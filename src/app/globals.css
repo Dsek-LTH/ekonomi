@@ -1,0 +1,505 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: toggled via <html class="dark"> (see ThemeToggle). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    /* Neutrals */
+    --color-background: #ffffff;
+    --color-canvas: #fafafa;
+    --color-surface: #f5f5f7;
+    --color-border: #e5e5ea;
+
+    --color-foreground: #1d1d1f;
+    --color-muted: #6e6e73;
+
+
+    /* Brand */
+    --color-brand: #e85d86;
+    --color-brand-hover: #d94f78;
+    --color-on-brand: #ffffff;
+    --color-brand-edge: #d94f78;
+    --color-brand-soft: #fdf1f5;
+
+
+    /* Accent */
+    --color-accent: #c93663;
+    --color-accent-hover: #b72f58;
+    --color-accent-soft: #fdf1f5;
+
+
+    /* Purple — secondary meaning only */
+    --color-purple: #8b5fc7;
+    --color-purple-hover: #7950b4;
+    --color-purple-soft: #f6f2fc;
+
+    /* Semantic */
+    --color-success: #248a3d;
+    --color-success-hover: #1f7535;
+    --color-success-soft: #f1f9f2;
+
+    --color-warning: #9a6700;
+    --color-warning-hover: #805600;
+    --color-warning-soft: #fff8e7;
+
+    --color-danger: #d70015;
+    --color-danger-hover: #ba0012;
+    --color-danger-soft: #fff2f3;
+    --color-on-danger: #ffffff;
+
+
+    /* Misc */
+    --color-ring: #c93663;
+    --color-scrollbar: #c7c7cc;
+
+    /* The light that sweeps a skeleton block. Brighter than the surface it
+       runs across, which on a light ground means white and on a dark one a
+       thin white wash — the same gesture, not the same colour. */
+    --skeleton-sheen: rgb(255 255 255 / 0.75);
+
+    --spacing-inset: 1rem;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    --shadow-card: 0 1px 2px rgb(23 19 25 / 0.04), 0 2px 8px rgb(23 19 25 / 0.04);
+    --shadow-pop: 0 4px 12px rgb(23 19 25 / 0.08), 0 12px 32px rgb(23 19 25 / 0.12);
+
+    /* One easing for everything that moves, so the app has a single hand.
+        Exponential-ish ease-out: leaves fast, settles soft. */
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Neutrals */
+  --color-background: #1c1c1e;
+  --color-canvas: #000000;
+  --color-surface: #2c2c2e;
+  --color-border: #3a3a3c;
+
+  --color-foreground: #f5f5f7;
+  --color-muted: #98989d;
+
+
+  /* Brand */
+  --color-brand: #ed7198;
+  --color-brand-hover: #f080a5;
+  --color-on-brand: #ffffff;
+  --color-brand-edge: #ed7198;
+  --color-brand-soft: #382b31;
+
+
+  /* Accent */
+  --color-accent: #ff7fa5;
+  --color-accent-hover: #ff91b2;
+  --color-accent-soft: #382b31;
+
+
+  /* Purple — secondary meaning only */
+  --color-purple: #a98bd8;
+  --color-purple-hover: #b79be2;
+  --color-purple-soft: #302b38;
+
+
+  /* Semantic */
+  --color-success: #30d158;
+  --color-success-hover: #63df7d;
+  --color-success-soft: #203427;
+
+  --color-warning: #ff9f0a;
+  --color-warning-hover: #ffb340;
+  --color-warning-soft: #382d1d;
+
+  --color-danger: #ff453a;
+  --color-danger-hover: #ff6961;
+  --color-danger-soft: #3a2323;
+  --color-on-danger: #ffffff;
+
+
+  /* Misc */
+  --color-ring: #ff7fa5;
+  --color-scrollbar: #48484a;
+
+  /* On near-black, white at three-quarters would be a flashbulb; the sweep has
+     to read as the surface catching light, not as a second colour. */
+  --skeleton-sheen: rgb(255 255 255 / 0.06);
+
+
+  /* Elevation */
+  --shadow-card:
+    0 1px 2px rgb(0 0 0 / 0.45),
+    0 4px 12px rgb(0 0 0 / 0.25);
+
+  --shadow-pop:
+    0 8px 24px rgb(0 0 0 / 0.45),
+    0 20px 48px rgb(0 0 0 / 0.35);
+}
+
+/* The inset opens up once there is room for it. One override here moves every
+   surface in the app together, which is the entire point of it being a token. */
+@media (width >= 40rem) {
+  :root {
+    --spacing-inset: 1.5rem;
+  }
+}
+
+/* ── Spacing rhythm ─────────────────────────────────────────────
+   Four steps, with real gaps between them. The app had eleven gap
+   values and twenty padding values in use — every half-step Tailwind
+   offers — which is why nothing read as a boundary: with every
+   interval available, no interval means anything.
+
+     tight      gap-2   / 8px    inside a control; icon to label
+     grouped    gap-4   / 16px   related items within one group
+     separated  space-y-6 / 24px between blocks on a page
+     sectioned  mb-10   / 40px   page header to content
+
+   Reach for the next step up rather than inventing the value
+   between two steps. The half-steps are not banned, they are for
+   optical corrections, not for structure. */
+
+.brand-fill {
+    background: var(--color-brand);
+    transition: var(--ease-out-quint);
+}
+
+.brand-fill:hover {
+    background: var(--color-brand-hover);
+}
+
+/* A block standing in for content that hasn't arrived. The surface fill is what
+   draws the shape; the sweep is what says it is coming rather than empty — an
+   un-animated grey block reads as a broken image, which is the opposite of the
+   message. Slow and low-contrast on purpose: this runs behind a whole page of
+   siblings at once, and anything faster turns a loading table into a strobe.
+
+   One sweep, not one per block: `background-attachment: fixed` would sync them
+   to the viewport, but that breaks inside the app's scroll containers, so each
+   block runs its own — at 1.6s the phase difference reads as texture. */
+.skeleton {
+  background-color: var(--color-surface);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-sheen) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.6s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+html {
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* Headings tighten as they grow — at 24px and up the default tracking reads
+   loose, and the app's page titles are the only large type it has. */
+h1,
+h2 {
+  letter-spacing: -0.021em;
+}
+
+/* Money is the thing this app is about, so digits line up in a column by
+   default: same-width figures everywhere a number can sit next to another
+   number. `tabular-nums` only touches digits, so a text cell is unaffected. */
+table,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-foreground);
+}
+
+/* Tailwind's preflight resets buttons to the default arrow cursor. Anything
+   clickable should say so — done here rather than per-component so the many
+   bare <button>s (table row actions, popover triggers, close buttons) are
+   covered too. Disabled controls keep the arrow. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+
+/* ── Focus ───────────────────────────────────────────────────────
+   ONE focus ring for the whole app: 1.5px of the ring colour, sitting just off
+   the element rather than on its edge — on a filled control an on-the-edge ring
+   reads as part of the fill. A focused input, button, link and combobox all
+   look the same, and nothing else marks focus: no border colour change, no soft
+   halo. Fields used to add both on top of this and the same field then read as
+   one, two or three lines depending on how it had been styled and whether it
+   was reached by mouse or keyboard.
+
+   These rules are deliberately OUTSIDE Tailwind's layers, so they beat every
+   utility: `focus:outline-none`, `focus:ring-2`, `focus:border-accent` and
+   friends have NO effect on a focused element and must not be added — a
+   component that wants a different treatment opts out through one of the two
+   classes below (or the sheet rules further down), not by stacking utilities.
+
+   :focus-visible, not :focus — a mouse click puts the caret in the field, which
+   is signal enough; the ring is for finding the keyboard. */
+*:focus-visible {
+  outline: 1px solid var(--color-ring);
+  outline-offset: 1px;
+}
+
+/* Pull that ring inside the element — for inputs that fill their whole cell
+   edge to edge, where there is no room outside to draw it in. Same colour and
+   thickness, just inward. The offset is the negative of the width, so the ring
+   covers exactly the outermost 1.5px of the box on all four sides (the same
+   reasoning as the sheet cell outline further down). */
+.focus-inset:focus-visible {
+  outline-offset: -1.5px;
+}
+
+/* A field assembled from a wrapper and a bare input (a fixed prefix beside an
+   editable rest, say): the ring belongs around the whole thing, so the wrapper
+   draws it and the input inside is stopped from drawing a second one. */
+.focus-ring-within:has(:focus-visible) {
+  outline: 1px solid var(--color-ring);
+  outline-offset: 1px;
+}
+.focus-ring-within :focus-visible {
+  outline: none;
+}
+
+/* Subtle, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+/* Nothing in an app this dense should move for someone who asked it not to.
+   State changes still happen, they just arrive rather than travel. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* One exception, and it is the whole reason the rule above can be this blunt:
+     a spinner that doesn't turn is not a quieter spinner, it is a ring with no
+     meaning, and the app would be telling someone nothing is happening while a
+     request is in flight. So it keeps turning — slower, and it is a 14–28px
+     mark, not travel across the screen.
+
+     The skeleton sweep gets no such exemption: a static block still says
+     "content goes here", which is the whole of its message. */
+  [data-spinner] {
+    animation-duration: 1.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* Budget sheets read like a spreadsheet, not like the rest of the app: light
+   hairline gridlines, roomy rows, a soft hover, neutral fills. Scoped to the
+   table wrappers (class `budget-grid`). */
+.budget-grid {
+  --grid-line: #ddd7df; /* light hairline gridline */
+  --color-border: var(--grid-line); /* outer frame + row-group separators */
+  --cell-select: #948d99; /* graphite box on the merely-selected cell */
+}
+.dark .budget-grid {
+  --grid-line: #39393b; /* darker hairline so it reads on the dark cards */
+  --cell-select: #6e6e73;
+}
+/* One quiet hairline colour on every rule (keeps each utility's border WIDTH but
+   defeats the soft /40–/60 opacity tints used elsewhere). */
+.budget-grid :is(th, td, tr, tbody) {
+  border-color: var(--grid-line);
+}
+/* Rambudget: the table scrolls inside its own card while the header block —
+   the column names plus the grand total — stays pinned at the top of it, so a
+   fifty-row overview never loses which column is which or what it all adds up
+   to. The card is the scrollport (see rambudget.tsx).
+
+   The whole <thead> is what sticks, not its cells: pinning the two rows
+   separately means handing the second one the first one's height as an offset,
+   and every pixel that measurement is off by is a seam the scrolling rows show
+   through. As one block they stay exactly as adjacent as they are in flow. */
+@media (width >= 64rem) {
+  .rambudget thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  /* The cells still paint their own fill and rules, both of which are needed
+     once they move: the rows' rules belong to the table under `border-collapse`
+     and would be left behind, and the rows' tints are translucent, so the
+     content scrolling underneath would show through. */
+  .rambudget thead th {
+    background: var(--color-background);
+    box-shadow: inset 0 -1px 0 var(--color-border);
+  }
+  .rambudget thead td {
+    background: color-mix(in srgb, var(--color-surface) 50%, var(--color-background));
+    box-shadow: inset 0 -2px 0 var(--color-border);
+  }
+  /* Cells carrying a left divider, which has to travel with them too. */
+  .rambudget thead th[data-rule="l"] {
+    box-shadow: inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border);
+  }
+  .rambudget thead td[data-rule="l"] {
+    box-shadow: inset 1px 0 0 var(--color-border), inset 0 -2px 0 var(--color-border);
+  }
+}
+/* Roomier rows for breathing space (overrides the cells' tight py-1.5). */
+.budget-grid :is(input, .min-h-8) {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+/* A single selection box on the focused cell — sits on the gridline and encloses
+   the whole cell (drag grip included). The input's own ring is removed so this is
+   the only border. Graphite, not brand: moving around a sheet is the quiet
+   state, and the section's pink is saved for the cell actually being edited
+   (see below). On the filled account-number cell the same box is drawn in
+   translucent white.
+
+   An inward outline, not an inset shadow: cells carry a border on the right and
+   top only, and an inset shadow is clipped to the PADDING box, so it stacks on
+   top of those two borders (border + ring) while the left and bottom get the ring
+   alone — the box reads visibly thicker on two sides. An outline is measured from
+   the border box, so `outline-offset: -Npx` with an Npx width covers the outermost
+   Npx of the cell evenly on all four sides, border included. */
+.budget-grid :is(td, th):focus-within {
+  position: relative;
+  z-index: 10;
+  outline: 1.5px solid var(--cell-select);
+  outline-offset: -1.5px;
+}
+.budget-grid .bg-brand:focus-within {
+  outline-color: rgb(23 17 26 / 0.45);
+}
+/* The cell outline above is the only selection indicator — suppress the app's
+   global *:focus-visible outline on cell inputs so it isn't drawn as a 2nd line. */
+.budget-grid input:focus,
+.budget-grid input:focus-visible {
+  outline: none;
+}
+/* …except a field that merely happens to sit in the sheet — the comment box on
+   an expanded row is a form field, not a cell. It takes the app's ordinary
+   focus ring back, and its row draws no cell box around it. */
+.budget-grid td.sheet-field:focus-within {
+  outline: none;
+}
+.budget-grid td.sheet-field :is(input, textarea):focus-visible {
+  outline: 1.5px solid var(--color-ring);
+  outline-offset: 1px;
+}
+/* Spreadsheet select vs edit: a selected (focused) cell hides its text caret so
+   it reads as "selected, not editing"; the caret returns once the sheet is in
+   edit mode. Only the navigable [data-cell] inputs are affected (not add-rows). */
+.budget-grid input[data-cell] {
+  caret-color: transparent;
+}
+/* A selected cell also hides its text selection — the box is the selection.
+   (Type-to-edit selects the cell's text so the keystroke overwrites it; that
+   highlight would otherwise flash up before edit mode paints.) */
+.budget-grid input[data-cell]::selection {
+  background-color: transparent;
+}
+/* Edit mode: the graphite box turns the section's pink with a soft halo, the
+   blinking caret returns and the text selection is visible again. The colour
+   change is what separates the two states — pink in a sheet means "you are
+   typing here". */
+.is-editing input[data-cell]:focus {
+  caret-color: auto;
+}
+.is-editing input[data-cell]:focus::selection {
+  background-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+.is-editing :is(td, th):has(input[data-cell]:focus) {
+  outline-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft); /* halo, outside the box */
+}
+/* …and solid near-black on the pink account-number cell, up from the
+   translucent mark it carries while merely selected. */
+.is-editing .bg-brand:has(input[data-cell]:focus) {
+  outline-color: var(--color-on-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-on-brand) 30%, transparent);
+}
+
+/* ── Print ───────────────────────────────────────────────────────
+   A printed page is a report someone hands to a revisor, not a
+   screenshot of the app: no chrome, no shadows, black on white, and
+   tables that break across pages with their header repeated. Pages
+   opt their own furniture out with Tailwind's `print:hidden`. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  /* Dark mode is a screen preference. On paper it costs a full-bleed
+     black page and unreadable greys, so the light tokens are restored
+     for the print run — every component reads these, so this is all
+     it takes. */
+  html.dark {
+    color-scheme: light;
+
+    --color-background: #ffffff;
+    --color-canvas: #ffffff;
+    --color-surface: #f2f2f4;
+    --color-border: #c8c8ce;
+    --color-foreground: #000000;
+    --color-muted: #45454a;
+
+    /* The dark palette's hues are tuned for a near-black card and read as
+       washed-out highlighter on paper. A printed surplus, deficit or brand
+       mark has to stay legible in ink. */
+    --color-brand: #f280a1;
+    --color-on-brand: #000000;
+    --color-accent: #d02253;
+    --color-purple: #8c4ccb;
+    --color-success: #1d7b4f;
+    --color-danger: #cb3227;
+    --color-warning: #a05c0d;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  /* Card elevation is a screen affordance; on paper the border alone
+     separates one block from the next. */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* A table taller than the page splits, but never mid-row, and each
+     page repeats the column headers. */
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  th,
+  td {
+    break-inside: avoid;
+  }
+}

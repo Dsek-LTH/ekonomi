@@ -1,0 +1,236 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Card, CardHeader } from "@/components/ui/card";
+import { DataTable, type Column } from "@/components/ui/data-table";
+import { IconButton } from "@/components/ui/icon-button";
+import { Menu, MenuItem, MenuLabel, MenuNote, MenuSeparator } from "@/components/ui/menu";
+import { useTableControls } from "@/components/ui/table-controls";
+import { useRole } from "@/components/shell/role-context";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useMutation } from "@/components/shell/use-mutation";
+import { PageShell } from "@/components/page-shell";
+import { IconCompare, IconCopy, IconPlus, IconTrash } from "@/components/ui/icons";
+import { isAdmin } from "@/lib/domain/permissions";
+import { cn, stopClick } from "@/lib/ui/utils";
+import { useProgressRouter } from "@/components/shell/route-progress";
+import type { BudgetSummary } from "@/lib/data/budget";
+
+// A budget is a year and a name, and nothing above it. Several may share a year
+// — the adopted one and whatever was drafted beside it — and they are siblings,
+// not versions of each other: no budget knows that another exists. So the list
+// is flat, and every row stands on its own.
+//
+// The rows arrive from the page's Server Component, like every other list in the
+// app. This used to fetch them itself, which meant it also owned the loading
+// state, rendered its own route skeleton, reloaded by hand after every write —
+// and showed the "no budgets yet" empty state when the request had actually
+// failed. `useMutation`'s refresh does all of that now, and a failure is the
+// route's error boundary rather than a silent empty list.
+export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
+  const router = useProgressRouter();
+  const t = useTranslations("budget.list");
+  const { user } = useRole();
+  const confirm = useConfirm();
+  const admin = isAdmin(user.roles);
+
+  const { pending, mutate } = useMutation();
+  const controls = useTableControls({ sortKey: "year", sortDir: "desc" });
+
+  // Which budgets the compare view opens with. Comparing is a question about two
+  // or more budgets, so it is chosen here rather than assumed from the list's
+  // order — any of them against any other, across years.
+  const [picked, setPicked] = useState<string[]>([]);
+
+  const thisYear = new Date().getFullYear();
+
+  // Creating asks nothing. Every budget starts as a year and a name that are
+  // both a pencil away on its own page, so a form here would only be collecting
+  // what the next screen already lets you change — and the empty one has to be
+  // named something before you know what it is anyway.
+  //
+  // `key` names the control that asked, so only that one spins: the header menu
+  // and every row's copy button all end up here, and they share one busy scope.
+  async function create(
+    body: { year: number; name?: string; copyFromId?: string },
+    success: string,
+    key = "create",
+  ) {
+    const data = await mutate("/api/budgets", { key, body, error: t("createFailed"), success });
+    if (data?.id) router.push(`/budget/${String(data.id)}`);
+  }
+
+  const createEmpty = () => create({ year: thisYear }, t("created"));
+
+  // Duplicating makes a plain copy: the source's year, a derived name, and no
+  // tie back to what it was copied from. It keeps the year rather than guessing
+  // at next year's — if the copy is meant for another year, that is one edit on
+  // the page it just opened.
+  const copyBudget = (b: BudgetSummary, key?: string) =>
+    create({ year: b.year, name: t("copyOf", { name: b.name }), copyFromId: b.id }, t("copied"), key);
+
+  async function deleteBudget(b: BudgetSummary) {
+    const ok = await confirm({
+      title: t("deleteTitle", { year: b.year, name: b.name }),
+      message: t("deleteMessage"),
+      confirmLabel: t("delete"),
+      tone: "danger",
+    });
+    if (!ok) return;
+    await mutate(`/api/budgets/${b.id}`, {
+      key: b.id,
+      method: "DELETE",
+      success: t("deleted"),
+      error: t("deleteFailed"),
+    });
+    setPicked((p) => p.filter((id) => id !== b.id));
+  }
+
+  const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+
+  // The compare button carries no text, so this is its whole accessible name —
+  // and the count is the part that changes as boxes are ticked.
+  const compareLabel = picked.length >= 2 ? t("compareCount", { count: picked.length }) : t("compare");
+
+  const columns: Column<BudgetSummary>[] = [
+    {
+      key: "compare",
+      header: "",
+      className: "w-10",
+      // On a phone it rides with the buttons at the foot of the card; there is
+      // no checkbox column there to put it in.
+      mobile: "actions",
+      cell: (b) => (
+        <span onClick={stopClick}>
+          <input
+            type="checkbox"
+            checked={picked.includes(b.id)}
+            onChange={() => toggle(b.id)}
+            aria-label={t("compareAria", { year: b.year, name: b.name })}
+            className="size-4 accent-accent"
+          />
+        </span>
+      ),
+    },
+    {
+      key: "year",
+      header: t("colYear"),
+      value: (b) => b.year,
+      sortable: true,
+      searchable: true,
+      className: "w-24 whitespace-nowrap",
+      cell: (b) => <span className="text-sm font-medium tabular-nums">{b.year}</span>,
+    },
+    {
+      key: "name",
+      header: t("colBudget"),
+      value: (b) => b.name,
+      sortable: true,
+      searchable: true,
+      mobile: "title",
+      cell: (b) => (
+        <p className="flex items-center gap-2 truncate text-sm font-medium">
+          {b.name}
+          {b.lockedAt && (
+            <span className="rounded-lg bg-purple-soft px-1.5 py-0.5 text-[11px] font-medium text-purple">{t("locked")}</span>
+          )}
+        </p>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      mobile: "actions",
+      className: "whitespace-nowrap",
+      cell: (b) => (
+        <div className="flex items-center justify-end gap-2" onClick={stopClick}>
+          {admin && (
+            <>
+              <IconButton
+                label={t("copy")}
+                onClick={() => copyBudget(b, `copy-${b.id}`)}
+                loading={pending === `copy-${b.id}`}
+              >
+                <IconCopy className="size-4" />
+              </IconButton>
+              <IconButton
+                label={t("deleteBudget")}
+                tone="danger"
+                onClick={() => deleteBudget(b)}
+                loading={pending === b.id}
+                // A locked budget stays; the server refuses it either way.
+                disabled={b.lockedAt !== null}
+              >
+                <IconTrash className="size-4" />
+              </IconButton>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <PageShell
+      title={t("title")}
+      description={t("description")}
+      action={admin ? (
+        // Not a form in a dropdown: two ways to start, each of them one click.
+        <Menu label={t("new")} icon={<IconPlus className="size-4" />} loading={pending === "create"}>
+          <MenuItem onClick={createEmpty}>{t("newEmpty", { year: String(thisYear) })}</MenuItem>
+          {budgets.length > 0 && (
+            <>
+              <MenuSeparator />
+              <MenuLabel>{t("copyExisting")}</MenuLabel>
+              {budgets.map((b) => (
+                <MenuItem key={b.id} onClick={() => copyBudget(b)}>
+                  <span className="tabular-nums text-muted">{b.year}</span>
+                  <span className="truncate">{b.name}</span>
+                </MenuItem>
+              ))}
+              <MenuNote>{t("basedOnHint")}</MenuNote>
+            </>
+          )}
+        </Menu>
+      ) : undefined}
+    >
+      <Card>
+        <CardHeader
+          title={t("budgets")}
+          subtitle={t("budgetCount", { count: budgets.length })}
+          action={
+            // Icon only: the checkbox column is what explains it, and the label
+            // it used to carry said the same thing twice. The count lives in the
+            // accessible name, which is the one place it still has to be said.
+            <Link
+              href={`/budget/compare?b=${picked.join(",")}`}
+              aria-label={compareLabel}
+              title={compareLabel}
+              // Two is the fewest that makes a comparison; there is no upper
+              // bound, and the compare view gives each its own column.
+              aria-disabled={picked.length < 2}
+              className={cn(
+                "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-surface hover:text-foreground",
+                picked.length < 2 && "pointer-events-none opacity-40",
+              )}
+            >
+              <IconCompare className="size-4" />
+            </Link>
+          }
+        />
+        <DataTable
+          columns={columns}
+          rows={budgets}
+          controls={controls}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(b) => b.id}
+          onRowClick={(b) => router.push(`/budget/${b.id}`)}
+          empty={budgets.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
+        />
+      </Card>
+    </PageShell>
+  );
+}

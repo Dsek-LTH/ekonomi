@@ -1,0 +1,179 @@
+"use client";
+
+// My profile — the full version of what the sidebar's profile popover shows in
+// miniature. The popover keeps the quick switches; anything that needs a form,
+// an explanation or a destructive confirmation belongs here.
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { signOut } from "next-auth/react";
+import { useMutation } from "@/components/shell/use-mutation";
+import { PageShell } from "@/components/page-shell";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { DetailList, DetailRow } from "@/components/ui/detail-list";
+import { Field, Input } from "@/components/ui/field";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { LanguageSwitcher } from "@/components/shell/language-switcher";
+import { FortnoxBanner } from "@/components/shell/fortnox-banner";
+
+import { useFormat } from "@/lib/ui/use-format";
+import type { FortnoxStatus, Role } from "@/lib/domain/types";
+
+export function ProfileClient({
+  name,
+  email,
+  roles,
+  clearing: c0,
+  account: a0,
+  fortnox,
+}: {
+  name: string;
+  email: string;
+  roles: Role[];
+  clearing: string;
+  account: string;
+  /** Absent for everyone who doesn't book in Fortnox under their own login. */
+  fortnox?: { session: FortnoxStatus["session"] | null };
+}) {
+  const t = useTranslations("common");
+  const tRole = useTranslations("common.role");
+  const tProfile = useTranslations("profile");
+  const tNav = useTranslations("nav");
+  const { dateTime } = useFormat();
+  const { pending, mutate } = useMutation();
+  const [clearing, setClearing] = useState(c0);
+  const [account, setAccount] = useState(a0);
+  const dirty = clearing !== c0 || account !== a0;
+  const saving = pending === "payout";
+
+  const save = () =>
+    mutate("/api/profile", {
+      key: "payout",
+      method: "PATCH",
+      body: { bankClearingNumber: clearing, bankAccountNumber: account },
+      success: tProfile("saved"),
+      error: tProfile("saveFailed"),
+    });
+
+  const session = fortnox?.session;
+
+  return (
+    <PageShell
+      title={tNav("profile")}
+      description={tProfile("description")}
+      width="form"
+    >
+      <Card>
+        <CardBody className="space-y-5">
+          <DetailList>
+            <DetailRow label={tProfile("name")} value={name} />
+            <DetailRow label={tProfile("email")} value={email} />
+            <DetailRow
+              label={tProfile("roles")}
+              value={roles.length ? roles.map((r) => tRole(r)).join(" · ") : tRole("ORDINARIE")}
+            />
+          </DetailList>
+
+          <div>
+            <h2 className="text-base font-semibold">{tProfile("payoutTitle")}</h2>
+            <p className="mt-1 text-sm text-muted">{tProfile("payoutDescription")}</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label={tProfile("clearing")}>
+              <Input value={clearing} placeholder={tProfile("clearingPlaceholder")} onChange={(e) => setClearing(e.target.value)} />
+            </Field>
+            <Field label={tProfile("account")}>
+              <Input value={account} placeholder={tProfile("accountPlaceholder")} onChange={(e) => setAccount(e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button onClick={save} loading={saving} disabled={!dirty}>
+              {tProfile("save")}
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Only rendered for the treasury — everyone else has no Fortnox login to
+          have an opinion about. */}
+      {fortnox && (
+        <Card>
+          <CardHeader
+            title="Fortnox"
+            subtitle={tProfile("fortnoxSubtitle")}
+          />
+          <CardBody className="space-y-4">
+            <FortnoxBanner
+              ok={!!session}
+              title={
+                session
+                  ? session.fortnoxUserName
+                    ? tProfile("signedInAs", { name: session.fortnoxUserName })
+                    : tProfile("signedIn")
+                  : tProfile("notSignedIn")
+              }
+              detail={
+                session
+                  ? tProfile("validUntil", { time: dateTime(session.expiresAt) })
+                  : tProfile("fortnoxRequired")
+              }
+            />
+
+            <div className="flex flex-wrap gap-2.5">
+              <ButtonLink
+                href={`/api/fortnox/connect?mode=user&returnTo=${encodeURIComponent("/profile")}`}
+                variant={session ? "secondary" : "primary"}
+              >
+                {session ? tProfile("signInAgain") : tProfile("signInFortnox")}
+              </ButtonLink>
+              {session && (
+                <Button
+                  variant="secondary"
+                  loading={pending === "fortnoxLogout"}
+                  onClick={() =>
+                    mutate("/api/fortnox/session", {
+                      key: "fortnoxLogout",
+                      method: "DELETE",
+                      success: tProfile("fortnoxSignedOut"),
+                      error: tProfile("fortnoxSignOutFailed"),
+                    })
+                  }
+                >
+                  {tProfile("signOutFortnox")}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted">{tProfile("signOutNote")}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader title={tNav("settings")} />
+        <CardBody className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">{t("theme")}</span>
+            <ThemeToggle />
+          </div>
+          <div className="flex items-center justify-between border-t border-border pt-3">
+            <span className="text-sm text-muted">{t("language")}</span>
+            <LanguageSwitcher />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <Button
+            variant="dangerOutline"
+            className="w-full"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+          >
+            {t("signOut")}
+          </Button>
+        </CardBody>
+      </Card>
+    </PageShell>
+  );
+}

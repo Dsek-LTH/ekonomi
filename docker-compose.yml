@@ -1,0 +1,39 @@
+# Local development Postgres. Mirrors the self-hosted CloudNativePG target
+# closely enough for app development. Production runs on the org's k8s cluster.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: utlagg-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: utlagg
+      POSTGRES_PASSWORD: utlagg
+      POSTGRES_DB: utlagg
+    ports:
+      - "5432:5432"
+    volumes:
+      - utlagg-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U utlagg -d utlagg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Object storage for uploaded receipts (S3-compatible). Console at :9001.
+  minio:
+    image: minio/minio:latest
+    container_name: utlagg-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: utlagg
+      MINIO_ROOT_PASSWORD: utlagg-dev-secret
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    volumes:
+      - utlagg-miniodata:/data
+
+volumes:
+  utlagg-pgdata:
+  utlagg-miniodata:

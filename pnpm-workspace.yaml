@@ -1,0 +1,22 @@
+allowBuilds:
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
+# Transitive dependencies pinned by a package above them to a version with a
+# published advisory. Each is a copy nested inside another package, not
+# something this app depends on directly — an override is the only way to
+# reach them, and they go away again when the parent catches up.
+overrides:
+  # next pins sharp <0.35 for its image optimizer (inherited libvips CVEs:
+  # 2026-33327/33328/35590/35591). Our own imports already resolve to 0.35.x;
+  # this makes next's copy the same one.
+  sharp: '^0.35.1'
+  # next pins postcss to exactly 8.4.31. Build-time only, but the sourceMappingURL
+  # path traversal reads arbitrary .map files off the build machine.
+  postcss: '^8.5.25'
+  # ajv, under prisma's dev tooling. Host confusion via backslash authority
+  # delimiter and failed IDN canonicalization.
+  fast-uri: '^3.1.4'

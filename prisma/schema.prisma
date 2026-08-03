@@ -1,0 +1,765 @@
+// Prisma schema for the utlägg (expense) service.
+// Money is stored as integer öre (minor units) everywhere — no floats —
+// to keep accounting exact and clean for Fortnox export. Divide by 100
+// for display, multiply by 100 on import.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Connection URL lives in prisma.config.ts (Prisma 7 moved it out of the schema).
+}
+
+// ── Enums ─────────────────────────────────────────────────────────
+
+// Section role. A user may hold several (e.g. skattförman + resultatansvarig),
+// so it's stored as an array. Access and attest authority are derived from the
+// set of roles in lib/permissions.ts — never from a single value.
+//   SKATTMASTARE / ORDFORANDE       — admins; full access; attest any expense but their own
+//   VICE_SKATTMASTARE               — bookkeeping; attest expenses by "ordinarie" submitters
+//   SKATTFORMAN                     — bookkeeping (book + return wrongly-approved)
+//   RESULTATANSVARIG                — attest/handle expenses for the result unit(s) they answer for
+//   ORDINARIE                       — regular functionary; submits own expenses
+enum Role {
+  SKATTMASTARE
+  ORDFORANDE
+  VICE_SKATTMASTARE
+  SKATTFORMAN
+  RESULTATANSVARIG
+  ORDINARIE
+}
+
+enum PaymentType {
+  CARD // section card — matched against the purchase before signing
+  REIMBURSEMENT // out-of-pocket — matched against the payout after signing
+}
+
+enum ExpenseStatus {
+  DRAFT
+  PENDING_MATCH
+  PENDING_APPROVAL
+  CHANGES_REQUESTED
+  APPROVED
+  BOOKED
+  EXPORTED
+  REJECTED // kept in DB for historical rows; not reachable from the app
+}
+
+// Structured audit trail. The app renders human-readable (Swedish)
+// labels from the type; the database stays language-neutral and queryable.
+enum ExpenseEventType {
+  CREATED
+  EDITED
+  RECEIPT_UPLOADED
+  MATCHED
+  UNMATCHED
+  SUBMITTED
+  CHANGES_REQUESTED
+  COST_CENTER_APPROVED
+  ATTEST_WITHDRAWN
+  APPROVED
+  REJECTED
+  BOOKED
+  EXPORTED
+  EXPORT_REVERTED
+}
+
+// ── Models ────────────────────────────────────────────────────────
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique // Google Workspace identity, @user.dsek.se
+  name  String
+  roles Role[] @default([ORDINARIE]) // one or more section roles; authority derived in lib/permissions.ts
+
+  // Bank details for REIMBURSEMENT payouts (Swedish clearing + account no.)
+  bankClearingNumber String?
+  bankAccountNumber  String?
+
+  active Boolean @default(true)
+
+  submittedExpenses    Expense[]               @relation("ExpenseSubmitter")
+  allocationApprovals  ExpenseCostAllocation[] @relation("AllocationApprover")
+  uploadedReceipts     Receipt[]               @relation("ReceiptUploader")
+  events               ExpenseEvent[]          @relation("EventActor")
+  createdVerifications Verification[]          @relation("VerificationCreator")
+  heldCards            Card[]                  @relation("CardHolder")
+  budgets              Budget[]                @relation("BudgetAuthor")
+  lockedBudgets        Budget[]                @relation("BudgetLocker")
+  budgetComments       BudgetComment[]         @relation("BudgetCommentAuthor")
+  budgetChanges        BudgetChange[]          @relation("BudgetChangeAuthor")
+  revokedBudgetChanges BudgetChange[]          @relation("BudgetChangeRevoker")
+  fortnoxConnections   FortnoxConnection[]     @relation("FortnoxConnector")
+  fortnoxSession       FortnoxUserSession?     @relation("FortnoxUserSession")
+  resultUnitOwnerships ResultUnitOwner[]       @relation("ResultUnitOwnerUser")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Kostnadsställe — the org unit an expense is booked against.
+// Which result unit a cost centre belongs to is NOT stored here — it is derived
+// from ResultUnitPrefix by matching this `code`, so the two can never drift and
+// a Fortnox sync has nothing to preserve. See lib/result-units.ts.
+// Where a cost centre came from, and therefore who owns its lifecycle.
+// FORTNOX rows are a mirror: the sync creates, renames and retires them.
+// LOCAL rows are created here by an admin and the sync must leave them alone —
+// they exist for dimensions Fortnox has no cost centre for (alcohol bought for
+// resale books to a balance account, and for a budget being drafted the cost
+// centre may not exist in Fortnox yet). They are never sent to Fortnox.
+enum CostCenterSource {
+  FORTNOX
+  LOCAL
+}
+
+model CostCenter {
+  id   String  @id @default(cuid())
+  code String  @unique // e.g. "NÄRU" or "SKT01"
+  name String
+  active Boolean @default(true)
+  source CostCenterSource @default(FORTNOX)
+
+  allocations       ExpenseCostAllocation[]
+  verificationLines VerificationLine[]
+  budgetCostCenters BudgetCostCenter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// The BAS chart of accounts, mirrored from Fortnox (/3/accounts). Replaces the
+// short hardcoded list this app shipped with: it backs the account picker when
+// booking an expense and validates the accounts a budget refers to. Synced by
+// upsert — accounts are never deleted, since a budget or verification may still
+// reference one that Fortnox has since retired.
+model Account {
+  number String  @id // BAS account number, e.g. "6071"
+  name   String
+  active Boolean @default(true) // Active in Fortnox; inactive stays selectable-but-hidden
+  sru    String? // Fortnox SRU code, informational
+
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([active])
+}
+
+// App-wide bookkeeping configuration. A single row (id "singleton"): these are
+// the accounts the booking view pre-fills, which used to be the ACCOUNT.BANK /
+// ACCOUNT.MEMBER_DEBT constants in lib/accounts.ts. Kept apart from
+// FortnoxConnection so that disconnecting Fortnox doesn't discard them.
+model BookkeepingSettings {
+  id String @id @default("singleton")
+
+  // Debited when a card purchase is booked.
+  bankAccount String @default("1930")
+  // Credited when a member is owed a reimbursement.
+  memberDebtAccount String @default("2890")
+
+  updatedAt DateTime @updatedAt
+}
+
+// Resultatenhet — Styrelsen, Sexmästeriet, and the rest. Which cost centres
+// belong to it is decided entirely by its prefixes: a cost centre whose code
+// starts with one of them is part of the result unit. Nothing is stored on
+// CostCenter, so the two can never disagree.
+model ResultUnit {
+  id   String @id @default(cuid())
+  name String @unique // "Skattmästeriet"
+
+  prefixes ResultUnitPrefix[]
+  owners   ResultUnitOwner[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A cost-centre code prefix owned by a result unit, e.g. "SKT" for SKT01/SKT02.
+// Prefixes are globally unique AND non-overlapping: no prefix may be an
+// extension of another, so at most one can ever match a given code and
+// membership is unambiguous. The overlap rule is enforced in the API, since
+// the database can't express "no row is a prefix of another".
+model ResultUnitPrefix {
+  id           String     @id @default(cuid())
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+  resultUnitId String
+  value        String     @unique // stored upper-case
+
+  createdAt DateTime @default(now())
+
+  @@index([resultUnitId])
+}
+
+// Resultatansvarig ↔ resultatenhet. Many-to-many: one person may answer for
+// several result units and a result unit may have several ansvariga. This drives
+// attest authority: a resultatansvarig may attest/handle allocations whose cost
+// centre belongs to a result unit they own (see lib/permissions.ts).
+model ResultUnitOwner {
+  id String @id @default(cuid())
+
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+  resultUnitId String
+
+  user   User   @relation("ResultUnitOwnerUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, resultUnitId])
+  @@index([resultUnitId])
+}
+
+model Expense {
+  id        String @id @default(cuid())
+  reference String @unique // human-readable, e.g. "U-2026-0042"
+  title     String
+
+  submitter   User   @relation("ExpenseSubmitter", fields: [submitterId], references: [id])
+  submitterId String
+
+  paymentType PaymentType
+  status      ExpenseStatus @default(DRAFT)
+
+  // Receipt / OCR-derived details (editable until signed).
+  purchaseDate DateTime? @db.Date
+  grossAmount  Int? // öre
+  currency     String    @default("SEK")
+
+  // One-to-one match to a bank transaction (the correctness source of truth).
+  matchedTransaction   BankTransaction? @relation(fields: [matchedTransactionId], references: [id], onDelete: SetNull)
+  matchedTransactionId String?          @unique
+
+  allocations  ExpenseCostAllocation[]
+  receipts     Receipt[]
+  events       ExpenseEvent[]
+  verification Verification? // the booked voucher, once status reaches BOOKED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([submitterId])
+}
+
+// One cost-centre slice of an expense. An expense may span several cost centres
+// with a fixed SEK amount each; all amounts must sum to grossAmount.
+// Each allocation is individually approved by that cost centre's designated approver.
+model ExpenseCostAllocation {
+  id           String     @id @default(cuid())
+  expense      Expense    @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId    String
+  costCenter   CostCenter @relation(fields: [costCenterId], references: [id])
+  costCenterId String
+  amount       Int        // öre
+  comment      String?    // optional note from the submitter
+
+  approvedBy   User?      @relation("AllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  approvedAt   DateTime?
+
+  @@unique([expenseId, costCenterId])
+  @@index([expenseId])
+}
+
+// An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
+// Expenses can be revised, so an expense may accumulate several receipts.
+model Receipt {
+  id      String  @id @default(cuid())
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String
+
+  objectKey    String // MinIO object key (the full-size, display-normalised file)
+  thumbnailKey String? // MinIO object key of a small preview (images only)
+  filename     String
+  mimeType     String // the stored file's type (images are normalised to image/jpeg)
+  byteSize     Int?
+
+  ocrText   String? // raw extracted text
+  ocrResult Json? // structured OCR pre-fill (amount, vat, merchant, date…)
+
+  uploadedBy   User?   @relation("ReceiptUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
+}
+
+// A row from an imported bank CSV. Negative amount = money out.
+model BankTransaction {
+  id          String   @id @default(cuid())
+  bookedDate  DateTime @db.Date
+  description String
+  amount      Int // öre, negative = outgoing
+  currency    String   @default("SEK")
+
+  // Dedup key for re-imported CSVs (hash of date+amount+description+row).
+  importHash String? @unique
+  importedAt DateTime @default(now())
+
+  // Which section card made this purchase (from the card number in the CSV).
+  card      Card?   @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  cardId    String?
+  cardLast4 String? // raw last 4 from the CSV; resolved to a Card by last4
+
+  matchedExpense Expense? @relation
+
+  @@index([bookedDate])
+  @@index([cardId])
+}
+
+// A physical section card ("sektionskort"). Only some members hold one; the
+// card number's last 4 digits appear in the bank CSV, which lets us attribute a
+// card purchase to its holder so they can account for it. Admin-assigned.
+model Card {
+  id       String  @id @default(cuid())
+  last4    String  @unique
+  holder   User?   @relation("CardHolder", fields: [holderId], references: [id], onDelete: SetNull)
+  holderId String?
+  active   Boolean @default(true)
+
+  transactions BankTransaction[]
+
+  createdAt DateTime @default(now())
+
+  @@index([holderId])
+}
+
+model ExpenseEvent {
+  id        String           @id @default(cuid())
+  expense   Expense          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String
+  type      ExpenseEventType
+
+  actor   User?   @relation("EventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+
+  comment String? // e.g. reason on CHANGES_REQUESTED / REJECTED
+  diff    Json? // snapshot of what changed on EDITED
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
+  @@index([type])
+}
+
+// A bookkeeping voucher (verifikation) created when an expense is booked.
+// One per expense. Its lines must balance (sum debit == sum credit).
+model Verification {
+  id          String   @id @default(cuid())
+  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId   String   @unique
+  date        DateTime @db.Date
+  description String // verifikationstext
+
+  createdBy   User?   @relation("VerificationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  lines VerificationLine[]
+
+  // Set once the voucher has been exported to Fortnox. The series+number+year
+  // identify the booked verifikation in Fortnox; exportedAt marks success.
+  fortnoxSeries String?
+  fortnoxNumber Int?
+  fortnoxYear   Int?
+  exportedAt    DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// The org's SERVICE connection to Fortnox: a Fortnox service account, authorised
+// once by a Fortnox system administrator, not tied to any person. There is at
+// most one (the whole section books into a single Fortnox company), so the app
+// treats this table as a singleton. It backs everything that READS from Fortnox
+// — the ledger sync, the chart of accounts, cost centres — including the
+// scheduled job, which is why it must survive people coming and going.
+//
+// Tokens are refreshed in place: the refresh token is long-lived (~45 days) but
+// ROTATES on every use, so the new pair must be persisted on each refresh.
+// Token columns are encrypted at rest (lib/secrets.ts).
+model FortnoxConnection {
+  id            String   @id @default(cuid())
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime // when the access token expires
+  scopes        String   // space-delimited granted scopes
+  tokenType     String   @default("Bearer")
+  voucherSeries String   @default("A") // default verifikationsserie for exports
+  companyName   String?  // from /3/companyinformation, for display
+  orgNumber     String?  // organisationsnummer — personal logins are checked against it
+
+  connectedBy   User?   @relation("FortnoxConnector", fields: [connectedById], references: [id], onDelete: SetNull)
+  connectedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A bookkeeper's PERSONAL Fortnox login, one row per app user. Everything that
+// WRITES to Fortnox (creating vouchers, attaching receipts) runs on this token
+// rather than the service account, so Fortnox stamps the voucher with the
+// person's name instead of the integration's.
+//
+// Deliberately short-lived: `sessionExpiresAt` is our own hard cap (a few
+// hours). Inside it the ~1h Fortnox access token is refreshed silently; past it
+// the row is useless and the bookkeeper has to log in to Fortnox again. Tokens
+// are encrypted at rest (lib/secrets.ts).
+model FortnoxUserSession {
+  id     String @id @default(cuid())
+  user   User   @relation("FortnoxUserSession", fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  accessToken      String
+  refreshToken     String
+  tokenExpiresAt   DateTime // when the Fortnox access token expires (~1h)
+  sessionExpiresAt DateTime // our cap — no refresh past this, log in again
+  scopes           String
+
+  // Who Fortnox says this is, from /3/me — shown in the UI so a bookkeeper can
+  // tell which Fortnox identity their exports will be signed with.
+  fortnoxUserName  String?
+  fortnoxUserEmail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── Fortnox ledger mirror (read side) ─────────────────────────────
+// A local copy of what's actually been bookkept in Fortnox, pulled via the SIE
+// export (one file per financial year). This is the whole general ledger — not
+// just vouchers this app created — so it backs spend reporting (per account per
+// cost centre) and budget-vs-actual. Synced by replacing a whole year at a time
+// (idempotent), so closed years stay stable and the current year just re-pulls.
+
+model FortnoxFinancialYear {
+  id         Int       @id // Fortnox financial-year id (not the calendar year)
+  fromDate   DateTime  @db.Date
+  toDate     DateTime  @db.Date
+  lastSyncAt DateTime?
+
+  vouchers LedgerVoucher[]
+  balances LedgerAccountBalance[]
+}
+
+model LedgerVoucher {
+  id            String               @id @default(cuid())
+  financialYear Int // FortnoxFinancialYear.id
+  year          FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
+  series        String // VoucherSeries, e.g. "A"
+  number        Int // VoucherNumber within the series+year
+  date          DateTime             @db.Date // transaction date
+  description   String
+
+  rows       LedgerRow[]
+  importedAt DateTime    @default(now())
+
+  @@unique([financialYear, series, number])
+  @@index([date])
+}
+
+// Per-account opening/closing balance for a financial year, from the SIE
+// #IB/#UB records. Needed by the balance report: balance-sheet accounts carry
+// history from earlier years, so the year's vouchers alone only give the
+// movement, not the actual balance. Replaced wholesale alongside the year's
+// vouchers, so it stays as idempotent as the rest of the mirror.
+model LedgerAccountBalance {
+  financialYear Int
+  year          FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
+  account       String // BAS account number
+  accountName   String // denormalised from the SIE #KONTO chart
+  // "" is the account-level total (#IB/#UB). A non-empty code is the optional
+  // per-cost-centre breakdown (#OIB/#OUB), which an exporter may omit — so the
+  // account-level row is the only one guaranteed to exist. Empty string rather
+  // than null because it is part of the primary key.
+  costCenterCode String @default("")
+
+  opening Int // öre at period start (#IB), positive = debit
+  closing Int // öre at period end (#UB), positive = debit
+
+  @@id([financialYear, account, costCenterCode])
+  @@index([account])
+}
+
+model LedgerRow {
+  id        String        @id @default(cuid())
+  voucher   LedgerVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucherId String
+
+  account     String // BAS account number, e.g. "6071"
+  accountName String // denormalised from the SIE #KONTO chart
+  // Cost centre (SIE dimension 1). Code matched to an app CostCenter by string;
+  // some Fortnox codes have no app counterpart, so this stays a denormalised
+  // string rather than a FK.
+  costCenterCode String?
+  costCenterName String?
+  project        String?
+  text           String? // SIE transaction text
+
+  debit  Int // öre
+  credit Int // öre
+
+  @@index([account])
+  @@index([costCenterCode])
+  @@index([voucherId])
+}
+
+// ── Budget ────────────────────────────────────────────────────────
+
+// A budget: a year, a name, and everything budgeted in it.
+enum BudgetAccountKind {
+  INCOME // intäkt
+  COST   // kostnad
+}
+
+// Budgets stand alone. Any number may share a year — the adopted one and a
+// revision drafted beside it are simply two budgets — and none of them knows
+// anything about the others. Copying one duplicates its contents and then the
+// two go their separate ways: no lineage is stored, nothing is shared, and
+// changing this one's year or name moves nothing else.
+//
+// They stay comparable all the same, because what they are made of lines up on
+// its own: cost-centre codes, account codes and row descriptions mean the same
+// thing in every budget of every year. lib/budget/compare.ts joins any number of
+// them on exactly that, keeping what only one side has rather than dropping it.
+//
+// Locking freezes one budget: it then rejects every write to its numbers — rows,
+// accounts, cost centres, variables, its own name and year, and being deleted —
+// while comments stay open, since those are a discussion about the frozen
+// figures rather than an edit to them. Only the skattmästare may lock or unlock
+// (see canLockBudget in lib/permissions.ts); the guard every budget write goes
+// through is lib/budget/access.ts.
+//
+// A locked budget still moves, but only one way: through a BudgetChange, which
+// adjusts the figures without touching a single row of what was adopted. That is
+// the whole reason the lock is worth having — see BudgetChange below.
+model Budget {
+  id          String   @id @default(cuid())
+  year        Int
+  name        String // "Ursprunglig", "VTM-extra"
+  createdBy   User     @relation("BudgetAuthor", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  // Null while open. Both are set together — the timestamp is what the app
+  // tests, the locker is who to name in the UI.
+  lockedAt   DateTime?
+  lockedBy   User?     @relation("BudgetLocker", fields: [lockedById], references: [id], onDelete: SetNull)
+  lockedById String?
+
+  variables   BudgetVariable[]
+  costCenters BudgetCostCenter[]
+  changes     BudgetChange[]
+
+  @@index([year])
+}
+
+// Named global value or expression. Expressions may reference other variables
+// or account totals via account(CC_CODE, ACCT_CODE). Evaluated with
+// fixed-point iteration so cross-cost-center references resolve correctly.
+model BudgetVariable {
+  id         String @id @default(cuid())
+  budget     Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId   String
+  name       String // identifier, e.g. "MEMBERS"
+  expression String // e.g. "300", "TICKET_PRICE * MEMBERS", "account(INFU,3010)"
+  sortOrder  Int    @default(0)
+
+  @@unique([budgetId, name])
+  @@index([budgetId])
+}
+
+// A cost center included in a budget. Ordered by sortOrder.
+//
+// The link to a real cost centre is optional: a sheet cloned inside a budget
+// starts detached, since the code it would copy is already taken by its source
+// (and a budget is often drafted before the cost centre exists in Fortnox at
+// all). A detached sheet budgets normally but stands outside the A1 grid — it
+// has no code for `account(CC, ACCT)` or a `CC!C7` reference to name — until an
+// unused cost centre is picked for it. `label` is what it is called meanwhile;
+// once linked, the cost centre's own code and name take over. The label is also
+// what a detached sheet is matched on when budgets are compared, since its id
+// means nothing to any other budget (see lib/budget/compare.ts).
+// The unique pair still holds where it matters: Postgres treats each NULL as
+// distinct, so any number of detached sheets may coexist while a linked cost
+// centre still cannot appear twice in one budget.
+model BudgetCostCenter {
+  id           String          @id @default(cuid())
+  budget       Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId     String
+  costCenter   CostCenter?     @relation(fields: [costCenterId], references: [id])
+  costCenterId String?
+  label        String?         // display name while detached
+  sortOrder    Int             @default(0)
+  accounts     BudgetAccount[]
+
+  @@unique([budgetId, costCenterId])
+  @@index([budgetId])
+}
+
+// A BAS account within a cost center. Line items beneath it must sum to its
+// total; the total is derived — never stored — to stay consistent. Editorial
+// adjustments (BudgetAdjustment) are added on top of that sum, so the account
+// total is "what was adopted, plus what has been decided since".
+model BudgetAccount {
+  id                 String           @id @default(cuid())
+  budgetCostCenter   BudgetCostCenter @relation(fields: [budgetCostCenterId], references: [id], onDelete: Cascade)
+  budgetCostCenterId String
+  accountCode        String           // e.g. "3010"
+  accountName        String           // e.g. "Biljettintäkter"
+  sortOrder          Int              @default(0)
+  // Income vs. cost. When null the kind is inferred from the account code
+  // (BAS: 3xxx = income, everything else = cost); set to override.
+  kindOverride       BudgetAccountKind?
+  lineItems          BudgetLineItem[]
+  comments           BudgetComment[]
+  adjustments        BudgetAdjustment[]
+
+  @@unique([budgetCostCenterId, accountCode])
+  @@index([budgetCostCenterId])
+}
+
+// One line item beneath an account. Amount is an expression string so it
+// can reference variables (e.g. "MEMBERS * TICKET_PRICE").
+model BudgetLineItem {
+  id          String        @id @default(cuid())
+  account     BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId   String
+  description String
+  // When both `quantity` and `unitPrice` are set the amount is their product
+  // (the "antal × á-pris" form); otherwise `expression` is used directly.
+  // All three are expression strings, so they may reference variables.
+  quantity    String?       // e.g. "2", "MEMBERS", "PASLAG_OL"
+  unitPrice   String?       // e.g. "350", "TACK_POLICY"
+  expression  String        // e.g. "1500", "MEMBERS * 5"
+  sortOrder   Int           @default(0)
+  // Per-line values for the six general columns, keyed x1…x6 (see
+  // EXTRA_COLUMN_KEYS in lib/budget/grid.ts). Each holds a literal or formula
+  // string, exactly like `expression`.
+  values      Json          @default("{}")
+
+  @@index([accountId])
+}
+
+// ── Redaktionella ändringar ───────────────────────────────────────
+//
+// What a locked budget is allowed to do. An adopted budget is voted through and
+// then sealed, but the year goes on: a sittning costs more than it was budgeted
+// to, a resultatenhet wants to spend one post's money on another. Rather than reopen
+// the adopted figures — which would quietly rewrite what was voted for — the
+// change is recorded beside them and added on top. The sheet shows the new
+// number, and it shows where it came from.
+//
+// Two kinds, told apart by their effect on the rambudget rather than by what the
+// treasurer calls them (see lib/budget/changes.ts, which does the arithmetic):
+//
+//   AVSTEG        — a departure from the adopted frame. The section's bottom
+//                   line moves, and that is exactly what must be visible.
+//   FORFLYTTNING  — money moved between accounts inside one resultatenhet
+//                   (Sexmästeriet and its cost centres). The bottom line is
+//                   untouched, so the entries must cancel out exactly.
+//
+// A change is never edited and never quietly disappears. Wrongly entered, it is
+// revoked: it stops counting towards the figures the moment it is, and stays in
+// the history struck through, with who revoked it and when. Undoing a real
+// decision is a new, opposite change instead — the history is the record of what
+// happened, not of what the numbers currently are.
+//
+// Only the skattmästare may make one, and only on a locked budget: on an open
+// one there is nothing to depart from, and the figures are simply edited.
+enum BudgetChangeKind {
+  AVSTEG
+  FORFLYTTNING
+}
+
+model BudgetChange {
+  id       String @id @default(cuid())
+  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId String
+  // Running number within the budget, from 1 — what a change is called out loud
+  // ("avsteg #4") and in the sheet, since a cuid is no use to anyone.
+  seq      Int
+  kind     BudgetChangeKind
+  reason   String // motivering, required — a bare number explains nothing
+
+  createdBy   User     @relation("BudgetChangeAuthor", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  // Set together when the change is revoked. `revokedAt` is what the arithmetic
+  // tests; the revoker is who to name in the history.
+  revokedAt   DateTime?
+  revokedBy   User?     @relation("BudgetChangeRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  revokedById String?
+
+  entries BudgetAdjustment[]
+
+  @@unique([budgetId, seq])
+  @@index([budgetId])
+}
+
+// One account's share of a change: a signed amount in the account's own
+// orientation, i.e. the same direction its line items are budgeted in. +500 on a
+// cost account is 500 kr more spent; +500 on an income account is 500 kr more
+// earned. What that does to the result is a separate question, and the reason
+// the two kinds can be told apart at all — see resultImpact in
+// lib/budget/changes.ts.
+//
+// Stored as a decided number rather than an expression: the rest of the budget
+// is formulas so it can be redrafted, but a change is a decision about an amount
+// and must still be that amount after a variable moves — otherwise a
+// förflyttning that summed to zero when it was made might not tomorrow.
+model BudgetAdjustment {
+  id        String       @id @default(cuid())
+  change    BudgetChange @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  changeId  String
+  // Cascades so deleting a whole budget still works. Deleting a single account
+  // that carries adjustments is refused by the API instead, which is where the
+  // history is worth protecting.
+  account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  amount    Float // SEK, signed — same units the evaluator works in
+
+  @@index([changeId])
+  @@index([accountId])
+}
+
+// Approver comment on a specific account within a budget. Not copied when a
+// budget is duplicated — a comment is a discussion about the figures in front of
+// it, not part of them.
+model BudgetComment {
+  id        String        @id @default(cuid())
+  account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  author    User          @relation("BudgetCommentAuthor", fields: [authorId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime      @default(now())
+
+  @@index([accountId])
+}
+
+// ── One posting row (konteringsrad) ──────────────────────────────
+// One posting row (konteringsrad): an account, an optional cost center, and a
+// debit or credit amount (öre). A row normally has one of debit/credit set.
+model VerificationLine {
+  id             String       @id @default(cuid())
+  verification   Verification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  verificationId String
+
+  account     String // BAS account number, e.g. "1930"
+  accountName String // denormalised label at booking time (chart may change)
+  description String?
+
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  debit     Int @default(0) // öre
+  credit    Int @default(0) // öre
+  sortOrder Int @default(0)
+
+  @@index([verificationId])
+}

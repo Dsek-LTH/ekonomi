@@ -1,0 +1,554 @@
+[
+  {
+    "id": "basics",
+    "label": "Grunderna",
+    "items": [
+      {
+        "id": "why-rules",
+        "q": "Varför är sektionen så noga med redovisning?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Bokföring är ett lagkrav i Sverige. Bokföringslagen gäller alla som driver näringsverksamhet, och D-sektionen är en näringsverksamhet — därför måste vi förhålla oss till den."
+          },
+          {
+            "t": "p",
+            "v": "Lagen innehåller de riktlinjer och krav som Skatteverket ställer på oss som organisation. En överträdelse kan få allvarliga konsekvenser både för sektionen och för skattmästaren som privatperson. Reglerna på den här sidan finns alltså inte för att krångla till det, utan för att vi ska hålla oss till lagen."
+          }
+        ]
+      },
+      {
+        "id": "who",
+        "q": "Vem gäller det här för?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Alla som handlar åt sektionen. Är du sektionsengagerad kommer du med största sannolikhet behöva göra ett utlägg för D-sektionens räkning någon gång under ditt verksamhetsår."
+          },
+          {
+            "t": "p",
+            "v": "Är du utskottsledare gäller dessutom attesteringen: du granskar och godkänner utläggen som hör till ditt utskott innan de bokförs."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "expenses",
+    "label": "Utlägg",
+    "items": [
+      {
+        "id": "what-is",
+        "q": "Vad är ett utlägg?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ett utlägg är en utgift som du betalar för någon annans räkning — du lägger ut egna pengar för något som sektionen ska stå för, och ersätts i efterhand."
+          }
+        ]
+      },
+      {
+        "id": "reimbursement",
+        "q": "Får jag alltid tillbaka mina pengar?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej, du har inte automatisk rätt till ersättning. Du har rätt till ersättning när båda de här kraven är uppfyllda:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Att du fått godkänt från din utskottsordförande.",
+              "Att du kan styrka köpet med ett giltigt kvitto."
+            ]
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Kolla ALLTID med din utskottsledare innan du genomför ett köp. Är kraven inte uppfyllda riskerar du att själv bli betalningsskyldig."
+          }
+        ]
+      },
+      {
+        "id": "before-buying",
+        "q": "Vad ska jag göra innan jag handlar?",
+        "a": [
+          {
+            "t": "ol",
+            "v": [
+              "Stäm av köpet med din utskottsordförande och få ett godkännande.",
+              "Se till att du får ett giltigt kvitto i kassan — inte bara en orderbekräftelse eller ett kortkvitto.",
+              "Redovisa köpet här på sidan så fort du är hemma."
+            ]
+          },
+          {
+            "t": "action",
+            "v": "Redovisa ett köp",
+            "href": "/expenses/new"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "card",
+    "label": "Sektionskort",
+    "items": [
+      {
+        "id": "who-gets",
+        "q": "Vem får ett sektionskort?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Har du en post som kräver många och dyra köp får du ett sektionskort. Kortet är kopplat till D-sektionens bankkonto, så att du slipper ligga ute med egna pengar."
+          }
+        ]
+      },
+      {
+        "id": "card-rules",
+        "q": "Får jag köpa vad jag vill med sektionskortet?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. Ett sektionskort innebär INTE att du får köpa vad du vill. Alla köp med ett sektionskort ska godkännas av din utskottsledare i förväg, och varje köp måste redovisas i efterhand."
+          },
+          {
+            "t": "note",
+            "tone": "danger",
+            "v": "Om olovliga köp genomförs på ditt sektionskort blir du personligen betalningsskyldig."
+          }
+        ]
+      },
+      {
+        "id": "declined",
+        "q": "Betalningen nekas i kassan — vad gör jag?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Då har vi inte flyttat över tillräckligt med pengar till kortkontot. Är det brådskande gör du bäst i att ringa oss direkt:"
+          },
+          {
+            "t": "link",
+            "v": "Skattmästaren (Ludwig) — 070-893 55 85",
+            "href": "tel:+46708935585"
+          },
+          {
+            "t": "link",
+            "v": "Vice skattmästare (Edvin) — 079-349 06 22",
+            "href": "tel:+46793490622"
+          }
+        ]
+      },
+      {
+        "id": "lend",
+        "q": "Får jag låna ut mitt sektionskort?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan — det är knutet till dig och till din post."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "invoices",
+    "label": "Fakturor",
+    "items": [
+      {
+        "id": "can-invoice",
+        "q": "Kan jag ta ett köp på faktura?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ja, blir du erbjuden att ta ett köp på faktura kan du göra det."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Kolla ALLTID med din utskottsledare innan du tar något på faktura. Är kraven inte uppfyllda riskerar du att själv bli betalningsskyldig."
+          }
+        ]
+      },
+      {
+        "id": "invoice-recipient",
+        "q": "Vem ska fakturan ställas till?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Sektionen. Se till att leverantören fakturerar D-sektionen och inte dig som privatperson."
+          },
+          {
+            "t": "p",
+            "v": "Sektionen betalar ALDRIG fakturor som inte är ställda till sektionen. Har du blivit fakturerad privat måste du betala fakturan själv och sedan göra ett utlägg på den."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "reporting",
+    "label": "Redovisning",
+    "items": [
+      {
+        "id": "how",
+        "q": "Hur redovisar jag ett köp?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Alla köp måste redovisas — det är kravet för att du ska få ersättning för ett privat utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort. När du redovisar fyller du i:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Datum på kvittot.",
+              "En övergripande titel som beskriver affärshändelsen.",
+              "Om köpet gjordes med sektionskort eller privat.",
+              "Kvittot eller kvittona.",
+              "Kostnadsställe och belopp för varje del av köpet."
+            ]
+          },
+          {
+            "t": "action",
+            "v": "Redovisa ett köp",
+            "href": "/expenses/new"
+          }
+        ]
+      },
+      {
+        "id": "multiple-receipts",
+        "q": "Kan jag lägga flera kvitton på samma redovisning?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ja, om kvittona avser SAMMA HÄNDELSE — till exempel två olika köp samma dag inför samma event. Tryck på \"lägg till kvitto\" och redovisa dem tillsammans."
+          },
+          {
+            "t": "p",
+            "v": "Kvitton som hör till olika händelser ska redovisas var för sig."
+          }
+        ]
+      },
+      {
+        "id": "split",
+        "q": "Kvittot ska belasta flera kostnadsställen — hur gör jag?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Lägg till en ny rad per kostnadsställe och särredovisa kostnaderna där, med en kommentar som förklarar vad raden avser. Summan av raderna ska motsvara kvittots totalbelopp."
+          }
+        ]
+      },
+      {
+        "id": "alcohol",
+        "q": "Hur redovisar jag alkohol?",
+        "a": [
+          {
+            "t": "p",
+            "v": "För alkohol finns ytterligare lagar att förhålla sig till. Ett av kraven är att alkoholdrycker och alkoholliknande preparat måste särredovisas efter kategori:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Öl — bärs, suröl.",
+              "Vin — högst 22 ‰, portvin, sherry, vermouth.",
+              "Annan jäst dryck — cider, fruktviner, mjöd.",
+              "Spritdryck — Halmstad Crush, vodka, likörer.",
+              "Alkoholdrycksliknande preparat — alkoglass."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "I praktiken innebär det att du delar upp den inköpta alkoholen på en rad per kategori: summera allt som tillhör samma kategori och skriv ut det på en egen rad, pant inräknad."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Är du osäker på vilken kategori en dryck tillhör — fråga alltid din utskottsordförande. Den vanligaste missen är att spritdrycker kategoriseras som annan jäst dryck: Halmstad Crush är en spritdryck, inte cider."
+          }
+        ]
+      },
+      {
+        "id": "alcohol-example",
+        "q": "Exempel: hur särredovisar jag ett köp på Systembolaget?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Säg att du handlat följande inför en sittning:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Norrlands Guld (öl) — 2 × 13,90 kr + 2 × 1 kr pant.",
+              "Pistonhead Haze Lager (öl) — 2 × 11,90 kr + 2 × 1 kr pant.",
+              "Crazy Cat (vin) — 209 kr.",
+              "Explorer Vodka (spritdryck) — 189 kr + 1 kr pant.",
+              "Halmstad Crush (spritdryck) — 16,90 kr + 1 kr pant.",
+              "Briska Fläder (annan jäst dryck) — 16,90 kr + 1 kr pant."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "Då redovisar du fyra rader — en per kategori:"
+          },
+          {
+            "t": "table",
+            "head": [
+              "Kostnadsställe",
+              "Belopp",
+              "Kommentar"
+            ],
+            "rows": [
+              [
+                "ALKO",
+                "55,60 kr",
+                "Öl (inklusive pant)"
+              ],
+              [
+                "ALKO",
+                "207,90 kr",
+                "Spritdryck (inklusive pant)"
+              ],
+              [
+                "ALKO",
+                "209,00 kr",
+                "Vin"
+              ],
+              [
+                "ALKO",
+                "17,90 kr",
+                "Annan jäst dryck (inklusive pant)"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "deadline",
+        "q": "Hur snabbt måste jag redovisa?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp — privat utlägg såväl som köp med sektionskort — inte redovisas inom 60 dagar från att köpet genomfördes."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Skattmästeriet har inte tid att jaga er för att ni ska redovisa i tid. Redovisa dina köp med en gång."
+          }
+        ]
+      },
+      {
+        "id": "returns",
+        "q": "Jag har returnerat en vara — måste det redovisas?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ja. Returer av varor som var ämnade för sektionen redovisas precis som vanliga köp, med skillnaden att beloppet du anger ska vara negativt."
+          }
+        ]
+      },
+      {
+        "id": "foreign",
+        "q": "Jag ska handla från utlandet — något särskilt att tänka på?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Gör köpet via Klarna om du kan. Andra länder behöver inte följa svenska regelverk och är därför inte skyldiga att lämna kvitto på samma sätt som en svensk säljare — men går köpet via Klarna får du alltid ett giltigt kvitto."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "receipts",
+    "label": "Kvitton",
+    "items": [
+      {
+        "id": "valid",
+        "q": "Vad är ett giltigt kvitto?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Enligt bokföringslagen (5 kap. 7 §) ska verifikationen innehålla uppgift om när den sammanställts, när affärshändelsen inträffat, vad den avser, vilket belopp den gäller, vilken motpart den berör, samt verifikationsnummer eller annan identifikation."
+          },
+          {
+            "t": "p",
+            "v": "Praktiskt måste följande finnas på kvittot:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Datum.",
+              "Vilka produkter kvittot avser.",
+              "Kostnaderna för produkterna.",
+              "Skattesatserna (momspålägget).",
+              "Säljarens organisationsnummer.",
+              "Säljarens bolagsnamn.",
+              "Säljarens adress.",
+              "Verifikationsnummer."
+            ]
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Saknas något av ovanstående, eller går det inte att TYDLIGT urskilja, kommer attesteringen inte att godkännas. Då får du begära ett giltigt kvitto från leverantören."
+          }
+        ]
+      },
+      {
+        "id": "order-confirmation",
+        "q": "Räcker en orderbekräftelse som kvitto?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. En orderbekräftelse är som standard inte ett kvitto. Begär ett riktigt kvitto från säljaren."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "examples-valid",
+    "label": "Giltiga kvitton",
+    "items": [
+      {
+        "id": "ex-store",
+        "q": "Kassakvitto från butik",
+        "a": [
+          {
+            "t": "p",
+            "v": "Datum, varje vara med pris, momssatserna, säljarens bolagsnamn, adress och organisationsnummer samt kvittonummer — allt finns med och går att läsa."
+          },
+          {
+            "t": "image",
+            "file": "valid-store",
+            "alt": "Kassakvitto där datum, varor, moms och säljarens organisationsnummer syns tydligt."
+          }
+        ]
+      },
+      {
+        "id": "ex-webshop",
+        "q": "Kvitto från en webbutik",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ett riktigt kvitto, eller en faktura ställd till sektionen, med samma uppgifter som ett kassakvitto. Mejlet du fick när du la beställningen är inte det här."
+          },
+          {
+            "t": "image",
+            "file": "valid-webshop",
+            "alt": "Kvitto från en webbutik med säljaruppgifter, moms och verifikationsnummer."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "examples-invalid",
+    "label": "Ogiltiga kvitton",
+    "items": [
+      {
+        "id": "ex-order-confirmation",
+        "q": "Orderbekräftelse",
+        "a": [
+          {
+            "t": "p",
+            "v": "Bekräftar att en beställning är lagd — inte att den är betald. Saknar verifikationsnummer och redovisar sällan moms. Begär ett kvitto när varan skickats."
+          },
+          {
+            "t": "image",
+            "file": "invalid-order-confirmation",
+            "alt": "Orderbekräftelse från en webbutik, utan verifikationsnummer och momsuppgifter."
+          }
+        ]
+      },
+      {
+        "id": "ex-no-seller",
+        "q": "Kvitto utan säljaruppgifter",
+        "a": [
+          {
+            "t": "p",
+            "v": "Utan säljarens bolagsnamn, adress och organisationsnummer går motparten inte att fastställa, och då duger kvittot inte som verifikation."
+          },
+          {
+            "t": "image",
+            "file": "invalid-no-seller",
+            "alt": "Kvitto där säljarens namn, adress och organisationsnummer saknas."
+          }
+        ]
+      },
+      {
+        "id": "ex-no-vat",
+        "q": "Kvitto utan moms",
+        "a": [
+          {
+            "t": "p",
+            "v": "Skattesatserna måste framgå. Ett underlag som bara visar totalbeloppet går inte att bokföra — kortterminalens köpbevis är det vanligaste exemplet."
+          },
+          {
+            "t": "image",
+            "file": "invalid-no-vat",
+            "alt": "Köpbevis från en kortterminal som bara visar totalbeloppet."
+          }
+        ]
+      },
+      {
+        "id": "ex-unreadable",
+        "q": "Suddig eller beskuren bild",
+        "a": [
+          {
+            "t": "p",
+            "v": "Går texten inte att TYDLIGT urskilja, eller är en del av kvittot utanför bild, blir attesteringen nekad. Fota rakt ovanifrån, i bra ljus, med hela kvittot i bild."
+          },
+          {
+            "t": "image",
+            "file": "invalid-unreadable",
+            "alt": "Suddig bild av ett kvitto där nederkanten är utanför bild."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "approval",
+    "label": "Attestering",
+    "items": [
+      {
+        "id": "what-is-attest",
+        "q": "Vad innebär det att attestera?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Att attestera innebär att du granskar och godkänner en affärshändelse innan den bokförs. Är du utskottsledare attesterar du utläggen som hör till ditt utskott."
+          },
+          {
+            "t": "action",
+            "v": "Till attesteringen",
+            "href": "/approvals"
+          }
+        ]
+      },
+      {
+        "id": "attest-check",
+        "q": "Vad ska jag kontrollera innan jag godkänner?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Underlaget måste vara tillfredsställande. Ställ dig de här frågorna innan du godkänner affärshändelsen:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Är det ett giltigt kvitto?",
+              "Stämmer angivet datum med kvittots datum?",
+              "Är beskrivningen lämplig med avseende på varorna?",
+              "Är kostnadsstället korrekt?",
+              "Är sektionskort respektive privatkort korrekt angivet?"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
