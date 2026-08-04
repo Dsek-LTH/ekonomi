@@ -66,11 +66,9 @@ export function ApprovalsClient({
   ];
 
   const columns: Column<Expense>[] = [
-    expenseDateColumn(tCol("date"), date),
-    // As on the utlägg and bokföring lists: the reference and the payment type
-    // get columns of their own here, so the title cell is just the title.
-    expenseTitleColumn(tCol("title"), { reference: false }),
     expenseReferenceColumn(tCol("verification")),
+    expenseTitleColumn(tCol("title"), { reference: false }),
+    expenseDateColumn(tCol("date"), date),
     expensePaymentTypeColumn(tCol("type"), (type) => tPayment(`${type}.label`)),
     expenseSubmitterColumn(tCol("submitter")),
     expenseStatusColumn(tCol("status")),

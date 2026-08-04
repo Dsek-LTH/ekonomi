@@ -144,7 +144,10 @@ export interface FortnoxStatus {
 }
 
 export interface Expense {
-  id: string; // e.g. "U-2026-0042"
+  id: string; // the row's own id — what pages and API routes are keyed on
+  // The human reference, e.g. "D-26|0042". Absent until the utlägg is submitted
+  // for attest; see lib/domain/reference.ts.
+  reference?: string;
   title: string;
   submitterId: string;
   submitterName: string;
@@ -168,7 +171,8 @@ export interface BankTransaction {
   bookedDate: string; // ISO
   description: string;
   amount: number; // negative = money out
-  matchedExpenseId?: string;
+  matchedExpenseId?: string; // the utlägg's id, for linking to it
+  matchedExpenseRef?: string; // its human reference, once it has one
   // Section card that made the purchase, if known (from the CSV card number).
   cardLast4?: string;
   cardHolderId?: string;

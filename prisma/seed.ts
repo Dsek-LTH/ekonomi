@@ -50,6 +50,7 @@ async function main() {
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
   await prisma.resultUnitOwner.deleteMany();
+  await prisma.resultUnit.deleteMany(); // cascades → prefixes + owners
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
   await prisma.costCenter.deleteMany();
   await prisma.user.deleteMany();
@@ -177,7 +178,7 @@ async function main() {
   for (const e of EXPENSES) {
     const created = await prisma.expense.create({
       data: {
-        reference: e.id,
+        reference: e.reference,
         title: e.title,
         submitterId: userId(e.submitterName),
         paymentType: e.paymentType,
@@ -200,7 +201,7 @@ async function main() {
     });
     for (const a of e.allocations) {
       const ccId = costCenterByCode.get(a.costCenterCode);
-      if (!ccId) throw new Error(`Unknown cost center code "${a.costCenterCode}" in expense ${e.id}`);
+      if (!ccId) throw new Error(`Unknown cost center code "${a.costCenterCode}" in expense "${e.title}"`);
       await prisma.expenseCostAllocation.create({
         data: {
           expenseId: created.id,

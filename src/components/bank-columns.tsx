@@ -90,19 +90,36 @@ export const bankAmountColumn = (header: string): Column<BankTransaction> => ({
   cell: (tx) => <Amount value={tx.amount} className={tx.amount > 0 ? "text-success" : undefined} />,
 });
 
-/** The utlägg this purchase was accounted for as, as a link to it. */
-export const bankMatchedColumn = (header: string, dash = "–"): Column<BankTransaction> => ({
+/**
+ * The utlägg this purchase was accounted for as, as a link to it — the one
+ * place on either bank table that answers "has this been dealt with, and by
+ * what". Unaccounted rows are a dash, so a column of links reads as the work
+ * that is done and the gaps as the work that isn't.
+ *
+ * `linked` names a match that has no reference yet: an utlägg is only numbered
+ * when it is submitted for attest (see lib/domain/reference.ts), so a purchase
+ * someone is still filling in is genuinely accounted for and genuinely has
+ * nothing to be called. It still links — that half-finished utlägg is exactly
+ * what a reader following this column wants to find.
+ */
+export const bankMatchedColumn = (
+  header: string,
+  { dash = "–", linked }: { dash?: string; linked?: string } = {},
+): Column<BankTransaction> => ({
   key: "matched",
   header,
-  value: (tx) => tx.matchedExpenseId ?? "",
+  // Sorted and searched on what the reader sees, not on the id behind the link.
+  value: (tx) => tx.matchedExpenseRef ?? (tx.matchedExpenseId ? linked ?? "" : ""),
   sortable: true,
+  searchable: true,
+  className: "whitespace-nowrap tabular-nums",
   cell: (tx) =>
     tx.matchedExpenseId ? (
       <Link
         href={`/expenses/${tx.matchedExpenseId}`}
         className="font-medium text-accent hover:underline"
       >
-        {tx.matchedExpenseId}
+        {tx.matchedExpenseRef ?? linked ?? dash}
       </Link>
     ) : (
       <span className="text-muted">{dash}</span>

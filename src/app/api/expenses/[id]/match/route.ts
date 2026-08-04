@@ -1,6 +1,6 @@
 // Set or clear the bank-transaction match on a CARD expense. Only allowed
 // while the expense is still pre-submission (DRAFT / PENDING_MATCH /
-// CHANGES_REQUESTED). The [id] param is the human reference.
+// CHANGES_REQUESTED). The [id] param is the expense id.
 import { prisma } from "@/lib/server/db";
 import { isSubmittable } from "@/lib/domain/status";
 import { fail, gate } from "@/lib/api/guard";
@@ -8,22 +8,23 @@ import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 import { cancelsOut } from "@/lib/domain/matching";
 import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK } from "@/lib/domain/money";
+import { expenseLabel } from "@/lib/domain/reference";
 
 // POST /api/expenses/:id/match
 // body: { transactionId: string }  → match
 // body: { transactionId: null }    → unmatch
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id: reference } = await ctx.params;
+  const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
   const body = await req.json().catch(() => ({}));
 
-  const expense = await prisma.expense.findUnique({ where: { reference } });
+  const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) return fail(404, "expense.notFound");
 
   // Out of scope is not found, as everywhere else — a 403 here would confirm
-  // that an utlägg with this reference exists, which is the one thing the view
-  // rule is meant to withhold.
+  // that this utlägg exists, which is the one thing the view rule is meant to
+  // withhold.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
 
@@ -51,15 +52,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // card, and isn't already taken by another expense.
     const txn = await prisma.bankTransaction.findUnique({
       where: { id: transactionId },
-      include: { matchedExpense: { select: { reference: true } }, card: { select: { holderId: true } } },
+      include: {
+        matchedExpense: { select: { id: true, reference: true } },
+        card: { select: { holderId: true } },
+      },
     });
     if (!txn) return fail(422, "bank.txnNotFound");
     if (txn.card?.holderId !== expense.submitterId) {
       return fail(403, "bank.txnNotExpenseCard");
     }
-    if (txn.matchedExpense && txn.matchedExpense.reference !== reference) {
+    if (txn.matchedExpense && txn.matchedExpense.id !== id) {
       return fail(409, "bank.txnLinkedTo", {
-        values: { reference: txn.matchedExpense.reference },
+        values: { reference: expenseLabel(txn.matchedExpense) },
       });
     }
     // Both in öre, so this is an exact comparison.

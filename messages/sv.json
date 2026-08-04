@@ -258,6 +258,8 @@
       "newTitle": "Nytt utlägg",
       "newDescription": "Ladda upp kvittot och fyll i uppgifterna.",
       "editTitle": "Redigera {id}",
+      "editTitleDraft": "Redigera utkast",
+      "draftLabel": "Utkast",
       "editDescription": "Ändra uppgifterna och spara. Ändringen loggas i historiken.",
       "save": "Spara",
       "saveDraft": "Spara utkast",
@@ -677,6 +679,7 @@
     "colCard": "Kort",
     "colAmount": "Belopp",
     "colExpense": "Utlägg",
+    "expenseStarted": "Påbörjat",
     "account": "Redovisa",
     "searchPlaceholder": "Sök köp…",
     "noMatch": "Inga köp matchar filtret."
@@ -709,12 +712,20 @@
     "colDate": "Datum",
     "colTransaction": "Transaktion",
     "colHolder": "Korthållare / Kort",
-    "colStatus": "Status",
+    "colExpense": "Utlägg",
     "colAmount": "Belopp",
-    "matchedWith": "Matchad · {id}",
-    "unmatched": "Omatchad",
+    "matched": "Matchad",
     "searchPlaceholder": "Sök bankutdrag...",
-    "noMatch": "Inga transaktioner matchar filtret."
+    "noMatch": "Inga transaktioner matchar filtret.",
+    "csvHelp": {
+      "label": "Om CSV-filen",
+      "title": "Transaktionsrapport från banken",
+      "source": "Exportera en Transaktionsrapport som CSV från 1931 i Swedbank/Sparbanken.",
+      "format": "Ladda upp filen precis som den är. Kolumnerna läses efter position (Radnr … Belopp), så en fil som sorterats om eller sparats om i Excel läses fel.",
+      "cards": "Kortköp knyts till rätt kort via ett avslutande K#### i Referens. Nya kortnummer läggs upp automatiskt under Sektionskort.",
+      "duplicates": "Rader som redan importerats hoppas över. Samma fil kan laddas upp igen utan dubbletter.",
+      "limits": "Max 5 MB."
+    }
   },
   "bookkeeping": {
     "title": "Bokföring",

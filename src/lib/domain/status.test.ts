@@ -24,7 +24,7 @@ const ready = {
   paymentType: "CARD" as const,
   matchedTransactionId: "txn_1",
   submitterHasPayout: false,
-  receiptId: "rcp_1",
+  hasReceipt: true,
   allocations: [{ amount: 250, costCenterCode: "SEX01" }],
 };
 
@@ -77,8 +77,7 @@ describe("submitBlocker", () => {
   it("blocks an utlägg with no receipt", () => {
     // The one missing piece that can't be typed in, so it gets said on its own
     // rather than folded into "komplettera uppgifterna".
-    expect(submitBlocker({ ...ready, receiptId: null })).toBe("receipt");
-    expect(submitBlocker({ ...ready, receiptId: undefined })).toBe("receipt");
+    expect(submitBlocker({ ...ready, hasReceipt: false })).toBe("receipt");
   });
 
   it("blocks a half-typed date", () => {
@@ -123,7 +122,7 @@ describe("submitBlocker", () => {
         paymentType: "REIMBURSEMENT",
         matchedTransactionId: undefined,
         submitterHasPayout: false,
-        receiptId: null,
+        hasReceipt: false,
         purchaseDate: "2026-01-01",
       }),
     ).toBe("tooLate");

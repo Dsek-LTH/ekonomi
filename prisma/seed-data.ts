@@ -4,7 +4,9 @@
 import type { BankTransaction, CostCenter, User } from "../src/lib/domain/types";
 
 export interface SeedExpense {
-  id: string;
+  // The human reference. Null for an utlägg that hasn't been submitted for
+  // attest yet — that is when the number is handed out, so a draft has none.
+  reference: string | null;
   title: string;
   submitterName: string;
   allocations: { costCenterCode: string; amount: number }[]; // SEK, must sum to grossAmount
@@ -61,7 +63,7 @@ export const COST_CENTERS: (CostCenter & { ownerName?: string })[] = [
 
 export const EXPENSES: SeedExpense[] = [
   {
-    id: "U-2026-0042",
+    reference: null,
     title: "Fika till sektionsmöte",
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "NÄRU", amount: 845.5 }],
@@ -75,7 +77,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0041",
+    reference: null,
     title: "Banderoll till mottagningen",
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "INFU", amount: 1290 }],
@@ -90,7 +92,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0039",
+    reference: "D-26|0039",
     title: "Pizza till arbetskväll",
     submitterName: "Anton Falk",
     // Multi-cost-centre example: shared between two result units.
@@ -111,7 +113,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0038",
+    reference: "D-26|0038",
     title: "Priser till idrottsdagen",
     submitterName: "Sara Nyberg",
     allocations: [{ costCenterCode: "IDRU", amount: 2340 }],
@@ -133,7 +135,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0036",
+    reference: "D-26|0036",
     title: "Kontorsmaterial",
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "STYR", amount: 432 }],
@@ -151,7 +153,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0034",
+    reference: "D-26|0034",
     title: "Förtäring styrelsemöte",
     submitterName: "Anton Falk",
     allocations: [{ costCenterCode: "STYR", amount: 318 }],
@@ -168,7 +170,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    id: "U-2026-0031",
+    reference: "D-26|0031",
     title: "Trycksaker phadderverksamhet",
     submitterName: "Sara Nyberg",
     allocations: [{ costCenterCode: "INFU", amount: 4120 }],
@@ -190,14 +192,14 @@ export const EXPENSES: SeedExpense[] = [
 export const BANK_TRANSACTIONS: BankTransaction[] = [
   { id: "t1", bookedDate: "2026-06-11", description: "STORDBOOSTER AB", amount: -1290 },
   { id: "t2", bookedDate: "2026-06-11", description: "SWISH inbetalning", amount: 500 },
-  { id: "t3", bookedDate: "2026-06-08", description: "PIZZERIA ROMA", amount: -1560, matchedExpenseId: "U-2026-0039" },
+  { id: "t3", bookedDate: "2026-06-08", description: "PIZZERIA ROMA", amount: -1560, matchedExpenseId: "D-26|0039" },
   { id: "t4", bookedDate: "2026-06-07", description: "WILLYS LUND", amount: -642 },
   { id: "t5", bookedDate: "2026-06-04", description: "SYSTEMBOLAGET", amount: -980 },
-  { id: "t6", bookedDate: "2026-06-02", description: "CLAS OHLSON 0421", amount: -432, matchedExpenseId: "U-2026-0036" },
+  { id: "t6", bookedDate: "2026-06-02", description: "CLAS OHLSON 0421", amount: -432, matchedExpenseId: "D-26|0036" },
   { id: "t7", bookedDate: "2026-05-30", description: "BANKAVGIFT", amount: -75 },
-  { id: "t8", bookedDate: "2026-05-28", description: "ESPRESSO HOUSE", amount: -318, matchedExpenseId: "U-2026-0034" },
+  { id: "t8", bookedDate: "2026-05-28", description: "ESPRESSO HOUSE", amount: -318, matchedExpenseId: "D-26|0034" },
   { id: "t9", bookedDate: "2026-05-25", description: "ÅTERBETALNING medlem", amount: -4120 },
-  { id: "t10", bookedDate: "2026-05-22", description: "TRYCKERI LUND AB", amount: -4120, matchedExpenseId: "U-2026-0031" },
+  { id: "t10", bookedDate: "2026-05-22", description: "TRYCKERI LUND AB", amount: -4120, matchedExpenseId: "D-26|0031" },
 ];
 
 // Section cards ("sektionskort"). Only some members hold one. `transactionIds`

@@ -58,18 +58,24 @@ export const expenseTitleColumn = (
   // The cell already carries its own second line, which is exactly what the
   // card's headline slot wants.
   mobile: "title",
-  cell: (e) => (
-    <>
-      <p className="font-medium">{e.title}</p>
-      {(reference || paymentLabel) && (
-        <p className="mt-0.5 text-xs text-muted">
-          {reference && e.id}
-          {reference && paymentLabel && " · "}
-          {paymentLabel && <Tag>{paymentLabel(e.paymentType)}</Tag>}
-        </p>
-      )}
-    </>
-  ),
+  cell: (e) => {
+    // An utlägg that hasn't been submitted yet has no reference to show, so the
+    // second line is whatever is left of it — possibly nothing, in which case
+    // there is no second line rather than an empty one.
+    const ref = reference ? e.reference : undefined;
+    return (
+      <>
+        <p className="font-medium">{e.title}</p>
+        {(ref || paymentLabel) && (
+          <p className="mt-0.5 text-xs text-muted">
+            {ref}
+            {ref && paymentLabel && " · "}
+            {paymentLabel && <Tag>{paymentLabel(e.paymentType)}</Tag>}
+          </p>
+        )}
+      </>
+    );
+  },
 });
 
 // The kind of utlägg — bought on the section card, or paid privately and to be
@@ -87,17 +93,20 @@ export const expensePaymentTypeColumn = (
   cell: (e) => <Tag>{paymentLabel(e.paymentType)}</Tag>,
 });
 
-// The utlägg's own reference — "U-2026-0043", the number it is known by
+// The utlägg's own reference — "D-26|0043", the number it is known by
 // everywhere from the receipt envelope to the ledger. Not the Fortnox voucher
 // label, which only exists after export and lives on the detail page.
-export const expenseReferenceColumn = (header: string): Column<Expense> => ({
+//
+// A dash until it has one: the number is handed out when the utlägg is
+// submitted for attest, so anything still with its submitter shows nothing here.
+export const expenseReferenceColumn = (header: string, dash = "–"): Column<Expense> => ({
   key: "reference",
   header,
-  value: (e) => e.id,
+  value: (e) => e.reference ?? "",
   sortable: true,
   searchable: true,
   className: "whitespace-nowrap tabular-nums text-muted",
-  cell: (e) => e.id,
+  cell: (e) => e.reference ?? dash,
 });
 
 export const expenseSubmitterColumn = (header: string, hidden = false): Column<Expense> => ({

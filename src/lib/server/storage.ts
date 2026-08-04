@@ -70,9 +70,12 @@ export function receiptKey(
   return `receipts/${expenseId}/${receiptId}-${safeName(filename)}`;
 }
 
-// Key for a receipt's thumbnail, alongside its full-size object.
-export function receiptThumbKey(expenseId: string, receiptId: string): string {
-  return `receipts/${expenseId}/${receiptId}-thumb.jpg`;
+// Key for a receipt's thumbnail, alongside its full-size object. The extension
+// follows what the thumbnail actually is — a transparent receipt is kept as PNG
+// (see lib/server/images.ts), and a .jpg holding PNG bytes is a trap for anyone
+// reading the bucket by hand. Existing objects keep the key stored on their row.
+export function receiptThumbKey(expenseId: string, receiptId: string, ext = "jpg"): string {
+  return `receipts/${expenseId}/${receiptId}-thumb.${ext}`;
 }
 
 export async function putObject(

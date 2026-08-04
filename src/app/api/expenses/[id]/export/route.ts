@@ -1,12 +1,13 @@
 // Export a BOOKED expense's voucher to Fortnox: create the voucher, attach
 // the receipt, store the returned voucher number, and only then flip the expense
 // to EXPORTED. If the Fortnox call fails, nothing is mutated locally — the
-// bookkeeper can retry. The [id] param is the human reference (e.g. U-2026-0043).
+// bookkeeper can retry. The [id] param is the expense id.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectBuffer } from "@/lib/server/storage";
+import { expenseLabel } from "@/lib/domain/reference";
 import {
   connectFileToVoucher,
   createVoucher,
@@ -21,14 +22,14 @@ import {
 const ore = (n: number) => Math.round(n) / 100; // öre int → SEK decimal
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id: reference } = await ctx.params;
+  const { id } = await ctx.params;
 
   const g = await gate(canAccessBookkeeping, "auth.bookkeeperExport");
   if (!g.ok) return g.res;
   const user = g.actor;
 
   const expense = await prisma.expense.findUnique({
-    where: { reference },
+    where: { id },
     include: {
       verification: { include: { lines: { include: { costCenter: true } } } },
       receipts: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -90,7 +91,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       fileId = await uploadInboxFile(token, bytes, receipt.filename, receipt.mimeType);
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
-      console.error(`[fortnox] ${reference}: step ${step} failed`, e);
+      console.error(`[fortnox] ${id}: step ${step} failed`, e);
       return fail(e instanceof FortnoxError ? (e.status ?? 502) : 502, "expense.receiptStepFailed", {
         values: { step: { key: `errors.expense.exportStep.${step}` }, detail },
       });
@@ -103,7 +104,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     created = await createVoucher(token, {
       series: conn.voucherSeries,
       date: verification.date.toISOString().slice(0, 10),
-      description: `${expense.reference} – ${verification.description}`,
+      description: `${expenseLabel(expense)} – ${verification.description}`,
       rows,
     });
   } catch (e) {
@@ -129,7 +130,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       // Surfaced verbatim beside the success message, so it is worded by the
       // client from this code.
       attachWarning = detail;
-      console.error(`[fortnox] ${reference}: could not attach the receipt to the voucher`, e);
+      console.error(`[fortnox] ${id}: could not attach the receipt to the voucher`, e);
     }
   }
 
@@ -157,7 +158,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   return NextResponse.json({
     ok: true,
-    reference,
+    id,
     voucher: created,
     label,
     attachWarning,

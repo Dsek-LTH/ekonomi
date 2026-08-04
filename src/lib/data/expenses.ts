@@ -74,7 +74,10 @@ function fortnoxLabel(v: { fortnoxSeries: string | null; fortnoxNumber: number |
 
 function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
   return {
-    id: e.reference,
+    id: e.id,
+    // Absent until the utlägg is submitted for attest — see reference in
+    // schema.prisma. The interface says so rather than inventing a placeholder.
+    reference: e.reference ?? undefined,
     title: e.title,
     submitterId: e.submitterId,
     submitterName: e.submitter.name,
@@ -165,7 +168,14 @@ export async function getExpenseSummaries(viewer?: Viewer): Promise<Expense[]> {
   const where = viewer ? expenseScopeWhere(await expenseScopeOf(viewer)) : {};
   const expenses = await prisma.expense.findMany({
     where,
-    orderBy: { reference: "desc" },
+    // Newest first. This used to sort on the reference, which no longer works:
+    // a draft has none until it is submitted, and null sorts apart from the
+    // numbered rows rather than into its place among them. createdAt is the
+    // order the references are handed out in anyway. It is not unique — a
+    // seeded batch shares a timestamp — so it carries a tiebreaker, without
+    // which Postgres may order tied rows differently per query and the HTML and
+    // the RSC payload disagree.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: summaryInclude,
   });
   const [ctx, prefixes] = await Promise.all([
@@ -182,7 +192,7 @@ export async function getExpenseSummaries(viewer?: Viewer): Promise<Expense[]> {
 // Full single expense for the detail page — adds the event timeline and the
 // verification's voucher lines on top of the summary shape.
 export async function getExpense(
-  reference: string,
+  id: string,
   viewer?: Viewer,
 ): Promise<Expense | null> {
   // The scope goes into the lookup rather than after it: an expense the viewer
@@ -190,7 +200,7 @@ export async function getExpense(
   // anyway (the page renders notFound, the API answers 404).
   const scopeWhere = viewer ? expenseScopeWhere(await expenseScopeOf(viewer)) : {};
   const e = await prisma.expense.findFirst({
-    where: { AND: [{ reference }, scopeWhere] },
+    where: { AND: [{ id }, scopeWhere] },
     include: {
       ...summaryInclude,
       // Several events can be written in one transaction and share a timestamp.

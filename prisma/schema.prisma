@@ -214,8 +214,12 @@ model ResultUnitOwner {
 }
 
 model Expense {
-  id        String @id @default(cuid())
-  reference String @unique // human-readable, e.g. "U-2026-0042"
+  id String @id @default(cuid())
+  // Human-readable, e.g. "D-26|0042" — see lib/domain/reference.ts. Null until
+  // the utlägg is submitted for attest: a draft is not yet a claim on the
+  // section, and numbering one would burn a number every time someone opens the
+  // wizard and walks away. Pages and API routes are keyed on `id`, not on this.
+  reference String? @unique
   title     String
 
   submitter   User   @relation("ExpenseSubmitter", fields: [submitterId], references: [id])

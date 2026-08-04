@@ -4,23 +4,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
 
-// A unique-constraint violation, which for this route can only be two people
-// claiming the same reference at once. Duck-typed rather than imported: the
-// code is Prisma's public contract for it and this is the only thing here that
-// cares which error it was.
-const isUniqueViolation = (e: unknown) =>
-  typeof e === "object" && e !== null && (e as { code?: unknown }).code === "P2002";
-
-async function withReferenceRetry<T>(run: () => Promise<T>, attempts = 5): Promise<T> {
-  for (let i = 1; ; i++) {
-    try {
-      return await run();
-    } catch (e) {
-      if (i >= attempts || !isUniqueViolation(e)) throw e;
-    }
-  }
-}
-
 // POST /api/expenses — body: { paymentType?, title?, matchedTransactionId? }
 export async function POST(req: Request) {
   const g = await gate();
@@ -55,41 +38,26 @@ export async function POST(req: Request) {
     }
   }
 
-  const create = () =>
-    prisma.$transaction(async (tx) => {
-      const prefix = `U-${new Date().getFullYear()}-`;
-      const last = await tx.expense.findFirst({
-        where: { reference: { startsWith: prefix } },
-        orderBy: { reference: "desc" },
-        select: { reference: true },
-      });
-      const nextNum = last ? parseInt(last.reference.slice(prefix.length), 10) + 1 : 1;
-      const reference = `${prefix}${String(nextNum).padStart(4, "0")}`;
-
-      const created = await tx.expense.create({
-        data: { reference, title, submitterId, paymentType, status: "DRAFT", matchedTransactionId },
-      });
-      await tx.expenseEvent.create({
-        data: { expenseId: created.id, type: "CREATED", actorId: submitterId },
-      });
-      if (matchedTransactionId) {
-        await tx.expenseEvent.create({
-          data: { expenseId: created.id, type: "MATCHED", actorId: submitterId },
-        });
-      }
-      return created;
+  // No reference yet. A draft is not a claim on the section — it is someone
+  // part-way through the wizard — and numbering it here means every abandoned
+  // upload takes a number out of the year's sequence for good. The number is
+  // handed out when the utlägg is submitted for attest; see the `submit` branch
+  // in expenses/[id]/transition/route.ts. Until then the row is known by its id,
+  // which is what every page and route is keyed on anyway.
+  const expense = await prisma.$transaction(async (tx) => {
+    const created = await tx.expense.create({
+      data: { title, submitterId, paymentType, status: "DRAFT", matchedTransactionId },
     });
+    await tx.expenseEvent.create({
+      data: { expenseId: created.id, type: "CREATED", actorId: submitterId },
+    });
+    if (matchedTransactionId) {
+      await tx.expenseEvent.create({
+        data: { expenseId: created.id, type: "MATCHED", actorId: submitterId },
+      });
+    }
+    return created;
+  });
 
-  // The reference is read-then-written, and two people filing an utlägg in the
-  // same moment both read the same "last" one. `Expense.reference` is unique, so
-  // the loser hits a constraint violation rather than stealing the number — the
-  // right outcome, but a 500 for someone who did nothing wrong. Take the number
-  // again instead. A handful of attempts covers any burst the section can
-  // produce; giving up is better than looping if something else is wrong.
-  const expense = await withReferenceRetry(create);
-
-  return NextResponse.json(
-    { id: expense.id, reference: expense.reference },
-    { status: 201 },
-  );
+  return NextResponse.json({ id: expense.id }, { status: 201 });
 }

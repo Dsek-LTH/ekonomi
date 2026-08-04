@@ -1,8 +1,13 @@
 // Drive an utlägg through its lifecycle. One endpoint, validated state machine.
 // Booking is separate (/book) because it creates a verification.
-// [id] param is the human reference.
+// [id] param is the expense id.
+//
+// This is also where an utlägg gets its human reference: submitting is the act
+// that turns a draft into a claim, so it is the first moment the section has
+// anything worth numbering. See lib/server/expense-reference.ts.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import { claimReference, withReferenceRetry } from "@/lib/server/expense-reference";
 import { canAttestAllocation, canReturnApproved, canUnexport, isAdmin } from "@/lib/domain/permissions";
 import { resultUnitNameForCode, getPrefixes, ownedResultUnits } from "@/lib/server/result-units";
 import { fail, gate } from "@/lib/api/guard";
@@ -42,7 +47,7 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const { id: reference } = await ctx.params;
+  const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
   const actor = g.actor;
@@ -53,7 +58,7 @@ export async function POST(
   const comment = typeof body.comment === "string" ? body.comment.trim() : "";
 
   const expense = await prisma.expense.findUnique({
-    where: { reference },
+    where: { id },
     include: {
       allocations: { include: { costCenter: true } },
       matchedTransaction: { select: { amount: true } },
@@ -134,7 +139,7 @@ export async function POST(
       where: { id: expense.id },
       select: { status: true },
     });
-    return NextResponse.json({ ok: true, reference, status: updated?.status });
+    return NextResponse.json({ ok: true, id, status: updated?.status });
   }
 
   // ── Withdraw your own attest ──────────────────────────────────────────────
@@ -180,7 +185,7 @@ export async function POST(
       });
     });
 
-    return NextResponse.json({ ok: true, reference, status: "PENDING_APPROVAL" });
+    return NextResponse.json({ ok: true, id, status: "PENDING_APPROVAL" });
   }
 
   // ── Return a wrongly-approved expense for changes ─────────────────────────
@@ -214,7 +219,7 @@ export async function POST(
         data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
       });
     });
-    return NextResponse.json({ ok: true, reference, status: "CHANGES_REQUESTED" });
+    return NextResponse.json({ ok: true, id, status: "CHANGES_REQUESTED" });
   }
 
   // Undo an export: EXPORTED → BOOKED, clearing the Fortnox voucher reference
@@ -251,7 +256,7 @@ export async function POST(
         data: { expenseId: expense.id, type: "EXPORT_REVERTED", actorId, comment },
       });
     });
-    return NextResponse.json({ ok: true, reference, status: "BOOKED" });
+    return NextResponse.json({ ok: true, id, status: "BOOKED" });
   }
 
   // ── Simple state-machine transitions ──────────────────────────────────────
@@ -339,24 +344,37 @@ export async function POST(
     return fail(422, "expense.commentRequired");
   }
 
-  await prisma.$transaction(async (tx) => {
-    // Clear allocation approvals when going back to editable state.
-    if (rule.to === "CHANGES_REQUESTED") {
-      await tx.expenseCostAllocation.updateMany({
-        where: { expenseId: expense.id },
-        data: { approvedById: null, approvedAt: null },
+  const written = await withReferenceRetry(() =>
+    prisma.$transaction(async (tx) => {
+      // Clear allocation approvals when going back to editable state.
+      if (rule.to === "CHANGES_REQUESTED") {
+        await tx.expenseCostAllocation.updateMany({
+          where: { expenseId: expense.id },
+          data: { approvedById: null, approvedAt: null },
+        });
+      }
+      // The number, on the way in. Only on submit, and only once: an utlägg sent
+      // back for changes and re-submitted keeps the number it was already known
+      // by — to everyone who has seen it, it is the same utlägg.
+      const reference =
+        action === "submit" && expense.reference === null
+          ? await claimReference(tx)
+          : undefined;
+      await tx.expense.update({
+        where: { id: expense.id },
+        data: { status: rule.to, ...(reference ? { reference } : {}) },
       });
-    }
-    await tx.expense.update({ where: { id: expense.id }, data: { status: rule.to } });
-    await tx.expenseEvent.create({
-      data: {
-        expenseId: expense.id,
-        type: rule.event as Parameters<typeof tx.expenseEvent.create>[0]["data"]["type"],
-        actorId,
-        comment: comment || null,
-      },
-    });
-  });
+      await tx.expenseEvent.create({
+        data: {
+          expenseId: expense.id,
+          type: rule.event as Parameters<typeof tx.expenseEvent.create>[0]["data"]["type"],
+          actorId,
+          comment: comment || null,
+        },
+      });
+      return reference ?? expense.reference;
+    }),
+  );
 
-  return NextResponse.json({ ok: true, reference, status: rule.to });
+  return NextResponse.json({ ok: true, id, reference: written, status: rule.to });
 }

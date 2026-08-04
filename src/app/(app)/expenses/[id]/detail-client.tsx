@@ -78,7 +78,14 @@ function ExpenseDetail({
     <PageShell
       width="content"
       title={expense.title}
-      subtitle={`${expense.id} - ${expense.submitterName}`}
+      // Before it is submitted there is no reference to show, and the status
+      // pill below already says so — the name alone, not a gap where a number
+      // would be.
+      subtitle={
+        expense.reference
+          ? `${expense.reference} - ${expense.submitterName}`
+          : expense.submitterName
+      }
       description={<StatusPill status={expense.status} />}
       back={{ href: "/expenses", label: tNav("expenses") }}
       action={

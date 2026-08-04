@@ -1,5 +1,5 @@
 // Book an approved expense (POST) or amend a booked voucher before export
-// (PATCH). The [id] param is the human reference (e.g. U-2026-0043).
+// (PATCH). The [id] param is the expense id.
 //
 // Both handlers do the same work on the same rows and differ only in which
 // status they accept and whether the verification is created or replaced, so
@@ -103,12 +103,12 @@ const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
 // Authority + the expense. Booking creates a verification in the section's
 // books, so it is bookkeepers only — the status checks below say *which*
 // utlägg, never *who*.
-async function loadForBooking(reference: string) {
+async function loadForBooking(id: string) {
   const g = await gate(canBookkeep, "auth.bookkeeperBook");
   if (!g.ok) return { ok: false as const, res: g.res };
 
   const expense = await prisma.expense.findUnique({
-    where: { reference },
+    where: { id },
     include: { verification: true },
   });
   if (!expense) return { ok: false as const, res: fail(404, "expense.notFound") };
@@ -155,8 +155,8 @@ function voucherMeta(
 
 // POST — create the voucher for an APPROVED expense and flip it to BOOKED.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id: reference } = await ctx.params;
-  const loaded = await loadForBooking(reference);
+  const { id } = await ctx.params;
+  const loaded = await loadForBooking(id);
   if (!loaded.ok) return loaded.res;
   const { actor, expense } = loaded;
 
@@ -191,13 +191,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   });
 
-  return NextResponse.json({ ok: true, reference }, { status: 201 });
+  return NextResponse.json({ ok: true, id }, { status: 201 });
 }
 
 // PATCH — amend the konteringsrader of a BOOKED (not yet EXPORTED) verification.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id: reference } = await ctx.params;
-  const loaded = await loadForBooking(reference);
+  const { id } = await ctx.params;
+  const loaded = await loadForBooking(id);
   if (!loaded.ok) return loaded.res;
   const { actor, expense } = loaded;
 
@@ -240,5 +240,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     });
   });
 
-  return NextResponse.json({ ok: true, reference }, { status: 200 });
+  return NextResponse.json({ ok: true, id }, { status: 200 });
 }

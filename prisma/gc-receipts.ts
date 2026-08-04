@@ -16,6 +16,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/lib/generated/prisma/client";
 import { bucket, deleteKeys, listObjects } from "./storage-admin";
+import { expenseLabel } from "../src/lib/domain/reference";
 
 // Standalone run — load .env ourselves, as seed.ts does.
 process.loadEnvFile?.(".env");
@@ -40,6 +41,7 @@ async function supersededReceipts() {
   const grouped = await prisma.expense.findMany({
     where: { receipts: { some: {} } },
     select: {
+      id: true,
       reference: true,
       receipts: {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }], // same order the app reads
@@ -48,7 +50,7 @@ async function supersededReceipts() {
     },
   });
   return grouped.flatMap((e) =>
-    e.receipts.slice(1).map((r) => ({ ...r, reference: e.reference })),
+    e.receipts.slice(1).map((r) => ({ ...r, expense: expenseLabel(e) })),
   );
 }
 
@@ -101,7 +103,7 @@ async function main() {
       0,
     );
     console.log(`\n${superseded.length} ersatta kvitton som inget utlägg visar (${mb(bytes)}):`);
-    for (const r of superseded) console.log(`   ${r.reference}: ${r.filename}  (${r.id})`);
+    for (const r of superseded) console.log(`   ${r.expense}: ${r.filename}  (${r.id})`);
 
     if (shouldDelete) {
       // Files before rows, as everywhere else: a row kept beside a deleted file

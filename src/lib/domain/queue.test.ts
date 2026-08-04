@@ -15,7 +15,8 @@ const viewer = (roles: Role[], id = ME) => ({ id, roles });
 // a full Expense in every case.
 function expense(over: Partial<Expense> & { status: ExpenseStatus }): Expense {
   return {
-    id: "U-2026-0001",
+    id: "e_1",
+    reference: "D-26|0001",
     title: "Fika till mötet",
     submitterId: ME,
     submitterName: "Jag",

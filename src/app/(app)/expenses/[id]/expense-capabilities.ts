@@ -49,7 +49,7 @@ export function expenseCapabilities(
   const isOwner = expense.submitterId === viewer.id;
   const submittable = isSubmittable(expense.status);
   const mayAct = isOwner || admin;
-  const blocker = submitBlocker(expense);
+  const blocker = submitBlocker({ ...expense, hasReceipt: Boolean(expense.receiptId) });
 
   const canSubmit = submittable && mayAct && !blocker;
   const canApprove =

@@ -258,6 +258,8 @@
       "newTitle": "New expense",
       "newDescription": "Upload the receipt and fill in the details.",
       "editTitle": "Edit {id}",
+      "editTitleDraft": "Edit draft",
+      "draftLabel": "Draft",
       "editDescription": "Change the details and save. The change is logged in the history.",
       "save": "Save",
       "saveDraft": "Save draft",
@@ -677,6 +679,7 @@
     "colCard": "Card",
     "colAmount": "Amount",
     "colExpense": "Expense",
+    "expenseStarted": "Started",
     "account": "Account for it",
     "searchPlaceholder": "Search purchases…",
     "noMatch": "No purchases match the filter."
@@ -709,12 +712,20 @@
     "colDate": "Date",
     "colTransaction": "Transaction",
     "colHolder": "Card holder / Card",
-    "colStatus": "Status",
+    "colExpense": "Expense",
     "colAmount": "Amount",
-    "matchedWith": "Matched · {id}",
-    "unmatched": "Unmatched",
+    "matched": "Matched",
     "searchPlaceholder": "Search the statement...",
-    "noMatch": "No transactions match the filter."
+    "noMatch": "No transactions match the filter.",
+    "csvHelp": {
+      "label": "About the CSV file",
+      "title": "Transaction report from the bank",
+      "source": "Export a Transaktionsrapport as CSV from the section's business account in Swedbank/Sparbanken.",
+      "format": "Upload the file exactly as it comes. Columns are read by position (Radnr … Belopp), so a file reordered or re-saved in Excel is read wrongly.",
+      "cards": "A card purchase is tied to its card by a trailing K#### in Referens. Card numbers not seen before are added under Sektionskort automatically.",
+      "duplicates": "Rows already imported are skipped — the same file can be uploaded again without creating duplicates.",
+      "limits": "Maximum 5 MB. The character encoding (Windows-1252) is handled for you."
+    }
   },
   "bookkeeping": {
     "title": "Bookkeeping",

@@ -30,8 +30,13 @@ type SubmitCandidate = {
   paymentType: PaymentType;
   matchedTransactionId?: string;
   submitterHasPayout: boolean;
-  /** The receipt is the underlag the whole utlägg rests on — see below. */
-  receiptId?: string | null;
+  /**
+   * Whether there is a receipt — the underlag the whole utlägg rests on, see
+   * below. Not its id: the wizard holds the picked file in the browser until
+   * the utlägg is saved, so for most of the time this question is asked there
+   * is a receipt and nothing has an id for it yet.
+   */
+  hasReceipt: boolean;
   allocations: { amount: number; costCenterCode: string }[];
 };
 
@@ -60,7 +65,7 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
   // evidence it happened — bokföringslagen wants that underlag kept, and an
   // attester has nothing to attest without it. Named separately from the rest
   // of the missing details because it's the one that can't be typed in.
-  if (!e.receiptId) return "receipt";
+  if (!e.hasReceipt) return "receipt";
   // A return is a negative amount, so the amount is only missing when it's zero
   // (or not a number at all) — `!` covers both.
   // A half-typed date ("2026", "2026-07") counts as missing, not as a date:

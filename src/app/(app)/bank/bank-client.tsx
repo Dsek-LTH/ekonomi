@@ -6,7 +6,7 @@ import { PageShell } from "@/components/page-shell";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { Tag } from "@/components/ui/status-pill";
+import { InfoHint } from "@/components/ui/info-hint";
 import { IconUpload, IconTrash } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import { useTableControls } from "@/components/ui/table-controls";
@@ -20,6 +20,7 @@ import {
   bankDateColumn,
   bankDescriptionColumn,
   bankHolderColumn,
+  bankMatchedColumn,
 } from "@/components/bank-columns";
 import { useFormat } from "@/lib/ui/use-format";
 import type { BankTransaction } from "@/lib/domain/types";
@@ -92,15 +93,12 @@ export default function BankClient({
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
     bankHolderColumn(t("colHolder")),
-    {
-      key: "status",
-      header: t("colStatus"),
-      cell: (tx) => (
-        <Tag tone={tx.matchedExpenseId ? "success" : "neutral"}>
-          {tx.matchedExpenseId ? t("matchedWith", { id: tx.matchedExpenseId }) : t("unmatched")}
-        </Tag>
-      ),
-    },
+    // Was a status pill saying "Matchad · D-26|0039". It said the same thing
+    // this does, in more words and without going anywhere — and the tabs above
+    // already sort matched from unmatched, which is the only part a pill was
+    // adding. Same column as on Kortköp, so the two tables answer "which
+    // utlägg" the same way.
+    bankMatchedColumn(t("colExpense"), { linked: t("matched") }),
     bankAmountColumn(t("colAmount")),
     {
       key: "actions",
@@ -144,14 +142,26 @@ export default function BankClient({
                 }}
               />
 
-              <Button
-                size="sm"
-                loading={importing}
-                onClick={() => fileRef.current?.click()}
-              >
-                <IconUpload className="size-4" />
-                {t("pickCsv")}
-              </Button>
+              <span className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  loading={importing}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <IconUpload className="size-4" />
+                  {t("pickCsv")}
+                </Button>
+                <InfoHint label={t("csvHelp.label")}>
+                  <span className="block font-medium text-foreground">
+                    {t("csvHelp.title")}
+                  </span>
+                  <span className="mt-1 block">{t("csvHelp.source")}</span>
+                  <span className="mt-1.5 block">{t("csvHelp.format")}</span>
+                  <span className="mt-1.5 block">{t("csvHelp.cards")}</span>
+                  <span className="mt-1.5 block">{t("csvHelp.duplicates")}</span>
+                  <span className="mt-1.5 block">{t("csvHelp.limits")}</span>
+                </InfoHint>
+              </span>
             </>
           )}
         />

@@ -50,7 +50,14 @@ const FLOATING_BTN =
   "flex size-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-surface";
 
 type Source = {
-  receiptId: string | null;
+  /**
+   * Where to read the receipt from — the archive, or a local URL for one the
+   * page is still holding (the wizard keeps the picked file in the browser
+   * until the utlägg is saved). The panel doesn't care which: showing a receipt
+   * is showing whatever is at this address, and "is there one" is this being
+   * set at all.
+   */
+  src: string | null;
   mimeType: string;
   /** Only the image's alt text — the panel itself is never titled. */
   filename?: string;
@@ -102,7 +109,7 @@ export function useReceiptTabShowing(): boolean {
 /** A page waiting for a receipt keeps the panel open — there'd be nothing to
  *  fold away, and folding is how you'd lose the only way to add one. */
 const isAwaitingUpload = (source: Source | null) =>
-  Boolean(source && !source.receiptId && source.upload);
+  Boolean(source && !source.src && source.upload);
 
 const writeCookie = (name: string, value: string) => {
   document.cookie = `${name}=${value}; path=/; max-age=31536000; samesite=lax`;
@@ -146,6 +153,7 @@ export function ReceiptPanelProvider({
  */
 export function ReceiptPanelSource({
   receiptId,
+  previewUrl,
   mimeType,
   filename,
   onFile,
@@ -154,6 +162,13 @@ export function ReceiptPanelSource({
   emptyDescription,
 }: {
   receiptId: string | null;
+  /**
+   * A receipt the page has but the archive doesn't yet — an object URL for a
+   * file just picked. Shown ahead of `receiptId`, so replacing a stored receipt
+   * shows the new one from the moment it is chosen rather than the old one
+   * until the save goes through.
+   */
+  previewUrl?: string | null;
   mimeType: string;
   filename?: string;
   /** Makes the panel accept a receipt as well as show one. */
@@ -174,14 +189,15 @@ export function ReceiptPanelSource({
   });
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
+  const src = previewUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
 
   useEffect(() => {
-    if (!receiptId && !accepts && !emptyTitle) {
+    if (!src && !accepts && !emptyTitle) {
       setSource(null);
       return;
     }
     setSource({
-      receiptId,
+      src,
       mimeType,
       filename,
       upload: accepts ? { onFile: stableOnFile, uploading } : undefined,
@@ -189,7 +205,7 @@ export function ReceiptPanelSource({
     });
     return () => setSource(null);
   }, [
-    receiptId,
+    src,
     mimeType,
     filename,
     accepts,
@@ -222,7 +238,7 @@ export function ReceiptPanelColumn() {
   useEffect(() => {
     const now = {
       source: Boolean(source),
-      receipt: Boolean(source?.receiptId),
+      receipt: Boolean(source?.src),
       awaiting: awaitingUpload,
     };
     const appeared = now.source && !was.current.source;
@@ -314,7 +330,7 @@ export function ReceiptPanelColumn() {
           <IconX className="size-4 md:hidden" />
         </button>
       )}
-      {upload && source.receiptId && (
+      {upload && source.src && (
         <button
           type="button"
           onClick={pick}
@@ -329,9 +345,9 @@ export function ReceiptPanelColumn() {
     </div>
   );
 
-  const body = source.receiptId ? (
+  const body = source.src ? (
     <ReceiptViewer
-      receiptId={source.receiptId}
+      src={source.src}
       mimeType={source.mimeType}
       filename={source.filename}
       className="min-h-0 flex-1"

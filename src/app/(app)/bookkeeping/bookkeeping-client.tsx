@@ -16,6 +16,7 @@ import {
   expenseTitleColumn,
 } from "@/components/expense-columns";
 import { isSigned } from "@/lib/domain/status";
+import { expenseLabel } from "@/lib/domain/reference";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { stopClick } from "@/lib/ui/utils";
@@ -53,13 +54,17 @@ export default function BookkeepingClient({
   // Bookkeeping picks up where approval ends: approved, booked, exported.
   const base = expenses.filter((e) => isSigned(e.status));
 
-  async function doExport(id: string) {
+  // Keyed on the utlägg's id, spoken about by its reference — anything
+  // exportable has been through attest, so it has one.
+  async function doExport(expense: Expense) {
+    const id = expense.id;
+    const name = expenseLabel(expense);
     const data = await mutate(`/api/expenses/${id}/export`, {
       key: id,
-      error: t("exportFailed", { id }),
+      error: t("exportFailed", { id: name }),
     });
     if (!data) return;
-    const done = t("exportDone", { id, label: String(data.label) });
+    const done = t("exportDone", { id: name, label: String(data.label) });
     // The warning describes itself, so it's passed through verbatim.
     if (data.attachWarning) {
       notify.info(`${done}. ${tExpense("export.attachWarning", { detail: String(data.attachWarning) })}`);
@@ -105,7 +110,7 @@ export default function BookkeepingClient({
                 loading={pending === e.id}
                 disabled={exportBlocked !== null}
                 aria-label={exportBlocked ?? undefined}
-                onClick={() => doExport(e.id)}
+                onClick={() => doExport(e)}
               >
                 {t("export")}
               </Button>

@@ -45,7 +45,9 @@ function looksLikeTrackpad(e: WheelEvent): boolean {
 }
 
 export interface ReceiptViewerProps {
-  receiptId: string;
+  /** Where the file is — an archive URL, or a local one for a file not yet
+   *  uploaded. The viewer only ever reads it. */
+  src: string;
   mimeType: string;
   filename?: string;
   /** Sizing/framing for the inline (non-fullscreen) viewer. */
@@ -53,13 +55,12 @@ export interface ReceiptViewerProps {
 }
 
 export default function ReceiptViewerImpl({
-  receiptId,
+  src,
   mimeType,
   filename,
   className,
 }: ReceiptViewerProps) {
   const t = useTranslations("receipt");
-  const src = `/api/receipts/${receiptId}`;
   const isPdf = mimeType === "application/pdf";
 
   const [fullscreen, setFullscreen] = useState(false);
@@ -71,7 +72,11 @@ export default function ReceiptViewerImpl({
   // it re-fails without having asked anyone anything.
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const fileSrc = attempt ? `${src}?retry=${attempt}` : src;
+  // The cache-busting query only makes sense for a URL that was fetched. A
+  // blob: URL is the browser's own copy — it cannot fail this way, and a query
+  // string appended to one addresses nothing.
+  const fetched = !src.startsWith("blob:");
+  const fileSrc = attempt && fetched ? `${src}?retry=${attempt}` : src;
   const retry = () => {
     setFailed(false);
     setAttempt((n) => n + 1);

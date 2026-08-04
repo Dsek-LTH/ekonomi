@@ -1,5 +1,5 @@
 // Edit an utlägg. Only allowed before signing (see EDITABLE_STATUSES). Records
-// an EDITED event with a structured diff + human summary. [id] = human reference.
+// an EDITED event with a structured diff + human summary. [id] = expense id.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObject } from "@/lib/server/storage";
@@ -9,6 +9,7 @@ import {
   isLateReimbursement,
 } from "@/lib/domain/status";
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
+import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import {
   canEditExpense,
@@ -26,13 +27,13 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const { id: reference } = await ctx.params;
+  const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
   const body = await req.json().catch(() => ({}));
 
   const expense = await prisma.expense.findUnique({
-    where: { reference },
+    where: { id },
     include: {
       allocations: { include: { costCenter: true } },
     },
@@ -169,7 +170,7 @@ export async function PATCH(
 
   const changedFields = Object.keys(diff);
   if (changedFields.length === 0 && !newAllocs) {
-    return NextResponse.json({ ok: true, reference, changed: 0 });
+    return NextResponse.json({ ok: true, id, changed: 0 });
   }
 
   try {
@@ -212,7 +213,7 @@ export async function PATCH(
     return fail(500, err instanceof Error ? err.message : "database");
   }
 
-  return NextResponse.json({ ok: true, reference, changed: changedFields.length }, { status: 200 });
+  return NextResponse.json({ ok: true, id, changed: changedFields.length }, { status: 200 });
 }
 
 // DELETE — admin deletes any; owner deletes own while not yet attested.
@@ -220,12 +221,12 @@ export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const { id: reference } = await ctx.params;
+  const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
 
   const expense = await prisma.expense.findUnique({
-    where: { reference },
+    where: { id },
     include: { receipts: { select: { objectKey: true, thumbnailKey: true } } },
   });
   if (!expense) return fail(404, "expense.notFound");
@@ -245,7 +246,7 @@ export async function DELETE(
   const failed = results.filter((r) => r.status === "rejected");
   if (failed.length > 0) {
     console.error(
-      `[expenses] ${expense.reference}: ${failed.length}/${keys.length} receipt objects could not be deleted, keeping utlägg`,
+      `[expenses] ${expenseLabel(expense)}: ${failed.length}/${keys.length} receipt objects could not be deleted, keeping utlägg`,
       failed.map((f) => f.reason),
     );
     return fail(503, "expense.receiptDeleteFailed");

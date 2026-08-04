@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { useTranslations } from "next-intl";
@@ -87,7 +87,6 @@ export default function NewExpenseClient({
     return id ? bankTransactions.find((t) => t.id === id) : undefined;
   })();
   const [step, setStep] = useState(0);
-  const [uploading, setUploading] = useState(false);
   // CARD is only offered to card holders; the expense being edited keeps its
   // type as an option even if the user no longer holds a card.
   const paymentTypes = PAYMENT_TYPES.filter(
@@ -133,8 +132,8 @@ export default function NewExpenseClient({
   const [matchId, setMatchId] = useState<string | null>(
     existing?.matchedTransactionId ?? (presetTxn ? presetTxn.id : null),
   );
-  // One busy scope for the whole wizard: saving, submitting and uploading all
-  // block the same footer.
+  // One busy scope for the whole wizard: saving and submitting — and the
+  // receipt upload inside them — block the same footer.
   const { pending, mutate } = useMutation();
   const saving = pending === "save";
   const saveLabel = editing ? t("save") : t("saveDraft");
@@ -146,49 +145,73 @@ export default function NewExpenseClient({
   // happened.
   const [exit, setExit] = useState<"draft" | "submit" | null>(null);
 
-  // Real receipt upload (browser → Next route → MinIO), driven by the receipt
-  // panel. When editing, the draft is the existing expense (its reference works
-  // for both PATCH and receipts).
-  // Both come from the same POST, so they're one piece of state — "either both
-  // or neither" then isn't a case anyone has to remember to handle.
-  const [draft, setDraft] = useState<{ id: string; reference: string } | null>(
-    existing ? { id: existing.id, reference: existing.id } : null,
-  );
-  const reference = draft?.reference ?? null;
+  // The utlägg's own id, once there is a row for it. Null all the way through a
+  // new utlägg until the moment it is saved — see `persist`. The id and not the
+  // reference: an utlägg has no reference until it is submitted (see
+  // lib/domain/reference.ts), and every route this page calls is keyed on the id.
+  const [draftId, setDraftId] = useState<string | null>(existing?.id ?? null);
+  // The receipt already in the archive, if any. Only an utlägg being edited
+  // starts with one.
   const [receiptId, setReceiptId] = useState<string | null>(existing?.receiptId ?? null);
   const [uploadedMime, setUploadedMime] = useState<string>(existing?.receiptMimeType ?? "");
   const [uploadedName, setUploadedName] = useState<string>(existing?.receiptId ? tReceipt("alt") : "");
 
-  // Create a DRAFT expense once, then reuse it for further uploads.
-  async function ensureDraft(): Promise<{ id: string; reference: string } | null> {
-    if (draft) return draft;
-    const data = await mutate("/api/expenses", {
-      body: { paymentType, matchedTransactionId: presetTxn?.id ?? null },
-      error: t("createFailed"),
-    });
-    if (!data) return null;
-    const created = { id: data.id as string, reference: data.reference as string };
-    setDraft(created);
-    return created;
+  // The receipt as picked, before it is anywhere but this browser. Dropping a
+  // file used to create the utlägg and upload on the spot, which meant walking
+  // away from a half-filled wizard left a bare row and a stored file behind,
+  // and every abandoned attempt was something a bookkeeper later had to look at
+  // and dismiss. Now the file waits here and goes up with the save, so leaving
+  // the page leaves nothing.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // A local URL to show it by, since there is no /api/receipts/:id to read it
+  // from yet. Revoked when it is replaced and when the page goes — otherwise
+  // the browser holds the file for as long as the tab lives.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // One cleanup covers both ways a preview ends — a second file replacing the
+  // first, and the page going away — because either is this value changing.
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  function handleFile(file: File) {
+    setPendingFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setUploadedMime(file.type);
+    setUploadedName(file.name);
   }
 
-  async function handleFile(file: File) {
-    setUploading(true);
-    const created = await ensureDraft();
+  // Whether there is a receipt, which is the only form of the question this
+  // page ever asks — every gate here (continue, save, submit) wants "has the
+  // reader produced one", not "is one in the archive". Those were the same
+  // thing while the upload happened on drop; they aren't now, and asking for
+  // `receiptId` gets a "no" while the receipt is on screen.
+  const hasReceipt = Boolean(receiptId || pendingFile);
+
+  // Put the waiting receipt in the archive, if there is one. Part of saving
+  // now, so it can fail the save: an utlägg whose receipt didn't make it is not
+  // saved but half saved, and the next attempt tries the upload again against
+  // the row that by then already exists.
+  async function writeReceipt(id: string): Promise<boolean> {
+    if (!pendingFile) return true;
     const fd = new FormData();
-    fd.append("file", file);
-    const receipt = created && await mutate(`/api/expenses/${created.id}/receipts`, {
+    fd.append("file", pendingFile);
+    const receipt = await mutate(`/api/expenses/${id}/receipts`, {
+      key: "save",
       body: fd,
       error: t("uploadFailed"),
+      refresh: false,
     });
-    if (!receipt) {
-      setUploading(false);
-      return;
-    }
+    if (!receipt) return false;
     setReceiptId(receipt.id as string);
-    setUploadedMime((receipt.mimeType as string) ?? file.type);
-    setUploadedName((receipt.filename as string) ?? file.name);
-    setUploading(false);
+    setUploadedMime((receipt.mimeType as string) ?? pendingFile.type);
+    setUploadedName((receipt.filename as string) ?? pendingFile.name);
+    // It is in the archive now, so the panel reads it from there. Dropping the
+    // preview is what makes that happen — kept, it would go on pointing at a
+    // local copy that the effect above is about to revoke.
+    setPendingFile(null);
+    setPreviewUrl(null);
+    return true;
   }
 
   const candidates = useMemo(() => {
@@ -236,7 +259,7 @@ export default function NewExpenseClient({
   // whole date that has already happened and is still in time, and a cost
   // centre on every row.
   const filledForm =
-    Boolean(receiptId) &&
+    hasReceipt &&
     parseSEK(form.gross) !== 0 &&
     dateComplete &&
     !dateInFuture &&
@@ -250,14 +273,15 @@ export default function NewExpenseClient({
   // Saving a draft is allowed with fields still empty, but not with a partial
   // date — that would be stored as 1 January of the year typed so far — and not
   // with one that hasn't happened yet, which the server refuses anyway. And not
-  // before the receipt: the draft utlägg is created by the first upload, so
-  // until then there is nothing on the server to save any of this into.
+  // before the receipt: an utlägg is a claim about a purchase, and the receipt
+  // is what makes it one. It no longer has to be uploaded by then — a file
+  // waiting in the browser counts, and goes up as part of the save.
   const canPersist =
     form.title.trim() !== "" &&
     !dateIncomplete &&
     !dateInFuture &&
     !dateTooLate &&
-    Boolean(reference) &&
+    hasReceipt &&
     !saving;
   // Everything required to send for attest (complete details + match/payout);
   // `blocker` names the first missing piece, for the hint below.
@@ -266,7 +290,7 @@ export default function NewExpenseClient({
     purchaseDate: form.purchaseDate,
     grossAmount: grossSEK,
     paymentType,
-    receiptId,
+    hasReceipt,
     // Only a match that still cancels out counts, so a stale one shows the
     // "match it first" hint rather than letting submit fail at the server.
     matchedTransactionId: matchDone ? matchId ?? undefined : undefined,
@@ -277,11 +301,30 @@ export default function NewExpenseClient({
     })),
   });
 
-  // Save the reviewed fields onto the draft/existing expense. For card
-  // purchases the bank match is persisted via its own endpoint.
-  async function persist(): Promise<boolean> {
-    if (!reference) return false;
-    const saved = await mutate(`/api/expenses/${reference}`, {
+  // Everything this wizard writes, in the order it has to happen: the utlägg
+  // itself, then its receipt, then the reviewed fields, then the bank match for
+  // a card purchase. Nothing before this — a wizard that was opened and left
+  // alone has written nothing at all.
+  //
+  // Returns the utlägg's id rather than a bare success, because on a first save
+  // the caller has no other way to know it: `draftId` is set here, and state
+  // set inside a handler isn't readable from the rest of that same handler.
+  async function persist(): Promise<string | null> {
+    let id = draftId;
+    if (!id) {
+      const created = await mutate("/api/expenses", {
+        key: "save",
+        body: { paymentType, matchedTransactionId: presetTxn?.id ?? null },
+        error: t("createFailed"),
+        // Nothing on screen shows it yet — the steps after this one do.
+        refresh: false,
+      });
+      if (!created) return null;
+      id = created.id as string;
+      setDraftId(id);
+    }
+    if (!(await writeReceipt(id))) return null;
+    const saved = await mutate(`/api/expenses/${id}`, {
       key: "save",
       method: "PATCH",
       body: {
@@ -297,39 +340,41 @@ export default function NewExpenseClient({
       },
       error: t("saveFailed"),
     });
-    if (!saved) return false;
-    if (paymentType !== "CARD") return true;
-    const matched = await mutate(`/api/expenses/${reference}/match`, {
+    if (!saved) return null;
+    if (paymentType !== "CARD") return id;
+    const matched = await mutate(`/api/expenses/${id}/match`, {
       key: "save",
       body: { transactionId: matchId },
       error: t("matchSaveFailed"),
     });
-    return matched !== null;
+    return matched === null ? null : id;
   }
 
   // Both exits from the wizard save first, then land on the expense itself.
-  function done() {
-    router.push(`/expenses/${reference}`);
+  function done(id: string) {
+    router.push(`/expenses/${id}`);
     router.refresh();
   }
 
   async function saveDraft() {
     setExit("draft");
-    if (!(await persist())) {
+    const id = await persist();
+    if (!id) {
       setExit(null);
       return;
     }
     notify.success(editing ? t("savedChanges") : t("savedDraft"));
-    done();
+    done(id);
   }
 
   async function submitExpense() {
     setExit("submit");
-    if (!(await persist())) {
+    const id = await persist();
+    if (!id) {
       setExit(null);
       return;
     }
-    const sent = await mutate(`/api/expenses/${reference}/transition`, {
+    const sent = await mutate(`/api/expenses/${id}/transition`, {
       key: "save",
       body: { action: "submit" },
       error: t("submitFailed"),
@@ -339,17 +384,26 @@ export default function NewExpenseClient({
       return;
     }
     notify.success(t("submitted"));
-    done();
+    done(id);
   }
 
   return (
     <PageShell
-      title={editing ? t("editTitle", { id: existing!.id }) : t("newTitle")}
+      title={
+        editing
+          ? existing!.reference
+            ? t("editTitle", { id: existing!.reference })
+            : t("editTitleDraft")
+          : t("newTitle")
+      }
       description={editing ? t("editDescription") : t("newDescription")}
       back={
         // Editing belongs to the expense it changes; a new one to the list.
         editing
-          ? { href: `/expenses/${existing!.id}`, label: existing!.id }
+          ? {
+              href: `/expenses/${existing!.id}`,
+              label: existing!.reference ?? t("draftLabel"),
+            }
           : { href: "/expenses", label: tNav("expenses") }
       }
       width="content"
@@ -361,10 +415,11 @@ export default function NewExpenseClient({
           wizard has no upload step of its own. */}
       <ReceiptPanelSource
         receiptId={receiptId}
+        previewUrl={previewUrl}
         mimeType={uploadedMime}
         filename={uploadedName || tReceipt("alt")}
         onFile={handleFile}
-        uploading={uploading}
+        uploading={saving}
       />
 
       {/* Step 1 — the details, beside the receipt */}
@@ -445,7 +500,7 @@ export default function NewExpenseClient({
             {/* The receipt is a condition like any other, and the one that
                 isn't in this card — without saying so, Fortsätt is a dead
                 button with its reason off at the edge of the screen. */}
-            {!receiptId && (
+            {!hasReceipt && (
               <p className="text-xs text-warning">{t("receiptRequired")}</p>
             )}
             {/* No back: this is the first step now. */}

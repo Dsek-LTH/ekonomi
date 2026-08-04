@@ -21,6 +21,7 @@ import { Amount } from "@/components/ui/amount";
 import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { voucherBlocker } from "@/lib/domain/voucher";
+import { expenseLabel } from "@/lib/domain/reference";
 import { DateInput, Field } from "@/components/ui/field";
 import { cn, uid } from "@/lib/ui/utils";
 import type { CostCenter, Expense } from "@/lib/domain/types";
@@ -279,11 +280,15 @@ export default function BookExpenseClient({
     short: c.code,
   }));
 
+  // Anything bookable has been through attest, so it has a reference; the
+  // fallback is only here so the page can't render a blank where a name goes.
+  const label = expenseLabel(expense);
+
   return (
     <PageShell
-      title={mode === "edit" ? t("editTitle", { id: expense.id }) : t("createTitle", { id: expense.id })}
+      title={mode === "edit" ? t("editTitle", { id: label }) : t("createTitle", { id: label })}
       description={mode === "edit" ? t("editDescription") : t("createDescription")}
-      back={{ href: `/expenses/${expense.id}`, label: expense.id }}
+      back={{ href: `/expenses/${expense.id}`, label }}
       width="wide"
     >
 

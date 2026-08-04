@@ -11,9 +11,15 @@ import {
   receiptKey,
   receiptThumbKey,
 } from "@/lib/server/storage";
-import { asJpegName, isNormalisableImage, normaliseImage } from "@/lib/server/images";
+import {
+  isNormalisableImage,
+  normaliseImage,
+  normalisedExtension,
+  normalisedName,
+} from "@/lib/server/images";
 import { isEditable } from "@/lib/domain/status";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
+import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 
@@ -29,10 +35,7 @@ export async function POST(
   const g = await gate();
   if (!g.ok) return g.res;
 
-  // Accept either the cuid (wizard flow) or the human reference (edit page).
-  const expense = await prisma.expense.findFirst({
-    where: { OR: [{ id: expenseId }, { reference: expenseId }] },
-  });
+  const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!expense) return fail(404, "expense.notFound");
 
   // Adding a receipt changes the utlägg, so it follows the edit rule: the
@@ -88,8 +91,8 @@ export async function POST(
     select: { id: true, objectKey: true, thumbnailKey: true },
   });
 
-  // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled) and get a
-  // thumbnail; PDFs are stored as-is. Collect the objects to write, plus the
+  // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled — but PNG when
+  // the image is see-through) and get a thumbnail; PDFs are stored as-is. Collect the objects to write, plus the
   // row's metadata, then persist atomically (object first, row second).
   let filename = file.name;
   let mimeType: string = fileType;
@@ -104,12 +107,12 @@ export async function POST(
     } catch {
       return fail(422, "receipt.unreadable");
     }
-    filename = asJpegName(file.name);
+    filename = normalisedName(file.name, normalised.mimeType);
     mimeType = normalised.mimeType;
     byteSize = normalised.full.length;
-    thumbnailKey = receiptThumbKey(expense.id, receiptId);
+    thumbnailKey = receiptThumbKey(expense.id, receiptId, normalisedExtension(normalised.mimeType));
     objects.push({ key: receiptKey(expense.id, receiptId, filename), body: normalised.full, contentType: mimeType });
-    objects.push({ key: thumbnailKey, body: normalised.thumb, contentType: "image/jpeg" });
+    objects.push({ key: thumbnailKey, body: normalised.thumb, contentType: mimeType });
   } else {
     objects.push({ key: receiptKey(expense.id, receiptId, file.name), body: original, contentType: fileType });
   }
@@ -135,7 +138,7 @@ export async function POST(
     const stuck = swept.filter((s) => s.status === "rejected");
     if (stuck.length > 0) {
       console.error(
-        `[receipts] ${expense.reference}: ${stuck.length}/${staleKeys.length} replaced objects could not be deleted, keeping previous receipt`,
+        `[receipts] ${expenseLabel(expense)}: ${stuck.length}/${staleKeys.length} replaced objects could not be deleted, keeping previous receipt`,
         stuck.map((s) => s.reason),
       );
       await Promise.all(objects.map((o) => deleteObjectBestEffort(o.key)));
@@ -187,9 +190,7 @@ export async function GET(
   const g = await gate();
   if (!g.ok) return g.res;
 
-  const expense = await prisma.expense.findFirst({
-    where: { OR: [{ id: expenseId }, { reference: expenseId }] },
-  });
+  const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!expense) return fail(404, "expense.notFound");
 
   const hidden = await denyExpenseView(g.actor, expense);

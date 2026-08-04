@@ -53,7 +53,9 @@ export default function CardPurchasesClient({
     bankDescriptionColumn(t("colMerchant")),
     bankCardColumn(t("colCard"), !showCardCol),
     bankAmountColumn(t("colAmount")),
-    bankMatchedColumn(t("colExpense")),
+    // A purchase already being accounted for, on an utlägg not yet sent in:
+    // it has no number to show, but it is the thing the reader is looking for.
+    bankMatchedColumn(t("colExpense"), { linked: t("expenseStarted") }),
     {
       key: "actions",
       header: "",
