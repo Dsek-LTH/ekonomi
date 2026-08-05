@@ -87,13 +87,11 @@ export default function BankClient({
     });
   }
 
-  const totalMatched = bankTransactions.filter((tx) => tx.matchedExpenseId).length;
-
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
     bankHolderColumn(t("colHolder")),
-    // Was a status pill saying "Matchad · D-26|0039". It said the same thing
+    // Was a status pill saying "Matchad · DEK26-0039". It said the same thing
     // this does, in more words and without going anywhere — and the tabs above
     // already sort matched from unmatched, which is the only part a pill was
     // adding. Same column as on Kortköp, so the two tables answer "which
@@ -128,7 +126,6 @@ export default function BankClient({
       <Card>
         <CardHeader
           title={t("transactions")}
-          subtitle={t("matchedCount", { matched: totalMatched, total: bankTransactions.length })}
           action={canImport && (
             <>
               <input

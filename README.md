@@ -32,7 +32,8 @@ _Screenshots pending — see the comment in this section for where to put them._
 
 - [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
-- [Signing in locally](#signing-in-locally)
+- [Running the whole stack in Docker](#running-the-whole-stack-in-docker)
+- [Signing in](#signing-in)
 - [Troubleshooting](#troubleshooting)
 - [Commands](#commands)
 - [Project structure](#project-structure)
@@ -57,8 +58,8 @@ refuse to run on older Node.
 | **Docker** | any recent | `docker compose version` | Runs Postgres and MinIO. Docker Desktop or Docker Engine both work; on Windows use WSL 2 and enable WSL integration in Docker Desktop. |
 | **Git** | any | `git --version` | |
 
-You do **not** need a local Postgres, a MinIO install, Google credentials or a
-Fortnox account to develop. Everything below runs offline.
+You do **not** need a local Postgres, a MinIO install, Authentik credentials
+or a Fortnox account to develop. Everything below runs offline.
 
 ---
 
@@ -149,23 +150,93 @@ by hand.
 
 ---
 
-## Signing in locally
+## Running the whole stack in Docker
 
-Google sign-in needs real credentials, so outside production the login page
-offers a **dev login** instead: pick "Dev login" and type the email address of a
-seeded user. There is no password.
+Everything above runs the app on your machine and only the infrastructure in
+Docker, which is the shorter loop: `pnpm dev` reloads, a container rebuild does
+not. The stack below is for the other question — *does the thing we deploy
+work?* It builds the same image the k8s cluster runs, and runs it the same way.
 
-Seeded emails are derived from names (`Elsa Lindqvist` →
-`elsa.lindqvist@user.dsek.se`). Three to start with, one per kind of access:
+```bash
+pnpm app:up      # build the image, migrate, start the stack → :3000
+pnpm app:logs    # follow the app container
+pnpm app:down    # stop it (Postgres and MinIO keep their data)
+```
 
-| Email | Role | Sees |
-| --- | --- | --- |
-| `elsa.lindqvist@user.dsek.se` | Ordinarie | Their own expenses only |
-| `oskar.berg@user.dsek.se` | Resultatansvarig | The approval queue for their result unit |
-| `ludwig.gehlsdorf@user.dsek.se` | Skattförman | Bookkeeping and the ledger |
+`pnpm db:up` is unaffected: the app and its migration step sit behind a compose
+profile, so the everyday command still starts Postgres and MinIO alone.
 
-`prisma/seed-data.ts` has the full list. The dev provider is registered only
-outside production — see `src/auth.ts`.
+**It will not start until `AUTH_AUTHENTIK_CLIENT_SECRET` is set.** The
+container runs the production build, which requires every variable in
+`.env.example` to have a value — and that is the one the template leaves empty,
+since the development client it ships is a public one with no secret. Inside
+the container the dev sign-in does not exist (`src/auth.ts` registers it only
+when `NODE_ENV !== "production"`), so Authentik is the only way in. The check
+tests presence, not validity: a placeholder gets the stack up and the login
+page rendered, an application registered in Authentik gets you through it.
+Whatever is missing is named in `pnpm app:logs` just before the container
+exits.
+
+Two things worth knowing:
+
+- **Migrations run before the app does.** A `migrate` service runs
+  `prisma migrate deploy` and the app waits for it to succeed, so a stack that
+  is up is one whose schema matches its code. Seeding stays manual — it wipes
+  the domain tables:
+  `docker compose --profile app run --rm migrate pnpm db:seed`.
+- **The image carries no configuration.** `.env` is in `.dockerignore`;
+  compose passes the environment in at run time, as k8s will. The only values
+  compose sets itself are `DATABASE_URL` and `S3_ENDPOINT`, because `localhost`
+  inside a container is the container.
+
+---
+
+## Signing in
+
+Sign-in goes through the guild's **Authentik** (`auth.dsek.se`) — the same
+identity provider the guild's own web app uses. Google is federated behind it,
+so this app never holds a Google client of its own, and a mandate granted or
+revoked in Authentik is granted or revoked here.
+
+`.env.example` ships with the guild's public development client, which
+Authentik only accepts localhost redirects for. That is enough to sign in with
+your real D-sektionen account while developing. A deployment registers its own
+application (redirect URI `<origin>/api/auth/callback/authentik`) and sets
+`AUTH_AUTHENTIK_CLIENT_ID`, `AUTH_AUTHENTIK_CLIENT_SECRET` and
+`AUTH_AUTHENTIK_ISSUER`; the server refuses to boot in production without them.
+
+### Roles come from Authentik
+
+A user's roles are derived from their Authentik group list on every sign-in and
+on every token refresh — `dsek.skattm.mastare` is the skattmästare,
+`dsek.ordf` the ordförande, and a committee's `…mastare`/`…ordf` is a
+resultatansvarig. The mapping is one table in
+`src/lib/server/authentik-roles.ts`, and it is the only place to change how a
+group is read.
+
+That makes Inställningar → Användare a read-only view: roles are changed by
+changing the mandate in Authentik, not here. *Which* result units a
+resultatansvarig answers for is still an explicit link in the app
+(`ResultUnitOwner`), because a committee and a cost-centre prefix do not
+correspond one to one.
+
+### Without Authentik
+
+Outside production the login page also offers a **dev login**: pick a seeded
+user, no password, no network. Users are keyed on student id (Authentik's
+`preferred_username`), so that is what it signs in with.
+
+| Student id | Name | Role | Sees |
+| --- | --- | --- | --- |
+| `el1234li-s` | Elsa Lindqvist | Ordinarie | Their own expenses only |
+| `os5678be-s` | Oskar Berg | Resultatansvarig | The approval queue for their result unit |
+| `lu9012ge-s` | Ludwig Gehlsdorf | Skattförman | Bookkeeping and the ledger |
+| `ma3456ho-s` | Maja Holm | Skattmästare | Everything, including Inställningar |
+
+The four are buttons on the login page, so nothing needs typing.
+`prisma/seed-data.ts` has the full list; everyone else in the fixtures gets a
+derived student id. The dev provider is registered only outside production —
+see `src/auth.ts`.
 
 ---
 
@@ -181,9 +252,12 @@ outside production — see `src/auth.ts`.
 | `Cannot find module '@/lib/generated/prisma'`, or hundreds of type errors after cloning | The Prisma client hasn't been generated | `pnpm db:generate` |
 | `P3005: The database schema is not empty`, or migration drift | Your local database has diverged | `pnpm db:reset` — destroys local data and rebuilds from migrations plus seed. |
 | Receipt upload fails with an S3 or connection error | MinIO isn't running | `pnpm db:up`, then check http://localhost:9001 responds. |
-| Dev login says the user doesn't exist | The seed hasn't run, or the email is mistyped | `pnpm db:seed`, then copy an email from the table above. |
+| Dev login says the user doesn't exist | The seed hasn't run | `pnpm db:seed` — the four buttons on the login page match the seeded student ids. |
 | The Fortnox pages say the integration isn't configured | Expected — `FORTNOX_*` is unset | Nothing to fix; see [Optional integrations](#optional-integrations). |
-| A production server refuses to boot, complaining about the environment | Deliberate — a required variable is missing or still on a development value | Set it properly; the check lives in `instrumentation.ts`. |
+| A production server refuses to boot, complaining about the environment | Deliberate — a required variable has no value | Set the ones it names; the check lives in `instrumentation.ts`. |
+| `pnpm app:up` starts and the app container restarts forever | The same check, in Docker | `pnpm app:logs` — it names every variable that is wrong. See [Running the whole stack in Docker](#running-the-whole-stack-in-docker). |
+| `pnpm app:up` starts and the app container restarts forever | The startup check, in Docker — almost always `AUTH_AUTHENTIK_CLIENT_SECRET` | `pnpm app:logs` names it. See [Running the whole stack in Docker](#running-the-whole-stack-in-docker). |
+| Receipt upload fails in the Docker stack with `SignatureDoesNotMatch` | `S3_ACCESS_KEY`/`S3_SECRET_KEY` changed after MinIO's volume was created with the old ones | `docker compose down && pnpm app:up` — compose passes the same two values to MinIO as its root credentials. |
 
 ---
 
@@ -198,6 +272,7 @@ outside production — see `src/auth.ts`.
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm db:up` / `db:down` | Postgres + MinIO containers |
+| `pnpm app:up` / `app:down` / `app:logs` | The whole stack in Docker, app included |
 | `pnpm db:generate` | Regenerate the Prisma client |
 | `pnpm db:migrate` / `db:reset` | Migrations |
 | `pnpm db:seed` | Seed data |
@@ -233,6 +308,7 @@ src/lib/ui/       Presentation helpers (formatting, class names).
 prisma/           Schema, migrations, seed and the budget import.
 messages/         Translations (sv is the source language, en the translation).
 public/           Static files.
+Dockerfile        The production image, and the migration step that precedes it.
 ```
 
 The split inside `lib/` follows what the code *touches*, not what it's *about*:
@@ -262,18 +338,16 @@ in kronor. `lib/domain/money.ts` is the only place that converts — never write
 `.env.example` lists all of them and `lib/server/env.ts` is the code that reads
 them. Locally, empty values work: the fallbacks match `docker-compose.yml`. In
 production there are no fallbacks — the server refuses to start if anything is
-missing or still set to a development value (`instrumentation.ts`).
+missing (`instrumentation.ts`). It checks that a value is there, not that it is
+a good one: `AUTH_SECRET` and `S3_SECRET_KEY` still have to be generated by
+whoever deploys.
 
 ---
 
 ## Optional integrations
 
-Neither is needed for local development, and neither fails loudly when absent —
-the app tells you it's switched off.
-
-**Google sign-in** (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`) is restricted to the
-`@user.dsek.se` workspace. Leave it empty locally and use the dev login. It is
-required in production: without it, nobody can sign in.
+Not needed for local development, and it does not fail loudly when absent — the
+app tells you it's switched off.
 
 **Fortnox** (`FORTNOX_CLIENT_ID`, `FORTNOX_CLIENT_SECRET`,
 `FORTNOX_REDIRECT_URI`) drives the bookkeeping export and the ledger sync. With
@@ -314,7 +388,11 @@ means rewriting history for everyone. Keep them next to the repo instead.
 
 ## Production
 
-Postgres runs on the section's k8s cluster (CloudNativePG); `docker-compose.yml`
-mirrors that setup closely enough that development behaves the same. Receipt
-images live in an S3-compatible bucket and never reach the browser directly —
-they're streamed through `/api/receipts/[id]`, so storage stays internal.
+The app ships as the image `Dockerfile` builds: Next's standalone output on
+`node:22-alpine`, running unprivileged, holding no configuration of its own and
+nothing it needs to write to disk. It listens on `PORT` (3000 by default) and
+exits non-zero on a misconfigured environment rather than serving 500s, so a
+bad deploy fails instead of going green. `prisma migrate deploy` is a separate
+step — the `migrator` stage of the same Dockerfile — and must run before a new
+version starts. [Running the whole stack in
+Docker](#running-the-whole-stack-in-docker) is the same arrangement locally.

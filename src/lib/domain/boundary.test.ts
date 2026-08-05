@@ -63,7 +63,7 @@ describe.each(["domain", "ui"])("lib/%s stays pure", (folder) => {
 const PINNED_PURE: Record<string, string[]> = {
   budget: ["changes.ts", "compare.ts", "eval.ts", "grid.ts", "index.ts"],
   ledger: ["bas.ts"],
-  fortnox: ["oauth-state.ts", "sie.ts"],
+  fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
 };
 
 describe.each(Object.entries(PINNED_PURE))("lib/%s: the pure half stays pure", (folder, names) => {

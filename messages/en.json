@@ -309,7 +309,7 @@
   "login": {
     "title": "The D-Guilds economy",
     "description": "Sign in with your D-Guild account to continue",
-    "loginPrompt": "Continue with Google",
+    "loginPrompt": "Continue with your D-Guild account",
     "dev": {
       "heading": "Dev sign-in (local only)",
       "member": "Member",
@@ -693,7 +693,6 @@
       "unmatched": "Unmatched"
     },
     "transactions": "Transactions",
-    "matchedCount": "{matched} of {total} matched",
     "pickCsv": "Pick a CSV file",
     "importFailed": "The import failed",
     "importDone": "Import complete",
@@ -1090,23 +1089,16 @@
   "admin": {
     "users": {
       "title": "Users",
-      "description": "Roles govern access and approval authority.",
+      "description": "Roles govern access and approval authority. They come from Authentik.",
       "findTitle": "Find a member",
-      "findSubtitle": "Look up anyone in the guild to see and change their roles.",
+      "findSubtitle": "Look up anyone in the guild to see their roles.",
       "searchPlaceholder": "Search names or emails…",
       "searching": "Searching…",
       "noMatch": "No member matches.",
       "onlyBaseRole": "Only holds {role}, the baseline every member has.",
       "rolesTitle": "Roles",
-      "rolesSubtitle": "Roles govern access and approval authority. {role} is not listed, since every member holds it.",
-      "nobodyHasRole": "Nobody holds this role.",
-      "saveFailed": "Could not save the roles",
-      "removeTitle": "Remove {role} from {name}?",
-      "removeMessage": "They lose the access and approval authority the role gives.",
-      "remove": "Remove",
-      "removeAria": "Remove {role} from {name}",
-      "addPlaceholder": "Add {role}…",
-      "addPerson": "Add person"
+      "rolesSubtitle": "Roles govern access and approval authority, and follow the mandates in Authentik — they are changed there, not here. {role} is not listed, since every member holds it.",
+      "nobodyHasRole": "Nobody holds this role."
     },
     "cards": {
       "title": "Guild cards",

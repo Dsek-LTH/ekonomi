@@ -4,10 +4,15 @@
 //   Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp
 // The card used is the trailing "K####" inside the Referens field (not always
 // present). Amounts are SEK with a sign; negative = outgoing.
+//
+// A row is dated by Transdag — the day the purchase happened — not Bokfdag, the
+// day the bank settled it. The two differ by a day or three on card purchases,
+// and Transdag is the one that matches the receipt a member hands in. Rows
+// without a Transdag (fees, interest) fall back to Bokfdag.
 import { createHash } from "node:crypto";
 
 export interface ParsedTransaction {
-  bookedDate: string; // YYYY-MM-DD
+  transactionDate: string; // YYYY-MM-DD, Transdag (Bokfdag if absent)
   description: string; // Referens with the trailing card token stripped
   amount: number; // öre, negative = outgoing
   cardLast4?: string; // the #### from a trailing "K####" token
@@ -101,7 +106,9 @@ export function parseBankCsv(text: string): ParseResult {
     const transdag = cols[6].trim();
     const referens = cols[8].trim();
     const amount = amountToOre(cols[10]);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(bokfdag) || amount === null) {
+    const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+    const date = isDate(transdag) ? transdag : isDate(bokfdag) ? bokfdag : null;
+    if (date === null || amount === null) {
       skippedRows++;
       continue;
     }
@@ -118,7 +125,7 @@ export function parseBankCsv(text: string): ParseResult {
       .update(`${naturalKey}|${occ}`)
       .digest("hex");
 
-    transactions.push({ bookedDate: bokfdag, description, amount, cardLast4, importHash });
+    transactions.push({ transactionDate: date, description, amount, cardLast4, importHash });
   }
 
   return { transactions, cardLast4s: [...cardSet], skippedRows };

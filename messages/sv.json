@@ -309,7 +309,7 @@
   "login": {
     "title": "D-sektionens ekonomi",
     "description": "Logga in med ditt D-sektionskonto för att komma vidare",
-    "loginPrompt": "Fortsätt med Google",
+    "loginPrompt": "Fortsätt med ditt D-sektionskonto",
     "dev": {
       "heading": "Dev-inloggning (endast lokalt)",
       "member": "Medlem",
@@ -693,7 +693,6 @@
       "unmatched": "Ej matchade"
     },
     "transactions": "Transaktioner",
-    "matchedCount": "{matched} av {total} matchade",
     "pickCsv": "Välj CSV-fil",
     "importFailed": "Importen misslyckades",
     "importDone": "Import klar",
@@ -1090,23 +1089,16 @@
   "admin": {
     "users": {
       "title": "Användare",
-      "description": "Roller styr åtkomst och attesträttigheter.",
+      "description": "Roller styr åtkomst och attesträttigheter. De hämtas från Authentik.",
       "findTitle": "Hitta en medlem",
-      "findSubtitle": "Sök upp vem som helst i sektionen för att se och ändra deras roller.",
+      "findSubtitle": "Sök upp vem som helst i sektionen för att se deras roller.",
       "searchPlaceholder": "Sök namn eller e-post…",
       "searching": "Söker…",
       "noMatch": "Ingen medlem matchar.",
       "onlyBaseRole": "Har bara {role}, grundnivån alla medlemmar har.",
       "rolesTitle": "Roller",
-      "rolesSubtitle": "Rollerna styr åtkomst och attesträttigheter. {role} listas inte, eftersom alla medlemmar har den.",
-      "nobodyHasRole": "Ingen har den här rollen.",
-      "saveFailed": "Kunde inte spara rollerna",
-      "removeTitle": "Ta bort {role} från {name}?",
-      "removeMessage": "Personen förlorar den åtkomst och attesträtt rollen ger.",
-      "remove": "Ta bort",
-      "removeAria": "Ta bort {role} från {name}",
-      "addPlaceholder": "Lägg till {role}…",
-      "addPerson": "Lägg till person"
+      "rolesSubtitle": "Rollerna styr åtkomst och attesträttigheter, och följer mandaten i Authentik — de ändras där, inte här. {role} listas inte, eftersom alla medlemmar har den.",
+      "nobodyHasRole": "Ingen har den här rollen."
     },
     "cards": {
       "title": "Sektionskort",

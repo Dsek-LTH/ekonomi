@@ -1,38 +1,64 @@
 #!/usr/bin/env python3
-"""Parse GENOMRÖSTAD BUDGETREVIDERING.xlsx into prisma/import/budget-2026.json.
+"""Parse a budget workbook into prisma/import/budget-2026.json.
+
+    python3 prisma/import/parse-budget.py [workbook.xlsx]
 
 Each committee sheet (AKTU01, SEX02, …) becomes a cost center; its Konto rows
 become accounts and the indented rows beneath become line items. Two value
-columns are read per sheet: J = "2026 REV" (the left-hand column, and the only
-one imported — see import-budget.ts) and L = "2026" (the adopted column, kept
-here for reference).
+columns are read per sheet: J — the budget being written, and the only one
+imported (see import-budget.ts) — and L, the one it was revised from, kept here
+for reference. Both name themselves: Parametrar!I5 and I6 hold the two budgets'
+names ("2026 DELTA", "2026 VTM"), and every sheet's column heading points at
+them, so the JSON carries the names rather than this file guessing at them.
 
-Where a line uses the "antal × á-pris" form (cells F × H) the REV revision keeps
-that structure, mapping well-known Parametrar references to named variables.
-Anything else — and the whole baseline column — is stored as its computed value,
-so the totals always match the spreadsheet exactly.
+Where a line uses the "antal × á-pris" form (cells F × H) the imported column
+keeps that structure, mapping well-known Parametrar references to named
+variables. Anything else — and the whole previous column — is stored as its
+computed value, so the totals always match the spreadsheet exactly.
 """
 import json
 import re
 import os
+import sys
 import openpyxl
 from openpyxl.worksheet.formula import ArrayFormula
 
 HERE = os.path.dirname(__file__)
-XLSX = os.path.join(HERE, "..", "..", "GENOMRÖSTAD BUDGETREVIDERING.xlsx")
+DEFAULT_XLSX = os.path.join(HERE, "..", "..", "VTM-EXTRA.xlsx")
+XLSX = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_XLSX
 OUT = os.path.join(HERE, "budget-2026.json")
 
-# Parametrar rows we expose as named variables (cell Parametrar!$I$<row>).
-PARAM_BY_ROW = {
-    7: "PRISBASBELOPP",
-    8: "TACK_POLICY",
-    9: "TROJA_POLICY",
-    10: "MAT",
-    33: "PASLAG_OL",
-    34: "PASLAG_OVRIG_JAST",
-    35: "PASLAG_VIN",
-    36: "PASLAG_SPRIT",
+# Parametrar rows we expose as named variables, keyed by the label in column A.
+# Located by label and not by row number: each revision of the workbook inserts
+# rows into this sheet, and a row number that has drifted does not fail — it
+# names the wrong cell, and the budget imports plausible numbers under the wrong
+# variable. A label that no longer matches stops the parse instead (see
+# resolve_params).
+PARAM_BY_LABEL = {
+    "Prisbasbelopp": "PRISBASBELOPP",
+    "Tack enl. policy": "TACK_POLICY",
+    "Tröja enl. policy": "TROJA_POLICY",
+    "Mat": "MAT",
+    "Lokalbokning för lunchföreläsning": "LOKAL_LUNCHFORELASNING",
+    "Fortnox — Bokföring": "FORTNOX_BOKFORING",
+    "Fortnox — Bokföring (för bokslut)": "FORTNOX_BOKFORING_BOKSLUT",
+    "Fortnox — Offert och order": "FORTNOX_OFFERT_ORDER",
+    "Fortnox — Fakturering": "FORTNOX_FAKTURERING",
+    "Fortnox — Läs (Revisorer)": "FORTNOX_LAS",
+    "Fortnox — Integration": "FORTNOX_INTEGRATION",
+    "GENOMSNITTLIGT Påslag öl": "PASLAG_OL",
+    "GENOMSNITTLIGT Påslag övrig jäst dryck": "PASLAG_OVRIG_JAST",
+    "GENOMSNITTLIGT Påslag vin": "PASLAG_VIN",
+    "GENOMSNITTLIGT Påslag spritdryck": "PASLAG_SPRIT",
 }
+
+# Filled in by resolve_params(): {row: variable name}.
+PARAM_BY_ROW = {}
+
+# Rows the sheets reference that no label above claims. Their value still lands
+# in the budget (as a number rather than a live variable reference), so this is
+# a report, not an error — see the note printed by main().
+UNNAMED_PARAMS = []
 
 COL_F, COL_H, COL_J, COL_L = 6, 8, 10, 12
 SKIP_B = {"Summa", "Intäkter", "Kostnader", "Resultat", ""}
@@ -69,6 +95,82 @@ def split_range_account(first, last, description):
 
 wb = openpyxl.load_workbook(XLSX, data_only=False)
 wbv = openpyxl.load_workbook(XLSX, data_only=True)
+
+
+def resolve_params():
+    """Find each named parameter's row by its label in Parametrar column A.
+
+    Every label must match exactly one row: a missing one means the workbook
+    renamed it (and the lines referencing it would quietly become plain numbers),
+    a repeated one means the label no longer identifies a single parameter.
+    Either way the mapping is no longer trustworthy, so stop.
+    """
+    ws = wbv["Parametrar"]
+    rows_by_label = {}
+    for r in range(1, ws.max_row + 1):
+        a = ws.cell(r, 1).value
+        if isinstance(a, str) and a.strip() in PARAM_BY_LABEL:
+            rows_by_label.setdefault(a.strip(), []).append(r)
+
+    problems = []
+    for label, name in PARAM_BY_LABEL.items():
+        rows = rows_by_label.get(label, [])
+        if len(rows) != 1:
+            problems.append(f"    {name:26} {label!r}: "
+                            f"{'no such row' if not rows else f'{len(rows)} rows {rows}'}")
+        else:
+            PARAM_BY_ROW[rows[0]] = name
+    if problems:
+        raise SystemExit(
+            "Parametrar no longer matches PARAM_BY_LABEL in this parser:\n"
+            + "\n".join(problems)
+            + "\n\nFix the labels above to match the workbook and re-run."
+        )
+
+
+def collect_unnamed_params():
+    """Parametrar cells the sheets reference that aren't named variables.
+
+    Informational: an unnamed reference is imported as the number it evaluates
+    to, which is correct but dead — changing the parameter won't reflow it.
+    """
+    ws = wbv["Parametrar"]
+    seen = set()
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                v = cell.value
+                if isinstance(v, ArrayFormula):
+                    v = v.text
+                if not isinstance(v, str) or "Parametrar" not in v:
+                    continue
+                for m in re.finditer(r"Parametrar!\$?I\$?(\d+)", v):
+                    r = int(m.group(1))
+                    if r in PARAM_BY_ROW or r in seen or r <= 6:
+                        continue  # rows 1–6 are the sheet's own headings
+                    seen.add(r)
+                    UNNAMED_PARAMS.append((r, str(ws.cell(r, 1).value or "").strip()))
+    UNNAMED_PARAMS.sort()
+
+
+def budget_names():
+    """The two columns' names, as the workbook states them (Parametrar I5/I6)."""
+    ws = wbv["Parametrar"]
+    current = str(ws.cell(5, 9).value or "").strip()
+    previous = str(ws.cell(6, 9).value or "").strip()
+    if not current:
+        raise SystemExit("Parametrar!I5 (Nuvarande budgetnamn) is empty — "
+                         "the imported budget would have no name.")
+    return current, previous
+
+
+def year_of(name):
+    """The year a budget name opens with ("2026 DELTA" → 2026)."""
+    m = re.match(r"\s*(\d{4})\b", name)
+    if not m:
+        raise SystemExit(f"Budget name {name!r} does not start with a year, so "
+                         f"there is nothing to file the budget under.")
+    return int(m.group(1))
 
 
 def fmtnum(v):
@@ -313,9 +415,9 @@ def reconcile(data):
             if want is None or abs(got - want) > 1:
                 bad.append((cc["code"], got, want))
         # Only the left column is imported (see import-budget.ts), so only it
-        # can make this fail; the adopted column is reported for information.
+        # can make this fail; the previous column is reported for information.
         imported = side == "rev"
-        label = "2026 REV" if imported else "2026 (antagen, importeras ej)"
+        label = data["name"] if imported else f"{data['previousName']} (importeras ej)"
         stated = ram_total[side] or 0
         reconciled = not bad and abs(total - stated) <= 1
         mark = "OK " if reconciled else ("!! " if imported else "-- ")
@@ -330,6 +432,11 @@ def reconcile(data):
 
 
 def main():
+    print(f"Reading {os.path.relpath(XLSX)}")
+    resolve_params()
+    collect_unnamed_params()
+    name, previous_name = budget_names()
+
     units = result_unit_map()
     skip = {"Rambudget", "Parametrar"}
     cost_centers = []
@@ -341,9 +448,22 @@ def main():
         del cc["lineItems_unused"]
         cost_centers.append(cc)
 
-    data = {"year": 2026, "variables": parse_variables(), "costCenters": cost_centers}
+    data = {
+        "year": year_of(name),
+        "name": name,
+        "previousName": previous_name,
+        "variables": parse_variables(),
+        "costCenters": cost_centers,
+    }
     with open(OUT, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=1)
+
+    if UNNAMED_PARAMS:
+        print(f"Note: {len(UNNAMED_PARAMS)} referenced Parametrar row(s) have no "
+              f"named variable, so lines using them import as fixed numbers:")
+        for r, label in UNNAMED_PARAMS:
+            print(f"    I{r:<4} {label}")
+        print()
 
     if UNPLACED:
         print(f"WARNING: {len(UNPLACED)} line(s) under a range header could not be "
@@ -353,7 +473,9 @@ def main():
 
     n_acc = sum(len(c["accounts"]) for c in cost_centers)
     n_li = sum(len(a["lineItems"]) for c in cost_centers for a in c["accounts"])
-    print(f"Wrote {OUT}: {len(cost_centers)} cost centers, {n_acc} accounts, {n_li} line items, {len(data['variables'])} variables\n")
+    print(f"Wrote {OUT}: \"{name}\" (revised from \"{previous_name}\") — "
+          f"{len(cost_centers)} cost centers, {n_acc} accounts, {n_li} line items, "
+          f"{len(data['variables'])} variables\n")
 
     if not reconcile(data):
         print("\nThe sheets above do not add up to the Resultat they report, so the\n"

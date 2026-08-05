@@ -21,6 +21,7 @@
 // ROTATES on every refresh, so each refresh persists the new pair.
 import { prisma } from "@/lib/server/db";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets";
+import { VOUCHER_DESCRIPTION_MAX } from "./voucher-text";
 
 const AUTH_URL = "https://apps.fortnox.se/oauth-v1/auth";
 const TOKEN_URL = "https://apps.fortnox.se/oauth-v1/token";
@@ -545,7 +546,7 @@ export async function createVoucher(
     Voucher: {
       VoucherSeries: input.series,
       TransactionDate: input.date,
-      Description: input.description.slice(0, 200),
+      Description: input.description.slice(0, VOUCHER_DESCRIPTION_MAX),
       VoucherRows,
     },
   });

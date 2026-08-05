@@ -28,16 +28,16 @@ export async function getBankTransactions(
       opts.cardHolderId && alsoIds.length
         ? { OR: [scoped, { id: { in: [...alsoIds] } }] }
         : scoped,
-    // bookedDate is a date, so same-day purchases tie. Without a unique
+    // transactionDate is a date, so same-day purchases tie. Without a unique
     // tiebreaker Postgres may return tied rows in a different order per query,
     // which shows up as a hydration mismatch when the HTML and the RSC payload
     // come from two executions. Every non-unique ordering here needs one.
-    orderBy: [{ bookedDate: "desc" }, { id: "desc" }],
+    orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
     include: { matchedExpense: true, card: { include: { holder: true } } },
   });
   return txns.map((t) => ({
     id: t.id,
-    bookedDate: isoDate(t.bookedDate),
+    transactionDate: isoDate(t.transactionDate),
     description: t.description,
     amount: ore(t.amount),
     matchedExpenseId: t.matchedExpense?.id ?? undefined,

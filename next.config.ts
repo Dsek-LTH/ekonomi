@@ -37,6 +37,11 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Emit .next/standalone: server.js plus only the node_modules the traced
+  // build actually reaches. That is what the Docker image ships — the
+  // alternative is copying a 700 MB node_modules into the runtime image to run
+  // `next start`. Harmless outside Docker; `next dev` and `next start` ignore it.
+  output: "standalone",
   // sharp is a native module — don't bundle it; load it from node_modules.
   serverExternalPackages: ["sharp"],
   experimental: {

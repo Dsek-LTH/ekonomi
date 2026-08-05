@@ -1,5 +1,13 @@
 # Local development Postgres. Mirrors the self-hosted CloudNativePG target
 # closely enough for app development. Production runs on the org's k8s cluster.
+#
+# Two ways to use this file:
+#
+#   pnpm db:up    postgres + minio only, and you run the app with `pnpm dev`.
+#                 The everyday loop. Unchanged by the `app` profile below.
+#   pnpm app:up   the whole stack, app included, built from the Dockerfile and
+#                 run the way production runs it. Needs real values in .env —
+#                 see "Running the whole stack in Docker" in the README.
 services:
   postgres:
     image: postgres:16-alpine
@@ -26,13 +34,69 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: utlagg
-      MINIO_ROOT_PASSWORD: utlagg-dev-secret
+      # Read from .env so MinIO's credentials and the app's stay one setting.
+      # The defaults are what lib/server/env.ts falls back to in development,
+      # so an empty .env still gives you the same MinIO as before.
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-utlagg}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-utlagg-dev-secret}
     ports:
       - "9000:9000" # S3 API
       - "9001:9001" # web console
     volumes:
       - utlagg-miniodata:/data
+
+  # ── The app itself, under the `app` profile ─────────────────────────
+  # Behind a profile so `docker compose up` keeps meaning "the services I
+  # develop against". Both services below only start with `--profile app`.
+
+  # Brings the schema up to date, then exits. The app waits for it to succeed,
+  # so a stack that starts is a stack whose database matches the code. Seeding
+  # is separate and manual — it wipes the domain tables:
+  #   docker compose --profile app run --rm migrate pnpm db:seed
+  migrate:
+    build:
+      context: .
+      target: migrator
+    image: utlagg-migrate
+    profiles: ["app"]
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: utlagg-app
+    container_name: utlagg-app
+    profiles: ["app"]
+    restart: unless-stopped
+    # Everything the app reads comes from .env, exactly as it does under
+    # `pnpm dev` — except the two addresses that are wrong inside the compose
+    # network, which are overridden below. NODE_ENV is production here, so
+    # lib/server/env.ts holds this to production rules: every required variable
+    # set, and none of them left on the value .env.example ships. A stack that
+    # exits immediately is that check talking — read it with
+    # `docker compose --profile app logs app`.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # localhost inside a container is the container itself. These two are the
+      # only settings that differ between `pnpm dev` and the stack — everything
+      # else is whatever .env says, for both.
+      DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio:
+        condition: service_started
 
 volumes:
   utlagg-pgdata:

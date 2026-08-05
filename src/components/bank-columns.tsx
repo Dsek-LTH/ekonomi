@@ -28,11 +28,11 @@ export const bankDateColumn = (
 ): Column<BankTransaction> => ({
   key: "date",
   header,
-  value: (tx) => tx.bookedDate,
+  value: (tx) => tx.transactionDate,
   sortable: true,
   dateRange: true,
   className: "whitespace-nowrap text-muted",
-  cell: (tx) => date(tx.bookedDate),
+  cell: (tx) => date(tx.transactionDate),
 });
 
 export const bankDescriptionColumn = (header: string): Column<BankTransaction> => ({

@@ -176,7 +176,7 @@ function BankTransactionCard({
             <div className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
               <div>
                 <p className="text-sm font-medium">{txn.description}</p>
-                <p className="text-xs text-muted">{date(txn.bookedDate)}</p>
+                <p className="text-xs text-muted">{date(txn.transactionDate)}</p>
               </div>
               <Amount value={txn.amount} />
             </div>
@@ -278,7 +278,7 @@ function TransactionPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{txn.description}</p>
                 <p className="text-xs text-muted">
-                  {date(txn.bookedDate)}
+                  {date(txn.transactionDate)}
                   {txn.cardHolderName && <> · {txn.cardHolderName}</>}
                   {!selectable && ` · ${t("otherAmount")}`}
                 </p>

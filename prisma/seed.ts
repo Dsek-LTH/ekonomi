@@ -5,7 +5,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/generated/prisma/client";
 
 // Standalone run (pnpm db:seed) — load .env ourselves.
-process.loadEnvFile?.(".env");
+import { loadEnvFile } from "./load-env";
+
+loadEnvFile();
 import { bucket, deleteKeys, listObjects } from "./storage-admin";
 import {
   BANK_TRANSACTIONS,
@@ -22,13 +24,25 @@ const prisma = new PrismaClient({
 // öre — store money as integer minor units.
 const ore = (sek: number) => Math.round(sek * 100);
 
+const ascii = (name: string) =>
+  name.toLowerCase().replace(/å|ä/g, "a").replace(/ö/g, "o");
+
 // "Elsa Lindqvist" → "elsa.lindqvist@user.dsek.se"
-const emailFor = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/å|ä/g, "a")
-    .replace(/ö/g, "o")
-    .replace(/\s+/g, ".") + "@user.dsek.se";
+const emailFor = (name: string) => ascii(name).replace(/\s+/g, ".") + "@user.dsek.se";
+
+// "Elsa Lindqvist" → "el1234li-s". The app keys users on the student id that
+// Authentik sends as `preferred_username`, so the fixtures need ones shaped
+// like LTH's: two letters of the given name, four digits, two of the family
+// name. The digits are derived from the name rather than random, so a reseed
+// gives the same person the same id and the ones hard-coded in the dev
+// sign-in (app/login/page.tsx) keep working.
+const studentIdFor = (name: string) => {
+  const [first = "", last = ""] = ascii(name).split(/\s+/);
+  const digits = String(
+    [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 10000, 7),
+  ).padStart(4, "0");
+  return `${first.slice(0, 2)}${digits}${last.slice(0, 2)}-s`;
+};
 
 // Map the mockup's free-text revision actions to typed audit events.
 const EVENT_TYPE: Record<string, ExpenseEventType> = {
@@ -87,10 +101,20 @@ async function main() {
       if (!rolesByName.has(r.actor)) rolesByName.set(r.actor, ["ORDINARIE"]);
   }
 
+  // The dev sign-in's four have fixed student ids; the rest are derived.
+  const studentIdByName = new Map<string, string>(
+    Object.values(CURRENT_USERS).map((u) => [u.name, u.studentId]),
+  );
+
   const usersByName = new Map<string, string>(); // name → user id
   for (const [name, roles] of rolesByName) {
     const user = await prisma.user.create({
-      data: { name, email: emailFor(name), roles },
+      data: {
+        name,
+        studentId: studentIdByName.get(name) ?? studentIdFor(name),
+        email: emailFor(name),
+        roles,
+      },
     });
     usersByName.set(name, user.id);
   }
@@ -147,7 +171,7 @@ async function main() {
   for (const t of BANK_TRANSACTIONS) {
     const tx = await prisma.bankTransaction.create({
       data: {
-        bookedDate: new Date(t.bookedDate),
+        transactionDate: new Date(t.transactionDate),
         description: t.description,
         amount: ore(t.amount),
       },

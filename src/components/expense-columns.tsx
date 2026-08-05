@@ -93,7 +93,7 @@ export const expensePaymentTypeColumn = (
   cell: (e) => <Tag>{paymentLabel(e.paymentType)}</Tag>,
 });
 
-// The utlägg's own reference — "D-26|0043", the number it is known by
+// The utlägg's own reference — "DEK26-0043", the number it is known by
 // everywhere from the receipt envelope to the ledger. Not the Fortnox voucher
 // label, which only exists after export and lives on the detail page.
 //

@@ -26,7 +26,7 @@ import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go — see `matchLead` below.
 import { formatSEK } from "@/lib/ui/format";
-import { parseSEK, sekToOre } from "@/lib/domain/money";
+import { isAmountInput, parseSEK, sekToOre } from "@/lib/domain/money";
 import { cancelsOut } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
@@ -114,7 +114,7 @@ export default function NewExpenseClient({
     return presetTxn
       ? {
           title: presetTxn.description,
-          purchaseDate: presetTxn.bookedDate,
+          purchaseDate: presetTxn.transactionDate,
           gross: String(-presetTxn.amount),
         }
       : { title: "", purchaseDate: "", gross: "" };
@@ -455,12 +455,16 @@ export default function NewExpenseClient({
               </Field>
               {/* Not type="number": it drops a lone leading "-" from .value, so a
                   return is awkward to type, and it rejects "1 234,50". parseSEK
-                  reads both, and this matches the allocation amount fields. */}
+                  reads both, and this matches the allocation amount fields.
+                  Anything that isn't on its way to an amount — a third decimal
+                  included, since öre is as fine as money gets here — is simply
+                  not taken, so the field keeps what it had. */}
               <Field label={t("amount")}>
                 <Input
                   value={form.gross}
                   inputMode="decimal"
                   onChange={(e) => {
+                    if (!isAmountInput(e.target.value)) return;
                     setForm({ ...form, gross: e.target.value });
                     if (allocations.length === 1) {
                       setAllocations([{ ...allocations[0], amount: e.target.value }]);
@@ -559,7 +563,7 @@ export default function NewExpenseClient({
                               )}
                             </div>
                             <p className="text-xs text-muted">
-                              {date(txn.bookedDate)}
+                              {date(txn.transactionDate)}
                               {!selectable && ` · ${t("otherAmount")}`}
                             </p>
                           </div>

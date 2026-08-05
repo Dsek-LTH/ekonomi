@@ -1,0 +1,31 @@
+# Kept out of the build context. Short list, and every line earns its place —
+# without this file `COPY . .` in the builder stage pulls the whole working
+# directory in, and two of these end up inside the shipped image: Next copies
+# .env into .next/standalone, so `docker run <image> cat .env` prints the
+# Fortnox secrets and the session key.
+.env
+.env.*
+!.env.example
+
+# Installed inside the image. The host tree is built for this machine, and
+# copying it over the container's is how you get a native module that loads
+# on your laptop and not in the container.
+node_modules
+.next
+src/lib/generated
+*.tsbuildinfo
+
+# Section financial data — real account numbers and member-identifying rows.
+# No more welcome in an image than in git history.
+*.csv
+*.xlsx
+*.xls
+!**/__fixtures__/*.csv
+
+# Nothing the build reads
+.git
+.claude
+README.md
+Dockerfile
+.dockerignore
+docker-compose*.yml

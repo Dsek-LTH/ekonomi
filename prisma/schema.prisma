@@ -70,9 +70,23 @@ enum ExpenseEventType {
 // ── Models ────────────────────────────────────────────────────────
 
 model User {
-  id    String @id @default(cuid())
-  email String @unique // Google Workspace identity, @user.dsek.se
+  id String @id @default(cuid())
+
+  // Authentik's `preferred_username` — the LTH student id ("lu1234ge-s"), and
+  // the identity this app is keyed on. It is the one thing about a member that
+  // does not change: an email address can be re-pointed and a name can be
+  // changed, and neither should make somebody a different person here. Same
+  // key the guild's own web app uses (Member.studentId), so a future
+  // integration has something to join on.
+  studentId String @unique
+
+  // Descriptive, not identifying. Refreshed from Authentik on each sign-in.
+  email String @unique
   name  String
+
+  // Derived from the Authentik group list on sign-in and on every token
+  // refresh (lib/server/authentik-roles.ts). Authority is still read from this
+  // column and never from the token — see lib/server/current-user.ts.
   roles Role[] @default([ORDINARIE]) // one or more section roles; authority derived in lib/permissions.ts
 
   // Bank details for REIMBURSEMENT payouts (Swedish clearing + account no.)
@@ -215,7 +229,7 @@ model ResultUnitOwner {
 
 model Expense {
   id String @id @default(cuid())
-  // Human-readable, e.g. "D-26|0042" — see lib/domain/reference.ts. Null until
+  // Human-readable, e.g. "DEK26-0042" — see lib/domain/reference.ts. Null until
   // the utlägg is submitted for attest: a draft is not yet a claim on the
   // section, and numbering one would burn a number every time someone opens the
   // wizard and walks away. Pages and API routes are keyed on `id`, not on this.
@@ -295,11 +309,13 @@ model Receipt {
 
 // A row from an imported bank CSV. Negative amount = money out.
 model BankTransaction {
-  id          String   @id @default(cuid())
-  bookedDate  DateTime @db.Date
-  description String
-  amount      Int // öre, negative = outgoing
-  currency    String   @default("SEK")
+  id String @id @default(cuid())
+  // Transdag from the CSV — the day the purchase was made, not the day the
+  // bank settled it. That is the date on the member's receipt.
+  transactionDate DateTime @db.Date
+  description     String
+  amount          Int // öre, negative = outgoing
+  currency        String   @default("SEK")
 
   // Dedup key for re-imported CSVs (hash of date+amount+description+row).
   importHash String? @unique
@@ -312,7 +328,7 @@ model BankTransaction {
 
   matchedExpense Expense? @relation
 
-  @@index([bookedDate])
+  @@index([transactionDate])
   @@index([cardId])
 }
 

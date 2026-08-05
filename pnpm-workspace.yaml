@@ -13,7 +13,10 @@ overrides:
   # next pins sharp <0.35 for its image optimizer (inherited libvips CVEs:
   # 2026-33327/33328/35590/35591). Our own imports already resolve to 0.35.x;
   # this makes next's copy the same one.
-  sharp: '^0.35.1'
+  # Kept in step with the direct dependency in package.json: an override that
+  # is narrower than the manifest rewrites the app's own specifier too, and a
+  # frozen install then refuses the lockfile for disagreeing with itself.
+  sharp: '^0.35.3'
   # next pins postcss to exactly 8.4.31. Build-time only, but the sourceMappingURL
   # path traversal reads arbitrary .map files off the build machine.
   postcss: '^8.5.25'

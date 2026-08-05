@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { oreToSEK, parseOre, parseSEK, sekToOre } from "./money";
+import { isAmountInput, oreToSEK, parseOre, parseSEK, sekToOre } from "./money";
 
 describe("oreToSEK", () => {
   it("divides by 100", () => {
@@ -71,6 +71,40 @@ describe("parseOre", () => {
     expect(parseOre("1 234,50")).toBe(123450);
     expect(parseOre("19,99")).toBe(1999);
     expect(parseOre("-250")).toBe(-25000);
+  });
+});
+
+describe("isAmountInput", () => {
+  it("takes an amount to the öre, written either way", () => {
+    expect(isAmountInput("12,50")).toBe(true);
+    expect(isAmountInput("12.50")).toBe(true);
+    expect(isAmountInput("1 234,50")).toBe(true);
+    expect(isAmountInput("-12,50")).toBe(true);
+    expect(isAmountInput("0,01")).toBe(true);
+  });
+
+  // Every one of these is a keystroke on the way to an amount, so refusing them
+  // would mean a field nobody can type a decimal into.
+  it("takes half-typed input", () => {
+    expect(isAmountInput("")).toBe(true);
+    expect(isAmountInput("-")).toBe(true);
+    expect(isAmountInput("12")).toBe(true);
+    expect(isAmountInput("12,")).toBe(true);
+    expect(isAmountInput("12,5")).toBe(true);
+  });
+
+  // The point of the rule: a third decimal is not a finer amount, it is one
+  // sekToOre rounds away — 12,505 would be stored as 12,51 without a word.
+  it("stops at two decimals", () => {
+    expect(isAmountInput("12,505")).toBe(false);
+    expect(isAmountInput("12.5678")).toBe(false);
+    expect(sekToOre(12.505)).toBe(1251); // what it would have become
+  });
+
+  it("refuses what is not an amount at all", () => {
+    expect(isAmountInput("abc")).toBe(false);
+    expect(isAmountInput("12,50 kr")).toBe(false);
+    expect(isAmountInput("1,2,3")).toBe(false);
   });
 });
 

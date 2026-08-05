@@ -29,27 +29,41 @@ const mustBeConfigured = isProduction && !isBuildPhase;
 const REQUIRED = {
   DATABASE_URL: "postgresql://utlagg:utlagg@localhost:5432/utlagg",
   // Signs the session JWTs. A known constant is fine on a laptop and is a
-  // forgery key on the internet.
+  // forgery key on the internet — and since the check below only asks whether
+  // a value is set, nothing stops a deploy that kept this one. Generating it
+  // is the deploy's job: `openssl rand -base64 32`.
   AUTH_SECRET: "dev-only-insecure-auth-secret",
   S3_ENDPOINT: "http://localhost:9000",
   S3_REGION: "us-east-1",
   S3_BUCKET: "receipts",
   S3_ACCESS_KEY: "utlagg",
   S3_SECRET_KEY: "utlagg-dev-secret",
-} as const;
 
-// Required in production, with no sensible local default. Google is the only
-// way in once the dev credentials provider is gone (see auth.ts), so a
-// production server without it is one nobody can sign in to.
-const REQUIRED_IN_PRODUCTION = ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"] as const;
+  // ── Authentik (sign-in) ──
+  // Same names the guild's own web app uses, so a value copied from there
+  // lands under the name it left. The fallbacks are their public development
+  // client: it has no secret and Authentik only accepts localhost redirects
+  // for it, which is what makes publishing it here harmless and what makes it
+  // useless in production. A deployment registers its own application in
+  // Authentik (redirect URI `<origin>/api/auth/callback/authentik`) and sets
+  // all three — the check below refuses to start a production server that
+  // didn't, since sign-in is the only way in once the dev provider is gone.
+  AUTH_AUTHENTIK_CLIENT_ID: "SvRybUTCGqhNiw2Y3gn1wqt0YxpjW2sv9fbPsUaP",
+  AUTH_AUTHENTIK_CLIENT_SECRET: "",
+  AUTH_AUTHENTIK_ISSUER: "https://auth.dsek.se/application/o/dev/",
+} as const;
 
 // The rest of the environment is genuinely optional, and running without it is
 // a supported way to run rather than a misconfiguration — so nothing here
 // checks for it. FORTNOX_CLIENT_ID, FORTNOX_CLIENT_SECRET and
 // FORTNOX_REDIRECT_URI switch the Fortnox integration on (lib/fortnox reads
 // them where it needs them), and FORTNOX_TOKEN_KEY encrypts the stored tokens,
-// falling back to AUTH_SECRET (lib/server/secrets.ts). They are listed in
-// .env.example, which is where someone setting the app up will look.
+// falling back to AUTH_SECRET (lib/server/secrets.ts).
+// They are all listed in .env.example, which is where someone setting the app
+// up will look.
+//
+// Authentik needs nothing beyond the three above: the endpoints it uses are
+// read from the issuer's discovery document rather than configured (auth.ts).
 
 export type RequiredVar = keyof typeof REQUIRED;
 
@@ -77,21 +91,17 @@ export function serverEnv(name: RequiredVar): string {
 function envProblems(): string[] {
   if (!mustBeConfigured) return [];
 
-  const missing = [
-    ...(Object.keys(REQUIRED) as RequiredVar[]),
-    ...REQUIRED_IN_PRODUCTION,
-  ].filter((name) => !process.env[name]);
-
-  const problems = missing.map((name) => `${name} saknas`);
-
-  // Set but still the documented placeholder: the variable was copied out of
-  // .env.example and never filled in, which the presence check alone would pass.
-  for (const [name, devValue] of Object.entries(REQUIRED)) {
-    if (process.env[name] === devValue) {
-      problems.push(`${name} är kvar på utvecklingsvärdet`);
-    }
-  }
-  return problems;
+  // Presence, and nothing else. This used to also refuse a variable still set
+  // to the value .env.example documents, which sounds like the same check and
+  // is not: it cannot tell "never filled in" from "filled in with a name that
+  // happens to be the obvious one", and most of these have an obvious one. A
+  // bucket called `receipts` in a region called `us-east-1` is a plausible
+  // production answer, and refusing to boot over it taught people that the
+  // startup check cries wolf — which is the last thing a check like this can
+  // afford. What a value should be is .env.example's job to say.
+  return (Object.keys(REQUIRED) as RequiredVar[])
+    .filter((name) => !process.env[name])
+    .map((name) => `${name} saknas`);
 }
 
 /**

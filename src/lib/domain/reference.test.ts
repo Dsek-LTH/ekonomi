@@ -3,13 +3,13 @@ import { expenseLabel, formatReference, nextReference, referencePrefix } from ".
 
 describe("reference format", () => {
   it("writes the year as two digits and pads the counter", () => {
-    expect(formatReference(2026, 1)).toBe("D-26|0001");
-    expect(formatReference(2026, 43)).toBe("D-26|0043");
+    expect(formatReference(2026, 1)).toBe("DEK26-0001");
+    expect(formatReference(2026, 43)).toBe("DEK26-0043");
   });
 
   it("keeps the prefix fixed-width, which is what lets the counter be sliced off", () => {
-    expect(referencePrefix(2026)).toBe("D-26|");
-    expect(referencePrefix(2009)).toBe("D-09|");
+    expect(referencePrefix(2026)).toBe("DEK26-");
+    expect(referencePrefix(2009)).toBe("DEK09-");
   });
 
   // Lists sort on this string, and the next number is the highest one plus one.
@@ -22,39 +22,39 @@ describe("reference format", () => {
       formatReference(2026, 1000),
     ];
     expect([...refs].sort()).toEqual([
-      "D-25|9999",
-      "D-26|0009",
-      "D-26|0100",
-      "D-26|1000",
+      "DEK25-9999",
+      "DEK26-0009",
+      "DEK26-0100",
+      "DEK26-1000",
     ]);
   });
 });
 
 describe("nextReference", () => {
   it("starts a year at 1", () => {
-    expect(nextReference(2026, null)).toBe("D-26|0001");
+    expect(nextReference(2026, null)).toBe("DEK26-0001");
   });
 
   it("counts on from the highest reference taken", () => {
-    expect(nextReference(2026, "D-26|0042")).toBe("D-26|0043");
-    expect(nextReference(2026, "D-26|0099")).toBe("D-26|0100");
+    expect(nextReference(2026, "DEK26-0042")).toBe("DEK26-0043");
+    expect(nextReference(2026, "DEK26-0099")).toBe("DEK26-0100");
   });
 
   // The counter outgrowing its padding is not an error: it stops being
   // zero-padded and keeps counting, and the year's own numbers still sort
   // among themselves because they're all wider than the padded ones.
   it("keeps counting past four digits", () => {
-    expect(nextReference(2026, "D-26|9999")).toBe("D-26|10000");
+    expect(nextReference(2026, "DEK26-9999")).toBe("DEK26-10000");
   });
 
   it("starts over rather than yielding NaN when there is nothing to count from", () => {
-    expect(nextReference(2026, "")).toBe("D-26|0001");
+    expect(nextReference(2026, "")).toBe("DEK26-0001");
   });
 });
 
 describe("expenseLabel", () => {
   it("names an utlägg by its reference once it has one", () => {
-    expect(expenseLabel({ id: "e_1", reference: "D-26|0042" })).toBe("D-26|0042");
+    expect(expenseLabel({ id: "e_1", reference: "DEK26-0042" })).toBe("DEK26-0042");
   });
 
   it("falls back to the id, so a draft is still named", () => {

@@ -15,6 +15,12 @@ import { cn } from "@/lib/ui/utils";
 // Resolving it through the bundler (rather than copying the file into /public)
 // means the worker is always the one from the installed pdfjs-dist — no copy
 // step to run, and no way for it to drift from the version react-pdf expects.
+//
+// That is also why package.json depends on pdfjs-dist at the exact version
+// react-pdf pins: this import reaches past react-pdf into its own dependency,
+// which a flat node_modules happens to allow and pnpm's does not. Declaring it
+// is what makes the import legitimate — and keeping it exact is what keeps the
+// worker and the library the same build.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,

@@ -19,9 +19,15 @@ export interface SeedExpense {
   revisions: { id: string; actor: string; action: string; comment?: string; date: string }[];
 }
 
-export const CURRENT_USERS: Record<string, User> = {
+// The four people the dev sign-in offers, one per role. `studentId` is what
+// the app keys a user on (Authentik's `preferred_username`), so these are
+// fixed rather than generated — app/login/page.tsx names them, and a reseed
+// must not move them. Everyone else referenced in the fixtures gets a derived
+// one; see `studentIdFor` in seed.ts.
+export const CURRENT_USERS: Record<string, User & { studentId: string }> = {
   ORDINARIE: {
     id: "u1",
+    studentId: "el1234li-s",
     name: "Elsa Lindqvist",
     email: "elsa.lindqvist@user.dsek.se",
     roles: ["ORDINARIE"],
@@ -29,6 +35,7 @@ export const CURRENT_USERS: Record<string, User> = {
   },
   RESULTATANSVARIG: {
     id: "u2",
+    studentId: "os5678be-s",
     name: "Oskar Berg",
     email: "oskar.berg@user.dsek.se",
     roles: ["RESULTATANSVARIG"],
@@ -36,6 +43,7 @@ export const CURRENT_USERS: Record<string, User> = {
   },
   SKATTFORMAN: {
     id: "u3",
+    studentId: "lu9012ge-s",
     name: "Ludwig Gehlsdorf",
     email: "ludwig.gehlsdorf@user.dsek.se",
     roles: ["SKATTFORMAN"],
@@ -43,6 +51,7 @@ export const CURRENT_USERS: Record<string, User> = {
   },
   SKATTMASTARE: {
     id: "u4",
+    studentId: "ma3456ho-s",
     name: "Maja Holm",
     email: "maja.holm@user.dsek.se",
     roles: ["SKATTMASTARE"],
@@ -92,7 +101,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    reference: "D-26|0039",
+    reference: "DEK26-0039",
     title: "Pizza till arbetskväll",
     submitterName: "Anton Falk",
     // Multi-cost-centre example: shared between two result units.
@@ -113,7 +122,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    reference: "D-26|0038",
+    reference: "DEK26-0038",
     title: "Priser till idrottsdagen",
     submitterName: "Sara Nyberg",
     allocations: [{ costCenterCode: "IDRU", amount: 2340 }],
@@ -135,7 +144,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    reference: "D-26|0036",
+    reference: "DEK26-0036",
     title: "Kontorsmaterial",
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "STYR", amount: 432 }],
@@ -153,7 +162,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    reference: "D-26|0034",
+    reference: "DEK26-0034",
     title: "Förtäring styrelsemöte",
     submitterName: "Anton Falk",
     allocations: [{ costCenterCode: "STYR", amount: 318 }],
@@ -170,7 +179,7 @@ export const EXPENSES: SeedExpense[] = [
     ],
   },
   {
-    reference: "D-26|0031",
+    reference: "DEK26-0031",
     title: "Trycksaker phadderverksamhet",
     submitterName: "Sara Nyberg",
     allocations: [{ costCenterCode: "INFU", amount: 4120 }],
@@ -190,16 +199,16 @@ export const EXPENSES: SeedExpense[] = [
 ];
 
 export const BANK_TRANSACTIONS: BankTransaction[] = [
-  { id: "t1", bookedDate: "2026-06-11", description: "STORDBOOSTER AB", amount: -1290 },
-  { id: "t2", bookedDate: "2026-06-11", description: "SWISH inbetalning", amount: 500 },
-  { id: "t3", bookedDate: "2026-06-08", description: "PIZZERIA ROMA", amount: -1560, matchedExpenseId: "D-26|0039" },
-  { id: "t4", bookedDate: "2026-06-07", description: "WILLYS LUND", amount: -642 },
-  { id: "t5", bookedDate: "2026-06-04", description: "SYSTEMBOLAGET", amount: -980 },
-  { id: "t6", bookedDate: "2026-06-02", description: "CLAS OHLSON 0421", amount: -432, matchedExpenseId: "D-26|0036" },
-  { id: "t7", bookedDate: "2026-05-30", description: "BANKAVGIFT", amount: -75 },
-  { id: "t8", bookedDate: "2026-05-28", description: "ESPRESSO HOUSE", amount: -318, matchedExpenseId: "D-26|0034" },
-  { id: "t9", bookedDate: "2026-05-25", description: "ÅTERBETALNING medlem", amount: -4120 },
-  { id: "t10", bookedDate: "2026-05-22", description: "TRYCKERI LUND AB", amount: -4120, matchedExpenseId: "D-26|0031" },
+  { id: "t1", transactionDate: "2026-06-11", description: "STORDBOOSTER AB", amount: -1290 },
+  { id: "t2", transactionDate: "2026-06-11", description: "SWISH inbetalning", amount: 500 },
+  { id: "t3", transactionDate: "2026-06-08", description: "PIZZERIA ROMA", amount: -1560, matchedExpenseId: "DEK26-0039" },
+  { id: "t4", transactionDate: "2026-06-07", description: "WILLYS LUND", amount: -642 },
+  { id: "t5", transactionDate: "2026-06-04", description: "SYSTEMBOLAGET", amount: -980 },
+  { id: "t6", transactionDate: "2026-06-02", description: "CLAS OHLSON 0421", amount: -432, matchedExpenseId: "DEK26-0036" },
+  { id: "t7", transactionDate: "2026-05-30", description: "BANKAVGIFT", amount: -75 },
+  { id: "t8", transactionDate: "2026-05-28", description: "ESPRESSO HOUSE", amount: -318, matchedExpenseId: "DEK26-0034" },
+  { id: "t9", transactionDate: "2026-05-25", description: "ÅTERBETALNING medlem", amount: -4120 },
+  { id: "t10", transactionDate: "2026-05-22", description: "TRYCKERI LUND AB", amount: -4120, matchedExpenseId: "DEK26-0031" },
 ];
 
 // Section cards ("sektionskort"). Only some members hold one. `transactionIds`

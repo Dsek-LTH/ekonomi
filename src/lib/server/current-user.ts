@@ -17,6 +17,11 @@ import type { Role, User } from "@/lib/domain/types";
 
 export async function resolveUserId(): Promise<string | null> {
   const session = await auth();
+  // An errored session is one Authentik would not renew — usually because it
+  // was revoked at that end. Honouring it here would be this app insisting
+  // somebody is signed in after the place that decides has said otherwise, so
+  // it counts as signed out and the caller sends them back to /login.
+  if (session?.error) return null;
   return session?.user?.id ?? null;
 }
 

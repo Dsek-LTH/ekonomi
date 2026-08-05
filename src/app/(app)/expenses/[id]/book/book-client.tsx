@@ -19,7 +19,7 @@ import { Amount } from "@/components/ui/amount";
 // The out-of-balance difference is set inside a sentence, so that one stays a
 // string — everything else on this page is an Amount.
 import { formatSEK } from "@/lib/ui/format";
-import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
+import { isAmountInput, oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { voucherBlocker } from "@/lib/domain/voucher";
 import { expenseLabel } from "@/lib/domain/reference";
 import { DateInput, Field } from "@/components/ui/field";
@@ -38,11 +38,9 @@ interface Row {
 
 // The amount columns hold text, not type="number": that drops a lone leading
 // "-" from .value (a return is booked with the sign flipped) and rejects
-// "1 234,50". So what may be typed is the shape parseSEK reads instead —
-// digits, spaces as thousand separators, one comma or dot, optional minus.
-// Partial input has to pass too, since this runs on every keystroke: "-", "12,"
-// and "" are all on the way to a number.
-const AMOUNT_PATTERN = /^-?[\d ]*(?:[.,]\d*)?$/;
+// "1 234,50". What may be typed is the shape parseSEK reads instead — see
+// isAmountInput in lib/domain/money.ts, which is also what the wizard's amount
+// fields accept, so an amount can't be typed one way there and another here.
 
 // Which account the money moves from. A card purchase already left the section's
 // bank; a private outlay is a debt to the member until it's paid back. That
@@ -232,7 +230,7 @@ export default function BookExpenseClient({
   // Anything that isn't on its way to an amount is simply not taken — the field
   // keeps what it had, so a stray letter leaves no trace to delete.
   function patchAmount(id: string, field: "debit" | "credit", value: string) {
-    if (!AMOUNT_PATTERN.test(value)) return;
+    if (!isAmountInput(value)) return;
     patch(id, { [field]: value });
   }
   function addRow() {

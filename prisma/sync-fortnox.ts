@@ -4,7 +4,9 @@
 //   pnpm fortnox:sync --year 9 → sync one Fortnox financial-year id
 //
 // Env (.env) is loaded before importing anything that reads DATABASE_URL.
-process.loadEnvFile?.();
+import { loadEnvFile } from "./load-env";
+
+loadEnvFile();
 
 async function main() {
   const { syncLedger } = await import("../src/lib/fortnox/sync");

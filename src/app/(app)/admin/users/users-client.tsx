@@ -7,74 +7,45 @@
 // admin actually manages is the couple of dozen people who hold something more.
 // So this lists the roles and who holds each — and a member without a role
 // simply never appears until you search for them.
+//
+// Read-only, since sign-in moved to Authentik: roles are derived from the
+// Authentik group list on every sign-in and token refresh
+// (lib/server/authentik-roles.ts), so a role granted here would last until the
+// holder's next request and then quietly revert. The place to change one is the
+// mandate in Authentik. What this page is for now is answering "who holds
+// what, right now" — and showing when the answer is not what somebody expected,
+// which is the first thing you want to know when a mapping is wrong.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { Chip } from "@/components/ui/chip";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconPlus, IconTrash, IconX } from "@/components/ui/icons";
-import { useConfirm } from "@/components/confirm-dialog";
-import { useMutation } from "@/components/shell/use-mutation";
+import { IconX } from "@/components/ui/icons";
+import { cn } from "@/lib/ui/utils";
 import { ASSIGNABLE_ROLES } from "@/lib/domain/permissions";
-import type { Role, User } from "@/lib/domain/types";
+import type { User } from "@/lib/domain/types";
 import { PersonSearch } from "./person-search";
 
 export function UsersClient({ holders }: { holders: User[] }) {
   const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
   const tRole = useTranslations("common.role");
-  const confirm = useConfirm();
-  const { pending, busy, mutate } = useMutation();
 
-  // Which role's "+ add" picker is open.
-  const [adding, setAdding] = useState<Role | null>(null);
-  // A member looked up by the top search — shown so their whole role set can be
-  // edited in one place, including granting the first one.
+  // A member looked up by the top search — shown so their whole role set is
+  // visible in one place, including for someone who holds nothing more than
+  // the baseline and therefore appears in no list below.
   const [inspecting, setInspecting] = useState<User | null>(null);
 
-  // The looked-up member may have been edited since; prefer the live row.
+  // The looked-up member may have been re-synced since; prefer the live row.
   const live = inspecting
     ? holders.find((u) => u.id === inspecting.id) ?? inspecting
     : null;
-
-  // `role` only names which control started this — one user's chips all write
-  // the same field, so without it every chip in the row spins together.
-  async function setRoles(user: User, roles: Role[], role: Role) {
-    const ok = await mutate(`/api/users/${user.id}`, {
-      key: `${user.id}:${role}`,
-      method: "PATCH",
-      body: { roles },
-      error: t("saveFailed"),
-    });
-    // Keep the inspected card in step with what was just saved.
-    if (ok && inspecting?.id === user.id) setInspecting({ ...user, roles });
-  }
-
-  function grant(user: User, role: Role) {
-    if (user.roles.includes(role)) return;
-    setRoles(user, [...user.roles, role], role);
-  }
-
-  async function revoke(user: User, role: Role) {
-    const ok = await confirm({
-      title: t("removeTitle", { role: tRole(role), name: user.name }),
-      message: t("removeMessage"),
-      confirmLabel: t("remove"),
-      tone: "danger",
-    });
-    if (!ok) return;
-    setRoles(user, user.roles.filter((r) => r !== role), role);
-  }
 
   return (
     <div className="space-y-5">
       {/* Look up anyone, including the ~980 with no role at all. */}
       <Card>
-        <CardHeader
-          title={t("findTitle")}
-          subtitle={t("findSubtitle")}
-        />
+        <CardHeader title={t("findTitle")} subtitle={t("findSubtitle")} />
         <CardBody className="space-y-4">
           <PersonSearch onSelect={setInspecting} className="max-w-md" />
 
@@ -93,19 +64,24 @@ export function UsersClient({ holders }: { holders: User[] }) {
                 </IconButton>
               </div>
 
+              {/* Every assignable role, held or not, rather than only the held
+                  ones: "does this person have attesträtt" is answered by the
+                  absence as much as by the presence, and a row of four chips
+                  with one lit says it at a glance. Not `Chip` — that is a
+                  toggle, and there is nothing here to toggle. */}
               <div className="mt-3 flex flex-wrap gap-2">
                 {ASSIGNABLE_ROLES.map((r) => (
-                  <Chip
+                  <span
                     key={r}
-                    active={live.roles.includes(r)}
-                    loading={pending === `${live.id}:${r}`}
-                    disabled={busy}
-                    onClick={() =>
-                      live.roles.includes(r) ? revoke(live, r) : grant(live, r)
-                    }
+                    className={cn(
+                      "inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium",
+                      live.roles.includes(r)
+                        ? "border-accent bg-accent-soft text-accent"
+                        : "border-border text-muted",
+                    )}
                   >
                     {tRole(r)}
-                  </Chip>
+                  </span>
                 ))}
               </div>
               {!live.roles.some((r) => r !== "ORDINARIE") && (
@@ -120,10 +96,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
 
       {/* One section per role. ORDINARIE is left out: everyone holds it. */}
       <Card>
-        <CardHeader
-          title={t("rolesTitle")}
-          subtitle={t("rolesSubtitle", { role: tRole("ORDINARIE") })}
-        />
+        <CardHeader title={t("rolesTitle")} subtitle={t("rolesSubtitle", { role: tRole("ORDINARIE") })} />
         {ASSIGNABLE_ROLES.map((role) => {
           const members = holders.filter((u) => u.roles.includes(role));
           return (
@@ -134,59 +107,20 @@ export function UsersClient({ holders }: { holders: User[] }) {
               </div>
 
               {members.length === 0 ? (
-                <p className="px-inset pb-2 text-sm text-muted">{t("nobodyHasRole")}</p>
+                <p className="px-inset pb-4 text-sm text-muted">{t("nobodyHasRole")}</p>
               ) : (
-                <ul className="pb-1">
+                <ul className="pb-2">
                   {members.map((u) => (
-                    <li
-                      key={u.id}
-                      className="flex items-center gap-3.5 px-inset py-2 transition-colors hover:bg-surface/50"
-                    >
+                    <li key={u.id} className="flex items-center gap-3.5 px-inset py-2">
                       <Avatar initials={u.initials} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{u.name}</p>
                         <p className="truncate text-xs text-muted">{u.email}</p>
                       </div>
-                      <IconButton
-                        tone="danger"
-                        onClick={() => revoke(u, role)}
-                        loading={pending === `${u.id}:${role}`}
-                        label={t("removeAria", { role: tRole(role), name: u.name })}
-                      >
-                        <IconTrash className="size-4" />
-                      </IconButton>
                     </li>
                   ))}
                 </ul>
               )}
-
-              <div className="px-inset pb-4 pt-1">
-                {adding === role ? (
-                  <div className="flex items-start gap-2">
-                    <PersonSearch
-                      autoFocus
-                      className="max-w-sm flex-1"
-                      placeholder={t("addPlaceholder", { role: tRole(role).toLowerCase() })}
-                      exclude={members.map((u) => u.id)}
-                      onSelect={(u) => {
-                        grant(u, role);
-                        setAdding(null);
-                      }}
-                    />
-                    <IconButton label={tCommon("cancel")} onClick={() => setAdding(null)}>
-                      <IconX className="size-4" />
-                    </IconButton>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAdding(role)}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition hover:bg-surface hover:text-foreground"
-                  >
-                    <IconPlus className="size-4" />
-                    {t("addPerson")}
-                  </button>
-                )}
-              </div>
             </div>
           );
         })}

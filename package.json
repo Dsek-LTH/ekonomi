@@ -12,6 +12,9 @@
     "test:watch": "vitest",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
+    "app:up": "docker compose --profile app up -d --build",
+    "app:down": "docker compose --profile app down",
+    "app:logs": "docker compose --profile app logs -f app",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
@@ -32,12 +35,13 @@
     "next": "^16.3.0",
     "next-auth": "5.0.0-beta.32",
     "next-intl": "^4.13.4",
+    "pdfjs-dist": "5.4.296",
     "pg": "^8.21.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-pdf": "^10.4.1",
     "react-zoom-pan-pinch": "^4.0.3",
-    "sharp": "^0.35.1"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

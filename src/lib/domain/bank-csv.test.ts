@@ -8,8 +8,16 @@ const HEADER =
   "Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp";
 const COMMENT = "* Transaktionsrapport Period 2026-01-01 - 2026-03-31 Skapad 2026-03-31 20:06 CEST";
 
-// One data row, with only the parts the parser reads worth varying.
-const row = (opts: { n?: number; date?: string; referens: string; amount: string }) =>
+// One data row, with only the parts the parser reads worth varying. `date` sets
+// all three date columns at once; `transdag` overrides the purchase date alone,
+// which is how the bank writes a card purchase that settled a day or two later.
+const row = (opts: {
+  n?: number;
+  date?: string;
+  transdag?: string;
+  referens: string;
+  amount: string;
+}) =>
   [
     opts.n ?? 1,
     "0000",
@@ -17,7 +25,7 @@ const row = (opts: { n?: number; date?: string; referens: string; amount: string
     '"Företagskonto"',
     "SEK",
     opts.date ?? "2026-03-01",
-    opts.date ?? "2026-03-01",
+    opts.transdag ?? opts.date ?? "2026-03-01",
     opts.date ?? "2026-03-01",
     `"${opts.referens}"`,
     '"Kortköp/uttag"',
@@ -33,10 +41,35 @@ describe("parseBankCsv", () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.skippedRows).toBe(0);
     expect(result.transactions[0]).toMatchObject({
-      bookedDate: "2026-03-01",
+      transactionDate: "2026-03-01",
       description: "KAFFEBAREN LUND",
       amount: -14950, // öre, negative because the money left the account
     });
+  });
+
+  it("dates a purchase by Transdag, not the day the bank settled it", () => {
+    // The receipt the member hands in says the 1st; the bank booked it on the
+    // 3rd. Matching the two only works if we keep the day of the purchase.
+    const result = parseBankCsv(
+      file(
+        row({
+          date: "2026-03-03",
+          transdag: "2026-03-01",
+          referens: "KAFFEBAREN LUND K1234",
+          amount: "-49.00",
+        }),
+      ),
+    );
+    expect(result.transactions[0].transactionDate).toBe("2026-03-01");
+  });
+
+  it("falls back to Bokfdag on a row with no Transdag", () => {
+    // Fees and interest are booked without ever having been "made" anywhere.
+    const result = parseBankCsv(
+      file(row({ date: "2026-03-03", transdag: "", referens: "BANKAVGIFT", amount: "-75.00" })),
+    );
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0].transactionDate).toBe("2026-03-03");
   });
 
   it("pulls the card number off the end of the reference", () => {

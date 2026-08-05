@@ -7,7 +7,6 @@ import { prisma } from "@/lib/server/db";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectBuffer } from "@/lib/server/storage";
-import { expenseLabel } from "@/lib/domain/reference";
 import {
   connectFileToVoucher,
   createVoucher,
@@ -18,6 +17,7 @@ import {
   FortnoxError,
   type VoucherRowInput,
 } from "@/lib/fortnox";
+import { voucherText } from "@/lib/fortnox/voucher-text";
 
 const ore = (n: number) => Math.round(n) / 100; // öre int → SEK decimal
 
@@ -104,7 +104,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     created = await createVoucher(token, {
       series: conn.voucherSeries,
       date: verification.date.toISOString().slice(0, 10),
-      description: `${expenseLabel(expense)} – ${verification.description}`,
+      description: voucherText(verification.description, expense.reference),
       rows,
     });
   } catch (e) {

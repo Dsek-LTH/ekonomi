@@ -1,21 +1,26 @@
-// Imports the real 2026 budget from prisma/import/budget-2026.json (produced by
-// parse-budget.py) as one budget:
+// Imports the real budget from prisma/import/budget-2026.json (produced by
+// parse-budget.py) as two standalone budgets for the year — the workbook's two
+// value columns, both named by the workbook itself (Parametrar!I5 and I6):
 //
-//   "2026 REV" — the workbook's left-hand column, with antal × á-pris formulas
+//   "2026 DELTA" — the left-hand column, the revision being written
+//   "2026 VTM"   — the column it was revised from
 //
-// The adopted "2026" column is parsed but deliberately not imported: its line
-// items don't add up to the totals the sheets themselves report (parse-budget
-// .py names the sheets), so importing it would put a budget in the app that
-// disagrees with the budget that was voted through.
+// Both are imported only because both reconcile against the totals the sheets
+// themselves report; parse-budget.py refuses to leave that unsaid. An earlier
+// workbook's previous column did not add up, and importing it would have put a
+// budget in the app that disagreed with the budget that was voted through — so
+// if that check ever fails again, drop the column rather than importing it.
 //
-// Re-runnable: drops and recreates every 2026 budget. Pass a name to import
-// under that one instead — `tsx prisma/import/import-budget.ts VTM`.
+// Re-runnable: drops and recreates every budget of the year. Pass a name to
+// override the imported column's name — `tsx prisma/import/import-budget.ts VTM`.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/lib/generated/prisma/client";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-process.loadEnvFile?.(".env");
+import { loadEnvFile } from "../load-env";
+
+loadEnvFile();
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -31,7 +36,13 @@ interface JsonAccount { code: string; name: string; lineItems: JsonLineItem[] }
 // spreadsheet said, and that is worth being able to check the prefixes against.
 interface JsonCostCenter { code: string; name: string; resultUnit: string | null; accounts: JsonAccount[] }
 interface JsonVariable { name: string; rev: string; orig: string }
-interface BudgetJson { year: number; variables: JsonVariable[]; costCenters: JsonCostCenter[] }
+interface BudgetJson {
+  year: number;
+  name: string;         // the imported column, e.g. "2026 DELTA"
+  previousName: string; // the column it was revised from, e.g. "2026 VTM"
+  variables: JsonVariable[];
+  costCenters: JsonCostCenter[];
+}
 
 async function main() {
   const data: BudgetJson = JSON.parse(
@@ -113,15 +124,18 @@ async function main() {
 
   // Budgets stand alone, so "replace the year's budget" means every budget of
   // that year — there is no container row to hold them together any more.
-  const name = process.argv[2]?.trim() || "2026 REV";
+  const name = process.argv[2]?.trim() || data.name;
   await prisma.budget.deleteMany({ where: { year: data.year } });
+  // The previous column first, so the newer revision sorts after it.
+  await buildBudget(data.previousName, "orig");
   await buildBudget(name, "rev");
 
   const accounts = data.costCenters.reduce((s, c) => s + c.accounts.length, 0);
   const lines = data.costCenters.reduce((s, c) => s + c.accounts.reduce((t, a) => t + a.lineItems.length, 0), 0);
   console.log(
-    `Imported budget ${data.year} "${name}": ${data.costCenters.length} cost centers, ` +
-    `${accounts} accounts, ${lines} line items, ${data.variables.length} variables.`,
+    `Imported ${data.year} "${data.previousName}" and "${name}": ` +
+    `${data.costCenters.length} cost centers, ${accounts} accounts, ${lines} line items, ` +
+    `${data.variables.length} variables each.`,
   );
 }
 

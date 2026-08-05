@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (fresh.length > 0) {
     await prisma.bankTransaction.createMany({
       data: fresh.map((t) => ({
-        bookedDate: new Date(t.bookedDate),
+        transactionDate: new Date(t.transactionDate),
         description: t.description,
         amount: t.amount,
         importHash: t.importHash,

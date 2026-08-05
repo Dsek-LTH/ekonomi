@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
-import { parseSEK } from "@/lib/domain/money";
+import { isAmountInput, parseSEK } from "@/lib/domain/money";
 import { Combobox } from "@/components/ui/combobox";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconX } from "@/components/ui/icons";
@@ -97,7 +97,13 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                 inputMode="decimal"
                 placeholder={t("amountPlaceholder")}
                 value={row.amount}
-                onChange={(e) => update(row.id, { amount: e.target.value })}
+                // Only what is on its way to an amount, öre included but no
+                // finer — the same rule the gross field and the voucher's
+                // amount columns hold to.
+                onChange={(e) => {
+                  if (!isAmountInput(e.target.value)) return;
+                  update(row.id, { amount: e.target.value });
+                }}
                 className={amt}
               />
               <span className="text-xs text-muted">kr</span>

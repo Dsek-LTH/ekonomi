@@ -19,7 +19,9 @@ import { bucket, deleteKeys, listObjects } from "./storage-admin";
 import { expenseLabel } from "../src/lib/domain/reference";
 
 // Standalone run — load .env ourselves, as seed.ts does.
-process.loadEnvFile?.(".env");
+import { loadEnvFile } from "./load-env";
+
+loadEnvFile();
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),

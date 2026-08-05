@@ -1,5 +1,7 @@
 {
  "year": 2026,
+ "name": "2026 DELTA",
+ "previousName": "2026 VTM",
  "variables": [
   {
    "name": "PRISBASBELOPP",
@@ -19,6 +21,41 @@
   {
    "name": "MAT",
    "rev": "0",
+   "orig": "0"
+  },
+  {
+   "name": "LOKAL_LUNCHFORELASNING",
+   "rev": "1505",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_BOKFORING",
+   "rev": "271.25",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_BOKFORING_BOKSLUT",
+   "rev": "173.75",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_OFFERT_ORDER",
+   "rev": "142.5",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_FAKTURERING",
+   "rev": "213.75",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_LAS",
+   "rev": "142.5",
+   "orig": "0"
+  },
+  {
+   "name": "FORTNOX_INTEGRATION",
+   "rev": "271.25",
    "orig": "0"
   },
   {
@@ -80,7 +117,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -93,7 +130,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -106,7 +143,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       },
       {
@@ -119,7 +156,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -132,7 +169,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       },
       {
@@ -177,7 +214,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -190,7 +227,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -203,7 +240,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -229,7 +266,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -242,7 +279,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -255,7 +292,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -268,7 +305,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -281,7 +318,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -307,7 +344,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3312"
+        "expression": "1656"
        }
       },
       {
@@ -320,7 +357,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -333,7 +370,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       }
      ]
@@ -359,7 +396,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "399000"
+        "expression": "0"
        }
       },
       {
@@ -372,7 +409,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "37500"
+        "expression": "33025"
        }
       }
      ]
@@ -391,7 +428,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "427570"
        }
       }
      ]
@@ -410,7 +447,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10500"
+        "expression": "16875"
        }
       }
      ]
@@ -494,7 +531,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "8000"
        }
       }
      ]
@@ -532,7 +569,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "12313"
+        "expression": "20000"
        }
       },
       {
@@ -653,7 +690,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "20768.5"
+        "expression": "21785"
        }
       }
      ]
@@ -756,7 +793,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "8000"
+        "expression": "1000"
        }
       },
       {
@@ -833,7 +870,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "24650"
+        "expression": "11250"
        }
       },
       {
@@ -846,7 +883,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "9600"
        }
       },
       {
@@ -859,7 +896,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "3800"
        }
       },
       {
@@ -1099,7 +1136,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "15456"
+        "expression": "17640"
        }
       },
       {
@@ -1131,7 +1168,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1144,7 +1181,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1157,7 +1194,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       },
       {
@@ -1170,7 +1207,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2800"
+        "expression": "0"
        }
       },
       {
@@ -1183,7 +1220,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       }
      ]
@@ -1202,7 +1239,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1215,7 +1252,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1228,7 +1265,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -1241,7 +1278,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3312"
+        "expression": "1656"
        }
       },
       {
@@ -1254,7 +1291,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -1267,7 +1304,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       },
       {
@@ -1280,7 +1317,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "14490"
+        "expression": "7245"
        }
       }
      ]
@@ -1319,7 +1356,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "100800"
+        "expression": "84000"
        }
       },
       {
@@ -1390,7 +1427,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "60480"
+        "expression": "63000"
        }
       },
       {
@@ -1500,7 +1537,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "7500"
+        "expression": "1000"
        }
       }
      ]
@@ -1583,7 +1620,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1596,7 +1633,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1609,7 +1646,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1622,7 +1659,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -1641,7 +1678,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1654,7 +1691,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1667,7 +1704,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1680,7 +1717,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1693,7 +1730,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4140"
+        "expression": "2070"
        }
       },
       {
@@ -1706,13 +1743,813 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "6210"
+        "expression": "3105"
        }
       }
      ]
     }
    ],
    "resultUnit": "Centralprocessutskottet"
+  },
+  {
+   "code": "DEL01",
+   "name": "Funktionärer",
+   "accounts": [
+    {
+     "code": "4000",
+     "name": "Inköp av varor från Sverige",
+     "lineItems": [
+      {
+       "description": "Merch till jobbare",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "4002",
+     "name": "Mötesfika/Jobbarmat",
+     "lineItems": [
+      {
+       "description": "Mötesfika",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "6530",
+     "name": "Redovisningstjänster",
+     "lineItems": [
+      {
+       "description": "Fortnox — Offert & Order",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Fortnox — Fakturering",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "7600",
+     "name": "Tack",
+     "lineItems": [
+      {
+       "description": "Delta-general",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Projektledare inom Delta",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Delta-värdar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    }
+   ],
+   "resultUnit": "DELTA"
+  },
+  {
+   "code": "DEL02",
+   "name": "Uppstartskostnader",
+   "accounts": [
+    {
+     "code": "4000",
+     "name": "Inköp av varor från Sverige",
+     "lineItems": [
+      {
+       "description": "Tygmärken",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "1000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Medaljer",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "1000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Banderoll till E-huset",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "15000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Övriga kostnader",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "10000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "4002",
+     "name": "Mötesfika/Jobbarmat",
+     "lineItems": [
+      {
+       "description": "Mötesfika",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "4310",
+     "name": "Arrangemangskostnader",
+     "lineItems": [
+      {
+       "description": "Pynt till evenemang",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "1000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "5480",
+     "name": "Arbetskläder och skyddsmaterial",
+     "lineItems": [
+      {
+       "description": "Arbetskläder t. funktionärer",
+       "rev": {
+        "quantity": "30",
+        "unitPrice": "100",
+        "expression": "3000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "5900",
+     "name": "Reklam och PR",
+     "lineItems": [
+      {
+       "description": "Affischer på campus",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "500"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Rekrytering - Monter - Kaffe och godis",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "500"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "6530",
+     "name": "Redovisningstjänster",
+     "lineItems": [
+      {
+       "description": "Fortnox — Offert & Order",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "855"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Fortnox — Fakturering",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "1282.5"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "6930",
+     "name": "Kostnader för varumärken m.m.",
+     "lineItems": [
+      {
+       "description": "Varumärkesregistrering",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "5000"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "7600",
+     "name": "Tack",
+     "lineItems": [
+      {
+       "description": "Kick-off för projektgruppen",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    }
+   ],
+   "resultUnit": "DELTA"
+  },
+  {
+   "code": "DEL03",
+   "name": "Försäljning",
+   "accounts": [
+    {
+     "code": "3000",
+     "name": "Försäljning inom Sverige",
+     "lineItems": [
+      {
+       "description": "Lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Lunchföreläsning - Pris",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Mat t. lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Dryck t. lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Studentsessioner",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Studentsession - Pris",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Pubar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Pub - Pris",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Paket",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Företagspaket - Brons",
+       "rev": {
+        "quantity": "0",
+        "unitPrice": "20000",
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Företagspaket - Silver",
+       "rev": {
+        "quantity": "0",
+        "unitPrice": "25000",
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Företagspaket - Guld",
+       "rev": {
+        "quantity": "0",
+        "unitPrice": "30000",
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "4310",
+     "name": "Arrangemangskostnader",
+     "lineItems": [
+      {
+       "description": "Lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Mat t. lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Dryck t. lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Lokalbokning t. lunchföreläsningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    },
+    {
+     "code": "4730",
+     "name": "Erhållna rabatter",
+     "lineItems": [
+      {
+       "description": "Paketrabatter",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    }
+   ],
+   "resultUnit": "DELTA"
+  },
+  {
+   "code": "DEL04",
+   "name": "Logistik",
+   "accounts": [
+    {
+     "code": "4310",
+     "name": "Arrangemangskostnader",
+     "lineItems": [
+      {
+       "description": "Lokaler",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Gasquesalen",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Möbler ej för företag",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Loungemöbler",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Andra möbler",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Matta",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Matta",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Matttejp",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Garderob",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Garderobsställningar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Galgar",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Övrigt",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "El och internet",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Shuttle service",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Parkeringsbiljetter",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      }
+     ]
+    }
+   ],
+   "resultUnit": "DELTA"
   },
   {
    "code": "FRA01",
@@ -1777,7 +2614,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "900"
+        "expression": "0"
        }
       }
      ]
@@ -1796,7 +2633,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1809,7 +2646,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3850"
+        "expression": "0"
        }
       }
      ]
@@ -1828,7 +2665,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -1841,7 +2678,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4554"
+        "expression": "2277"
        }
       }
      ]
@@ -1970,7 +2807,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1983,7 +2820,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -1996,7 +2833,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -2015,7 +2852,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2028,7 +2865,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2041,7 +2878,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -2054,7 +2891,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -2067,7 +2904,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -2080,7 +2917,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -2093,7 +2930,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2106,7 +2943,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2119,7 +2956,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -2132,7 +2969,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "207"
        }
       },
       {
@@ -2145,7 +2982,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "621"
        }
       },
       {
@@ -2158,7 +2995,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2898"
+        "expression": "1449"
        }
       }
      ]
@@ -2358,7 +3195,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1000"
+        "expression": "0"
        }
       }
      ]
@@ -2435,7 +3272,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2448,7 +3285,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2461,7 +3298,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -2474,7 +3311,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       },
       {
@@ -2487,7 +3324,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -2500,7 +3337,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3312"
+        "expression": "1656"
        }
       }
      ]
@@ -2712,7 +3549,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -2731,7 +3568,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2744,7 +3581,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1656"
+        "expression": "828"
        }
       }
      ]
@@ -2828,7 +3665,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -2847,7 +3684,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2376"
+        "expression": "3420"
        }
       },
       {
@@ -2860,7 +3697,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3096"
+        "expression": "5130"
        }
       }
      ]
@@ -2879,7 +3716,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2892,7 +3729,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2918,7 +3755,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -2931,7 +3768,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1656"
+        "expression": "828"
        }
       },
       {
@@ -2944,7 +3781,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       }
      ]
@@ -2983,7 +3820,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "56000"
+        "expression": "40000"
        }
       },
       {
@@ -2996,7 +3833,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "7000"
+        "expression": "5000"
        }
       },
       {
@@ -3009,7 +3846,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10535"
+        "expression": "7525"
        }
       },
       {
@@ -3022,7 +3859,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "105700"
+        "expression": "75500"
        }
       },
       {
@@ -3048,7 +3885,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "22500"
        }
       },
       {
@@ -3061,7 +3898,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "38000"
+        "expression": "57000"
        }
       },
       {
@@ -3113,7 +3950,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "125000"
+        "expression": "137500"
        }
       },
       {
@@ -3126,7 +3963,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "60000"
+        "expression": "65000"
        }
       },
       {
@@ -3191,7 +4028,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "43000"
+        "expression": "10000"
        }
       },
       {
@@ -3236,7 +4073,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "56000"
+        "expression": "40000"
        }
       },
       {
@@ -3249,7 +4086,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "7000"
+        "expression": "5000"
        }
       },
       {
@@ -3294,7 +4131,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "65000"
+        "expression": "70000"
        }
       },
       {
@@ -3320,7 +4157,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "25000"
        }
       },
       {
@@ -3333,7 +4170,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "35000"
        }
       }
      ]
@@ -3365,13 +4202,13 @@
        "description": "Lokalbokning t. lunchföreläsningar",
        "rev": {
         "quantity": "5",
-        "unitPrice": "1505",
+        "unitPrice": "LOKAL_LUNCHFORELASNING",
         "expression": "7525"
        },
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10535"
+        "expression": "7525"
        }
       }
      ]
@@ -3531,7 +4368,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -3544,7 +4381,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1750"
+        "expression": "0"
        }
       },
       {
@@ -3557,7 +4394,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       },
       {
@@ -3570,7 +4407,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3150"
+        "expression": "0"
        }
       },
       {
@@ -3583,7 +4420,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "14880"
+        "expression": "0"
        }
       }
      ]
@@ -3602,7 +4439,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -3615,7 +4452,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       },
       {
@@ -3628,7 +4465,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -3641,7 +4478,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3726"
+        "expression": "1863"
        }
       },
       {
@@ -3763,7 +4600,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "25000"
+        "expression": "0"
        }
       },
       {
@@ -3776,7 +4613,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "35000"
+        "expression": "0"
        }
       }
      ]
@@ -3924,7 +4761,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "40500"
        }
       }
      ]
@@ -3982,7 +4819,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "40500"
        }
       }
      ]
@@ -4116,7 +4953,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4000"
+        "expression": "3000"
        }
       }
      ]
@@ -4238,7 +5075,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       },
       {
@@ -4251,7 +5088,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -4270,7 +5107,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -4283,7 +5120,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -4296,7 +5133,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       }
      ]
@@ -4373,7 +5210,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "15000"
+        "expression": "17000"
        }
       }
      ]
@@ -4405,7 +5242,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1572"
+        "expression": "1800"
        }
       }
      ]
@@ -4650,7 +5487,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "500"
        }
       }
      ]
@@ -4669,7 +5506,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "2975"
        }
       }
      ]
@@ -4695,7 +5532,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "43850"
+        "expression": "45000"
        }
       }
      ]
@@ -4714,7 +5551,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10000"
+        "expression": "17000"
        }
       },
       {
@@ -4727,7 +5564,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "6000"
        }
       },
       {
@@ -4798,7 +5635,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2850"
+        "expression": "607.2"
        }
       },
       {
@@ -4811,7 +5648,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "7500"
+        "expression": "770.46"
        }
       },
       {
@@ -4824,7 +5661,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3000"
+        "expression": "400"
        }
       },
       {
@@ -4850,7 +5687,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2300"
+        "expression": "777.38"
        }
       },
       {
@@ -4863,7 +5700,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1000"
+        "expression": "118.33"
        }
       },
       {
@@ -4876,7 +5713,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3000"
+        "expression": "518.81"
        }
       },
       {
@@ -4889,7 +5726,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1100"
+        "expression": "181.94"
        }
       },
       {
@@ -4902,7 +5739,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1500"
+        "expression": "317.5"
        }
       },
       {
@@ -4915,7 +5752,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2000"
+        "expression": "0"
        }
       },
       {
@@ -4928,7 +5765,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2500"
+        "expression": "0"
        }
       },
       {
@@ -4941,7 +5778,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "8500"
+        "expression": "5000"
        }
       },
       {
@@ -4954,7 +5791,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "0"
        }
       },
       {
@@ -4967,7 +5804,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1500"
+        "expression": "284.52"
        }
       },
       {
@@ -4980,7 +5817,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "300"
+        "expression": "0"
        }
       },
       {
@@ -4993,7 +5830,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "0"
        }
       },
       {
@@ -5006,7 +5843,33 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1000"
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Projektgruppen inom Delta",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       }
+      },
+      {
+       "description": "Delta-dagen",
+       "rev": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
+       },
+       "orig": {
+        "quantity": null,
+        "unitPrice": null,
+        "expression": "0"
        }
       }
      ]
@@ -5259,7 +6122,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1050"
+        "expression": "1400"
        }
       },
       {
@@ -5323,7 +6186,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "414"
        }
       },
       {
@@ -5336,7 +6199,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "1035"
        }
       },
       {
@@ -5349,7 +6212,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "621"
        }
       },
       {
@@ -5362,7 +6225,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "1035"
        }
       },
       {
@@ -5375,7 +6238,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "621"
        }
       },
       {
@@ -5388,7 +6251,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "621"
        }
       },
       {
@@ -5401,7 +6264,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "828"
        }
       },
       {
@@ -5414,7 +6277,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "414"
        }
       },
       {
@@ -5427,7 +6290,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "1242"
        }
       }
      ]
@@ -5446,7 +6309,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "30000"
+        "expression": "16560"
        }
       }
      ]
@@ -5472,7 +6335,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "0"
        }
       },
       {
@@ -5523,7 +6386,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "38250"
+        "expression": "69741.91669963063"
        }
       }
      ]
@@ -5542,7 +6405,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "6750"
+        "expression": "21961.4297683978"
        }
       }
      ]
@@ -5561,7 +6424,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "75600"
+        "expression": "69448.8034809331"
        }
       }
      ]
@@ -5580,7 +6443,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "23400"
+        "expression": "117052.86512868061"
        }
       }
      ]
@@ -5599,7 +6462,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "234000"
+        "expression": "250000"
        }
       },
       {
@@ -5612,7 +6475,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "25000"
        }
       }
      ]
@@ -5631,7 +6494,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "20000"
        }
       }
      ]
@@ -5650,7 +6513,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "48431.886596965705"
        }
       }
      ]
@@ -5669,7 +6532,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "16267.725754368741"
        }
       }
      ]
@@ -5688,7 +6551,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "48228.33575064798"
        }
       }
      ]
@@ -5707,7 +6570,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "43352.91301062245"
        }
       }
      ]
@@ -5726,7 +6589,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "150000"
+        "expression": "170000"
        }
       },
       {
@@ -5739,7 +6602,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "15000"
+        "expression": "10000"
        }
       }
      ]
@@ -5758,7 +6621,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "65000"
+        "expression": "140000"
        }
       },
       {
@@ -5842,7 +6705,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "10000"
        }
       }
      ]
@@ -5861,7 +6724,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "25000"
+        "expression": "40000"
        }
       }
      ]
@@ -5880,7 +6743,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "53550"
+        "expression": "51637.17137386946"
        }
       }
      ]
@@ -5899,7 +6762,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "9450"
+        "expression": "20301.804297674425"
        }
       }
      ]
@@ -5918,7 +6781,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "27000"
+        "expression": "4513.7081807839195"
        }
       }
      ]
@@ -5937,7 +6800,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2700"
+        "expression": "25963.58378386137"
        }
       }
      ]
@@ -5956,7 +6819,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "10000"
        }
       }
      ]
@@ -5975,7 +6838,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "35859.14678740934"
        }
       }
      ]
@@ -5994,7 +6857,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "15038.373553832906"
        }
       }
      ]
@@ -6013,7 +6876,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "3134.5195699888327"
        }
       }
      ]
@@ -6032,7 +6895,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "9616.142142170876"
        }
       }
      ]
@@ -6051,7 +6914,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "2500"
        }
       },
       {
@@ -6064,7 +6927,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "14000"
+        "expression": "5000"
        }
       },
       {
@@ -6077,7 +6940,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "37500"
+        "expression": "62500"
        }
       }
      ]
@@ -6115,7 +6978,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "11200"
+        "expression": "9600"
        }
       }
      ]
@@ -6141,7 +7004,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "600"
        }
       }
      ]
@@ -6160,7 +7023,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "700"
        }
       }
      ]
@@ -6179,7 +7042,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10404"
+        "expression": "12744.633495974158"
        }
       }
      ]
@@ -6198,7 +7061,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2835"
+        "expression": "4942.069176214988"
        }
       }
      ]
@@ -6217,7 +7080,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "63450"
+        "expression": "30867.164392918356"
        }
       }
      ]
@@ -6236,7 +7099,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "36000"
+        "expression": "36528.7943631196"
        }
       }
      ]
@@ -6255,7 +7118,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "108500"
+        "expression": "112970"
        }
       },
       {
@@ -6268,7 +7131,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "16000"
        }
       }
      ]
@@ -6287,7 +7150,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "31000"
+        "expression": "24310"
        }
       },
       {
@@ -6300,7 +7163,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "5000"
+        "expression": "1000"
        }
       }
      ]
@@ -6319,7 +7182,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "8850.439927759831"
        }
       }
      ]
@@ -6338,7 +7201,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "3660.7919823814723"
        }
       }
      ]
@@ -6357,7 +7220,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "21435.53082841552"
        }
       }
      ]
@@ -6376,7 +7239,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "13529.183097451703"
        }
       }
      ]
@@ -6485,7 +7348,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "700"
        }
       }
      ]
@@ -6523,7 +7386,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "13770"
+        "expression": "6158.259596245911"
        }
       }
      ]
@@ -6542,7 +7405,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "12150"
+        "expression": "1719.315797653576"
        }
       }
      ]
@@ -6561,7 +7424,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "27000"
+        "expression": "18121.483945364635"
        }
       }
      ]
@@ -6580,7 +7443,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10800"
+        "expression": "14771.182362000429"
        }
       }
      ]
@@ -6599,7 +7462,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3000"
+        "expression": "1000"
        }
       },
       {
@@ -6612,7 +7475,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1500"
+        "expression": "0"
        }
       }
      ]
@@ -6663,7 +7526,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "4276.56916405966"
        }
       }
      ]
@@ -6682,7 +7545,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "1273.5672575211674"
        }
       }
      ]
@@ -6701,7 +7564,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "12584.36385094766"
        }
       }
      ]
@@ -6720,7 +7583,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "5470.8082822223805"
        }
       }
      ]
@@ -6797,7 +7660,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "1000"
        }
       }
      ]
@@ -6816,7 +7679,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "28710.000000000004"
+        "expression": "17453.890834279857"
        }
       }
      ]
@@ -6835,7 +7698,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "19800"
+        "expression": "12837.043960059213"
        }
       }
      ]
@@ -6873,7 +7736,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "99000"
+        "expression": "60743.12436233797"
        }
       }
      ]
@@ -6892,7 +7755,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "15750"
+        "expression": "12120.757523805454"
        }
       }
      ]
@@ -6911,7 +7774,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "11700"
+        "expression": "9508.921451895712"
        }
       }
      ]
@@ -6949,7 +7812,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "31500"
+        "expression": "22497.45346753258"
        }
       }
      ]
@@ -6968,7 +7831,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1140"
+        "expression": "800"
        }
       }
      ]
@@ -6987,7 +7850,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "35424"
+        "expression": "18842.770685377323"
        }
       }
      ]
@@ -7032,7 +7895,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -7045,7 +7908,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -7058,7 +7921,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1050"
+        "expression": "0"
        }
       }
      ]
@@ -7077,7 +7940,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7090,7 +7953,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7103,7 +7966,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1242"
+        "expression": "828"
        }
       },
       {
@@ -7142,7 +8005,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2376"
+        "expression": "3255"
        }
       }
      ]
@@ -7161,7 +8024,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "300"
+        "expression": "1000"
        }
       }
      ]
@@ -7180,7 +8043,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "100"
+        "expression": "500"
        }
       }
      ]
@@ -7199,7 +8062,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1500"
+        "expression": "5250"
        }
       },
       {
@@ -7212,7 +8075,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10000"
+        "expression": "18000"
        }
       },
       {
@@ -7225,7 +8088,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "13500"
+        "expression": "8000"
        }
       }
      ]
@@ -7244,7 +8107,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1500"
+        "expression": "3450"
        }
       },
       {
@@ -7257,7 +8120,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3850"
+        "expression": "3500"
        }
       }
      ]
@@ -7289,7 +8152,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "10008"
+        "expression": "19530"
        }
       },
       {
@@ -7302,7 +8165,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "556"
+        "expression": "1503.75"
        }
       },
       {
@@ -7315,7 +8178,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2376"
+        "expression": "3420"
        }
       },
       {
@@ -7328,7 +8191,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "3096"
+        "expression": "5130"
        }
       },
       {
@@ -7341,20 +8204,20 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1560"
+        "expression": "3420"
        }
       },
       {
        "description": "Fortnox — Integration",
        "rev": {
         "quantity": "12",
-        "unitPrice": "271.25",
+        "unitPrice": "FORTNOX_INTEGRATION",
         "expression": "3255"
        },
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1548"
+        "expression": "3255"
        }
       }
      ]
@@ -7373,7 +8236,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "1000"
        }
       }
      ]
@@ -7463,7 +8326,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -7476,7 +8339,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -7489,7 +8352,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -7502,7 +8365,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4200"
+        "expression": "0"
        }
       },
       {
@@ -7515,7 +8378,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "700"
+        "expression": "0"
        }
       }
      ]
@@ -7534,7 +8397,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7547,7 +8410,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7560,7 +8423,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7573,7 +8436,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4968"
+        "expression": "2484"
        }
       },
       {
@@ -7586,7 +8449,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -7599,7 +8462,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1656"
+        "expression": "828"
        }
       },
       {
@@ -7612,7 +8475,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "8280"
+        "expression": "4140"
        }
       }
      ]
@@ -7638,7 +8501,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "0"
+        "expression": "7500"
        }
       }
      ]
@@ -7715,7 +8578,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "24000"
+        "expression": "12500"
        }
       },
       {
@@ -7754,7 +8617,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4500"
+        "expression": "0"
        }
       }
      ]
@@ -7882,7 +8745,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "4200"
+        "expression": "500"
        }
       },
       {
@@ -7895,7 +8758,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7908,7 +8771,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       }
      ]
@@ -7953,7 +8816,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -7972,7 +8835,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -7985,7 +8848,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       }
      ]
@@ -8004,7 +8867,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "20000"
+        "expression": "15000"
        }
       }
      ]
@@ -8049,7 +8912,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -8068,7 +8931,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -8081,7 +8944,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2070"
+        "expression": "1035"
        }
       }
      ]
@@ -8100,7 +8963,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "30000"
+        "expression": "15000"
        }
       }
      ]
@@ -8882,7 +9745,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "323453.1729181407"
+        "expression": "256557.64331169002"
        }
       }
      ]
@@ -8960,7 +9823,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "6500"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9010,7 +9873,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "0"
        }
       }
      ]
@@ -9086,9 +9949,9 @@
       {
        "description": "Tröjor t. projektgruppen",
        "rev": {
-        "quantity": "14",
+        "quantity": "0",
         "unitPrice": "350",
-        "expression": "4900"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9107,7 +9970,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9120,7 +9983,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "500"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9133,7 +9996,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2000"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9150,9 +10013,9 @@
       {
        "description": "Fortnox — Offert & Order",
        "rev": {
-        "quantity": "1",
+        "quantity": "0",
         "unitPrice": "99",
-        "expression": "99"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9163,9 +10026,9 @@
       {
        "description": "Fortnox — Fakturering",
        "rev": {
-        "quantity": "1",
+        "quantity": "0",
         "unitPrice": "129",
-        "expression": "129"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9184,7 +10047,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2800"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9203,7 +10066,7 @@
        "rev": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "2000"
+        "expression": "0"
        },
        "orig": {
         "quantity": null,
@@ -9285,7 +10148,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -9298,7 +10161,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "1050"
+        "expression": "0"
        }
       },
       {
@@ -9311,7 +10174,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -9324,7 +10187,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       }
      ]
@@ -9343,7 +10206,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -9356,7 +10219,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "828"
+        "expression": "414"
        }
       },
       {
@@ -9369,7 +10232,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -9382,7 +10245,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       }
      ]
@@ -9427,7 +10290,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "350"
+        "expression": "0"
        }
       },
       {
@@ -9440,7 +10303,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "9800"
+        "expression": "0"
        }
       }
      ]
@@ -9459,7 +10322,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "414"
+        "expression": "207"
        }
       },
       {
@@ -9472,7 +10335,7 @@
        "orig": {
         "quantity": null,
         "unitPrice": null,
-        "expression": "11592"
+        "expression": "9936"
        }
       }
      ]

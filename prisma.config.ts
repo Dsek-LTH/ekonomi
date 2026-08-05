@@ -2,8 +2,9 @@
 // out of schema.prisma. Env is loaded explicitly — the config file does not
 // read .env automatically.
 import { defineConfig } from "prisma/config";
+import { loadEnvFile } from "./prisma/load-env";
 
-process.loadEnvFile?.(".env");
+loadEnvFile();
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
