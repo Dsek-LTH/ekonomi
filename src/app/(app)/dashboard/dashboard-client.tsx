@@ -9,8 +9,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/status-pill";
 import { IconPlus, IconChevronRight } from "@/components/ui/icons";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import { useTableControls } from "@/components/ui/table-controls";
+import { type Column } from "@/components/ui/data-table";
+import { ClientDataTable } from "@/components/ui/client-data-table";
+import { useTableControls } from "@/lib/data/use-list-query";
 import {
   expenseAmountColumn,
   expenseDateColumn,
@@ -19,17 +20,11 @@ import {
   expenseStatusColumn,
   expenseSubmitterColumn,
   expenseTitleColumn,
-} from "@/components/expense-columns";
+} from "@/components/columns/expense-columns";
 import type { QueueAction, QueueItem } from "@/lib/domain/queue";
 
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
-import { useProgressRouter } from "@/components/shell/route-progress";
-
-// How many of your own utlägg the dashboard shows before handing you off to the
-// list that is built for browsing. The old page said "senaste" and then rendered
-// every one of them, which made it an unbounded copy of /expenses.
-const MINE_PREVIEW = 5;
 
 // The queue's action reuses the app's status colours rather than inventing a
 // second language: purple is the authority chain, danger is "it came back",
@@ -70,7 +65,6 @@ export function DashboardClient({
   const tList = useTranslations("expenses");
   const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
-  const router = useProgressRouter();
 
   // Two tables on one page means two independent sets of sort/filter state.
   const queueControls = useTableControls();
@@ -140,13 +134,13 @@ export function DashboardClient({
           <Card>
             <CardHeader title={t("queueTitle")} />
             {queue.length ? (
-              <DataTable
+              <ClientDataTable
                 columns={queueColumns}
                 rows={queue}
                 controls={queueControls}
                 searchPlaceholder={tList("searchPlaceholder")}
                 rowKey={(i) => i.expense.id}
-                onRowClick={(i) => router.push(`/expenses/${i.expense.id}`)}
+                rowHref={(i) => `/expenses/${i.expense.id}`}
                 empty={tList("noMatch")}
               />
             ) : (
@@ -168,13 +162,13 @@ export function DashboardClient({
               }
             />
             {mine.length ? (
-              <DataTable
+              <ClientDataTable
                 columns={mineColumns}
-                rows={mine.slice(0, MINE_PREVIEW)}
+                rows={mine}
                 controls={mineControls}
                 searchPlaceholder={tList("searchPlaceholder")}
                 rowKey={(e) => e.id}
-                onRowClick={(e) => router.push(`/expenses/${e.id}`)}
+                rowHref={(e) => `/expenses/${e.id}`}
                 empty={tList("noMatch")}
               />
             ) : (

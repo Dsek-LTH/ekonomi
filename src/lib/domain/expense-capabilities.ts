@@ -1,10 +1,23 @@
 // Which actions the detail page offers for one expense, to one viewer.
 //
-// Pure and React-free: role capabilities (lib/permissions) and status rules
-// (lib/status) go in, a flat set of booleans comes out — so the page renders the
-// answer rather than deriving it inline. Attest authority is the one input the
-// client can't compute: the server stamps it per allocation as `a.canAttest`.
-import { canBookkeep, canUnexport, isAdmin } from "@/lib/domain/permissions";
+// Pure and React-free: role capabilities (permissions.ts) and status rules
+// (status.ts) go in, a flat set of booleans comes out.
+//
+// It lives in lib/domain, and is called on the *server* — the detail page
+// derives it once and hands the answer down. That is not where it started: it
+// was a client module, deriving the same rules the API enforces, from a second
+// copy of them written by hand. Each of those copies was a place the two could
+// drift, and one had: `canExport` offered the button to anyone with bookkeeping
+// access, which includes the ordförande, who has no Fortnox login and could
+// never complete it (see `canLogInToFortnox`).
+//
+// One derivation, on the side that decides, in a module the tests can reach.
+import {
+  canBookkeep,
+  canLogInToFortnox,
+  canUnexport,
+  isAdmin,
+} from "@/lib/domain/permissions";
 import {
   isAttestWithdrawable,
   isEditable,
@@ -12,8 +25,8 @@ import {
   isSubmittable,
   submitBlocker,
   type SubmitBlocker,
-} from "@/lib/domain/status";
-import type { Expense, Role } from "@/lib/domain/types";
+} from "./status";
+import type { Expense, Role } from "./types";
 
 export type ExpenseCapabilities = {
   canSubmit: boolean;
@@ -62,7 +75,12 @@ export function expenseCapabilities(
     expense.allocations.some((a) => a.canAttest && a.approvedById === viewer.id);
   const canReturn = !!expense.canReturn && expense.status === "APPROVED";
   const canBook = bookkeeper && expense.status === "APPROVED";
-  const canExport = bookkeeper && expense.status === "BOOKED";
+  // Exporting is a real Fortnox call made under the bookkeeper's own login, so
+  // it takes the narrower role set — the one that *has* such a login. The chair
+  // counts as bookkeeping in this app and has no Fortnox account, and was being
+  // offered a button whose first step would have asked them to sign in to
+  // something they cannot sign in to.
+  const canExport = canLogInToFortnox(viewer.roles) && expense.status === "BOOKED";
   const mayUnexport = canUnexport(viewer.roles) && expense.status === "EXPORTED";
   const canRequestChanges =
     expense.status === "PENDING_APPROVAL" && expense.allocations.some((a) => a.canAttest);

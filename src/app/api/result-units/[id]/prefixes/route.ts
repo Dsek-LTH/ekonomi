@@ -9,6 +9,8 @@ import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { normalisePrefix, prefixConflict, prefixConflictError } from "@/lib/server/result-units";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { AddPrefix } from "@/lib/api/schemas/admin";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: resultUnitId } = await ctx.params;
@@ -19,9 +21,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return fail(404, "resultUnit.notFound");
   }
 
-  const body = await req.json().catch(() => ({}));
-  const value = normalisePrefix(typeof body.value === "string" ? body.value : "");
-  if (!value) return fail(422, "resultUnit.prefixRequired");
+  const parsed = await parseBody(req, AddPrefix);
+  if (!parsed.ok) return parsed.res;
+  const value = normalisePrefix(parsed.data.value);
   if (!/^[A-ZÅÄÖ0-9]+$/.test(value)) {
     return fail(422, "resultUnit.prefixFormat");
   }

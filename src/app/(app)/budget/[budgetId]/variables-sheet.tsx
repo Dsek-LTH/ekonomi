@@ -11,7 +11,10 @@ import { cn } from "@/lib/ui/utils";
 import { IconButton } from "@/components/ui/icon-button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconTrash } from "@/components/ui/icons";
-import { fmt } from "./budget-helpers";
+// Variables are not money — MEDLEMMAR is a headcount, a policy figure may be a
+// share — so they are printed as the numbers they are rather than converted
+// from öre. See `fmtScalar` in budget-helpers.
+import { fmtScalar } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";
 import type { Comparison } from "./use-comparison";
 import type { Budget, Evaluated, CellFn, FormulaFn, ApiFn } from "./budget-types";
@@ -52,12 +55,12 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
                   {renderCell({ id: v.id, field: "name", actual: v.name, mono: true, url, payload: (x) => ({ name: x.toUpperCase() }), gated: true })}
                 </td>
                 <td className="border-r border-border/60 p-0">
-                  {renderFormula({ id: v.id, field: "expression", raw: v.expression, computed: ev.vars[v.name], sheet: "", display: "formula", bad, url, payload: (x) => ({ expression: x }), gated: true })}
+                  {renderFormula({ id: v.id, field: "expression", raw: v.expression, computed: ev.vars[v.name], unit: "scalar", sheet: "", display: "formula", bad, url, payload: (x) => ({ expression: x }), gated: true })}
                 </td>
-                <td className={cn("px-3 py-1.5 text-right tabular-nums", bad && "text-danger")}>{fmt(ev.vars[v.name])}</td>
+                <td className={cn("px-3 py-1.5 text-right tabular-nums", bad && "text-danger")}>{fmtScalar(ev.vars[v.name])}</td>
                 {showCompare && (
                   <td className="border-l border-border/40 px-3 py-1.5 text-right tabular-nums text-muted">
-                    {fmt(compareValue.get(v.name))}
+                    {fmtScalar(compareValue.get(v.name))}
                   </td>
                 )}
                 {isAdmin && (
@@ -78,7 +81,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
               <td className="border-r border-border/60 px-3 py-1.5 font-mono text-xs">{v.name}</td>
               <td className="border-r border-border/60 px-3 py-1.5 text-xs">· {tRam("notInThisBudget")}</td>
               <td />
-              <td className="border-l border-border/40 px-3 py-1.5 text-right tabular-nums">{fmt(v.values[1])}</td>
+              <td className="border-l border-border/40 px-3 py-1.5 text-right tabular-nums">{fmtScalar(v.values[1])}</td>
               {isAdmin && <td />}
             </tr>
           ))}
@@ -87,6 +90,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
             <tr className="border-b border-border/60">
               <td className="border-r border-border/60 p-0" colSpan={2}>
                 <input
+                  aria-label={t("addPlaceholder")}
                   value={newVar}
                   onChange={(e) => setNewVar(e.target.value)}
                   onKeyDown={async (e) => {

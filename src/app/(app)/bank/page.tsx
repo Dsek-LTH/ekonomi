@@ -1,9 +1,14 @@
 import { requirePage } from "@/lib/server/current-user";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
-import { getBankTransactions } from "@/lib/data/bank";
+import { getBankTransactionPage } from "@/lib/data/bank";
+import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import BankClient from "./bank-client";
 
-export default async function BankPage() {
+export default async function BankPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   // The whole section's bank feed — every purchase, its amount and whose card
   // it sat on. The nav only offers it to bookkeeping, and this is what keeps
   // the route from being reachable by URL regardless. (BankClient hides the
@@ -11,6 +16,6 @@ export default async function BankPage() {
   // of the rule, not the first.)
   await requirePage(canAccessBookkeeping);
 
-  const bankTransactions = await getBankTransactions();
-  return <BankClient bankTransactions={bankTransactions} />;
+  const page = await getBankTransactionPage({}, parseListQuery(await searchParams));
+  return <BankClient page={page} />;
 }

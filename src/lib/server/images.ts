@@ -1,7 +1,12 @@
 // Server-side image normalisation for uploaded receipts. Phone photos arrive in
 // formats browsers can't always show (HEIC/HEIF) and at huge sizes; we convert
-// them to a web-friendly image, fix EXIF rotation, and make a small thumbnail.
-// PDFs are not touched here.
+// them to a web-friendly image and fix EXIF rotation. PDFs are not touched here.
+//
+// There is one stored size and no thumbnail. There used to be a second, 480px
+// encode written alongside it, and nothing ever asked for it — the viewer always
+// read the full-size object, and no list shows a preview. It cost an extra
+// encode on every upload and an extra object per receipt to produce something
+// nobody looked at.
 import sharp, { type Sharp } from "sharp";
 
 const IMAGE_MIME = new Set([
@@ -21,12 +26,10 @@ export type NormalisedMime = "image/jpeg" | "image/png";
 
 export interface NormalisedImage {
   full: Buffer; // display image (EXIF-rotated, downscaled)
-  thumb: Buffer; // small preview
   mimeType: NormalisedMime;
 }
 
 const MAX_FULL = 2400; // px on the longest side — plenty to zoom into details
-const THUMB = 480; // px on the longest side
 
 const EXTENSION: Record<NormalisedMime, string> = {
   "image/jpeg": "jpg",
@@ -51,8 +54,8 @@ async function isTransparent(input: Buffer): Promise<boolean> {
   return !isOpaque;
 }
 
-// Turn an original image into a web-friendly full image + thumbnail. Throws if
-// the bytes aren't a decodable image.
+// Turn an original image into a web-friendly one. Throws if the bytes aren't a
+// decodable image.
 export async function normaliseImage(input: Buffer): Promise<NormalisedImage> {
   // `.rotate()` with no angle bakes in the EXIF orientation, then strips it, so
   // the pixels are upright regardless of how the phone recorded them.
@@ -75,16 +78,11 @@ export async function normaliseImage(input: Buffer): Promise<NormalisedImage> {
       : pipeline.jpeg({ quality, mozjpeg: true });
 
   const full = await encode(
-    base.clone().resize({ width: MAX_FULL, height: MAX_FULL, fit: "inside", withoutEnlargement: true }),
+    base.resize({ width: MAX_FULL, height: MAX_FULL, fit: "inside", withoutEnlargement: true }),
     82,
   ).toBuffer();
 
-  const thumb = await encode(
-    base.clone().resize({ width: THUMB, height: THUMB, fit: "inside", withoutEnlargement: true }),
-    70,
-  ).toBuffer();
-
-  return { full, thumb, mimeType };
+  return { full, mimeType };
 }
 
 /** Original filename with its extension swapped for the one actually stored. */
@@ -92,6 +90,3 @@ export function normalisedName(filename: string, mimeType: NormalisedMime): stri
   const base = filename.replace(/\.[^.]+$/, "");
   return `${base || "kvitto"}.${EXTENSION[mimeType]}`;
 }
-
-/** The extension a normalised image is stored under — for naming its objects. */
-export const normalisedExtension = (mimeType: NormalisedMime): string => EXTENSION[mimeType];

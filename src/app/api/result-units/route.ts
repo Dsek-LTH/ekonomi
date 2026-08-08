@@ -4,14 +4,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { ResultUnitBody } from "@/lib/api/schemas/admin";
 
 export async function POST(req: Request) {
   const g = await gate(canAccessSettings, "auth.adminOnly");
   if (!g.ok) return g.res;
 
-  const body = await req.json().catch(() => ({}));
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  if (!name) return fail(422, "resultUnit.nameRequired");
+  const parsed = await parseBody(req, ResultUnitBody);
+  if (!parsed.ok) return parsed.res;
+  const { name } = parsed.data;
 
   if (await prisma.resultUnit.findUnique({ where: { name } })) {
     return fail(409, "resultUnit.exists", { values: { name } });

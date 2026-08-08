@@ -291,20 +291,34 @@ All source lives under `src/`; the root is configuration and data.
 src/app/(app)/    Signed-in views. Each route loads its own data in a Server
                   Component and hands it to a *-client.tsx.
 src/app/api/      REST endpoints. Every handler starts with gate() — see below.
-src/components/   Shared components; components/ui/ holds the primitives
-                  (DataTable, Field, Button …).
+src/components/   Shared components. components/ui/ holds the primitives
+                  (DataTable, Field, Button …); components/columns/ the column
+                  definitions the list screens share; components/shell/ the
+                  frame around every page. The few files directly under
+                  components/ are the ones that are none of those — a page
+                  layout, the confirm dialog, the allocation editor.
 src/lib/domain/   Pure rules and shapes — money, status, permissions,
                   matching, the bank file. No side effects, runnable anywhere,
                   and what the tests cover.
 src/lib/server/   Everything that touches the outside world: the database, the
                   environment, storage, secrets, the session. All `server-only`.
 src/lib/data/     Reads the database and returns the shapes the screens use.
-                  The only place the schema meets the interface.
+                  The only place the schema meets the interface. Also the
+                  list-query pair — list-query.ts is what a filtered list *is*
+                  (and how it is spelled in a URL), use-list-query.tsx the React
+                  state around it. That is not database code, but it is the same
+                  subsystem, and keeping the two halves apart is what let them
+                  disagree about which tab a page had opened on.
 src/lib/api/      What every route handler starts with: gate(), fail(), access.
 src/lib/budget/   The budget engine: formula expressions, grid, comparisons, lock.
 src/lib/ledger/   The general ledger: BAS structure, reports, comparison.
 src/lib/fortnox/  Fortnox API, SIE parsing and sync.
 src/lib/ui/       Presentation helpers (formatting, class names).
+src/lib/s3-config.ts
+                  The one file directly under lib/, and the exception that
+                  proves the rule below: bucket settings shared between the
+                  app's `server-only` storage module and the standalone
+                  scripts, which cannot import one.
 prisma/           Schema, migrations, seed and the budget import.
 messages/         Translations (sv is the source language, en the translation).
 public/           Static files.
@@ -327,9 +341,18 @@ from `lib/api/guard.ts`, which reads roles from the database — not from the
 session, because a role that's removed must stop applying immediately. Budget
 writes additionally go through `lib/budget/access.ts`, which handles the lock.
 
-**Money is stored in öre.** The database holds integer öre; the interface counts
-in kronor. `lib/domain/money.ts` is the only place that converts — never write
-`* 100` by hand.
+**Every control has to work without a mouse.** A row that opens something is a
+link, not a click handler on the `<tr>`; a sortable column is a button in the
+header, and the header carries `aria-sort`; a dialog traps Tab and gives focus
+back when it closes. `eslint-plugin-jsx-a11y` runs as warnings and is currently
+clean — it is there to catch the next clickable `<div>`, not to be silenced.
+
+**Money is stored in öre.** The database holds integer öre and so does every
+amount in an API request body; only the interface counts in kronor, and it
+converts on the way out. `lib/domain/money.ts` is the only place that converts —
+never write `* 100` by hand. The reason this is stated so firmly: a PATCH body
+once carried the gross in öre and each cost-centre row in kronor, which made a
+distribution that had to sum to the gross a hundred times too small.
 
 ---
 

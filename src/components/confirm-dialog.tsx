@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,12 +54,23 @@ interface Pending extends ConfirmOptions {
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const [pending, setPending] = useState<Pending | null>(null);
+  // The dialog box itself, for the focus trap below.
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Whatever had focus when the dialog opened. A modal takes focus away from
+  // the control that summoned it, and has to give it back: without this, a
+  // keyboard user who cancels a delete is returned to the top of the document
+  // and has to find their way back down the list to the row they were on.
+  const openerRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const messageId = useId();
   const [comment, setComment] = useState("");
 
   const confirm = useCallback<ConfirmFn>(
     (opts) =>
       new Promise<ConfirmResult>((resolve) => {
         setComment("");
+        // Taken before the dialog renders and steals it.
+        openerRef.current = document.activeElement as HTMLElement | null;
         setPending({ ...opts, resolve });
       }),
     [],
@@ -71,6 +82,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         cur?.resolve(ok ? { comment: comment.trim() } : false);
         return null;
       });
+      // Back where they were. `isConnected` because the answer may have removed
+      // the very row whose button opened this — focusing a detached node puts
+      // focus on <body>, which is where it would have gone anyway.
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (opener?.isConnected) opener.focus();
     },
     [comment],
   );
@@ -79,10 +96,38 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
   // Esc cancels, Enter confirms — except while a comment is being written,
   // where Enter is a new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
+  //
+  // Tab is held inside the box. `aria-modal` tells a screen reader the rest of
+  // the page is inert; it does not make it so for the keyboard, and without
+  // this Tab walked straight out of the dialog and on through the page behind
+  // it — where every control was still operable while a modal claimed to be
+  // blocking them.
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") settle(false);
+      if (e.key === "Escape") {
+        settle(false);
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = boxRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        // Wrap at whichever end you have reached, and catch the case where
+        // focus is somewhere outside the box entirely.
+        if (e.shiftKey && (active === first || !boxRef.current?.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+        return;
+      }
       if (e.key !== "Enter") return;
       if (pending.comment && !(e.metaKey || e.ctrlKey)) return;
       if (missingComment) return;
@@ -103,13 +148,25 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={confirm}>
       {children}
       {pending && (
+        // Clicking away cancels. That is a mouse affordance, and it has a
+        // keyboard equivalent already — Escape, handled above — so the rules
+        // asking for a key handler here are asking for a second copy of one
+        // that exists somewhere it works better.
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
           onClick={() => settle(false)}
         >
+          <div ref={boxRef} className="contents">
           <Card
             role="alertdialog"
             aria-modal="true"
+            // What a screen reader announces on arrival. Without these it says
+            // "dialog" and then reads whatever focus landed on, which for a
+            // destructive confirm is the word "Ta bort" with none of the
+            // sentence that explains what is about to be removed.
+            aria-labelledby={titleId}
+            aria-describedby={pending.message ? messageId : undefined}
             onClick={(e) => e.stopPropagation()}
             className={cn(
               // p-5 rather than the card inset: a dialog is read at arm's
@@ -126,9 +183,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold">{pending.title}</h2>
+                <h2 id={titleId} className="text-base font-semibold">{pending.title}</h2>
                 {pending.message && (
-                  <p className="mt-1 text-sm text-muted">{pending.message}</p>
+                  <p id={messageId} className="mt-1 text-sm text-muted">{pending.message}</p>
                 )}
               </div>
             </div>
@@ -162,6 +219,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
           </Card>
+          </div>
         </div>
       )}
     </Ctx.Provider>

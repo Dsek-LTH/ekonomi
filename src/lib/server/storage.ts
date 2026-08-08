@@ -8,25 +8,20 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
-  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { s3ClientOptions } from "@/lib/s3-config";
 import { serverEnv } from "@/lib/server/env";
 
 const BUCKET = serverEnv("S3_BUCKET");
 
+// How to reach the bucket is shared with the standalone scripts (see
+// lib/s3-config.ts); *what happens when it isn't configured* is not, and that
+// is the whole difference between the two callers. Here an unset variable in
+// production is a refusal to start.
 function createClient() {
-  return new S3Client({
-    endpoint: serverEnv("S3_ENDPOINT"),
-    region: serverEnv("S3_REGION"),
-    // MinIO needs path-style addressing (bucket in the path, not the host).
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: serverEnv("S3_ACCESS_KEY"),
-      secretAccessKey: serverEnv("S3_SECRET_KEY"),
-    },
-  });
+  return new S3Client(s3ClientOptions(serverEnv));
 }
 
 // Singleton — avoids creating a new client per request under hot-reload.
@@ -68,14 +63,6 @@ export function receiptKey(
   filename: string,
 ): string {
   return `receipts/${expenseId}/${receiptId}-${safeName(filename)}`;
-}
-
-// Key for a receipt's thumbnail, alongside its full-size object. The extension
-// follows what the thumbnail actually is — a transparent receipt is kept as PNG
-// (see lib/server/images.ts), and a .jpg holding PNG bytes is a trap for anyone
-// reading the bucket by hand. Existing objects keep the key stored on their row.
-export function receiptThumbKey(expenseId: string, receiptId: string, ext = "jpg"): string {
-  return `receipts/${expenseId}/${receiptId}-thumb.${ext}`;
 }
 
 export async function putObject(
@@ -158,19 +145,7 @@ export async function deleteObjectBestEffort(key: string): Promise<void> {
   }
 }
 
-// Every key in the bucket, following the 1000-per-response pagination. Only the
-// sweeper needs this — the app addresses objects by the key stored on the row.
-export async function listAllKeys(prefix?: string): Promise<string[]> {
-  const keys: string[] = [];
-  let token: string | undefined;
-  do {
-    const res = await s3.send(
-      new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }),
-    );
-    for (const obj of res.Contents ?? []) {
-      if (obj.Key) keys.push(obj.Key);
-    }
-    token = res.IsTruncated ? res.NextContinuationToken : undefined;
-  } while (token);
-  return keys;
-}
+// Listing the bucket is the sweeper's business, and the sweeper has its own
+// client (prisma/storage-admin.ts) because a tsx script cannot import a
+// `server-only` module. There was a copy of it here too, unreachable from
+// anything, under a comment saying the sweeper needed it.

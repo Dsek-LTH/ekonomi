@@ -20,14 +20,14 @@ import { effectiveKind, sheetKey, sheetName, type AccountKind } from "@/lib/budg
 export interface CompareLine {
   key: string; // what it is matched on — see lineKeys
   description: string;
-  value: number | undefined;
+  value: number | undefined; // öre
 }
 
 export interface CompareAccount {
   code: string;
   name: string;
   kind: AccountKind;
-  total: number | undefined;
+  total: number | undefined; // öre
   lines: CompareLine[];
 }
 
@@ -43,6 +43,7 @@ export interface Snapshot {
   id: string;
   label: string; // the column heading, e.g. "2025 · Ursprunglig" or "Utfall 2026"
   sheets: CompareSheet[];
+  /** Variables are not money — see the units note in lib/budget/eval.ts. */
   vars: Record<string, number>;
 }
 

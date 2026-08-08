@@ -31,6 +31,36 @@ import type { Role } from "@/lib/domain/types";
 // the status code already said, and a handler that returns it is telling the
 // next reader there might be something in there worth checking.
 
+/**
+ * Run a write that addresses a row by id, answering 404 if that row is not
+ * there rather than letting the driver's "record not found" out as a 500.
+ *
+ * Prisma's `update` and `delete` raise P2025 when nothing matched. A handler
+ * that has already established the row exists is still not safe from it — the
+ * check and the write are two statements, and a row can be deleted between
+ * them — and a handler that never checked gets a 500 for the ordinary case of a
+ * stale link. Both are the same answer: the thing you named is not here.
+ *
+ *     const budget = await orNotFound(
+ *       () => prisma.budget.update({ where: { id }, data }),
+ *       "budget.notFound",
+ *     );
+ *     if (budget instanceof NextResponse) return budget;
+ */
+export async function orNotFound<T>(
+  write: () => Promise<T>,
+  error = "notFound",
+): Promise<T | NextResponse> {
+  try {
+    return await write();
+  } catch (err) {
+    // The code is Prisma's public contract for it; duck-typed so this module
+    // does not have to import the generated client.
+    if ((err as { code?: unknown })?.code === "P2025") return fail(404, error);
+    throw err;
+  }
+}
+
 /** Who is acting, with the roles they hold right now. */
 export type Actor = { id: string; roles: Role[] };
 

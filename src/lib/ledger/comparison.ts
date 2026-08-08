@@ -48,11 +48,12 @@ export async function priorYearComparison(
 
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "costCenterCode"],
+    // The row's own year and date — see LedgerRow in schema.prisma. The prior
+    // year's comparison is the same shape of question as the period itself, and
+    // reaches the same index.
     where: {
-      voucher: {
-        financialYear: prior.id,
-        date: { gte: priorFrom, lte: priorTo > prior.toDate ? prior.toDate : priorTo },
-      },
+      financialYear: prior.id,
+      date: { gte: priorFrom, lte: priorTo > prior.toDate ? prior.toDate : priorTo },
     },
     _sum: { debit: true, credit: true },
   });
@@ -169,11 +170,15 @@ export async function budgetComparison(
     // against — it is budgeted for one that hasn't been decided yet.
     if (!cc.costCenter) continue;
     for (const acct of cc.accounts) {
-      const sek = accounts.get(`${cc.costCenter.code}:${acct.accountCode}`);
-      if (sek == null) continue;
+      // Already öre — the evaluator reports money in the same unit the ledger
+      // stores it in, so there is nothing to convert here any more. This used
+      // to be `Math.round(sek * 100)`, the budget side crossing into the
+      // ledger's units at the point of comparison.
+      const ore = accounts.get(`${cc.costCenter.code}:${acct.accountCode}`);
+      if (ore == null) continue;
       // Income is a credit, cost a debit — the report re-orients from there.
       const kind = effectiveKind(acct.accountCode, acct.kindOverride);
-      const net = Math.round(sek * 100) * (kind === "INCOME" ? -1 : 1);
+      const net = ore * (kind === "INCOME" ? -1 : 1);
       const key = `${acct.accountCode}|${cc.costCenter.code}`;
       out.set(key, (out.get(key) ?? 0) + net);
     }

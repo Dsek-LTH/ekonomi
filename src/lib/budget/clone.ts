@@ -16,6 +16,7 @@
 // reference to a row that wasn't copied is left alone — that row is still
 // exactly the row meant.
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { lockForAppend, nextSortOrder } from "@/lib/server/sort-order";
 import { sheetName } from "@/lib/budget";
 import { changeLabel, isActive } from "@/lib/budget/changes";
 
@@ -218,6 +219,10 @@ export async function cloneCostCenter(
   });
   if (!src) return null;
 
+  // The clone goes last in the budget, which is a read-modify-write on the same
+  // list every "add a sheet" touches — so it takes the same lock they do, for
+  // the same reason. See lib/server/sort-order.ts.
+  await lockForAppend(tx, "budget", src.budgetId);
   const last = await tx.budgetCostCenter.findFirst({
     where: { budgetId: src.budgetId },
     orderBy: { sortOrder: "desc" },
@@ -229,7 +234,7 @@ export async function cloneCostCenter(
       budgetId: src.budgetId,
       costCenterId: null,
       label: `Kopia av ${sheetName(src)}`,
-      sortOrder: (last?.sortOrder ?? -1) + 1,
+      sortOrder: nextSortOrder(last),
     },
   });
 

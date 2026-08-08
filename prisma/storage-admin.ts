@@ -2,17 +2,18 @@
 //
 // The app's own client lives in lib/server/storage.ts, but that module is
 // `server-only` and reads config through lib/server/env.ts, which is too —
-// neither can be imported from a tsx script. So the client is built again here,
-// with the same dev fallbacks. Production sets every one of these explicitly.
-import {
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  S3Client,
-} from "@aws-sdk/client-s3";
+// neither can be imported from a tsx script. So the client is built again here.
+// The settings it is built from are not copied any more, only the way of
+// reading them: they come from lib/s3-config.ts, which both sides share.
+//
+// The reading is where this legitimately differs from the app. A script takes
+// the development fallback and gets on with it; the server refuses to start.
+import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { S3_DEFAULTS, s3ClientOptions, type S3Var } from "../src/lib/s3-config";
 
-const env = (name: string, fallback: string) => process.env[name] || fallback;
+const env = (name: S3Var) => process.env[name] || S3_DEFAULTS[name];
 
-export const bucket = () => env("S3_BUCKET", "receipts");
+export const bucket = () => env("S3_BUCKET");
 
 // Built on first use, not at import. A script calls `process.loadEnvFile()` in
 // its module body, but static imports are hoisted and run first — a client
@@ -20,16 +21,7 @@ export const bucket = () => env("S3_BUCKET", "receipts");
 // it, and quietly use the dev fallbacks against a production bucket name.
 let client: S3Client | undefined;
 function s3(): S3Client {
-  client ??= new S3Client({
-    endpoint: env("S3_ENDPOINT", "http://localhost:9000"),
-    region: env("S3_REGION", "us-east-1"),
-    // MinIO needs path-style addressing (bucket in the path, not the host).
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: env("S3_ACCESS_KEY", "utlagg"),
-      secretAccessKey: env("S3_SECRET_KEY", "utlagg-dev-secret"),
-    },
-  });
+  client ??= new S3Client(s3ClientOptions(env));
   return client;
 }
 

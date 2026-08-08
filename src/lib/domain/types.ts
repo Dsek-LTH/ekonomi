@@ -151,6 +151,7 @@ export interface Expense {
   title: string;
   submitterId: string;
   submitterName: string;
+  submitterStudentId: string; // the StiL id — what a voucher text identifies them by
   allocations: CostAllocation[];
   paymentType: PaymentType;
   status: ExpenseStatus;

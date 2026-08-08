@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import { appendInOrder, nextSortOrder } from "@/lib/server/sort-order";
 import { denyBudgetWrite } from "@/lib/budget/access";
 import { cloneCostCenter } from "@/lib/budget/clone";
 import { fail } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { CreateSheet } from "@/lib/api/schemas/budget";
 
 // POST /api/budgets/[id]/cost-centers
 //   { costCenterId } — add a cost centre to the budget
@@ -13,8 +16,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const denied = await denyBudgetWrite({ budget: budgetId });
   if (denied) return denied;
 
-  const body = await req.json().catch(() => ({}));
-  const cloneFromId = typeof body.cloneFromId === "string" ? body.cloneFromId : null;
+  const parsed = await parseBody(req, CreateSheet);
+  if (!parsed.ok) return parsed.res;
+  const cloneFromId = parsed.data.cloneFromId ?? null;
 
   if (cloneFromId) {
     const source = await prisma.budgetCostCenter.findUnique({
@@ -31,13 +35,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json(clone, { status: 201 });
   }
 
-  const costCenterId = typeof body.costCenterId === "string" ? body.costCenterId : null;
+  const costCenterId = parsed.data.costCenterId ?? null;
   if (!costCenterId) return fail(422, "request.costCenterIdRequired");
 
-  const last = await prisma.budgetCostCenter.findFirst({ where: { budgetId }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
-  const cc = await prisma.budgetCostCenter.create({
-    data: { budgetId, costCenterId, sortOrder: (last?.sortOrder ?? -1) + 1 },
-    include: { costCenter: true },
+  const cc = await appendInOrder({ model: "budget", id: budgetId }, async (tx) => {
+    const last = await tx.budgetCostCenter.findFirst({ where: { budgetId }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
+    return tx.budgetCostCenter.create({
+      data: { budgetId, costCenterId, sortOrder: nextSortOrder(last) },
+      include: { costCenter: true },
+    });
   });
   return NextResponse.json(cc, { status: 201 });
 }

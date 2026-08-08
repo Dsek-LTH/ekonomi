@@ -26,7 +26,8 @@ import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go — see `matchLead` below.
 import { formatSEK } from "@/lib/ui/format";
-import { isAmountInput, parseSEK, sekToOre } from "@/lib/domain/money";
+import { isAmountInput, parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
+import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
@@ -196,16 +197,16 @@ export default function NewExpenseClient({
     if (!pendingFile) return true;
     const fd = new FormData();
     fd.append("file", pendingFile);
-    const receipt = await mutate(`/api/expenses/${id}/receipts`, {
-      key: "save",
-      body: fd,
-      error: t("uploadFailed"),
-      refresh: false,
-    });
+    // The Receipt row the route answers with, named rather than cast field by
+    // field at each use.
+    const receipt = await mutate<{ id: string; mimeType?: string; filename?: string }>(
+      `/api/expenses/${id}/receipts`,
+      { key: "save", body: fd, error: t("uploadFailed"), refresh: false },
+    );
     if (!receipt) return false;
-    setReceiptId(receipt.id as string);
-    setUploadedMime((receipt.mimeType as string) ?? pendingFile.type);
-    setUploadedName((receipt.filename as string) ?? pendingFile.name);
+    setReceiptId(receipt.id);
+    setUploadedMime(receipt.mimeType ?? pendingFile.type);
+    setUploadedName(receipt.filename ?? pendingFile.name);
     // It is in the archive now, so the panel reads it from there. Dropping the
     // preview is what makes that happen — kept, it would go on pointing at a
     // local copy that the effect above is about to revoke.
@@ -312,32 +313,46 @@ export default function NewExpenseClient({
   async function persist(): Promise<string | null> {
     let id = draftId;
     if (!id) {
-      const created = await mutate("/api/expenses", {
+      // Typed on the way out as well as back: `CreateExpense` is the schema the
+      // route validates against, so a field renamed on one side stops compiling
+      // on the other.
+      const create: CreateExpense = {
+        paymentType,
+        title: "",
+        matchedTransactionId: presetTxn?.id ?? null,
+      };
+      const created = await mutate<{ id: string }>("/api/expenses", {
         key: "save",
-        body: { paymentType, matchedTransactionId: presetTxn?.id ?? null },
+        body: create,
         error: t("createFailed"),
         // Nothing on screen shows it yet — the steps after this one do.
         refresh: false,
       });
       if (!created) return null;
-      id = created.id as string;
+      id = created.id;
       setDraftId(id);
     }
     if (!(await writeReceipt(id))) return null;
+    // Öre, both of them. The gross and the rows that have to sum to it cross
+    // the wire in the same unit as each other and as the columns they land in —
+    // the rows used to go as kronor, which made a figure a hundred times too
+    // small look like a distribution that didn't balance. `PatchExpense` is
+    // what now says so in a form the compiler reads.
+    const patch: PatchExpense = {
+      title: form.title,
+      purchaseDate: form.purchaseDate || null,
+      grossAmount: sekToOre(grossSEK),
+      allocations: allocations.map((a) => ({
+        costCenterCode: a.costCenterCode,
+        amount: parseOre(a.amount),
+        comment: a.comment || undefined,
+      })),
+      paymentType,
+    };
     const saved = await mutate(`/api/expenses/${id}`, {
       key: "save",
       method: "PATCH",
-      body: {
-        title: form.title,
-        purchaseDate: form.purchaseDate || null,
-        grossAmount: sekToOre(grossSEK),
-        allocations: allocations.map((a) => ({
-          costCenterCode: a.costCenterCode,
-          amount: parseSEK(a.amount),
-          comment: a.comment || undefined,
-        })),
-        paymentType,
-      },
+      body: patch,
       error: t("saveFailed"),
     });
     if (!saved) return null;

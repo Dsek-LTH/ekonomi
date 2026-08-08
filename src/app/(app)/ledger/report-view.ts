@@ -117,7 +117,7 @@ export function share(part: number, whole: number): number | null {
 // Surplus or deficit. Only for figures that are a *result* — the bottom line
 // and a cost centre's own total, which are the only places in this report where
 // the sign says good or bad news. Account and section amounts are deliberately
-// left alone: every cost section is credit-oriented (see lib/bas.ts), so its
+// left alone: every cost section is credit-oriented (see lib/ledger/bas.ts), so its
 // lines are negative by construction, and colouring them red would say
 // "something is wrong here" about an ordinary invoice.
 export const resultTone = (value: number) =>

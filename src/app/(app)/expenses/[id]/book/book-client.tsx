@@ -122,10 +122,12 @@ export default function BookExpenseClient({
     expense?.status === "APPROVED" ? "create" : expense?.status === "BOOKED" ? "edit" : null;
 
   // The voucher text always starts with a fixed, non-editable prefix: the
-  // submitter's name for a card purchase, "PU <name>" for a reimbursement. The
-  // user can only append free text after it.
+  // submitter's StiL id for a card purchase, "PU <stilid>" for a reimbursement.
+  // The user can only append free text after it.
   const textPrefix = expense
-    ? expense.paymentType === "CARD" ? expense.submitterName : `PU ${expense.submitterName}`
+    ? expense.paymentType === "CARD"
+      ? expense.submitterStudentId
+      : `PU ${expense.submitterStudentId}`
     : "";
 
   const [date, setDate] = useState(
@@ -133,7 +135,18 @@ export default function BookExpenseClient({
   );
   const [textSuffix, setTextSuffix] = useState(() => {
     const full = expense?.verification?.description ?? expense?.title ?? "";
-    return full.startsWith(textPrefix) ? full.slice(textPrefix.length).trim() : full;
+    // Vouchers booked before the prefix became the StiL id still carry the name
+    // form; strip that too, or amending one would prepend the new prefix to the
+    // old one and keep the name in the text forever.
+    const legacyPrefix = expense
+      ? expense.paymentType === "CARD"
+        ? expense.submitterName
+        : `PU ${expense.submitterName}`
+      : "";
+    for (const prefix of [textPrefix, legacyPrefix]) {
+      if (prefix && full.startsWith(prefix)) return full.slice(prefix.length).trim();
+    }
+    return full;
   });
   const voucherText = textSuffix.trim() ? `${textPrefix} ${textSuffix.trim()}` : textPrefix;
   // `rows` holds the DEBIT side only. The credit row is derived from the
@@ -317,9 +330,9 @@ export default function BookExpenseClient({
                 — focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}
             <div className="focus-ring-within flex h-9 w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm">
-              {/* The prefix is a person's name, so its width is out of our
-                  hands. Nowrap-and-never-shrink made the box wider than the
-                  card body on a long name; it truncates instead, and the
+              {/* The prefix comes from the submitter's identity, so its width is
+                  out of our hands. Nowrap-and-never-shrink made the box wider
+                  than the card body on a long one; it truncates instead, and the
                   input keeps a usable minimum before that ever happens. */}
               <span className="min-w-0 truncate font-medium text-muted" title={t("prefixLocked")}>
                 {textPrefix}
@@ -460,6 +473,11 @@ export default function BookExpenseClient({
                         onChange={(e) => patchAmount(r.id, "debit", e.target.value)}
                         className={amountInput}
                         placeholder="0,00"
+                        // A placeholder is not a label: it is a hint that
+                        // disappears the moment you type, and a screen reader
+                        // reading this row otherwise announces the field as
+                        // nothing at all. The account names which row it is.
+                        aria-label={`${tDetail("debit")} ${r.account || ""}`.trim()}
                       />
                     </td>
                     <td className="p-0 align-middle">
@@ -468,6 +486,7 @@ export default function BookExpenseClient({
                         inputMode="decimal"
                         value={r.credit}
                         onChange={(e) => patchAmount(r.id, "credit", e.target.value)}
+                        aria-label={`${tDetail("credit")} ${r.account || ""}`.trim()}
                         className={amountInput}
                         placeholder="0,00"
                       />

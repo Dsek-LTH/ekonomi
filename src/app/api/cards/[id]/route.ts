@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { PatchCard } from "@/lib/api/schemas/admin";
 
 const admin = () => gate(canAccessSettings, "auth.adminOnly");
 
@@ -16,10 +18,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!card) return fail(404, "card.notFound");
 
   // Empty / null → unassign; otherwise must be an existing user.
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, PatchCard);
+  if (!parsed.ok) return parsed.res;
   let holderId: string | null = null;
-  if (typeof body.holderId === "string" && body.holderId !== "") {
-    const user = await prisma.user.findUnique({ where: { id: body.holderId } });
+  if (parsed.data.holderId) {
+    const user = await prisma.user.findUnique({ where: { id: parsed.data.holderId } });
     if (!user) return fail(422, "user.unknown");
     holderId = user.id;
   }

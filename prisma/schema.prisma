@@ -1,7 +1,17 @@
 // Prisma schema for the utlägg (expense) service.
-// Money is stored as integer öre (minor units) everywhere — no floats —
-// to keep accounting exact and clean for Fortnox export. Divide by 100
-// for display, multiply by 100 on import.
+//
+// Money is stored as integer öre (minor units) everywhere — no floats — to keep
+// accounting exact and clean for Fortnox export. Divide by 100 for display,
+// multiply by 100 on import; lib/domain/money.ts is the only place that does
+// either.
+//
+// "Everywhere" now means everywhere. BudgetAdjustment.amount was a Float
+// holding kronor, and the budget engine reported kronor to match it, so the one
+// part of the app whose whole job is arithmetic was the part not following the
+// rule. Both are öre as of the 20260807 migrations. The engine still *computes*
+// in kronor, because a budget formula multiplies money by things that are not
+// money — a headcount, a percentage — and scaling those by 100 would be wrong;
+// see the units note at the top of lib/budget/eval.ts.
 
 generator client {
   provider = "prisma-client"
@@ -37,6 +47,13 @@ enum PaymentType {
   REIMBURSEMENT // out-of-pocket — matched against the payout after signing
 }
 
+// One value per state a reader can be in, and no more. There used to be a
+// REJECTED alongside CHANGES_REQUESTED, unreachable from the app and meaning
+// the same thing to anybody looking at it — so every query that filtered on
+// status had to remember to match both, and the mapper had to translate one
+// into the other on the way out. Three places each did that separately. The
+// rows were migrated and the value dropped; see the
+// 20260807_drop_rejected_status migration.
 enum ExpenseStatus {
   DRAFT
   PENDING_MATCH
@@ -45,7 +62,6 @@ enum ExpenseStatus {
   APPROVED
   BOOKED
   EXPORTED
-  REJECTED // kept in DB for historical rows; not reachable from the app
 }
 
 // Structured audit trail. The app renders human-readable (Swedish)
@@ -61,7 +77,6 @@ enum ExpenseEventType {
   COST_CENTER_APPROVED
   ATTEST_WITHDRAWN
   APPROVED
-  REJECTED
   BOOKED
   EXPORTED
   EXPORT_REVERTED
@@ -259,8 +274,42 @@ model Expense {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([status])
-  @@index([submitterId])
+  // ── What the list screens actually ask for ──────────────────────
+  //
+  // Filtering, sorting and paging all happen in the database (see
+  // lib/data/expenses.ts). That only costs what it is supposed to cost if the
+  // ordering is one an index can hand over already sorted — otherwise every
+  // page of 25 is a full sort of everything that matched, and LIMIT/OFFSET
+  // reads the whole set to throw most of it away. The bare @@index([status])
+  // and @@index([submitterId]) these replace served the filters and left every
+  // ORDER BY to a sort.
+  //
+  // Each ends in `id` because every ordering the app issues does: a page is a
+  // window onto an ordering, and an ordering with ties is a window that can
+  // show one row twice and skip another. Postgres scans a btree in either
+  // direction, so one index covers both asc and desc.
+  //
+  // What is deliberately not here: `title`, `paymentType` and `submitter.name`.
+  // Those are sorts someone chooses by clicking a column, on a table holding a
+  // section's utlägg rather than a bank's — the sort is milliseconds, and an
+  // index apiece would be paid for on every write to buy that back. `reference`
+  // needs none either; it is unique, so it already has one.
+  //
+  // And the honest limit of all of them: a query can use one index. Filtering
+  // by status *and* sorting by amount will use whichever Postgres judges the
+  // better of the two and sort or filter the rest by hand. There is no index
+  // set that makes every combination free.
+
+  // The default order of every list, and of the dashboard.
+  @@index([createdAt, id])
+  // A status tab in that same order — the most common shape in the app.
+  @@index([status, createdAt, id])
+  // "My utlägg, newest first": the dashboard, and the expenses page's MINE view.
+  @@index([submitterId, createdAt, id])
+  // Both the date-range filter and the date column sort.
+  @@index([purchaseDate, id])
+  // The amount column sort.
+  @@index([grossAmount, id])
 }
 
 // One cost-centre slice of an expense. An expense may span several cost centres
@@ -281,6 +330,11 @@ model ExpenseCostAllocation {
 
   @@unique([expenseId, costCenterId])
   @@index([expenseId])
+  // The other direction: "every utlägg touching one of these cost centres",
+  // which is how a resultatansvarig's scope is resolved (lib/data/expense-scope.ts)
+  // and how their attest queue is filtered. Without it that walked the whole
+  // allocation table on every list they open.
+  @@index([costCenterId])
 }
 
 // An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
@@ -290,8 +344,7 @@ model Receipt {
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   expenseId String
 
-  objectKey    String // MinIO object key (the full-size, display-normalised file)
-  thumbnailKey String? // MinIO object key of a small preview (images only)
+  objectKey    String // MinIO object key (the display-normalised file)
   filename     String
   mimeType     String // the stored file's type (images are normalised to image/jpeg)
   byteSize     Int?
@@ -328,8 +381,13 @@ model BankTransaction {
 
   matchedExpense Expense? @relation
 
-  @@index([transactionDate])
-  @@index([cardId])
+  // The same reasoning as on Expense: the bank feed is filtered, sorted and
+  // paged in the database (lib/data/bank.ts), so its default ordering carries
+  // its tiebreaker into the index. The description and card-number sorts are
+  // left to a sort for the same reason the equivalents on Expense are.
+  @@index([transactionDate, id]) // default order, and the date-range filter
+  @@index([amount, id]) // the amount column sort
+  @@index([cardId]) // "this member's card purchases"
 }
 
 // A physical section card ("sektionskort"). Only some members hold one; the
@@ -509,6 +567,21 @@ model LedgerRow {
   voucher   LedgerVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
   voucherId String
 
+  // Denormalised from the voucher, like accountName and costCenterName above,
+  // and for the same kind of reason — except that this pair is about what can
+  // be indexed rather than what can be read. Every report and every
+  // budget-vs-actual figure asks for one financial year, usually a month range
+  // inside it; expressed through the relation that is a join against
+  // LedgerVoucher before any index on this table can be reached, on what is by
+  // far the largest table in the app. Held here, the same questions are a
+  // straight indexed scan.
+  //
+  // Kept in step by being written once: a year's rows are deleted and
+  // re-inserted wholesale on every sync (see lib/fortnox/sync.ts), so these can
+  // no more drift from the voucher than accountName can.
+  financialYear Int
+  date          DateTime @db.Date
+
   account     String // BAS account number, e.g. "6071"
   accountName String // denormalised from the SIE #KONTO chart
   // Cost centre (SIE dimension 1). Code matched to an app CostCenter by string;
@@ -522,8 +595,17 @@ model LedgerRow {
   debit  Int // öre
   credit Int // öre
 
-  @@index([account])
-  @@index([costCenterCode])
+  // The two shapes every reader actually asks in: a period within a year (the
+  // report's movements, and the budget's actuals, which take the whole year),
+  // and one account within a year (the drill-down behind a report cell).
+  //
+  // These replace a bare @@index([account]) and @@index([costCenterCode]).
+  // Neither was reachable for the queries above — both start by narrowing to a
+  // financial year — and nothing asks about an account, or a cost centre,
+  // across all years. An index that answers nothing is not free here: a sync
+  // re-inserts tens of thousands of rows at a time and pays for every one.
+  @@index([financialYear, date])
+  @@index([financialYear, account])
   @@index([voucherId])
 }
 
@@ -741,7 +823,13 @@ model BudgetAdjustment {
   // history is worth protecting.
   account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId String
-  amount    Float // SEK, signed — same units the evaluator works in
+  // Öre, signed in the account's own orientation — the same units as every
+  // other amount in this database, and the same the evaluator now reports in.
+  // This was a Float holding kronor, which is the one thing the note at the top
+  // of this file says money is never stored as: two decided amounts that ought
+  // to cancel could miss by a fraction of an öre, and `isNeutral` in
+  // lib/budget/changes.ts carried a half-öre epsilon to paper over it.
+  amount    Int
 
   @@index([changeId])
   @@index([accountId])

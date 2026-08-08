@@ -1,9 +1,30 @@
 import { requireUser } from "@/lib/server/current-user";
-import { getExpenseSummaries } from "@/lib/data/expenses";
+import { getExpensePage } from "@/lib/data/expenses";
+import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
+import { canAccessBookkeeping, hasAttestRole } from "@/lib/domain/permissions";
 import { ExpensesClient } from "./expenses-client";
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const user = await requireUser();
-  const expenses = await getExpenseSummaries(user);
-  return <ExpensesClient expenses={expenses} />;
+  const query = parseListQuery(await searchParams);
+
+  // Whose utlägg the list is about. Anyone who can see past their own gets the
+  // toggle and starts on their own; everyone else has only the one answer.
+  //
+  // Note what this does and does not decide: it picks which *subject* the page
+  // has. What the viewer may see at all is applied underneath it either way
+  // (getExpensePage always intersects with the viewer's scope), so a hand-typed
+  // ?view=ALL widens nothing for someone with no business seeing more.
+  const canToggleScope = canAccessBookkeeping(user.roles) || hasAttestRole(user.roles);
+  const showOwnOnly = !canToggleScope || query.view !== "ALL";
+
+  const page = await getExpensePage(user, { kind: showOwnOnly ? "mine" : "all" }, query);
+
+  return (
+    <ExpensesClient page={page} canToggleScope={canToggleScope} showOwnOnly={showOwnOnly} />
+  );
 }

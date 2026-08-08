@@ -1,20 +1,34 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { MultiCombobox } from "./combobox";
 import { EmptyNote } from "./empty-state";
 import { DateInput } from "./field";
 import { SearchInput } from "./search-input";
+import { IconChevronLeft, IconChevronRight } from "./icons";
 import { SegmentedControl } from "./segmented-control";
-import { Pagination, SortableHeader, type TableControlState } from "./table-controls";
+import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState } from "@/lib/data/use-list-query";
 
-// One table for every data list. Declare columns; DataTable renders the filter
-// bar (search / date range / tabs, all derived from the column declarations),
-// the header (sortable where a column has a `value`), the filtered and sorted
-// rows, and its own pagination footer — so the visible count always matches the
-// filtered rows. Pages keep their own <Card> wrapper around it.
+// The table every data list is drawn with: the filter bar (search / date range
+// / tabs, all derived from the column declarations), the header, the rows, and
+// the pagination footer. Pages keep their own <Card> wrapper around it.
+//
+// It renders the page it is given and does not choose it. Filtering, sorting
+// and cutting happen in the database, and the address bar is where the choices
+// live (lib/data/list-query.ts) — so this takes `rows` already narrowed and
+// `controls.total` for the pager to count against.
+//
+// A list that filters in the browser instead uses ClientDataTable, which wraps
+// this one and does that work first. The two used to be one component with a
+// `server` boolean, and the boolean silently changed what half the props meant:
+// on a server-backed list the `predicate` on a tab was never called, the
+// `value` accessors were never compared, and nothing said so. Declaring one was
+// not an error, it was just ineffective — which is the kind of thing you find
+// by noticing a filter does nothing, months later. Now the two engines are two
+// components, and the props each accepts are only the ones it acts on.
 //
 // Below md a row is drawn as a stacked card instead of a table row: five to
 // seven columns cannot be read on a phone, and side-scrolling a list you are
@@ -25,22 +39,19 @@ import { Pagination, SortableHeader, type TableControlState } from "./table-cont
 // for the whole app rather than two.
 //
 // That only holds because the sidebar is the 64px rail from md and not the full
-// column until lg (see components/app-shell.tsx). With a 256px column at md the
-// table below inherited under 500px and its trailing columns fell off the right
-// edge, which made 768 read worse than 767. If that ever changes back, this
-// breakpoint has to move to lg with it.
+// column until lg (see components/shell/app-shell.tsx). With a 256px column at
+// md the table below inherited under 500px and its trailing columns fell off
+// the right edge, which made 768 read worse than 767. If that ever changes
+// back, this breakpoint has to move to lg with it.
 
-// A tab (segmented filter) co-locates each option's label with the predicate
-// that selects its rows. DataTable renders the segmented control from these and
-// applies the active option's predicate automatically. An option without a
-// predicate (e.g. "Alla") matches every row; the first option is the default.
-export type TabOption<T> = {
-  value: string;
-  label: string;
-  predicate?: (row: T) => boolean;
-};
+// A tab (segmented filter). The value is what goes in the URL and what the
+// page's query translates into a filter; the first option is the default.
+//
+// No predicate: what a tab *means* is the database's business here. The
+// browser-side variant with predicates is ClientTabOption, in client-data-table.
+export type TabOption = { value: string; label: string };
 
-export type TabFilter<T> = TabOption<T>[];
+export type TabFilter = TabOption[];
 
 // A dropdown filter over one dimension of the rows, for a dimension with more
 // values than a segmented control can carry — status, of which there are seven.
@@ -48,11 +59,11 @@ export type TabFilter<T> = TabOption<T>[];
 // so the options are OR-ed; none picked means the filter isn't narrowing
 // anything. That resting state is why this doesn't replace `tabs`, which always
 // has exactly one option in force and reads as a coarse cut of the whole list.
-export type SelectFilter<T> = {
+export type SelectFilter = {
   // The trigger's text while nothing is picked — it stands for every row, so
   // say so ("Alla statusar") rather than naming the column.
   label: string;
-  options: { value: string; label: string; predicate: (row: T) => boolean }[];
+  options: { value: string; label: string }[];
 };
 
 export interface Column<T> {
@@ -88,8 +99,6 @@ export interface Column<T> {
 // list that has not been annotated still reads as a card rather than a stack of
 // anonymous label/value pairs.
 type MobileSlot = "title" | "trailing" | "meta" | "actions" | "hide";
-
-type Controls = TableControlState;
 
 const alignCls = (a?: Column<unknown>["align"]) => a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
@@ -132,39 +141,6 @@ function mobileSlots<T>(cols: Column<T>[]): MobileGroups<T> {
 const isBlank = (node: React.ReactNode) =>
   node == null || node === false || node === "";
 
-// One collator for every sort, rather than an implicit one per comparison.
-const collator = new Intl.Collator("sv");
-
-// Compose every active filter — column (text/date), tab and dropdown — into a
-// single predicate. Text columns match if any one contains the query; each date
-// column must fall within the from/to range; the dropdown's picked options are
-// OR-ed; then the tab predicate. A row is kept only if it passes them all.
-function buildRowFilter<T>(
-  cols: Column<T>[],
-  controls: Controls,
-  activeTab: TabOption<T> | undefined,
-  filter: SelectFilter<T> | undefined,
-): (row: T) => boolean {
-  const { query, dateFrom: from, dateTo: to } = controls;
-  const q = query.trim().toLowerCase();
-  const pick = (flag: "searchable" | "dateRange") =>
-    cols.flatMap((c) => (c[flag] && c.value ? [c.value] : []));
-
-  const search = q ? pick("searchable") : [];
-  const dates = from || to ? pick("dateRange") : [];
-  const within = (v: string) => (!from || v >= from) && (!to || v <= to);
-  const tabPred = activeTab?.predicate;
-  const picked = (filter?.options ?? [])
-    .filter((o) => controls.picks.includes(o.value))
-    .map((o) => o.predicate);
-
-  return (row) =>
-    (!search.length || search.some((v) => String(v(row)).toLowerCase().includes(q))) &&
-    dates.every((v) => within(String(v(row)))) &&
-    (!picked.length || picked.some((p) => p(row))) &&
-    (tabPred?.(row) ?? true);
-}
-
 export function DataTable<T>({
   columns,
   rows,
@@ -174,23 +150,41 @@ export function DataTable<T>({
   searchPlaceholder,
   rowKey,
   rowClassName,
-  onRowClick,
+  rowHref,
   empty,
 }: {
   columns: Column<T>[];
+  /** This page of rows, already narrowed and ordered. */
   rows: T[];
-  // Drives the filter bar, sorting and pagination.
-  controls: Controls;
-  // Segmented filter; the active option's predicate is applied automatically.
-  tabs?: TabFilter<T>;
-  // Dropdown filter; the picked options' predicates are OR-ed automatically.
-  filter?: SelectFilter<T>;
+  // Drives the filter bar, the sort indicator and the pager. `ServerControls`
+  // specifically: handing this the browser-side `useTableControls` is a
+  // compile error rather than a table that silently shows one unfiltered page.
+  controls: ServerControls;
+  /** Segmented filter. Which rows each value selects is the query's business. */
+  tabs?: TabFilter;
+  /** Dropdown filter, OR-ed across the picked values. */
+  filter?: SelectFilter;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   // Styles the whole row from its data — a retired row dimmed, say. Applies to
   // the phone card as well, so both renderings read the same.
   rowClassName?: (row: T) => string | undefined;
-  onRowClick?: (row: T) => void;
+  /**
+   * Where a row goes when you open it.
+   *
+   * This used to be `onRowClick`, a handler on the `<tr>`, and every caller
+   * passed the same thing: a `router.push` to a URL. A click handler on a table
+   * row is reachable with a mouse and with nothing else — no tab stop, no
+   * Enter, no "open in a new tab", and a screen reader announcing the row said
+   * nothing about it being openable at all. Every list in the app was mouse-only
+   * because of it.
+   *
+   * Given the address instead, the row's title becomes a real link. The keyboard
+   * gets one tab stop per row on a control that says what it is; the mouse keeps
+   * the whole row, because that is a nice thing to have and costs nothing once
+   * the link underneath is doing the actual work.
+   */
+  rowHref?: (row: T) => string;
   empty?: React.ReactNode;
 }) {
   const t = useTranslations("common.table");
@@ -201,25 +195,10 @@ export function DataTable<T>({
   // first tab is the active one, so pages don't restate their default.
   const activeTab = tabs?.find((o) => o.value === controls.tab) ?? tabs?.[0];
 
-  const { query, dateFrom, dateTo, picks, sortKey, sortDir } = controls;
-  const data = useMemo(() => {
-    const filtered = rows.filter(buildRowFilter(cols, controls, activeTab, filter));
-    const col = sortKey ? cols.find((c) => c.key === sortKey) : undefined;
-    if (!col?.sortable || !col.value) return filtered;
-    const dir = sortDir === "asc" ? 1 : -1;
-    const get = col.value;
-    return filtered.sort((a, b) => {
-      const av = get(a);
-      const bv = get(b);
-      if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
-      return dir * collator.compare(String(av), String(bv));
-    });
-    // `controls` is recreated every render; the fields the filter reads are
-    // listed individually so the work only repeats when one of them changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, cols, activeTab, filter, query, dateFrom, dateTo, picks, sortKey, sortDir]);
-
-  const pageRows = controls.paginate(data);
+  // The rows are the page. Nothing is filtered, sorted or cut here.
+  const data = rows;
+  const pageRows = rows;
+  const totalItems = controls.total;
 
   const hasText = cols.some((c) => c.searchable);
   const hasDate = cols.some((c) => c.dateRange);
@@ -301,7 +280,7 @@ export function DataTable<T>({
                 row={row}
                 slots={slots}
                 className={rowClassName?.(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                href={rowHref?.(row)}
               />
             ))}
           </div>
@@ -336,22 +315,39 @@ export function DataTable<T>({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {pageRows.map((row) => (
+                {pageRows.map((row) => {
+                  const href = rowHref?.(row);
+                  return (
                   <tr
                     key={rowKey(row)}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
-                      onRowClick && "cursor-pointer hover:bg-surface/50",
+                      href && "relative cursor-pointer hover:bg-surface/50",
                       rowClassName?.(row),
                     )}
                   >
                     {cols.map((c) => (
                       <td key={c.key} className={cn(CELL_X, "py-4", alignCls(c.align), c.className)}>
-                        {c.cell(row)}
+                        {/* The link goes in the title cell and nowhere else:
+                            one control per row, on the thing that names it.
+                            `before:` stretches its hit area over the whole row,
+                            so clicking anywhere still opens it — the mouse
+                            behaviour the old row handler had, now provided by
+                            the same element the keyboard uses. */}
+                        {href && c === slots.title ? (
+                          <Link
+                            href={href}
+                            className="before:absolute before:inset-0 hover:underline focus-visible:underline"
+                          >
+                            {c.cell(row)}
+                          </Link>
+                        ) : (
+                          c.cell(row)
+                        )}
                       </td>
                     ))}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -363,7 +359,7 @@ export function DataTable<T>({
         onPageChange={controls.setPage}
         pageSize={controls.pageSize}
         onPageSizeChange={controls.setPageSize}
-        totalItems={data.length}
+        totalItems={totalItems}
       />
     </>
   );
@@ -375,25 +371,42 @@ function MobileRow<T>({
   row,
   slots,
   className,
-  onClick,
+  href,
 }: {
   row: T;
   slots: MobileGroups<T>;
   className?: string;
-  onClick?: () => void;
+  /** Where the card goes when opened — see `rowHref`. */
+  href?: string;
 }) {
   const cell = (c: Column<T>) => c.cell(row);
   const meta = slots.meta.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
   const actions = slots.actions.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
   const trailing = slots.trailing.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
 
+  const title = slots.title && cell(slots.title);
   return (
     <div
-      onClick={onClick}
-      className={cn("px-inset py-4", onClick && "cursor-pointer active:bg-surface/50", className)}
+      className={cn(
+        "px-inset py-4",
+        href && "relative cursor-pointer active:bg-surface/50",
+        className,
+      )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 text-sm">{slots.title && cell(slots.title)}</div>
+        <div className="min-w-0 flex-1 text-sm">
+          {/* Same arrangement as the table: the headline is the link, and its
+              hit area covers the card. The actions further down sit above it
+              (they are later in the stacking order), so a delete button on a
+              card is still a delete button and not a navigation. */}
+          {href ? (
+            <Link href={href} className="before:absolute before:inset-0 hover:underline focus-visible:underline">
+              {title}
+            </Link>
+          ) : (
+            title
+          )}
+        </div>
         {trailing.length > 0 && (
           <div className="flex shrink-0 flex-col items-end gap-1 text-sm font-semibold tabular-nums">
             {trailing.map(([c, node]) => (
@@ -415,12 +428,124 @@ function MobileRow<T>({
       )}
 
       {actions.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <div className="relative mt-3 flex flex-wrap items-center justify-end gap-2">
           {actions.map(([c, node]) => (
             <div key={c.key}>{node}</div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Sortable table header cell. Renders a <th> with a sort indicator.
+export function SortableHeader({
+  children,
+  sortKey: key,
+  controls,
+  className,
+}: {
+  children: React.ReactNode;
+  sortKey: string;
+  controls: Pick<TableControlState, "sortKey" | "sortDir" | "toggleSort">;
+  className?: string;
+}) {
+  const active = controls.sortKey === key;
+  const dir = controls.sortDir === "asc" ? "ascending" : "descending";
+  return (
+    <th
+      // What the column is sorted by, in the one attribute assistive tech reads
+      // for it. Without this a screen reader user could reorder a table and be
+      // told nothing about what had changed — or that it was sortable at all.
+      aria-sort={active ? dir : "none"}
+      className={cn("select-none whitespace-nowrap", className)}
+    >
+      {/* The control is a button, not the cell. A <th> with an onClick is
+          reachable by mouse alone: no tab stop, no Enter, no announcement. */}
+      <button
+        type="button"
+        onClick={() => controls.toggleSort(key)}
+        className="inline-flex cursor-pointer items-center whitespace-nowrap"
+      >
+        {children}
+        {/* Decoration. It is the arrow for the *current* direction whether or
+            not this column is the sorted one — hidden with `text-transparent`
+            so the header keeps its width — which means it is a lie on every
+            other column and must not be read out. `aria-sort` above is what
+            actually carries this to a reader. */}
+        <span
+          aria-hidden="true"
+          className={cn("ml-1 text-[10px]", active ? "text-accent" : "text-transparent")}
+        >
+          {controls.sortDir === "asc" ? "▲" : "▼"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+// Pagination footer — rendered by DataTable after the list.
+export function Pagination({
+  page,
+  onPageChange,
+  pageSize,
+  onPageSizeChange,
+  totalItems,
+}: {
+  page: number;
+  onPageChange: (n: number) => void;
+  pageSize: PageSize;
+  onPageSizeChange: (n: PageSize) => void;
+  totalItems: number;
+}) {
+  const t = useTranslations("common.table");
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const from = totalItems === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min((page + 1) * pageSize, totalItems);
+
+  const select = "h-8 rounded-lg border border-border bg-background px-2 text-sm";
+  const btn = "flex size-8 items-center justify-center rounded-lg border border-border bg-background text-sm transition-colors hover:bg-surface disabled:opacity-40 disabled:pointer-events-none";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">
+      <p className="text-xs text-muted">
+        {totalItems === 0 ? t("noResults") : t("showing", { from, to, total: totalItems })}
+      </p>
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-1.5 text-xs text-muted">
+          {/* On a phone the select and the arrows are what matter; the words
+              around them are the first thing to give up the width. */}
+          <span className="hidden sm:inline">{t("show")}</span>
+          <select
+            value={pageSize}
+            // The visible label is gone below sm, so the select carries its own.
+            aria-label={`${t("show")} ${t("perPage")}`}
+            onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
+            className={select}
+          >
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+          <span className="hidden sm:inline">{t("perPage")}</span>
+        </label>
+        <button
+          className={btn}
+          disabled={page === 0}
+          onClick={() => onPageChange(page - 1)}
+          aria-label={t("prevPage")}
+        >
+          <IconChevronLeft className="size-4" />
+        </button>
+        <button
+          className={btn}
+          disabled={page >= totalPages - 1}
+          onClick={() => onPageChange(page + 1)}
+          aria-label={t("nextPage")}
+        >
+          <IconChevronRight className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

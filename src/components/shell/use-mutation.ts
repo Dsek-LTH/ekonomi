@@ -44,6 +44,18 @@ const isRawBody = (b: unknown): b is BodyInit =>
 // Returns the parsed response body, or null once a failure has been reported —
 // so callers only add what's specific to them. One hook instance is one busy
 // scope; take two when a screen has an action that shouldn't block the others.
+//
+// The response type is the caller's to name: `mutate<{ id: string }>(…)`. It
+// used to be `Record<string, unknown>` for everybody, which meant every screen
+// reading something back cast it — `created.id as string` — and a route that
+// changed what it returned broke nothing until somebody ran it. Nothing here
+// can verify the claim, so a wrong one is still wrong; what it buys is that the
+// claim is written down at the call site instead of asserted mid-expression.
+//
+// The *request* side is named the same way, by typing the object handed to
+// `body` with the route's own schema: `const patch: PatchExpense = { … }`. That
+// one the compiler does check, because both sides infer from one definition in
+// lib/api/schemas.
 export function useMutation() {
   // Progress-aware: the refresh below is a second round trip after the request
   // itself, and until it lands the screen is still showing the old numbers. The
@@ -57,10 +69,10 @@ export function useMutation() {
 
   // Stable identity, so `mutate` can be used from a memoised callback.
   const mutate = useCallback(
-    async (
+    async <T = Record<string, unknown>>(
       url: string,
       opts: MutateOptions = {},
-    ): Promise<Record<string, unknown> | null> => {
+    ): Promise<T | null> => {
       const { key = url, method = "POST", body, contentType, error, success, refresh = true } = opts;
       const raw = isRawBody(body);
       const type = raw ? contentType : body === undefined ? undefined : "application/json";
@@ -83,7 +95,7 @@ export function useMutation() {
         }
         if (success) notify.success(success);
         if (refresh) router.refresh();
-        return data;
+        return data as T;
       } catch {
         notify.error(t("common.error.network"));
         return null;

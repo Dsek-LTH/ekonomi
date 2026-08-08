@@ -22,6 +22,45 @@ function* chunks<T>(arr: T[], size: number): Generator<T[]> {
   for (let i = 0; i < arr.length; i += size) yield arr.slice(i, i + size);
 }
 
+// Rows per upsert statement. Postgres caps a statement at 65535 bound
+// parameters; at six columns a chart of accounts would have to be ten thousand
+// rows long to come near it, and a smaller statement keeps the plan cheap.
+const UPSERT_CHUNK = 500;
+
+/**
+ * The rows of `list`, one per key, keeping the last of any repeat.
+ *
+ * A loop of single-row upserts simply overwrote its own work if Fortnox listed
+ * a code twice; one statement upserting the batch cannot — Postgres refuses an
+ * ON CONFLICT DO UPDATE that would touch the same row a second time, and the
+ * whole sync would fail on a duplicate somewhere upstream. Last one wins, which
+ * is what the loop did.
+ */
+function lastByKey<T>(list: readonly T[], key: (item: T) => string): T[] {
+  return [...new Map(list.map((item) => [key(item), item])).values()];
+}
+
+/**
+ * `($1,$2,$3),($4,$5,$6),…` for a multi-row VALUES, plus the flat parameter
+ * list to go with it. `casts` types individual columns where Postgres cannot
+ * infer it from context — an enum column, most of all.
+ */
+function valuesClause(
+  rows: readonly unknown[][],
+  casts: Readonly<Record<number, string>> = {},
+): { sql: string; params: unknown[] } {
+  const params: unknown[] = [];
+  const tuples = rows.map((row) => {
+    const holders = row.map((value, col) => {
+      params.push(value);
+      const cast = casts[col];
+      return cast ? `$${params.length}::${cast}` : `$${params.length}`;
+    });
+    return `(${holders.join(",")})`;
+  });
+  return { sql: tuples.join(","), params };
+}
+
 // Refresh the list of financial years (so the report's year picker and the
 // sync know what exists). Returns them newest-first.
 export async function syncFinancialYears(token: string): Promise<FortnoxFinancialYear[]> {
@@ -58,18 +97,31 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
   const fortnoxCcs = await listCostCenters(token);
   const seenCodes = new Set(fortnoxCcs.map((c) => c.code));
 
-  let upserted = 0;
-  for (const c of fortnoxCcs) {
-    await prisma.costCenter.upsert({
-      where: { code: c.code },
-      create: { code: c.code, name: c.description, active: c.active, source: "FORTNOX" },
-      // Fortnox now has this code, so it owns the row from here on — a local
-      // one that has since been created for real is adopted rather than
-      // duplicated (the code is unique, so there is only ever the one row).
-      update: { name: c.description, active: c.active, source: "FORTNOX" },
-    });
-    upserted++;
+  // One statement per chunk rather than one per cost centre. `id` is only ever
+  // written on insert — an existing row keeps the one every allocation,
+  // verification line and budget sheet already points at.
+  //
+  // Fortnox now has this code, so it owns the row from here on: a local cost
+  // centre that has since been created for real is adopted rather than
+  // duplicated (the code is unique, so there is only ever the one row).
+  const now = new Date();
+  for (const chunk of chunks(lastByKey(fortnoxCcs, (c) => c.code), UPSERT_CHUNK)) {
+    const { sql, params } = valuesClause(
+      chunk.map((c) => [randomUUID(), c.code, c.description, c.active, "FORTNOX", now]),
+      { 4: '"CostCenterSource"' },
+    );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "CostCenter" ("id","code","name","active","source","updatedAt")
+       VALUES ${sql}
+       ON CONFLICT ("code") DO UPDATE SET
+         "name" = EXCLUDED."name",
+         "active" = EXCLUDED."active",
+         "source" = EXCLUDED."source",
+         "updatedAt" = EXCLUDED."updatedAt"`,
+      ...params,
+    );
   }
+  const upserted = fortnoxCcs.length;
 
   const gone = await prisma.costCenter.findMany({
     where: { code: { notIn: [...seenCodes] }, source: "FORTNOX" },
@@ -120,18 +172,24 @@ export async function syncAccounts(
   const accounts = await listAccounts(token, financialYearId);
   const now = new Date();
 
-  for (const a of accounts) {
-    await prisma.account.upsert({
-      where: { number: a.number },
-      create: {
-        number: a.number,
-        name: a.name,
-        active: a.active,
-        sru: a.sru,
-        lastSyncAt: now,
-      },
-      update: { name: a.name, active: a.active, sru: a.sru, lastSyncAt: now },
-    });
+  // A BAS chart is a thousand accounts and change. One statement per chunk, not
+  // one round trip per account — the loop this replaced was the slowest part of
+  // a sync by a wide margin, and all it was doing was waiting.
+  for (const chunk of chunks(lastByKey(accounts, (a) => a.number), UPSERT_CHUNK)) {
+    const { sql, params } = valuesClause(
+      chunk.map((a) => [a.number, a.name, a.active, a.sru, now, now]),
+    );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Account" ("number","name","active","sru","lastSyncAt","updatedAt")
+       VALUES ${sql}
+       ON CONFLICT ("number") DO UPDATE SET
+         "name" = EXCLUDED."name",
+         "active" = EXCLUDED."active",
+         "sru" = EXCLUDED."sru",
+         "lastSyncAt" = EXCLUDED."lastSyncAt",
+         "updatedAt" = EXCLUDED."updatedAt"`,
+      ...params,
+    );
   }
 
   const { count: deactivated } = await prisma.account.updateMany({
@@ -176,18 +234,23 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
 
   for (const v of parsed.vouchers) {
     const voucherId = randomUUID();
+    const date = new Date(`${v.date}T00:00:00Z`);
     voucherRecords.push({
       id: voucherId,
       financialYear: fyId,
       series: v.series,
       number: v.number,
-      date: new Date(`${v.date}T00:00:00Z`),
+      date,
       description: v.description,
     });
     for (const tr of v.transactions) {
       rowRecords.push({
         id: randomUUID(),
         voucherId,
+        // Copied down from the voucher so a report can be answered without
+        // joining back up to it — see LedgerRow in schema.prisma.
+        financialYear: fyId,
+        date,
         account: tr.account,
         accountName: parsed.accounts.get(tr.account) ?? "",
         costCenterCode: tr.costCenterCode ?? null,

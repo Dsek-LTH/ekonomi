@@ -2,18 +2,18 @@
 
 // The columns every bank-transaction list is built from.
 //
-// The same reasoning as components/expense-columns.tsx, and the same history:
-// Bank & matching and Card purchases showed the same rows — date, what was
-// bought, which card, how much, which utlägg — with a private copy of the cell
-// markup, the sort/search flags and the alignment in each. Two copies of a
-// column is two places for the amount to be set differently, which is exactly
-// what happened.
+// The same reasoning as components/columns/expense-columns.tsx, and the same
+// history: Bank & matching and Card purchases showed the same rows — date,
+// what was bought, which card, how much, which utlägg — with a private copy
+// of the cell markup, the sort/search flags and the alignment in each. Two
+// copies of a column is two places for the amount to be set differently,
+// which is exactly what happened.
 //
 // A page picks the columns it wants, in the order it wants, and adds its own
 // (the delete button, the "redovisa" link) alongside them.
 
 import Link from "next/link";
-import { Amount } from "./ui/amount";
+import { Amount } from "@/components/ui/amount";
 import type { Column } from "@/components/ui/data-table";
 import type { BankTransaction } from "@/lib/domain/types";
 

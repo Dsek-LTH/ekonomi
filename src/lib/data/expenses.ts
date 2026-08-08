@@ -5,6 +5,7 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import type { ExpenseStatus as DbExpenseStatus } from "@/lib/generated/prisma/enums";
 import {
   resultUnitNameForCode,
   getPrefixes,
@@ -12,9 +13,28 @@ import {
   type PrefixRow,
 } from "@/lib/server/result-units";
 import { oreToSEK as ore } from "@/lib/domain/money";
-import { canAttestAllocation, canReturnApproved } from "@/lib/domain/permissions";
-import type { CostAllocation, Expense, Role } from "@/lib/domain/types";
+import {
+  canAccessBookkeeping,
+  canAttestAllocation,
+  canReturnApproved,
+  hasAttestRole,
+} from "@/lib/domain/permissions";
+import type {
+  CostAllocation,
+  Expense,
+  Role,
+  Verification,
+  VerificationLine,
+} from "@/lib/domain/types";
 import { expenseScopeOf, expenseScopeWhere, type Viewer } from "./expense-scope";
+import { attestScopeWhere } from "./attest-scope";
+import {
+  dateRangeFilter,
+  pageBounds,
+  type ListQuery,
+  type RowPage,
+  type SortDir,
+} from "./list-query";
 import { isoDate } from "./shared";
 
 // Map one allocation row (+ its cost-centre/approver relations) to the UI shape.
@@ -60,6 +80,7 @@ const summaryInclude = {
   receipts: {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }] as Prisma.ReceiptOrderByWithRelationInput[],
     take: 1,
+    select: { id: true, mimeType: true },
   },
   verification: { include: { createdBy: true } },
 } as const;
@@ -72,6 +93,27 @@ function fortnoxLabel(v: { fortnoxSeries: string | null; fortnoxNumber: number |
   return v.fortnoxSeries && v.fortnoxNumber != null ? `${v.fortnoxSeries}-${v.fortnoxNumber}` : undefined;
 }
 
+// One shape for the booked voucher, whether or not its rows were loaded.
+//
+// A list wants the heading — the date, who booked it, the Fortnox number — and
+// has no use for the rows; the detail page wants both. That was two copies of
+// the same object literal, and the detail one worked by building the version
+// without rows and then discarding it whole to build it again with them.
+// `lines` is what actually differs, so it is the argument.
+function mapVerification(
+  v: NonNullable<SummaryRow["verification"]>,
+  lines: VerificationLine[] = [],
+): Verification {
+  return {
+    date: isoDate(v.date),
+    description: v.description,
+    createdBy: v.createdBy?.name,
+    fortnoxLabel: fortnoxLabel(v),
+    exportedAt: v.exportedAt?.toISOString() ?? undefined,
+    lines,
+  };
+}
+
 function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
   return {
     id: e.id,
@@ -81,9 +123,10 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     title: e.title,
     submitterId: e.submitterId,
     submitterName: e.submitter.name,
+    submitterStudentId: e.submitter.studentId,
     allocations: e.allocations.map((a) => mapAllocation(a, prefixes)),
     paymentType: e.paymentType,
-    status: (e.status === "REJECTED" ? "CHANGES_REQUESTED" : e.status) as Expense["status"],
+    status: e.status,
     purchaseDate: isoDate(e.purchaseDate),
     grossAmount: ore(e.grossAmount),
     currency: e.currency,
@@ -93,16 +136,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     submitterHasPayout: Boolean(
       e.submitter.bankClearingNumber && e.submitter.bankAccountNumber,
     ),
-    verification: e.verification
-      ? {
-          date: isoDate(e.verification.date),
-          description: e.verification.description,
-          createdBy: e.verification.createdBy?.name,
-          fortnoxLabel: fortnoxLabel(e.verification),
-          exportedAt: e.verification.exportedAt?.toISOString() ?? undefined,
-          lines: [],
-        }
-      : undefined,
+    verification: e.verification ? mapVerification(e.verification) : undefined,
     revisions: [],
   };
 }
@@ -160,33 +194,239 @@ function annotateAttest(
   mapped.canReturn = canReturnApproved(ctx.viewerRoles);
 }
 
-// Lightweight list for every index/list screen. Omits the audit timeline and
-// voucher lines so we don't drag the whole history of every expense to the UI.
-// Pass the acting user to scope the result to what they're allowed to see (and
-// to stamp attest flags); omit it only for trusted internal callers.
-export async function getExpenseSummaries(viewer?: Viewer): Promise<Expense[]> {
-  const where = viewer ? expenseScopeWhere(await expenseScopeOf(viewer)) : {};
-  const expenses = await prisma.expense.findMany({
-    where,
-    // Newest first. This used to sort on the reference, which no longer works:
-    // a draft has none until it is submitted, and null sorts apart from the
-    // numbered rows rather than into its place among them. createdAt is the
-    // order the references are handed out in anyway. It is not unique — a
-    // seeded batch shares a timestamp — so it carries a tiebreaker, without
-    // which Postgres may order tied rows differently per query and the HTML and
-    // the RSC payload disagree.
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    include: summaryInclude,
-  });
-  const [ctx, prefixes] = await Promise.all([
-    viewer ? attestCtx(viewer) : null,
+// ── The list screens ──────────────────────────────────────────────
+
+/**
+ * Which slice of the section's utlägg a list screen is about, before anything
+ * the reader has typed. This is the page's own subject — "the attest queue",
+ * "what bookkeeping still has to book" — and it is the page that knows it.
+ */
+export type ExpenseListScope =
+  | { kind: "all" }
+  /** Only the viewer's own. */
+  | { kind: "mine" }
+  /** What the viewer may attest — see attest-scope.ts. */
+  | { kind: "attestable" }
+  /** The whole section's attest queue, for a bookkeeping role looking wider. */
+  | { kind: "attestChain" }
+  /** Signed and beyond: what bookkeeping works on. */
+  | { kind: "signed" };
+
+// The status tabs, as the database spells them — which is now the same way the
+// interface spells them, since REJECTED was migrated away. A tab is one status
+// unless the page's question genuinely covers several.
+const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
+  DRAFT: ["DRAFT"],
+  PENDING_MATCH: ["PENDING_MATCH"],
+  PENDING_APPROVAL: ["PENDING_APPROVAL"],
+  CHANGES_REQUESTED: ["CHANGES_REQUESTED"],
+  APPROVED: ["APPROVED"],
+  BOOKED: ["BOOKED"],
+  EXPORTED: ["EXPORTED"],
+  // The attest page names its two tabs after the question it asks rather than
+  // after a status — "waiting on someone" and "signed" — and the second covers
+  // three. Distinct from the names above, so one table serves every list.
+  PENDING: ["PENDING_APPROVAL"],
+  ATTESTED: ["APPROVED", "BOOKED", "EXPORTED"],
+};
+
+const SIGNED: DbExpenseStatus[] = ["APPROVED", "BOOKED", "EXPORTED"];
+const ATTEST_CHAIN: DbExpenseStatus[] = ["PENDING_APPROVAL", ...SIGNED];
+
+// What each sortable column on the list is, as an order the database can take.
+// Every one ends in `id`: a page is a window onto an ordering, so an ordering
+// with ties is a window that can show the same row twice and skip another as
+// the reader pages through it. The client offers exactly these keys.
+const EXPENSE_ORDER: Record<string, (dir: SortDir) => Prisma.ExpenseOrderByWithRelationInput[]> = {
+  date: (d) => [{ purchaseDate: d }, { id: d }],
+  title: (d) => [{ title: d }, { id: d }],
+  reference: (d) => [{ reference: d }, { id: d }],
+  amount: (d) => [{ grossAmount: d }, { id: d }],
+  status: (d) => [{ status: d }, { id: d }],
+  paymentType: (d) => [{ paymentType: d }, { id: d }],
+  submitter: (d) => [{ submitter: { name: d } }, { id: d }],
+};
+
+// Newest first, and the order references are handed out in. Not unique — a
+// seeded batch shares a timestamp — so it carries a tiebreaker too.
+const EXPENSE_DEFAULT_ORDER: Prisma.ExpenseOrderByWithRelationInput[] = [
+  { createdAt: "desc" },
+  { id: "desc" },
+];
+
+/** The page's own subject, as a filter. */
+async function listScopeWhere(
+  scope: ExpenseListScope,
+  viewer: Viewer,
+): Promise<Prisma.ExpenseWhereInput> {
+  switch (scope.kind) {
+    case "all":
+      return {};
+    case "mine":
+      return { submitterId: viewer.id };
+    case "attestable":
+      return attestScopeWhere(viewer);
+    case "attestChain":
+      return { status: { in: ATTEST_CHAIN } };
+    case "signed":
+      return { status: { in: SIGNED } };
+  }
+}
+
+/** What the reader has typed and picked, as a filter. */
+function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
+  const and: Prisma.ExpenseWhereInput[] = [];
+
+  // The tab is one status; the dropdown is any number of them, OR-ed, and
+  // picking none narrows nothing. A list uses one or the other, never both.
+  const statuses = q.picks.length
+    ? q.picks.flatMap((p) => STATUS_TAB[p] ?? [])
+    : STATUS_TAB[q.tab];
+  if (statuses?.length) and.push({ status: { in: statuses } });
+
+  const date = dateRangeFilter(q, { dateOnly: true });
+  if (date) and.push({ purchaseDate: date });
+
+  // The columns the table marks searchable, asked of the database instead of
+  // of an array. Case-insensitive, because nobody types a reference in caps.
+  if (q.q) {
+    and.push({
+      OR: [
+        { title: { contains: q.q, mode: "insensitive" } },
+        { reference: { contains: q.q, mode: "insensitive" } },
+        { submitter: { name: { contains: q.q, mode: "insensitive" } } },
+      ],
+    });
+  }
+
+  return and;
+}
+
+/**
+ * One page of a list screen, and how many rows are behind it.
+ *
+ * Replaces loading every utlägg the viewer may see and letting the browser cut
+ * it down to twenty-five. The filtering, the sorting and the cut all happen in
+ * the database.
+ *
+ * What that is worth depends on there being an index behind the ordering, which
+ * for a while there was not — the work moved to Postgres and Postgres sorted the
+ * whole matching set for every page. The orderings this issues by default, and
+ * the columns it filters on, are indexed now (see Expense in schema.prisma);
+ * `title` and `paymentType` are deliberately not, so choosing one of those sorts
+ * is a sort. On a section's table that is a few milliseconds, which is the
+ * reason it is allowed to be.
+ *
+ * The search is a different matter and no index helps it: `contains` is
+ * `ILIKE '%q%'`, which no btree can answer, so it reads the table. Same
+ * conclusion at this size, and the same thing to revisit first if it ever stops
+ * being true — a trigram index is the answer, and it needs the pg_trgm
+ * extension.
+ */
+export async function getExpensePage(
+  viewer: Viewer,
+  scope: ExpenseListScope,
+  q: ListQuery,
+): Promise<RowPage<Expense>> {
+  // Two filters, both always applied: what this screen is about, and what the
+  // viewer is allowed to see at all. The second is not the first's business —
+  // an attest queue is narrower than "everything you may see", and a
+  // bookkeeping list is wider, but neither may reach past the scope.
+  const where: Prisma.ExpenseWhereInput = {
+    AND: [
+      expenseScopeWhere(await expenseScopeOf(viewer)),
+      await listScopeWhere(scope, viewer),
+      ...listQueryWhere(q),
+    ],
+  };
+
+  const { skip, take } = pageBounds(q);
+  const order = EXPENSE_ORDER[q.sort];
+
+  const [rows, total, ctx, prefixes] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      orderBy: order ? order(q.dir) : EXPENSE_DEFAULT_ORDER,
+      skip,
+      take,
+      include: summaryInclude,
+    }),
+    prisma.expense.count({ where }),
+    attestCtx(viewer),
     getPrefixes(),
   ]);
-  return expenses.map((e) => {
-    const mapped = mapSummary(e, prefixes);
-    if (ctx) annotateAttest(e, mapped, ctx);
-    return mapped;
-  });
+
+  return {
+    rows: rows.map((e) => {
+      const mapped = mapSummary(e, prefixes);
+      annotateAttest(e, mapped, ctx);
+      return mapped;
+    }),
+    total,
+  };
+}
+
+/**
+ * Everything that could possibly be waiting on this viewer, and their own most
+ * recent utlägg — the two things the dashboard is made of.
+ *
+ * The queue is derived by `buildQueue` (domain/queue.ts), which asks each utlägg
+ * whether it is waiting on this person. It used to be asked of every utlägg in
+ * the section; the answer is only ever yes for a handful of statuses, so those
+ * are what is fetched. An exported utlägg from three years ago cannot be
+ * waiting on anybody, and there is no reason to read it to find that out.
+ *
+ * The filter is deliberately wider than `queueActionFor` — it is a shortlist,
+ * not a second copy of the rule. That function still decides, unchanged, and if
+ * the two ever disagree the worst case is a row fetched and then dropped.
+ */
+export async function getDashboardExpenses(
+  viewer: Viewer,
+  minePreview: number,
+): Promise<{ queueCandidates: Expense[]; mine: Expense[] }> {
+  const scope = expenseScopeWhere(await expenseScopeOf(viewer));
+
+  // Waiting on you as the person who sent it in.
+  const waitingOnSubmitter: Prisma.ExpenseWhereInput = {
+    submitterId: viewer.id,
+    status: { in: ["CHANGES_REQUESTED", "DRAFT", "PENDING_MATCH"] },
+  };
+
+  const candidates: Prisma.ExpenseWhereInput[] = [waitingOnSubmitter];
+  if (hasAttestRole(viewer.roles)) {
+    candidates.push({
+      AND: [await attestScopeWhere(viewer), { status: { in: ["PENDING_APPROVAL"] } }],
+    });
+  }
+  if (canAccessBookkeeping(viewer.roles)) {
+    candidates.push({ status: { in: ["APPROVED", "BOOKED"] } });
+  }
+
+  const [queueRows, mineRows, ctx, prefixes] = await Promise.all([
+    prisma.expense.findMany({
+      where: { AND: [scope, { OR: candidates }] },
+      orderBy: EXPENSE_DEFAULT_ORDER,
+      include: summaryInclude,
+    }),
+    // The dashboard shows a handful, so it asks for a handful.
+    prisma.expense.findMany({
+      where: { submitterId: viewer.id },
+      orderBy: [{ purchaseDate: "desc" }, { id: "desc" }],
+      take: minePreview,
+      include: summaryInclude,
+    }),
+    attestCtx(viewer),
+    getPrefixes(),
+  ]);
+
+  const map = (rows: SummaryRow[]) =>
+    rows.map((e) => {
+      const mapped = mapSummary(e, prefixes);
+      annotateAttest(e, mapped, ctx);
+      return mapped;
+    });
+
+  return { queueCandidates: map(queueRows), mine: map(mineRows) };
 }
 
 // Full single expense for the detail page — adds the event timeline and the
@@ -219,13 +459,9 @@ export async function getExpense(
   const mapped: Expense = {
     ...mapSummary(e, prefixes),
     verification: e.verification
-      ? {
-          date: isoDate(e.verification.date),
-          description: e.verification.description,
-          createdBy: e.verification.createdBy?.name,
-          fortnoxLabel: fortnoxLabel(e.verification),
-          exportedAt: e.verification.exportedAt?.toISOString() ?? undefined,
-          lines: e.verification.lines.map((l) => ({
+      ? mapVerification(
+          e.verification,
+          e.verification.lines.map((l) => ({
             id: l.id,
             account: l.account,
             accountName: l.accountName,
@@ -234,7 +470,7 @@ export async function getExpense(
             debit: ore(l.debit),
             credit: ore(l.credit),
           })),
-        }
+        )
       : undefined,
     revisions: e.events.map((ev) => ({
       id: ev.id,

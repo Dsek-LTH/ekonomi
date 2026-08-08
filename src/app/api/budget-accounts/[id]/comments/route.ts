@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import { parseBody } from "@/lib/api/parse";
+import { BudgetCommentBody } from "@/lib/api/schemas/budget";
 import { canCommentBudget } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 
@@ -8,8 +10,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const g = await gate(canCommentBudget);
   if (!g.ok) return g.res;
 
-  const body = await req.json().catch(() => ({}));
-  const body_ = typeof body.body === "string" ? body.body.trim() : "";
+  const parsed = await parseBody(req, BudgetCommentBody);
+  if (!parsed.ok) return parsed.res;
+  const body_ = parsed.data.body;
   if (!body_) return fail(422, "budget.commentEmpty");
 
   // Comments deliberately don't go through `denyBudgetWrite` — they stay open on

@@ -9,15 +9,8 @@ import { prisma } from "@/lib/server/db";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
 import { fail, gate } from "@/lib/api/guard";
-
-interface LineInput {
-  account?: string;
-  accountName?: string;
-  description?: string;
-  costCenterCode?: string;
-  debit?: number; // öre
-  credit?: number; // öre
-}
+import { parseBody } from "@/lib/api/parse";
+import { BookVoucher } from "@/lib/api/schemas/expense";
 
 interface NormLine {
   account: string;
@@ -28,20 +21,22 @@ interface NormLine {
   credit: number; // öre
 }
 
-// Parse + validate the voucher lines: each row needs an account, amounts are
-// non-negative, and the verification must balance (debit total == credit total).
+// Validate the voucher lines: each row needs an account, and the verification
+// must balance (debit total == credit total). The *shapes* — strings that are
+// strings, amounts that are non-negative integer öre — are the schema's, and
+// are not re-checked here. A number that arrived as nonsense used to become 0
+// through `Number(x) || 0` and quietly unbalance the voucher.
 function prepareLines(
-  body: { lines?: unknown },
+  body: BookVoucher,
 ): { ok: true; lines: NormLine[] } | { ok: false; error: string; status: number } {
-  const rawLines: LineInput[] = Array.isArray(body.lines) ? body.lines : [];
-  const lines: NormLine[] = rawLines
+  const lines: NormLine[] = body.lines
     .map((l) => ({
-      account: String(l.account ?? "").trim(),
-      accountName: String(l.accountName ?? "").trim(),
-      description: l.description?.toString().trim() || null,
-      costCenterCode: l.costCenterCode?.toString() || null,
-      debit: Math.round(Number(l.debit) || 0),
-      credit: Math.round(Number(l.credit) || 0),
+      account: l.account,
+      accountName: l.accountName,
+      description: l.description || null,
+      costCenterCode: l.costCenterCode ?? null,
+      debit: l.debit,
+      credit: l.credit,
     }))
     .filter((l) => l.account || l.debit || l.credit);
 
@@ -80,11 +75,29 @@ async function checkPaymentLine(
   return null;
 }
 
-// Resolve the cost-center codes used by the lines to their ids.
-async function costCenterIdByCode(lines: NormLine[]): Promise<Map<string, string>> {
+/**
+ * Resolve the cost-center codes used by the lines to their ids, or name the
+ * first one that isn't a cost centre.
+ *
+ * A code that resolves to nothing used to be booked as no cost centre at all:
+ * the voucher balanced, the accounts were right, and the line simply carried no
+ * kostnadsställe. That is the one field the whole budget-vs-actual side of the
+ * app reads — a verification posted without it is money that has left the
+ * section and appears in nobody's outcome. PATCH /api/expenses/[id] refuses an
+ * unknown code on an allocation; there is no reason the voucher itself should
+ * be the laxer of the two.
+ */
+async function costCenterIdByCode(
+  lines: NormLine[],
+): Promise<{ ok: true; idByCode: Map<string, string> } | { ok: false; code: string }> {
   const codes = [...new Set(lines.map((l) => l.costCenterCode).filter(Boolean))] as string[];
   const ccs = await prisma.costCenter.findMany({ where: { code: { in: codes } } });
-  return new Map(ccs.map((c) => [c.code, c.id]));
+  const idByCode = new Map(ccs.map((c) => [c.code, c.id]));
+  // Inactive ones still resolve: a retired cost centre is one nothing new
+  // should be *allocated* to, but a voucher being amended may well be posted
+  // against the one it was always posted against.
+  const unknown = codes.find((c) => !idByCode.has(c));
+  return unknown ? { ok: false, code: unknown } : { ok: true, idByCode };
 }
 
 // The rows as Prisma nested-create data. Identical for creating and replacing,
@@ -117,7 +130,7 @@ async function loadForBooking(id: string) {
 
 // The rows, validated against the utlägg they belong to.
 async function prepareVoucher(
-  body: { lines?: unknown },
+  body: BookVoucher,
   expense: { paymentType: "CARD" | "REIMBURSEMENT"; grossAmount: number | null },
 ) {
   const prepared = prepareLines(body);
@@ -131,25 +144,30 @@ async function prepareVoucher(
     };
   }
 
+  const resolved = await costCenterIdByCode(prepared.lines);
+  if (!resolved.ok) {
+    return {
+      ok: false as const,
+      res: fail(422, "voucher.unknownCostCenter", { values: { code: resolved.code } }),
+    };
+  }
+
   return {
     ok: true as const,
     lines: prepared.lines,
-    idByCode: await costCenterIdByCode(prepared.lines),
+    idByCode: resolved.idByCode,
   };
 }
 
 // The verification's date and heading — the caller may set both, and each falls
 // back to what the utlägg already says.
 function voucherMeta(
-  body: { date?: unknown; description?: unknown },
+  body: BookVoucher,
   fallback: { date: Date; description: string },
 ) {
   return {
-    date: body.date ? new Date(body.date as string) : fallback.date,
-    description:
-      typeof body.description === "string" && body.description.trim()
-        ? body.description.trim()
-        : fallback.description,
+    date: body.date ? new Date(body.date) : fallback.date,
+    description: body.description || fallback.description,
   };
 }
 
@@ -166,7 +184,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, BookVoucher);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const voucher = await prepareVoucher(body, expense);
   if (!voucher.ok) return voucher.res;
 
@@ -191,7 +211,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   });
 
-  return NextResponse.json({ ok: true, id }, { status: 201 });
+  return NextResponse.json({ id }, { status: 201 });
 }
 
 // PATCH — amend the konteringsrader of a BOOKED (not yet EXPORTED) verification.
@@ -211,7 +231,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const verification = expense.verification;
   if (!verification) return fail(404, "expense.noVoucherToAmend");
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, BookVoucher);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const voucher = await prepareVoucher(body, expense);
   if (!voucher.ok) return voucher.res;
 
@@ -240,5 +262,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     });
   });
 
-  return NextResponse.json({ ok: true, id }, { status: 200 });
+  return NextResponse.json({ id }, { status: 200 });
 }

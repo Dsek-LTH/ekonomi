@@ -20,6 +20,7 @@ function expense(over: Partial<Expense> & { status: ExpenseStatus }): Expense {
     title: "Fika till mötet",
     submitterId: ME,
     submitterName: "Jag",
+    submitterStudentId: "ja1234ge-s",
     allocations: [],
     paymentType: "CARD",
     purchaseDate: "2026-07-01",

@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Runs before paint so the right theme is applied without a flash. Mirrors the
-// logic in components/theme-toggle.tsx.
+// logic in components/shell/theme-toggle.tsx.
 //
 // A plain inline <script> in <head>, not next/script: this has to execute while
 // the document is parsing, before the first paint. next/script is a client

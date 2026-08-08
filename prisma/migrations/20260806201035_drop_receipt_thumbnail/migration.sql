@@ -1,0 +1,14 @@
+-- Receipts no longer have a thumbnail. A second 480px encode was written on
+-- every image upload and stored as its own object, and nothing ever read it:
+-- the viewer always fetched the full-size file, and no list shows a preview.
+--
+-- Dropping the column loses the pointer to any thumbnails an instance has
+-- already stored, so those objects become unreferenced. That is deliberate and
+-- already handled — `pnpm receipts:gc` reconciles the bucket against the
+-- database and reports exactly this, and `pnpm receipts:gc --delete` removes
+-- it. Run it once after deploying to reclaim the space; nothing breaks if you
+-- don't, the objects simply sit there.
+--
+-- Nothing else is affected: objectKey, the file people actually read, is
+-- untouched.
+ALTER TABLE "Receipt" DROP COLUMN "thumbnailKey";

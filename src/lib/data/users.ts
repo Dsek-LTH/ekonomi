@@ -17,8 +17,17 @@ const toUser = (u: { id: string; name: string; email: string; roles: Role[] }): 
   initials: initials(u.name),
 });
 
+// The four columns `toUser` actually maps. Named once: a User row also carries
+// the member's bank details, and a loader that selects the whole row hands them
+// to every caller — today they are dropped in the mapper, but the next field
+// added to the shape would ship them without anyone deciding to.
+const userSelect = { id: true, name: true, email: true, roles: true } as const;
+
 export async function getUsers(): Promise<User[]> {
-  const users = await prisma.user.findMany({ orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  const users = await prisma.user.findMany({
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: userSelect,
+  });
   return users.map(toUser);
 }
 
@@ -29,6 +38,7 @@ export async function getRoleHolders(): Promise<User[]> {
   const users = await prisma.user.findMany({
     where: { roles: { hasSome: [...ASSIGNABLE_ROLES] } },
     orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: userSelect,
   });
   return users.map(toUser);
 }
@@ -47,6 +57,7 @@ export async function searchUsers(query: string, take = 20): Promise<User[]> {
     },
     orderBy: [{ name: "asc" }, { id: "asc" }],
     take,
+    select: userSelect,
   });
   return users.map(toUser);
 }

@@ -1,10 +1,57 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // The app handles people's money and their reimbursements, so the population
+  // that needs a keyboard or a screen reader to use it is not hypothetical.
+  // Every list in the app was mouse-only until this was added: rows carried an
+  // onClick and nothing else, and a <th> was the sort control.
+  //
+  // Warnings rather than errors, deliberately. A rule here can be wrong about a
+  // particular component in a way the reviewer has to judge, and a lint that
+  // fails the build on a judgement call is one people learn to bypass. These
+  // are meant to be read and acted on, not silenced.
+  //
+  // The rules only, not the plugin: eslint-config-next registers `jsx-a11y`
+  // itself (for the handful of rules it turns on — alt-text, aria-props and a
+  // few more), and registering it twice is a hard config error. So this takes
+  // the recommended rule set and leaves the plugin where it already is.
+  //
+  // `error` becomes `warn`; anything the plugin ships as `off` stays off. That
+  // second half matters: the recommended set deliberately disables a few rules,
+  // and turning them on wholesale added twenty-odd findings about empty <td/>
+  // spacer cells in the budget sheet — which are not controls and want no
+  // label. A lint that reports things that are fine is worse than no lint.
+  {
+    rules: Object.fromEntries(
+      Object.entries(jsxA11y.flatConfigs.recommended.rules ?? {}).map(([rule, level]) => {
+        const [severity, ...opts] = Array.isArray(level) ? level : [level];
+        const off = severity === "off" || severity === 0;
+        return [rule, off ? "off" : ["warn", ...opts]];
+      }),
+    ),
+  },
+  {
+    rules: {
+      // Off, and this is the whole reason.
+      //
+      // The rule guards against a page that grabs focus on load, moving a
+      // screen reader past the heading that says where it is. Every autoFocus
+      // in this app is the other thing: focus following a control the reader
+      // just operated — "byt namn", "+ ny resultatenhet", entering a cell, or
+      // a confirm dialog opening, where moving focus in is required rather
+      // than merely allowed. Nine sites, one pattern, all correct.
+      //
+      // If a form ever autofocuses on arrival at a route, this will not catch
+      // it. That is the trade: nine inline disables saying the same sentence
+      // teach people to write the disable without reading it.
+      "jsx-a11y/no-autofocus": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

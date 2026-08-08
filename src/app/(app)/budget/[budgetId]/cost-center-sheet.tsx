@@ -52,6 +52,10 @@ export function CostCenterSheet(props: {
   const [newRow, setNewRow] = useState<Record<string, Draft>>({});
 
   const badLine = new Set(ev.badLineItems ?? []);
+  // Accounts whose total is short a row that didn't resolve. The figure below
+  // is still the sum of the rows that did — a sheet you can't read is no help
+  // in finding the row to fix — so this is what says it is a partial one.
+  const badAccount = new Set(ev.badAccounts ?? []);
   const gut = (n: number | undefined) => <td className="select-none border-r border-border/60 px-1 text-right align-top font-mono text-[10px] leading-8 text-muted/50">{n ?? ""}</td>;
 
   // Row delete. Revealed on row hover (like the drag grip) so a long sheet isn't
@@ -188,7 +192,9 @@ export function CostCenterSheet(props: {
   });
 
   function accountBlock(account: Account) {
-    const total = ev.accounts[`${ccCode}:${account.accountCode}`];
+    const accountKey = `${ccCode}:${account.accountCode}`;
+    const total = ev.accounts[accountKey];
+    const totalIncomplete = badAccount.has(accountKey);
     const open = openComments.has(account.id);
     const d = draft(account.id);
     const incomeLike = effectiveKind(account.accountCode, account.kindOverride) === "INCOME";
@@ -327,8 +333,8 @@ export function CostCenterSheet(props: {
             {columns.map((col) => {
               const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40 focus:bg-accent-soft/40";
               const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
-              if (col.key === "beskrivning") return <td key={col.key} className="border-r border-border/60 p-0"><input value={d.description} onChange={(e) => setDraft(account.id, { description: e.target.value })} onKeyDown={onEnter} placeholder={t("newLine")} className={cn(base, "pl-5 text-sm text-muted")} /></td>;
-              if (col.key === "expression") return <td key={col.key} className="border-r border-border/60 p-0"><input value={d.expression} onChange={(e) => setDraft(account.id, { expression: e.target.value })} onKeyDown={onEnter} onBlur={() => createLine(account.id)} placeholder={tCol("expression").toLowerCase()} className={cn(base, "text-right font-mono text-xs")} /></td>;
+              if (col.key === "beskrivning") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={t("newLine")} value={d.description} onChange={(e) => setDraft(account.id, { description: e.target.value })} onKeyDown={onEnter} placeholder={t("newLine")} className={cn(base, "pl-5 text-sm text-muted")} /></td>;
+              if (col.key === "expression") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={tCol("expression")} value={d.expression} onChange={(e) => setDraft(account.id, { expression: e.target.value })} onKeyDown={onEnter} onBlur={() => createLine(account.id)} placeholder={tCol("expression").toLowerCase()} className={cn(base, "text-right font-mono text-xs")} /></td>;
               return <td key={col.key} className="border-r border-border/60" />;
             })}
             {actualPad}
@@ -350,8 +356,16 @@ export function CostCenterSheet(props: {
                 {t("originally", { amount: fmt(total - adjTotal) })}
               </span>
             )}
+            {/* Says the sum is short a row rather than letting a partial total
+                pass for the budgeted amount. The rows themselves are already
+                marked; this is the figure they add up to admitting it. */}
+            {totalIncomplete && (
+              <span className="ml-2 font-normal normal-case tracking-normal text-warning">
+                {t("incompleteSum")}
+              </span>
+            )}
           </td>
-          <td className={cn("px-2 py-1.5 text-right font-semibold tabular-nums", total !== undefined && total < 0 && "text-danger")}>{fmt(total)}</td>
+          <td className={cn("px-2 py-1.5 text-right font-semibold tabular-nums", totalIncomplete && "text-warning", total !== undefined && total < 0 && !totalIncomplete && "text-danger")}>{fmt(total)}</td>
           {showCompare && <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />}
           <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
             {canComment && (

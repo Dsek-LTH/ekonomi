@@ -89,7 +89,10 @@ async function movements(
 ): Promise<Map<string, Cell>> {
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "accountName", "costCenterCode", "costCenterName"],
-    where: { voucher: { financialYear, date: { gte: from, lte: to } } },
+    // The row's own year and date, not the voucher's — same values, but this
+    // way the sum is an indexed scan of one table rather than a join over the
+    // whole ledger. See LedgerRow in schema.prisma.
+    where: { financialYear, date: { gte: from, lte: to } },
     _sum: { debit: true, credit: true },
   });
 

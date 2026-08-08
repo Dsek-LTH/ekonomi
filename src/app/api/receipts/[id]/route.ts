@@ -16,8 +16,7 @@ const withExpense = {
 } as const;
 
 // GET /api/receipts/:id — streams the receipt image/PDF back inline.
-// `?variant=thumb` serves the small preview when one exists.
-export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
@@ -28,8 +27,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const hidden = await denyExpenseView(g.actor, receipt.expense);
   if (hidden) return fail(404, "receipt.notFound");
 
-  const wantThumb = new URL(req.url).searchParams.get("variant") === "thumb";
-  const key = wantThumb && receipt.thumbnailKey ? receipt.thumbnailKey : receipt.objectKey;
+  const key = receipt.objectKey;
 
   // Two very different failures, told apart deliberately. Storage being
   // unreachable is an afternoon's outage and the rest of the app carries on
@@ -84,7 +82,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   // finishes the job (deleting an already-gone object counts as success).
   try {
     await deleteObject(receipt.objectKey);
-    if (receipt.thumbnailKey) await deleteObject(receipt.thumbnailKey);
   } catch (e) {
     console.error(`[receipts] ${receipt.id}: could not delete object, keeping row`, e);
     return fail(503, "receipt.deleteStorageFailed");

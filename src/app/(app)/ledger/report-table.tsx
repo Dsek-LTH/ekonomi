@@ -401,19 +401,30 @@ function SectionRows({
         const value = rowValue(a, isBalance);
         return (
           <Fragment key={key}>
+            {/* The expander is a real button on the account name, not a click
+                handler on the row. A `role="row"` with an onClick is reachable
+                by mouse alone: no tab stop, no Enter, and `aria-expanded` on a
+                row announces a state nothing can be operated to change. The row
+                keeps its hover, driven from the button's own focus too, so
+                nothing looks different and it can now be used. */}
             <div
               role="row"
-              aria-expanded={open}
-              onClick={() => onToggle(group, a)}
               className={cn(
                 ROW,
-                "cursor-pointer border-t border-border hover:bg-surface/50",
+                "group border-t border-border hover:bg-surface/50 focus-within:bg-surface/50",
                 open && "bg-surface/40",
               )}
             >
               <div role="cell" className="min-w-0 py-2 pl-inset pr-3">
-                <span className="font-medium tabular-nums">{a.account}</span>{" "}
-                <span className="text-muted">{a.accountName}</span>
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => onToggle(group, a)}
+                  className="cursor-pointer text-left"
+                >
+                  <span className="font-medium tabular-nums">{a.account}</span>{" "}
+                  <span className="text-muted">{a.accountName}</span>
+                </button>
               </div>
               {isBalance && (
                 <div role="cell" className={cn(AMOUNT_CELL, "text-muted")}>

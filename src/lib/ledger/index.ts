@@ -61,15 +61,19 @@ export async function getLedgerRows(
 ): Promise<LedgerRowView[]> {
   const rows = await prisma.ledgerRow.findMany({
     where: {
+      financialYear,
       account,
       ...(costCenterCode === undefined ? {} : { costCenterCode }),
-      voucher: {
-        financialYear,
-        ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
-      },
+      ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
     },
+    // The voucher is still joined — this is the drill-down, and its series,
+    // number and description are the whole point of it. What moved off the
+    // relation is the *filtering*, which is what had to read every row.
     include: { voucher: true },
-    orderBy: [{ voucher: { date: "asc" } }],
+    // On the row's own date, so the sort is served by the same index as the
+    // filter. It ties for rows of one voucher, hence the tiebreaker — without
+    // one, tied rows come back in whatever order the plan produces.
+    orderBy: [{ date: "asc" }, { id: "asc" }],
     take: 500,
   });
   return rows.map((r) => ({
@@ -98,7 +102,7 @@ export async function getActualsByAccountCostCenter(
 
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["costCenterCode", "account"],
-    where: { voucher: { financialYear: fyId } },
+    where: { financialYear: fyId },
     _sum: { debit: true, credit: true },
   });
   for (const g of grouped) {

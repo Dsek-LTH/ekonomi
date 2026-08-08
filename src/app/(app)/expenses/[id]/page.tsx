@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/server/current-user";
 import { getBankTransactions } from "@/lib/data/bank";
 import { getExpense } from "@/lib/data/expenses";
 import { getFortnoxStatus } from "@/lib/data/fortnox";
+import { expenseCapabilities } from "@/lib/domain/expense-capabilities";
 import ExpenseDetailClient from "./detail-client";
 
 export default async function ExpenseDetailPage({
@@ -32,9 +33,17 @@ export default async function ExpenseDetailPage({
     alsoIds: expense?.matchedTransactionId ? [expense.matchedTransactionId] : [],
   });
 
+  // What this viewer may do with this utlägg, worked out here rather than
+  // again in the browser. `canAttest` is already stamped per allocation by the
+  // loader; this is the rest of the same question, asked in the same place.
+  const can = expense
+    ? expenseCapabilities(expense, { id: user.id, roles: user.roles })
+    : null;
+
   return (
     <ExpenseDetailClient
       expense={expense}
+      can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
     />

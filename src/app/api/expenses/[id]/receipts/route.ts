@@ -9,12 +9,10 @@ import {
   deleteObjectBestEffort,
   putObject,
   receiptKey,
-  receiptThumbKey,
 } from "@/lib/server/storage";
 import {
   isNormalisableImage,
   normaliseImage,
-  normalisedExtension,
   normalisedName,
 } from "@/lib/server/images";
 import { isEditable } from "@/lib/domain/status";
@@ -25,6 +23,12 @@ import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 
 // Generous limit on the *original* upload — images get downscaled on the server.
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+
+// The multipart envelope around a 25 MB file is a little larger than the file.
+// The allowance is loose on purpose: this is the cheap check that keeps an
+// absurd body from being read at all, and `file.size` below is what actually
+// holds the limit.
+const MAX_BODY_BYTES = MAX_BYTES + 1024 * 1024;
 
 // POST /api/expenses/:id/receipts — multipart form-data, field "file".
 export async function POST(
@@ -49,6 +53,17 @@ export async function POST(
     return fail(409, "expense.notChangeableInStatus", {
       values: { status: { key: `common.status.${expense.status}` } },
     });
+  }
+
+  // Before the body is touched. `req.formData()` reads the whole request into
+  // memory, so checking `file.size` afterwards protected the bucket and not the
+  // server — a 2 GB POST was buffered in full and only then called too big.
+  // Content-Length is the sender's claim, which is enough here: an honest one
+  // is refused for nothing, and a dishonest one still meets the real limit
+  // below once the bytes are counted.
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return fail(413, "receipt.sizeRange", { values: { max: MAX_BYTES } });
   }
 
   let form: FormData;
@@ -88,17 +103,23 @@ export async function POST(
   // utlägg to still be editable, which the status check above has established.
   const replaced = await prisma.receipt.findMany({
     where: { expenseId: expense.id },
-    select: { id: true, objectKey: true, thumbnailKey: true },
+    select: { id: true, objectKey: true },
   });
 
   // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled — but PNG when
-  // the image is see-through) and get a thumbnail; PDFs are stored as-is. Collect the objects to write, plus the
-  // row's metadata, then persist atomically (object first, row second).
+  // the image is see-through); PDFs are stored as-is. Work out the object to
+  // write plus the row's metadata, then persist atomically (object first, row
+  // second).
+  //
+  // One object, singular. This was an array, and every use of it a `map` over
+  // exactly one element — the shape left behind when the 480px thumbnail was
+  // removed and the loops around it were not.
   let filename = file.name;
   let mimeType: string = fileType;
   let byteSize = file.size;
-  let thumbnailKey: string | null = null;
-  const objects: { key: string; body: Buffer; contentType: string }[] = [];
+  // Annotated, not inferred: `original` narrows to Buffer<ArrayBuffer> and the
+  // normalised bytes come back as the wider Buffer, which is what putObject takes.
+  let body: Buffer = original;
 
   if (isNormalisableImage(fileType)) {
     let normalised;
@@ -110,30 +131,22 @@ export async function POST(
     filename = normalisedName(file.name, normalised.mimeType);
     mimeType = normalised.mimeType;
     byteSize = normalised.full.length;
-    thumbnailKey = receiptThumbKey(expense.id, receiptId, normalisedExtension(normalised.mimeType));
-    objects.push({ key: receiptKey(expense.id, receiptId, filename), body: normalised.full, contentType: mimeType });
-    objects.push({ key: thumbnailKey, body: normalised.thumb, contentType: mimeType });
-  } else {
-    objects.push({ key: receiptKey(expense.id, receiptId, file.name), body: original, contentType: fileType });
+    body = normalised.full;
   }
-  const objectKey = objects[0].key;
+  const objectKey = receiptKey(expense.id, receiptId, filename);
 
   // Store bytes first; only write the row if that succeeds (no orphan rows).
-  // Both the writes and the row are inside the try, because a half-finished
-  // write orphans just as surely as a failed row does: an image writes its
-  // thumbnail and its full-size object separately, and either can be the one
-  // that lands. Whatever got as far as the bucket is removed on the way out.
+  // The write and the row are both inside the try: whatever got as far as the
+  // bucket is removed on the way out if the row never lands.
   try {
-    await Promise.all(objects.map((o) => putObject(o.key, o.body, o.contentType)));
+    await putObject(objectKey, body, mimeType);
 
     // The replaced receipt's files go before its row, and before anything is
     // committed — the same rule as an outright delete, applied at the only
     // other point a receipt stops being current. Failing here changes nothing
-    // at all: the new objects are rolled back below and the old receipt is
+    // at all: the new object is rolled back below and the old receipt is
     // still the utlägg's, so trying again once storage is back is safe.
-    const staleKeys = replaced.flatMap((r) =>
-      [r.objectKey, r.thumbnailKey].filter((k): k is string => Boolean(k)),
-    );
+    const staleKeys = replaced.map((r) => r.objectKey);
     const swept = await Promise.allSettled(staleKeys.map((k) => deleteObject(k)));
     const stuck = swept.filter((s) => s.status === "rejected");
     if (stuck.length > 0) {
@@ -141,7 +154,7 @@ export async function POST(
         `[receipts] ${expenseLabel(expense)}: ${stuck.length}/${staleKeys.length} replaced objects could not be deleted, keeping previous receipt`,
         stuck.map((s) => s.reason),
       );
-      await Promise.all(objects.map((o) => deleteObjectBestEffort(o.key)));
+      await deleteObjectBestEffort(objectKey);
       return fail(503, "receipt.replaceStorageFailed");
     }
 
@@ -156,7 +169,6 @@ export async function POST(
           id: receiptId,
           expenseId: expense.id,
           objectKey,
-          thumbnailKey,
           filename,
           mimeType,
           byteSize,
@@ -176,7 +188,7 @@ export async function POST(
   } catch (err) {
     // Roll back whatever reached the bucket. Deleting a key that was never
     // written is a no-op, so this needs no record of which writes succeeded.
-    await Promise.all(objects.map((o) => deleteObjectBestEffort(o.key)));
+    await deleteObjectBestEffort(objectKey);
     throw err;
   }
 }

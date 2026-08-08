@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import { parseBody } from "@/lib/api/parse";
+import { PatchVariable } from "@/lib/api/schemas/budget";
 import { denyBudgetWrite } from "@/lib/budget/access";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -7,11 +9,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const denied = await denyBudgetWrite({ variable: id });
   if (denied) return denied;
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, PatchVariable);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const data: Record<string, unknown> = {};
-  if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim().toUpperCase();
-  if (typeof body.expression === "string") data.expression = body.expression.trim();
-  if (typeof body.sortOrder === "number") data.sortOrder = body.sortOrder;
+  if (body.name !== undefined) data.name = body.name;
+  if (body.expression !== undefined) data.expression = body.expression;
+  if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
 
   const variable = await prisma.budgetVariable.update({ where: { id }, data });
   return NextResponse.json(variable);

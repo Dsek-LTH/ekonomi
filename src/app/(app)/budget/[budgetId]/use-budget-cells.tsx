@@ -9,7 +9,7 @@ import { sheetKey } from "@/lib/budget";
 import { evaluate } from "@/lib/budget/eval";
 import { adjustmentsByAccount } from "@/lib/budget/changes";
 import { cn } from "@/lib/ui/utils";
-import { fmt, prettyFormula, normalizeFormula } from "./budget-helpers";
+import { fmt, fmtScalar, prettyFormula, normalizeFormula } from "./budget-helpers";
 import type { Budget, Evaluated, ApiFn, MutateFn, CellArgs, FormulaArgs, CellFn, FormulaFn } from "./budget-types";
 
 interface Opts {
@@ -69,7 +69,8 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     const evaluated: Evaluated = {
       vars: Object.fromEntries(r.vars), accounts: Object.fromEntries(r.accounts),
       lineItems: Object.fromEntries(r.lineItems), cells: Object.fromEntries(r.cells),
-      badLineItems: r.badLineItems, badVariables: r.badVariables, errors: r.errors,
+      badLineItems: r.badLineItems, badVariables: r.badVariables,
+      badAccounts: r.badAccounts, errors: r.errors,
     };
     return { ...rev, evaluated };
   }
@@ -114,7 +115,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // The optimistic path: show the edit, then tell the server. It goes through
   // the same `mutate` as every other write in the app — it only asks it not to
   // refresh afterwards, because the new value is already on screen (see the
-  // `refresh` option in components/use-mutation.ts). It used to be a bare
+  // `refresh` option in components/shell/use-mutation.ts). It used to be a bare
   // fetch, which meant it was also the one write in the app that printed the
   // server's error *code* at the reader instead of the sentence behind it.
   async function commitField(url: string, payload: Record<string, unknown>) {
@@ -171,8 +172,11 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // A spreadsheet-style cell: shows the evaluated value when idle, the formula
   // (in A1 form, with a leading "=") while focused. `raw` is the stored string,
   // `computed` the evaluated number, `sheet` the cost-centre code for ref scope.
-  const renderFormula: FormulaFn = ({ id, field, raw, computed, sheet, bad, placeholder, url, payload, className, display = "value", gated }: FormulaArgs) => {
+  const renderFormula: FormulaFn = ({ id, field, raw, computed, sheet, bad, placeholder, url, payload, className, display = "value", gated, unit = "ore" }: FormulaArgs) => {
     const key = `${id}:${field}`;
+    // A Belopp is money in öre; a variable is whatever it means. The renderer
+    // is shared, so which one this cell holds has to come in with it.
+    const show = unit === "scalar" ? fmtScalar : fmt;
     const focused = focusKey === key;
     const empty = raw.trim() === "";
     const isFormula = raw.trim().startsWith("=");
@@ -188,8 +192,8 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         : bad
           ? "fel"
           : isFormula
-            ? `${pretty} = ${fmt(computed)}`
-            : fmt(computed);
+            ? `${pretty} = ${show(computed)}`
+            : show(computed);
     if (!isAdmin) {
       return <div className={cn("px-2 py-1.5 min-h-8", display === "formula" ? "font-mono text-xs" : "text-right tabular-nums", empty && "text-muted/40", bad && !empty && "text-danger", className)} title={isFormula ? formulaText : undefined}>{idle}</div>;
     }

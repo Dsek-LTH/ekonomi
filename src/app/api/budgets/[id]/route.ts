@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessBudget, canLockBudget } from "@/lib/domain/permissions";
-import { fail, gate } from "@/lib/api/guard";
+import { fail, gate, orNotFound } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { PatchBudget } from "@/lib/api/schemas/budget";
 import { denyBudgetWrite } from "@/lib/budget/access";
 import { getEvaluatedBudget } from "@/lib/data/budget";
 
@@ -24,20 +26,30 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 // apart rather than folded into one permission check.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, PatchBudget);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
 
-  if ("locked" in body) {
+  if (body.locked !== undefined) {
     const g = await gate(canLockBudget, "auth.treasurerLockBudget");
     if (!g.ok) return g.res;
 
-    const lock = body.locked === true;
-    const budget = await prisma.budget.update({
-      where: { id },
-      // Cleared together, so "locked" is never half-true.
-      data: lock
-        ? { lockedAt: new Date(), lockedById: g.actor.id }
-        : { lockedAt: null, lockedById: null },
-    });
+    const lock = body.locked;
+    // This branch runs before `denyBudgetWrite`, which is what establishes the
+    // budget exists everywhere else in this file — so locking one that isn't
+    // there reached Prisma unguarded and came back a 500.
+    const budget = await orNotFound(
+      () =>
+        prisma.budget.update({
+          where: { id },
+          // Cleared together, so "locked" is never half-true.
+          data: lock
+            ? { lockedAt: new Date(), lockedById: g.actor.id }
+            : { lockedAt: null, lockedById: null },
+        }),
+      "budget.notFound",
+    );
+    if (budget instanceof NextResponse) return budget;
     return NextResponse.json(budget);
   }
 
@@ -46,26 +58,22 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const data: { name?: string; year?: number } = {};
 
-  if ("name" in body) {
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    if (!name) return fail(422, "resultUnit.nameRequired");
-    data.name = name;
-  }
+  if (body.name !== undefined) data.name = body.name;
 
   // The year is more than a label: it decides which financial year's outcome the
   // budget is held against. It moves this budget alone — another budget of the
   // same year is a separate thing and stays where it is.
-  if ("year" in body) {
-    const year = typeof body.year === "number" ? body.year : Number(body.year);
-    if (!Number.isInteger(year) || year < 1900 || year > 2200) {
-      return fail(422, "budget.invalidYear");
-    }
-    data.year = year;
-  }
+  if (body.year !== undefined) data.year = body.year;
 
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
 
-  const budget = await prisma.budget.update({ where: { id }, data });
+  // `denyBudgetWrite` has established it exists; this covers the gap between
+  // that statement and this one.
+  const budget = await orNotFound(
+    () => prisma.budget.update({ where: { id }, data }),
+    "budget.notFound",
+  );
+  if (budget instanceof NextResponse) return budget;
   return NextResponse.json(budget);
 }
 
@@ -77,6 +85,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const denied = await denyBudgetWrite({ budget: id });
   if (denied) return denied;
 
-  await prisma.budget.delete({ where: { id } });
+  const deleted = await orNotFound(
+    () => prisma.budget.delete({ where: { id } }),
+    "budget.notFound",
+  );
+  if (deleted instanceof NextResponse) return deleted;
   return new Response(null, { status: 204 });
 }

@@ -340,14 +340,13 @@
     "notFound": "Not found",
     "request": {
       "rolesList": "roles has to be a list",
-      "userIdsList": "userIds has to be a list",
       "orderedIdsRequired": "orderedIds is required",
-      "transactionIdRequired": "transactionId is required",
       "costCenterIdRequired": "costCenterId is required",
       "yearAndAccountRequired": "year and account are required",
       "expectedMultipart": "Expected multipart/form-data",
       "noFile": "No file attached",
-      "nothingToChange": "Nothing to change"
+      "nothingToChange": "Nothing to change",
+      "invalidBody": "The request was malformed and could not be processed ({fields})"
     },
     "expense": {
       "notFound": "The expense was not found",
@@ -366,7 +365,6 @@
       "commentRequired": "A comment is required",
       "commentRequiredReopen": "A comment is required to reopen it",
       "commentRequiredUnexport": "A comment is required to undo an export",
-      "unknownAction": "Unknown action",
       "incomplete": "Fill in the description, purchase date and amount before submitting",
       "receiptRequired": "A receipt is required before the expense can be submitted for approval",
       "matchRequired": "A card purchase has to be matched against a bank transaction before it can be submitted for approval",
@@ -402,7 +400,9 @@
       "exportStep": {
         "readReceipt": "read the receipt",
         "uploadReceipt": "upload the receipt to Fortnox"
-      }
+      },
+      "changedMeanwhile": "Someone else changed the expense in the meantime. Reload the page and try again",
+      "alreadyAttested": "Someone else attested those cost centres first"
     },
     "receipt": {
       "notFound": "The receipt was not found",
@@ -428,7 +428,6 @@
     },
     "card": {
       "notFound": "The card was not found",
-      "last4Required": "Enter the card's last four digits (four digits).",
       "exists": "A card ending ····{last4} already exists."
     },
     "user": {
@@ -439,8 +438,6 @@
     },
     "resultUnit": {
       "notFound": "The result unit was not found",
-      "nameRequired": "A name is required",
-      "prefixRequired": "A prefix is required",
       "prefixFormat": "A prefix may only contain letters and digits.",
       "exists": "{name} already exists.",
       "prefixTaken": "The prefix is already used by {resultUnit}.",
@@ -452,7 +449,6 @@
     },
     "costCenter": {
       "notFound": "The cost center does not exist",
-      "nameRequired": "The cost center needs a name.",
       "codeFormat": "The code may only contain letters, digits, - and _ (2–20 characters).",
       "fortnoxOwned": "{code} comes from Fortnox and is changed there.",
       "inUse": "{code} is used by {count, plural, one {# entry} other {# entries}} and cannot be deleted.",
@@ -463,7 +459,6 @@
       "notFound": "The budget was not found",
       "sourceNotFound": "The budget to start from was not found",
       "locked": "The budget is locked. Unlock it to make changes.",
-      "invalidYear": "Enter a valid year",
       "sheetNotFound": "The cost center was not found in the budget",
       "sheetNotInBudget": "The cost center does not exist in this budget",
       "sheetExists": "The cost center is already in the budget",
@@ -472,7 +467,6 @@
       "lineRequired": "A description or a formula is required",
       "changeNotFound": "The change was not found",
       "changeRevoked": "The change has already been revoked",
-      "unknownChangeKind": "Unknown kind of change",
       "reasonRequired": "A justification is required",
       "entryRequired": "Add at least one entry",
       "amountsNotNumbers": "Every amount has to be a number",
@@ -495,7 +489,6 @@
       "notConnectedSeries": "Fortnox is not connected. The voucher series cannot be changed.",
       "noFinancialYears": "Fortnox has no financial years to fetch a chart of accounts for.",
       "unconfigured": "Fortnox is not configured on the server (missing client id / secret).",
-      "settingNotAccount": "{field} has to be an account number",
       "loginRequired": "You need to sign in to Fortnox to book.",
       "loginExpired": "Your Fortnox login has expired. Sign in again to book.",
       "loginRefreshFailed": "Your Fortnox login could not be renewed. Sign in again to book.",
@@ -518,7 +511,8 @@
       "unbalanced": "The voucher does not balance (debit ≠ credit)",
       "onePaymentLine": "The voucher has to have exactly one line on the payment account {account}",
       "paymentLineNoCostCenter": "The payment line ({account}) cannot have a cost center",
-      "paymentLineFullAmount": "The payment line ({account}) has to credit the whole expense amount"
+      "paymentLineFullAmount": "The payment line ({account}) has to credit the whole expense amount",
+      "unknownCostCenter": "Cost centre {code} does not exist"
     }
   },
   "nav": {
@@ -552,7 +546,9 @@
       "connected": "Fortnox account connected",
       "signedInUntil": "Signed in until {time}",
       "signedOut": "Not signed in, click to connect"
-    }
+    },
+    "skipToContent": "Skip to content",
+    "mainNav": "Main navigation"
   },
   "allocation": {
     "pick": "Pick a cost center…",
@@ -970,7 +966,8 @@
       "originallyLabel": "orig.",
       "totalIncome": "Total income",
       "totalCosts": "Total costs",
-      "formulaHelp": "Type a number (<code>350</code>) or a calculation straight into <strong>Amount</strong>, say <code>2 × 3 × 12</code> or <code>8 × TACK_POLICY</code>. The cell shows the calculation with its result (<code>2 × 350 = 700</code>). Click to edit. Both <code>x</code> and <code>*</code> mean times. You can point at variables (<code>MEDLEMMAR × 150</code>), account totals (<code>=account(SEX02, 3015)</code>) and cells in <strong>A1 form</strong> (<code>=TEK02!C7</code>). The row numbers sit in the left margin."
+      "formulaHelp": "Type a number (<code>350</code>) or a calculation straight into <strong>Amount</strong>, say <code>2 × 3 × 12</code> or <code>8 × TACK_POLICY</code>. The cell shows the calculation with its result (<code>2 × 350 = 700</code>). Click to edit. Both <code>x</code> and <code>*</code> mean times. You can point at variables (<code>MEDLEMMAR × 150</code>), account totals (<code>=account(SEX02, 3015)</code>) and cells in <strong>A1 form</strong> (<code>=TEK02!C7</code>). The row numbers sit in the left margin.",
+      "incompleteSum": "incomplete – a row could not be computed"
     },
     "col": {
       "konto": "Account",

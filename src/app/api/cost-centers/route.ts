@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { CreateCostCenter } from "@/lib/api/schemas/admin";
 
 // Same shape as a Fortnox code so the result unit prefixes keep working: the
 // result unit that attests a cost centre is resolved from its code, so "SEX01"
@@ -14,14 +16,16 @@ export async function POST(req: Request) {
   const g = await gate(canAccessSettings, "auth.adminCreateCostCenter");
   if (!g.ok) return g.res;
 
-  const body = await req.json().catch(() => ({}));
-  const code = String(body.code ?? "").trim().toUpperCase();
-  const name = String(body.name ?? "").trim();
+  const parsed = await parseBody(req, CreateCostCenter);
+  if (!parsed.ok) return parsed.res;
+  const { code, name } = parsed.data;
 
+  // The shape of a code is this route's rule rather than the schema's: it is
+  // the format the section's own cost centres follow, not a property of the
+  // request.
   if (!CODE.test(code)) {
     return fail(422, "costCenter.codeFormat");
   }
-  if (!name) return fail(422, "costCenter.nameRequired");
 
   const existing = await prisma.costCenter.findUnique({ where: { code } });
   if (existing) {

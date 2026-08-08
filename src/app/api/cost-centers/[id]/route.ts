@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { PatchCostCenter } from "@/lib/api/schemas/admin";
 import type { CostCenter } from "@/lib/generated/prisma/client";
 
 const admin = () => gate(canAccessSettings, "auth.adminEditCostCenter");
@@ -28,16 +30,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const local = await loadLocal(id);
   if (!local.ok) return local.res;
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, PatchCostCenter);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const data: { name?: string; active?: boolean } = {};
-  if (typeof body.name === "string") {
-    const name = body.name.trim();
-    if (!name) return fail(422, "costCenter.nameRequired");
-    data.name = name;
-  }
+  if (body.name !== undefined) data.name = body.name;
   // The code is left alone on purpose: allocations and voucher lines point at
   // this row, and the result unit that attests them is derived from the code.
-  if (typeof body.active === "boolean") data.active = body.active;
+  if (body.active !== undefined) data.active = body.active;
   // A PATCH that names nothing this route acts on is a malformed request, not
   // a quiet success — the same answer PATCH /api/budgets/[id] gives.
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
@@ -68,9 +68,9 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       return fail(409, "costCenter.inUse", { values: { code: cc.code, count: used } });
     }
     await prisma.costCenter.update({ where: { id: cc.id }, data: { active: false } });
-    return NextResponse.json({ ok: true, retired: true, used });
+    return NextResponse.json({ retired: true, used });
   }
 
   await prisma.costCenter.delete({ where: { id: cc.id } });
-  return NextResponse.json({ ok: true, retired: false });
+  return NextResponse.json({ retired: false });
 }

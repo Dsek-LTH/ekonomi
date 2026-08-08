@@ -12,7 +12,7 @@ export async function POST() {
   if (!g.ok) return g.res;
 
   try {
-    return NextResponse.json({ ok: true, ...(await syncCostCenters(g.token)) });
+    return NextResponse.json(await syncCostCenters(g.token));
   } catch (e) {
     return fortnoxFailure(e, {
       forbidden: "fortnox.missingCostCenterScope",

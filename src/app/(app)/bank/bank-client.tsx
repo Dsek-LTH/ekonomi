@@ -9,7 +9,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconUpload, IconTrash } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { useTableControls } from "@/components/ui/table-controls";
+import { useUrlTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { useNotify } from "@/components/shell/notifications";
@@ -21,14 +21,15 @@ import {
   bankDescriptionColumn,
   bankHolderColumn,
   bankMatchedColumn,
-} from "@/components/bank-columns";
+} from "@/components/columns/bank-columns";
 import { useFormat } from "@/lib/ui/use-format";
+import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction } from "@/lib/domain/types";
 
 export default function BankClient({
-  bankTransactions,
+  page,
 }: {
-  bankTransactions: BankTransaction[];
+  page: RowPage<BankTransaction>;
 }) {
   const t = useTranslations("bank");
   const { user } = useRole();
@@ -38,14 +39,16 @@ export default function BankClient({
   const { pending, mutate } = useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const controls = useTableControls();
+  const controls = useUrlTableControls(page.total);
   const canImport = canBookkeep(user.roles);
   const importing = pending === "import";
 
-  const tabs: TabFilter<BankTransaction> = [
+  const tabs: TabFilter = [
     { value: "ALL", label: t("tab.all") },
-    { value: "MATCHED", label: t("tab.matched"), predicate: (tx) => !!tx.matchedExpenseId },
-    { value: "UNMATCHED", label: t("tab.unmatched"), predicate: (tx) => !tx.matchedExpenseId },
+    // No predicates — the tab is a filter the server applies (see
+    // getBankTransactionPage), so the rows arrive already narrowed to it.
+    { value: "MATCHED", label: t("tab.matched") },
+    { value: "UNMATCHED", label: t("tab.unmatched") },
   ];
 
   async function upload(file: File) {
@@ -165,7 +168,7 @@ export default function BankClient({
 
         <DataTable
           columns={columns}
-          rows={bankTransactions}
+          rows={page.rows}
           controls={controls}
           tabs={tabs}
           searchPlaceholder={t("searchPlaceholder")}

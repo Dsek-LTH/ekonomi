@@ -26,7 +26,9 @@ const TREASURY_ROLES: readonly Role[] = [
 ];
 
 // Roles that, when held by an expense's submitter, make it NOT "ordinarie".
-const ELEVATED_SUBMITTER_ROLES: readonly Role[] = [
+// Exported because the attest *query* (lib/data/attest-scope.ts) has to ask the
+// same question of the database that `isOrdinarie` below asks of a loaded row.
+export const ELEVATED_SUBMITTER_ROLES: readonly Role[] = [
   "SKATTMASTARE",
   "ORDFORANDE",
   "RESULTATANSVARIG",

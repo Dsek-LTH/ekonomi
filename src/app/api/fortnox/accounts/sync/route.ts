@@ -25,7 +25,7 @@ export async function POST() {
 
     const result = await syncAccounts(g.token, target.id);
     const total = await prisma.account.count();
-    return NextResponse.json({ ok: true, ...result, total, year: target.id });
+    return NextResponse.json({ ...result, total, year: target.id });
   } catch (e) {
     return fortnoxFailure(e);
   }

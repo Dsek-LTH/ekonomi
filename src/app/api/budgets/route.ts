@@ -4,6 +4,8 @@ import { canAccessBudget, isAdmin } from "@/lib/domain/permissions";
 import { copyBudgetContents } from "@/lib/budget/clone";
 import { getBudgetSummaries } from "@/lib/data/budget";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { CreateBudget } from "@/lib/api/schemas/budget";
 
 // GET /api/budgets — every budget, shallow. The list page server-renders the
 // same call (lib/data/budget.ts); this is here for the compare view, which is a
@@ -25,13 +27,10 @@ export async function POST(req: Request) {
   const g = await gate(isAdmin);
   if (!g.ok) return g.res;
 
-  const body = await req.json().catch(() => ({}));
-  const year = typeof body.year === "number" ? body.year : Number(body.year) || new Date().getFullYear();
-  if (!Number.isInteger(year) || year < 1900 || year > 2200) {
-    return fail(422, "budget.invalidYear");
-  }
-  const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : "Ursprunglig";
-  const copyFromId = typeof body.copyFromId === "string" && body.copyFromId ? body.copyFromId : null;
+  const parsed = await parseBody(req, CreateBudget);
+  if (!parsed.ok) return parsed.res;
+  const { year, name } = parsed.data;
+  const copyFromId = parsed.data.copyFromId ?? null;
 
   // Fail before creating anything if the chosen source is gone.
   if (copyFromId) {

@@ -12,6 +12,8 @@
 // answer to "what is this set to, and what happens when it isn't".
 import "server-only";
 
+import { S3_DEFAULTS } from "@/lib/s3-config";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 // `next build` runs with NODE_ENV=production but on a machine that has no
@@ -33,11 +35,12 @@ const REQUIRED = {
   // a value is set, nothing stops a deploy that kept this one. Generating it
   // is the deploy's job: `openssl rand -base64 32`.
   AUTH_SECRET: "dev-only-insecure-auth-secret",
-  S3_ENDPOINT: "http://localhost:9000",
-  S3_REGION: "us-east-1",
-  S3_BUCKET: "receipts",
-  S3_ACCESS_KEY: "utlagg",
-  S3_SECRET_KEY: "utlagg-dev-secret",
+
+  // ── Object storage ──
+  // From lib/s3-config.ts, which the standalone scripts read too — they cannot
+  // import this module (it is `server-only`) and used to keep a second copy of
+  // these five values.
+  ...S3_DEFAULTS,
 
   // ── Authentik (sign-in) ──
   // Same names the guild's own web app uses, so a value copied from there

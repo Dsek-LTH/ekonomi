@@ -1,5 +1,6 @@
-// Seeds the database from the mockup's static data (lib/mock-data.ts) so the
-// real app starts with the same scenarios the design was validated against.
+// Seeds the database from the static fixtures in prisma/seed-data.ts — once
+// the frontend mock dataset — so the real app starts with the same scenarios
+// the design was validated against.
 // Idempotent: wipes the domain tables and re-inserts on every run.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/generated/prisma/client";

@@ -23,24 +23,29 @@ import { cn } from "@/lib/ui/utils";
 import type { BankTransaction, Expense, FortnoxStatus } from "@/lib/domain/types";
 import { DetailsCard, TimelineCard, VerificationCard } from "./detail-sections";
 import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
-import { expenseCapabilities } from "./expense-capabilities";
+import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
 
 export default function ExpenseDetailClient({
   expense,
+  can,
   bankTransactions,
   fortnox,
 }: {
   expense: Expense | null;
+  // Null exactly when `expense` is: there is nothing to be capable of. The two
+  // are narrowed together below so the detail view sees both as present.
+  can: ExpenseCapabilities | null;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
 }) {
-  if (!expense) {
+  if (!expense || !can) {
     return <ExpenseMissing />;
   }
   return (
     <ExpenseDetail
       expense={expense}
+      can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
     />
@@ -60,10 +65,13 @@ function ExpenseMissing() {
 
 function ExpenseDetail({
   expense,
+  can,
   bankTransactions,
   fortnox,
 }: {
   expense: Expense;
+  /** Decided on the server — see expenseCapabilities. */
+  can: ExpenseCapabilities;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
 }) {
@@ -71,7 +79,6 @@ function ExpenseDetail({
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const { user } = useRole();
-  const can = expenseCapabilities(expense, { id: user.id, roles: user.roles });
   const mutations = useExpenseMutations(expense.id);
 
   return (

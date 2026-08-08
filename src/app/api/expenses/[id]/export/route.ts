@@ -157,7 +157,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
 
   return NextResponse.json({
-    ok: true,
     id,
     voucher: created,
     label,

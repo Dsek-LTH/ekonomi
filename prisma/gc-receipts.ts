@@ -47,7 +47,7 @@ async function supersededReceipts() {
       reference: true,
       receipts: {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }], // same order the app reads
-        select: { id: true, filename: true, objectKey: true, thumbnailKey: true },
+        select: { id: true, filename: true, objectKey: true },
       },
     },
   });
@@ -62,13 +62,9 @@ async function main() {
   const superseded = await supersededReceipts();
 
   const rows = await prisma.receipt.findMany({
-    select: { id: true, objectKey: true, thumbnailKey: true },
+    select: { id: true, objectKey: true },
   });
-  const referenced = new Set<string>();
-  for (const r of rows) {
-    referenced.add(r.objectKey);
-    if (r.thumbnailKey) referenced.add(r.thumbnailKey);
-  }
+  const referenced = new Set(rows.map((r) => r.objectKey));
 
   const objects = await listObjects();
   const present = new Set(objects.map((o) => o.key));
@@ -80,9 +76,7 @@ async function main() {
 
   // The opposite failure, which this script cannot repair but should not stay
   // quiet about: a row whose bytes are gone is a verifikat nobody can produce.
-  const missing = rows.filter(
-    (r) => !present.has(r.objectKey) || (r.thumbnailKey && !present.has(r.thumbnailKey)),
-  );
+  const missing = rows.filter((r) => !present.has(r.objectKey));
 
   console.log(
     `Bucket ${bucket()}: ${objects.length} objekt, ${referenced.size} refererade av ${rows.length} kvitton.`,
@@ -100,25 +94,18 @@ async function main() {
   const sizeOf = (key: string) => objects.find((o) => o.key === key)?.size ?? 0;
 
   if (superseded.length > 0) {
-    const bytes = superseded.reduce(
-      (sum, r) => sum + sizeOf(r.objectKey) + (r.thumbnailKey ? sizeOf(r.thumbnailKey) : 0),
-      0,
-    );
+    const bytes = superseded.reduce((sum, r) => sum + sizeOf(r.objectKey), 0);
     console.log(`\n${superseded.length} ersatta kvitton som inget utlägg visar (${mb(bytes)}):`);
     for (const r of superseded) console.log(`   ${r.expense}: ${r.filename}  (${r.id})`);
 
     if (shouldDelete) {
       // Files before rows, as everywhere else: a row kept beside a deleted file
       // is recoverable, the reverse is invisible.
-      const keys = superseded.flatMap((r) =>
-        [r.objectKey, r.thumbnailKey].filter((k): k is string => Boolean(k)),
-      );
+      const keys = superseded.map((r) => r.objectKey);
       const failures = await deleteKeys(keys);
       for (const f of failures) console.error(`   kunde inte ta bort ${f.key}: ${f.message}`);
       const stuck = new Set(failures.map((f) => f.key));
-      const clear = superseded.filter(
-        (r) => !stuck.has(r.objectKey) && !(r.thumbnailKey && stuck.has(r.thumbnailKey)),
-      );
+      const clear = superseded.filter((r) => !stuck.has(r.objectKey));
       await prisma.receipt.deleteMany({ where: { id: { in: clear.map((r) => r.id) } } });
       console.log(`Tog bort ${clear.length} ersatta kvitton (${mb(bytes)}).`);
     }

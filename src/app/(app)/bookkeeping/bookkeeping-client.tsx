@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { useTableControls } from "@/components/ui/table-controls";
+import { useUrlTableControls } from "@/lib/data/use-list-query";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import {
   expenseAmountColumn,
@@ -14,24 +14,21 @@ import {
   expenseStatusColumn,
   expenseSubmitterColumn,
   expenseTitleColumn,
-} from "@/components/expense-columns";
-import { isSigned } from "@/lib/domain/status";
+} from "@/components/columns/expense-columns";
 import { expenseLabel } from "@/lib/domain/reference";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
-import { stopClick } from "@/lib/ui/utils";
+import type { RowPage } from "@/lib/data/list-query";
 import type { Expense, FortnoxStatus } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
-import { useProgressRouter } from "@/components/shell/route-progress";
 
 export default function BookkeepingClient({
-  expenses,
+  page,
   fortnox,
 }: {
-  expenses: Expense[];
+  page: RowPage<Expense>;
   fortnox: FortnoxStatus;
 }) {
-  const router = useProgressRouter();
   const notify = useNotify();
   const t = useTranslations("bookkeeping");
   const tCol = useTranslations("expenses.col");
@@ -39,20 +36,21 @@ export default function BookkeepingClient({
   const tExpense = useTranslations("expenses.mutations");
   const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
-  const controls = useTableControls();
+  const controls = useUrlTableControls(page.total);
   const { pending, mutate } = useMutation();
 
-  const tabs: TabFilter<Expense> = [
+  // No predicates: the tab value is a status the server filters on, and the
+  // page arrives already narrowed to it. "Bokföring picks up where approval
+  // ends" — approved, booked, exported — is likewise the page's query now
+  // (ExpenseListScope "signed"), not a filter applied to everything.
+  const tabs: TabFilter = [
     { value: "all", label: t("tab.all") },
-    { value: "APPROVED", label: t("tab.toBook"), predicate: (e) => e.status === "APPROVED" },
-    { value: "BOOKED", label: t("tab.toExport"), predicate: (e) => e.status === "BOOKED" },
-    { value: "EXPORTED", label: t("tab.exported"), predicate: (e) => e.status === "EXPORTED" },
+    { value: "APPROVED", label: t("tab.toBook") },
+    { value: "BOOKED", label: t("tab.toExport") },
+    { value: "EXPORTED", label: t("tab.exported") },
   ];
   // The OAuth round-trip's result is surfaced globally — see FortnoxAuthResult
   // in the app layout, since the callback can return to any page.
-
-  // Bookkeeping picks up where approval ends: approved, booked, exported.
-  const base = expenses.filter((e) => isSigned(e.status));
 
   // Keyed on the utlägg's id, spoken about by its reference — anything
   // exportable has been through attest, so it has one.
@@ -95,7 +93,7 @@ export default function BookkeepingClient({
       align: "right",
       mobile: "actions",
       cell: (e) => (
-        <div onClick={stopClick}>
+        <div className="relative">
           {e.status === "APPROVED" && (
             <ButtonLink href={`/expenses/${e.id}/book`} size="sm">
               {t("book")}
@@ -132,11 +130,11 @@ export default function BookkeepingClient({
       <Card>
         <DataTable
           columns={columns}
-          rows={base}
+          rows={page.rows}
           controls={controls}
           tabs={tabs}
           rowKey={(e) => e.id}
-          onRowClick={(e) => router.push(`/expenses/${e.id}`)}
+          rowHref={(e) => `/expenses/${e.id}`}
           empty={tList("noMatch")}
         />
       </Card>

@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { SetOwners } from "@/lib/api/schemas/admin";
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: resultUnitId } = await ctx.params;
@@ -16,11 +18,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return fail(404, "resultUnit.notFound");
   }
 
-  const body = await req.json().catch(() => ({}));
-  if (!Array.isArray(body.userIds)) {
-    return fail(422, "request.userIdsList");
-  }
-  const userIds = [...new Set(body.userIds.map(String))] as string[];
+  const parsed = await parseBody(req, SetOwners);
+  if (!parsed.ok) return parsed.res;
+  const userIds = [...new Set(parsed.data.userIds)];
 
   if (userIds.length) {
     const found = await prisma.user.count({ where: { id: { in: userIds } } });
@@ -34,5 +34,5 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     ),
   ]);
 
-  return NextResponse.json({ ok: true, resultUnitId, userIds });
+  return NextResponse.json({ resultUnitId, userIds });
 }

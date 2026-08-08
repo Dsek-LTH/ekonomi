@@ -7,12 +7,13 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
+import { type Column } from "@/components/ui/data-table";
+import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { FieldGroup, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconPencil, IconPlus, IconSync, IconTrash } from "@/components/ui/icons";
 import { Tag } from "@/components/ui/status-pill";
-import { useTableControls } from "@/components/ui/table-controls";
+import { useTableControls } from "@/lib/data/use-list-query";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -37,7 +38,7 @@ export function CostCentersClient({
   const { pending, mutate } = useMutation();
   const controls = useTableControls();
 
-  const tabs: TabFilter<CostCenter> = [
+  const tabs: ClientTabFilter<CostCenter> = [
     { value: "active", label: t("tab.active"), predicate: (c) => c.active },
     { value: "local", label: t("tab.local"), predicate: (c) => c.source === "LOCAL" },
     { value: "inactive", label: t("tab.inactive"), predicate: (c) => !c.active },
@@ -333,7 +334,7 @@ export function CostCentersClient({
             </div>
           }
         />
-        <DataTable
+        <ClientDataTable
           columns={columns}
           rows={costCenters}
           controls={controls}

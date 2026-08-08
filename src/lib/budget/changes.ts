@@ -10,9 +10,11 @@
 //   • An AVSTEG must actually move it — a change that nets to nothing is a
 //     förflyttning, whatever it was called when it was entered.
 //
-// Everything is in SEK, signed in the account's own orientation (see
-// BudgetAdjustment), because that is the direction the sheet budgets in and so
-// the only one a person entering a change is thinking in.
+// Everything is in integer öre, signed in the account's own orientation (see
+// BudgetAdjustment). The sign is the direction the sheet budgets in, which is
+// the only one a person entering a change is thinking in; the unit is the one
+// the rest of the app stores money in. `parseAmount` is where kronor typed by
+// hand become öre, and it is the only place on this path that converts.
 import type { AccountKind } from "@/lib/budget";
 
 export type ChangeKind = "AVSTEG" | "FORFLYTTNING";
@@ -28,11 +30,6 @@ export interface ResolvedEntry {
   scopeLabel: string;
 }
 
-// Amounts are kronor typed by hand and summed as doubles; two of them that
-// should cancel can miss by a fraction of an öre. Anything under half an öre is
-// zero as far as these rules are concerned.
-const EPSILON = 0.005;
-
 /**
  * What one entry does to the result (och därmed till rambudgeten). Income and
  * cost are both budgeted as positive magnitudes, so the sign has to be put back
@@ -42,11 +39,16 @@ const EPSILON = 0.005;
 export const resultImpact = (kind: AccountKind, amount: number): number =>
   kind === "INCOME" ? amount : -amount;
 
-/** A whole change's effect on the result. Zero (within EPSILON) = rambudgeten står still. */
+/** A whole change's effect on the result. Zero = rambudgeten står still. */
 export const netResultImpact = (entries: readonly { kind: AccountKind; amount: number }[]): number =>
   entries.reduce((sum, e) => sum + resultImpact(e.kind, e.amount), 0);
 
-const isNeutral = (net: number): boolean => Math.abs(net) < EPSILON;
+// Exactly zero, because the amounts are integer öre. This was `Math.abs(net) <
+// 0.005` — half an öre — because two kronor floats that ought to cancel could
+// miss by a fraction. Integers either cancel or they do not, and a
+// förflyttning that is genuinely one öre out is now refused rather than
+// rounded into neutrality.
+const isNeutral = (net: number): boolean => net === 0;
 
 /**
  * Which resultatenhet a sheet belongs to — the unit a förflyttning may move
@@ -75,17 +77,20 @@ export function scopeLabel(sheet: {
 }
 
 /**
- * What was typed in a belopp field → kronor, or NaN when it isn't a number.
- * Forgiving about how Swedes write one (spaces as thousands separators, a comma
- * for the decimal point) and about nothing else: a change is a decided amount,
- * so unlike a line item it takes no formula.
+ * What was typed in a belopp field → integer öre, or NaN when it isn't a
+ * number. Forgiving about how Swedes write one (spaces as thousands separators,
+ * a comma for the decimal point) and about nothing else: a change is a decided
+ * amount, so unlike a line item it takes no formula.
+ *
+ * The one place kronor become öre on this path. A number handed in is already
+ * öre — that is an amount coming back from the API, not one being typed.
  */
 export function parseAmount(raw: string | number): number {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : NaN;
   const s = raw.replace(/[\s _]/g, "").replace(",", ".");
   if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
   const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
+  return Number.isFinite(n) ? Math.round(n * 100) : NaN;
 }
 
 /**
@@ -109,7 +114,7 @@ export function validateChange(kind: ChangeKind, entries: readonly ResolvedEntry
   if (entries.some((e) => !Number.isFinite(e.amount))) {
     return { ok: false, error: "notNumbers" };
   }
-  if (entries.every((e) => Math.abs(e.amount) < EPSILON)) {
+  if (entries.every((e) => e.amount === 0)) {
     return { ok: false, error: "allZero" };
   }
   // The same account twice in one change nets to a single figure anyway, and

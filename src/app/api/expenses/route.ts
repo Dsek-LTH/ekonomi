@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { CreateExpense } from "@/lib/api/schemas/expense";
 
 // POST /api/expenses — body: { paymentType?, title?, matchedTransactionId? }
 export async function POST(req: Request) {
@@ -10,11 +12,10 @@ export async function POST(req: Request) {
   if (!g.ok) return g.res;
   const submitterId = g.actor.id;
 
-  const body = await req.json().catch(() => ({}));
-  const paymentType = body.paymentType === "REIMBURSEMENT" ? "REIMBURSEMENT" : "CARD";
-  const title: string = typeof body.title === "string" ? body.title : "";
-  const matchedTransactionId =
-    typeof body.matchedTransactionId === "string" ? body.matchedTransactionId : null;
+  const parsed = await parseBody(req, CreateExpense);
+  if (!parsed.ok) return parsed.res;
+  const { paymentType, title } = parsed.data;
+  const matchedTransactionId = parsed.data.matchedTransactionId ?? null;
 
   // A card purchase ("Sektionskort") is only available to members who hold a card.
   if (paymentType === "CARD") {

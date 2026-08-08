@@ -263,6 +263,16 @@ export function AppShell({
     // On paper none of that applies: the chrome is dropped and the page column
     // is left to flow, or the printer gets one screenful and nothing after it.
     <div className="flex min-h-dvh md:h-screen md:overflow-hidden print:block print:h-auto print:overflow-visible">
+      {/* The first thing the keyboard reaches, and invisible until it does.
+          Without it every page begins with a walk through the whole sidebar —
+          a dozen-odd links — before the content the reader came for. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:border-brand-edge focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:brand-fill focus:text-on-brand"
+      >
+        {t("skipToContent")}
+      </a>
+
       {/* Backdrop for the mobile drawer. */}
       {drawerOpen && (
         <button
@@ -325,6 +335,7 @@ export function AppShell({
               unrail("lg:justify-start lg:px-6"),
             )}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-10 shrink-0" />
             <div className={cn("leading-tight md:hidden", unrail("lg:block"))}>
               <p className="text-sm font-semibold">D-sektionen</p>
@@ -333,7 +344,7 @@ export function AppShell({
           </div>
         )}
 
-        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-2">
+        <nav aria-label={t("mainNav")} className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-2">
           {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
           {groups.map((group) => (
             <div key={group.label} className="flex flex-col gap-0.5">
@@ -376,11 +387,17 @@ export function AppShell({
           >
             <IconMenu className="size-5" />
           </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="" className="h-7" />
           <p className="text-sm font-semibold">D-sektionen</p>
         </header>
 
         <main
+          id="main"
+          // Focusable only as the skip link's destination: without it the jump
+          // moves the viewport and leaves focus where it was, so the next Tab
+          // goes back into the nav the reader just skipped.
+          tabIndex={-1}
           className={cn(
             // Asymmetric on purpose. The top needs less than it had (a page
             // header already carries its own space, and on a phone the sticky

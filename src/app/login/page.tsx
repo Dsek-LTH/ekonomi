@@ -25,6 +25,7 @@ export default function LoginPage() {
         {/* The mark stands on its own. It used to sit inside a 56px rounded
             tile with a card shadow and a white text colour, none of which had
             anything to render — an 80px symbol overflowing an empty box. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/symbol_rosa.svg"
           alt="D-sektionen"
@@ -41,6 +42,7 @@ export default function LoginPage() {
           onClick={() => signIn("authentik", { callbackUrl: "/dashboard" })}
           className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-background text-sm font-medium transition-colors hover:bg-surface"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="" aria-hidden className="size-5" />
           {t("loginPrompt")}
         </button>

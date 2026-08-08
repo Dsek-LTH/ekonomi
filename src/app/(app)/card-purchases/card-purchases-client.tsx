@@ -7,46 +7,54 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconUpload } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { useTableControls } from "@/components/ui/table-controls";
-import { useRole } from "@/components/shell/role-context";
+import { useUrlTableControls } from "@/lib/data/use-list-query";
 import {
   bankAmountColumn,
   bankCardColumn,
   bankDateColumn,
   bankDescriptionColumn,
   bankMatchedColumn,
-} from "@/components/bank-columns";
+} from "@/components/columns/bank-columns";
+import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 
+/**
+ * The tab this page opens on — see APPROVALS_DEFAULT_TAB for why it is declared
+ * once and shared rather than written on both sides.
+ */
+export const CARD_PURCHASES_DEFAULT_TAB = "UNMATCHED";
+
 export default function CardPurchasesClient({
-  bankTransactions,
+  page,
   cards,
 }: {
-  bankTransactions: BankTransaction[];
+  page: RowPage<BankTransaction>;
   cards: SectionCard[];
 }) {
   const t = useTranslations("cardPurchases");
-  const { user } = useRole();
   const { date } = useFormat();
-  const controls = useTableControls();
+  const controls = useUrlTableControls(page.total, CARD_PURCHASES_DEFAULT_TAB);
 
-  const tabs: TabFilter<BankTransaction> = [
-    { value: "unmatched", label: t("tab.unaccounted"), predicate: (tx) => !tx.matchedExpenseId },
-    { value: "matched", label: t("tab.accounted"), predicate: (tx) => !!tx.matchedExpenseId },
-    { value: "all", label: t("tab.all") },
+  const tabs: TabFilter = [
+    // No predicates — these are filters the server applies; see
+    // getBankTransactionPage, which takes the same two names.
+    { value: CARD_PURCHASES_DEFAULT_TAB, label: t("tab.unaccounted") },
+    { value: "MATCHED", label: t("tab.accounted") },
+    { value: "ALL", label: t("tab.all") },
   ];
 
-  const myCards = cards.filter((c) => c.holderId === user.id);
-  const showCardCol = myCards.length > 1;
+  // Both props arrive scoped to this member (see page.tsx) — the cards are
+  // theirs and the transactions are the ones made on them, so there is nothing
+  // left to filter here. Only the card column is a question: it earns its space
+  // once someone holds more than one card.
+  const showCardCol = cards.length > 1;
 
   // Already newest-first from the query, and DataTable takes over once a column
   // is sorted — so there is nothing to re-sort here. (The comparator that used
   // to do it never returned 0, so it reordered same-day purchases instead of
   // leaving them alone.)
-  const myPurchases = bankTransactions.filter(
-    (tx) => tx.cardHolderId === user.id,
-  );
+  const myPurchases = page.rows;
 
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
@@ -71,7 +79,7 @@ export default function CardPurchasesClient({
     },
   ];
 
-  if (myCards.length === 0) {
+  if (cards.length === 0) {
     return (
       <PageShell title={t("title")} description={t("descriptionShort")} width="content">
         <EmptyState title={t("noCardTitle")} description={t("noCardDescription")} />

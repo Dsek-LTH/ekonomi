@@ -4,6 +4,8 @@
 import { prisma } from "@/lib/server/db";
 import { isSubmittable } from "@/lib/domain/status";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { MatchExpense } from "@/lib/api/schemas/expense";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 import { cancelsOut } from "@/lib/domain/matching";
 import { formatSEK } from "@/lib/ui/format";
@@ -17,7 +19,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, MatchExpense);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
 
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) return fail(404, "expense.notFound");
@@ -38,14 +42,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return fail(422, "expense.matchCardOnly");
   }
 
-  const transactionId =
-    body.transactionId === null || body.transactionId === ""
-      ? null
-      : typeof body.transactionId === "string"
-        ? body.transactionId
-        : undefined;
-
-  if (transactionId === undefined) return fail(422, "request.transactionIdRequired");
+  // A transaction id, or null to unmatch. The schema insists it is one of the
+  // two, so the third case this used to carry — a body that named neither, and
+  // its own 422 — cannot arrive.
+  const transactionId = body.transactionId;
 
   if (transactionId !== null) {
     // Validate the transaction exists, belongs to the submitter's own section

@@ -10,7 +10,7 @@ import { StatusPill, Tag } from "@/components/ui/status-pill";
 import type { Column } from "@/components/ui/data-table";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
 
-import { Amount } from "./ui/amount";
+import { Amount } from "@/components/ui/amount";
 import type { Expense } from "@/lib/domain/types";
 
 // Each column also says where it lands in DataTable's phone card, so every

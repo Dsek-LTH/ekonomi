@@ -142,7 +142,7 @@ export async function getEvaluatedBudget(id: string): Promise<EvaluatedBudget | 
     cc.accounts.map((acct) => `${sheetKey(cc)}:${acct.accountCode}`),
   );
 
-  const { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, errors } = evaluate(varInputs, liInputs, [...EXTRA_COLUMN_KEYS], adjustments, knownAccounts);
+  const { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, badAccounts, errors } = evaluate(varInputs, liInputs, [...EXTRA_COLUMN_KEYS], adjustments, knownAccounts);
 
   const actualsSynced = (await financialYearIdForCalendarYear(budget.year)) != null;
   const actuals = await actualSheets(budget.year, budget.costCenters);
@@ -162,6 +162,7 @@ export async function getEvaluatedBudget(id: string): Promise<EvaluatedBudget | 
       cells: Object.fromEntries(cells),
       badLineItems,
       badVariables,
+      badAccounts,
       errors,
     },
     actuals,
@@ -240,7 +241,10 @@ async function actualSheets(
       code: accountCode,
       name: acctName.get(accountCode) ?? accountCode,
       kind,
-      total: net / 100, // SEK
+      // Öre, as the ledger stores it. This used to divide by 100 because the
+      // budget side was kronor and the two had to meet somewhere; they meet in
+      // öre now, so the conversion is gone rather than moved.
+      total: net,
       lines: [], // the ledger has no line items — only account totals
     });
   }

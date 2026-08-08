@@ -4,17 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader } from "@/components/ui/card";
-import { DataTable, type Column } from "@/components/ui/data-table";
+import { type Column } from "@/components/ui/data-table";
+import { ClientDataTable } from "@/components/ui/client-data-table";
 import { IconButton } from "@/components/ui/icon-button";
 import { Menu, MenuItem, MenuLabel, MenuNote, MenuSeparator } from "@/components/ui/menu";
-import { useTableControls } from "@/components/ui/table-controls";
+import { useTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { IconCompare, IconCopy, IconPlus, IconTrash } from "@/components/ui/icons";
 import { isAdmin } from "@/lib/domain/permissions";
-import { cn, stopClick } from "@/lib/ui/utils";
+import { cn } from "@/lib/ui/utils";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import type { BudgetSummary } from "@/lib/data/budget";
 
@@ -103,7 +104,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       // no checkbox column there to put it in.
       mobile: "actions",
       cell: (b) => (
-        <span onClick={stopClick}>
+        <span className="relative">
           <input
             type="checkbox"
             checked={picked.includes(b.id)}
@@ -146,7 +147,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       mobile: "actions",
       className: "whitespace-nowrap",
       cell: (b) => (
-        <div className="flex items-center justify-end gap-2" onClick={stopClick}>
+        <div className="relative flex items-center justify-end gap-2">
           {admin && (
             <>
               <IconButton
@@ -221,13 +222,13 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
             </Link>
           }
         />
-        <DataTable
+        <ClientDataTable
           columns={columns}
           rows={budgets}
           controls={controls}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(b) => b.id}
-          onRowClick={(b) => router.push(`/budget/${b.id}`)}
+          rowHref={(b) => `/budget/${b.id}`}
           empty={budgets.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
         />
       </Card>

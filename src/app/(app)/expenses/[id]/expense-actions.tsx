@@ -8,7 +8,7 @@ import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconAlert, IconCheck, IconUndo } from "@/components/ui/icons";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import type { FortnoxStatus } from "@/lib/domain/types";
-import type { ExpenseCapabilities } from "./expense-capabilities";
+import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useProgressRouter } from "@/components/shell/route-progress";
 
 // Everything the detail page can do to an utlägg, in the page header.

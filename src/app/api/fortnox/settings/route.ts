@@ -6,22 +6,27 @@ import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getBookkeepingSettings } from "@/lib/data/accounts";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { FortnoxSettings } from "@/lib/api/schemas/admin";
 
 export async function PATCH(req: Request) {
   const g = await gate(canAccessSettings, "auth.adminBookkeepingSettings");
   if (!g.ok) return g.res;
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, FortnoxSettings);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const data: { bankAccount?: string; memberDebtAccount?: string } = {};
 
+  // The schema says these are non-empty strings; that each names an account in
+  // the synced chart is what the lookup below establishes, and is the check
+  // worth having — a voucher posted to a number Fortnox has never heard of is
+  // the failure this prevents.
   for (const field of ["bankAccount", "memberDebtAccount"] as const) {
     const value = body[field];
     if (value === undefined) continue;
-    if (typeof value !== "string" || !value.trim()) {
-      return fail(422, "fortnox.settingNotAccount", { values: { field } });
-    }
-    const account = await prisma.account.findUnique({ where: { number: value.trim() } });
-    if (!account) return fail(422, "budgetAccount.unknown", { values: { code: value.trim() } });
+    const account = await prisma.account.findUnique({ where: { number: value } });
+    if (!account) return fail(422, "budgetAccount.unknown", { values: { code: value } });
     data[field] = account.number;
   }
 
@@ -34,16 +39,16 @@ export async function PATCH(req: Request) {
   }
 
   // The voucher series lives on the connection — only settable while connected.
-  if (typeof body.voucherSeries === "string" && body.voucherSeries.trim()) {
+  if (body.voucherSeries !== undefined) {
     const conn = await prisma.fortnoxConnection.findFirst();
     if (!conn) {
       return fail(409, "fortnox.notConnectedSeries");
     }
     await prisma.fortnoxConnection.update({
       where: { id: conn.id },
-      data: { voucherSeries: body.voucherSeries.trim().toUpperCase() },
+      data: { voucherSeries: body.voucherSeries },
     });
   }
 
-  return NextResponse.json({ ok: true, settings: await getBookkeepingSettings() });
+  return NextResponse.json({ settings: await getBookkeepingSettings() });
 }

@@ -11,6 +11,8 @@ import { claimReference, withReferenceRetry } from "@/lib/server/expense-referen
 import { canAttestAllocation, canReturnApproved, canUnexport, isAdmin } from "@/lib/domain/permissions";
 import { resultUnitNameForCode, getPrefixes, ownedResultUnits } from "@/lib/server/result-units";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { TransitionExpense } from "@/lib/api/schemas/expense";
 import { denyExpenseView } from "@/lib/api/expense-access";
 import {
   REIMBURSEMENT_DEADLINE_DAYS,
@@ -25,6 +27,45 @@ import type { ExpenseStatus } from "@/lib/generated/prisma/client";
 // Note: export (BOOKED → EXPORTED) is NOT here — it's a real Fortnox API call,
 // handled by app/api/expenses/[id]/export/route.ts.
 type SimpleAction = "submit" | "request_changes";
+
+// ── Acting on the state you actually checked ──────────────────────
+//
+// Every branch below reads the utlägg once, decides against what it read, and
+// then writes. Between those two moments somebody else can act on the same
+// utlägg — two attestants clicking at once, or one person's second tab — and
+// the write would land on a row that no longer looks like the one the decision
+// was made about. Nothing failed; the numbers simply stopped meaning what they
+// said. In the approve path it was worse than a lost update: the rows to sign
+// were chosen by `!a.approvedById` outside the transaction and then written by
+// id alone, so the second writer replaced the first one's signature with their
+// own name. An attest trail that can silently reattribute a signature is not
+// one.
+//
+// So no write here is addressed by id alone. Each one restates the condition it
+// was decided under — the status it expects, the approval slot it expects to be
+// empty — and `applied` insists that it actually matched something. A write
+// that matched nothing means the world moved underneath us, which is a 409 and
+// a reload, not a silent success.
+class StaleWrite extends Error {
+  constructor(readonly code = "expense.changedMeanwhile") {
+    super(code);
+  }
+}
+
+/** Assert a conditional write matched the row it was aimed at. */
+function applied({ count }: { count: number }, code?: string): void {
+  if (count === 0) throw new StaleWrite(code);
+}
+
+/** Run a transition body, turning a lost race into a 409 rather than a 500. */
+async function commit<T>(body: () => Promise<T>): Promise<T | NextResponse> {
+  try {
+    return await body();
+  } catch (err) {
+    if (err instanceof StaleWrite) return fail(409, err.code);
+    throw err;
+  }
+}
 
 const SIMPLE_TRANSITIONS: Record<
   SimpleAction,
@@ -53,9 +94,9 @@ export async function POST(
   const actor = g.actor;
   const actorId = actor.id;
 
-  const body = await req.json().catch(() => ({}));
-  const action: string = body.action;
-  const comment = typeof body.comment === "string" ? body.comment.trim() : "";
+  const parsed = await parseBody(req, TransitionExpense);
+  if (!parsed.ok) return parsed.res;
+  const { action, comment } = parsed.data;
 
   const expense = await prisma.expense.findUnique({
     where: { id },
@@ -112,34 +153,45 @@ export async function POST(
     }
 
     const now = new Date();
-    await prisma.$transaction(async (tx) => {
-      // Stamp each of the actor's pending allocations as approved.
-      await tx.expenseCostAllocation.updateMany({
-        where: { id: { in: mine.map((a) => a.id) } },
-        data: { approvedById: actorId, approvedAt: now },
-      });
+    const result = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Stamp each of the actor's pending allocations as approved. Still
+        // pending is part of the condition, not just part of how they were
+        // picked — without it this overwrote a signature somebody else had put
+        // there in the meantime, and the timeline showed ours.
+        applied(
+          await tx.expenseCostAllocation.updateMany({
+            where: { id: { in: mine.map((a) => a.id) }, approvedById: null },
+            data: { approvedById: actorId, approvedAt: now },
+          }),
+          "expense.alreadyAttested",
+        );
 
-      // Reload to check if ALL allocations are now approved.
-      const remaining = await tx.expenseCostAllocation.count({
-        where: { expenseId: expense.id, approvedById: null },
-      });
-
-      await tx.expenseEvent.create({
-        data: { expenseId: expense.id, type: "COST_CENTER_APPROVED", actorId },
-      });
-      if (remaining === 0) {
-        await tx.expense.update({
-          where: { id: expense.id },
-          data: { status: "APPROVED" },
+        // Reload to check if ALL allocations are now approved.
+        const remaining = await tx.expenseCostAllocation.count({
+          where: { expenseId: expense.id, approvedById: null },
         });
-      }
-    });
 
-    const updated = await prisma.expense.findUnique({
-      where: { id: expense.id },
-      select: { status: true },
-    });
-    return NextResponse.json({ ok: true, id, status: updated?.status });
+        await tx.expenseEvent.create({
+          data: { expenseId: expense.id, type: "COST_CENTER_APPROVED", actorId },
+        });
+        if (remaining === 0) {
+          // The last signature. The utlägg has to still be waiting for one —
+          // if it was sent back for changes while we were signing, this is not
+          // an utlägg to mark attested.
+          applied(
+            await tx.expense.updateMany({
+              where: { id: expense.id, status: "PENDING_APPROVAL" },
+              data: { status: "APPROVED" },
+            }),
+          );
+          return "APPROVED" as const;
+        }
+        return "PENDING_APPROVAL" as const;
+      }),
+    );
+    if (result instanceof NextResponse) return result;
+    return NextResponse.json({ id, status: result });
   }
 
   // ── Withdraw your own attest ──────────────────────────────────────────────
@@ -163,29 +215,38 @@ export async function POST(
       return fail(403, "expense.noApprovalToWithdraw");
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.expenseCostAllocation.updateMany({
-        where: { id: { in: mine.map((a) => a.id) } },
-        data: { approvedById: null, approvedAt: null },
-      });
-      // The utlägg is only fully attested while every allocation is signed.
-      if (expense.status === "APPROVED") {
-        await tx.expense.update({
-          where: { id: expense.id },
-          data: { status: "PENDING_APPROVAL" },
+    const withdrawn = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Yours to take back, and still yours at the moment of writing.
+        applied(
+          await tx.expenseCostAllocation.updateMany({
+            where: { id: { in: mine.map((a) => a.id) }, approvedById: actorId },
+            data: { approvedById: null, approvedAt: null },
+          }),
+          "expense.noApprovalToWithdraw",
+        );
+        // The utlägg is only fully attested while every allocation is signed.
+        if (expense.status === "APPROVED") {
+          applied(
+            await tx.expense.updateMany({
+              where: { id: expense.id, status: "APPROVED" },
+              data: { status: "PENDING_APPROVAL" },
+            }),
+          );
+        }
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "ATTEST_WITHDRAWN",
+            actorId,
+            comment: comment || null,
+          },
         });
-      }
-      await tx.expenseEvent.create({
-        data: {
-          expenseId: expense.id,
-          type: "ATTEST_WITHDRAWN",
-          actorId,
-          comment: comment || null,
-        },
-      });
-    });
+      }),
+    );
+    if (withdrawn instanceof NextResponse) return withdrawn;
 
-    return NextResponse.json({ ok: true, id, status: "PENDING_APPROVAL" });
+    return NextResponse.json({ id, status: "PENDING_APPROVAL" });
   }
 
   // ── Return a wrongly-approved expense for changes ─────────────────────────
@@ -206,20 +267,26 @@ export async function POST(
     if (!comment) {
       return fail(422, "expense.commentRequiredReopen");
     }
-    await prisma.$transaction(async (tx) => {
-      await tx.expenseCostAllocation.updateMany({
-        where: { expenseId: expense.id },
-        data: { approvedById: null, approvedAt: null },
-      });
-      await tx.expense.update({
-        where: { id: expense.id },
-        data: { status: "CHANGES_REQUESTED" },
-      });
-      await tx.expenseEvent.create({
-        data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
-      });
-    });
-    return NextResponse.json({ ok: true, id, status: "CHANGES_REQUESTED" });
+    const reopened = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Still attested when the write lands, or this is not ours to reopen.
+        applied(
+          await tx.expense.updateMany({
+            where: { id: expense.id, status: "APPROVED" },
+            data: { status: "CHANGES_REQUESTED" },
+          }),
+        );
+        await tx.expenseCostAllocation.updateMany({
+          where: { expenseId: expense.id },
+          data: { approvedById: null, approvedAt: null },
+        });
+        await tx.expenseEvent.create({
+          data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
+        });
+      }),
+    );
+    if (reopened instanceof NextResponse) return reopened;
+    return NextResponse.json({ id, status: "CHANGES_REQUESTED" });
   }
 
   // Undo an export: EXPORTED → BOOKED, clearing the Fortnox voucher reference
@@ -241,29 +308,39 @@ export async function POST(
     if (!comment) {
       return fail(422, "expense.commentRequiredUnexport");
     }
-    await prisma.$transaction(async (tx) => {
-      await tx.verification.updateMany({
-        where: { expenseId: expense.id },
-        data: {
-          fortnoxSeries: null,
-          fortnoxNumber: null,
-          fortnoxYear: null,
-          exportedAt: null,
-        },
-      });
-      await tx.expense.update({ where: { id: expense.id }, data: { status: "BOOKED" } });
-      await tx.expenseEvent.create({
-        data: { expenseId: expense.id, type: "EXPORT_REVERTED", actorId, comment },
-      });
-    });
-    return NextResponse.json({ ok: true, id, status: "BOOKED" });
+    const reverted = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Still exported when the write lands. Two people undoing the same
+        // export would otherwise both succeed and both log a reason.
+        applied(
+          await tx.expense.updateMany({
+            where: { id: expense.id, status: "EXPORTED" },
+            data: { status: "BOOKED" },
+          }),
+        );
+        await tx.verification.updateMany({
+          where: { expenseId: expense.id },
+          data: {
+            fortnoxSeries: null,
+            fortnoxNumber: null,
+            fortnoxYear: null,
+            exportedAt: null,
+          },
+        });
+        await tx.expenseEvent.create({
+          data: { expenseId: expense.id, type: "EXPORT_REVERTED", actorId, comment },
+        });
+      }),
+    );
+    if (reverted instanceof NextResponse) return reverted;
+    return NextResponse.json({ id, status: "BOOKED" });
   }
 
   // ── Simple state-machine transitions ──────────────────────────────────────
+  // Whatever is left is one of the two simple transitions — the schema's enum
+  // is what says so, and the check that used to answer 400 for an unknown
+  // action is gone with it.
   const rule = SIMPLE_TRANSITIONS[action as SimpleAction];
-  if (!rule) {
-    return fail(400, "expense.unknownAction");
-  }
   if (!rule.from.includes(expense.status)) {
     return fail(409, "expense.actionNotFromStatus", {
       values: { status: { key: `common.status.${expense.status}` } },
@@ -273,7 +350,7 @@ export async function POST(
     // Sending an utlägg for attest is the submitter's act — it is their claim,
     // and it lands in someone else's queue signed with their name. An admin may
     // do it on their behalf; nobody else may, however complete the utlägg
-    // happens to be. Mirrors `mayAct` in expenses/[id]/expense-capabilities.ts,
+    // happens to be. Mirrors `mayAct` in lib/domain/expense-capabilities.ts,
     // which is what decides whether the button is offered.
     if (!actorIsSubmitter && !isAdmin(actor.roles)) {
       return fail(403, "expense.noSubmitAccess");
@@ -344,37 +421,46 @@ export async function POST(
     return fail(422, "expense.commentRequired");
   }
 
-  const written = await withReferenceRetry(() =>
-    prisma.$transaction(async (tx) => {
-      // Clear allocation approvals when going back to editable state.
-      if (rule.to === "CHANGES_REQUESTED") {
-        await tx.expenseCostAllocation.updateMany({
-          where: { expenseId: expense.id },
-          data: { approvedById: null, approvedAt: null },
+  const written = await commit(() =>
+    withReferenceRetry(() =>
+      prisma.$transaction(async (tx) => {
+        // Clear allocation approvals when going back to editable state.
+        if (rule.to === "CHANGES_REQUESTED") {
+          await tx.expenseCostAllocation.updateMany({
+            where: { expenseId: expense.id },
+            data: { approvedById: null, approvedAt: null },
+          });
+        }
+        // The number, on the way in. Only on submit, and only once: an utlägg sent
+        // back for changes and re-submitted keeps the number it was already known
+        // by — to everyone who has seen it, it is the same utlägg.
+        const reference =
+          action === "submit" && expense.reference === null
+            ? await claimReference(tx)
+            : undefined;
+        // The status this transition was permitted from has to still be the
+        // status it is in. Two submits of the same draft would both have passed
+        // the check above and both written, and the second would have found a
+        // reference already claimed by the first.
+        applied(
+          await tx.expense.updateMany({
+            where: { id: expense.id, status: { in: rule.from } },
+            data: { status: rule.to, ...(reference ? { reference } : {}) },
+          }),
+        );
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: rule.event as Parameters<typeof tx.expenseEvent.create>[0]["data"]["type"],
+            actorId,
+            comment: comment || null,
+          },
         });
-      }
-      // The number, on the way in. Only on submit, and only once: an utlägg sent
-      // back for changes and re-submitted keeps the number it was already known
-      // by — to everyone who has seen it, it is the same utlägg.
-      const reference =
-        action === "submit" && expense.reference === null
-          ? await claimReference(tx)
-          : undefined;
-      await tx.expense.update({
-        where: { id: expense.id },
-        data: { status: rule.to, ...(reference ? { reference } : {}) },
-      });
-      await tx.expenseEvent.create({
-        data: {
-          expenseId: expense.id,
-          type: rule.event as Parameters<typeof tx.expenseEvent.create>[0]["data"]["type"],
-          actorId,
-          comment: comment || null,
-        },
-      });
-      return reference ?? expense.reference;
-    }),
+        return reference ?? expense.reference;
+      }),
+    ),
   );
+  if (written instanceof NextResponse) return written;
 
-  return NextResponse.json({ ok: true, id, reference: written, status: rule.to });
+  return NextResponse.json({ id, reference: written, status: rule.to });
 }

@@ -16,14 +16,45 @@
 // Evaluation uses fixed-point iteration so references that chain through
 // variables, account totals and other cells resolve across cost centres.
 // Circular dependencies are caught by a pass limit and surfaced as NaN.
+//
+// A formula is read whole or not at all. Anything the grammar above does not
+// account for — a stray word, a character with no meaning, a group that is
+// never closed — makes the whole cell an error rather than a number followed by
+// something quietly discarded. The same rule holds for what a formula reads:
+// a cell that did not resolve poisons the ones referring to it instead of
+// standing in as a zero, so an account total is either right or visibly
+// incomplete (`badAccounts`), never plausibly wrong.
 
-export type AccountTotals = Map<string, number>; // "CC_CODE:ACCT_CODE" → SEK
-export type VarValues    = Map<string, number>;  // variable name → SEK
-export type CellValues   = Map<string, number>;  // "<lineItemId>:<fieldKey>" → SEK
+// ── Units ─────────────────────────────────────────────────────────
+//
+// The figures this produces are money and come out as integer öre, like every
+// other amount in the app. Getting there needs one distinction the rest of the
+// codebase doesn't:
+//
+// The *language* is not all money. `MEDLEMMAR` is a headcount, `67%` is a
+// ratio, and `=MEDLEMMAR*20` multiplies one by kronor to get kronor. Scale that
+// whole value space by 100 and `67%` becomes `67`, and every formula built on a
+// share is a hundred times too big. So the arithmetic below happens in kronor,
+// where a scalar is a scalar, and öre is what the money *results* are expressed
+// in — rounded the moment a row's amount is settled, and summed as integers
+// from there.
+//
+// That is where the float drift actually was: not in one row's arithmetic, but
+// in adding a hundred of them together and comparing the answer to something.
+export type AccountTotals = Map<string, number>; // "CC_CODE:ACCT_CODE" → öre
+/** Variable values, in whatever the variable means — kronor, a count, a ratio. */
+export type VarValues    = Map<string, number>;
+/** Working values for cell references, in kronor (rounded to öre precision). */
+export type CellValues   = Map<string, number>;
 /** Every "CC_CODE:ACCT_CODE" the budget actually holds, rows or no rows. */
 export type KnownAccounts = ReadonlySet<string>;
 
-type TokKind = "num" | "id" | "ref" | "acct" | "op" | "lparen" | "rparen" | "comma" | "eof";
+// "bad" is a character the language has no meaning for. It used to be skipped
+// silently, which made `=350 kr` evaluate to 350 — a formula that quietly drops
+// half of itself and returns a confident number is worse than one that fails,
+// because nobody goes looking for it. It is a token now, and `parseAtom`
+// answers NaN for it like any other thing it cannot read.
+type TokKind = "num" | "id" | "ref" | "acct" | "op" | "lparen" | "rparen" | "comma" | "bad" | "eof";
 interface Tok { kind: TokKind; val: string }
 
 // What may start / continue a name. Any letter, not just A–Z: variable names are
@@ -91,20 +122,33 @@ function tokenise(src: string): Tok[] {
     } else if (ch === ",") {
       toks.push({ kind: "comma", val: "," }); i++;
     } else {
-      i++; // skip unknown characters
+      toks.push({ kind: "bad", val: ch }); i++;
     }
   }
   toks.push({ kind: "eof", val: "" });
   return toks;
 }
 
-function evalExpr(
-  src: string,
-  vars: VarValues,
-  accounts: AccountTotals,
-  cells: CellValues,
-  known: KnownAccounts,
-): number {
+/**
+ * Everything a formula may read, in one value.
+ *
+ * `badCells` is the part that is not simply "the numbers so far": a cell that
+ * did not resolve is still *stored* as 0, because the fixed-point iteration
+ * below needs a finite number to settle on. Reading that 0 as though it were an
+ * answer is what let one broken row turn into a clean, wrong total three rows
+ * down. So the zero stays for the iteration and this set is what a formula
+ * actually consults.
+ */
+interface EvalCtx {
+  vars: VarValues;
+  accounts: AccountTotals;
+  cells: CellValues;
+  badCells: Set<string>;
+  known: KnownAccounts;
+}
+
+function evalExpr(src: string, ctx: EvalCtx): number {
+  const { vars, accounts, cells, badCells, known } = ctx;
   const toks = tokenise(src);
   let pos = 0;
 
@@ -152,13 +196,21 @@ function evalExpr(
       // val is "L<lineItemId>:<fieldKey>"; the cell map is keyed
       // "<lineItemId>:<fieldKey>".
       const key = t.val.startsWith("L") ? t.val.slice(1) : t.val;
+      // A cell that did not resolve is not a zero to build on — see EvalCtx.
+      // Reading one makes this formula unresolved too, which is what puts the
+      // row that depends on a broken row into `badLineItems` beside it.
+      if (badCells.has(key)) return NaN;
       const v = cells.get(key);
       return v !== undefined ? v : NaN;
     }
     if (t.kind === "lparen") {
       consume();
       const v = parseExpr();
-      if (peek().kind === "rparen") consume();
+      // An unclosed group is a formula someone is still halfway through
+      // writing. It used to be closed for them at the end of the line, so
+      // `=(1+2` quietly answered 3.
+      if (peek().kind !== "rparen") return NaN;
+      consume();
       return v;
     }
     // Built-in function: account(CC_CODE, ACCT_CODE)
@@ -167,7 +219,10 @@ function evalExpr(
       const [cc = "", acct = ""] = t.val.split(",", 2).map((s) => s.trim());
       const key = `${cc}:${acct}`;
       const total = accounts.get(key);
-      if (total !== undefined) return total;
+      // Back to kronor: the totals are kept in öre so they can be summed
+      // exactly, but a formula reading one is doing arithmetic in the unit the
+      // sheet is written in.
+      if (total !== undefined) return total / 100;
       // Nothing summed into it. An account the budget holds but put no rows on
       // is empty, and empty is zero — that is a true answer, not a broken
       // formula. An account it doesn't hold at all is a reference to something
@@ -185,21 +240,21 @@ function evalExpr(
   }
 
   const result = parseExpr();
+  // Everything, or nothing. Without this the parser stopped wherever it stopped
+  // understanding and handed back what it had read so far: `=350 kr` was 350,
+  // `=100 200` was 100, and neither said anything was wrong. A budget figure
+  // that is confidently short by whatever came after the space is the one
+  // failure this file exists to prevent.
+  if (peek().kind !== "eof") return NaN;
   return Number.isFinite(result) ? result : NaN;
 }
 
 // A spreadsheet cell: literal number unless it starts with "=", in which case
 // the rest is a formula. Empty / non-numeric text → NaN.
-function evalCell(
-  raw: string | null | undefined,
-  vars: VarValues,
-  accounts: AccountTotals,
-  cells: CellValues,
-  known: KnownAccounts,
-): number {
+function evalCell(raw: string | null | undefined, ctx: EvalCtx): number {
   const s = (raw ?? "").trim();
   if (!s) return NaN;
-  if (s.startsWith("=")) return evalExpr(s.slice(1), vars, accounts, cells, known);
+  if (s.startsWith("=")) return evalExpr(s.slice(1), ctx);
   // A trailing % is a fraction: "67%" → 0.67.
   if (s.endsWith("%")) {
     const p = Number(s.slice(0, -1).replace(/[\s_]/g, "").replace(",", "."));
@@ -229,16 +284,27 @@ export interface VariableInput {
 // figure that is actually in force rather than the one that was adopted.
 export interface AdjustmentInput {
   accountKey: string; // "CC_CODE:ACCT_CODE"
-  amount: number;     // SEK, signed in the account's own orientation
+  amount: number;     // öre, signed in the account's own orientation
 }
 
 export interface EvalResult {
-  vars: VarValues;           // variable name → evaluated SEK value
-  accounts: AccountTotals;   // "CC:ACCT" → sum of line items (SEK)
-  lineItems: Map<string, number>; // lineItem.id → evaluated SEK value
-  cells: CellValues;         // "<lineItemId>:<fieldKey>" → evaluated SEK value
+  /** Variable name → its value, in whatever it means (kronor, a count, a ratio). */
+  vars: VarValues;
+  accounts: AccountTotals;   // "CC:ACCT" → sum of its rows, in öre
+  lineItems: Map<string, number>; // lineItem.id → the row's amount, in öre
+  /** Reference values in kronor — the working unit, not an output. See Units. */
+  cells: CellValues;
   badLineItems: string[];    // ids whose cell didn't resolve (formula error)
   badVariables: string[];    // variable names that didn't resolve
+  /**
+   * Account keys ("CC:ACCT") whose total is missing at least one row.
+   *
+   * The total itself is still the sum of the rows that *did* resolve, because a
+   * sheet you cannot read is no help in finding the row to fix. This is what
+   * says the figure is a partial one — without it an account holding a broken
+   * row showed a total that looked entirely ordinary.
+   */
+  badAccounts: string[];
   errors: string[];          // human-readable warnings (circular etc.)
 }
 
@@ -262,8 +328,10 @@ export function evaluate(
   const vars: VarValues     = new Map();
   const accounts: AccountTotals = new Map();
   const cells: CellValues   = new Map();
+  const badCells            = new Set<string>();
   const liValues: Map<string, number> = new Map();
   const errors: string[] = [];
+  const ctx: EvalCtx = { vars, accounts, cells, badCells, known };
 
   let pass = 0;
   let stable = false;
@@ -272,18 +340,41 @@ export function evaluate(
     pass++;
     const prevVars    = new Map(vars);
     const prevAccts   = new Map(accounts);
+    // The cells are part of the fixed point too. Leaving them out of the
+    // convergence test meant a chain of cell references that had not settled
+    // could still be declared stable — the loop stopped, the numbers were
+    // whatever the last pass happened to hold, and nothing reported "circular".
+    const prevCells   = new Map(cells);
+    const prevBad     = new Set(badCells);
 
     // Step 1: evaluate line items + their cells using current var/account/cell values
+    badCells.clear();
     for (const li of lineItems) {
-      const value = evalCell(li.expression, vars, accounts, cells, known);
-      liValues.set(li.id, Number.isFinite(value) ? value : 0);
-      // Cell map keeps finite numbers (0 for unresolved) so the fixed point
-      // stays stable; the bad-cell set below tracks the actual errors. Keyed by
-      // field so refs survive column reorders.
-      cells.set(`${li.id}:expression`, Number.isFinite(value) ? value : 0);
+      const kr = evalCell(li.expression, ctx);
+      // The rounding boundary. A row's Belopp is money, so this is where it
+      // stops being an arithmetic result and becomes an amount — and it is
+      // rounded once, here, rather than being carried at full float precision
+      // into a sum of a hundred rows and rounded at the end.
+      const ore = Number.isFinite(kr) ? Math.round(kr * 100) : 0;
+      liValues.set(li.id, ore);
+      // The cell map keeps finite numbers (0 for unresolved) so the fixed point
+      // stays stable; `badCells` is what says which of those zeros are answers
+      // and which are failures. Keyed by field so refs survive column reorders.
+      //
+      // Stored back in kronor, and from the *rounded* öre — so a formula
+      // reading this row reads the figure the sheet shows, not one that differs
+      // from it in the twelfth decimal.
+      const key = `${li.id}:expression`;
+      cells.set(key, ore / 100);
+      if (!Number.isFinite(kr)) badCells.add(key);
       for (const colId of extraColumnKeys) {
-        const cv = evalCell(li.values?.[colId], vars, accounts, cells, known);
-        cells.set(`${li.id}:${colId}`, Number.isFinite(cv) ? cv : 0);
+        const cv = evalCell(li.values?.[colId], ctx);
+        const colKey = `${li.id}:${colId}`;
+        cells.set(colKey, Number.isFinite(cv) ? cv : 0);
+        // An empty general-purpose column is empty, not broken: most rows fill
+        // in none of the six, and flagging them would poison every formula that
+        // reads across a row.
+        if (!Number.isFinite(cv) && (li.values?.[colId] ?? "").trim()) badCells.add(colKey);
       }
     }
 
@@ -291,6 +382,10 @@ export function evaluate(
     // since. An account may hold nothing but an adjustment — a förflyttning is
     // allowed to fund a post the sheet never budgeted for — so the adjustments
     // are added by key rather than only onto totals that already exist.
+    //
+    // Integer öre on both sides, so this is exact addition. It used to add
+    // kronor floats, where a hundred rows of 0.1 do not come to 10 and the
+    // total a sheet showed was not quite the total of the rows above it.
     accounts.clear();
     for (const li of lineItems) {
       const cur = accounts.get(li.accountKey) ?? 0;
@@ -302,32 +397,48 @@ export function evaluate(
 
     // Step 3: evaluate variables in declaration order (later vars can ref earlier)
     for (const v of variables) {
-      const val = evalCell(v.expression, vars, accounts, cells, known);
+      const val = evalCell(v.expression, ctx);
       vars.set(v.name, Number.isFinite(val) ? val : 0);
     }
 
-    // Check convergence
+    // Check convergence. A map that lost a key between passes is not stable
+    // either, so the sizes are compared alongside the entries.
+    const same = <V,>(now: Map<string, V>, before: Map<string, V>) =>
+      now.size === before.size && [...now.entries()].every(([k, v]) => before.get(k) === v);
     stable =
-      [...vars.entries()].every(([k, v]) => prevVars.get(k) === v) &&
-      [...accounts.entries()].every(([k, v]) => prevAccts.get(k) === v);
+      same(vars, prevVars) &&
+      same(accounts, prevAccts) &&
+      same(cells, prevCells) &&
+      badCells.size === prevBad.size &&
+      [...badCells].every((k) => prevBad.has(k));
   }
 
   // Final pass to flag cells/variables that don't resolve (after convergence).
   const badLineItems: string[] = [];
   for (const li of lineItems) {
-    const value = evalCell(li.expression, vars, accounts, cells, known);
+    const value = evalCell(li.expression, ctx);
     if (!Number.isFinite(value)) badLineItems.push(li.id);
   }
   const badVariables: string[] = [];
   for (const v of variables) {
-    const val = evalCell(v.expression, vars, accounts, cells, known);
+    const val = evalCell(v.expression, ctx);
     if (!Number.isFinite(val)) badVariables.push(v.name);
   }
+
+  // An account is only as complete as the rows under it. The total already
+  // holds the ones that resolved; this names the accounts where that is less
+  // than all of them, so the sheet can mark the figure rather than present a
+  // partial sum as the budgeted amount.
+  const badAccounts = [
+    ...new Set(
+      lineItems.filter((li) => badLineItems.includes(li.id)).map((li) => li.accountKey),
+    ),
+  ];
 
   if (!stable) {
     // A code, not a sentence — the screen wording lives in `budget.eval`.
     errors.push("circular");
   }
 
-  return { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, errors };
+  return { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, badAccounts, errors };
 }

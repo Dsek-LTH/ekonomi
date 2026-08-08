@@ -39,11 +39,6 @@ describe("normaliseImage", () => {
     expect(await sharp(out.full).stats().then((s) => s.isOpaque)).toBe(false);
   });
 
-  it("keeps the thumbnail see-through too, so the list doesn't show black", async () => {
-    const out = await normaliseImage(await png(0));
-    expect(await sharp(out.thumb).stats().then((s) => s.isOpaque)).toBe(false);
-  });
-
   // An alpha channel is not transparency. Screenshots are PNGs with a fully
   // opaque alpha channel, and storing those as PNG would cost several times the
   // JPEG for nothing — which is why the check reads pixels, not metadata.

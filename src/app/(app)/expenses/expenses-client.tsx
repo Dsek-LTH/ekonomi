@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { ButtonLink } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { IconPlus, IconCheck } from "@/components/ui/icons";
 import { SegmentedControl, type SegOption } from "@/components/ui/segmented-control";
 import { DataTable, type Column, type SelectFilter } from "@/components/ui/data-table";
-import { useTableControls } from "@/components/ui/table-controls";
+import { useUrlTableControls } from "@/lib/data/use-list-query";
 import {
   expenseAmountColumn,
   expenseDateColumn,
@@ -18,58 +18,62 @@ import {
   expenseStatusColumn,
   expenseSubmitterColumn,
   expenseTitleColumn,
-} from "@/components/expense-columns";
-import { useRole } from "@/components/shell/role-context";
-import { canAccessBookkeeping, hasAttestRole } from "@/lib/domain/permissions";
+} from "@/components/columns/expense-columns";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
+import type { RowPage } from "@/lib/data/list-query";
 
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
-import { useProgressRouter } from "@/components/shell/route-progress";
 
 
 type ScopeFilter = "MINE" | "ALL";
 
 export function ExpensesClient({
-  expenses: allExpenses,
+  page,
+  canToggleScope,
+  showOwnOnly,
 }: {
-  expenses: Expense[];
+  page: RowPage<Expense>;
+  canToggleScope: boolean;
+  showOwnOnly: boolean;
 }) {
   const t = useTranslations("expenses");
   const tPayment = useTranslations("common.payment");
   const tStatus = useTranslations("common.status");
-  const router = useProgressRouter();
-  const { user } = useRole();
   const { date } = useFormat();
-  const controls = useTableControls();
+  // The list's state lives in the URL, because the query behind it runs on the
+  // server — see useUrlTableControls. `page.rows` is already the page.
+  const controls = useUrlTableControls(page.total);
 
   // `t` is stable per locale, so these are built once rather than per render —
-  // a fresh `columns` array would also defeat DataTable's filter/sort memo.
+  // a fresh `columns` array would also defeat DataTable's memo.
   const SCOPE_OPTS: SegOption<ScopeFilter>[] = useMemo(() => [
     { value: "MINE", label: t("scope.mine") },
     { value: "ALL", label: t("scope.all") },
   ], [t]);
-  // Anyone who sees more than their own utlägg (bookkeeping or attest roles) can
-  // switch between their own and everything they're allowed to see (default: own).
-  const canToggleScope = canAccessBookkeeping(user.roles) || hasAttestRole(user.roles);
-  const [scope, setScope] = useState<ScopeFilter>("MINE");
-  const showOwnOnly = !canToggleScope || scope === "MINE";
-
-  const base = showOwnOnly ? allExpenses.filter((e) => e.submitterId === user.id) : allExpenses;
 
   // Replaces the old Pågående/Klara/Alla tabs. Those were one coarse cut of a
   // list whose whole point is where in the chain an utlägg has got to — "klara"
   // covered attesterat, bokfört and exporterat alike, and there was no way to
   // ask for one of them. Every status is offered here instead, several at a
   // time; picking none is the old "Alla".
-  const STATUS_FILTER: SelectFilter<Expense> = useMemo(() => ({
+  //
+  // No predicates: these are names the server matches on (STATUS_TAB in
+  // lib/data/expenses.ts), so the rows arrive already narrowed.
+  const STATUS_FILTER: SelectFilter = useMemo(() => ({
     label: t("statusFilter.all"),
-    options: EXPENSE_STATUSES.map((s) => ({
-      value: s,
-      label: tStatus(s),
-      predicate: (e: Expense) => e.status === s,
-    })),
+    options: EXPENSE_STATUSES.map((s) => ({ value: s, label: tStatus(s) })),
   }), [t, tStatus]);
+
+  // "Nothing here at all" and "nothing matching what you asked for" are
+  // different things and read differently. With the filtering done in the
+  // database the row count alone can no longer tell them apart, so the question
+  // is asked of the controls: an empty list nobody has narrowed is the first.
+  // `view` is deliberately not in this — showing your own and having none is
+  // still an empty list, not a fruitless search.
+  const narrowed = Boolean(
+    controls.query || controls.picks.length || controls.dateFrom || controls.dateTo,
+  );
 
   const columns: Column<Expense>[] = useMemo(() => [
     expenseReferenceColumn(t("col.verification")),
@@ -134,8 +138,8 @@ export function ExpensesClient({
           {canToggleScope && (
             <SegmentedControl
               options={SCOPE_OPTS}
-              value={scope}
-              onChange={(v) => { setScope(v); controls.setPage(0); }}
+              value={showOwnOnly ? "MINE" : "ALL"}
+              onChange={(v) => controls.setView(v)}
             />
           )}
           <ButtonLink href="/expenses/new">
@@ -145,7 +149,7 @@ export function ExpensesClient({
         </div>
       }
     >
-      {base.length === 0 ? (
+      {page.total === 0 && !narrowed ? (
         <EmptyState
           title={t("emptyTitle")}
           description={t("emptyDescription")}
@@ -160,12 +164,12 @@ export function ExpensesClient({
         <Card>
           <DataTable
             columns={columns}
-            rows={base}
+            rows={page.rows}
             controls={controls}
             filter={STATUS_FILTER}
             searchPlaceholder={t("searchPlaceholder")}
             rowKey={(e) => e.id}
-            onRowClick={(e) => router.push(`/expenses/${e.id}`)}
+            rowHref={(e) => `/expenses/${e.id}`}
             empty={t("noMatch")}
           />
         </Card>

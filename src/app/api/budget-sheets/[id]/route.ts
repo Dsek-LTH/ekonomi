@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { denyBudgetWrite, denyDeletingAdjusted } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { PatchSheet } from "@/lib/api/schemas/budget";
 
 // PATCH /api/budget-sheets/[id] — which cost centre this sheet is, and
 // what it is called while it isn't one.
@@ -18,11 +20,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const denied = await denyBudgetWrite({ costCenter: id });
   if (denied) return denied;
 
-  const body = await req.json().catch(() => ({}));
+  const parsed = await parseBody(req, PatchSheet);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
   const data: { costCenterId?: string | null; label?: string | null } = {};
 
-  if ("costCenterId" in body) {
-    const costCenterId = typeof body.costCenterId === "string" && body.costCenterId ? body.costCenterId : null;
+  if (body.costCenterId !== undefined) {
+    const costCenterId = body.costCenterId;
     if (costCenterId) {
       const cc = await prisma.budgetCostCenter.findUnique({ where: { id }, select: { budgetId: true } });
       if (!cc) return fail(404, "notFound");
@@ -37,7 +41,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.costCenterId = costCenterId;
   }
 
-  if (typeof body.label === "string") data.label = body.label.trim() || null;
+  if (body.label !== undefined) data.label = body.label;
 
   const updated = await prisma.budgetCostCenter.update({
     where: { id },

@@ -157,19 +157,35 @@ describe("scopeLabel", () => {
 });
 
 describe("parseAmount", () => {
-  it("reads a plain number", () => {
-    expect(parseAmount("500")).toBe(500);
-    expect(parseAmount(500)).toBe(500);
+  // Kronor in, öre out. This is the one place on the editorial-change path
+  // where what somebody typed becomes an amount, so it is the one place the
+  // conversion happens — see the units note in lib/budget/eval.ts.
+  it("reads a plain number as öre", () => {
+    expect(parseAmount("500")).toBe(50_000);
+  });
+
+  it("takes a number as already being öre", () => {
+    // Not something typed: an amount coming back from the API, which stores
+    // and returns öre. Converting it again would multiply it by a hundred
+    // every time a change was reopened for editing.
+    expect(parseAmount(50_000)).toBe(50_000);
   });
 
   it("reads the way a Swede writes one", () => {
-    expect(parseAmount("1 234,50")).toBe(1234.5);
-    expect(parseAmount("1_234.50")).toBe(1234.5);
+    expect(parseAmount("1 234,50")).toBe(123_450);
+    expect(parseAmount("1_234.50")).toBe(123_450);
   });
 
   it("keeps the sign", () => {
-    expect(parseAmount("-500")).toBe(-500);
-    expect(parseAmount("+500")).toBe(500);
+    expect(parseAmount("-500")).toBe(-50_000);
+    expect(parseAmount("+500")).toBe(50_000);
+  });
+
+  it("rounds a third decimal away rather than carrying it", () => {
+    // Öre is the resolution money is kept at; a fraction of one is not a
+    // smaller amount, it is a different one.
+    expect(parseAmount("10,005")).toBe(1001);
+    expect(parseAmount("10,004")).toBe(1000);
   });
 
   // Unlike a line item, a change is a decided amount and takes no formula.

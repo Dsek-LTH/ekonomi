@@ -49,7 +49,10 @@ export interface BudgetChange {
 }
 export interface Evaluated {
   vars: Record<string, number>; accounts: Record<string, number>; lineItems: Record<string, number>;
-  cells: Record<string, number>; badLineItems: string[]; badVariables: string[]; errors: string[];
+  cells: Record<string, number>; badLineItems: string[]; badVariables: string[];
+  /** Account keys ("CC:KONTO") whose total is missing a row that didn't resolve. */
+  badAccounts: string[];
+  errors: string[];
 }
 export interface Budget {
   id: string; name: string; year: number;
@@ -90,5 +93,12 @@ export interface FormulaArgs {
   // "formula": always show the formula (used where a separate value column exists).
   display?: "value" | "formula";
   gated?: boolean;
+  /**
+   * What `computed` is. The same cell renderer draws a line item's Belopp and a
+   * variable's value, and those are not the same kind of number: a Belopp is
+   * money in öre, a variable may be a headcount or a share and is nobody's
+   * currency. Money is the default because almost every cell is one.
+   */
+  unit?: "ore" | "scalar";
 }
 export type FormulaFn = (a: FormulaArgs) => ReactNode;

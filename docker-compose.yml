@@ -78,8 +78,10 @@ services:
     # `pnpm dev` — except the two addresses that are wrong inside the compose
     # network, which are overridden below. NODE_ENV is production here, so
     # lib/server/env.ts holds this to production rules: every required variable
-    # set, and none of them left on the value .env.example ships. A stack that
-    # exits immediately is that check talking — read it with
+    # has to be set, and there are no development fallbacks left to fall back
+    # on. Whether a value is a *good* one is not checked and cannot be — see
+    # the note on `envProblems` — so .env.example is what says what each should
+    # be. A stack that exits immediately is that check talking; read it with
     # `docker compose --profile app logs app`.
     env_file:
       - path: .env

@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/server/db";
+import { parseBody } from "@/lib/api/parse";
+import { ReorderLineItems } from "@/lib/api/schemas/budget";
 import { denyBudgetWrite } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
 
@@ -9,8 +11,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const denied = await denyBudgetWrite({ account: accountId });
   if (denied) return denied;
 
-  const body = await req.json().catch(() => ({}));
-  const orderedIds: string[] = Array.isArray(body.orderedIds) ? body.orderedIds.filter((x: unknown) => typeof x === "string") : [];
+  const parsed = await parseBody(req, ReorderLineItems);
+  if (!parsed.ok) return parsed.res;
+  const { orderedIds } = parsed.data;
   if (orderedIds.length === 0) return fail(422, "request.orderedIdsRequired");
 
   const own = await prisma.budgetLineItem.findMany({ where: { accountId }, select: { id: true } });

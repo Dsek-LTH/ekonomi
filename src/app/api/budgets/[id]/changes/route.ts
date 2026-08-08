@@ -8,12 +8,13 @@ import { resolveBudgetAccount } from "@/lib/budget/account-validation";
 import { resultUnitNameForCode, getPrefixes } from "@/lib/server/result-units";
 import { effectiveKind, sheetName } from "@/lib/budget";
 import { fail } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { CreateChange } from "@/lib/api/schemas/budget";
 import {
   parseAmount,
   scopeKey,
   scopeLabel,
   validateChange,
-  type ChangeKind,
   type ResolvedEntry,
 } from "@/lib/budget/changes";
 
@@ -21,29 +22,19 @@ import {
 // rather than by id, because a förflyttning is allowed to fund a post the sheet
 // doesn't budget for yet. Then there is no id to send, and the account is
 // created as part of the change.
-interface EntryBody {
-  costCenterId?: unknown; // BudgetCostCenter id (a sheet in this budget)
-  accountCode?: unknown;
-  amount?: unknown;
-}
-
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const gate = await gateEditorialChange({ budget: id });
   if (!gate.ok) return gate.res;
 
-  const body = await req.json().catch(() => ({}));
-
-  const kind: ChangeKind | null =
-    body.kind === "AVSTEG" || body.kind === "FORFLYTTNING" ? body.kind : null;
-  if (!kind) return fail(422, "budget.unknownChangeKind");
+  const parsed = await parseBody(req, CreateChange);
+  if (!parsed.ok) return parsed.res;
+  const { kind, reason, entries: rawEntries } = parsed.data;
 
   // The motivering is the point of the history — a list of amounts explains
-  // nothing on its own — so it is required rather than encouraged.
-  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  // nothing on its own — so it is required rather than encouraged. The schema
+  // says it is a string; that it says something is this route's rule.
   if (!reason) return fail(422, "budget.reasonRequired");
-
-  const rawEntries: EntryBody[] = Array.isArray(body.entries) ? body.entries : [];
   if (rawEntries.length === 0) {
     return fail(422, "budget.entryRequired");
   }
@@ -71,19 +62,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const toCreate = new Map<string, { budgetCostCenterId: string; accountCode: string; accountName: string }>();
 
   for (const raw of rawEntries) {
-    const sheet = typeof raw.costCenterId === "string" ? sheets.get(raw.costCenterId) : undefined;
+    const sheet = sheets.get(raw.costCenterId);
     if (!sheet) {
       return fail(422, "budget.sheetNotInBudget");
     }
 
-    const amount = parseAmount(
-      typeof raw.amount === "number" || typeof raw.amount === "string" ? raw.amount : "",
-    );
-    if (!Number.isFinite(amount)) {
+    const amount = parseAmount(raw.amount);
+    // Whole öre. `parseAmount` rounds what was typed, but a caller may hand in
+    // a number directly — that path takes it as öre already — and the column is
+    // an integer, so a fractional one would reach Postgres and come back a 500
+    // rather than a message anybody can act on.
+    if (!Number.isInteger(amount)) {
       return fail(422, "budget.amountsNotNumbers");
     }
 
-    const code = typeof raw.accountCode === "string" ? raw.accountCode.trim() : "";
+    const code = raw.accountCode;
     const existing = sheet.accounts.find((a) => a.accountCode === code);
 
     // The result unit is derived from the cost-centre code on every read

@@ -103,10 +103,32 @@ export function insideRect(e: DragEvent): boolean {
 }
 
 const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
-export const fmt = (n: number | undefined) =>
-  n === undefined || Number.isNaN(n) ? "" : numFmt.format(n);
-export const fmtSigned = (n: number | undefined) =>
-  n === undefined || Number.isNaN(n) ? "" : (n > 0 ? "+" : "") + numFmt.format(n);
+
+/**
+ * A money amount for the sheet: **öre in, whole kronor out**.
+ *
+ * Everything the evaluator reports as money is öre (see lib/budget/eval.ts), as
+ * are the adjustment rows and the comparison figures, so that is what this
+ * takes. A budget is read in kronor and to no decimals, which is what it shows.
+ *
+ * A number that is *not* money — a variable holding a headcount or a share —
+ * goes through `fmtScalar` instead. That is the one distinction this file has
+ * to keep, and the reason the two are named differently rather than one
+ * function being used for both.
+ */
+export const fmt = (ore: number | undefined) =>
+  ore === undefined || Number.isNaN(ore) ? "" : numFmt.format(ore / 100);
+export const fmtSigned = (ore: number | undefined) =>
+  ore === undefined || Number.isNaN(ore) ? "" : (ore > 0 ? "+" : "") + numFmt.format(ore / 100);
+
+/**
+ * A dimensionless value, printed as it stands — a variable's headcount, a
+ * multiplier, a ratio. No unit conversion, and decimals kept, because 0.67 is
+ * the value and "1" would be a different one.
+ */
+const scalarFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 4 });
+export const fmtScalar = (n: number | undefined) =>
+  n === undefined || Number.isNaN(n) ? "" : scalarFmt.format(n);
 
 // The budgeted income / cost split for one sheet. Only for this budget's own
 // figures — anything involving a comparison goes through `sheetTotals` in

@@ -340,14 +340,13 @@
     "notFound": "Hittades inte",
     "request": {
       "rolesList": "roles måste vara en lista",
-      "userIdsList": "userIds måste vara en lista",
       "orderedIdsRequired": "orderedIds krävs",
-      "transactionIdRequired": "transactionId krävs",
       "costCenterIdRequired": "costCenterId krävs",
       "yearAndAccountRequired": "year och account krävs",
       "expectedMultipart": "Förväntade multipart/form-data",
       "noFile": "Ingen fil bifogad",
-      "nothingToChange": "Inget att ändra"
+      "nothingToChange": "Inget att ändra",
+      "invalidBody": "Begäran hade fel format och kunde inte behandlas ({fields})"
     },
     "expense": {
       "notFound": "Utlägget hittades inte",
@@ -366,7 +365,6 @@
       "commentRequired": "En kommentar krävs",
       "commentRequiredReopen": "En kommentar krävs för att återöppna",
       "commentRequiredUnexport": "En kommentar krävs för att ångra en export",
-      "unknownAction": "Okänd åtgärd",
       "incomplete": "Fyll i beskrivning, kvittodatum och belopp innan du skickar in",
       "receiptRequired": "Ett kvitto krävs innan utlägget kan skickas in för attest",
       "matchRequired": "Kortköp måste matchas mot en banktransaktion innan de skickas in för attest",
@@ -402,7 +400,9 @@
       "exportStep": {
         "readReceipt": "läsa kvittot",
         "uploadReceipt": "ladda upp kvittot till Fortnox"
-      }
+      },
+      "changedMeanwhile": "Utlägget hann ändras av någon annan. Ladda om sidan och försök igen",
+      "alreadyAttested": "Kostnadsställena hann attesteras av någon annan"
     },
     "receipt": {
       "notFound": "Kvittot hittades inte",
@@ -428,7 +428,6 @@
     },
     "card": {
       "notFound": "Kortet hittades inte",
-      "last4Required": "Ange kortets fyra sista siffror (fyra siffror).",
       "exists": "Ett kort med ····{last4} finns redan."
     },
     "user": {
@@ -439,8 +438,6 @@
     },
     "resultUnit": {
       "notFound": "Resultatenheten hittades inte",
-      "nameRequired": "Namn krävs",
-      "prefixRequired": "Prefix krävs",
       "prefixFormat": "Prefixet får bara innehålla bokstäver och siffror.",
       "exists": "{name} finns redan.",
       "prefixTaken": "Prefixet används redan av {resultUnit}.",
@@ -452,7 +449,6 @@
     },
     "costCenter": {
       "notFound": "Kostnadsstället finns inte",
-      "nameRequired": "Kostnadsstället behöver ett namn.",
       "codeFormat": "Koden får bara innehålla bokstäver, siffror, - och _ (2–20 tecken).",
       "fortnoxOwned": "{code} kommer från Fortnox och ändras där.",
       "inUse": "{code} används av {count, plural, one {# post} other {# poster}} och kan inte raderas.",
@@ -463,7 +459,6 @@
       "notFound": "Budget hittades inte",
       "sourceNotFound": "Budgeten att utgå från hittades inte",
       "locked": "Budgeten är låst. Lås upp den för att ändra.",
-      "invalidYear": "Ange ett giltigt år",
       "sheetNotFound": "Kostnadsstället hittades inte i budgeten",
       "sheetNotInBudget": "Kostnadsstället finns inte i den här budgeten",
       "sheetExists": "Kostnadsstället finns redan i budgeten",
@@ -472,7 +467,6 @@
       "lineRequired": "Beskrivning eller formel krävs",
       "changeNotFound": "Ändringen hittades inte",
       "changeRevoked": "Ändringen är redan återkallad",
-      "unknownChangeKind": "Okänd ändringstyp",
       "reasonRequired": "En motivering krävs",
       "entryRequired": "Lägg till minst en kontopost",
       "amountsNotNumbers": "Alla belopp måste vara tal",
@@ -495,7 +489,6 @@
       "notConnectedSeries": "Fortnox är inte anslutet. Verifikationsserien går inte att ändra.",
       "noFinancialYears": "Fortnox har inga räkenskapsår att hämta kontoplan för.",
       "unconfigured": "Fortnox är inte konfigurerat på servern (saknar klient-id/secret).",
-      "settingNotAccount": "{field} måste vara ett kontonummer",
       "loginRequired": "Du behöver logga in mot Fortnox för att bokföra.",
       "loginExpired": "Din Fortnox-inloggning har gått ut. Logga in igen för att bokföra.",
       "loginRefreshFailed": "Din Fortnox-inloggning kunde inte förnyas. Logga in igen för att bokföra.",
@@ -518,7 +511,8 @@
       "unbalanced": "Verifikationen balanserar inte (debet ≠ kredit)",
       "onePaymentLine": "Verifikationen måste ha exakt en rad på betalningskontot {account}",
       "paymentLineNoCostCenter": "Betalningsraden ({account}) kan inte ha ett kostnadsställe",
-      "paymentLineFullAmount": "Betalningsraden ({account}) måste kreditera hela utläggsbeloppet"
+      "paymentLineFullAmount": "Betalningsraden ({account}) måste kreditera hela utläggsbeloppet",
+      "unknownCostCenter": "Kostnadsstället {code} finns inte"
     }
   },
   "nav": {
@@ -552,7 +546,9 @@
       "connected": "Fortnox-konto kopplat",
       "signedInUntil": "Inloggad till {time}",
       "signedOut": "Inte inloggad, klicka för att koppla"
-    }
+    },
+    "skipToContent": "Hoppa till innehållet",
+    "mainNav": "Huvudmeny"
   },
   "allocation": {
     "pick": "Välj kostnadsställe…",
@@ -970,7 +966,8 @@
       "originallyLabel": "urspr.",
       "totalIncome": "Summa intäkter",
       "totalCosts": "Summa utgifter",
-      "formulaHelp": "Skriv ett tal (<code>350</code>) eller en uträkning direkt i <strong>Belopp</strong>, till exempel <code>2 × 3 × 12</code> eller <code>8 × TACK_POLICY</code>. Cellen visar uträkningen med resultatet (<code>2 × 350 = 700</code>). Klicka för att redigera. Både <code>x</code> och <code>*</code> betyder gånger. Du kan hänvisa till variabler (<code>MEDLEMMAR × 150</code>), kontosummor (<code>=account(SEX02, 3015)</code>) och celler i <strong>A1-form</strong> (<code>=TEK02!C7</code>). Radnumren hittar du i vänsterkanten."
+      "formulaHelp": "Skriv ett tal (<code>350</code>) eller en uträkning direkt i <strong>Belopp</strong>, till exempel <code>2 × 3 × 12</code> eller <code>8 × TACK_POLICY</code>. Cellen visar uträkningen med resultatet (<code>2 × 350 = 700</code>). Klicka för att redigera. Både <code>x</code> och <code>*</code> betyder gånger. Du kan hänvisa till variabler (<code>MEDLEMMAR × 150</code>), kontosummor (<code>=account(SEX02, 3015)</code>) och celler i <strong>A1-form</strong> (<code>=TEK02!C7</code>). Radnumren hittar du i vänsterkanten.",
+      "incompleteSum": "ofullständig – en rad går inte att räkna ut"
     },
     "col": {
       "konto": "Konto",
