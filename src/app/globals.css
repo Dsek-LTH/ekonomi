@@ -291,6 +291,18 @@ summary {
   scrollbar-color: var(--color-scrollbar) transparent;
 }
 
+/* A box that draws its own — see components/ui/overlay-scroll.tsx, which floats
+   a thumb over the content so a narrow panel does not lose 11px of every row to
+   a gutter. Both properties are needed: the standard one for Firefox and recent
+   Chrome, the pseudo-element for the WebKit that predates it. */
+.no-native-scrollbar {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.no-native-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Nothing in an app this dense should move for someone who asked it not to.
    State changes still happen, they just arrive rather than travel. */
 @media (prefers-reduced-motion: reduce) {

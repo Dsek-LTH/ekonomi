@@ -23,13 +23,17 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function DetailsCard({ expense }: { expense: Expense }) {
+export function DetailsCard({ expense, action }: { expense: Expense; action?: React.ReactNode }) {
   const t = useTranslations("expenses.detail");
   const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
   return (
     <Card>
-      <CardHeader title={t("details")} />
+      {/* The utlägg's own actions ride this header: it is the card that *is* the
+          utlägg, and what you can do to a thing belongs to the thing rather
+          than to the page around it. They were in the page header until that
+          became identity only — see components/page-shell.tsx. */}
+      <CardHeader title={t("details")} action={action} />
       {/* Explicit minmax(0,…) single column below sm: the implicit `auto` track
           would floor at its widest item's max-content width, and the allocation
           rows below hold names long enough to take the whole card past the edge

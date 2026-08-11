@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { SegmentedControl, type SegOption } from "@/components/ui/segmented-control";
+import type { CollectionOption } from "@/components/ui/collection-switch";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
 import {
   expenseAmountColumn,
@@ -19,20 +19,7 @@ import {
 import type { RowPage } from "@/lib/data/list-query";
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
-
-/**
- * The tab this page opens on.
- *
- * Declared once and read by both halves: the page hands it to `parseListQuery`
- * so the query it runs matches, and the client hands it to
- * `useUrlTableControls` so the tab drawn as active matches too. They used to
- * declare it separately — the page explicitly, the client by accident, through
- * DataTable falling back to its first option — and agreed only because the
- * first option happened to be this one.
- */
-export const APPROVALS_DEFAULT_TAB = "PENDING";
-
-type ScopeFilter = "MINE" | "ALL";
+import { APPROVALS_DEFAULT_TAB } from "./tabs";
 
 export function ApprovalsClient({
   page,
@@ -54,7 +41,7 @@ export function ApprovalsClient({
   const { date } = useFormat();
   const controls = useUrlTableControls(page.total, APPROVALS_DEFAULT_TAB);
 
-  const SCOPE_OPTS: SegOption<ScopeFilter>[] = useMemo(() => [
+  const SCOPE_OPTS: CollectionOption[] = useMemo(() => [
     { value: "MINE", label: t("scope.mine") },
     { value: "ALL", label: t("scope.all") },
   ], [t]);
@@ -80,16 +67,21 @@ export function ApprovalsClient({
 
   return (
     <PageShell
-      title={showOwnOnly ? t("titleOwn") : t("titleAll")}
-      description={showOwnOnly ? t("descriptionOwn") : t("descriptionAll")}
-      action={
-        canToggleScope && (
-          <SegmentedControl
-            options={SCOPE_OPTS}
-            value={showOwnOnly ? "MINE" : "ALL"}
-            onChange={(v) => controls.setView(v)}
-          />
-        )
+      // Fixed, whichever scope is showing — see the note on the same field in
+      // expenses-client.tsx. What "mine" and "alla" mean here is not a wide and
+      // a narrow cut of one list but two different questions, so the track is
+      // the one place that says which was asked.
+      title={t("title")}
+      description={t("description")}
+      collections={
+        canToggleScope
+          ? {
+              label: t("scopeLabel"),
+              value: showOwnOnly ? "MINE" : "ALL",
+              options: SCOPE_OPTS,
+              onChange: (v) => controls.setView(v),
+            }
+          : undefined
       }
     >
       <Card>

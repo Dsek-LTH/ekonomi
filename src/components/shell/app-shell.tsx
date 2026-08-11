@@ -14,6 +14,7 @@ import { FortnoxMark, IconFortnox } from "./fortnox-mark";
 import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
 import {
   IconBank,
+  IconIncome,
   IconBook,
   IconBudget,
   IconCard,
@@ -125,6 +126,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconBank,
         visible: (u) => canAccessBookkeeping(u.roles),
       },
+      {
+        href: "/income",
+        label: "income",
+        icon: IconIncome,
+        visible: (u) => canAccessBookkeeping(u.roles),
+      },
     ],
   },
   {
@@ -145,12 +152,31 @@ const SETTINGS_NAV: NavGroup[] = [
     items: [
       { href: "/admin/fortnox", label: "fortnox", icon: IconFortnox, visible: ALL },
       { href: "/admin/cost-centers", label: "costCenters", icon: IconChart, visible: ALL },
+      { href: "/admin/income", label: "income", icon: IconIncome, visible: ALL },
       { href: "/admin/result-units", label: "resultUnits", icon: IconHierarchy, visible: ALL },
       { href: "/admin/cards", label: "cards", icon: IconCard, visible: ALL },
       { href: "/admin/users", label: "users", icon: IconUsers, visible: ALL },
     ],
   },
 ];
+
+/**
+ * Every section of the app by route, with the name the nav gives it.
+ *
+ * Exported for the back link. A nested page names one parent, but you can reach
+ * it from any list that links to it — an utlägg is opened from Utlägg, from
+ * Attest, from Bokföring and from Översikt — and "← Utlägg" is the wrong answer
+ * on three of those. Derived from the nav itself so a section cannot be added
+ * in one place and forgotten in the other. See components/back-link.tsx.
+ */
+export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
+  [
+    OVERVIEW,
+    HELP,
+    ...NAV_GROUPS.flatMap((g) => g.items),
+    ...SETTINGS_NAV.flatMap((g) => g.items),
+  ].map((item) => [item.href, item.label]),
+);
 
 export function AppShell({
   children,

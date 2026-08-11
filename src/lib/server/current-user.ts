@@ -34,10 +34,16 @@ export async function resolveUserId(): Promise<string | null> {
  * "what roles does this person hold", whichever half of the app is asking.
  */
 export const loadUser = cache(
-  async (id: string): Promise<{ name: string; email: string; roles: Role[] } | null> =>
+  async (
+    id: string,
+  ): Promise<{ name: string; email: string; studentId: string; roles: Role[] } | null> =>
     prisma.user.findUnique({
       where: { id },
-      select: { name: true, email: true, roles: true },
+      // studentId rides along because it is on the same row and it is what the
+      // section knows a person by: it is the STIL-ID printed on an
+      // intäktsräkning beside their name (lib/income/config.ts). Fetching it
+      // separately would be a second lookup for a column already in hand.
+      select: { name: true, email: true, studentId: true, roles: true },
     }),
 );
 

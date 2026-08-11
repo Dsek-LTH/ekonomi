@@ -20,7 +20,7 @@ async function main() {
     `Syncing Fortnox ledger (${year != null ? `year ${year}` : all ? "all years" : "current year"})…`,
   );
   const t0 = Date.now();
-  const result = await syncLedger({ scope: all ? "all" : "current", year });
+  const result = await syncLedger({ scope: all ? "all" : "current", financialYearId: year });
   for (const y of result.years) {
     console.log(`  FY ${y.financialYear}: ${y.vouchers} vouchers, ${y.rows} rows`);
   }

@@ -18,12 +18,7 @@ import {
 import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
-
-/**
- * The tab this page opens on — see APPROVALS_DEFAULT_TAB for why it is declared
- * once and shared rather than written on both sides.
- */
-export const CARD_PURCHASES_DEFAULT_TAB = "UNMATCHED";
+import { CARD_PURCHASES_DEFAULT_TAB } from "./tabs";
 
 export default function CardPurchasesClient({
   page,

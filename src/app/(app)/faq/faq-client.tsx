@@ -9,11 +9,12 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
+import { Notice } from "@/components/ui/notice";
 import { SearchInput } from "@/components/ui/search-input";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { FilterTabs } from "@/components/ui/filter-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
-import { IconAlert, IconChevronDown, IconReceipt } from "@/components/ui/icons";
+import { IconChevronDown, IconReceipt } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { searchText, type FaqBlock, type FaqItem, type FaqSection } from "./faq-content";
 
@@ -113,7 +114,17 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
           aria-label={t("searchPlaceholder")}
           className="sm:max-w-md"
         />
-        <SegmentedControl options={options} value={category} onChange={setCategory} size="sm" />
+        {/* Which slice of the questions, so the underline register — the pills
+            these were would have read as "which set of questions is this
+            page about", which is not a choice this page offers. */}
+        <div className="border-b border-border">
+          <FilterTabs
+            options={options}
+            value={category}
+            onChange={setCategory}
+            aria-label={t("categories")}
+          />
+        </div>
         {matches && (
           <p aria-live="polite" className="text-xs text-muted">
             {t("matches", { count: shown })}
@@ -227,13 +238,8 @@ function Answer({ blocks }: { blocks: FaqBlock[] }) {
 
 const LIST = "ml-5 list-outside space-y-1.5";
 
-// Warnings carry their tone flat, the way status does everywhere else — the
-// gradient belongs to the action register (see DESIGN.md), and none of these
-// are something you do.
-const NOTE_TONE = {
-  warn: { box: "border-warning/30 bg-warning-soft", icon: "text-warning" },
-  danger: { box: "border-danger/30 bg-danger-soft", icon: "text-danger" },
-};
+// The answer's own tones, in the shared notice's terms.
+const NOTE_TONE = { warn: "warning", danger: "danger" } as const;
 
 function Block({ block }: { block: FaqBlock }) {
   switch (block.t) {
@@ -258,20 +264,12 @@ function Block({ block }: { block: FaqBlock }) {
         </ol>
       );
 
-    case "note": {
-      const tone = NOTE_TONE[block.tone];
+    case "note":
       return (
-        <div
-          className={cn(
-            "flex gap-2.5 rounded-xl border px-3.5 py-3 text-sm text-foreground",
-            tone.box,
-          )}
-        >
-          <IconAlert className={cn("mt-0.5 size-4 shrink-0", tone.icon)} />
+        <Notice tone={NOTE_TONE[block.tone]}>
           <p>{block.v}</p>
-        </div>
+        </Notice>
       );
-    }
 
     case "table":
       return <AnswerTable head={block.head} rows={block.rows} />;

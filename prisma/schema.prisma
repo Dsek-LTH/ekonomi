@@ -124,6 +124,7 @@ model User {
   fortnoxConnections   FortnoxConnection[]     @relation("FortnoxConnector")
   fortnoxSession       FortnoxUserSession?     @relation("FortnoxUserSession")
   resultUnitOwnerships ResultUnitOwner[]       @relation("ResultUnitOwnerUser")
+  incomeBatches        IncomeBatch[]           @relation("IncomeBatchCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -145,15 +146,19 @@ enum CostCenterSource {
 }
 
 model CostCenter {
-  id   String  @id @default(cuid())
-  code String  @unique // e.g. "NÄRU" or "SKT01"
-  name String
-  active Boolean @default(true)
+  id     String           @id @default(cuid())
+  code   String           @unique // e.g. "NÄRU" or "SKT01"
+  name   String
+  active Boolean          @default(true)
   source CostCenterSource @default(FORTNOX)
 
   allocations       ExpenseCostAllocation[]
   verificationLines VerificationLine[]
   budgetCostCenters BudgetCostCenter[]
+
+  incomeUnits       ResultUnitIncome[]    @relation("IncomeDefaultCostCenter")
+  incomeReports     IncomeReport[]
+  zettleFeeSettings BookkeepingSettings[] @relation("ZettleFeeCostCenter")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -185,10 +190,145 @@ model BookkeepingSettings {
   id String @id @default("singleton")
 
   // Debited when a card purchase is booked.
-  bankAccount String @default("1930")
+  bankAccount       String @default("1930")
   // Credited when a member is owed a reimbursement.
   memberDebtAccount String @default("2890")
 
+  // ── Income (intäkter) ──
+  // The other side of the same idea: where money *arrives*. An income report is
+  // booked by crediting the revenue accounts its products routed to and
+  // debiting the account the money actually landed in, which depends on how it
+  // was paid. These are the app's own settings, not intakt's — the service
+  // returns what was sold and never decides which account it clears through.
+  zettleClearingAccount String      @default("1930")
+  swishClearingAccount  String      @default("1931")
+  // Zettle's own transaction fees are a cost, not income: debited here and
+  // credited against the Zettle clearing account above.
+  zettleFeeAccount      String      @default("6570")
+  // Cost centre the fee vouchers carry. Fees are not attributable to a
+  // committee the way sales are — they belong to whoever runs the terminal.
+  zettleFeeCostCenter   CostCenter? @relation("ZettleFeeCostCenter", fields: [zettleFeeCostCenterId], references: [id], onDelete: SetNull)
+  zettleFeeCostCenterId String?
+  // Which verifikationsserie a day's takings are filed under in Fortnox.
+  //
+  // Null means "the same one everything else uses" — FortnoxConnection's
+  // voucherSeries — which is what every export did before this column existed.
+  // Set, it separates a term of Swish from the utlägg they would otherwise be
+  // interleaved with, and it is also the series the duplicate check reads: a
+  // day is recognised over there by its series, its date and its voucher text
+  // (lib/income/duplicate.ts), so the two must be decided in one place.
+  incomeVoucherSeries   String?
+
+  updatedAt DateTime @updatedAt
+}
+
+// ── Income routing (intäkter) ─────────────────────────────────────
+// The table that decides which committee and which revenue account a sold
+// product belongs to. This is intakt's config.yaml, moved into the database so
+// it can be edited in the app rather than in a file on the treasurer's laptop —
+// and so there is one copy of it. The app serialises these rows into the
+// request it sends the intakt service; the service holds no configuration of
+// its own.
+
+// The income half of a resultatenhet: what it is called on an intäktsräkning,
+// what its verifikation says, and which products route to it.
+//
+// This used to be IncomeCommittee — a second list of the section's verksamheter
+// beside ResultUnit, maintained on another screen, with nothing checking that
+// the two agreed. They are one thing: Sexmästeriet is a result unit that also
+// sells beer. So a unit that takes money in has one of these, and a unit that
+// does not simply has none.
+//
+// Optional on purpose, in both directions. Income runs on a database with no
+// result units worth the name (every profile can carry its own, created for it),
+// and result units, attest and the budget never read this table — which is what
+// keeps the two halves of the app separable. Nothing here is required to attest
+// an utlägg, and nothing in attest is required to book a day's takings.
+model ResultUnitIncome {
+  id String @id @default(cuid())
+
+  // One profile per unit. Cascade: deleting the unit takes its income settings
+  // with it — but a unit with booked reports cannot be deleted anyway, because
+  // IncomeReport restricts it.
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+  resultUnitId String     @unique
+
+  // Stable identifier, matching the key intakt groups by, e.g. "cafe". Report
+  // keys are "<key>-<date>", so changing this renames every future report. It
+  // stays a field of its own rather than being derived from the unit's name:
+  // the name is editable prose, the key is a contract with another program.
+  key String @unique
+
+  // What the rendered PDF calls it. Null means the result unit's own name,
+  // which is the ordinary case — it is here only for a unit whose documents
+  // need a different form of its name than the settings screens use.
+  properName String?
+
+  // "Sexmästeriets verksamhet" — becomes the verifikationstext, and with the
+  // date it is how a day is recognised in Fortnox (lib/income/duplicate.ts).
+  description String
+
+  // Pre-filled on every report this unit produces. Still editable per report
+  // before booking, which is the point of the review step.
+  defaultCostCenter   CostCenter? @relation("IncomeDefaultCostCenter", fields: [defaultCostCenterId], references: [id], onDelete: SetNull)
+  defaultCostCenterId String?
+
+  // Whether it still takes money in. A retired verksamhet keeps its reports and
+  // stops appearing in the routing table sent to intakt.
+  active Boolean @default(true)
+
+  prefixes IncomeProductPrefix[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A product-name prefix and where it routes. A Zettle product called
+// "s1 - Öl", or a Swish message reading "c-Cola", is matched on the part before
+// the separator.
+//
+// Several prefixes share a verksamhet on purpose: Sexmästeriet sells beer, wine
+// and spirits, which are one verksamhet but three revenue accounts. That is the
+// whole reason this is a separate table and not a column on ResultUnitIncome.
+model IncomeProductPrefix {
+  id   String @id @default(cuid())
+  // Stored lower-case; matching is case-insensitive. Unique across every
+  // verksamhet, since a prefix that routed two ways would be ambiguous.
+  code String @unique
+
+  income   ResultUnitIncome @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  incomeId String
+
+  // BAS revenue account, e.g. "3011". A string, like everywhere else accounts
+  // appear, and validated against Account rather than related to it — a prefix
+  // may name an account Fortnox has since retired.
+  account String
+
+  // Products matching no prefix at all fall back to exactly one prefix, marked
+  // here. Without it an unrecognised product has nowhere to go; with more than
+  // one the fallback would be ambiguous, so the API enforces a single row.
+  isFallback Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incomeId])
+}
+
+// Swish payments whose message carries no usable prefix, matched on the exact
+// amount instead. Someone who swishes 13,00 kr with an empty message has
+// almost certainly bought a Cola.
+//
+// A guess, and knowingly so — which is why it is a small explicit table a
+// treasurer maintains, rather than anything inferred.
+model SwishAmountFallback {
+  // Öre. The primary key: one guess per amount, or it would be ambiguous.
+  amount  Int    @id
+  // A product message run through the normal prefix pipeline, e.g. "c-Cola",
+  // so it routes exactly as a labelled payment would.
+  message String
+
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
@@ -202,6 +342,11 @@ model ResultUnit {
 
   prefixes ResultUnitPrefix[]
   owners   ResultUnitOwner[]
+
+  // The income half, for a unit that takes money in — see ResultUnitIncome.
+  // Optional, and read by nothing outside the income module.
+  income        ResultUnitIncome?
+  incomeReports IncomeReport[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -243,7 +388,7 @@ model ResultUnitOwner {
 }
 
 model Expense {
-  id String @id @default(cuid())
+  id        String  @id @default(cuid())
   // Human-readable, e.g. "DEK26-0042" — see lib/domain/reference.ts. Null until
   // the utlägg is submitted for attest: a draft is not yet a claim on the
   // section, and numbering one would burn a number every time someone opens the
@@ -321,10 +466,10 @@ model ExpenseCostAllocation {
   expenseId    String
   costCenter   CostCenter @relation(fields: [costCenterId], references: [id])
   costCenterId String
-  amount       Int        // öre
-  comment      String?    // optional note from the submitter
+  amount       Int // öre
+  comment      String? // optional note from the submitter
 
-  approvedBy   User?      @relation("AllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedBy   User?     @relation("AllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedById String?
   approvedAt   DateTime?
 
@@ -340,14 +485,14 @@ model ExpenseCostAllocation {
 // An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
 // Expenses can be revised, so an expense may accumulate several receipts.
 model Receipt {
-  id      String  @id @default(cuid())
-  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   expenseId String
 
-  objectKey    String // MinIO object key (the display-normalised file)
-  filename     String
-  mimeType     String // the stored file's type (images are normalised to image/jpeg)
-  byteSize     Int?
+  objectKey String // MinIO object key (the display-normalised file)
+  filename  String
+  mimeType  String // the stored file's type (images are normalised to image/jpeg)
+  byteSize  Int?
 
   ocrText   String? // raw extracted text
   ocrResult Json? // structured OCR pre-fill (amount, vat, merchant, date…)
@@ -362,7 +507,7 @@ model Receipt {
 
 // A row from an imported bank CSV. Negative amount = money out.
 model BankTransaction {
-  id String @id @default(cuid())
+  id              String   @id @default(cuid())
   // Transdag from the CSV — the day the purchase was made, not the day the
   // bank settled it. That is the date on the member's receipt.
   transactionDate DateTime @db.Date
@@ -371,7 +516,7 @@ model BankTransaction {
   currency        String   @default("SEK")
 
   // Dedup key for re-imported CSVs (hash of date+amount+description+row).
-  importHash String? @unique
+  importHash String?  @unique
   importedAt DateTime @default(now())
 
   // Which section card made this purchase (from the card number in the CSV).
@@ -425,12 +570,27 @@ model ExpenseEvent {
   @@index([type])
 }
 
-// A bookkeeping voucher (verifikation) created when an expense is booked.
-// One per expense. Its lines must balance (sum debit == sum credit).
+// A bookkeeping voucher (verifikation). Its lines must balance (sum debit ==
+// sum credit), whatever produced it.
+//
+// It hangs off exactly one of two things: an Expense (money going out — an
+// utlägg or a card purchase) or an IncomeReport (money coming in — a day's
+// takings). Both are the same object to a bookkeeper and to Fortnox, so they
+// are one table rather than two: the export path, the Fortnox voucher columns
+// and the balance rule are written once and both sides get them.
+//
+// "Exactly one" is not expressible in Prisma — both columns are nullable and
+// separately unique, which permits neither being set as readily as both. A
+// CHECK constraint in the migration is what actually enforces it.
 model Verification {
-  id          String   @id @default(cuid())
-  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  expenseId   String   @unique
+  id String @id @default(cuid())
+
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String?  @unique
+
+  incomeReport   IncomeReport? @relation(fields: [incomeReportId], references: [id], onDelete: Cascade)
+  incomeReportId String?       @unique
+
   date        DateTime @db.Date
   description String // verifikationstext
 
@@ -464,11 +624,11 @@ model FortnoxConnection {
   accessToken   String
   refreshToken  String
   expiresAt     DateTime // when the access token expires
-  scopes        String   // space-delimited granted scopes
+  scopes        String // space-delimited granted scopes
   tokenType     String   @default("Bearer")
   voucherSeries String   @default("A") // default verifikationsserie for exports
-  companyName   String?  // from /3/companyinformation, for display
-  orgNumber     String?  // organisationsnummer — personal logins are checked against it
+  companyName   String? // from /3/companyinformation, for display
+  orgNumber     String? // organisationsnummer — personal logins are checked against it
 
   connectedBy   User?   @relation("FortnoxConnector", fields: [connectedById], references: [id], onDelete: SetNull)
   connectedById String?
@@ -545,15 +705,15 @@ model LedgerVoucher {
 // movement, not the actual balance. Replaced wholesale alongside the year's
 // vouchers, so it stays as idempotent as the rest of the mirror.
 model LedgerAccountBalance {
-  financialYear Int
-  year          FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
-  account       String // BAS account number
-  accountName   String // denormalised from the SIE #KONTO chart
+  financialYear  Int
+  year           FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
+  account        String // BAS account number
+  accountName    String // denormalised from the SIE #KONTO chart
   // "" is the account-level total (#IB/#UB). A non-empty code is the optional
   // per-cost-centre breakdown (#OIB/#OUB), which an exporter may omit — so the
   // account-level row is the only one guaranteed to exist. Empty string rather
   // than null because it is part of the primary key.
-  costCenterCode String @default("")
+  costCenterCode String               @default("")
 
   opening Int // öre at period start (#IB), positive = debit
   closing Int // öre at period end (#UB), positive = debit
@@ -582,8 +742,8 @@ model LedgerRow {
   financialYear Int
   date          DateTime @db.Date
 
-  account     String // BAS account number, e.g. "6071"
-  accountName String // denormalised from the SIE #KONTO chart
+  account        String // BAS account number, e.g. "6071"
+  accountName    String // denormalised from the SIE #KONTO chart
   // Cost centre (SIE dimension 1). Code matched to an app CostCenter by string;
   // some Fortnox codes have no app counterpart, so this stays a denormalised
   // string rather than a FK.
@@ -614,7 +774,7 @@ model LedgerRow {
 // A budget: a year, a name, and everything budgeted in it.
 enum BudgetAccountKind {
   INCOME // intäkt
-  COST   // kostnad
+  COST // kostnad
 }
 
 // Budgets stand alone. Any number may share a year — the adopted one and a
@@ -694,7 +854,7 @@ model BudgetCostCenter {
   budgetId     String
   costCenter   CostCenter?     @relation(fields: [costCenterId], references: [id])
   costCenterId String?
-  label        String?         // display name while detached
+  label        String? // display name while detached
   sortOrder    Int             @default(0)
   accounts     BudgetAccount[]
 
@@ -707,12 +867,12 @@ model BudgetCostCenter {
 // adjustments (BudgetAdjustment) are added on top of that sum, so the account
 // total is "what was adopted, plus what has been decided since".
 model BudgetAccount {
-  id                 String           @id @default(cuid())
-  budgetCostCenter   BudgetCostCenter @relation(fields: [budgetCostCenterId], references: [id], onDelete: Cascade)
+  id                 String             @id @default(cuid())
+  budgetCostCenter   BudgetCostCenter   @relation(fields: [budgetCostCenterId], references: [id], onDelete: Cascade)
   budgetCostCenterId String
-  accountCode        String           // e.g. "3010"
-  accountName        String           // e.g. "Biljettintäkter"
-  sortOrder          Int              @default(0)
+  accountCode        String // e.g. "3010"
+  accountName        String // e.g. "Biljettintäkter"
+  sortOrder          Int                @default(0)
   // Income vs. cost. When null the kind is inferred from the account code
   // (BAS: 3xxx = income, everything else = cost); set to override.
   kindOverride       BudgetAccountKind?
@@ -734,9 +894,9 @@ model BudgetLineItem {
   // When both `quantity` and `unitPrice` are set the amount is their product
   // (the "antal × á-pris" form); otherwise `expression` is used directly.
   // All three are expression strings, so they may reference variables.
-  quantity    String?       // e.g. "2", "MEMBERS", "PASLAG_OL"
-  unitPrice   String?       // e.g. "350", "TACK_POLICY"
-  expression  String        // e.g. "1500", "MEMBERS * 5"
+  quantity    String? // e.g. "2", "MEMBERS", "PASLAG_OL"
+  unitPrice   String? // e.g. "350", "TACK_POLICY"
+  expression  String // e.g. "1500", "MEMBERS * 5"
   sortOrder   Int           @default(0)
   // Per-line values for the six general columns, keyed x1…x6 (see
   // EXTRA_COLUMN_KEYS in lib/budget/grid.ts). Each holds a literal or formula
@@ -778,8 +938,8 @@ enum BudgetChangeKind {
 }
 
 model BudgetChange {
-  id       String @id @default(cuid())
-  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  id       String           @id @default(cuid())
+  budget   Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   budgetId String
   // Running number within the budget, from 1 — what a change is called out loud
   // ("avsteg #4") and in the sheet, since a cuid is no use to anyone.
@@ -815,8 +975,8 @@ model BudgetChange {
 // and must still be that amount after a variable moves — otherwise a
 // förflyttning that summed to zero when it was made might not tomorrow.
 model BudgetAdjustment {
-  id        String       @id @default(cuid())
-  change    BudgetChange @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  id        String        @id @default(cuid())
+  change    BudgetChange  @relation(fields: [changeId], references: [id], onDelete: Cascade)
   changeId  String
   // Cascades so deleting a whole budget still works. Deleting a single account
   // that carries adjustments is refused by the API instead, which is where the
@@ -870,4 +1030,156 @@ model VerificationLine {
   sortOrder Int @default(0)
 
   @@index([verificationId])
+}
+
+// ── Income batches (intäkter) ─────────────────────────────────────
+// What the intakt service returned, held so it survives a page reload and so
+// booking is reproducible. This is the old pending.yaml: a list of reports
+// waiting to be reviewed and booked, except that it is per-user, reviewable in
+// the app, and cannot be half-edited by hand.
+
+enum IncomeSource {
+  ZETTLE // card takings, from the Zettle purchase API
+  ZETTLE_FEE // Zettle's own transaction fees — a cost, not income
+  SWISH // from an uploaded Swish CSV export
+}
+
+// There used to be an EXCLUDED between DRAFT and BOOKED — a day deliberately
+// skipped, carried over from the manifest file this replaced, where skipping
+// meant deleting a line. It was a state nobody needed: a fetch is a working
+// set, so a day you do not book is simply a day you do not book, and the next
+// fetch clears it (see createSalesBatch). Keeping it meant every query that
+// meant "unbooked" had to name two statuses and every screen had to say which
+// one a row was in.
+enum IncomeReportStatus {
+  DRAFT // fetched, not yet booked
+  BOOKED // a Verification exists
+  EXPORTED // and it has reached Fortnox
+}
+
+// One fetch: a source and a date range, pulled once. Grouping reports under
+// the run that produced them is what makes "what did I import on Tuesday"
+// answerable, and what lets a whole bad import be discarded in one go.
+model IncomeBatch {
+  id     String       @id @default(cuid())
+  source IncomeSource
+
+  fromDate DateTime @db.Date
+  toDate   DateTime @db.Date
+
+  // The uploaded export's filename, for SWISH. Nothing reads it — it is there
+  // so a treasurer can tell two imports apart.
+  filename String?
+
+  createdBy   User?   @relation("IncomeBatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  reports IncomeReport[]
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt, id])
+  @@index([source, createdAt, id])
+}
+
+// One committee's takings for one day: one PDF, one voucher.
+model IncomeReport {
+  id      String      @id @default(cuid())
+  batch   IncomeBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId String
+
+  // Denormalised from the batch, and not merely for convenience. A report key
+  // is "<verksamhet>-<date>", which a Zettle report and a Swish report for the
+  // same unit and day both answer to — the source is what tells them apart, and
+  // it has to be reachable without joining the batch for the already-booked
+  // check below to be an index lookup.
+  source IncomeSource
+
+  // Null for ZETTLE_FEE, which is not attributable to a verksamhet.
+  //
+  // The unit rather than its income profile: whose takings these were is a fact
+  // about the section, and it must survive someone deciding the unit no longer
+  // sells anything and removing its income settings.
+  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: Restrict)
+  resultUnitId String?
+
+  date  DateTime @db.Date
+  total Int // öre
+
+  status IncomeReportStatus @default(DRAFT)
+
+  // Pre-filled from the committee, then editable in review. This is the one
+  // field the old workflow made a person edit a YAML file for.
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  // The report this one repeats: same source, same verksamhet, same day, and
+  // already booked here. Set at import, and the reason the row is shown as a
+  // warning rather than left out of the fetch — a day that simply is not there
+  // reads as takings gone missing. Booking it is refused; the partial unique
+  // index over booked reports would refuse it anyway.
+  duplicateOf   IncomeReport?  @relation("IncomeReportDuplicate", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicateOfId String?
+  duplicates    IncomeReport[] @relation("IncomeReportDuplicate")
+
+  // A voucher Fortnox already holds for this verksamhet on this day — "IR-142".
+  //
+  // Set at import, when the range is checked against Fortnox's own IR series
+  // (lib/income/duplicate.ts). The day is imported all the same: the section may
+  // genuinely have two, and refusing to show it would be deciding that for
+  // whoever is reviewing. It is flagged instead, and booking it is their call.
+  existingVoucher String?
+
+  // The rendered intäktsräkning in object storage, written when the report is
+  // booked. Stored exactly like a Receipt, because that is what it is: the
+  // document that substantiates the voucher, and the file that gets attached
+  // to it in Fortnox.
+  documentKey      String?
+  documentFilename String?
+
+  lines        IncomeLine[]
+  verification Verification?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Two reports for the same source, unit and day are the same takings
+  // imported twice. Booking both would double the section's income, and the
+  // old CLI had nothing stopping it — re-running upload simply wrote the
+  // vouchers again.
+  //
+  // Not a unique constraint, because re-fetching a range after a failure is
+  // normal and must stay possible. The uniqueness that matters is over
+  // *booked* reports only, which Postgres expresses as a partial index and
+  // Prisma cannot — so it is added by hand in the migration.
+  @@index([source, resultUnitId, date])
+  @@index([batchId])
+  @@index([status, date, id])
+}
+
+// One product line of a report. Kept because the review screen shows them and
+// the PDF is rendered from them — the service is stateless, so the report has
+// to be sent back to it to be rendered.
+model IncomeLine {
+  id       String       @id @default(cuid())
+  report   IncomeReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId String
+
+  name    String
+  variant String?
+
+  // BAS revenue account this line routed to, and its name at import time —
+  // denormalised for the same reason VerificationLine.accountName is: the
+  // chart of accounts may change, the booked document may not.
+  account     String
+  accountName String
+
+  quantity  Int
+  unitPrice Int // öre
+  discount  Int @default(0) // öre, this line's share of any purchase discount
+  total     Int // öre — quantity*unitPrice - discount
+
+  sortOrder Int @default(0)
+
+  @@index([reportId])
 }

@@ -65,6 +65,14 @@ export function receiptKey(
   return `receipts/${expenseId}/${receiptId}-${safeName(filename)}`;
 }
 
+// The rendered intäktsräkning for a day's takings. Kept under its own prefix
+// rather than alongside receipts because it is generated rather than uploaded —
+// re-rendering a report replaces the object at the same key, which a receipt
+// never does.
+export function incomeDocumentKey(reportId: string, filename: string): string {
+  return `income/${reportId}/${safeName(filename)}`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

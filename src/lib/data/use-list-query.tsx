@@ -18,6 +18,7 @@ import { useProgressRouter } from "@/components/shell/route-progress";
 import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZES,
+  isWholeDate,
   listQueryToSearch,
   parseListQuery,
   type ListQuery,
@@ -158,6 +159,65 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
 /** How long a search box sits still before the server is asked again. */
 const SEARCH_DEBOUNCE_MS = 300;
 
+/** Whatever was typed is worth asking about — the search box's rule. */
+const always = () => true;
+
+/** A whole date, or nothing at all. Anything in between is still being typed. */
+const wholeOrEmpty = (v: string) => v === "" || isWholeDate(v);
+
+/**
+ * A control whose value lives in the URL but is typed into.
+ *
+ * The URL is the state, and on these pages a URL change is a Server Component
+ * render — a round trip. A controlled input reading straight from it therefore
+ * shows nothing until the trip lands, which means every character is thrown
+ * away in front of you, and every character starts another trip.
+ *
+ * So the draft is echoed here and the URL is written on the caller's terms:
+ *
+ *   the search box  commits anything, once the typing stops
+ *   a date          commits only a whole one, and empty to clear it — a
+ *                   half-typed date is not a filter, and parseListQuery drops
+ *                   it on the way back in, which is what blanked the field
+ *
+ * Returns the draft to render and the setter to hand the input.
+ */
+function useUrlDraft(
+  committed: string,
+  commit: (value: string) => void,
+  { ready, debounceMs = 0 }: { ready: (value: string) => boolean; debounceMs?: number },
+): [string, (value: string) => void] {
+  const [draft, setDraft] = useState(committed);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // What we last wrote, so the effect below can tell the URL moving on its own
+  // from the URL moving because of us.
+  const ours = useRef(committed);
+
+  // Re-seed when the URL's own value moves without us typing — Back, or a link.
+  useEffect(() => {
+    if (committed !== ours.current) {
+      ours.current = committed;
+      setDraft(committed);
+    }
+  }, [committed]);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const set = (value: string) => {
+    setDraft(value);
+    clearTimeout(timer.current);
+    if (!ready(value)) return;
+    const write = () => {
+      ours.current = value;
+      commit(value);
+    };
+    if (debounceMs) timer.current = setTimeout(write, debounceMs);
+    else write();
+  };
+
+  return [draft, set];
+}
+
 export function useUrlTableControls(
   total: number,
   /**
@@ -203,29 +263,14 @@ export function useUrlTableControls(
   const set = <K extends keyof ListQuery>(key: K) => (v: ListQuery[K]) =>
     commit({ [key]: v, page: 0 } as Partial<ListQuery>);
 
-  // The search box is the one control that can't wait for a round trip per
-  // change. It is echoed locally so typing stays instant, and the server is
-  // asked once the typing stops.
-  const [draft, setDraft] = useState(q.q);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Re-seed when the URL's own q moves without us typing — Back, or a link.
-  const committedQ = useRef(q.q);
-  useEffect(() => {
-    if (q.q !== committedQ.current) {
-      committedQ.current = q.q;
-      setDraft(q.q);
-    }
-  }, [q.q]);
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  const setQuery = (v: string) => {
-    setDraft(v);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      committedQ.current = v;
-      commit({ q: v, page: 0 });
-    }, SEARCH_DEBOUNCE_MS);
-  };
+  // The three controls that are typed into rather than clicked. None of them
+  // can wait for a round trip per keystroke — see useUrlDraft.
+  const [query, setQuery] = useUrlDraft(q.q, (v) => commit({ q: v, page: 0 }), {
+    ready: always,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
+  const [dateFrom, setDateFrom] = useUrlDraft(q.from, set("from"), { ready: wholeOrEmpty });
+  const [dateTo, setDateTo] = useUrlDraft(q.to, set("to"), { ready: wholeOrEmpty });
 
   const toggleSort = (key: string) => {
     // Same rule as the local version: re-clicking the active column flips it,
@@ -239,12 +284,12 @@ export function useUrlTableControls(
     setTab: set("tab"),
     picks: q.picks,
     setPicks: set("picks"),
-    query: draft,
+    query,
     setQuery,
-    dateFrom: q.from,
-    setDateFrom: set("from"),
-    dateTo: q.to,
-    setDateTo: set("to"),
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
     pageSize: q.pageSize,
     setPageSize: set("pageSize"),
     page: q.page,

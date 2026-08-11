@@ -3,7 +3,8 @@ import { requireUser } from "@/lib/server/current-user";
 import { getBankTransactionPage, getCards } from "@/lib/data/bank";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { userHoldsCard } from "@/lib/data/users";
-import CardPurchasesClient, { CARD_PURCHASES_DEFAULT_TAB } from "./card-purchases-client";
+import CardPurchasesClient from "./card-purchases-client";
+import { CARD_PURCHASES_DEFAULT_TAB } from "./tabs";
 
 export default async function CardPurchasesPage({
   searchParams,

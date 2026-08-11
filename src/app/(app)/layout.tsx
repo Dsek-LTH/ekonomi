@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { AppShell, SIDEBAR_COOKIE } from "@/components/shell/app-shell";
+import { RouteHistoryRecorder } from "@/components/shell/route-history";
 import { RouteProgressBar } from "@/components/shell/route-progress";
 import {
   DEFAULT_WIDTH,
@@ -55,6 +56,10 @@ export default async function AppLayout({
               boundary — nothing renders in the fallback, it is a 2px bar. */}
           <Suspense fallback={null}>
             <RouteProgressBar />
+            {/* Beside the bar because it watches the same thing — the URL
+                changing — and reads the query string to do it. What it
+                remembers is what a back link returns you to. */}
+            <RouteHistoryRecorder />
           </Suspense>
           {/* A fixed overlay, deliberately outside AppShell — notifications
               float over the page rather than pushing the content down. */}

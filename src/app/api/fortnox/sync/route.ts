@@ -1,4 +1,5 @@
-// Trigger a Fortnox ledger sync. Body: { scope?: "current" | "all", year?: number }.
+// Trigger a Fortnox ledger sync. Body:
+// { scope?: "current" | "all", financialYearId?: number }.
 // Default is "current" (one SIE call — fast, safe for an interactive button).
 // "all" backfills every financial year and can take a while; prefer the CLI
 // (pnpm fortnox:sync) or the scheduled job for that.
@@ -22,10 +23,10 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, FortnoxSync);
   if (!parsed.ok) return parsed.res;
-  const { scope, year } = parsed.data;
+  const { scope, financialYearId } = parsed.data;
 
   try {
-    const result = await syncLedger({ scope, year });
+    const result = await syncLedger({ scope, financialYearId });
     const vouchers = result.years.reduce((s, y) => s + y.vouchers, 0);
     return NextResponse.json({ ...result, totalVouchers: vouchers });
   } catch (e) {

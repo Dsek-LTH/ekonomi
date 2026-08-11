@@ -14,14 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Field, FieldGroup, Input } from "@/components/ui/field";
+import { Tag } from "@/components/ui/status-pill";
 import { SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
 import { IconPencil, IconPlus, IconTrash } from "@/components/ui/icons";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
-import type { ResultUnit, ResultUnitCostCenter, User } from "@/lib/domain/types";
+import type { CostCenter, ResultUnit, ResultUnitCostCenter, User } from "@/lib/domain/types";
 
 // Sentinel for the "no result unit" entry in the left-hand list.
 const UNASSIGNED = "__unassigned__";
@@ -30,10 +32,16 @@ export function ResultUnitsClient({
   resultUnits,
   users,
   unassigned,
+  costCenters,
+  incomeEnabled,
 }: {
   resultUnits: ResultUnit[];
   users: User[];
   unassigned: ResultUnitCostCenter[];
+  /** For the income section's default-cost-centre picker. */
+  costCenters: CostCenter[];
+  /** False when the app runs without the intakt service — see intaktConfigured. */
+  incomeEnabled: boolean;
 }) {
   const t = useTranslations("admin.resultUnits");
   const tCommon = useTranslations("common");
@@ -41,6 +49,7 @@ export function ResultUnitsClient({
   const tNav = useTranslations("nav");
   const tAlloc = useTranslations("allocation");
   const tCostCenters = useTranslations("admin.costCenters");
+  const tIncome = useTranslations("admin.resultUnits.income");
   const confirm = useConfirm();
   const { pending, busy, mutate } = useMutation();
 
@@ -56,6 +65,14 @@ export function ResultUnitsClient({
   // behind the pencil: null means "not editing".
   const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  // The product-prefix form, same idea: two fields behind a +.
+  const [productDraft, setProductDraft] = useState<{ code: string; account: string } | null>(null);
+
+  const ccOptions = costCenters.map((c) => ({
+    value: c.id,
+    label: `${c.code} — ${c.name}`,
+    short: c.code,
+  }));
 
   const ownerCandidates = users.filter((u) => u.roles.includes("RESULTATANSVARIG"));
 
@@ -150,6 +167,70 @@ export function ResultUnitsClient({
       method: "DELETE",
       error: t("prefixRemoveFailed"),
       success: t("prefixRemoved", { prefix: value }),
+    });
+  }
+
+  // ── The income half ───────────────────────────────────────────────
+  //
+  // Everything a verksamhet needs in order to take money in, edited here
+  // because this is where the verksamhet is. The key is not among these: it is
+  // derived from the name when the profile is created and never changed.
+
+  async function enableIncome(c: ResultUnit) {
+    await mutate("/api/income/units", {
+      key: `income-new-${c.id}`,
+      // The verifikationstext starts as the unit's own name — it is what the
+      // voucher will say, and that is a better start than blank.
+      body: { resultUnitId: c.id, description: c.resultUnit },
+      error: t("saveFailed"),
+    });
+  }
+
+  async function updateIncome(c: ResultUnit, body: Record<string, unknown>) {
+    if (!c.income) return;
+    await mutate(`/api/income/units/${c.income.id}`, {
+      key: `income-${c.income.id}`,
+      method: "PATCH",
+      body,
+      error: t("saveFailed"),
+    });
+  }
+
+  async function removeIncome(c: ResultUnit) {
+    if (!c.income) return;
+    const ok = await confirm({
+      title: tIncome("removeTitle", { name: c.resultUnit }),
+      message: tIncome("removeBody"),
+      confirmLabel: tIncome("remove"),
+      tone: "danger",
+    });
+    if (!ok) return;
+    await mutate(`/api/income/units/${c.income.id}`, {
+      key: `income-${c.income.id}`,
+      method: "DELETE",
+      error: t("saveFailed"),
+    });
+  }
+
+  async function addProductPrefix(c: ResultUnit) {
+    if (!c.income || !productDraft) return;
+    const ok = await mutate("/api/income/prefixes", {
+      key: "addProduct",
+      body: {
+        incomeId: c.income.id,
+        code: productDraft.code.trim(),
+        account: productDraft.account.trim(),
+      },
+      error: t("saveFailed"),
+    });
+    if (ok) setProductDraft(null);
+  }
+
+  async function removeProductPrefix(id: string) {
+    await mutate(`/api/income/prefixes/${id}`, {
+      key: `product-${id}`,
+      method: "DELETE",
+      error: t("saveFailed"),
     });
   }
 
@@ -278,6 +359,11 @@ export function ResultUnitsClient({
                       setCcSearch("");
                       setPrefixDraft(null);
                       setNameDraft(null);
+                      // Same reason as the other two drafts, and it matters
+                      // more: a product-prefix form left open across a switch
+                      // would post what was typed for one verksamhet to
+                      // whichever one is selected when Lägg till is pressed.
+                      setProductDraft(null);
                     }}
                   >
                     <span className="block truncate text-sm font-medium">{c.resultUnit}</span>
@@ -424,7 +510,7 @@ export function ResultUnitsClient({
               </div>
 
               <CardBody className="space-y-5">
-                {/* Prefixes */}
+                {/* Cost-centre prefixes — which cost centres are the unit's. */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-muted">{t("prefixes")}</p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -493,6 +579,178 @@ export function ResultUnitsClient({
                     )}
                   </div>
                 </div>
+
+                {/* Product prefixes and the rest of the income half. Rendered
+                    only when the income module is configured: a section that
+                    runs without intakt has no use for any of it, and the
+                    result-unit screen must not depend on income existing. */}
+                {incomeEnabled && (
+                  <div className="space-y-4 rounded-xl border border-border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs font-medium text-muted">{tIncome("section")}</p>
+                      {selected.income ? (
+                        <span className="flex items-center gap-2 text-xs text-muted">
+                          {/* Derived from the name and never edited — shown so
+                              it can be recognised in intakt's own output. */}
+                          <span className="font-mono">{selected.income.key}</span>
+                          <IconButton
+                            tone="danger"
+                            size="xs"
+                            label={tIncome("remove")}
+                            loading={pending === `income-${selected.income.id}`}
+                            onClick={() => removeIncome(selected)}
+                          >
+                            <IconTrash className="size-3.5" />
+                          </IconButton>
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={pending === `income-new-${selected.id}`}
+                          onClick={() => enableIncome(selected)}
+                        >
+                          <IconPlus className="size-4" />
+                          {tIncome("enable")}
+                        </Button>
+                      )}
+                    </div>
+
+                    {selected.income ? (
+                      <>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label={tIncome("description")} hint={tIncome("descriptionHint")}>
+                            <Input
+                              size="sm"
+                              // Uncontrolled, because it commits on blur rather
+                              // than on every keystroke — so `defaultValue` is
+                              // read once, when the input mounts. Selecting
+                              // another verksamhet does not remount it: it is
+                              // the same element in the same place, and React
+                              // keeps it (and its typed-in value) while only
+                              // the props change. The field went on showing the
+                              // first unit's verifikationstext however many
+                              // units you clicked through. Keying it on the
+                              // income profile makes switching a remount, which
+                              // is what re-reads the default.
+                              key={selected.income.id}
+                              defaultValue={selected.income.description}
+                              onBlur={(e) =>
+                                e.target.value !== selected.income?.description &&
+                                updateIncome(selected, { description: e.target.value })
+                              }
+                            />
+                          </Field>
+                          <FieldGroup label={tIncome("defaultCostCenter")}>
+                            <Combobox
+                              options={ccOptions}
+                              value={selected.income.defaultCostCenterId ?? ""}
+                              onChange={(v) => updateIncome(selected, { defaultCostCenterId: v || null })}
+                              placeholder={tIncome("noCostCenter")}
+                              allowClear
+                              aria-label={tIncome("defaultCostCenter")}
+                            />
+                          </FieldGroup>
+                        </div>
+
+                        <div>
+                          <p className="mb-2 text-xs font-medium text-muted">
+                            {tIncome("productPrefixes")}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {selected.income.prefixes.map((p) => (
+                              <span
+                                key={p.id}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background py-1 pl-3 pr-1.5 text-xs"
+                              >
+                                <span className="font-mono font-semibold">{p.code}</span>
+                                <span className="text-muted">→ {p.account}</span>
+                                {/* An account the chart has never heard of is a
+                                    voucher Fortnox will reject, but only at
+                                    export — so it is worth saying here. */}
+                                {!p.accountName && (
+                                  <Tag tone="warning">{tIncome("unknownAccount")}</Tag>
+                                )}
+                                {p.isFallback && <Tag tone="accent">{tIncome("fallback")}</Tag>}
+                                <IconButton
+                                  tone="danger"
+                                  size="xs"
+                                  disabled={p.isFallback}
+                                  loading={pending === `product-${p.id}`}
+                                  label={tIncome("prefixRemove")}
+                                  onClick={() => removeProductPrefix(p.id)}
+                                >
+                                  <IconTrash className="size-3.5" />
+                                </IconButton>
+                              </span>
+                            ))}
+
+                            {productDraft === null ? (
+                              <button
+                                onClick={() => setProductDraft({ code: "", account: "" })}
+                                title={tIncome("prefixAdd")}
+                                aria-label={tIncome("prefixAdd")}
+                                className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-border text-muted transition hover:border-accent hover:text-accent"
+                              >
+                                <IconPlus className="size-4" />
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="w-20">
+                                  <Input
+                                    size="sm"
+                                    autoFocus
+                                    value={productDraft.code}
+                                    onChange={(e) =>
+                                      setProductDraft({ ...productDraft, code: e.target.value })
+                                    }
+                                    placeholder="s1"
+                                    aria-label={tIncome("prefixCode")}
+                                    className="font-mono"
+                                  />
+                                </span>
+                                <span className="w-24">
+                                  <Input
+                                    size="sm"
+                                    inputMode="numeric"
+                                    value={productDraft.account}
+                                    onChange={(e) =>
+                                      setProductDraft({ ...productDraft, account: e.target.value })
+                                    }
+                                    placeholder="3011"
+                                    aria-label={tIncome("prefixAccount")}
+                                    className="font-mono"
+                                  />
+                                </span>
+                                <Button
+                                  size="sm"
+                                  loading={pending === "addProduct"}
+                                  disabled={!productDraft.code.trim() || !productDraft.account.trim()}
+                                  onClick={() => addProductPrefix(selected)}
+                                >
+                                  {tCostCenters("add")}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setProductDraft(null)}
+                                >
+                                  {tCommon("cancel")}
+                                </Button>
+                              </span>
+                            )}
+
+                            {selected.income.prefixes.length === 0 && productDraft === null && (
+                              <span className="text-sm text-muted">{tIncome("noPrefixHint")}</span>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted">{tIncome("disabledHint")}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Owners */}
                 <div>

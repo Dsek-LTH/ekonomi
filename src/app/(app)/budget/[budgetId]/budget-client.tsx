@@ -9,6 +9,7 @@ import { EmptyNote } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
+import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
 import { useRole } from "@/components/shell/role-context";
 import { canChangeLockedBudget, canCommentBudget, canLockBudget, isAdmin as isAdminRole } from "@/lib/domain/permissions";
@@ -298,39 +299,43 @@ export default function BudgetClient({
           )}
         </>
       }
-      action={
-        <div className="flex items-center gap-2">
-          {/* Nothing is compared until asked for — see use-comparison.tsx. */}
-          <Combobox
-            options={[
-              { value: "", label: t("noComparison") },
-              ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
-            ]}
-            value={compareTarget}
-            onChange={setCompareTarget}
-            placeholder={t("compareWith")}
-            searchPlaceholder={tList("searchPlaceholder")}
-            emptyText={t("nothingToCompare")}
-            aria-label={t("compareWith")}
-            className="w-56"
-          />
-          {/* A closed padlock to lock it, a sprung one to unlock — the icon
-              shows the action, and the chip by the year is the state. */}
-          {canLock && (
-            <IconButton
-              label={locked ? t("unlock") : t("lock")}
-              loading={locking}
-              onClick={() => setLocked(!locked)}
-            >
-              {locked ? <IconLockOpen className="size-5" /> : <IconLock className="size-5" />}
-            </IconButton>
-          )}
-        </div>
-      }
       back={{ href: "/budget", label: tNav("budget") }}
     >
       <div className="flex flex-col gap-4 lg:flex-row">
         <SidebarPanel>
+          {/* The two things that act on the budget as a whole, at the head of
+              the column that lists its sheets — the pane on the right is one
+              sheet at a time, and both of these change every one of them. They
+              were in the page header until that became identity only; the row
+              is shaped like the search and "add cost centre" rows further down
+              this same panel. */}
+          <div className="flex items-center gap-1.5 border-b border-border p-2">
+            {/* Nothing is compared until asked for — see use-comparison.tsx. */}
+            <Combobox
+              options={[
+                { value: "", label: t("noComparison") },
+                ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+              ]}
+              value={compareTarget}
+              onChange={setCompareTarget}
+              placeholder={t("compareWith")}
+              searchPlaceholder={tList("searchPlaceholder")}
+              emptyText={t("nothingToCompare")}
+              aria-label={t("compareWith")}
+              className="min-w-0 flex-1"
+            />
+            {/* A closed padlock to lock it, a sprung one to unlock — the icon
+                shows the action, and the chip by the year is the state. */}
+            {canLock && (
+              <IconButton
+                label={locked ? t("unlock") : t("lock")}
+                loading={locking}
+                onClick={() => setLocked(!locked)}
+              >
+                {locked ? <IconLockOpen className="size-5" /> : <IconLock className="size-5" />}
+              </IconButton>
+            )}
+          </div>
           <SidebarItem
             active={selected === RAMBUDGET}
             onClick={() => setSelected(RAMBUDGET)}
@@ -366,7 +371,11 @@ export default function BudgetClient({
               placeholder={tAlloc("search")}
             />
           </div>
-          <div className="max-h-[58vh] overflow-y-auto">
+          {/* The scrollbar floats over the rows instead of taking a column from
+              them — same as the income queue, and for the same reason: these
+              rows are a cost centre's name against its result, in a 16rem
+              panel. See components/ui/overlay-scroll.tsx. */}
+          <OverlayScroll className="max-h-[58vh]">
             {groups.map((g) => (
               <div key={g.resultUnit}>
                 <SidebarGroupLabel>{resultUnitLabel(g.resultUnit, tGroup)}</SidebarGroupLabel>
@@ -395,7 +404,7 @@ export default function BudgetClient({
               </div>
             ))}
             {groups.length === 0 && <EmptyNote size="compact">{t("noCostCenters")}</EmptyNote>}
-          </div>
+          </OverlayScroll>
           {/* Every cost centre already budgeted leaves the picker in place but
               dead, rather than removing it: the row vanishing reads as "this
               budget can't take cost centres", which is a different thing. */}

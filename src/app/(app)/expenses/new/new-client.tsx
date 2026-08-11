@@ -31,6 +31,7 @@ import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
+import { useSelectOnce } from "@/lib/ui/use-select-once";
 import { cn } from "@/lib/ui/utils";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
 import type { AllocationRow } from "@/components/allocation-editor";
@@ -73,6 +74,8 @@ export default function NewExpenseClient({
   const tReceipt = useTranslations("receipt");
   const tList = useTranslations("expenses");
   const { date } = useFormat();
+  // The description opens focused — see the field on the first step.
+  const selectOnce = useSelectOnce();
   const searchParams = useSearchParams();
   const notify = useNotify();
   const editing = !!existing;
@@ -441,8 +444,16 @@ export default function NewExpenseClient({
       {cur === "review" && (
         <Card>
           <CardBody className="space-y-5">
+            {/* The first thing asked for, so the first thing focused: this
+                step opens with the receipt beside it and one question to
+                answer, and reaching for the mouse to answer it is a step
+                nobody needs. Selected as well as focused, which only matters
+                when an existing utlägg is being edited — then the title is
+                already there and typing should replace it. */}
             <Field label={t("description")}>
               <Input
+                autoFocus
+                onFocus={selectOnce}
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />

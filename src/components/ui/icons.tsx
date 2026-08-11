@@ -27,6 +27,23 @@ export const IconGrid = (p: P) => (
   </Svg>
 );
 
+// The two shapes a list can be drawn in, for the view toggle
+// (components/ui/view-toggle.tsx). Pictures of the layouts themselves — a
+// master–detail split and a table — because the toggle carries no words.
+export const IconViewSplit = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9.5 4v16" />
+  </Svg>
+);
+
+export const IconViewTable = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 9.5h18M3 15h18" />
+  </Svg>
+);
+
 export const IconReceipt = (p: P) => (
   <Svg {...p}>
     <path d="M6 3h12v18l-2-1.2L14 21l-2-1.2L10 21l-2-1.2L6 21V3Z" />
@@ -86,6 +103,16 @@ export const IconBook = (p: P) => (
   </Svg>
 );
 
+// Income: a coin with an arrow coming in. The counterpart to IconReceipt,
+// which is money going the other way.
+export const IconIncome = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="14" r="7" />
+    <path d="M12 11v6M10 12.5h3a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3h3" />
+    <path d="M12 6V2M9.5 4.5 12 2l2.5 2.5" />
+  </Svg>
+);
+
 export const IconBank = (p: P) => (
   <Svg {...p}>
     <path d="M4 10h16M5 10 12 4l7 6M6 10v8M10 10v8M14 10v8M18 10v8M4 21h16" />
@@ -102,6 +129,23 @@ export const IconGear = (p: P) => (
 export const IconUpload = (p: P) => (
   <Svg {...p}>
     <path d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14" />
+  </Svg>
+);
+
+// The elbow that steps a product's variant in under its name — a drawing of
+// \variantpil in intakt/assets/intakt.tex, so the sold-lines table and the
+// intäktsräkning beside it mark a grouped row the same way.
+export const IconVariant = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 5v9h9m-3-3 3 3-3 3" />
+  </Svg>
+);
+
+// The mirror of IconUpload: bringing something in rather than sending it out —
+// a period fetched from Zettle or Swish.
+export const IconDownload = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14" />
   </Svg>
 );
 

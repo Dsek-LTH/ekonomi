@@ -14,7 +14,8 @@ import { IconComment, IconTrash } from "@/components/ui/icons";
 import { StatRow } from "./stat-row";
 import { resultImpact } from "@/lib/budget/changes";
 
-import { ccTotals, diffClass, fmt, fmtSigned, insideRect, type AdjustmentRow } from "./budget-helpers";
+import { DragHandle, insideRect } from "@/components/ui/drag";
+import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";
 import type { AccountRecord } from "@/lib/domain/types";
 import { Combobox } from "@/components/ui/combobox";
@@ -112,12 +113,11 @@ export function CostCenterSheet(props: {
     if (k === "konto") return (
       <td key={k} className="border-r border-border/60 p-0">
         {isAdmin && (
-          <span
-            draggable
+          <DragHandle
             onDragStart={(e) => { e.dataTransfer.setData("lineId", li.id); e.dataTransfer.effectAllowed = "move"; }}
-            className="flex cursor-grab select-none items-center px-1.5 py-1.5 text-muted/30 opacity-0 transition-opacity hover:text-muted active:cursor-grabbing group-hover:opacity-100"
+            className="flex items-center px-1.5 py-1.5 text-muted/30 hover:text-muted"
             title={t("dragToReorder")}
-          >⠿</span>
+          />
         )}
       </td>
     );
@@ -219,12 +219,11 @@ export function CostCenterSheet(props: {
           {gut(grid.accountRow.get(`${ccCode}|${account.id}`))}
           <td className="group relative border-r border-border/60 bg-brand p-0 align-middle">
             {isAdmin && (
-              <span
-                draggable
+              <DragHandle
                 onDragStart={(e) => { e.dataTransfer.setData("accountId", account.id); e.dataTransfer.effectAllowed = "move"; }}
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 flex cursor-grab select-none items-center px-1.5 text-on-brand/60 opacity-0 transition-opacity hover:text-on-brand active:cursor-grabbing group-hover:pointer-events-auto group-hover:opacity-100"
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center px-1.5 text-on-brand/60 hover:text-on-brand group-hover:pointer-events-auto"
                 title={t("dragToSection")}
-              >⠿</span>
+              />
             )}
             {isAdmin ? (
               <Combobox

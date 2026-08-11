@@ -381,6 +381,86 @@ export async function listFinancialYears(token: string): Promise<FortnoxFinancia
   }));
 }
 
+/** The financial years a date range touches, oldest first. */
+export function financialYearsFor(
+  years: readonly FortnoxFinancialYear[],
+  from: string,
+  to: string,
+): FortnoxFinancialYear[] {
+  return years
+    .filter((y) => y.fromDate <= to && y.toDate >= from)
+    .sort((a, b) => a.fromDate.localeCompare(b.fromDate));
+}
+
+/** A voucher as the list endpoint describes it — enough to recognise one. */
+export interface FortnoxVoucher {
+  series: string;
+  number: number;
+  /** YYYY-MM-DD. */
+  date: string;
+  description: string;
+  /** Fortnox's financial-year ID, not a calendar year. */
+  year: number | null;
+}
+
+/**
+ * Every voucher whose transaction date falls in a range.
+ *
+ * Read with the service token and used to recognise work Fortnox already has —
+ * a day's takings that were exported once and are about to be exported again
+ * (see lib/income/duplicate.ts). Listing is the only way to ask: Fortnox can
+ * fetch a voucher by series and number, but nothing looks one up by what it
+ * says or when it is dated.
+ *
+ * `financialyear` matters more than it looks. Without it Fortnox answers from
+ * the *current* year only, so a range that reaches into last year would come
+ * back empty — which, for a duplicate check, is the failure that quietly says
+ * "nothing there". Callers pass the year the range falls in; a range that
+ * spans two is asked for twice.
+ */
+export async function listVouchers(
+  token: string,
+  range: { from: string; to: string; financialYearId?: number },
+): Promise<FortnoxVoucher[]> {
+  interface Page {
+    Vouchers?: {
+      VoucherSeries?: string;
+      VoucherNumber?: number;
+      TransactionDate?: string;
+      Description?: string;
+      Year?: number;
+    }[];
+    MetaInformation?: { "@TotalPages"?: number };
+  }
+
+  const year = range.financialYearId != null ? `&financialyear=${range.financialYearId}` : "";
+  const out: FortnoxVoucher[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const data = await fortnoxGet<Page>(
+      `/vouchers?fromdate=${range.from}&todate=${range.to}${year}&page=${page}`,
+      token,
+    );
+    for (const v of data.Vouchers ?? []) {
+      if (!v.VoucherSeries || v.VoucherNumber == null) continue;
+      out.push({
+        series: v.VoucherSeries,
+        number: v.VoucherNumber,
+        // Fortnox dates are date-only, but it has been known to answer with a
+        // timestamp on some endpoints; the day is the part being compared.
+        date: (v.TransactionDate ?? "").slice(0, 10),
+        description: v.Description ?? "",
+        year: v.Year ?? null,
+      });
+    }
+    totalPages = data.MetaInformation?.["@TotalPages"] ?? 1;
+    page++;
+  } while (page <= totalPages);
+
+  return out;
+}
+
 // Download the SIE type-4 (transactions) export for one financial year and
 // decode it from CP437 to a normal JS string. This is the whole ledger for the
 // year in a single request.

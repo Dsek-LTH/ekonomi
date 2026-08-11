@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
 import { IconLink } from "@/components/ui/icons";
-import { useRole } from "@/components/shell/role-context";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { Amount } from "@/components/ui/amount";
 // For the amount that sits inside a translated sentence ("Pick a transaction for
@@ -78,7 +77,6 @@ function ExpenseDetail({
   const t = useTranslations("expenses.detail");
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
-  const { user } = useRole();
   const mutations = useExpenseMutations(expense.id);
 
   return (
@@ -95,18 +93,6 @@ function ExpenseDetail({
       }
       description={<StatusPill status={expense.status} />}
       back={{ href: "/expenses", label: tNav("expenses") }}
-      action={
-        <ExpenseActions
-          expenseId={expense.id}
-          can={can}
-          fortnox={fortnox}
-          busy={mutations.busy}
-          onTransition={mutations.transition}
-          onWithdrawAttest={mutations.withdrawAttest}
-          onExport={mutations.exportToFortnox}
-          onDelete={mutations.remove}
-        />
-      }
     >
       {/* The receipt is the app's panel now, not a card in this page — the page
           declares it and the shell stands it beside all of this, full height. */}
@@ -125,13 +111,30 @@ function ExpenseDetail({
           column past the screen instead of being truncated inside its card. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
         <div className="min-w-0 space-y-6">
-          <DetailsCard expense={expense} />
+          <DetailsCard
+            expense={expense}
+            action={
+              <ExpenseActions
+                expenseId={expense.id}
+                can={can}
+                fortnox={fortnox}
+                busy={mutations.busy}
+                onTransition={mutations.transition}
+                onWithdrawAttest={mutations.withdrawAttest}
+                onExport={mutations.exportToFortnox}
+                onDelete={mutations.remove}
+              />
+            }
+          />
 
           {expense.paymentType === "CARD" && (
             <BankTransactionCard
               expense={expense}
               bankTransactions={bankTransactions}
-              cardHolderId={user.id}
+              // Whose card the purchase was on, which is the submitter's —
+              // matching someone else's utlägg means offering their
+              // transactions, and the route refuses any other.
+              cardHolderId={expense.submitterId}
               canMatch={can.canMatch}
               matching={mutations.matching}
               onMatch={mutations.match}

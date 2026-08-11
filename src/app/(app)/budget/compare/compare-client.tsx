@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
@@ -78,23 +78,30 @@ export function CompareClient({
       description={t("description")}
       back={{ href: "/budget", label: tNav("budget") }}
       width="content"
-      action={
-        <Combobox
-          options={options}
-          value=""
-          onChange={(v) => v && setIds([...ids, v])}
-          placeholder={t("addBudget")}
-          searchPlaceholder={t("searchBudget")}
-          emptyText={t("noMoreBudgets")}
-          aria-label={t("addBudgetAria")}
-          className="w-64"
-        />
-      }
     >
-      {n < 2 ? (
-        <EmptyNote size="page">{t("pickTwo")}</EmptyNote>
-      ) : (
-        <Card>
+      {/* The picker sits on the card it fills rather than in the page header,
+          and the card is rendered even before there is anything to compare —
+          reaching two budgets is what the picker is for, so it cannot be behind
+          the same condition as the table. */}
+      <Card>
+        <CardHeader
+          title={t("included")}
+          action={
+            <Combobox
+              options={options}
+              value=""
+              onChange={(v) => v && setIds([...ids, v])}
+              placeholder={t("addBudget")}
+              searchPlaceholder={t("searchBudget")}
+              emptyText={t("noMoreBudgets")}
+              aria-label={t("addBudgetAria")}
+              className="w-64"
+            />
+          }
+        />
+        {n < 2 ? (
+          <EmptyNote>{t("pickTwo")}</EmptyNote>
+        ) : (
           <TableScroll minWidth="min-w-[38rem]">
             <table className="w-full text-sm">
               <thead>
@@ -143,8 +150,8 @@ export function CompareClient({
               </tbody>
             </table>
           </TableScroll>
-        </Card>
-      )}
+        )}
+      </Card>
     </PageShell>
   );
 }

@@ -286,7 +286,14 @@ function ComboboxBase({
         <div
           ref={panelRef}
           style={menuStyle()}
-          className="z-50 overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
+          // Above everything, dialogs included. The menu is portalled to
+          // <body>, so it shares a stacking context with the confirm dialog and
+          // the modals (both z-[200]) — at z-50 a field inside one of them
+          // opened its options *behind* the dialog they belong to. It cannot
+          // wrongly cover something else, because a menu only stays open while
+          // its own trigger is on top: an outside mousedown closes it, which is
+          // how anything above it would have been opened in the first place.
+          className="z-[210] overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
         >
           <div className="border-b border-border p-2">
             <input

@@ -2,7 +2,7 @@
 // section cards, cost centres, result units and their prefixes, the Fortnox
 // connection, and payout details.
 import { z } from "zod";
-import { Clearable, Id, NonEmpty, Trimmed, UpperCode, Year } from "./common";
+import { Clearable, Id, NonEmpty, Trimmed, UpperCode } from "./common";
 
 /** POST /api/cards — register a section card. */
 export const CreateCard = z.object({
@@ -82,9 +82,18 @@ export const FortnoxSettings = z.object({
 });
 export type FortnoxSettings = z.infer<typeof FortnoxSettings>;
 
-/** POST /api/fortnox/sync — pull the ledger. */
+/**
+ * POST /api/fortnox/sync — pull the ledger.
+ *
+ * `financialYearId` is Fortnox's own id for a financial year — a small integer
+ * like 9, not a calendar year. It was called `year` and validated as one, which
+ * meant every per-year sync button on the settings screen was refused: the
+ * button sends the id it has (FortnoxFinancialYear.id, which is Fortnox's), and
+ * 9 is not between 1900 and 2200. The name is the fix as much as the bounds
+ * are — `syncLedger` and the CLI's `--year` flag have always meant the id.
+ */
 export const FortnoxSync = z.object({
   scope: z.enum(["current", "all"]).default("current"),
-  year: Year.optional(),
+  financialYearId: z.int().positive().optional(),
 });
 export type FortnoxSync = z.infer<typeof FortnoxSync>;

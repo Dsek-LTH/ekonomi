@@ -7,7 +7,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconPlus, IconCheck } from "@/components/ui/icons";
-import { SegmentedControl, type SegOption } from "@/components/ui/segmented-control";
+import type { CollectionOption } from "@/components/ui/collection-switch";
 import { DataTable, type Column, type SelectFilter } from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
 import {
@@ -25,8 +25,6 @@ import type { RowPage } from "@/lib/data/list-query";
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 
-
-type ScopeFilter = "MINE" | "ALL";
 
 export function ExpensesClient({
   page,
@@ -47,7 +45,7 @@ export function ExpensesClient({
 
   // `t` is stable per locale, so these are built once rather than per render —
   // a fresh `columns` array would also defeat DataTable's memo.
-  const SCOPE_OPTS: SegOption<ScopeFilter>[] = useMemo(() => [
+  const SCOPE_OPTS: CollectionOption[] = useMemo(() => [
     { value: "MINE", label: t("scope.mine") },
     { value: "ALL", label: t("scope.all") },
   ], [t]);
@@ -131,22 +129,20 @@ export function ExpensesClient({
 
   return (
     <PageShell
-      title={showOwnOnly ? t("titleOwn") : t("titleAll")}
+      // Fixed, whichever scope is showing: the track below says which of the
+      // two you are on, and a heading that said it too would be the same word
+      // twice on one screen.
+      title={t("title")}
       description={t("description")}
-      action={
-        <div className="flex flex-wrap items-center gap-3">
-          {canToggleScope && (
-            <SegmentedControl
-              options={SCOPE_OPTS}
-              value={showOwnOnly ? "MINE" : "ALL"}
-              onChange={(v) => controls.setView(v)}
-            />
-          )}
-          <ButtonLink href="/expenses/new">
-            <IconPlus className="size-4" />
-            {t("new")}
-          </ButtonLink>
-        </div>
+      collections={
+        canToggleScope
+          ? {
+              label: t("scopeLabel"),
+              value: showOwnOnly ? "MINE" : "ALL",
+              options: SCOPE_OPTS,
+              onChange: (v) => controls.setView(v),
+            }
+          : undefined
       }
     >
       {page.total === 0 && !narrowed ? (
@@ -167,6 +163,19 @@ export function ExpensesClient({
             rows={page.rows}
             controls={controls}
             filter={STATUS_FILTER}
+            // On the list's own toolbar rather than in the page header: it adds
+            // a row to what is below it, so that is where it lives.
+            action={
+              // Outlined rather than filled: it shares this bar with the search
+              // box and the status filter, and the page's subject is the list
+              // below them — see `accentOutline` in components/ui/button.tsx.
+              // The empty state's copy of this button keeps the fill, because
+              // there it is the only thing on the screen to do.
+              <ButtonLink href="/expenses/new" variant="accentOutline">
+                <IconPlus className="size-4" />
+                {t("new")}
+              </ButtonLink>
+            }
             searchPlaceholder={t("searchPlaceholder")}
             rowKey={(e) => e.id}
             rowHref={(e) => `/expenses/${e.id}`}

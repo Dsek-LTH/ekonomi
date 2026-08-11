@@ -326,28 +326,6 @@ export default function LedgerClient({
           ? ` ${t("lastSynced", { time: dateTime(selectedYear.lastSyncAt) })}`
           : ""
       }`}
-      action={
-        hasPanel ? (
-          <div className="flex gap-2 print:hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={exportCsv}
-              disabled={!report || report.groups.length === 0}
-            >
-              {t("exportCsv")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.print()}
-              disabled={!report || report.groups.length === 0}
-            >
-              {t("print")}
-            </Button>
-          </div>
-        ) : undefined
-      }
     >
 
       {hasPanel && (
@@ -382,6 +360,18 @@ export default function LedgerClient({
             showSummary={!panelOnScreen}
             onEditParameters={() =>
               panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+            action={
+              report && report.groups.length > 0 ? (
+                <>
+                  <Button variant="secondary" size="sm" onClick={exportCsv}>
+                    {t("exportCsv")}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => window.print()}>
+                    {t("print")}
+                  </Button>
+                </>
+              ) : undefined
             }
             count={
               filtered?.filtered ? (

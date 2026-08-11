@@ -73,7 +73,15 @@ export type MatchExpense = z.infer<typeof MatchExpense>;
 export const VoucherLineInput = z.object({
   account: Trimmed.default(""),
   accountName: Trimmed.default(""),
-  description: Trimmed.optional(),
+  // Clearable like the cost centre beside it, and for the same reason: a row
+  // with nothing written on it sends null, and "no description" is not a
+  // malformed request. It was `Trimmed.optional()`, which accepts a string or
+  // the key being absent but not the null a cleared field actually sends — so
+  // booking an utlägg whose second row had no text was refused outright, with
+  // `lines.1.description` as the only clue. Both ends already agreed on the
+  // meaning: the route stores `description || null`, and the column is
+  // nullable. Only the schema disagreed.
+  description: Clearable(Trimmed).optional(),
   costCenterCode: Clearable(Trimmed).optional(),
   debit: Ore.min(0).default(0),
   credit: Ore.min(0).default(0),

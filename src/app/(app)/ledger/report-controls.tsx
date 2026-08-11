@@ -236,6 +236,7 @@ export function ReportBar({
   showSummary,
   onEditParameters,
   count,
+  action,
 }: {
   view: ViewOptions;
   onView: (patch: Partial<ViewOptions>) => void;
@@ -246,6 +247,16 @@ export function ReportBar({
   showSummary: boolean;
   onEditParameters: () => void;
   count: React.ReactNode;
+  /**
+   * What you can do with the report — export it, print it.
+   *
+   * Here rather than in the page header, which says what you are looking at and
+   * not what you can do to it (components/page-shell.tsx). It also means the
+   * two are absent until there is a report to act on, instead of sitting at the
+   * top of the page greyed out, which is the rule the chips above already
+   * follow.
+   */
+  action?: React.ReactNode;
 }) {
   const t = useTranslations("ledger");
   return (
@@ -303,6 +314,8 @@ export function ReportBar({
         <div className="ml-auto shrink-0 whitespace-nowrap text-sm text-muted">
           {count}
         </div>
+
+        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
     </div>
   );

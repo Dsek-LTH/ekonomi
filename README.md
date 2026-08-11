@@ -273,6 +273,7 @@ see `src/auth.ts`.
 | `pnpm lint` | ESLint |
 | `pnpm db:up` / `db:down` | Postgres + MinIO containers |
 | `pnpm app:up` / `app:down` / `app:logs` | The whole stack in Docker, app included |
+| `pnpm intakt:build` | Rebuild the intakt container after changing its Go source |
 | `pnpm db:generate` | Regenerate the Prisma client |
 | `pnpm db:migrate` / `db:reset` | Migrations |
 | `pnpm db:seed` | Seed data |

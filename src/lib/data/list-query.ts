@@ -55,6 +55,17 @@ const one = (v: string | string[] | undefined): string =>
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Is this a date a filter can be run on — a whole YYYY-MM-DD?
+ *
+ * Exported because both ends of the round trip have to agree about it. This
+ * file drops anything else on the way *in* (see `from`/`to` below); the
+ * controls that write the URL have to hold the same line on the way out, or a
+ * half-typed date is written to an address that then reads back as no date at
+ * all, and the character you just typed disappears as you type it.
+ */
+export const isWholeDate = (v: string) => ISO_DATE.test(v);
+
+/**
  * Read a list's state out of a URL.
  *
  * Every field falls back to its default rather than rejecting: a URL is

@@ -99,12 +99,22 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
     {
       key: "compare",
       header: "",
-      className: "w-10",
+      className: "w-10 align-middle",
       // On a phone it rides with the buttons at the foot of the card; there is
       // no checkbox column there to put it in.
       mobile: "actions",
       cell: (b) => (
-        <span className="relative">
+        // `z-10` because the row is a link: DataTable stretches the title
+        // cell's `before:` over the whole row, and this cell comes *earlier* in
+        // the row than that link — so with both at the auto stacking level the
+        // overlay won on tree order, and ticking a budget opened it instead.
+        // (The action buttons on other lists sit in the last column, after the
+        // link, which is why this only ever bit here.)
+        //
+        // `flex` rather than a bare span: a checkbox is an inline box and sits
+        // on the cell's text baseline with the line's descender space beneath
+        // it, which is what left it riding high against the two-line name.
+        <span className="relative z-10 flex items-center">
           <input
             type="checkbox"
             checked={picked.includes(b.id)}
@@ -178,25 +188,6 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
     <PageShell
       title={t("title")}
       description={t("description")}
-      action={admin ? (
-        // Not a form in a dropdown: two ways to start, each of them one click.
-        <Menu label={t("new")} icon={<IconPlus className="size-4" />} loading={pending === "create"}>
-          <MenuItem onClick={createEmpty}>{t("newEmpty", { year: String(thisYear) })}</MenuItem>
-          {budgets.length > 0 && (
-            <>
-              <MenuSeparator />
-              <MenuLabel>{t("copyExisting")}</MenuLabel>
-              {budgets.map((b) => (
-                <MenuItem key={b.id} onClick={() => copyBudget(b)}>
-                  <span className="tabular-nums text-muted">{b.year}</span>
-                  <span className="truncate">{b.name}</span>
-                </MenuItem>
-              ))}
-              <MenuNote>{t("basedOnHint")}</MenuNote>
-            </>
-          )}
-        </Menu>
-      ) : undefined}
     >
       <Card>
         <CardHeader
@@ -226,6 +217,34 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
           columns={columns}
           rows={budgets}
           controls={controls}
+          // On the list's toolbar: it adds a budget to the list under it.
+          action={
+            admin ? (
+              // Not a form in a dropdown: two ways to start, each one click.
+              <Menu
+                label={t("new")}
+                icon={<IconPlus className="size-4" />}
+                loading={pending === "create"}
+              >
+                <MenuItem onClick={createEmpty}>
+                  {t("newEmpty", { year: String(thisYear) })}
+                </MenuItem>
+                {budgets.length > 0 && (
+                  <>
+                    <MenuSeparator />
+                    <MenuLabel>{t("copyExisting")}</MenuLabel>
+                    {budgets.map((b) => (
+                      <MenuItem key={b.id} onClick={() => copyBudget(b)}>
+                        <span className="tabular-nums text-muted">{b.year}</span>
+                        <span className="truncate">{b.name}</span>
+                      </MenuItem>
+                    ))}
+                    <MenuNote>{t("basedOnHint")}</MenuNote>
+                  </>
+                )}
+              </Menu>
+            ) : undefined
+          }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(b) => b.id}
           rowHref={(b) => `/budget/${b.id}`}

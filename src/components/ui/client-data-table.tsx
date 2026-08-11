@@ -15,6 +15,8 @@
 // Anything paged by the database uses DataTable directly with
 // `useUrlTableControls`.
 import { useMemo } from "react";
+
+import { isWholeDate } from "@/lib/data/list-query";
 import {
   DataTable,
   type Column,
@@ -58,8 +60,13 @@ function buildRowFilter<T>(
     cols.flatMap((c) => (c[flag] && c.value ? [c.value] : []));
 
   const search = q ? pick("searchable") : [];
-  const dates = from || to ? pick("dateRange") : [];
-  const within = (v: string) => (!from || v >= from) && (!to || v <= to);
+  // Half-typed dates are ignored, the same way parseListQuery drops them from a
+  // URL: "2026-0" as an upper bound excludes the whole of 2026, so a list would
+  // empty itself between the fifth keystroke and the tenth.
+  const after = isWholeDate(from) ? from : "";
+  const before = isWholeDate(to) ? to : "";
+  const dates = after || before ? pick("dateRange") : [];
+  const within = (v: string) => (!after || v >= after) && (!before || v <= before);
   const tabPred = activeTab?.predicate;
   const picked = (filter?.options ?? [])
     .filter((o) => controls.picks.includes(o.value))
@@ -78,6 +85,7 @@ export function ClientDataTable<T>({
   controls,
   tabs,
   filter,
+  action,
   searchPlaceholder,
   rowKey,
   rowClassName,
@@ -90,6 +98,8 @@ export function ClientDataTable<T>({
   controls: ClientControls;
   tabs?: ClientTabFilter<T>;
   filter?: ClientSelectFilter<T>;
+  /** What you can do to this list — see DataTable's own `action`. */
+  action?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
@@ -139,6 +149,7 @@ export function ClientDataTable<T>({
       controls={{ ...controls, server: true, total: data.length }}
       tabs={plainTabs}
       filter={plainFilter}
+      action={action}
       searchPlaceholder={searchPlaceholder}
       rowKey={rowKey}
       rowClassName={rowClassName}

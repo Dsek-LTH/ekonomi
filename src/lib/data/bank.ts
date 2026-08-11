@@ -46,6 +46,31 @@ export async function getBankTransactions(
   return txns.map(toBankTransaction);
 }
 
+/**
+ * The named transactions and nothing else.
+ *
+ * For a screen that must show the row a record points at without being allowed
+ * to browse: the utlägg detail page shows what an expense was matched to
+ * whoever is looking, but only offers the picker to someone who may change it.
+ *
+ * Its own function rather than `getBankTransactions({ alsoIds })`, because that
+ * call reads as "these as well as nothing" and means "the whole feed" — the
+ * filter there is the holder, and `alsoIds` only widens it. An empty list in,
+ * an empty list out; there is no way to ask this one for everything.
+ */
+export async function getBankTransactionsByIds(
+  ids: readonly string[],
+): Promise<BankTransaction[]> {
+  const wanted = ids.filter(Boolean);
+  if (wanted.length === 0) return [];
+  const txns = await prisma.bankTransaction.findMany({
+    where: { id: { in: [...wanted] } },
+    orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+    include: { matchedExpense: true, card: { include: { holder: true } } },
+  });
+  return txns.map(toBankTransaction);
+}
+
 // One row as the UI shape. Shared by the paged screen query and the unpaged
 // loader above, so the two can't disagree about what a transaction is.
 type BankRow = {

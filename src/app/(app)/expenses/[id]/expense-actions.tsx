@@ -4,8 +4,9 @@ import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
-import { IconAlert, IconCheck, IconUndo } from "@/components/ui/icons";
+import { IconCheck, IconUndo } from "@/components/ui/icons";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import type { FortnoxStatus } from "@/lib/domain/types";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
@@ -254,18 +255,10 @@ export function ExpenseActionNotice({
   if (notes.length === 0) return null;
 
   return (
-    <div
-      role="status"
-      className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3"
-    >
-      <IconAlert className="mt-px size-4 shrink-0 text-warning" />
-      <div className="min-w-0 space-y-1">
-        {notes.map((note) => (
-          <p key={note} className="text-sm text-foreground">
-            {note}
-          </p>
-        ))}
-      </div>
-    </div>
+    <Notice>
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
+      ))}
+    </Notice>
   );
 }

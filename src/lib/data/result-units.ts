@@ -10,11 +10,19 @@ import type { ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 // each one currently owns. The cost centres are resolved from the prefixes, so
 // the list always reflects what a code would actually match right now.
 export async function getResultUnits(): Promise<ResultUnit[]> {
-  const [resultUnits, costCenters, prefixes] = await Promise.all([
+  const [resultUnits, costCenters, prefixes, accounts] = await Promise.all([
     prisma.resultUnit.findMany({
       include: {
         prefixes: { orderBy: { value: "asc" } },
         owners: { include: { user: { select: { id: true, name: true } } } },
+        // The income half, read here so a unit is one object on the screen that
+        // edits it. Nothing outside the income section reads it.
+        income: {
+          include: {
+            defaultCostCenter: { select: { id: true, code: true } },
+            prefixes: { orderBy: { code: "asc" } },
+          },
+        },
       },
       orderBy: { name: "asc" },
     }),
@@ -23,7 +31,11 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
       orderBy: { code: "asc" },
     }),
     getPrefixes(),
+    // Only to name the accounts the product prefixes point at — and to let the
+    // screen say when one is not in the chart at all.
+    prisma.account.findMany({ select: { number: true, name: true } }),
   ]);
+  const accountName = new Map(accounts.map((a) => [a.number, a.name]));
 
   const membersOf = new Map<string, ResultUnitCostCenter[]>();
   for (const cc of costCenters) {
@@ -46,6 +58,21 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
       costCenters: members,
       // Retired cost centres shouldn't inflate the headline count.
       costCenterCount: members.filter((cc) => cc.active).length,
+      income: c.income && {
+        id: c.income.id,
+        key: c.income.key,
+        description: c.income.description,
+        defaultCostCenterId: c.income.defaultCostCenter?.id ?? null,
+        defaultCostCenterCode: c.income.defaultCostCenter?.code ?? null,
+        active: c.income.active,
+        prefixes: c.income.prefixes.map((p) => ({
+          id: p.id,
+          code: p.code,
+          account: p.account,
+          accountName: accountName.get(p.account) ?? "",
+          isFallback: p.isFallback,
+        })),
+      },
     };
   });
 }

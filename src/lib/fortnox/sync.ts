@@ -303,7 +303,8 @@ export interface LedgerSyncResult {
 // specific `year` (Fortnox FY id) to sync just that one.
 export async function syncLedger(opts: {
   scope: "current" | "all";
-  year?: number;
+  /** Fortnox's id for one financial year — not a calendar year. */
+  financialYearId?: number;
 }): Promise<LedgerSyncResult> {
   const token = await getServiceToken();
   const years = await syncFinancialYears(token);
@@ -318,8 +319,8 @@ export async function syncLedger(opts: {
   }
 
   let targets: FortnoxFinancialYear[];
-  if (opts.year != null) {
-    targets = years.filter((y) => y.id === opts.year);
+  if (opts.financialYearId != null) {
+    targets = years.filter((y) => y.id === opts.financialYearId);
   } else if (opts.scope === "current") {
     const today = new Date().toISOString().slice(0, 10);
     const containing = years.find((y) => y.fromDate <= today && today <= y.toDate);

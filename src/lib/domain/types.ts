@@ -13,6 +13,15 @@ export type Role =
 
 export type PaymentType = "CARD" | "REIMBURSEMENT";
 
+// Where a day's takings came from. ZETTLE_FEE is Zettle's own transaction
+// fees, which are a cost rather than income and book the other way round.
+export type IncomeSource = "ZETTLE" | "ZETTLE_FEE" | "SWISH";
+
+// A report's life: fetched, then booked, and finally pushed to Fortnox. A day
+// you decide not to book has no state of its own — it stays a draft until the
+// next fetch clears the working set (see createSalesBatch).
+export type IncomeReportStatus = "DRAFT" | "BOOKED" | "EXPORTED";
+
 export type ExpenseStatus =
   | "DRAFT"
   | "PENDING_MATCH"
@@ -68,6 +77,30 @@ export interface ResultUnit {
   // The cost centres the prefixes currently match, resolved live.
   costCenters: ResultUnitCostCenter[];
   costCenterCount: number; // active ones only
+  /**
+   * The income half, for a unit that takes money in. Null for one that does not
+   * — and null throughout when the income module is switched off, so nothing on
+   * the result-unit screen depends on income existing.
+   */
+  income: ResultUnitIncome | null;
+}
+
+/** What a result unit needs in order to take money in. See ResultUnitIncome. */
+export interface ResultUnitIncome {
+  id: string;
+  /**
+   * What intakt groups the unit's reports by. Derived from the name when the
+   * profile is created and never edited after: the name is prose someone may
+   * reword, this is an identifier another program holds.
+   */
+  key: string;
+  /** The verifikationstext a booked day carries. */
+  description: string;
+  defaultCostCenterId: string | null;
+  defaultCostCenterCode: string | null;
+  active: boolean;
+  /** Product-name prefixes: "s1 - Öl" → account 3011. */
+  prefixes: { id: string; code: string; account: string; accountName: string; isFallback: boolean }[];
 }
 
 export interface CostAllocation {

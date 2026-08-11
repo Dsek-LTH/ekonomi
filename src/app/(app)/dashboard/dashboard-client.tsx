@@ -120,12 +120,6 @@ export function DashboardClient({
   return (
     <PageShell
       title={t("greeting", { name: firstName })}
-      action={
-        <ButtonLink href="/expenses/new">
-          <IconPlus className="size-4" />
-          {t("newExpense")}
-        </ButtonLink>
-      }
     >
       {isNewcomer ? (
         <FirstRun />
@@ -149,16 +143,27 @@ export function DashboardClient({
           </Card>
 
           <Card>
+            {/* Where "nytt utlägg" lives now that the page header carries only
+                what this page is: on the card of your own utlägg, which is what
+                a new one joins. In the header rather than on the table's
+                toolbar below, because that table is not rendered at all when
+                you have none — and having none is exactly when you want it. */}
             <CardHeader
               title={t("mineTitle")}
               action={
-                <Link
-                  href="/expenses"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
-                >
-                  {t("allExpenses")}
-                  <IconChevronRight className="size-4" />
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/expenses"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+                  >
+                    {t("allExpenses")}
+                    <IconChevronRight className="size-4" />
+                  </Link>
+                  <ButtonLink href="/expenses/new" size="sm">
+                    <IconPlus className="size-4" />
+                    {t("newExpense")}
+                  </ButtonLink>
+                </div>
               }
             />
             {mine.length ? (

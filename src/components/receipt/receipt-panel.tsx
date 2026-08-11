@@ -146,13 +146,19 @@ export function ReceiptPanelProvider({
 }
 
 /**
- * Declares the receipt the panel should be showing while this page is mounted.
- * Renders nothing. A null id takes the panel away entirely, rather than leaving
- * the last page's receipt standing — unless `onFile` is given, in which case an
- * empty panel is an invitation to upload one.
+ * Declares the document the panel should be showing while this page is mounted.
+ * Renders nothing. Nothing to show takes the panel away entirely, rather than
+ * leaving the last page's receipt standing — unless `onFile` is given, in which
+ * case an empty panel is an invitation to upload one.
+ *
+ * Three ways to say where the file is, in the order they win: `previewUrl` (one
+ * the page is still holding), `documentUrl` (an address the page knows), and
+ * `receiptId` (a receipt in the archive, whose address is this component's to
+ * build). A page gives whichever one it has.
  */
 export function ReceiptPanelSource({
-  receiptId,
+  receiptId = null,
+  documentUrl,
   previewUrl,
   mimeType,
   filename,
@@ -161,7 +167,14 @@ export function ReceiptPanelSource({
   emptyTitle,
   emptyDescription,
 }: {
-  receiptId: string | null;
+  receiptId?: string | null;
+  /**
+   * A stored document that is not a receipt, addressed outright — the rendered
+   * intäktsräkning behind an income report, served by its own route. The panel
+   * shows whatever is at the address; being a receipt was never the part that
+   * mattered to it.
+   */
+  documentUrl?: string | null;
   /**
    * A receipt the page has but the archive doesn't yet — an object URL for a
    * file just picked. Shown ahead of `receiptId`, so replacing a stored receipt
@@ -189,7 +202,8 @@ export function ReceiptPanelSource({
   });
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
-  const src = previewUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
+  const src =
+    previewUrl ?? documentUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
 
   useEffect(() => {
     if (!src && !accepts && !emptyTitle) {

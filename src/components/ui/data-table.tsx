@@ -9,7 +9,7 @@ import { EmptyNote } from "./empty-state";
 import { DateInput } from "./field";
 import { SearchInput } from "./search-input";
 import { IconChevronLeft, IconChevronRight } from "./icons";
-import { SegmentedControl } from "./segmented-control";
+import { FilterTabs } from "./filter-tabs";
 import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState } from "@/lib/data/use-list-query";
 
 // The table every data list is drawn with: the filter bar (search / date range
@@ -147,6 +147,7 @@ export function DataTable<T>({
   controls,
   tabs,
   filter,
+  action,
   searchPlaceholder,
   rowKey,
   rowClassName,
@@ -164,6 +165,19 @@ export function DataTable<T>({
   tabs?: TabFilter;
   /** Dropdown filter, OR-ed across the picked values. */
   filter?: SelectFilter;
+  /**
+   * What you can do to this list — "Nytt utlägg", "Importera CSV". At the right
+   * end of the toolbar, and the only place in the app a list's own action is
+   * put.
+   *
+   * Here rather than in the page header, where these used to live: a header
+   * says what you are looking at, and a create button is not that. It also
+   * stopped being true that the header could hold them — one page's header
+   * action was a create button, another's was a combobox, a third's was a row
+   * of buttons acting on a single object, and one slot holding all three is a
+   * slot that means nothing. Next to the search box, it means "this list".
+   */
+  action?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   // Styles the whole row from its data — a retired row dimmed, say. Applies to
@@ -205,67 +219,80 @@ export function DataTable<T>({
 
   return (
     <>
-      {(hasText || hasDate || activeTab || filter) && (
-        <div className="flex flex-col gap-3 border-b border-border px-inset py-3">
-          {tabs && tabs.length > 0 && (
-            <SegmentedControl
-              options={tabs.map((o) => ({ value: o.value, label: o.label }))}
-              value={activeTab?.value ?? ""}
-              onChange={controls.setTab}
-              size="sm"
+      {/* Which slice of the list, on its own hairline at the top of the card —
+          the underline register (components/ui/filter-tabs.tsx). Pills here
+          used to read exactly like the "Mina / Alla" pills in the page header a
+          few pixels above, and those two ask different questions: that one
+          changes which collection you are looking at, this one narrows the one
+          you are in. */}
+      {tabs && tabs.length > 0 && (
+        <div className="border-b border-border px-inset">
+          <FilterTabs
+            options={tabs.map((o) => ({ value: o.value, label: o.label }))}
+            value={activeTab?.value ?? ""}
+            onChange={controls.setTab}
+            aria-label={t("tabsLabel")}
+          />
+        </div>
+      )}
+
+      {(hasText || hasDate || filter || action) && (
+        <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
+          {/* Ahead of the search box: it names which kinds of row you're looking
+              at, which is the coarser question, and it keeps a fixed width while
+              the search takes whatever is left. */}
+          {filter && (
+            <MultiCombobox
+              className="sm:w-52 sm:shrink-0"
+              options={filter.options}
+              values={controls.picks}
+              onChange={controls.setPicks}
+              placeholder={filter.label}
+              aria-label={filter.label}
             />
           )}
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            {/* Ahead of the search box: it names which slice of the list you're
-                looking at, which is the coarser question, and it keeps a fixed
-                width while the search takes whatever is left. */}
-            {filter && (
-              <MultiCombobox
-                className="sm:w-52 sm:shrink-0"
-                options={filter.options}
-                values={controls.picks}
-                onChange={controls.setPicks}
-                placeholder={filter.label}
-                aria-label={filter.label}
-              />
-            )}
 
-            {hasText && (
-              <SearchInput
-                className="sm:min-w-48 sm:flex-1"
-                value={controls.query}
-                placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-                onChange={(e) => controls.setQuery(e.target.value)}
-              />
-            )}
+          {hasText && (
+            <SearchInput
+              className="sm:min-w-48 sm:flex-1"
+              value={controls.query}
+              placeholder={searchPlaceholder ?? t("searchPlaceholder")}
+              onChange={(e) => controls.setQuery(e.target.value)}
+            />
+          )}
 
-            {hasDate && (
-              // The two dates stay on one line together at every width — they
-              // read as a range — but share it rather than each claiming 10rem,
-              // which is what used to push the bar past a phone's screen.
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
-                  <DateInput
-                    size="sm"
-                    value={controls.dateFrom}
-                    onChange={(e) => controls.setDateFrom(e.target.value)}
-                    title={t("dateFromTitle")}
-                    placeholder={t("dateFrom")}
-                  />
-                </div>
-                <span className="text-xs text-muted">–</span>
-                <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
-                  <DateInput
-                    size="sm"
-                    value={controls.dateTo}
-                    onChange={(e) => controls.setDateTo(e.target.value)}
-                    title={t("dateToTitle")}
-                    placeholder={t("dateTo")}
-                  />
-                </div>
+          {hasDate && (
+            // The two dates stay on one line together at every width — they
+            // read as a range — but share it rather than each claiming 10rem,
+            // which is what used to push the bar past a phone's screen.
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
+                <DateInput
+                  size="sm"
+                  value={controls.dateFrom}
+                  onChange={(e) => controls.setDateFrom(e.target.value)}
+                  title={t("dateFromTitle")}
+                  placeholder={t("dateFrom")}
+                />
               </div>
-            )}
-          </div>
+              <span className="text-xs text-muted">–</span>
+              <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
+                <DateInput
+                  size="sm"
+                  value={controls.dateTo}
+                  onChange={(e) => controls.setDateTo(e.target.value)}
+                  title={t("dateToTitle")}
+                  placeholder={t("dateTo")}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Last, and pushed to the far end on a wide screen — the search box
+              is what takes the space between. On a phone the bar is a column
+              and this is simply the row after the search, which is where a
+              button that adds to the list below belongs anyway. */}
+          {action && <div className="flex items-center gap-2 sm:ml-auto">{action}</div>}
         </div>
       )}
 
@@ -332,7 +359,17 @@ export function DataTable<T>({
                             `before:` stretches its hit area over the whole row,
                             so clicking anywhere still opens it — the mouse
                             behaviour the old row handler had, now provided by
-                            the same element the keyboard uses. */}
+                            the same element the keyboard uses.
+
+                            A cell with a control of its own has to climb over
+                            that overlay: `relative z-10` on whatever wraps it.
+                            Positioned things at the auto level paint in tree
+                            order, so a control *after* this cell is already
+                            above it and one *before* it is not — which is why a
+                            checkbox in the first column silently stopped being
+                            clickable while action buttons in the last never
+                            did. See the compare column in
+                            app/(app)/budget/budget-list-client.tsx. */}
                         {href && c === slots.title ? (
                           <Link
                             href={href}

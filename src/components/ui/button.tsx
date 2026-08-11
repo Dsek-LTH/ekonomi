@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "dangerOutline";
+type Variant = "primary" | "secondary" | "ghost" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
 // The section's pink, flat and unmodified, with a near-black label — the same
@@ -21,6 +21,17 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     "bg-background text-foreground border border-border hover:bg-surface active:scale-[0.98]",
   ghost: "text-accent hover:bg-accent-soft",
+  // The section's pink as an edge rather than a fill: a create button that sits
+  // in a toolbar beside a search box, where a filled one is the loudest thing on
+  // a page whose subject is the list under it. Same shape as the dashed "add"
+  // controls in Inställningar, one step firmer.
+  //
+  // `accent` and not `brand`, for the reason the hairline above exists: the
+  // brand pink is 2.5:1 on white and a border owes 3:1, so the fill's colour
+  // cannot draw its own boundary. Accent is the pink that can — it is the one
+  // this app already writes text and links in.
+  accentOutline:
+    "bg-background text-accent border border-accent hover:bg-accent-soft active:scale-[0.98]",
   danger:
     "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
   // Destructive but not the primary path — sign out, delete an utlägg.

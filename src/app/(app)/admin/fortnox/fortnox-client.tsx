@@ -119,7 +119,9 @@ export function FortnoxClient({
   async function syncLedger(target: number | "current") {
     const data = await mutate("/api/fortnox/sync", {
       key: `ledger-${target}`,
-      body: target === "current" ? { scope: "current" } : { year: target },
+      // Fortnox's financial-year id, which is what FortnoxFinancialYear.id
+      // holds and what syncLedger filters on.
+      body: target === "current" ? { scope: "current" } : { financialYearId: target },
       error: tCostCenters("syncFailed"),
     });
     if (!data) return;

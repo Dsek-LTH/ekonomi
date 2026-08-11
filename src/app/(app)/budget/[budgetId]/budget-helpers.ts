@@ -1,5 +1,4 @@
 // Pure helpers + constants shared across the budget sheets.
-import type { DragEvent } from "react";
 import { effectiveKind, sheetKey } from "@/lib/budget";
 import { isActive, resultImpact } from "@/lib/budget/changes";
 import { compareKey, type Totals } from "@/lib/budget/compare";
@@ -94,13 +93,9 @@ export function normalizeFormula(raw: string): string {
   return body;
 }
 
-// True while the drag pointer is still inside the element's box. Used to keep a
-// drop highlight from flashing: dragleave fires every time the pointer crosses
-// onto a child element, so we only clear the highlight when it truly leaves.
-export function insideRect(e: DragEvent): boolean {
-  const r = e.currentTarget.getBoundingClientRect();
-  return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom;
-}
+// `insideRect` used to live here. It moved to components/ui/drag.tsx when the
+// income review screen needed the same rule — it is about drag and drop rather
+// than about budgets, and two copies of it would be two things to get right.
 
 const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
 
