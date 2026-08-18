@@ -9,14 +9,32 @@ import { Card } from "./card";
 export function SidebarPanel({
   children,
   className,
+  ref,
+  width = "lg:w-64",
 }: {
   children: React.ReactNode;
   className?: string;
+  /**
+   * The panel element itself, for a screen that has to measure or move it —
+   * the budget's list is sticky and walks its own offset as the page scrolls
+   * (see lib/ui/use-sticky-follow.ts).
+   */
+  ref?: React.Ref<HTMLElement>;
+  /**
+   * Where the panel stops being a full-width list and becomes a fixed column —
+   * which is to say the breakpoint its screen stands the detail beside it at.
+   * A prop of its own rather than something to pass through `className`: `cn`
+   * joins classes instead of merging them, so an override there would leave two
+   * `lg:w-*` utilities in the attribute for Tailwind's emission order to settle.
+   * Screens that stack for longer name their own — see the income queue, which
+   * has the document panel to fit as well and waits until xl.
+   */
+  width?: string;
 }) {
   return (
-    // Below lg the master–detail screens stack, so the panel is a full-width
+    // Until then the master–detail screens stack, so the panel is a full-width
     // list above the detail rather than a 16rem column beside it.
-    <aside className={cn("w-full shrink-0 lg:w-64", className)}>
+    <aside ref={ref} className={cn("w-full shrink-0", width, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on
           a master-detail screen, and it used to be the same shape with no
           elevation — which read as the list being a level behind. */}

@@ -11,12 +11,32 @@ import { getEvaluatedBudget } from "@/lib/data/budget";
 // it. The loading lives in lib/data/budget.ts, which the page server-renders
 // from; this is the same thing over HTTP, for the client to re-fetch after a
 // write.
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+//
+// Two things can be left out of it, and the page's own re-fetch after a write
+// leaves out both:
+//
+//   ?actuals=0    the year's outcome. The ledger cannot have changed because
+//                 someone typed a figure into a budget, and reading it is the
+//                 most expensive thing here by a distance — a group-by over the
+//                 whole financial year, paid on every save.
+//   ?evaluated=0  what the formulas come to. The budget screen works those out
+//                 in the browser for every cell it commits already, so sending
+//                 them means evaluating the budget twice and putting every
+//                 line's figure in the response for one of the two.
+//
+// Both default to on, because a caller that has neither in hand — anything
+// reading a budget cold — needs them.
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate(canAccessBudget);
   if (!g.ok) return g.res;
 
-  const budget = await getEvaluatedBudget(id);
+  const q = new URL(req.url).searchParams;
+  const budget = await getEvaluatedBudget(id, {
+    actuals: q.get("actuals") !== "0",
+    evaluated: q.get("evaluated") !== "0",
+    serialize: false,
+  });
   if (!budget) return fail(404, "budget.notFound");
   return NextResponse.json(budget);
 }

@@ -59,7 +59,9 @@ refuse to run on older Node.
 | **Git** | any | `git --version` | |
 
 You do **not** need a local Postgres, a MinIO install, Authentik credentials
-or a Fortnox account to develop. Everything below runs offline.
+or a Fortnox account to develop. Everything below runs offline. Nor a
+typesetter: the utläggsräkning is rendered by a Typst build that arrives with
+`pnpm install`, so a fresh checkout renders it on the first run.
 
 ---
 

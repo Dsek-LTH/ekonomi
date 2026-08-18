@@ -71,8 +71,37 @@ export interface Budget {
   actuals?: CompareSheet[]; actualsSynced?: boolean; actualsYear?: number;
 }
 
-// A reloading API call (PATCH/POST/DELETE then refetch). Returns ok.
-export type ApiFn = (url: string, method: string, body?: unknown) => Promise<boolean>;
+/**
+ * What has been copied, and what it was. Ids rather than contents: the server
+ * has the rows, and a copy that carried its own idea of what a row is would be
+ * a second description for the paste to get wrong (see the paste route).
+ *
+ * It lives on the page rather than in a sheet, because the whole point is to
+ * cross from one cost centre to another and a sheet is unmounted the moment you
+ * leave it. `label` is what to call it in the paste hint — "3 rader", "3011".
+ */
+export type BudgetClip =
+  | { kind: "rows"; ids: string[]; label: string }
+  | { kind: "accounts"; ids: string[]; label: string };
+
+/**
+ * A write, and what it does to the budget on screen. Returns ok.
+ *
+ * `apply` is the difference between a fast write and a slow one. A create route
+ * hands back the row it made, a delete says it deleted, a reorder was this
+ * screen's own arrangement — so where the caller can say what changed, it says
+ * so and the budget is patched in place. Where it can't, it leaves `apply` off
+ * and the whole budget is read back, which is correct and costs a round trip.
+ *
+ * The patch runs before the figures are re-derived, so an applier only has to
+ * move rows about; what they come to is worked out afterwards (see recompute).
+ */
+export type ApiFn = (
+  url: string,
+  method: string,
+  body?: unknown,
+  apply?: (budget: Budget, data: unknown) => Budget,
+) => Promise<boolean>;
 
 // The page's `useMutation().mutate`, as the sheets need it: the shared write
 // path, so a rejected cell edit reports the server's reason the same way every

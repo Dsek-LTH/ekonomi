@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancelsOut } from "./matching";
+import { cancelsOut, isMatchable } from "./matching";
 
 // A bank transaction settles an utlägg only when the two cancel exactly: the
 // purchase is +250 on the utlägg and −250 in the bank.
@@ -44,5 +44,30 @@ describe("cancelsOut", () => {
     // which is far outside the tolerance.
     expect(cancelsOut(-25000, 25000)).toBe(true);
     expect(cancelsOut(-24999, 25000)).toBe(false);
+  });
+});
+
+// Who is allowed to hold a match at all. The section's card is the only payer
+// a bank row can settle for — an eget utlägg matched to one would have the
+// section paying for the purchase twice.
+describe("isMatchable", () => {
+  it("lets a card purchase account for the row on the card", () => {
+    expect(isMatchable("CARD")).toBe(true);
+  });
+
+  it("refuses an eget utlägg", () => {
+    // The bug this exists to stop: "Redovisa" on a card purchase opened the
+    // wizard with the transaction already matched, and switching the payment
+    // type to "eget utlägg" kept the match — so the member was reimbursed for
+    // money that had already left the section's card, and the purchase counted
+    // as accounted for on the way out.
+    expect(isMatchable("REIMBURSEMENT")).toBe(false);
+  });
+
+  it("refuses anything it does not recognise", () => {
+    // The routes hand it whatever is stored on the row. A payment type added
+    // later is not matchable until this says it is.
+    expect(isMatchable("")).toBe(false);
+    expect(isMatchable("card")).toBe(false);
   });
 });

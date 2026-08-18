@@ -37,34 +37,50 @@ export function insideRect(e: React.DragEvent): boolean {
  * account picker, a checkbox — and a row that is itself draggable turns every
  * imprecise click on one of those into a drag.
  *
+ * Two ways to pick something up, and the props decide which. `onDragStart` is
+ * HTML5 drag and drop, for dropping a thing onto another thing — an account
+ * onto a section, a day's lines onto a verksamhet. `onPointerDown` is a plain
+ * pointer drag, for a row that has to follow the pointer as it goes: HTML5
+ * reports where you are over, not where you are, and it never hands over the
+ * cursor's position between one row and the next.
+ *
  * The parent row must carry `group` for the hover reveal to work.
  */
 export function DragHandle({
   onDragStart,
   onDragEnd,
+  onPointerDown,
   title,
   className,
 }: {
-  onDragStart: (e: React.DragEvent) => void;
+  onDragStart?: (e: React.DragEvent) => void;
   /**
    * Fires however the drag ended — dropped, cancelled with Escape, or let go
    * over nothing. Anything that lit up while the drag was in flight has to be
    * put out here rather than on drop, which does not happen for the other two.
    */
   onDragEnd?: (e: React.DragEvent) => void;
+  /** The other kind of drag: the caller follows the pointer from here itself. */
+  onPointerDown?: (e: React.PointerEvent) => void;
   /** What is being picked up, for the tooltip. */
   title: string;
   className?: string;
 }) {
   return (
     <span
-      draggable
+      // Only for the HTML5 kind. Left on for the other, the browser's own drag
+      // starts on top of the pointer drag and the row is being moved twice.
+      draggable={onDragStart ? true : undefined}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onPointerDown={onPointerDown}
       title={title}
       aria-hidden
       className={cn(
         "cursor-grab select-none opacity-0 transition-opacity active:cursor-grabbing group-hover:opacity-100",
+        // A touch that starts on the grip is a drag, not a scroll — without
+        // this the browser takes it for panning and the row never moves.
+        onPointerDown && "touch-none",
         className,
       )}
     >

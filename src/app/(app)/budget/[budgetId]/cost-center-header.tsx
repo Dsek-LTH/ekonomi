@@ -17,13 +17,15 @@ import { sheetName } from "@/lib/budget";
 import type { CostCenter } from "@/lib/domain/types";
 import type { ApiFn, BudgetCC } from "./budget-types";
 
-export function CostCenterHeader({ cc, available, canEdit, api, onClone, onRemoved }: {
+export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyContents, onRemoved }: {
   cc: BudgetCC;
   /** Cost centres not already budgeted in this budget. */
   available: CostCenter[];
   canEdit: boolean;
   api: ApiFn;
   onClone: () => void;
+  /** Copy every account of this sheet, to be pasted into another one. */
+  onCopyContents: () => void;
   onRemoved: () => void;
 }) {
   const t = useTranslations("budget.sheet");
@@ -89,6 +91,20 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onRemov
             aria-label={t("linkToAria")}
             className="w-56"
           />
+          {/* Copying the contents, as against cloning the sheet: this one puts
+              every account on the clipboard to be pasted into a cost centre
+              that already exists. A row or a single account is copied from the
+              sheet itself with ⌘C — there is nothing to stand in for a whole
+              sheet, so it says so in words. */}
+          {cc.accounts.length > 0 && (
+            <button
+              type="button"
+              onClick={onCopyContents}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              {t("copyContents")}
+            </button>
+          )}
           {/* The copy lands unconnected — the cost centre this one holds is
               taken, and which one the copy is for is the next thing to decide. */}
           <IconButton label={t("clone")} onClick={onClone}>

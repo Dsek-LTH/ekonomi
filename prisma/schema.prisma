@@ -39,6 +39,10 @@ enum Role {
   VICE_SKATTMASTARE
   SKATTFORMAN
   RESULTATANSVARIG
+  // Runs the bar's stock. Deliberately outside the treasury roles: keeping the
+  // lagerbokföring is not bookkeeping, and the people who do it are not the
+  // people who book vouchers. See canManageStock in lib/domain/permissions.ts.
+  STOCKARE
   ORDINARIE
 }
 
@@ -125,6 +129,7 @@ model User {
   fortnoxSession       FortnoxUserSession?     @relation("FortnoxUserSession")
   resultUnitOwnerships ResultUnitOwner[]       @relation("ResultUnitOwnerUser")
   incomeBatches        IncomeBatch[]           @relation("IncomeBatchCreator")
+  stockEntries         StockEntry[]            @relation("StockEntryActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -411,10 +416,33 @@ model Expense {
   matchedTransaction   BankTransaction? @relation(fields: [matchedTransactionId], references: [id], onDelete: SetNull)
   matchedTransactionId String?          @unique
 
+  // The rendered utläggsräkning — the cover page naming who attested what,
+  // written to object storage at export. The same shape as IncomeReport's, for
+  // the same reason: it is the document that substantiates the voucher.
+  //
+  // At export rather than at booking, because that is the moment the page stops
+  // being a rendering and becomes evidence: these bytes are what Fortnox holds.
+  // Before it, the document route draws one on the way past and keeps nothing,
+  // so a cover previewed on a BOOKED utlägg always shows the attestations as
+  // they stand.
+  //
+  // The cover *only*, never the receipt merged into it. The two are stored
+  // apart and joined on the way out (lib/server/pdf-merge.ts), so the receipt's
+  // bytes are held once rather than twice — and since both objects are
+  // immutable, the merge is reproducible without archiving its result.
+  //
+  // Cleared by `unexport`, which exists precisely to amend an utlägg that has
+  // already gone over: the cover describes the version being amended.
+  documentKey      String?
+  documentFilename String?
+
   allocations  ExpenseCostAllocation[]
   receipts     Receipt[]
   events       ExpenseEvent[]
   verification Verification? // the booked voucher, once status reaches BOOKED
+  // Stock bought on this utlägg. The receipt on it is the purchase
+  // documentation the lagerbokföring would otherwise have to ask for again.
+  stockEntries StockEntry[]            @relation("StockPurchaseExpense")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -483,7 +511,13 @@ model ExpenseCostAllocation {
 }
 
 // An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
-// Expenses can be revised, so an expense may accumulate several receipts.
+//
+// One per utlägg. The relation is a list because that is how Prisma spells the
+// other side of a foreign key, not because there is ever more than one: uploading
+// is a replace, and the previous receipt's object and row go in the same
+// transaction the new one arrives in (api/expenses/[id]/receipts/route.ts). So
+// "the utlägg's receipt" and "its newest receipt" are the same thing, and code
+// that takes the newest is reading the only one.
 model Receipt {
   id        String  @id @default(cuid())
   expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
@@ -1182,4 +1216,225 @@ model IncomeLine {
   sortOrder Int @default(0)
 
   @@index([reportId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Alkohollager — the bar's stock, and the law's reason for it.
+//
+// Serving alcohol under a permit means keeping a lagerbokföring: a record of
+// what came in, what went out, and what is on the shelf, that holds up when
+// somebody asks to see it. Two things follow from that and shape everything
+// below.
+//
+// The log is the record. `StockEntry` is append-only — never updated, never
+// deleted — and what is on hand is the sum of it, not a column somebody edits.
+// A quantity that can be quietly changed is a quantity nobody can defend; a log
+// that can be replayed is. Mistakes are corrected by a new row naming the row it
+// corrects (`correctsId`), which is also how a stocktake's discrepancy is
+// written.
+//
+// And the measurement is kept, not just its conclusion. Spirits are measured by
+// weighing the bottle, and grams become millilitres through the product's own
+// calibration (see lib/stock/measure.ts). The grams are stored, so a tare
+// corrected later can be applied to every historical figure. Store only the
+// derived volume and a wrong constant is baked into the legal record for good.
+
+/// How a product's stock is counted.
+enum StockKind {
+  /// Cans, bottles of beer, wares: whole units, and a delivery carries a
+  /// best-before date.
+  UNIT
+  /// Spirits: sealed bottles are counted, opened ones are weighed. Two numbers
+  /// per product — how many are open, and how much is in them together.
+  VOLUME
+}
+
+/// The drink types a restaurangrapport is broken down by, named as
+/// Folkhälsomyndigheten names them. Not our vocabulary to choose: the report is
+/// filed against these words, and a category we invented would have to be
+/// mapped onto them by hand every year.
+///
+/// Purchase volumes are required for the first five. FOLKOL and LATTDRYCK
+/// appear in the turnover section only, and OVRIGT is everything this feature
+/// tracks that the report never asks about — wares, cleaning supplies, the
+/// glassware.
+enum DrinkCategory {
+  SPRITDRYCK
+  VIN
+  ANDRA_JASTA
+  STARKOL
+  ALKOHOLDRYCKSLIKNANDE
+  FOLKOL
+  LATTDRYCK
+  OVRIGT
+}
+
+/// Why stock moved. Kept apart because the report keeps them apart: what was
+/// bought is reported, what was served is turnover, and what was spilled is
+/// neither.
+enum StockEntryKind {
+  /// Bought in. The only kind whose volume reaches the restaurangrapport's
+  /// "inköpt volym".
+  PURCHASE
+  /// Served at an event, or otherwise consumed.
+  SERVING
+  /// Spilled, broken, poured away, out of date.
+  WASTE
+  /// What a count found that the log did not predict.
+  COUNT
+  /// An entry undoing or amending an earlier one. Never an edit.
+  CORRECTION
+}
+
+/// Which weighing a reading belongs to.
+enum StockReadingPhase {
+  OUT
+  BACK
+  COUNT
+}
+
+/// A thing the bar keeps a stock of.
+///
+/// The calibration columns are the heart of it and are why a product is more
+/// than a name. For a VOLUME product, `tareGrams` and `fullGrams` are what turn
+/// a reading on the scale into millilitres without anyone needing to know the
+/// liquid's density — the two weights bracket `nominalMl`, and everything in
+/// between is linear.
+model StockProduct {
+  id       String        @id @default(cuid())
+  name     String
+  kind     StockKind
+  category DrinkCategory
+
+  /// Alcohol by volume, per cent — 40.00 for vodka, null for wares. Kept
+  /// because litres of pure alcohol is volume × this, and nothing else can
+  /// reconstruct it afterwards.
+  abv Decimal? @db.Decimal(5, 2)
+
+  /// UNIT: what one unit holds, in millilitres. 330 for a can. This is what
+  /// turns a count of cans into the litres the report asks for.
+  unitMl Int?
+
+  /// VOLUME: the bottle as sold, in millilitres — 700.
+  nominalMl Int?
+  /// VOLUME: an empty bottle on the scale, in grams.
+  tareGrams Int?
+  /// VOLUME: a sealed bottle on the scale, in grams.
+  fullGrams Int?
+
+  /// What the bar charges, in öre, including VAT. The restaurangrapport asks
+  /// for a "normalpris" per drink type; this is where that comes from.
+  normalPriceOre Int?
+
+  /// Below this, the overview says so. In units for UNIT, in millilitres for
+  /// VOLUME. Null asks nothing.
+  minimumLevel Int?
+
+  active Boolean @default(true)
+
+  entries StockEntry[]
+  lots    StockLot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, category])
+}
+
+/// A delivery of countable stock, and the best-before that came with it.
+///
+/// UNIT only. Spirits do not go off, and a bottle cannot carry a date anyway —
+/// open bottles here are anonymous, by the bar's own account of how it works.
+model StockLot {
+  id        String       @id @default(cuid())
+  productId String
+  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// Null when a delivery arrived without one, which is not an error — it is
+  /// simply a lot nothing can be said about.
+  bestBefore DateTime? @db.Date
+  receivedAt DateTime  @db.Date
+  note       String?
+
+  entries StockEntry[]
+
+  createdAt DateTime @default(now())
+
+  @@index([productId, bestBefore])
+}
+
+/// One movement of stock. The log, and the only thing that is true.
+///
+/// Every quantity is a signed delta — positive in, negative out — so on hand is
+/// their sum and nothing has to be kept in step with anything. There is no
+/// PATCH and no DELETE on this table anywhere in the app.
+model StockEntry {
+  id String @id @default(cuid())
+
+  productId String
+  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  /// UNIT: which delivery this came off, so a return credits back the lot it
+  /// left and keeps its best-before.
+  lotId String?
+  lot   StockLot? @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  kind StockEntryKind
+
+  /// Whole units for a UNIT product; sealed bottles for a VOLUME one.
+  units       Int @default(0)
+  /// Millilitres of liquid in opened bottles. VOLUME only.
+  volumeMl    Int @default(0)
+  /// How the number of open bottles changed. VOLUME only, and separate from
+  /// `volumeMl` because opening a bottle moves one without moving the other.
+  openBottles Int @default(0)
+
+  /// When it happened in the world, and when somebody wrote it down. They
+  /// differ often — a Friday's serving entered on Monday — and the gap is the
+  /// sort of thing an inspection asks about, so both are kept.
+  occurredAt DateTime @db.Date
+
+  actorId String
+  actor   User   @relation("StockEntryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  /// The utlägg this was bought on. The receipt is already in this app, so a
+  /// purchase row points at it rather than asking for the paperwork twice.
+  expenseId String?
+  expense   Expense? @relation("StockPurchaseExpense", fields: [expenseId], references: [id], onDelete: SetNull)
+
+  /// A correction names what it corrects. Self-relation, so the chain is
+  /// readable in both directions.
+  correctsId  String?
+  corrects    StockEntry?  @relation("StockCorrection", fields: [correctsId], references: [id], onDelete: Restrict)
+  correctedBy StockEntry[] @relation("StockCorrection")
+
+  note String?
+
+  readings StockReading[]
+
+  createdAt DateTime @default(now())
+
+  @@index([productId, occurredAt])
+  @@index([occurredAt])
+  @@index([kind, occurredAt])
+}
+
+/// One bottle on the scale. The observation behind a VOLUME entry.
+///
+/// A row per bottle rather than a summed total, because the count is part of
+/// the arithmetic: converting grams to millilitres subtracts one tare per
+/// bottle (see lib/stock/measure.ts). A pre-summed figure could not be
+/// recomputed if the tare were ever corrected, which is the whole reason these
+/// are kept.
+model StockReading {
+  id      String     @id @default(cuid())
+  entryId String
+  entry   StockEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  grams Int
+  phase StockReadingPhase
+
+  createdAt DateTime @default(now())
+
+  @@index([entryId])
 }

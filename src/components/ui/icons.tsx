@@ -132,10 +132,12 @@ export const IconUpload = (p: P) => (
   </Svg>
 );
 
-// The elbow that steps a product's variant in under its name — a drawing of
-// \variantpil in intakt/assets/intakt.tex, so the sold-lines table and the
-// intäktsräkning beside it mark a grouped row the same way.
-export const IconVariant = (p: P) => (
+// An elbow: down out of the line above, then right into this one. It says that
+// a row belongs to the thing over it — a product's variant stepped in under its
+// name, a budget line under its account number. A drawing of \variantpil in
+// intakt/assets/intakt.tex, so the sold-lines table and the intäktsräkning
+// beside it mark a grouped row the same way.
+export const IconElbow = (p: P) => (
   <Svg {...p}>
     <path d="M8 5v9h9m-3-3 3 3-3 3" />
   </Svg>

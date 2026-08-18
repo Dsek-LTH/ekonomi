@@ -4,13 +4,11 @@
 // background). Returned to the budget client and threaded into the sheets.
 // (Edit mode itself belongs to the sheet that owns the keyboard nav.)
 import { useState } from "react";
-import { toStored, toDisplay, EXTRA_COLUMN_KEYS, type BudgetGrid } from "@/lib/budget/grid";
-import { sheetKey } from "@/lib/budget";
-import { evaluate } from "@/lib/budget/eval";
-import { adjustmentsByAccount } from "@/lib/budget/changes";
+import { toStored, toDisplay, type BudgetGrid } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
+import { recomputeBudget } from "./recompute";
 import { fmt, fmtScalar, prettyFormula, normalizeFormula } from "./budget-helpers";
-import type { Budget, Evaluated, ApiFn, MutateFn, CellArgs, FormulaArgs, CellFn, FormulaFn } from "./budget-types";
+import type { Budget, ApiFn, MutateFn, CellArgs, FormulaArgs, CellFn, FormulaFn } from "./budget-types";
 
 interface Opts {
   grid: BudgetGrid;
@@ -37,43 +35,9 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
 
   // A cell edit shouldn’t refetch (and re-evaluate) the whole budget — that’s
   // a PATCH plus two GETs per keystroke-commit. Instead we apply the change to
-  // local state, re-run the evaluator on the client (same `evaluate` the server
-  // uses), and fire the PATCH in the background, only reloading if it fails.
-
-  // Re-derive `evaluated` from the budget’s own data (actuals are untouched).
-  function recompute(rev: Budget): Budget {
-    const varInputs = rev.variables.map((v) => ({ name: v.name, expression: v.expression }));
-    const liInputs = rev.costCenters.flatMap((cc) =>
-      cc.accounts.flatMap((a) =>
-        a.lineItems.map((li) => ({ id: li.id, accountKey: `${sheetKey(cc)}:${a.accountCode}`, expression: li.expression, values: li.values })),
-      ),
-    );
-    // Editorial changes are part of every account total the server sends,
-    // so they have to be part of the one computed here too — otherwise editing
-    // any cell would silently drop them until the next reload. (Cells are only
-    // editable while the budget is unlocked, and changes are only made while it
-    // is locked; but an unlocked budget still carries the ones made earlier.)
-    const netByAccount = adjustmentsByAccount(rev.changes);
-    const adjustments = rev.costCenters.flatMap((cc) =>
-      cc.accounts.flatMap((a) => {
-        const amount = netByAccount.get(a.id);
-        return amount === undefined || amount === 0
-          ? []
-          : [{ accountKey: `${sheetKey(cc)}:${a.accountCode}`, amount }];
-      }),
-    );
-    const knownAccounts = rev.costCenters.flatMap((cc) =>
-      cc.accounts.map((a) => `${sheetKey(cc)}:${a.accountCode}`),
-    );
-    const r = evaluate(varInputs, liInputs, [...EXTRA_COLUMN_KEYS], adjustments, knownAccounts);
-    const evaluated: Evaluated = {
-      vars: Object.fromEntries(r.vars), accounts: Object.fromEntries(r.accounts),
-      lineItems: Object.fromEntries(r.lineItems), cells: Object.fromEntries(r.cells),
-      badLineItems: r.badLineItems, badVariables: r.badVariables,
-      badAccounts: r.badAccounts, errors: r.errors,
-    };
-    return { ...rev, evaluated };
-  }
+  // local state, re-run the evaluator on the client (`recomputeBudget`, the
+  // same `evaluate` the server uses), and fire the PATCH in the background,
+  // only reloading if it fails.
 
   // Merge a columnValues patch the same way the server does (empty clears).
   function mergeValues(cur: Record<string, string>, patch: Record<string, string>): Record<string, string> {
@@ -121,7 +85,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   async function commitField(url: string, payload: Record<string, unknown>) {
     const next = applyLocal(budget, url, payload);
     if (!next) return void api(url, "PATCH", payload); // unknown shape → reload path
-    setBudget(recompute(next));
+    setBudget(recomputeBudget(next));
     const ok = await mutate(url, { method: "PATCH", body: payload, refresh: false });
     if (!ok) await load(); // rejected: the screen is ahead of the server, resync
   }

@@ -88,6 +88,23 @@ export const ReorderLineItems = z.object({
 });
 export type ReorderLineItems = z.infer<typeof ReorderLineItems>;
 
+/**
+ * POST /api/budgets/[id]/cost-centers/[ccId]/paste — copied rows or accounts,
+ * named by what they were copied from rather than by their contents.
+ *
+ * Ids and not values: a row is a description, an equation, an antal × á-pris and
+ * six general columns, and a copy that listed them would be a second description
+ * of a row for the paste to get wrong. The server has the originals.
+ */
+export const PasteIntoSheet = z.object({
+  /** Rows to append, and the account of this sheet to append them to. */
+  accountId: Id.optional(),
+  lineItemIds: z.array(Id).default([]),
+  /** Accounts to bring over whole — merged into this sheet's own by code. */
+  accountIds: z.array(Id).default([]),
+});
+export type PasteIntoSheet = z.infer<typeof PasteIntoSheet>;
+
 /** POST /api/budgets/[id]/variables. */
 export const CreateVariable = z.object({
   name: UpperCode.pipe(NonEmpty),

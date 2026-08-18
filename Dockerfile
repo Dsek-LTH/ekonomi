@@ -61,6 +61,23 @@ COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 
+# The utläggsräkning's template and the faces it is set in, read from disk at
+# render time rather than bundled. Next's standalone output traces imports, and
+# neither a .typ nor a .ttf is one — without this the cover renders in
+# `pnpm dev` and finds nothing here. The path mirrors the source tree because
+# that is what cover/typst.ts resolves against process.cwd(), which is also the
+# compile root; the section's mark it draws is already in public/.
+#
+# The fonts are not optional dressing. Typst embeds no proportional sans at all,
+# so without them this page comes out in a serif here and in Inter everywhere
+# else — see the note in cover/typst.ts.
+#
+# There is no typesetter to install beside them: Typst comes in as an npm
+# dependency with a musl build for this image, so `pnpm install` is the whole
+# of it.
+COPY --from=builder --chown=node:node \
+     /app/src/lib/expense/cover ./src/lib/expense/cover
+
 USER node
 EXPOSE 3000
 

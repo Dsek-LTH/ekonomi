@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,11 @@ import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/li
 import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
 import { useFormat } from "@/lib/ui/use-format";
+import { useStickyFollow } from "@/lib/ui/use-sticky-follow";
 import { cn } from "@/lib/ui/utils";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { CHANGES, RAMBUDGET, VARS, adjustmentRows, ccTotals, changeImpactBySheet, resultUnitLabel, resultUnitOf, fmtSigned, groupByResultUnit } from "./budget-helpers";
+import { recomputeBudget } from "./recompute";
 import { useBudgetCells } from "./use-budget-cells";
 import { useComparison } from "./use-comparison";
 import { Rambudget } from "./rambudget";
@@ -34,7 +36,7 @@ import { VariablesSheet } from "./variables-sheet";
 import { ChangesSheet } from "./changes-sheet";
 import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
-import type { Budget } from "./budget-types";
+import type { Budget, BudgetClip } from "./budget-types";
 
 export default function BudgetClient({
   initialBudget,
@@ -75,6 +77,16 @@ export default function BudgetClient({
   const [locking, setLocking] = useState(false);
   const [addingCc, setAddingCc] = useState(false);
 
+  // What has been copied, held on the page: copying is for moving something from
+  // one cost centre to another, and the sheet it was copied from is unmounted
+  // the moment the next one is picked. Cleared by nothing — a copy stays on the
+  // clipboard until the next one replaces it, as a clipboard does.
+  const [clip, setClip] = useState<BudgetClip | null>(null);
+
+  // The cost-centre list stands beside the sheet and follows the page as it is
+  // scrolled — the offset is the hook's, not a `top-*` class.
+  const stickyList = useStickyFollow<HTMLElement>();
+
   // The buffered "+ new variable" name (the cost-centre sheet owns its own drafts).
   const [newVar, setNewVar] = useState("");
 
@@ -83,29 +95,78 @@ export default function BudgetClient({
   // is for finding a budget, not for editing one. The edit state itself belongs
   // to each EditableText.
 
+  // The year's outcome from the ledger, which the reload below deliberately
+  // does not ask for again. Held here rather than read off `budget` so that
+  // `load` — and everything built on it — does not have to depend on the state
+  // it sets.
+  const outcome = useRef({
+    actuals: initialBudget.actuals,
+    actualsSynced: initialBudget.actualsSynced,
+    actualsYear: initialBudget.actualsYear,
+  });
+
   // Re-read the budget after a write. Same payload the page server-rendered —
   // GET /api/budgets/[id] and the page share one loader (lib/data/budget.ts),
   // so this replaces state with the identical shape it started from.
+  //
+  // Bar two things it asks the server not to bother with. The outcome, because
+  // no budget edit can change what the ledger reported and gathering it is a
+  // group-by over the whole financial year — the copy already in hand is
+  // carried over instead. And the evaluated figures, because this page works
+  // those out for every cell it commits anyway (`recomputeBudget`, the same
+  // evaluator the server runs); asking for them meant evaluating the budget
+  // twice over and sending every line's figure back for the pleasure.
   const load = useCallback(async () => {
-    const res = await fetch(`/api/budgets/${budgetId}`);
-    if (res.ok) setBudget(await res.json());
+    const res = await fetch(`/api/budgets/${budgetId}?actuals=0&evaluated=0`);
+    if (!res.ok) return;
+    const fresh = (await res.json()) as Budget;
+    // Unless the budget has been moved to another year, when the outcome beside
+    // it is a different year's and the only honest thing is to go and get it.
+    if (fresh.year !== outcome.current.actualsYear) {
+      const full = await fetch(`/api/budgets/${budgetId}?evaluated=0`);
+      if (full.ok) {
+        const withOutcome = (await full.json()) as Budget;
+        outcome.current = {
+          actuals: withOutcome.actuals,
+          actualsSynced: withOutcome.actualsSynced,
+          actualsYear: withOutcome.actualsYear,
+        };
+      }
+    }
+    setBudget(recomputeBudget({ ...fresh, ...outcome.current }));
   }, [budgetId]);
 
   // Every sheet write goes through here: the shared mutation path for the
   // request and the error message, then a reload — the budget is client-loaded,
   // so the router refresh useMutation does for Server Components isn't enough.
   //
+  // `refresh: false` because it is worse than not enough: this page's server
+  // component exists to hand over the *first* copy of the budget, which state
+  // has owned ever since, so refreshing it re-ran the whole loader — the nested
+  // query, the evaluation, the year's ledger — and threw the answer away. Every
+  // save was paying for that budget twice and using neither copy.
+  //
   // It holds the top progress bar for the whole of it, request and reload
   // both. Every other screen gets that from useMutation's router.refresh; this
   // one reloads itself instead, so it has to say so — and it is the screen
   // where a save is least visible, since a committed cell already shows its new
   // value while the server is still being told about it.
-  const api = useCallback(async (url: string, method: string, body?: unknown) => {
+  const api = useCallback(async (
+    url: string,
+    method: string,
+    body?: unknown,
+    apply?: (budget: Budget, data: unknown) => Budget,
+  ) => {
     const settled = startRouteProgress();
     try {
-      const data = await mutate(url, { method, body, error: tCommon("error.action") });
+      const data = await mutate(url, { method, body, error: tCommon("error.action"), refresh: false });
       if (!data) return false;
-      await load();
+      // The write has already said what it did — the row it created, the id it
+      // removed — so the budget is patched with that and the figures re-derived
+      // here. Only a write that cannot describe itself sends us back for the
+      // whole budget.
+      if (apply) setBudget((prev) => recomputeBudget(apply(prev, data)));
+      else await load();
       return true;
     } finally {
       settled();
@@ -156,6 +217,9 @@ export default function BudgetClient({
         body: { locked: next },
         success: next ? t("locked") : t("unlocked"),
         error: next ? t("lockFailed") : t("unlockFailed"),
+        // As in `api`: the reload below is what this page reads, and refreshing
+        // the server component would build the same budget again for nothing.
+        refresh: false,
       });
       if (data) await load();
     } finally {
@@ -235,6 +299,7 @@ export default function BudgetClient({
       body: { cloneFromId: sourceId },
       success: t("cloned"),
       error: t("cloneFailed"),
+      refresh: false, // the reload below is what this page reads — see `api`
     });
     if (!data) return;
     await load();
@@ -302,7 +367,19 @@ export default function BudgetClient({
       back={{ href: "/budget", label: tNav("budget") }}
     >
       <div className="flex flex-col gap-4 lg:flex-row">
-        <SidebarPanel>
+        {/* Sticky from lg, where the list is a column beside a sheet rather
+            than a stack above it. A sheet is the long thing on this screen —
+            a cost centre runs to scores of rows, and the rambudget to every
+            sheet at once — and the list scrolling away with it made picking
+            the next cost centre a scroll back to the top every time.
+
+            No `top-*` here: the offset is the hook's, walked up and down as the
+            page scrolls so that a list longer than the screen is reachable in
+            full either way (see lib/ui/use-sticky-follow.ts). `self-start` is
+            what makes it stick at all — the row stretches its items, so the
+            panel was already as tall as the sheet beside it, and a sticky box
+            with no scroll range of its own never moves. */}
+        <SidebarPanel ref={stickyList} className="lg:sticky lg:self-start">
           {/* The two things that act on the budget as a whole, at the head of
               the column that lists its sheets — the pane on the right is one
               sheet at a time, and both of these change every one of them. They
@@ -375,6 +452,12 @@ export default function BudgetClient({
               them — same as the income queue, and for the same reason: these
               rows are a cost centre's name against its result, in a 16rem
               panel. See components/ui/overlay-scroll.tsx. */}
+          {/* Capped at the same height either way it is standing. A budget runs
+              to scores of cost centres, and left to be as long as it liked the
+              panel was a column of them beside a sheet a fraction of its
+              height. So the list scrolls inside the panel — the scrollbar is
+              the floating one, which is why it costs the rows nothing — and
+              what the sticky above carries is a box that fits the screen. */}
           <OverlayScroll className="max-h-[58vh]">
             {groups.map((g) => (
               <div key={g.resultUnit}>
@@ -456,6 +539,14 @@ export default function BudgetClient({
               <CostCenterHeader
                 cc={cc} available={availableCc} canEdit={canEdit} api={api}
                 onClone={() => cloneCc(cc.id)}
+                onCopyContents={() => {
+                  setClip({
+                    kind: "accounts",
+                    ids: cc.accounts.map((a) => a.id),
+                    label: sheetName(cc, t("unnamed")),
+                  });
+                  notify.success(t("copiedAccounts", { count: cc.accounts.length }));
+                }}
                 onRemoved={() => setSelected(RAMBUDGET)}
               />
               <CostCenterSheet
@@ -464,6 +555,7 @@ export default function BudgetClient({
                 isAdmin={canEdit} canComment={canComment} userId={user.id}
                 renderCell={renderCell} renderFormula={renderFormula} api={api} budgetId={budgetId} accounts={accounts}
                 adjustments={adjustments}
+                clip={clip} onCopy={setClip}
               />
             </>
           ) : (
@@ -474,14 +566,6 @@ export default function BudgetClient({
         </div>
       </div>
 
-      {canEdit && selected !== RAMBUDGET && selected !== CHANGES && (
-        <p className="mt-3 text-xs text-muted">
-          {t.rich("formulaHelp", {
-            code: (chunks) => <code>{chunks}</code>,
-            strong: (chunks) => <strong>{chunks}</strong>,
-          })}
-        </p>
-      )}
     </PageShell>
   );
 }

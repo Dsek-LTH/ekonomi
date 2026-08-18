@@ -57,7 +57,10 @@ export function ViewToggle<T extends string>({
             className={cn(
               "flex size-7 items-center justify-center rounded-md transition-colors",
               active
-                ? "bg-background text-foreground shadow-[var(--shadow-card)]"
+                // The selected pill in a track — same reasoning, and the same
+                // token, as CollectionSwitch. The gutter here is 2px, so a
+                // shadow that leans down has even less room to do it in.
+                ? "bg-background text-foreground shadow-[var(--shadow-pill)]"
                 : "text-muted hover:text-foreground",
             )}
           >

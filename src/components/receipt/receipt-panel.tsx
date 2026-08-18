@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useTranslations } from "next-intl";
-import { ReceiptViewer } from "@/components/receipt/receipt-viewer";
+import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt-viewer";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -51,16 +51,14 @@ const FLOATING_BTN =
 
 type Source = {
   /**
-   * Where to read the receipt from — the archive, or a local URL for one the
-   * page is still holding (the wizard keeps the picked file in the browser
-   * until the utlägg is saved). The panel doesn't care which: showing a receipt
-   * is showing whatever is at this address, and "is there one" is this being
-   * set at all.
+   * What there is to read, in reading order — most often the utläggsräkning
+   * and the underlag behind it, sometimes just a receipt the page is still
+   * holding in the browser (the wizard keeps the picked file there until the
+   * utlägg is saved). The panel doesn't care which: showing a receipt is
+   * showing whatever is at these addresses, and "is there one" is this being
+   * non-empty.
    */
-  src: string | null;
-  mimeType: string;
-  /** Only the image's alt text — the panel itself is never titled. */
-  filename?: string;
+  docs: ViewerDocument[];
   /**
    * Offered by a page where the receipt is still being put there — the wizard.
    * With one of these the panel stays even with nothing to show, and the empty
@@ -109,7 +107,7 @@ export function useReceiptTabShowing(): boolean {
 /** A page waiting for a receipt keeps the panel open — there'd be nothing to
  *  fold away, and folding is how you'd lose the only way to add one. */
 const isAwaitingUpload = (source: Source | null) =>
-  Boolean(source && !source.src && source.upload);
+  Boolean(source && source.docs.length === 0 && source.upload);
 
 const writeCookie = (name: string, value: string) => {
   document.cookie = `${name}=${value}; path=/; max-age=31536000; samesite=lax`;
@@ -146,17 +144,20 @@ export function ReceiptPanelProvider({
 }
 
 /**
- * Declares the document the panel should be showing while this page is mounted.
+ * Declares what the panel should be showing while this page is mounted.
  * Renders nothing. Nothing to show takes the panel away entirely, rather than
  * leaving the last page's receipt standing — unless `onFile` is given, in which
  * case an empty panel is an invitation to upload one.
  *
- * Three ways to say where the file is, in the order they win: `previewUrl` (one
- * the page is still holding), `documentUrl` (an address the page knows), and
- * `receiptId` (a receipt in the archive, whose address is this component's to
- * build). A page gives whichever one it has.
+ * A page gives either a list of `documents` — an utlägg has two, its
+ * utläggsräkning and the underlag behind it, and the panel pages between them —
+ * or the single-document shorthands: `previewUrl` (one the page is still
+ * holding), `documentUrl` (an address the page knows), `receiptId` (a receipt
+ * in the archive, whose address is this component's to build), in the order
+ * they win. `documents` wins over all of them.
  */
 export function ReceiptPanelSource({
+  documents,
   receiptId = null,
   documentUrl,
   previewUrl,
@@ -167,6 +168,12 @@ export function ReceiptPanelSource({
   emptyTitle,
   emptyDescription,
 }: {
+  /**
+   * Everything to read, in reading order. An empty list is "there is nothing",
+   * exactly as a null `documentUrl` is — so a page can hand this straight from
+   * whatever computes it without narrowing first.
+   */
+  documents?: ViewerDocument[];
   receiptId?: string | null;
   /**
    * A stored document that is not a receipt, addressed outright — the rendered
@@ -182,7 +189,8 @@ export function ReceiptPanelSource({
    * until the save goes through.
    */
   previewUrl?: string | null;
-  mimeType: string;
+  /** Describes whichever of the shorthands above was given. */
+  mimeType?: string;
   filename?: string;
   /** Makes the panel accept a receipt as well as show one. */
   onFile?: (file: File) => void;
@@ -202,33 +210,35 @@ export function ReceiptPanelSource({
   });
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
-  const src =
-    previewUrl ?? documentUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
+
+  const shorthand = previewUrl ?? documentUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
+  const docs: ViewerDocument[] =
+    documents ??
+    (shorthand ? [{ src: shorthand, mimeType: mimeType ?? "application/pdf", filename }] : []);
+
+  // The list is compared by value, not by identity: a page that builds it
+  // inline builds a new array every render, and registering the source on each
+  // one would set state in the provider forever. The effect below reads the
+  // current list through a ref — kept fresh by this one, which runs first —
+  // and only the string decides whether it runs at all.
+  const docsKey = JSON.stringify(docs);
+  const docsRef = useRef(docs);
+  useEffect(() => {
+    docsRef.current = docs;
+  });
 
   useEffect(() => {
-    if (!src && !accepts && !emptyTitle) {
+    if (docsRef.current.length === 0 && !accepts && !emptyTitle) {
       setSource(null);
       return;
     }
     setSource({
-      src,
-      mimeType,
-      filename,
+      docs: docsRef.current,
       upload: accepts ? { onFile: stableOnFile, uploading } : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
     });
     return () => setSource(null);
-  }, [
-    src,
-    mimeType,
-    filename,
-    accepts,
-    uploading,
-    stableOnFile,
-    emptyTitle,
-    emptyDescription,
-    setSource,
-  ]);
+  }, [docsKey, accepts, uploading, stableOnFile, emptyTitle, emptyDescription, setSource]);
 
   return null;
 }
@@ -252,7 +262,7 @@ export function ReceiptPanelColumn() {
   useEffect(() => {
     const now = {
       source: Boolean(source),
-      receipt: Boolean(source?.src),
+      receipt: Boolean(source && source.docs.length > 0),
       awaiting: awaitingUpload,
     };
     const appeared = now.source && !was.current.source;
@@ -285,6 +295,25 @@ export function ReceiptPanelColumn() {
     };
   }, [open, source]);
 
+  // The drag does not go through React at all.
+  //
+  // It used to call `setWidth` on every pointermove, and `width` lives in the
+  // provider at the root of the app — so a single sweep of the handle was a
+  // hundred-odd context updates, each re-rendering every consumer, and the
+  // viewer's TransformWrapper re-measuring its subtree (getComponentsSizes,
+  // which reads layout) each time. Measured at ~5.4ms of main thread per
+  // pointermove, which a 120Hz trackpad turns into more work than there is
+  // time to do it in, and the drag stuttered.
+  //
+  // The width is one CSS custom property, and the panel is one element that is
+  // already carrying it. So the move handler writes that property directly and
+  // React is told once, on release. Nothing re-renders mid-drag; the browser
+  // does the one thing it cannot avoid — lay the column out — and does it once
+  // per frame rather than once per event.
+  const panelRef = useRef<HTMLElement>(null);
+  const frame = useRef(0);
+  const pending = useRef(0);
+
   const startDrag = (e: React.PointerEvent) => {
     e.preventDefault();
     // The pointer will leave this 12px strip on the first move; capture keeps
@@ -296,21 +325,37 @@ export function ReceiptPanelColumn() {
     document.body.style.userSelect = "none";
     document.body.style.cursor = "col-resize";
 
+    // Coalesced to one write per frame. Pointer events arrive faster than
+    // frames on any modern trackpad, and every width between two paints is a
+    // width nobody sees.
+    const paint = () => {
+      frame.current = 0;
+      widthRef.current = pending.current;
+      panelRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
+    };
+
     // Dragging left widens it, hence the reversed delta.
     const onMove = (ev: PointerEvent) => {
       const max = Math.max(MIN_WIDTH, window.innerWidth * MAX_FRACTION);
-      const next = Math.min(max, Math.max(MIN_WIDTH, startWidth + (startX - ev.clientX)));
-      widthRef.current = next;
-      setWidth(next);
+      pending.current = Math.min(max, Math.max(MIN_WIDTH, startWidth + (startX - ev.clientX)));
+      if (!frame.current) frame.current = requestAnimationFrame(paint);
     };
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      if (frame.current) cancelAnimationFrame(frame.current);
+      frame.current = 0;
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
+      const final = pending.current;
+      widthRef.current = final;
+      // Now, and only now, does React hear about it: one render, one cookie,
+      // and the inline style it renders agrees with what the drag was writing.
+      setWidth(final);
       setDragging(false);
-      writeCookie(RECEIPT_WIDTH_COOKIE, String(Math.round(widthRef.current)));
+      writeCookie(RECEIPT_WIDTH_COOKIE, String(Math.round(final)));
     };
+    pending.current = startWidth;
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   };
@@ -344,7 +389,7 @@ export function ReceiptPanelColumn() {
           <IconX className="size-4 md:hidden" />
         </button>
       )}
-      {upload && source.src && (
+      {upload && source.docs.length > 0 && (
         <button
           type="button"
           onClick={pick}
@@ -359,13 +404,8 @@ export function ReceiptPanelColumn() {
     </div>
   );
 
-  const body = source.src ? (
-    <ReceiptViewer
-      src={source.src}
-      mimeType={source.mimeType}
-      filename={source.filename}
-      className="min-h-0 flex-1"
-    />
+  const body = source.docs.length > 0 ? (
+    <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
   ) : !upload ? (
     // Nothing to show and nowhere to put one: the panel stays and says so,
     // rather than vanishing and letting the page reflow around its absence.
@@ -473,6 +513,9 @@ export function ReceiptPanelColumn() {
   // both mount, and each would load and parse the receipt for itself.
   return (
     <aside
+      ref={panelRef}
+      // The drag writes this same property straight onto the node; this is the
+      // value it starts from and the value React puts back on release.
       style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
       className={cn(
         // Below md it covers the screen; from md it's a column in the frame.

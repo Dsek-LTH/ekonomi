@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
+import { cn } from "@/lib/ui/utils";
 import "./globals.css";
 
 // The tab title follows the reader's language like everything else, so it has
@@ -9,16 +12,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
   return { title: t("title"), description: t("description") };
 }
-
-// Runs before paint so the right theme is applied without a flash. Mirrors the
-// logic in components/shell/theme-toggle.tsx.
-//
-// A plain inline <script> in <head>, not next/script: this has to execute while
-// the document is parsing, before the first paint. next/script is a client
-// component, so React ends up creating the <script> element during a client
-// render — where scripts never execute — which is what the "Encountered a
-// script tag while rendering React component" warning is about.
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 // The visual direction, recorded where the built output can be audited against
 // it. Survives the production build on purpose — grep the emitted HTML for
@@ -49,12 +42,15 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  // The theme arrives with the request, so the document is simply served in it.
+  // This is the whole of the no-flash story: the class is in the markup the
+  // parser reads, which is earlier than any script could run and needs no
+  // `suppressHydrationWarning`, because nothing corrects the DOM afterwards.
+  // See lib/ui/theme.ts for what this replaced.
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <html lang={locale} className="h-full" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-      </head>
+    <html lang={locale} className={cn("h-full", theme === "dark" && "dark")}>
       <body className="min-h-full">
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <NextIntlClientProvider locale={locale} messages={messages}>

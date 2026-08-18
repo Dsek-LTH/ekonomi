@@ -1,8 +1,8 @@
 "use client";
 
-// My profile — the full version of what the sidebar's profile popover shows in
-// miniature. The popover keeps the quick switches; anything that needs a form,
-// an explanation or a destructive confirmation belongs here.
+// My profile — everything about this session in one place, and where the
+// sidebar's footer leads. The sidebar keeps only theme and language, being the
+// two switches not worth a page load; the rest lives here.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react";
@@ -18,6 +18,7 @@ import { FortnoxBanner } from "@/components/shell/fortnox-banner";
 
 import { useFormat } from "@/lib/ui/use-format";
 import type { FortnoxStatus, Role } from "@/lib/domain/types";
+import type { Theme } from "@/lib/ui/theme";
 
 export function ProfileClient({
   name,
@@ -26,6 +27,7 @@ export function ProfileClient({
   clearing: c0,
   account: a0,
   fortnox,
+  theme,
 }: {
   name: string;
   email: string;
@@ -34,6 +36,8 @@ export function ProfileClient({
   account: string;
   /** Absent for everyone who doesn't book in Fortnox under their own login. */
   fortnox?: { session: FortnoxStatus["session"] | null };
+  /** What the toggle starts on, read from the cookie by the page. */
+  theme: Theme;
 }) {
   const t = useTranslations("common");
   const tRole = useTranslations("common.role");
@@ -154,7 +158,7 @@ export function ProfileClient({
         <CardBody className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">{t("theme")}</span>
-            <ThemeToggle />
+            <ThemeToggle initial={theme} />
           </div>
           <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="text-sm text-muted">{t("language")}</span>

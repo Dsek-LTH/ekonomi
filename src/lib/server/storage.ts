@@ -73,6 +73,16 @@ export function incomeDocumentKey(reportId: string, filename: string): string {
   return `income/${reportId}/${safeName(filename)}`;
 }
 
+// The rendered utläggsräkning — the cover page naming who attested what. Its
+// own prefix for the same reason as the income one: generated, not uploaded.
+//
+// The cover only. The receipt it fronts stays under `receipts/` and is joined
+// to this on the way out (lib/server/pdf-merge.ts), so the bytes of an underlag
+// are never held twice.
+export function expenseDocumentKey(expenseId: string, filename: string): string {
+  return `expenses/${expenseId}/${safeName(filename)}`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

@@ -42,8 +42,13 @@ const nextConfig: NextConfig = {
   // alternative is copying a 700 MB node_modules into the runtime image to run
   // `next start`. Harmless outside Docker; `next dev` and `next start` ignore it.
   output: "standalone",
-  // sharp is a native module — don't bundle it; load it from node_modules.
-  serverExternalPackages: ["sharp"],
+  // Native modules — don't bundle them; load them from node_modules. Both ship
+  // a platform-specific `.node` binary, which Turbopack cannot place in a
+  // JavaScript chunk and refuses outright ("non-ecmascript placeable asset").
+  //
+  // sharp normalises uploaded receipts; the typst compiler typesets the
+  // utläggsräkning (src/lib/expense/cover/typst.ts).
+  serverExternalPackages: ["sharp", "@myriaddreamin/typst-ts-node-compiler"],
   experimental: {
     // Turbopack's on-disk dev cache, on by default in Next 16. Off here because
     // it has handed us a stale stylesheet: a new route's utilities never made it

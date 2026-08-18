@@ -7,7 +7,7 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { MatchExpense } from "@/lib/api/schemas/expense";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
-import { cancelsOut } from "@/lib/domain/matching";
+import { cancelsOut, isMatchable } from "@/lib/domain/matching";
 import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK } from "@/lib/domain/money";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -38,7 +38,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!isSubmittable(expense.status)) {
     return fail(409, "expense.matchLocked");
   }
-  if (expense.paymentType !== "CARD") {
+  if (!isMatchable(expense.paymentType)) {
     return fail(422, "expense.matchCardOnly");
   }
 

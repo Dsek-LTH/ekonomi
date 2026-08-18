@@ -60,7 +60,10 @@ export function useComparison(budget: Budget) {
   useEffect(() => {
     if (!target || target === ACTUALS) return;
     let live = true;
-    fetch(`/api/budgets/${target}`)
+    // Without the outcome: a comparison reads the other budget's sheets and its
+    // evaluated figures, never the ledger beside it (see `snapshotOf`), and
+    // gathering that is a group-by over the other year's whole ledger.
+    fetch(`/api/budgets/${target}?actuals=0`)
       .then((r) => r.ok ? r.json() : null)
       .then((b: Budget | null) => {
         if (!live || !b) return;

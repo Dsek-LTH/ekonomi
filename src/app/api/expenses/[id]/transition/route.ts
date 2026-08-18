@@ -315,7 +315,22 @@ export async function POST(
         applied(
           await tx.expense.updateMany({
             where: { id: expense.id, status: "EXPORTED" },
-            data: { status: "BOOKED" },
+            data: {
+              status: "BOOKED",
+              // The stored utläggsräkning goes with the export it was written
+              // for. The whole reason to unexport is to amend the utlägg, and
+              // the cover names the attestations and amounts being amended — so
+              // keeping it would have the next export upload a page describing
+              // the version before the correction. Cleared, the next export
+              // draws a fresh one (lib/expense/document.ts).
+              //
+              // The object itself is left for the sweeper rather than deleted
+              // here: this runs inside the transaction, and a storage call that
+              // fails after the status has flipped would leave the two
+              // disagreeing about a file nobody can reach anyway.
+              documentKey: null,
+              documentFilename: null,
+            },
           }),
         );
         await tx.verification.updateMany({

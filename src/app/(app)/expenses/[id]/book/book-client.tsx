@@ -11,9 +11,12 @@ import { useRole } from "@/components/shell/role-context";
 import { useMutation } from "@/components/shell/use-mutation";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { expenseDocuments } from "@/lib/expense/document-url";
 import { PageShell } from "@/components/page-shell";
 import {
   BalanceChip,
+  filledVoucherRows,
+  VoucherBlockerChip,
   VoucherEditor,
   type VoucherEditorRow,
 } from "@/components/voucher-editor";
@@ -22,7 +25,7 @@ import type { AccountRecord, BookkeepingSettings } from "@/lib/domain/types";
 // string — everything else on this page is an Amount.
 import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
-import { voucherBlocker } from "@/lib/domain/voucher";
+import { voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { expenseLabel } from "@/lib/domain/reference";
 import { DateInput, Field } from "@/components/ui/field";
 import { uid } from "@/lib/ui/utils";
@@ -59,7 +62,7 @@ function defaultDebitRows(expense: Expense | undefined): Row[] {
       account: "",
       description: "",
       costCenterCode: a.costCenterCode,
-      debit: a.amount.toFixed(2),
+      debit: "",
       credit: "",
     }));
   }
@@ -110,6 +113,9 @@ export default function BookExpenseClient({
   const { busy: submitting, mutate } = useMutation();
   // The voucher date opens focused and full — see the field below.
   const selectOnce = useSelectOnce();
+  // `expense` is still nullable here — the not-found case is narrowed further
+  // down — and expenseDocuments takes that; the alt text has to as well.
+  const documents = expenseDocuments(expense, `${tReceipt("alt")} · ${expense?.title ?? ""}`);
 
   const accountName = (number: string) =>
     accounts.find((a) => a.number === number.trim())?.name ?? "";
@@ -199,6 +205,11 @@ export default function BookExpenseClient({
   // (kept out of `rows` so there is no state the UI could let anyone edit it
   // through) followed by the typed ones. `save()` sends this and the check below
   // reads it, so the button can only be live for a voucher the server accepts.
+  //
+  // Without the spare rows the editor keeps at the bottom of the table: they are
+  // where the next line would be written, not lines. Left in, every voucher
+  // would be three blank rows short of bookable.
+  const typedRows = filledVoucherRows(rows);
   const voucherLines = [
     {
       account: paymentAccount,
@@ -208,7 +219,7 @@ export default function BookExpenseClient({
       debit: 0,
       credit: sekToOre(paymentCredit),
     },
-    ...rows.map((r) => ({
+    ...typedRows.map((r) => ({
       account: r.account.trim(),
       accountName: accountName(r.account),
       description: r.description || null,
@@ -218,22 +229,30 @@ export default function BookExpenseClient({
     })),
   ];
 
-  const totalDebit = oreToSEK(voucherLines.reduce((s, l) => s + l.debit, 0));
-  const totalCredit = oreToSEK(voucherLines.reduce((s, l) => s + l.credit, 0));
-  const diff = totalDebit - totalCredit;
-  // The same rule the route applies (lib/domain/voucher.ts), on the same rows,
-  // in the same unit — so "balanced" here and "balanced" there cannot disagree.
-  const balanced = voucherBlocker(voucherLines) === null;
+  // Counted in öre and converted for display, never the other way round: a
+  // difference of one öre is a real difference, and summing kronor floats would
+  // hide it behind a rounding.
+  const balance = voucherBalance(voucherLines);
+  const totalDebit = oreToSEK(balance.debit);
+  const totalCredit = oreToSEK(balance.credit);
+  const diff = oreToSEK(balance.difference);
+  // Two questions, not one. The chip answers whether the voucher adds up; the
+  // blocker answers whether it may be written, which is the stricter of the two
+  // and is what the button waits on. Reading the chip off the blocker meant an
+  // unpicked account showed as "differs by 0,00 kr" — the sides met, and the
+  // screen said they didn't.
+  const blocker = voucherBlocker(voucherLines);
+  const balanced = balance.balanced;
   const costCenterExists = (code: string) => costCenters.some((c) => c.code === code.trim());
-  const allValidAccounts = rows.every((r) => accountExists(r.account));
-  const allValidCostCenters = rows.every(
+  const allValidAccounts = typedRows.every((r) => accountExists(r.account));
+  const allValidCostCenters = typedRows.every(
     (r) => !r.costCenterCode.trim() || costCenterExists(r.costCenterCode),
   );
   // A payment account that isn't in the chart is a settings problem, not
   // something to book around — see the banner below.
   const paymentAccountKnown = accountExists(paymentAccount);
   const canSubmit =
-    balanced && allValidAccounts && allValidCostCenters && paymentAccountKnown && !submitting;
+    !blocker && allValidAccounts && allValidCostCenters && paymentAccountKnown && !submitting;
 
   async function save() {
     const saved = await mutate(`/api/expenses/${expense!.id}/book`, {
@@ -261,14 +280,22 @@ export default function BookExpenseClient({
       {/* The receipt stands beside the whole frame, full height, and stays put
           while this table scrolls — which is the entire point of booking with
           it open. Declared here, rendered by the shell. */}
+      {/* The utläggsräkning as well as the underlag: the cover page naming who
+          attested each cost centre, and behind it the receipt itself, paged to
+          from the toolbar. This is the screen where that matters most — those
+          two are exactly what this booking will put on the voucher in Fortnox,
+          so the bookkeeper is reading what they are about to send rather than
+          half of it. See lib/expense/document-url.ts. */}
       <ReceiptPanelSource
-        receiptId={expense.receiptId ?? null}
-        mimeType={expense.receiptMimeType ?? "image/jpeg"}
-        filename={`${tReceipt("alt")} · ${expense.title}`}
+        documents={documents}
         // Said in the panel, not in the page. A voucher with no underlag is
         // something the bookkeeper has to know about, and it belongs where the
         // underlag would have been — so the voucher table sits in the same
         // place whether there's a receipt beside it or not.
+        //
+        // It is also why the cover is not stood here on its own when there is
+        // no receipt: it would fill the panel with a document and take away the
+        // one thing the panel is here to say.
         emptyTitle={t("noReceiptTitle")}
         emptyDescription={t("noReceiptDescription")}
       />
@@ -351,6 +378,12 @@ export default function BookExpenseClient({
           <BalanceChip balanced={balanced} difference={formatSEK(diff)} />
 
           <div className="flex items-center gap-2.5">
+            {/* Why the button is dead. Without it, making the chip tell the
+                truth about a balanced voucher would have left an unpicked
+                account with no signal at all — a green chip over a button that
+                quietly refuses. It says nothing when the balance chip is
+                already saying it. */}
+            <VoucherBlockerChip blocker={blocker} />
             <Button onClick={save} loading={submitting} disabled={!canSubmit}>
               <IconCheck className="size-4" />
               {mode === "edit" ? t("saveChanges") : t("book")}

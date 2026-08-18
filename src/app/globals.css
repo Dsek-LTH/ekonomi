@@ -65,6 +65,15 @@
     --shadow-card: 0 1px 2px rgb(23 19 25 / 0.04), 0 2px 8px rgb(23 19 25 / 0.04);
     --shadow-pop: 0 4px 12px rgb(23 19 25 / 0.08), 0 12px 32px rgb(23 19 25 / 0.12);
 
+    /* For something raised inside a track rather than above the page: the
+        selected pill of a switcher, sitting in a 4px gutter. The other two lean
+        downwards, which is right for a card on a page — light comes from above
+        — but in a gutter that thin the lean lands *in* the gap below the pill
+        and darkens it, and the pill then reads as sitting low in a track it is
+        in fact dead centre of. So this one has no vertical offset at all: it
+        seats the pill without telling you which way is up. */
+    --shadow-pill: 0 0 2px rgb(23 19 25 / 0.06), 0 0 6px rgb(23 19 25 / 0.05);
+
     /* One easing for everything that moves, so the app has a single hand.
         Exponential-ish ease-out: leaves fast, settles soft. */
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -131,6 +140,13 @@
   --shadow-card:
     0 1px 2px rgb(0 0 0 / 0.45),
     0 4px 12px rgb(0 0 0 / 0.25);
+
+  /* The one that most needed fixing: on a dark ground the card shadow is 45%
+     black 4px down, which filled the gutter under a selected pill almost
+     solid. */
+  --shadow-pill:
+    0 0 3px rgb(0 0 0 / 0.4),
+    0 0 10px rgb(0 0 0 / 0.25);
 
   --shadow-pop:
     0 8px 24px rgb(0 0 0 / 0.45),
@@ -398,20 +414,27 @@ summary {
    top of those two borders (border + ring) while the left and bottom get the ring
    alone — the box reads visibly thicker on two sides. An outline is measured from
    the border box, so `outline-offset: -Npx` with an Npx width covers the outermost
-   Npx of the cell evenly on all four sides, border included. */
+   Npx of the cell evenly on all four sides, border included.
+
+   The same box on every cell, the account-number cell included: it used to draw
+   its own in translucent ink to sit better on the pink, which made the one cell
+   people tab through most the one that looked unlike the rest. */
 .budget-grid :is(td, th):focus-within {
   position: relative;
   z-index: 10;
   outline: 1.5px solid var(--cell-select);
   outline-offset: -1.5px;
 }
-.budget-grid .bg-brand:focus-within {
-  outline-color: rgb(23 17 26 / 0.45);
+/* The cell box is the only selection indicator anywhere in the sheet, so nothing
+   inside a cell draws one of its own: not the inputs, not the account picker,
+   not a row's ✕, not a tick box — two lines around one thing reads as two
+   things. Outside a cell (the comment box below, the buttons above the sheet)
+   the app's ordinary ring is untouched. */
+.budget-grid :is(td, th) :is(input, button):focus,
+.budget-grid :is(td, th) :is(input, button):focus-visible {
+  outline: none;
 }
-/* The cell outline above is the only selection indicator — suppress the app's
-   global *:focus-visible outline on cell inputs so it isn't drawn as a 2nd line. */
-.budget-grid input:focus,
-.budget-grid input:focus-visible {
+.budget-grid :is(td, th) input:focus-visible + [data-check] {
   outline: none;
 }
 /* …except a field that merely happens to sit in the sheet — the comment box on

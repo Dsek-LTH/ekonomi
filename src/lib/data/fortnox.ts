@@ -8,8 +8,8 @@ import { fortnoxConfigured } from "@/lib/fortnox";
 import type { FortnoxStatus } from "@/lib/domain/types";
 
 // A user's live personal Fortnox session, or null when they have none (or it
-// has run past its cap). Just the session — for the profile menu, which has no
-// use for the org's service connection.
+// has run past its cap). Just the session — for /profile, which has no use for
+// the org's service connection.
 export async function getFortnoxSession(
   userId: string,
 ): Promise<FortnoxStatus["session"] | null> {

@@ -156,9 +156,12 @@ describe("buildFeeVoucherLines", () => {
 });
 
 describe("incomeVoucherDescription", () => {
-  it("names the payment method and the committee", () => {
-    expect(incomeVoucherDescription("SWISH", "Café")).toBe("IR Swish - Café");
-    expect(incomeVoucherDescription("ZETTLE", "Café")).toBe("IR Zettle - Café");
+  it("names the payment method and the committee, and no series", () => {
+    // No "IR ": every one of these is filed in the income series already, so
+    // the prefix spent characters saying what the series says. The key below is
+    // what keeps the ones written the old way recognisable.
+    expect(incomeVoucherDescription("SWISH", "Café")).toBe("Swish - Café");
+    expect(incomeVoucherDescription("ZETTLE", "Café")).toBe("Zettle - Café");
   });
 
   it("is the same text for every day of fees", () => {
@@ -169,7 +172,7 @@ describe("incomeVoucherDescription", () => {
   });
 
   it("leaves no trailing separator for a committee with no description", () => {
-    expect(incomeVoucherDescription("SWISH", null)).toBe("IR Swish -");
+    expect(incomeVoucherDescription("SWISH", null)).toBe("Swish -");
   });
 });
 
@@ -178,17 +181,41 @@ describe("incomeVoucherKey", () => {
     // What the duplicate check compares. A voucher already in Fortnox was
     // written by whatever wrote it — an older install, the CLI this replaced —
     // so the match cannot depend on spacing or case.
-    expect(incomeVoucherKey("2026-01-02", "IR Swish - Café")).toBe(
-      incomeVoucherKey("2026-01-02", "  ir swish -  café "),
+    expect(incomeVoucherKey("2026-01-02", "Swish - Café")).toBe(
+      incomeVoucherKey("2026-01-02", "  swish -  café "),
+    );
+  });
+
+  it("matches a day booked under the old IR prefix against one without it", () => {
+    // The fail-safe the prefix removal turns on. Fortnox holds vouchers written
+    // both ways, and a report booked before the change still carries the old
+    // text locally — which is what the export re-checks with. Every pairing has
+    // to land on the same key or a day gets booked twice.
+    const plain = incomeVoucherKey("2026-01-02", "Swish - Café");
+    expect(incomeVoucherKey("2026-01-02", "IR Swish - Café")).toBe(plain);
+    expect(incomeVoucherKey("2026-01-02", "ir  swish - café")).toBe(plain);
+    expect(incomeVoucherKey("2026-01-02", "IR Zettle - Café")).toBe(
+      incomeVoucherKey("2026-01-02", "Zettle - Café"),
+    );
+  });
+
+  it("only strips IR where it is the prefix, not where it starts a name", () => {
+    // "IR" is two letters a verksamhet may well begin with. Stripping it
+    // anywhere but the front would collapse two different days into one.
+    expect(incomeVoucherKey("2026-01-02", "Swish - Irrblosset")).not.toBe(
+      incomeVoucherKey("2026-01-02", "Swish - rblosset"),
+    );
+    expect(incomeVoucherKey("2026-01-02", "Irrblosset")).not.toBe(
+      incomeVoucherKey("2026-01-02", "rblosset"),
     );
   });
 
   it("keeps different days and different committees apart", () => {
-    const a = incomeVoucherKey("2026-01-02", "IR Swish - Café");
-    expect(a).not.toBe(incomeVoucherKey("2026-01-03", "IR Swish - Café"));
-    expect(a).not.toBe(incomeVoucherKey("2026-01-02", "IR Swish - Pub"));
+    const a = incomeVoucherKey("2026-01-02", "Swish - Café");
+    expect(a).not.toBe(incomeVoucherKey("2026-01-03", "Swish - Café"));
+    expect(a).not.toBe(incomeVoucherKey("2026-01-02", "Swish - Pub"));
     // The source is part of the text, so Zettle and Swish for one day are two.
-    expect(a).not.toBe(incomeVoucherKey("2026-01-02", "IR Zettle - Café"));
+    expect(a).not.toBe(incomeVoucherKey("2026-01-02", "Zettle - Café"));
   });
 });
 

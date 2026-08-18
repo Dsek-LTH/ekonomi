@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
 import { isAmountInput, parseSEK } from "@/lib/domain/money";
@@ -28,6 +29,9 @@ interface Props {
 
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
+  // Only ever the row `add` just made. Rows restored from a draft, and the one
+  // a new utlägg opens with, are not focused — nothing was clicked to get them.
+  const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const total = value.reduce((s, r) => s + parseSEK(r.amount), 0);
   // A return is budgeted the same way, only negative — so the rows have to add
   // up to the gross whichever sign it has. Zero means nothing to distribute yet.
@@ -43,9 +47,14 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   }
 
   // A new row starts unpicked, like the first one — the cost centre is always
-  // chosen deliberately, never guessed at from what's left over.
+  // chosen deliberately, never guessed at from what's left over. Which is why
+  // the new row's cost centre is also where the focus goes: the button that
+  // made the row sits below it, so without this you land past every field you
+  // just asked for and have to shift-tab back up into them.
   function add() {
-    onChange([...value, makeRow("")]);
+    const row = makeRow("");
+    setFocusRowId(row.id);
+    onChange([...value, row]);
   }
 
   const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}`, short: c.code }));
@@ -73,6 +82,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
         <div key={row.id} className="flex flex-col gap-2 @2xl:flex-row @2xl:items-center">
           <Combobox
             className="@2xl:flex-1"
+            autoFocus={row.id === focusRowId}
             options={ccOptions}
             value={row.costCenterCode}
             onChange={(v) => update(row.id, { costCenterCode: v })}

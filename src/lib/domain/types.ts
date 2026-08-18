@@ -9,9 +9,35 @@ export type Role =
   | "VICE_SKATTMASTARE"
   | "SKATTFORMAN"
   | "RESULTATANSVARIG"
+  | "STOCKARE"
   | "ORDINARIE";
 
 export type PaymentType = "CARD" | "REIMBURSEMENT";
+
+// ── Alkohollager ──────────────────────────────────────────────────
+
+// How a product's stock is counted: whole units (cans, wares) or sealed bottles
+// plus the liquid in the opened ones (spirits). See lib/stock/measure.ts.
+export type StockKind = "UNIT" | "VOLUME";
+
+// The drink types a restaurangrapport is broken down by, as
+// Folkhälsomyndigheten names them — not our vocabulary to choose. OVRIGT is
+// everything this app tracks that the form never asks about.
+export type DrinkCategory =
+  | "SPRITDRYCK"
+  | "VIN"
+  | "ANDRA_JASTA"
+  | "STARKOL"
+  | "ALKOHOLDRYCKSLIKNANDE"
+  | "FOLKOL"
+  | "LATTDRYCK"
+  | "OVRIGT";
+
+// Why stock moved. The report keeps these apart — bought is a volume, served is
+// turnover, spilled is neither — so the log does too.
+export type StockEntryKind = "PURCHASE" | "SERVING" | "WASTE" | "COUNT" | "CORRECTION";
+
+export type StockReadingPhase = "OUT" | "BACK" | "COUNT";
 
 // Where a day's takings came from. ZETTLE_FEE is Zettle's own transaction
 // fees, which are a cost rather than income and book the other way round.

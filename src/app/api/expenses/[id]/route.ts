@@ -9,6 +9,7 @@ import {
   isLateReimbursement,
 } from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
+import { isMatchable } from "@/lib/domain/matching";
 import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -76,6 +77,25 @@ export async function PATCH(
         : new Date(body.purchaseDate);
   const grossAmount = body.grossAmount === undefined ? expense.grossAmount : body.grossAmount;
   const paymentType = body.paymentType ?? expense.paymentType;
+
+  // Switching off the section card gives the bank transaction back.
+  //
+  // A match says a particular row on the card is the money that left for this
+  // purchase (see isMatchable). "Eget utlägg" says the member's own money left
+  // and the section owes them it back — so an utlägg holding both has the
+  // section paying for one purchase twice, once on the card and once into a
+  // member's account, with the card row marked accounted for either way.
+  //
+  // Dropped rather than refused: picking a payment type is the submitter's
+  // call to make on this form, and the match is a consequence of the old
+  // answer, not a separate thing they said. It goes back to being an
+  // unaccounted purchase on the card-purchases list, and the timeline records
+  // the UNMATCHED the same as pressing unmatch would.
+  //
+  // Not conditional on the type having *changed* in this edit: an utlägg that
+  // already holds the pair (they were reachable together before the create
+  // route refused it) is repaired by the next save rather than left alone.
+  const dropMatch = Boolean(expense.matchedTransactionId) && !isMatchable(paymentType);
 
   // Negative amounts are allowed on both sides: a return (a refunded purchase)
   // is the same utlägg with the sign flipped, and its allocations follow it.
@@ -167,7 +187,10 @@ export async function PATCH(
   // even when they were identical, which opened a transaction to rewrite four
   // rows into the same four rows and log nothing.
   const changedFields = Object.keys(diff);
-  if (changedFields.length === 0) {
+  // `dropMatch` is work of its own: it isn't one of the diffed fields, and on
+  // an utlägg already holding the contradictory pair it can be the only thing
+  // this save has to do.
+  if (changedFields.length === 0 && !dropMatch) {
     return NextResponse.json({ id, changed: 0 });
   }
 
@@ -175,8 +198,22 @@ export async function PATCH(
     await prisma.$transaction(async (tx) => {
       await tx.expense.update({
         where: { id: expense.id },
-        data: { title, purchaseDate, grossAmount, paymentType },
+        data: {
+          title,
+          purchaseDate,
+          grossAmount,
+          paymentType,
+          ...(dropMatch ? { matchedTransactionId: null } : {}),
+        },
       });
+
+      // Its own event, not a line in the diff: the timeline already has a word
+      // for a match coming off, and this is that, whoever pressed what.
+      if (dropMatch) {
+        await tx.expenseEvent.create({
+          data: { expenseId: expense.id, type: "UNMATCHED", actorId: g.actor.id },
+        });
+      }
 
       // Only when they actually differ. Rewriting an identical distribution
       // dropped and recreated every row for nothing — and left the write and

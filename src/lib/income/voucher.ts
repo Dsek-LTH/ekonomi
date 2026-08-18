@@ -18,15 +18,21 @@ import type { IncomeSource } from "@/lib/domain/types";
 import type { IncomeAccountDistribution, IncomeFeeReportDto } from "./types";
 
 /**
- * What the verifikation says it is: "IR Swish - Café", "Zettleavgifter".
+ * What the verifikation says it is: "Swish - Café", "Zettleavgifter".
  *
  * One function because this text has two jobs. It is the description the
  * voucher carries into Fortnox — and, together with the date, it is the only
  * thing that identifies a day's takings once they are over there: Fortnox
  * knows nothing about reports, batches or committees. The duplicate check
- * (lib/income/duplicate.ts) matches on exactly this string, so it must be
- * computed the same way wherever it is needed, and changing it means older
- * exports stop being recognised.
+ * (lib/income/duplicate.ts) matches on this string, so it must be computed the
+ * same way wherever it is needed.
+ *
+ * It used to begin "IR ". Every one of these goes into the income series (see
+ * incomeVoucherSeries), so the prefix repeated on every row what the series it
+ * was filed under already said — and it said it in the 30-odd characters
+ * Fortnox gives the description, where the verksamhet's own name is the part
+ * that has to fit. Vouchers already over there still carry it; `incomeVoucherKey`
+ * is where the two wordings are made to compare equal.
  */
 export function incomeVoucherDescription(
   source: IncomeSource,
@@ -34,7 +40,7 @@ export function incomeVoucherDescription(
 ): string {
   if (source === "ZETTLE_FEE") return "Zettleavgifter";
   const payment = source === "SWISH" ? "Swish" : "Zettle";
-  return `IR ${payment} - ${committeeDescription ?? ""}`.trim();
+  return `${payment} - ${committeeDescription ?? ""}`.trim();
 }
 
 /**
@@ -88,17 +94,32 @@ export function incomeKeyFromName(name: string): string {
  * knows nothing about reports, sources or batches.
  *
  * The payment method is part of it, because it is part of the description:
- * "IR Swish - Café" and "IR Zettle - Café" are two different days' work that
- * happen to share a date and a verksamhet, and neither is evidence that the
- * other has been booked. Only the same source, the same verksamhet and the same
- * day are the same takings.
+ * "Swish - Café" and "Zettle - Café" are two different days' work that happen
+ * to share a date and a verksamhet, and neither is evidence that the other has
+ * been booked. Only the same source, the same verksamhet and the same day are
+ * the same takings.
  *
  * Case- and space-insensitive: this app writes the descriptions it compares,
  * but the ones already over there were written by whatever wrote them, and a
  * voucher that differs by a double space is not a different day.
+ *
+ * A leading "IR" goes the same way, and that one is load-bearing. Descriptions
+ * were written as "IR Swish - Café" until the prefix was dropped, so the two
+ * wordings are in play at once and in every combination: Fortnox holds old
+ * vouchers and new ones, and a report booked before the change still carries
+ * the old text locally — which is what the export re-checks with, rather than
+ * recomputing it. Folding the prefix away here is what makes all four
+ * comparisons agree, and it is the only place they meet.
  */
 export function incomeVoucherKey(date: string, description: string): string {
-  return `${date}|${description.trim().replace(/\s+/g, " ").toLowerCase()}`;
+  const text = description
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    // Anchored, and only when something follows it: a verksamhet whose name
+    // starts with these two letters is not a prefix.
+    .replace(/^ir[\s-]+/, "");
+  return `${date}|${text}`;
 }
 
 /** A line as it is stored: a VoucherLine plus what goes in the ledger beside it. */

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateExpense } from "@/lib/api/schemas/expense";
+import { isMatchable } from "@/lib/domain/matching";
 
 // POST /api/expenses — body: { paymentType?, title?, matchedTransactionId? }
 export async function POST(req: Request) {
@@ -25,6 +26,12 @@ export async function POST(req: Request) {
 
   // Optional pre-match to a bank transaction (from the "Redovisa" deep-link).
   if (matchedTransactionId) {
+    // Before anything about the transaction itself: an eget utlägg carrying a
+    // match is the section paying for the purchase twice (see isMatchable).
+    // The deep-link opens the wizard on "Sektionskort" and no longer lets it
+    // be changed, so nothing we ship sends this — which is exactly why it is
+    // refused here rather than assumed. Same answer the match step gives.
+    if (!isMatchable(paymentType)) return fail(422, "expense.matchCardOnly");
     const txn = await prisma.bankTransaction.findUnique({
       where: { id: matchedTransactionId },
       include: { matchedExpense: { select: { id: true } }, card: { select: { holderId: true } } },

@@ -17,7 +17,8 @@ import { IconTrash } from "@/components/ui/icons";
 import { fmtScalar } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";
 import type { Comparison } from "./use-comparison";
-import type { Budget, Evaluated, CellFn, FormulaFn, ApiFn } from "./budget-types";
+import { withVariable, withoutVariable } from "./patch-budget";
+import type { Budget, Evaluated, CellFn, FormulaFn, ApiFn, Variable } from "./budget-types";
 
 export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, renderFormula, api, newVar, setNewVar, budgetId }: {
   budget: Budget; ev: Evaluated; comparison: Comparison;
@@ -65,7 +66,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
                 )}
                 {isAdmin && (
                   <td className="px-1 text-center">
-                    <IconButton tone="danger" reveal label={t("remove")} onClick={() => api(url, "DELETE")}>
+                    <IconButton tone="danger" reveal label={t("remove")} onClick={() => api(url, "DELETE", undefined, (b) => withoutVariable(b, v.id))}>
                       <IconTrash className="size-4" />
                     </IconButton>
                   </td>
@@ -95,7 +96,12 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
                   onChange={(e) => setNewVar(e.target.value)}
                   onKeyDown={async (e) => {
                     if (e.key !== "Enter" || !newVar.trim()) return;
-                    const ok = await api(`/api/budgets/${budgetId}/variables`, "POST", { name: newVar.trim().toUpperCase(), expression: "0" });
+                    const ok = await api(
+                      `/api/budgets/${budgetId}/variables`,
+                      "POST",
+                      { name: newVar.trim().toUpperCase(), expression: "0" },
+                      (b, data) => withVariable(b, data as Variable),
+                    );
                     if (ok) setNewVar("");
                   }}
                   placeholder={t("addPlaceholder")}

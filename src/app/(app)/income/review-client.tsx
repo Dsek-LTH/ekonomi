@@ -24,7 +24,9 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import {
   BalanceChip,
+  VoucherBlockerChip,
   VoucherEditor,
+  filledVoucherRows,
   makeVoucherRow,
   type VoucherEditorRow,
   type VoucherLockedRow,
@@ -37,9 +39,9 @@ import { Field } from "@/components/ui/field";
 import {
   IconAlert,
   IconDownload,
+  IconElbow,
   IconLock,
   IconPlus,
-  IconVariant,
   IconViewSplit,
   IconViewTable,
 } from "@/components/ui/icons";
@@ -52,10 +54,11 @@ import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
+import { TableScroll } from "@/components/ui/table-scroll";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { Tag } from "@/components/ui/status-pill";
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
-import { voucherBlocker } from "@/lib/domain/voucher";
+import { voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { incomeVoucherDescription } from "@/lib/income/voucher";
 import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
@@ -276,6 +279,25 @@ export default function IncomeReviewClient({
     setEdits((e) => ({ ...e, [report.id]: rows }));
 
   /**
+   * Whether a day's rows are still the ones this app derived — which is what
+   * decides whose voucher gets booked, and what the list says about the day.
+   *
+   * Asked of the rows and not of `edits[id]` having something in it, because
+   * the editor writes back the moment it is rendered: it keeps three spare rows
+   * under the last one, and putting them there is a change to the array without
+   * being a change to the voucher. Compared on the values, so undoing an edit by
+   * hand also counts as untouched.
+   */
+  const rowSignature = (rows: VoucherEditorRow[]) =>
+    filledVoucherRows(rows)
+      .map((r) => [r.account.trim(), r.costCenterCode.trim(), r.description.trim(), r.debit, r.credit].join("|"))
+      .join(";");
+  const isEdited = (report: IncomeReportRow) => {
+    const rows = edits[report.id];
+    return !!rows && rowSignature(rows) !== rowSignature(defaultRows(report, settings));
+  };
+
+  /**
    * The voucher exactly as it will be posted: the locked clearing row, then the
    * edited ones. Both the button's enabled state and the request read this, so
    * the button can only be live for a voucher the server will accept.
@@ -310,7 +332,10 @@ export default function IncomeReviewClient({
         debit: sekToOre(locked.debit),
         credit: sekToOre(locked.credit),
       },
-      ...rows.map((r) => ({
+      // The editor's spare rows are not lines of the voucher — see
+      // filledVoucherRows. Sent as they are, every day would be blocked on
+      // three rows with no account.
+      ...filledVoucherRows(rows).map((r) => ({
         account: r.account.trim(),
         accountName: accountName(r.account),
         description: r.description || undefined,
@@ -320,14 +345,22 @@ export default function IncomeReviewClient({
       })),
     ];
 
-    const totalDebit = oreToSEK(lines.reduce((s, l) => s + l.debit, 0));
-    const totalCredit = oreToSEK(lines.reduce((s, l) => s + l.credit, 0));
-    // The same rule the route applies (lib/domain/voucher.ts), on the same
-    // rows, in the same unit — so "balanced" here and "balanced" there cannot
-    // disagree.
-    const balanced = voucherBlocker(lines) === null;
-    const knownAccounts = rows.every((r) => accounts.some((a) => a.number === r.account.trim()));
-    const knownCostCenters = rows.every(
+    // Summed in öre and converted for display. The difference used to be taken
+    // between two kronor floats and then compared to 0, which is the comparison
+    // lib/domain/voucher.ts exists to keep out of the screens.
+    const balance = voucherBalance(lines);
+    const totalDebit = oreToSEK(balance.debit);
+    const totalCredit = oreToSEK(balance.credit);
+    // Two questions. `balanced` is whether the sides meet; `blocker` is whether
+    // it may be written at all, which is stricter — an unpicked account blocks a
+    // voucher that adds up perfectly well, and the chip should not call that a
+    // difference. The same rule the route applies, on the same rows, in the same
+    // unit, so the screen and the server cannot disagree.
+    const blocker = voucherBlocker(lines);
+    const knownAccounts = filledVoucherRows(rows).every((r) =>
+      accounts.some((a) => a.number === r.account.trim()),
+    );
+    const knownCostCenters = filledVoucherRows(rows).every(
       (r) => !r.costCenterCode.trim() || costCenters.some((c) => c.code === r.costCenterCode.trim()),
     );
     // The locked row is nobody's choice here, but it is still an account that
@@ -342,11 +375,13 @@ export default function IncomeReviewClient({
       lines,
       totalDebit,
       totalCredit,
-      difference: totalDebit - totalCredit,
+      difference: oreToSEK(balance.difference),
+      balanced: balance.balanced,
+      blocker,
       clearing,
       clearingKnown,
       canBook:
-        balanced &&
+        !blocker &&
         knownAccounts &&
         knownCostCenters &&
         clearingKnown &&
@@ -368,7 +403,7 @@ export default function IncomeReviewClient({
     // untouched one is booked from the report itself, by the server that owns
     // that derivation — the editor was showing a preview of it, and a preview
     // is not a better source than the thing it previews.
-    const body = edits[report.id] ? { lines: voucherFor(report).lines } : {};
+    const body = isEdited(report) ? { lines: voucherFor(report).lines } : {};
     const done = await mutate(`/api/income/reports/${report.id}/book`, {
       key: `book-${report.id}`,
       body,
@@ -585,7 +620,7 @@ export default function IncomeReviewClient({
   const bookable = drafts.filter(
     (d) =>
       costCentreFor(d, settings) &&
-      !edits[d.id] &&
+      !isEdited(d) &&
       !d.duplicateOf &&
       // A report waiting to be filled has nothing to book: the server answers
       // "noDistributions" and this loop stops at it, which would make one empty
@@ -940,8 +975,31 @@ export default function IncomeReviewClient({
           />
         </Card>
       ) : (
-        <div className="flex flex-col gap-6 lg:flex-row">
-          <SidebarPanel>
+        // Side by side only from xl, not lg. This screen is three columns, not
+        // two: the queue, the detail, and the shell's document panel — and that
+        // last one is 520px by default and open on this page, because the whole
+        // point is reading the intäktsräkning against the voucher. At lg that
+        // left the detail column about 130px wide (1024 − 520 panel − 64 page
+        // gutters − 280 queue and gap − 32 card padding), which is narrower
+        // than a single one of the fields inside it. Stacked, the detail gets
+        // the full main column instead, and the queue is a list above it.
+        <div className="flex flex-col gap-6 xl:flex-row">
+          {/* Matching the row above: the panel's default becomes a fixed column
+              at lg, which here would be a 16rem card stranded above a detail
+              that is still stacked under it.
+
+              Sticky from xl, where it is a column beside the detail rather than
+              a list above it. The detail is the long thing on this screen — a
+              day's sales can be a hundred rows — and the queue scrolling away
+              with it meant that picking the next day was a scroll back to the
+              top every time, on the one screen whose whole job is going through
+              a list of days one after another.
+
+              `self-start` is what makes that work at all: the row stretches its
+              items by default, so the panel was already as tall as the detail
+              beside it, and a sticky box that is as tall as its own scroll
+              range has nothing to stick for. */}
+          <SidebarPanel width="xl:w-64" className="xl:sticky xl:top-8 xl:self-start">
             {/* What the queue holds, and the one thing you can do to all of it.
                 The same pair the table view puts in its card header — this is
                 the same list in the other shape, and a bulk action belongs to
@@ -956,7 +1014,17 @@ export default function IncomeReviewClient({
                 from them — see components/ui/overlay-scroll.tsx. In a 16rem
                 panel whose rows are a name against an amount, the gutter was
                 worth removing. */}
-            <OverlayScroll className="max-h-[70vh]">
+            {/* Stacked above the detail, this is 70% of the screen you have to
+                scroll past before reaching the day you just picked — so while
+                it is a list on top, it is a short one.
+
+                As a sticky column it is the opposite: the panel now holds its
+                own position, so the height it takes is height it keeps, and the
+                right amount is as much of the screen as it can have. The 8rem
+                is the 2rem it sticks at plus the panel's own header, and enough
+                left under it that the card ends visibly rather than running off
+                the bottom edge. */}
+            <OverlayScroll className="max-h-80 xl:max-h-[calc(100dvh-8rem)]">
               {groups.map((group) => (
                 <div key={group.date}>
                   {/* The heading carries the day's own action: a report for a
@@ -1023,7 +1091,7 @@ export default function IncomeReviewClient({
                             day to look. A day standing on its committee's
                             default is not one of them. */}
                         {!costCentreFor(report, settings) && ` · ${t("review.noCostCenter")}`}
-                        {edits[report.id] && ` · ${t("review.edited")}`}
+                        {isEdited(report) && ` · ${t("review.edited")}`}
                         {report.duplicateOf && ` · ${t("review.alreadyBookedShort")}`}
                         {report.existingVoucher && ` · ${report.existingVoucher}`}
                       </p>
@@ -1035,7 +1103,13 @@ export default function IncomeReviewClient({
           </SidebarPanel>
 
           {selected && voucher && (
-            <div className="min-w-0 flex-1 space-y-6">
+            // A container, because nothing else in this column can know how
+            // wide it is. The document panel beside it is dragged to whatever
+            // width the reader wants (360px to 70vw, remembered in a cookie),
+            // so the detail's width is not a function of the viewport's and a
+            // `sm:`/`lg:` breakpoint here is guessing. What the fields inside
+            // respond to is this box — see the grid below.
+            <div className="@container min-w-0 flex-1 space-y-6">
               {/* What the voucher is — its own card, a gap above the rows that
                   say what it books, exactly as the utlägg booking view has it.
                   Both fields are locked, and not merely disabled-looking: the
@@ -1063,9 +1137,19 @@ export default function IncomeReviewClient({
                 <CardBody
                   className={cn(
                     "grid gap-5",
+                    // Every track is a minmax with a floor of 0, so a column
+                    // that has run out of room shrinks instead of pushing the
+                    // card open. The old `150px`/`140px` were rigid: four of
+                    // them wanted 542px however little there was, which is how
+                    // a 250px detail column ended up with fields hanging out
+                    // over the page.
+                    //
+                    // Two up as soon as there is room for two, four only when
+                    // the last column would still be worth having — below that
+                    // the voucher text was a 30px box with an ellipsis in it.
                     canMove
-                      ? "sm:grid-cols-[minmax(0,12rem)_150px_140px_minmax(0,1fr)]"
-                      : "sm:grid-cols-[150px_140px_minmax(0,1fr)]",
+                      ? "@md:grid-cols-2 @4xl:grid-cols-[minmax(0,12rem)_minmax(0,10rem)_minmax(0,9rem)_minmax(0,1fr)]"
+                      : "@md:grid-cols-2 @3xl:grid-cols-[minmax(0,10rem)_minmax(0,9rem)_minmax(0,1fr)]",
                   )}
                 >
                   {/* Whose takings the day is — stated where the rest of its
@@ -1158,7 +1242,6 @@ export default function IncomeReviewClient({
                   <Card className="overflow-hidden">
                     <CardHeader
                       title={t("book.title")}
-                      action={<Amount value={selected.total} size="md" />}
                     />
 
                     <VoucherEditor
@@ -1180,16 +1263,22 @@ export default function IncomeReviewClient({
                     )}
                     <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
                       <BalanceChip
-                        balanced={voucher.difference === 0 && voucher.canBook}
+                        balanced={voucher.balanced}
                         difference={formatSEK(voucher.difference)}
                       />
-                      <Button
-                        onClick={() => book(selected)}
-                        loading={pending === `book-${selected.id}`}
-                        disabled={!voucher.canBook}
-                      >
-                        {t("actions.bookAndNext")}
-                      </Button>
+                      <div className="flex items-center gap-2.5">
+                        {/* Why the button is dead — an empty row leaves a
+                            balanced voucher that still cannot be booked, and
+                            without this nothing on the screen would admit why. */}
+                        <VoucherBlockerChip blocker={voucher.blocker} />
+                        <Button
+                          onClick={() => book(selected)}
+                          loading={pending === `book-${selected.id}`}
+                          disabled={!voucher.canBook}
+                        >
+                          {t("actions.bookAndNext")}
+                        </Button>
+                      </div>
                     </CardBody>
                   </Card>
 
@@ -1207,7 +1296,17 @@ export default function IncomeReviewClient({
                         it is wrapped in something that has no padding to begin
                         with. Same as DataTable, which puts its rows straight into
                         the Card. */}
-                    <div className="overflow-x-auto">
+                    {/* TableScroll, not a bare `overflow-x-auto`: with nothing
+                        setting a floor, a `w-full` table always fits its box,
+                        so the scroller never engaged and six columns — one of
+                        them an account picker — squeezed down to a few
+                        characters each instead. Same treatment as the voucher
+                        editor directly above, which has scrolled at its own
+                        600px all along. */}
+                    {/* 7rem lighter than it was, all of it out of the account
+                        column below — every other column keeps the floor it
+                        had. */}
+                    <TableScroll minWidth={canMove ? "min-w-[35rem]" : "min-w-[31rem]"}>
                       <table className="w-full text-sm">
                         <thead className="border-b border-border bg-surface/40 text-left text-xs text-muted">
                           <tr>
@@ -1251,7 +1350,19 @@ export default function IncomeReviewClient({
                               </>
                             )}
                             <th className="px-3 py-2 font-medium">{t("lines.product")}</th>
-                            <th className="w-56 px-3 py-2 font-medium">{t("lines.account")}</th>
+                            {/* The picker under this only ever shows the account
+                                number — `accountOptions` gives every option a
+                                `short` of exactly that, and the trigger prefers
+                                it (components/ui/combobox.tsx). So the column
+                                was 14rem of box around four digits, taken from
+                                the product names next to it, which are the ones
+                                that actually run long. 7rem fits "3001" with
+                                room to spare.
+
+                                The menu does not shrink with it: it floors at
+                                240px of its own, so the full "3001 · Försäljning
+                                (prefixes)" is still what you pick from. */}
+                            <th className="w-28 px-3 py-2 font-medium">{t("lines.account")}</th>
                             <th className="px-3 py-2 text-right font-medium">{t("lines.quantity")}</th>
                             <th className="px-3 py-2 text-right font-medium">{t("lines.unitPrice")}</th>
                             <th className="px-3 py-2 text-right font-medium">{t("lines.total")}</th>
@@ -1264,9 +1375,9 @@ export default function IncomeReviewClient({
                               // in beneath — exactly as the intäktsräkning in the
                               // panel beside this lays them out. See
                               // lib/income/product-groups.ts.
-                              <tr key={row.key}>
+                              <tr key={row.key} className="[&>td]:align-middle">
                                 {canMove && <td colSpan={2} />}
-                                <td colSpan={5} className="px-3 pb-1 pt-3 font-medium">
+                                <td colSpan={5} className="px-3 pb-2 pt-2 font-medium">
                                   {row.name}:
                                 </td>
                               </tr>
@@ -1347,7 +1458,7 @@ export default function IncomeReviewClient({
                                 {row.indented ? (
                                   <span className="flex items-center gap-1.5 pl-4">
                                     {/* The same elbow the document draws. */}
-                                    <IconVariant className="size-3.5 shrink-0 text-muted/60" />
+                                    <IconElbow className="size-3.5 shrink-0 text-muted/60" />
                                     {row.label}
                                   </span>
                                 ) : (
@@ -1386,7 +1497,7 @@ export default function IncomeReviewClient({
                           )}
                         </tbody>
                       </table>
-                    </div>
+                    </TableScroll>
                     {/* Only once something is picked: an action bar on a day nobody
                         is correcting is a row of controls to read past. */}
                     {canMove && picked.length > 0 && (

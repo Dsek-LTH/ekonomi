@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { signOut } from "next-auth/react";
 import { useRole } from "./role-context";
 import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { Avatar } from "../ui/avatar";
-import { Button } from "../ui/button";
-import { FortnoxMark, IconFortnox } from "./fortnox-mark";
+import { IconFortnox } from "./fortnox-mark";
 import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
 import {
   IconBank,
@@ -29,7 +27,6 @@ import {
   IconHierarchy,
   IconMenu,
   IconReceipt,
-  IconUser,
   IconUsers,
 } from "../ui/icons";
 import {
@@ -39,8 +36,8 @@ import {
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
+import type { Theme } from "@/lib/ui/theme";
 
-import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 
 // Nav visibility is a capability predicate over the current user — their roles
@@ -63,18 +60,38 @@ type NavGroup = {
 
 const ALL = () => true;
 
-// Collapsed-sidebar preference. Kept in a cookie rather than localStorage so the
-// server layout can read it and render the right width on the first paint —
-// with localStorage the sidebar would flash open on every full page load.
-export const SIDEBAR_COOKIE = "sidebar_collapsed";
-
-// How wide the main column may grow. Collapsing the sidebar hands 192px back
-// (w-64 → w-16), so the caps grow by the same amount — otherwise collapsing on
-// a large monitor would just add side margin instead of room for content.
+// How wide the main column may grow. One cap per section, not two: what the
+// rail costs the row is a constant 64px, and the panel it opens into overlays
+// the page rather than widening the column it stands beside — so there is no
+// width being handed back and forth for the content to compensate for.
 const CONTENT_MAX = {
-  budget: { expanded: "max-w-[1600px]", collapsed: "max-w-[1792px]" },
-  default: { expanded: "max-w-7xl", collapsed: "max-w-[1472px]" },
+  budget: "max-w-[1792px]",
+  default: "max-w-[1472px]",
 };
+
+/**
+ * The nav is a 64px rail of icons that widens to 256px of labelled links on
+ * hover, and stays there if you pin it.
+ *
+ * It was a 16px strip of screen edge with a hairline on it, opening the same
+ * panel. That bought the 13" layout its width back — with the intäkter list at
+ * 256, the receipt at ~520 and the frame's own gutters, a permanent 256px
+ * sidebar left the booking form around 320px — but tested on people who hadn't
+ * been shown it, the hairline simply wasn't found. Worse than the navigation
+ * being hard to reach: with the panel shut there was no current-section marker,
+ * no brand, and no way to profile, theme, language or sign-out at all, since
+ * all of those live at the foot of this panel.
+ *
+ * 64px is what fixes that for the price of one icon column. The booking form
+ * goes 576 → 512, which is the same `@md` tier of its container query
+ * (`@3xl` doesn't start until 768), so nothing on the page reflows to pay for
+ * it.
+ *
+ * Widths are written out as literal classes at each place they are needed
+ * rather than shared through a constant: Tailwind reads these out of the source
+ * as text and never sees a template string.
+ */
+export const NAV_PINNED_COOKIE = "nav_pinned";
 
 // Where settings lands, and the prefix that switches the sidebar over to the
 // settings nav.
@@ -178,60 +195,152 @@ export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
   ].map((item) => [item.href, item.label]),
 );
 
+/** Below this the rail is gone and the same panel is a drawer over the page. */
+const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+
 export function AppShell({
   children,
-  defaultCollapsed = false,
+  defaultPinned = false,
+  theme,
   fortnox,
 }: {
   children: React.ReactNode;
-  /** Server-read cookie value, so the first paint already has the right width. */
-  defaultCollapsed?: boolean;
-  /** Present only for users who book in Fortnox under their own login; absent
-   *  means the profile menu shows nothing about Fortnox at all. */
+  /** The stored pin, read from the cookie by the layout so a pinned nav renders
+   *  pinned on the first paint rather than snapping wide after hydration. */
+  defaultPinned?: boolean;
+  /** The stored theme, read from its cookie by the same layout for the same
+   *  reason — it is only passing through, on its way to the footer's toggle. */
+  theme: Theme;
+  /**
+   * The reader's own Fortnox login, when they are one of the roles that books
+   * under one. Absent for everybody else, and the nav shows nothing — the row
+   * is an action only the treasury can take. A present-but-null session is
+   * signed out. See the foot of the nav.
+   */
   fortnox?: { session: FortnoxStatus["session"] | null };
 }) {
   const pathname = usePathname();
   const { user } = useRole();
   const t = useTranslations("nav");
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  // Below md the sidebar is an off-canvas drawer instead of a rail — a 64px
-  // rail plus a page is still too much on a phone.
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // One "held open" flag for both bands, because it is the same panel either
+  // way: below md the hamburger sets it, from md it is the pin. Hovering opens
+  // the panel too, but only in CSS (see the aside) — a hover that re-rendered
+  // the whole shell on the way in and out would be paying React for something
+  // the compositor already does.
+  const [pinned, setPinned] = useState(defaultPinned);
+
+  // Only the pin is a preference worth keeping; the drawer being open on a
+  // phone is not, so below md the cookie is left alone.
+  const togglePin = () => {
+    setPinned((v) => {
+      const next = !v;
+      if (!isMobile()) {
+        document.cookie = `${NAV_PINNED_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
-    if (!drawerOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
+    if (!pinned) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPinned(false);
     window.addEventListener("keydown", onKey);
-    // The drawer is only ever open at widths where the document scrolls, so
-    // without this the page slides around behind it.
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [drawerOpen]);
+    // Only matters below md, where the document is what scrolls and the panel
+    // is covering it: without this the page slides around behind the open
+    // drawer. From md the shell is `overflow-hidden` already, and the pinned
+    // rail is a column in the row rather than something over the page, so
+    // locking the body there would be freezing a scroll nothing is covering.
+    if (isMobile()) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        window.removeEventListener("keydown", onKey);
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinned]);
 
-  // Following a link is the natural "done with the menu" signal on mobile, so
-  // every navigable thing inside the drawer closes it on the way out.
-  const closeDrawer = () => setDrawerOpen(false);
+  // Following a link is the natural "done with the menu" signal on a phone, so
+  // every navigable thing inside the panel releases the drawer on the way out.
+  // From md it is not a drawer over anything — a pin is a standing preference
+  // about the shape of the frame, and navigating is not a request to undo it.
+  const closeNav = () => {
+    if (isMobile()) setPinned(false);
+  };
 
-  function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    document.cookie = `${SIDEBAR_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
-  }
-
-  // Three sidebar states, not two. Inside the mobile drawer it is always the
-  // full column. From md to lg it is always the rail: at those widths a 256px
-  // column leaves the page under 500px, which is not enough for a DataTable —
-  // its trailing columns fell off the screen entirely, and 768 (iPad portrait)
-  // came out worse than 767. From lg up `collapsed` decides.
+  // Everything in the panel that is text rather than icon fades with the width,
+  // so a label is never caught halfway through the rail's edge. Below md there
+  // is no rail — the panel is the full-width drawer — so the base state is
+  // "shown" and only md up hides it; open, the panel is simply open and none of
+  // it applies.
   //
-  // So a rail style is written as a plain `md:` variant, which covers both
-  // bands, and the expanded state undoes it again at `lg:` — which is what this
-  // helper emits.
-  const unrail = (classes: string) => (collapsed ? undefined : classes);
+  // The opacity states only. The `transition-*` belongs to each place this is
+  // used, because one of them is also transitioning a transform and `cn` joins
+  // classes rather than merging them — `transition-opacity` alongside
+  // `transition-transform` is not both, it is whichever Tailwind emitted last.
+  //
+  // These all track the panel's width, so they open on the same things it does
+  // and on nothing else — see the aside for why the keyboard's one is
+  // `:focus-visible` rather than `:focus-within`.
+  const labelFade = pinned
+    ? ""
+    : "md:opacity-0 md:group-hover:opacity-100 md:group-has-[:focus-visible]:opacity-100";
+
+  // A group heading is a word, and a word in a 64px rail is nothing but noise —
+  // so on the rail the headings become the rules they would have been sitting
+  // above, and swap back to their labels as the panel opens.
+  const groupRule = pinned
+    ? "opacity-0"
+    : "opacity-0 transition-opacity md:opacity-100 md:group-hover:opacity-0 md:group-has-[:focus-visible]:opacity-0";
+
+  // Sits in the header row past the rail's edge, so while collapsed it is both
+  // invisible and out of reach rather than an invisible click target hanging
+  // over the intäkter list.
+  const pinButton = pinned
+    ? "transition-opacity"
+    : "pointer-events-none opacity-0 transition-opacity md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-has-[:focus-visible]:pointer-events-auto md:group-has-[:focus-visible]:opacity-100";
+
+  // The quick switches at the foot. Unlike a label, these are rows of their own,
+  // so fading them would leave the rail with 80px of blank footer above the
+  // avatar and the avatar itself off the bottom of a phone-height panel. They
+  // have to give the height back too — hence a collapsing grid row rather than
+  // an opacity, which gets there without a hardcoded height that would have to
+  // be re-measured every time a switch changes size.
+  const switchReveal = pinned
+    ? "grid-rows-[1fr]"
+    : "md:grid-rows-[0fr] md:group-hover:grid-rows-[1fr] md:group-has-[:focus-visible]:grid-rows-[1fr]";
+
+  // The Fortnox box at the foot: a 36px square on the rail, holding nothing but
+  // the mark, that opens into a full-width button with its label inside it. A
+  // width rather than a fade, because the border is the box — fading a label in
+  // and out of a box that stayed 36px wide would put the text outside it.
+  //
+  // `calc(100% - 4px)` and not `w-full`: the box carries the profile row's own
+  // 2px inset so its square stands where the avatar stands, and a full-width
+  // element with margins on it would hang those 4px off the right of every
+  // other row in the panel.
+  const fortnoxBox = pinned
+    ? "w-[calc(100%-4px)]"
+    : cn(
+        "w-[calc(100%-4px)] md:w-9",
+        "md:group-hover:w-[calc(100%-4px)]",
+        "md:group-has-[:focus-visible]:w-[calc(100%-4px)]",
+      );
+
+  // And its dot travels with the width: badged on the corner of the square
+  // while it is one, and once there is a box to sit in, in from the trailing
+  // edge on the centre line — where the same dot sits on /profile. `top` and
+  // `right` both animate, so it takes the same 200ms the panel does and arrives
+  // with it rather than jumping when the transition ends.
+  const fortnoxDot = pinned
+    ? "top-1/2 right-[15px]"
+    : cn(
+        "top-1/2 right-[15px]",
+        "md:top-0 md:right-0",
+        "md:group-hover:top-1/2 md:group-hover:right-[15px]",
+        "md:group-has-[:focus-visible]:top-1/2 md:group-has-[:focus-visible]:right-[15px]",
+      );
 
   const isActive = (href: string) =>
     pathname === href ||
@@ -244,22 +353,29 @@ export function AppShell({
       <Link
         key={item.href}
         href={item.href}
-        onClick={closeDrawer}
-        // Unconditional, not just when collapsed: the label is display:none
-        // for the whole md–lg band now, and without this the link would have
-        // no accessible name there at all.
-        title={label}
+        onClick={closeNav}
+        // `px-[11px]`, not `px-3`: the nav's own `px-3` leaves a 40px row on the
+        // rail, and 11 + the 18px icon + 11 is exactly that — so the icon sits
+        // on the rail's centre line and stays on it, to the pixel, as the panel
+        // widens around it. Nothing about the row moves; only the label arrives.
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-          "md:justify-center md:gap-0 md:px-0",
-          unrail("lg:justify-start lg:gap-3 lg:px-3"),
+          "flex items-center rounded-xl px-[11px] py-2 text-sm font-medium transition-colors",
           isActive(item.href)
             ? "brand-fill text-on-brand"
             : "text-foreground hover:bg-surface",
         )}
       >
         <Icon className="size-[18px] shrink-0" />
-        <span className={cn("truncate md:hidden", unrail("lg:block"))}>{label}</span>
+        {/* Margin rather than the row's `gap`, which would be spent whether or
+            not there is a label to separate — 12px of it, on a row with 0 to
+            spare, pushing the icon off the centre line every time the panel
+            closed. As a margin it simply overflows the rail with the label and
+            is clipped along with it.
+
+            No `title` on any of this: the tooltip's own delay is longer than
+            the width transition, so the label it would repeat is already on
+            screen before it could appear. */}
+        <span className={cn("ms-3 min-w-0 flex-1 truncate transition-opacity", labelFade)}>{label}</span>
       </Link>
     );
   };
@@ -299,106 +415,175 @@ export function AppShell({
         {t("skipToContent")}
       </a>
 
-      {/* Backdrop for the mobile drawer. */}
-      {drawerOpen && (
+      {/* Backdrop for the mobile drawer. Below md only: from md the panel is a
+          hover overlay, and dimming the page every time the pointer brushed the
+          left edge would be strobing. */}
+      {pinned && (
         <button
           type="button"
           aria-label={t("closeMenu")}
-          onClick={() => setDrawerOpen(false)}
+          onClick={closeNav}
           className="fixed inset-0 z-30 cursor-default bg-black/40 md:hidden"
         />
       )}
 
-      {/* Sidebar — off-canvas drawer below md, the rail from md, and a full
-          column from lg unless it has been collapsed. */}
-      <aside
+      {/* The nav.
+
+          From md the wrapper is a real column in the flex row, and it is the
+          only part of this that costs the main column anything: 64px while the
+          rail is collapsed, 256 while it is pinned. The panel inside is
+          `absolute`, so widening it on hover overflows the column and passes
+          over the page instead of shoving it sideways — a page that reflowed
+          every time the pointer crossed the nav would be unusable.
+
+          Below md the wrapper goes back to being a `fixed` box of no width,
+          holding the drawer. `md:relative` with all-zero insets is the same
+          position it would take as a static column, so the offsets can stay. */}
+      <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-background",
-          "transition-[width,transform] duration-200 ease-out",
-          "md:relative md:z-30 md:h-screen md:shrink-0 md:w-16 md:translate-x-0",
-          "print:hidden",
-          drawerOpen ? "translate-x-0" : "-translate-x-full",
-          unrail("lg:w-64"),
+          "group pointer-events-none fixed inset-y-0 left-0 z-40 print:hidden",
+          "md:pointer-events-auto md:relative md:z-30 md:shrink-0",
+          "md:transition-[width] md:duration-200 md:ease-out",
+          pinned ? "md:w-64" : "md:w-16",
         )}
       >
-        {/* Collapse toggle — floats over the right border so it never competes
-            with the header for space, and sits inside the main column's own
-            padding so it can't overlap page content. Only from lg: below that
-            the rail is not a preference, it is the only thing that fits. */}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? t("expandMenu") : t("collapseMenu")}
-          title={collapsed ? t("expandMenu") : t("collapseMenu")}
-          className="absolute -right-3 top-5 z-10 hidden size-6 items-center justify-center rounded-full border border-border bg-background text-muted shadow-sm transition-colors hover:text-foreground lg:flex"
-        >
-          {collapsed ? (
-            <IconChevronRight className="size-3.5" />
-          ) : (
-            <IconChevronLeft className="size-3.5" />
+        <aside
+          className={cn(
+            "pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-64 flex-col bg-background",
+            // Everything that only exists at 256px — labels, the brand wordmark,
+            // the pin button — is laid out at full width and hangs off the right
+            // of the rail. This is what cuts it off at the edge.
+            "overflow-hidden border-r border-border",
+            "transition-[width,transform,box-shadow] duration-200 ease-out",
+            pinned
+              ? // Standing in the row rather than over the page: a border is
+                // enough, and a shadow would draw a seam down a frame that no
+                // longer has one.
+                "translate-x-0 md:w-64"
+              : cn(
+                  // Below md this is the drawer, parked off-screen until the
+                  // hamburger sets `pinned`. From md it never moves — it is
+                  // always on screen as the rail, and opening is a width.
+                  "-translate-x-full shadow-[var(--shadow-card)]",
+                  "md:w-16 md:translate-x-0 md:shadow-none",
+                  // The hover reveal, and the keyboard's way in: tabbing to a
+                  // link whose label is still clipped would otherwise walk the
+                  // reader through a menu they cannot read.
+                  //
+                  // `:focus-visible`, not `:focus-within`. Clicking a link
+                  // focuses it, and focus does not end when the pointer leaves —
+                  // so with `focus-within` the panel stayed open after every
+                  // click on it, until something else was clicked. Which is the
+                  // one interaction it gets most: pick a section, move away,
+                  // and the menu follows you out over the page. `:focus-visible`
+                  // is only set when the focus came from the keyboard, which is
+                  // exactly the case this is here for.
+                  "md:group-hover:w-64 md:group-hover:shadow-xl",
+                  "md:group-has-[:focus-visible]:w-64 md:group-has-[:focus-visible]:shadow-xl",
+                ),
           )}
-        </button>
-
-        {inSettings ? (
-          <Link
-            href="/dashboard"
-            onClick={closeDrawer}
-            title={t("backToApp")}
-            className={cn(
-              "flex h-16 items-center gap-2 px-6 text-sm font-medium text-muted transition-colors hover:text-foreground",
-              "md:justify-center md:px-0",
-              unrail("lg:justify-start lg:px-6"),
-            )}
-          >
-            <IconChevronDown className="size-4 shrink-0 rotate-90" />
-            <span className={cn("md:hidden", unrail("lg:inline"))}>{t("backToApp")}</span>
-          </Link>
-        ) : (
-          <div
-            className={cn(
-              "flex h-16 items-center gap-2.5 px-6",
-              "md:justify-center md:px-0",
-              unrail("lg:justify-start lg:px-6"),
-            )}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-10 shrink-0" />
-            <div className={cn("leading-tight md:hidden", unrail("lg:block"))}>
-              <p className="text-sm font-semibold">D-sektionen</p>
-              <p className="text-xs text-muted">{t("brandTagline")}</p>
-            </div>
-          </div>
-        )}
-
-        <nav aria-label={t("mainNav")} className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-2">
-          {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
-          {groups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-0.5">
-              {/* On the rail, the gap between groups carries the grouping. */}
-              <p
-                className={cn(
-                  "px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted md:hidden",
-                  unrail("lg:block"),
-                )}
+        >
+          {/* The header, in the same two-part shape as every row below it: one
+              40px slot on the rail's centre line that is always visible, and
+              text after it that arrives with the width. */}
+          <div className="flex h-16 shrink-0 items-center px-3">
+            {inSettings ? (
+              <Link
+                href="/dashboard"
+                onClick={closeNav}
+                className="flex min-w-0 flex-1 items-center rounded-xl py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
               >
-                {t(group.label)}
-              </p>
-              {group.items.map(navLink)}
-            </div>
-          ))}
-          {/* `mt-auto` so it sits against the profile footer however few groups
-              this user's roles leave above it. */}
-          <div className="mt-auto flex flex-col gap-0.5 pt-4">{navLink(HELP)}</div>
-        </nav>
+                <span className="flex size-10 shrink-0 items-center justify-center">
+                  <IconChevronDown className="size-4 rotate-90" />
+                </span>
+                <span className={cn("ms-1 min-w-0 flex-1 truncate transition-opacity", labelFade)}>
+                  {t("backToApp")}
+                </span>
+              </Link>
+            ) : (
+              <>
+                <span className="flex size-10 shrink-0 items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-8" />
+                </span>
+                <div className={cn("ms-1 min-w-0 flex-1 leading-tight transition-opacity", labelFade)}>
+                  <p className="truncate text-sm font-semibold">D-sektionen</p>
+                  <p className="truncate text-xs text-muted">{t("brandTagline")}</p>
+                </div>
+              </>
+            )}
 
-        {/* Sticky profile footer */}
-        <ProfileFooter
-          user={user}
-          collapsed={collapsed}
-          onNavigate={closeDrawer}
-          fortnox={fortnox}
-        />
-      </aside>
+            {/* Turns a hover into a decision. Without it the wide layout is only
+                ever borrowed — every trip to the nav costs the page 192px of
+                cover — and on a screen with the room to spare there is no
+                reason to keep paying that. It only appears once the panel is
+                open, which is the one moment it has somewhere to be. */}
+            <button
+              type="button"
+              onClick={togglePin}
+              aria-expanded={pinned}
+              title={pinned ? t("collapseMenu") : t("pinMenu")}
+              aria-label={pinned ? t("collapseMenu") : t("pinMenu")}
+              className={cn(
+                "-me-1 hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground md:flex",
+                pinButton,
+              )}
+            >
+              {pinned ? <IconChevronLeft className="size-4" /> : <IconMenu className="size-4" />}
+            </button>
+          </div>
+
+          <nav
+            aria-label={t("mainNav")}
+            // `overflow-y-auto` and nothing horizontal: the labels overflowing
+            // the rail are meant to be clipped, and a scrollbar offering to
+            // reach them would be offering to scroll the frame sideways.
+            className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 py-2"
+          >
+            {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
+            {groups.map((group) => (
+              <div key={group.label} className="flex flex-col gap-0.5">
+                {/* Heading and rule occupy the same fixed-height row, one fading
+                    out as the other fades in, so the list does not jump by a
+                    line-height every time the panel opens.
+
+                    No padding on the row itself: the rule wants the full 40px
+                    the nav's own `px-3` leaves, so that on the rail it is
+                    exactly as wide as the pills it separates. The heading takes
+                    the inset instead, which puts it back at the x the labels
+                    below it start from. */}
+                <div className="relative flex h-5 items-center">
+                  <span aria-hidden className={cn("h-px w-full bg-border", groupRule)} />
+                  <p
+                    className={cn(
+                      "absolute inset-x-3 truncate text-[11px] font-semibold uppercase tracking-wider text-muted transition-opacity",
+                      labelFade,
+                    )}
+                  >
+                    {t(group.label)}
+                  </p>
+                </div>
+                {group.items.map(navLink)}
+              </div>
+            ))}
+            {/* `mt-auto` so it sits against the profile footer however few groups
+                this user's roles leave above it. */}
+            <div className="mt-auto flex flex-col gap-0.5 pt-4">{navLink(HELP)}</div>
+          </nav>
+
+          {/* Sticky profile footer */}
+          <ProfileFooter
+            user={user}
+            onNavigate={closeNav}
+            theme={theme}
+            labelFade={labelFade}
+            switchReveal={switchReveal}
+            fortnox={fortnox}
+            fortnoxBox={fortnoxBox}
+            fortnoxDot={fortnoxDot}
+          />
+        </aside>
+      </div>
 
       {/* Main column — the only scroll container from md up; below that the
           document itself scrolls, so the browser chrome can get out of the way. */}
@@ -407,7 +592,7 @@ export function AppShell({
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:hidden print:hidden">
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => setPinned(true)}
             aria-label={t("openMenu")}
             className="-ml-1 flex size-9 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-surface"
           >
@@ -431,15 +616,15 @@ export function AppShell({
             // block clears the end of the scroll instead of butting against it.
             // The phone gutter drops to 16px: at 20px, page padding plus card
             // inset spent 36px of a 375px screen before any content.
-            "mx-auto w-full flex-1 pb-16 pl-4 pt-6 md:pb-20 md:pl-8 md:pt-8",
+            "mx-auto w-full flex-1 pb-16 pl-4 pt-6 md:pb-20 md:pl-6 md:pt-8",
             // The folded receipt tab is `fixed`, so it reserves no width and
             // would otherwise sit on top of whatever reaches the right edge.
             // Written as one side or the other, never both: `cn` joins rather
             // than merges, so two `pr-` utilities would be settled by
             // stylesheet order instead of by intent.
-            receiptTab ? "pr-14 md:pr-16" : "pr-4 md:pr-8",
+            receiptTab ? "pr-6 md:pr-12" : "pr-6 md:pr-6",
             // The budget sheets need more room; everything else stays centered.
-            collapsed ? caps.collapsed : caps.expanded,
+            caps,
           )}
         >
           {children}
@@ -454,168 +639,222 @@ export function AppShell({
   );
 }
 
-// Whether this user's own Fortnox login is live — the identity their exported
-// vouchers get stamped with. Distinct from the section's service connection,
-// which is admin-managed and lives under Settings → Fortnox.
-function FortnoxAccountButton({
+/**
+ * The treasury's own Fortnox login, as the button directly above the profile.
+ *
+ * It sits there rather than up among the nav links because it is not a section
+ * of the app to be in — it is the state of an account, next to the account it
+ * belongs to. On the rail it is a 36px square holding the mark, standing where
+ * the avatar below it stands; as the panel opens the square grows into a
+ * full-width button and its label arrives inside the border rather than beside
+ * it, which is what makes it read as one object opening rather than an icon
+ * that has grown a caption.
+ *
+ * A plain `<a>`, not a `<Link>`: /api/fortnox/connect is a redirect out to
+ * Fortnox's consent screen, and routing it through the client router would ask
+ * Next to render a page that is never going to arrive.
+ *
+ * It stays on screen signed in as well as signed out, and the dot says which.
+ * The session is short-lived by design, so a button that only appeared once it
+ * had lapsed would be one nobody could get ahead of — you would meet it for the
+ * first time on the export that failed. Signed in it is quiet and still
+ * clickable, which is how you renew a session that is about to go.
+ */
+function FortnoxLogin({
   session,
   returnTo,
+  onNavigate,
+  labelFade,
+  boxExpand,
+  dotSlide,
 }: {
   session: FortnoxStatus["session"] | null;
+  /** Where to come back to. Fortnox sends the browser here, not back through
+   *  history, so without this every login lands on /bookkeeping. */
   returnTo: string;
+  onNavigate: () => void;
+  labelFade: string;
+  /** How the box goes from square to button. See AppShell. */
+  boxExpand: string;
+  /** Where the dot rides at each of those widths. The same. */
+  dotSlide: string;
 }) {
-  const t = useTranslations("nav.fortnoxAccount");
-  const { dateTime } = useFormat();
-  const connected = Boolean(session);
+  const t = useTranslations("nav");
+  const signedIn = Boolean(session);
+  const label = signedIn ? t("fortnoxSignedIn") : t("fortnoxSignIn");
   return (
     <a
       href={`/api/fortnox/connect?mode=user&returnTo=${encodeURIComponent(returnTo)}`}
-      className="flex w-full items-center gap-2.5 rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-surface"
+      onClick={onNavigate}
+      title={label}
+      // `mx-0.5`, the profile row's own inset, so the square stands in exactly
+      // the 36px the avatar below it stands in. Outlined rather than filled:
+      // the border is what makes it a box for the label to be inside, and the
+      // fill is left to the hover, like every other row in this panel.
+      //
+      // `mb-2` to match the gap above it, so the button sits between the
+      // switches and the profile rather than stuck to the profile. Two bordered
+      // 36px squares touching read as one control split in half — which on the
+      // rail, where both are squares and neither is labelled, is exactly the
+      // wrong thing for a login to be mistaken for.
+      //
+      // No `overflow-hidden`, deliberately — the dot hangs off the corner while
+      // the box is a square, and clipping the box would take it with it.
+      className={cn(
+        "relative mx-0.5 mb-2 flex h-9 items-center rounded-lg border border-border transition-[width,background-color] duration-200 ease-out hover:bg-surface",
+        boxExpand,
+      )}
     >
-      <FortnoxMark />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate text-xs font-medium">
-          {connected ? session?.fortnoxUserName || t("connected") : "Fortnox"}
-        </span>
-        <span className="block truncate text-[11px] text-muted">
-          {connected
-            ? t("signedInUntil", { time: dateTime(session!.expiresAt) })
-            : t("signedOut")}
-        </span>
+      {/* A 36px slot, the avatar's size, so the mark lands on the same centre
+          line — and the label after it starts where the name below it does. It
+          is a pixel wider each side than the box's inside, which nothing can
+          show: what is drawn in it is a 20px logo in the middle. */}
+      <span className="flex size-9 shrink-0 items-center justify-center">
+        <IconFortnox className="size-5" />
+      </span>
+      <span
+        className={cn(
+          "ms-3 min-w-0 flex-1 truncate pe-6 text-sm font-medium transition-opacity",
+          labelFade,
+        )}
+      >
+        {label}
       </span>
       <span
         aria-hidden
+        // Positioned by its centre — the translate is half of it on each axis —
+        // so the corner badge and the seat inside the box are the same two
+        // numbers moving, and `top`/`right` can simply be animated between
+        // them. Ringed in the panel's background to keep it off the border it
+        // crosses.
+        //
+        // Warning rather than the muted grey the same state wears on /profile:
+        // there the dot reports, with a sentence beside it saying what it
+        // means, and here — clipped to a 64px rail most of the time — it is the
+        // whole message, and the message is that an export will fail until
+        // somebody presses this.
         className={cn(
-          "size-2 shrink-0 rounded-full",
-          connected ? "bg-success" : "bg-muted/50",
+          "absolute size-2.5 -translate-y-1/2 translate-x-1/2 rounded-full ring-2 ring-background transition-[top,right] duration-200 ease-out",
+          signedIn ? "bg-success" : "bg-warning",
+          dotSlide,
         )}
       />
     </a>
   );
 }
 
-// Bottom-of-sidebar profile: a trigger showing the user, and a popover panel
-// (opening upward) with the quick switches — theme, language, Fortnox status,
-// sign-out. Everything here also lives on /profile, which is where the details
-// (payout account, full Fortnox controls) are edited; the corner icon is the
-// way there.
+// Bottom-of-sidebar profile: the two switches that are worth reaching without
+// leaving the page — theme and language — over a row that says whose session
+// this is and leads to /profile, where the rest of it lives (payout account,
+// roles, Fortnox login, sign-out).
+//
+// This was a popover opening upward out of the footer, carrying all of that in
+// miniature. Two things were wrong with it. It stood over the panel's foot and
+// could not be reached without the pointer leaving the panel, so the panel had
+// to be held open behind it — and a menu that outlives the hover that opened it
+// is a menu that snags, still standing over the page long after you have moved
+// on. And it was a second copy of /profile, which is a page that already exists
+// and is one click from here. What is left inline is only what a page load
+// would be too much for.
 function ProfileFooter({
   user,
-  collapsed,
   onNavigate,
+  theme,
+  labelFade,
+  switchReveal,
   fortnox,
+  fortnoxBox,
+  fortnoxDot,
 }: {
   user: CurrentUser;
-  collapsed: boolean;
   onNavigate: () => void;
+  /** What the toggle starts on. See lib/ui/theme.ts. */
+  theme: Theme;
+  /** How the panel's text behaves as the rail widens. See AppShell. */
+  labelFade: string;
+  /** The same, for the switch rows, which give back their height too. */
+  switchReveal: string;
+  /** The reader's own Fortnox login, for the roles that book under one.
+   *  Absent for everybody else, and no button is drawn. */
   fortnox?: { session: FortnoxStatus["session"] | null };
+  /** How that button opens, and where its dot rides. See AppShell. */
+  fortnoxBox: string;
+  fortnoxDot: string;
 }) {
-  const { name, email, initials, roles } = user;
+  const { name, email, initials } = user;
   const t = useTranslations("common");
-  const tRole = useTranslations("common.role");
   const tNav = useTranslations("nav");
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  // Same md-always / lg-undo pairing as the sidebar above — see AppShell.
-  const unrail = (classes: string) => (collapsed ? undefined : classes);
+  const onProfile = pathname === "/profile";
 
   return (
-    <div className="relative border-t border-border p-3">
-      {open && (
-        // Click-catcher to dismiss the popover.
-        <button
-          type="button"
-          aria-label={t("close")}
-          className="fixed inset-0 z-10 cursor-default"
-          onClick={() => setOpen(false)}
+    <div className="border-t border-border p-3">
+      {/* Collapsed to nothing on the rail rather than merely faded: at 64px
+          there is no room for a label beside a 36px control, and a switch you
+          cannot see is still a switch you can hit. Tabbing to one from the
+          keyboard opens the panel around it — `switchReveal` answers to
+          `:focus-visible` the same way the labels do. */}
+      <div className={cn("grid transition-[grid-template-rows] duration-200 ease-out", switchReveal)}>
+        {/* The clip the collapsing row needs to close over. */}
+        <div className="overflow-hidden">
+          <div className={cn("space-y-1 pb-2 transition-opacity", labelFade)}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-xs text-muted">{t("theme")}</span>
+              <ThemeToggle initial={theme} />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-xs text-muted">{t("language")}</span>
+              <LanguageSwitcher />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Directly above the profile, and never inside the collapsing block
+          above: the switches are a convenience that the rail can afford to
+          fold away, and this is a warning that it cannot. */}
+      {fortnox && (
+        <FortnoxLogin
+          session={fortnox.session}
+          returnTo={pathname}
+          onNavigate={onNavigate}
+          labelFade={labelFade}
+          boxExpand={fortnoxBox}
+          dotSlide={fortnoxDot}
         />
       )}
 
-      {open && (
-        // Collapsed, the rail is far too narrow to hold this — the panel keeps
-        // its full width and spills to the right over the page instead.
-        <div
-          className={cn(
-            "absolute bottom-full left-3 right-3 z-20 mb-2 rounded-xl border border-border bg-background p-3 shadow-lg",
-            "md:right-auto md:w-64",
-            unrail("lg:right-3 lg:w-auto"),
-          )}
-        >
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{name}</p>
-                <p className="truncate text-xs text-muted">{email}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {roles.length ? roles.map((r) => tRole(r)).join(" · ") : tRole("ORDINARIE")}
-                </p>
-              </div>
-              {/* The way to the full profile. Sits in the corner so it reads as
-                  "open this" rather than as one more setting in the list. */}
-              <Link
-                href="/profile"
-                onClick={() => {
-                  setOpen(false);
-                  onNavigate();
-                }}
-                title={tNav("profile")}
-                aria-label={tNav("profile")}
-                className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
-              >
-                <IconUser className="size-[18px]" />
-              </Link>
-            </div>
-
-            {fortnox && (
-              <FortnoxAccountButton session={fortnox.session} returnTo={pathname} />
-            )}
-
-            <div className="flex items-center justify-between border-t border-border pt-2.5">
-              <span className="text-xs text-muted">{t("theme")}</span>
-              <ThemeToggle />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted">{t("language")}</span>
-              <LanguageSwitcher />
-            </div>
-
-            <Button
-              variant="dangerOutline"
-              size="sm"
-              className="w-full"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              {t("signOut")}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
+      {/* On the rail this is the whole footer: a 36px avatar on the centre line,
+          and the one thing on a collapsed nav that says whose session this is.
+          A link, not a menu — everything it used to open is on the page it
+          goes to. */}
+      <Link
+        href="/profile"
+        onClick={onNavigate}
+        aria-current={onProfile ? "page" : undefined}
         title={name}
+        // `px-0.5` centres the 36px avatar in the 40px the rail's padding
+        // leaves, the same way the nav rows centre their icons.
         className={cn(
-          "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-surface",
-          "md:justify-center md:gap-0 md:px-0",
-          unrail("lg:justify-start lg:gap-3 lg:px-2"),
+          "flex w-full items-center rounded-xl px-0.5 py-2 text-left transition-colors",
+          // Deliberately not the nav rows' brand fill. Those mark which section
+          // of the app you are in; this is a corner of the frame, and a block of
+          // brand colour under the avatar reads as a notification rather than as
+          // "you are here".
+          onProfile ? "bg-surface" : "hover:bg-surface",
         )}
       >
         <Avatar initials={initials} />
-        <div className={cn("min-w-0 flex-1 leading-tight md:hidden", unrail("lg:block"))}>
+        <div className={cn("ms-3 min-w-0 flex-1 leading-tight transition-opacity", labelFade)}>
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="truncate text-xs text-muted">{email}</p>
         </div>
-        <IconChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted transition-transform md:hidden",
-            open && "rotate-180",
-            unrail("lg:block"),
-          )}
+        <IconChevronRight
+          aria-hidden
+          className={cn("size-4 shrink-0 text-muted transition-opacity", labelFade)}
         />
-      </button>
+        <span className="sr-only">{tNav("profile")}</span>
+      </Link>
     </div>
   );
 }

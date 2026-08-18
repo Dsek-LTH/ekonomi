@@ -61,7 +61,7 @@ describe.each(["domain", "ui"])("lib/%s stays pure", (folder) => {
 // can unit-test again. So the named ones below are pinned: the list is the
 // promise, and adding to it is how a new pure module gets the same protection.
 const PINNED_PURE: Record<string, string[]> = {
-  budget: ["changes.ts", "compare.ts", "eval.ts", "grid.ts", "index.ts"],
+  budget: ["changes.ts", "compare.ts", "eval.ts", "grid.ts", "index.ts", "paste.ts"],
   ledger: ["bas.ts"],
   fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
 };

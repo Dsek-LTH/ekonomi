@@ -2,24 +2,37 @@
 // account → line-items → Summa table. Owns the drag-reclassify + row-reorder
 // drag handlers and the per-sheet drafts; the select/edit behaviour comes from
 // useCellEdit, and the cell renderers and `api` from the budget client.
-import { useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { lineKeys, sheetTotals, ZERO_TOTALS, type JoinedAccount, type JoinedSheet } from "@/lib/budget/compare";
 import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconComment, IconTrash } from "@/components/ui/icons";
+import { IconComment, IconElbow, IconTrash } from "@/components/ui/icons";
 import { StatRow } from "./stat-row";
 import { resultImpact } from "@/lib/budget/changes";
 
 import { DragHandle, insideRect } from "@/components/ui/drag";
 import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
+import {
+  withAccount,
+  withComment,
+  withLine,
+  withLineOrder,
+  withNewAccount,
+  withoutAccount,
+  withoutComment,
+  withoutLine,
+  withSheet,
+} from "./patch-budget";
 import { useCellEdit } from "./use-cell-edit";
+import { useNotify } from "@/components/shell/notifications";
 import type { AccountRecord } from "@/lib/domain/types";
 import { Combobox } from "@/components/ui/combobox";
-import type { Account, BudgetCC, Evaluated, LineItem, Draft, CellFn, FormulaFn, ApiFn } from "./budget-types";
+import type { Account, BudgetCC, BudgetClip, Comment, Evaluated, LineItem, Draft, CellFn, FormulaFn, ApiFn } from "./budget-types";
 
 /** This sheet, joined against the one side it is being compared with. */
 export interface SheetCompare { label: string; sheet: JoinedSheet }
@@ -32,8 +45,11 @@ export function CostCenterSheet(props: {
   accounts: AccountRecord[];
   /** Editorial adjustments in force, by account id — see budget-helpers. */
   adjustments: Map<string, AdjustmentRow[]>;
+  /** What has been copied, from this sheet or from any other. */
+  clip: BudgetClip | null;
+  onCopy: (clip: BudgetClip | null) => void;
 }) {
-  const { cc, ccCode, ev, grid, columns, compare, isAdmin, canComment, userId, renderCell, renderFormula, api, budgetId, accounts, adjustments } = props;
+  const { cc, ccCode, ev, grid, columns, compare, isAdmin, canComment, userId, renderCell, renderFormula, api, budgetId, accounts, adjustments, clip, onCopy } = props;
   const t = useTranslations("budget.sheet");
   const tCol = useTranslations("budget.col");
   const tRam = useTranslations("budget.rambudget");
@@ -45,6 +61,7 @@ export function CostCenterSheet(props: {
 
   // Spreadsheet select/edit over this sheet's gated cells. Movement is native.
   const cellEdit = useCellEdit("space-y-4");
+  const notify = useNotify();
 
   // Sheet-local UI state: which accounts have their comments expanded, and the
   // buffered drafts for the "+ new line" / "+ account" rows.
@@ -57,7 +74,22 @@ export function CostCenterSheet(props: {
   // is still the sum of the rows that did — a sheet you can't read is no help
   // in finding the row to fix — so this is what says it is a partial one.
   const badAccount = new Set(ev.badAccounts ?? []);
-  const gut = (n: number | undefined) => <td className="select-none border-r border-border/60 px-1 text-right align-top font-mono text-[10px] leading-8 text-muted/50">{n ?? ""}</td>;
+  // The left margin: the row's A1 number and the box that picks the row out for
+  // a copy, in one cell rather than a column each — a whole column of furniture
+  // for a 16px square is a column the figures don't get.
+  //
+  // The box is centred in the cell and the number is laid over its left edge,
+  // out of the flow, so that neither can push the other about: the boxes line
+  // up straight down the sheet whatever the numbers beside them are doing, and
+  // a row without a number keeps its box in the same place as the rest.
+  const gut = (n: number | undefined, box?: React.ReactNode) => (
+    <td className="relative select-none border-r border-border/60 px-1 align-middle">
+      <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted/50">
+        {n ?? ""}
+      </span>
+      <span className="flex h-8 items-center justify-center">{box}</span>
+    </td>
+  );
 
   // Row delete. Revealed on row hover (like the drag grip) so a long sheet isn't
   // a column of bins — keyboard focus reveals it too, so it stays reachable
@@ -103,22 +135,34 @@ export function CostCenterSheet(props: {
   // w-full, so it always fits its container with no horizontal scrollbar.
   // The action column holds a trash icon on every row, plus the comment toggle
   // (icon + count) on account rows — wide enough for both without wrapping.
-  const GUT_W = 40, ACT_W = 78;
+  const GUT_W = 58, ACT_W = 78;
   const staticWidth = (c: ColumnDef): number | undefined =>
     c.key === "beskrivning" ? undefined : c.key === "konto" ? 110 : 260;
 
   // One line-item cell, rendered per column.
-  function lineCell(col: ColumnDef, li: LineItem) {
+  function lineCell(col: ColumnDef, li: LineItem, account: Account) {
     const k = col.key;
     if (k === "konto") return (
+      // The account-number column, on a row that has no number of its own. What
+      // it holds instead is the elbow: down out of the account above, right into
+      // this row — the same mark the income screen puts on a product's variant,
+      // and the same reading. The grip keeps the left of the cell; `ml-auto`
+      // holds the elbow against the row it points at, whether or not the grip
+      // is there to be seen.
       <td key={k} className="border-r border-border/60 p-0">
-        {isAdmin && (
-          <DragHandle
-            onDragStart={(e) => { e.dataTransfer.setData("lineId", li.id); e.dataTransfer.effectAllowed = "move"; }}
-            className="flex items-center px-1.5 py-1.5 text-muted/30 hover:text-muted"
-            title={t("dragToReorder")}
-          />
-        )}
+        <span className="flex items-center py-1.5 pl-1.5 pr-2">
+          {isAdmin && (
+            <DragHandle
+              onPointerDown={(e) => startLineDrag(e, account, li)}
+              className={cn(
+                "flex items-center text-muted/30 hover:text-muted",
+                draggingLineId === li.id && "text-muted opacity-100",
+              )}
+              title={t("dragToReorder")}
+            />
+          )}
+          <IconElbow className="ml-auto size-3.5 shrink-0 text-muted/40" />
+        </span>
       </td>
     );
     if (k === "beskrivning")
@@ -134,10 +178,15 @@ export function CostCenterSheet(props: {
   async function createLine(accountId: string) {
     const d = newRow[accountId];
     if (!d || (!d.description.trim() && !d.expression.trim())) return;
-    const ok = await api(`/api/budget-accounts/${accountId}/line-items`, "POST", {
-      description: d.description.trim(),
-      expression: d.expression.trim() || "0",
-    });
+    // The route hands back the row it made, id and sort order and all, so the
+    // sheet gains it from the answer instead of re-reading the whole budget to
+    // find out that it has one more row than it had.
+    const ok = await api(
+      `/api/budget-accounts/${accountId}/line-items`,
+      "POST",
+      { description: d.description.trim(), expression: d.expression.trim() || "0" },
+      (b, data) => withLine(b, accountId, data as LineItem),
+    );
     if (ok) setNewRow((m) => { const n = { ...m }; delete n[accountId]; return n; });
   }
 
@@ -157,10 +206,16 @@ export function CostCenterSheet(props: {
 
   async function createAccount(kind: AccountKind, code: string) {
     if (!code.trim()) return;
-    // The name is resolved server-side from the chart.
-    await api(`/api/budgets/${budgetId}/cost-centers/${cc.id}/accounts`, "POST", {
-      accountCode: code.trim(), kindOverride: kind,
-    });
+    // The name is resolved server-side from the chart — which is the reason the
+    // new account is taken from the response rather than assembled here: this
+    // side knows the code that was asked for, and the server knows what it is
+    // called. It comes back with its (empty) rows and comments on it.
+    await api(
+      `/api/budgets/${budgetId}/cost-centers/${cc.id}/accounts`,
+      "POST",
+      { accountCode: code.trim(), kindOverride: kind },
+      (b, data) => withNewAccount(b, cc.id, data as Account),
+    );
   }
 
   // Dropping an account card flips its income/cost classification. Gated on the
@@ -168,28 +223,377 @@ export function CostCenterSheet(props: {
   const dropProps = (kind: AccountKind) => ({
     onDragOver: (e: React.DragEvent) => { if (!e.dataTransfer.types.includes("accountid")) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dropKind !== kind) setDropKind(kind); },
     onDragLeave: (e: React.DragEvent) => { if (insideRect(e)) return; setDropKind((k) => (k === kind ? null : k)); },
-    onDrop: (e: React.DragEvent) => { if (!e.dataTransfer.types.includes("accountid")) return; e.preventDefault(); setDropKind(null); const id = e.dataTransfer.getData("accountId"); if (id) api(`/api/budget-accounts/${id}`, "PATCH", { kindOverride: kind }); },
+    onDrop: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes("accountid")) return;
+      e.preventDefault();
+      setDropKind(null);
+      const id = e.dataTransfer.getData("accountId");
+      // Only the override moves; the account keeps its rows, which the response
+      // does not carry and this must not drop.
+      if (id) {
+        api(`/api/budget-accounts/${id}`, "PATCH", { kindOverride: kind }, (b, data) =>
+          withAccount(b, id, (a) => ({ ...a, kindOverride: (data as Account).kindOverride })),
+        );
+      }
+    },
   });
 
-  // Which line row is the current drop target (for the insert highlight).
-  const [dropLineId, setDropLineId] = useState<string | null>(null);
-
-  // Reorder a line within its account: drop `draggedId` at `targetId`'s slot.
-  // Same-account only; cross-account ids are ignored by the endpoint.
-  function reorderLine(account: Account, draggedId: string, targetId: string) {
-    if (draggedId === targetId) return;
-    if (!account.lineItems.some((l) => l.id === draggedId)) return; // not this account's row
-    const ids = account.lineItems.map((l) => l.id).filter((id) => id !== draggedId);
-    const idx = ids.indexOf(targetId);
-    if (idx === -1) return;
-    ids.splice(idx, 0, draggedId);
-    api(`/api/budget-accounts/${account.id}/line-items/reorder`, "POST", { orderedIds: ids });
+  /**
+   * Reordering a line by hand — within its account, or onto another one.
+   *
+   * The row is lifted out and follows the pointer; the rows it passes snap into
+   * the gap it left, one at a time, as the pointer crosses each halfway mark.
+   * The same drag as the voucher table's (components/voucher-editor.tsx) — a
+   * line drawn between two rows says where a row would land, which is not the
+   * same as reading the sheet you are about to save.
+   *
+   * A pointer drag and not HTML5's, which reports what you are over rather than
+   * where you are, and so can only ever snap. Reclassifying a whole account by
+   * dropping it on the other section still is HTML5: that one is a thing landing
+   * on another thing, which is exactly what it is for.
+   *
+   * Where a row lands is an account and a place in it at once, so a row can be
+   * carried across the sheet and not only up and down its own account. Which is
+   * why the geometry here is measured rather than counted in row heights: an
+   * account's heading, its Summa and its new-row line all stand between one
+   * account's rows and the next, and none of them is a row height.
+   */
+  interface LineDrag {
+    id: string;
+    /** The account it was picked up from, and the one it is over now. */
+    fromAccountId: string;
+    accountId: string;
+    /** Every account's rows as placed — the ref leads what is drawn. */
+    ids: Record<string, string[]>;
+    /** The same, as the drag found it: for Escape, and for "nothing moved". */
+    before: Record<string, string[]>;
+    /** Where the pointer is, and how far down the row it took hold. */
+    pointerY: number;
+    grab: number;
   }
-  const lineDropProps = (account: Account, li: LineItem) => ({
-    onDragOver: (e: React.DragEvent) => { if (!e.dataTransfer.types.includes("lineid")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; if (dropLineId !== li.id) setDropLineId(li.id); },
-    onDragLeave: (e: React.DragEvent) => { if (insideRect(e)) return; setDropLineId((k) => (k === li.id ? null : k)); },
-    onDrop: (e: React.DragEvent) => { if (!e.dataTransfer.types.includes("lineid")) return; e.preventDefault(); e.stopPropagation(); setDropLineId(null); reorderLine(account, e.dataTransfer.getData("lineId"), li.id); },
+  const lineDrag = useRef<LineDrag | null>(null);
+  const [draggingLineId, setDraggingLineId] = useState<string | null>(null);
+  // The placement to draw: the drag's while it is in the air, and then until
+  // the saved sheet comes back holding it. Rows are the server's, so without
+  // that second half the sheet would spring back to the old order for as long
+  // as the save took, and land on the new one after.
+  const [placement, setPlacement] = useState<Record<string, string[]> | null>(null);
+  // The lifted row itself, and the sheet it is being carried around.
+  const liftRef = useRef<HTMLTableRowElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Every row of the sheet by id, because a placement can hold a row that has
+  // been carried out of the account the server still has it under.
+  const lineById = new Map(cc.accounts.flatMap((a) => a.lineItems.map((l) => [l.id, l] as const)));
+
+  /** This account's rows in the order to draw them. */
+  function linesOf(account: Account): LineItem[] {
+    const ids = placement?.[account.id];
+    if (!ids) return account.lineItems;
+    return ids.map((id) => lineById.get(id)).filter((l): l is LineItem => Boolean(l));
+  }
+
+  /**
+   * Keep the lifted row under the pointer, wherever the rows have got to.
+   *
+   * Written straight to the node: this runs on every pointer move, and a state
+   * update per pixel would re-render the whole sheet to move one row. The
+   * measurement is of the row without its lift, which is the thing that changes
+   * as the rows around it snap into place.
+   */
+  const lift = useCallback(() => {
+    const el = liftRef.current;
+    const d = lineDrag.current;
+    if (!el || !d) return;
+    el.style.transform = "";
+    const box = el.getBoundingClientRect();
+    let y = d.pointerY - d.grab - box.top;
+    // Held inside the sheet's rows: past the first or the last there is nowhere
+    // to put it, so it stops there and the pointer carries on without it.
+    const rows = sheetRef.current?.querySelectorAll<HTMLElement>("tr[data-line]");
+    if (rows && rows.length > 0) {
+      const top = rows[0].getBoundingClientRect().top;
+      const bottom = rows[rows.length - 1].getBoundingClientRect().bottom;
+      y = Math.min(Math.max(y, top - box.top), bottom - box.height - box.top);
+    }
+    el.style.transform = `translateY(${y}px)`;
+  }, []);
+
+  /** Put the dragged row in `accountId`, beside `overId` — or at its end. */
+  const place = useCallback((d: LineDrag, accountId: string, overId: string | null, after: boolean) => {
+    const ids: Record<string, string[]> = {};
+    for (const [key, list] of Object.entries(d.ids)) ids[key] = list.filter((x) => x !== d.id);
+    const list = ids[accountId];
+    if (!list) return;
+    const at = overId ? list.indexOf(overId) : -1;
+    list.splice(at === -1 ? list.length : at + (after ? 1 : 0), 0, d.id);
+    // The pointer crosses a row many times over without changing anything.
+    if (accountId === d.accountId && list.join() === d.ids[accountId].join()) return;
+    d.ids = ids;
+    d.accountId = accountId;
+    setPlacement(ids);
+  }, []);
+
+  /**
+   * Copying rows and accounts from one cost centre into another.
+   *
+   * What travels is what is ticked: a box on every row and every account, in
+   * the sheet's left-hand margin beside the row numbers. Ticking says nothing
+   * about what happens next — ⌘/Ctrl+C takes the ticked rows (or the row you are
+   * standing in, if none are), ⌘/Ctrl+V puts them into whatever account you are
+   * standing in, on any sheet in the budget.
+   *
+   * The clipboard itself belongs to the page (`clip`), because leaving this
+   * sheet is the entire point and this component goes with it.
+   *
+   * The rows are named to the server by id, not by content — see the paste
+   * route, which is also what re-points equations inside a copied block at the
+   * copies. Nothing about a row is described twice.
+   */
+  const [ticked, setTicked] = useState<{ rows: Set<string>; accounts: Set<string> }>({
+    rows: new Set(),
+    accounts: new Set(),
   });
+
+  const toggle = (kind: "rows" | "accounts", id: string) =>
+    setTicked((was) => {
+      const next = new Set(was[kind]);
+      if (!next.delete(id)) next.add(id);
+      return { ...was, [kind]: next };
+    });
+  const clearTicks = () => setTicked({ rows: new Set(), accounts: new Set() });
+
+  /**
+   * What is ticked *on this sheet*, in the order the sheet draws it.
+   *
+   * This sheet's, because the ticks outlive it: the component stays mounted as
+   * the cost centre beside it changes, and a row ticked two sheets ago is not
+   * something a copy here should quietly take. Drawing order, because that is
+   * the order the rows will be pasted in.
+   */
+  function selection(): { accounts: string[]; rows: string[] } {
+    const accounts: string[] = [];
+    const rows: string[] = [];
+    for (const account of cc.accounts) {
+      if (ticked.accounts.has(account.id)) accounts.push(account.id);
+      for (const li of linesOf(account)) if (ticked.rows.has(li.id)) rows.push(li.id);
+    }
+    return { accounts, rows };
+  }
+  const marked = selection();
+
+  /** Which row and account the focus is in, read off the row's own markers. */
+  function focusedRow(): { accountId: string; lineId?: string } | null {
+    const el = document.activeElement as HTMLElement | null;
+    const line = el?.closest<HTMLElement>("tr[data-line]");
+    if (line?.dataset.account) return { accountId: line.dataset.account, lineId: line.dataset.line };
+    const account = el?.closest<HTMLElement>("tr[data-account-row]");
+    if (account?.dataset.accountRow) return { accountId: account.dataset.accountRow };
+    return null;
+  }
+
+  /**
+   * Put the ticked things on the clipboard. Accounts win where both are ticked:
+   * an account brings its rows with it, so the rows inside one are already in
+   * the copy and taking them twice would paste them twice.
+   */
+  function copySelection(): boolean {
+    if (marked.accounts.length > 0) {
+      const label = cc.accounts.find((a) => a.id === marked.accounts[0])?.accountCode ?? "";
+      onCopy({ kind: "accounts", ids: marked.accounts, label });
+      notify.success(t("copiedAccounts", { count: marked.accounts.length }));
+      return true;
+    }
+    if (marked.rows.length > 0) {
+      onCopy({ kind: "rows", ids: marked.rows, label: String(marked.rows.length) });
+      notify.success(t("copiedRows", { count: marked.rows.length }));
+      return true;
+    }
+    return false;
+  }
+
+  /** ⌘C with nothing ticked: the one row being stood in, which is what it looks
+   *  like it should do. An account's own line takes the account, rows and all. */
+  function copyHere(): boolean {
+    if (copySelection()) return true;
+    const at = focusedRow();
+    if (!at) return false;
+    if (!at.lineId) {
+      const account = cc.accounts.find((a) => a.id === at.accountId);
+      if (!account) return false;
+      onCopy({ kind: "accounts", ids: [account.id], label: account.accountCode });
+      notify.success(t("copiedAccounts", { count: 1 }));
+      return true;
+    }
+    onCopy({ kind: "rows", ids: [at.lineId], label: "1" });
+    notify.success(t("copiedRows", { count: 1 }));
+    return true;
+  }
+
+  function pasteHere(): boolean {
+    if (!clip || !isAdmin) return false;
+    const at = focusedRow();
+    const body =
+      clip.kind === "accounts"
+        ? { accountIds: clip.ids }
+        : at
+          ? { accountId: at.accountId, lineItemIds: clip.ids }
+          : null;
+    // Rows have to land in an account, and which one is not for this to guess.
+    if (!body) {
+      notify.info(t("pasteNeedsAccount"));
+      return true;
+    }
+    // Only this sheet's accounts change, so only those are taken from the
+    // answer: the cost centre it is linked to is the page's own, and the
+    // response has no opinion about the result unit derived from it.
+    api(`/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`, "POST", body, (b, data) =>
+      withSheet(b, cc.id, (sheet) => ({ ...sheet, accounts: (data as BudgetCC).accounts })),
+    );
+    return true;
+  }
+
+  /**
+   * The sheet's own keys, taken before the cell layer sees them — that one
+   * swallows anything it doesn't recognise while a cell is merely selected.
+   *
+   * Nothing is taken while a cell is being edited: ⌘C there is copying text out
+   * of a formula, and it has nothing to do with the rows.
+   */
+  function sheetKeys(e: React.KeyboardEvent): boolean {
+    if (cellEdit.className.includes("is-editing")) return false;
+    if (!e.metaKey && !e.ctrlKey) return false;
+    if (e.key === "c" || e.key === "C") {
+      // Nothing copied means nothing taken: the browser's own copy still works
+      // anywhere in the sheet that isn't a row.
+      if (!copyHere()) return false;
+      e.preventDefault();
+      return true;
+    }
+    if (e.key === "v" || e.key === "V") {
+      if (!pasteHere()) return false;
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
+  const sheetProps = {
+    ...cellEdit,
+    onKeyDownCapture: (e: React.KeyboardEvent) => {
+      if (sheetKeys(e)) return;
+      cellEdit.onKeyDownCapture(e);
+    },
+  };
+
+  /** The tick box in the margin, on every row that can be copied. The app's own
+   *  square — the one the multi-select picker marks its options with. */
+  function tickBox(kind: "rows" | "accounts", id: string, label: string) {
+    return (
+      <Checkbox checked={ticked[kind].has(id)} onChange={() => toggle(kind, id)} label={label} />
+    );
+  }
+
+  function startLineDrag(e: React.PointerEvent, account: Account, li: LineItem) {
+    if (!isAdmin || e.button !== 0) return;
+    const tr = (e.target as HTMLElement).closest("tr");
+    if (!tr) return;
+    // Or the pointer selects its way down the sheet as the row follows it.
+    e.preventDefault();
+    const ids: Record<string, string[]> = {};
+    for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
+    lineDrag.current = {
+      id: li.id,
+      fromAccountId: account.id,
+      accountId: account.id,
+      ids,
+      before: ids,
+      pointerY: e.clientY,
+      grab: e.clientY - tr.getBoundingClientRect().top,
+    };
+    setPlacement(ids);
+    setDraggingLineId(li.id);
+  }
+
+  // Put the row back under the pointer once the rows have been redrawn around
+  // it — before the frame is painted, so the two never disagree on screen.
+  useLayoutEffect(() => {
+    if (draggingLineId) lift();
+  }, [placement, draggingLineId, lift]);
+
+  // Followed on the window: the pointer leaves the grip within a few pixels,
+  // the row it belongs to being on its way out from under it.
+  useEffect(() => {
+    if (!draggingLineId) return;
+    const clear = () => {
+      // The lift is this row's own inline style, and the row outlives the drag.
+      if (liftRef.current) liftRef.current.style.transform = "";
+      liftRef.current = null;
+      lineDrag.current = null;
+      setDraggingLineId(null);
+    };
+    const move = (e: PointerEvent) => {
+      const d = lineDrag.current;
+      if (!d) return;
+      d.pointerY = e.clientY;
+      // What is under the pointer, asked of the page rather than worked out:
+      // the lifted row is `pointer-events-none`, so this sees the sheet it is
+      // being carried over. A heading or a Summa is nothing to land on, and the
+      // placement simply stands until the pointer is over a row again.
+      const under = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const over = under?.closest<HTMLElement>("tr[data-line]");
+      const end = under?.closest<HTMLElement>("tr[data-line-end]");
+      if (over?.dataset.line && over.dataset.account && over.dataset.line !== d.id) {
+        const box = over.getBoundingClientRect();
+        place(d, over.dataset.account, over.dataset.line, e.clientY > box.top + box.height / 2);
+      } else if (end?.dataset.lineEnd) {
+        // The new-row line, under the last of an account's rows — and the only
+        // thing to aim at in an account that has none.
+        place(d, end.dataset.lineEnd, null, false);
+      }
+      lift();
+    };
+    // Saved once, when it is let go — not on every row it crossed on the way.
+    // One request even when the row changed account: the rows it left keep the
+    // order they had, and the route moves it over (see the reorder endpoint).
+    //
+    // The arrangement was this screen's to begin with, so it is also what the
+    // budget is patched with — `withLineOrder` is the same rule the route
+    // applies, over the same list. The placement stands until that lands, and
+    // is then let go onto a budget that already says the same thing.
+    const stop = () => {
+      const d = lineDrag.current;
+      const to = d?.accountId;
+      const moved =
+        d && to && (to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join());
+      if (d && to && moved) {
+        const ids = d.ids[to];
+        api(`/api/budget-accounts/${to}/line-items/reorder`, "POST", { orderedIds: ids }, (b) =>
+          withLineOrder(b, to, ids),
+        ).then(() => setPlacement(null));
+      } else {
+        setPlacement(null);
+      }
+      clear();
+    };
+    const cancel = () => {
+      setPlacement(null);
+      clear();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancel();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", key);
+    };
+  }, [draggingLineId, api, lift, place]);
 
   function accountBlock(account: Account) {
     const accountKey = `${ccCode}:${account.accountCode}`;
@@ -203,7 +607,10 @@ export function CostCenterSheet(props: {
     // (lineKeys), so `keys[i]` is what this sheet's i-th row is known as over
     // there, and anything left over is a row only they have.
     const cmp = compareAccounts.get(account.accountCode);
-    const keys = lineKeys(account.lineItems);
+    // Off the rows as drawn, not as they arrived: a row being dragged is in a
+    // different place, and its comparison has to travel with it.
+    const lines = linesOf(account);
+    const keys = lineKeys(lines);
     const cmpLines = new Map((cmp?.lines ?? []).map((l) => [l.key, l]));
     const ghostLines = (cmp?.lines ?? []).filter((l) => !keys.includes(l.key));
 
@@ -215,8 +622,13 @@ export function CostCenterSheet(props: {
     const adjTotal = adjRows.reduce((sum, r) => sum + r.amount, 0);
     return (
       <tbody key={account.id} className="border-b border-border">
-        <tr className="group bg-background">
-          {gut(grid.accountRow.get(`${ccCode}|${account.id}`))}
+        {/* Marked like the rows below it: standing in this line and copying
+            takes the account and everything under it. */}
+        <tr data-account-row={account.id} className="group bg-background">
+          {gut(
+            grid.accountRow.get(`${ccCode}|${account.id}`),
+            isAdmin && tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
+          )}
           <td className="group relative border-r border-border/60 bg-brand p-0 align-middle">
             {isAdmin && (
               <DragHandle
@@ -230,9 +642,17 @@ export function CostCenterSheet(props: {
                 options={accountOptionsFor(account.accountCode)}
                 value={account.accountCode}
                 onChange={(v) => {
-                  if (v !== account.accountCode) {
-                    api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v });
-                  }
+                  if (v === account.accountCode) return;
+                  // The code pulls the name with it, resolved from the chart, so
+                  // both are taken off the answer — and only those two, since
+                  // the account's rows are not in it.
+                  api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v }, (b, data) =>
+                    withAccount(b, account.id, (a) => ({
+                      ...a,
+                      accountCode: (data as Account).accountCode,
+                      accountName: (data as Account).accountName,
+                    })),
+                  );
                 }}
                 placeholder={tBook("accountPlaceholder")}
                 searchPlaceholder={tBook("accountSearch")}
@@ -255,24 +675,59 @@ export function CostCenterSheet(props: {
           {actualPad}
           <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
             <span className="flex items-center">
-              {isAdmin && del(() => api(`/api/budget-accounts/${account.id}`, "DELETE"), t("removeAccount"))}
+              {isAdmin && del(
+                () => api(`/api/budget-accounts/${account.id}`, "DELETE", undefined, (b) =>
+                  withoutAccount(b, account.id),
+                ),
+                t("removeAccount"),
+              )}
             </span>
           </td>
         </tr>
 
-        {account.lineItems.map((li, i) => (
+        {lines.map((li, i) => (
           <tr
             key={li.id}
-            {...lineDropProps(account, li)}
-            className={cn("group border-t transition-colors hover:bg-surface/40", dropLineId === li.id ? "border-t-2 border-t-accent" : "border-border/40")}
+            // What a drag reads the sheet by: every row it may land among says
+            // which row it is and whose account it belongs to.
+            data-line={li.id}
+            data-account={account.id}
+            // Only ever set, never cleared: a row carried into another account
+            // is a different <tr> under a different <tbody>, and React mounts
+            // the new one around the same time it drops the old.
+            ref={(el) => {
+              if (el && draggingLineId === li.id) liftRef.current = el;
+            }}
+            className={cn(
+              "group border-t border-border/40 transition-colors hover:bg-surface/40",
+              // Lifted: over the rows it passes, on the sheet's own background
+              // so they don't read through it, and outlined so it is a row in
+              // hand rather than one that happens to overlap. Outline and not a
+              // shadow: box-shadow is not painted on the rows of a
+              // border-collapse table, which this is.
+              //
+              // `pointer-events-none` is what lets the drag see the sheet
+              // underneath it — the row is directly under the pointer the whole
+              // way, and it cannot be the answer to what it is over.
+              draggingLineId === li.id &&
+                "pointer-events-none relative z-10 bg-background outline outline-1 outline-border",
+              // Ticked, and so part of what a copy would take.
+              ticked.rows.has(li.id) && "bg-accent-soft/40",
+            )}
           >
-            {gut(grid.lineRow.get(`${ccCode}|${li.id}`))}
-            {columns.map((col) => lineCell(col, li))}
+            {gut(
+              grid.lineRow.get(`${ccCode}|${li.id}`),
+              isAdmin && tickBox("rows", li.id, t("selectRow")),
+            )}
+            {columns.map((col) => lineCell(col, li, account))}
             {showCompare && (
               <CompareCells other={cmpLines.get(keys[i])?.values[1]} own={ev.lineItems[li.id]} incomeLike={incomeLike} />
             )}
             <td className="px-1 text-left text-muted">
-              {isAdmin && del(() => api(liUrl(li.id), "DELETE"), tAlloc("removeRow"))}
+              {isAdmin && del(
+                () => api(liUrl(li.id), "DELETE", undefined, (b) => withoutLine(b, li.id)),
+                tAlloc("removeRow"),
+              )}
             </td>
           </tr>
         ))}
@@ -327,8 +782,11 @@ export function CostCenterSheet(props: {
         ))}
 
         {isAdmin && (
-          <tr className="border-t border-border/40 bg-background">
-            <td className="w-9 border-r border-border/60" />
+          // Also where a dragged row lands when it is carried this far down an
+          // account — including an account with no rows of its own, which has
+          // nothing else to aim at.
+          <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
+          <td className="w-9 border-r border-border/60" />
             {columns.map((col) => {
               const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40 focus:bg-accent-soft/40";
               const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
@@ -399,7 +857,12 @@ export function CostCenterSheet(props: {
                     <span className="shrink-0 font-medium">{cm.author.name}</span>
                     <span className="flex-1 text-muted">{cm.body}</span>
                     {(cm.author.id === userId || isAdmin) && (
-                      <span className="shrink-0">{del(() => api(`/api/budget-comments/${cm.id}`, "DELETE"), t("removeComment"))}</span>
+                      <span className="shrink-0">{del(
+                        () => api(`/api/budget-comments/${cm.id}`, "DELETE", undefined, (b) =>
+                          withoutComment(b, cm.id),
+                        ),
+                        t("removeComment"),
+                      )}</span>
                     )}
                   </div>
                 ))}
@@ -411,7 +874,12 @@ export function CostCenterSheet(props: {
                       if (e.key !== "Enter") return;
                       const body = (commentDraft[account.id] ?? "").trim();
                       if (!body) return;
-                      const ok = await api(`/api/budget-accounts/${account.id}/comments`, "POST", { body });
+                      const ok = await api(
+                        `/api/budget-accounts/${account.id}/comments`,
+                        "POST",
+                        { body },
+                        (b, data) => withComment(b, account.id, data as Comment),
+                      );
                       if (ok) setCommentDraft((m) => ({ ...m, [account.id]: "" }));
                     }}
                     placeholder={t("commentPlaceholder")}
@@ -539,7 +1007,7 @@ export function CostCenterSheet(props: {
   }
 
   return (
-    <div {...cellEdit}>
+    <div ref={sheetRef} {...sheetProps}>
       {/* summary — StatRow's auto-fit, so the three drop to one column on a
           phone instead of squeezing six-figure amounts into a third of it.
           Not a <Card>, on purpose and for the same reason the
@@ -580,6 +1048,58 @@ export function CostCenterSheet(props: {
           </div>
         ))}
       </StatRow>
+
+      {/* What is ticked, and what it can be made into. It appears only once
+          something is, so the sheet is as quiet as it was until you start. */}
+      {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface/60 px-4 py-2 text-sm">
+          <span className="font-medium">
+            {marked.accounts.length > 0
+              ? t("markedAccounts", { count: marked.accounts.length })
+              : t("markedRows", { count: marked.rows.length })}
+          </span>
+          <button
+            type="button"
+            onClick={copySelection}
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            {t("copyMarked")}
+          </button>
+          <span className="text-xs text-muted">⌘/Ctrl+C</span>
+          <button
+            type="button"
+            onClick={clearTicks}
+            className="ml-auto text-xs font-medium text-accent hover:underline"
+          >
+            {t("clearMarked")}
+          </button>
+        </div>
+      )}
+
+      {/* What is on the clipboard, and what to do with it. Here rather than
+          against every account: a copy is one thing at a time, and it is the
+          same one wherever in the budget you have gone to put it. It is also
+          the only place the shortcut is written down, which is what stops the
+          whole feature from being a secret. */}
+      {isAdmin && clip && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
+          <span className="font-medium">
+            {clip.kind === "rows"
+              ? t("copiedRows", { count: clip.ids.length })
+              : t("copiedAccountCode", { code: clip.label })}
+          </span>
+          <span className="text-xs text-muted">
+            {clip.kind === "rows" ? t("pasteRowsHint") : t("pasteAccountsHint")}
+          </span>
+          <button
+            type="button"
+            onClick={() => onCopy(null)}
+            className="ml-auto text-xs font-medium text-accent hover:underline"
+          >
+            {t("clearClipboard")}
+          </button>
+        </div>
+      )}
 
       {sectionCard("INCOME", tRam("income"), income, ghostAccounts.filter((a) => a.kind === "INCOME"), totals.income)}
       {sectionCard("COST", tRam("costs"), cost, ghostAccounts.filter((a) => a.kind === "COST"), totals.cost)}

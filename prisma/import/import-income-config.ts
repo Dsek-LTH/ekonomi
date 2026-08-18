@@ -95,8 +95,18 @@ async function main() {
   const costCentreIdByCode = new Map(found.map((c) => [c.code, c.id]));
   const unresolved = (codes as string[]).filter((code) => !costCentreIdByCode.has(code));
 
+  // Committees whose profile here is filed under a different key than the YAML
+  // uses. Not an error — the app is the source of the routing table intakt is
+  // handed — but the treasurer should see that the two spellings met.
+  const renamed: { yaml: string; here: string; name: string }[] = [];
+
   console.log(`Importing from ${path}`);
   console.log(`  ${Object.keys(committees).length} committees, ${Object.keys(prefixes).length} prefixes`);
+
+  // YAML committee key → the income profile it ended up on, so the prefix loop
+  // below can route by the name the YAML uses even when the profile is filed
+  // under a different key here (see the renames printed at the end).
+  const incomeIdByKey = new Map<string, string>();
 
   for (const [key, committee] of Object.entries(committees)) {
     const costCenterId = committee.default_cost_center
@@ -113,28 +123,43 @@ async function main() {
         select: { id: true },
       })) ?? (await prisma.resultUnit.create({ data: { name }, select: { id: true } }));
 
-    await prisma.resultUnitIncome.upsert({
-      where: { key },
-      create: {
-        key,
-        resultUnitId: unit.id,
-        description: committee.description?.trim() ?? "",
-        defaultCostCenterId: costCenterId,
-      },
-      // The cost centre is deliberately updated too: this script is how the
-      // YAML is brought across, and a stale link would be the thing it was
-      // supposed to fix.
-      update: {
-        resultUnitId: unit.id,
-        description: committee.description?.trim() ?? "",
-        defaultCostCenterId: costCenterId,
-      },
+    // Matched by unit, not by key. A unit given income settings in the app has
+    // a key derived from its name (incomeKeyFromName), which is not the short
+    // key the YAML uses — upserting on the key would try to create a second
+    // profile for a unit that already has one, and resultUnitId is unique. The
+    // existing key wins: it is what the app has already handed intakt, and the
+    // app serialises the routing table out of here (lib/income/config.ts), so
+    // the two stay in step on their own.
+    const existing = await prisma.resultUnitIncome.findUnique({
+      where: { resultUnitId: unit.id },
+      select: { id: true, key: true },
     });
-  }
 
-  const incomeIdByKey = new Map(
-    (await prisma.resultUnitIncome.findMany({ select: { id: true, key: true } })).map((i) => [i.key, i.id]),
-  );
+    const income = existing
+      ? await prisma.resultUnitIncome.update({
+          where: { id: existing.id },
+          // The cost centre is deliberately updated too: this script is how the
+          // YAML is brought across, and a stale link would be the thing it was
+          // supposed to fix.
+          data: {
+            description: committee.description?.trim() ?? "",
+            defaultCostCenterId: costCenterId,
+          },
+          select: { id: true, key: true },
+        })
+      : await prisma.resultUnitIncome.create({
+          data: {
+            key,
+            resultUnitId: unit.id,
+            description: committee.description?.trim() ?? "",
+            defaultCostCenterId: costCenterId,
+          },
+          select: { id: true, key: true },
+        });
+
+    if (income.key !== key) renamed.push({ yaml: key, here: income.key, name });
+    incomeIdByKey.set(key, income.id);
+  }
 
   // The fallback flag is guarded by a partial unique index, so two rows can
   // never claim it. Clearing it first keeps a re-run from colliding with the
@@ -190,6 +215,14 @@ async function main() {
   console.log(`  verksamheter          ${await prisma.resultUnitIncome.count()}`);
   console.log(`  prefixes              ${await prisma.incomeProductPrefix.count()}`);
   console.log(`  swish fallbacks       ${await prisma.swishAmountFallback.count()}`);
+
+  if (renamed.length > 0) {
+    console.log(
+      `\n  These verksamheter already had income settings, under a different key than the YAML's.` +
+        `\n  The existing key was kept — it is the one intakt has been given:`,
+    );
+    for (const r of renamed) console.log(`    ${r.name.padEnd(24)} ${r.yaml} → kept "${r.here}"`);
+  }
 
   const withoutCostCentre = await prisma.resultUnitIncome.count({ where: { defaultCostCenterId: null } });
   if (withoutCostCentre > 0) {

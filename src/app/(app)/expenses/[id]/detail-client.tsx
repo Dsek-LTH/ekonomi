@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
 import { IconLink } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { expenseDocuments } from "@/lib/expense/document-url";
 import { Amount } from "@/components/ui/amount";
 // For the amount that sits inside a translated sentence ("Pick a transaction for
 // exactly …"), where a React node cannot go. Everything rendered as a figure in
@@ -78,6 +79,7 @@ function ExpenseDetail({
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
+  const documents = expenseDocuments(expense, `${tReceipt("alt")} · ${expense.title}`);
 
   return (
     <PageShell
@@ -95,11 +97,19 @@ function ExpenseDetail({
       back={{ href: "/expenses", label: tNav("expenses") }}
     >
       {/* The receipt is the app's panel now, not a card in this page — the page
-          declares it and the shell stands it beside all of this, full height. */}
+          declares it and the shell stands it beside all of this, full height.
+
+          Two documents, not one: the utläggsräkning — the cover page naming
+          who attested what — and the underlag behind it, with the panel's
+          pager between them. Stapled together they are what gets attached to
+          the voucher in Fortnox, and being able to read that here is most of
+          the reason to render it at all; a document you cannot see until it is
+          in somebody else's system is one nobody checks.
+
+          A draft has no cover worth drawing and shows its receipt alone.
+          See lib/expense/document-url.ts. */}
       <ReceiptPanelSource
-        receiptId={expense.receiptId ?? null}
-        mimeType={expense.receiptMimeType ?? "image/jpeg"}
-        filename={`${tReceipt("alt")} · ${expense.title}`}
+        documents={documents}
         emptyTitle={tReceipt("alt")}
         emptyDescription={t("noReceipt")}
       />

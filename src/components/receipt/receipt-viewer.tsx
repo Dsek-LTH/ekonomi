@@ -10,6 +10,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/ui/utils";
 import type { ReceiptViewerProps } from "./receipt-viewer-impl";
 
+export type { ViewerDocument } from "./receipt-viewer-impl";
+
 // pdf.js is a large chunk, fetched at the moment someone first opens a receipt.
 // This used to render nothing at all, so the panel read as an empty box rather
 // than as one filling up.

@@ -28,7 +28,7 @@ import { Amount } from "@/components/ui/amount";
 import { formatSEK } from "@/lib/ui/format";
 import { isAmountInput, parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
-import { cancelsOut } from "@/lib/domain/matching";
+import { cancelsOut, isMatchable } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
@@ -93,9 +93,19 @@ export default function NewExpenseClient({
   const [step, setStep] = useState(0);
   // CARD is only offered to card holders; the expense being edited keeps its
   // type as an option even if the user no longer holds a card.
-  const paymentTypes = PAYMENT_TYPES.filter(
-    (pt) => holdsCard || pt !== "CARD" || existing?.paymentType === "CARD",
-  );
+  //
+  // And when this wizard was opened to account for one particular purchase on
+  // the card, the payment type is not a choice at all: that money has already
+  // left the section's account. Offering "eget utlägg" beside a purchase the
+  // section has already paid for is offering to pay for it a second time, into
+  // the member's own account — which is what this used to do, quietly, because
+  // the transaction stayed matched to the utlägg through the switch. Someone
+  // who meant to claim their own money back wants a new utlägg, not this one.
+  const paymentTypes = presetTxn
+    ? (["CARD"] as PaymentType[])
+    : PAYMENT_TYPES.filter(
+        (pt) => holdsCard || pt !== "CARD" || existing?.paymentType === "CARD",
+      );
   const [paymentType, setPaymentType] = useState<PaymentType>(
     existing?.paymentType ?? (holdsCard ? "CARD" : "REIMBURSEMENT"),
   );
@@ -322,7 +332,12 @@ export default function NewExpenseClient({
       const create: CreateExpense = {
         paymentType,
         title: "",
-        matchedTransactionId: presetTxn?.id ?? null,
+        // Only ever with the card purchase it belongs to. The type is locked
+        // to CARD whenever there is a presetTxn, so this reads as belt and
+        // braces — it is the same rule the route refuses on (isMatchable),
+        // written where the body is built rather than left implied by a
+        // condition three hundred lines up.
+        matchedTransactionId: isMatchable(paymentType) ? (presetTxn?.id ?? null) : null,
       };
       const created = await mutate<{ id: string }>("/api/expenses", {
         key: "save",
@@ -510,6 +525,11 @@ export default function NewExpenseClient({
             </FieldGroup>
 
             <FieldGroup label={t("paymentType")}>
+              {/* Said out loud, because a group that offers one answer reads
+                  as a group that is broken. */}
+              {presetTxn && (
+                <p className="mb-3 text-xs text-muted">{t("paymentTypeFixed")}</p>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 {paymentTypes.map((pt) => (
                   <button

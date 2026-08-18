@@ -27,21 +27,59 @@ export interface VoucherLine {
 export type VoucherBlocker =
   | "twoLines"
   | "accountRequired"
+  | "amountRequired"
   | "negativeAmounts"
   | "unbalanced";
+
+/**
+ * The two sides, and what stands between them. Öre.
+ *
+ * Balance is a narrower question than `voucherBlocker`, and worth asking on its
+ * own: a voucher with a half-filled row, or one account still unpicked, can be
+ * perfectly balanced — it simply cannot be *booked* yet. The booking screens
+ * used to read "balanced" off the blocker, which conflated the two and put a
+ * red "differs by 0,00 kr" under a voucher whose sides met exactly. What the
+ * blocker says is whether it may be written; what this says is whether it adds
+ * up, and the screens want both.
+ */
+export function voucherBalance(lines: readonly VoucherLine[]): {
+  debit: number;
+  credit: number;
+  difference: number;
+  balanced: boolean;
+} {
+  const debit = lines.reduce((s, l) => s + l.debit, 0);
+  const credit = lines.reduce((s, l) => s + l.credit, 0);
+  return {
+    debit,
+    credit,
+    difference: debit - credit,
+    // The zero check is what stops an empty voucher (0 = 0) counting as
+    // balanced — an untouched form would otherwise open on a green chip.
+    // Beyond that, balance is exact.
+    balanced: debit !== 0 && debit === credit,
+  };
+}
 
 export function voucherBlocker(lines: readonly VoucherLine[]): VoucherBlocker | null {
   // Double entry: one row is not a verifikation, whatever it says.
   if (lines.length < 2) return "twoLines";
   if (lines.some((l) => !l.account.trim())) return "accountRequired";
+  // An account with nothing posted to it is not a row of anything. It reaches
+  // here because the editors only discard a row that is empty *all through*
+  // (isBlankVoucherRow) — an account picked and then left, which is what a
+  // half-finished thought looks like, counts as typed and travels the whole way
+  // to Fortnox as a 0,00 line nobody meant to write.
+  //
+  // Ahead of the balance check on purpose: a voucher of nothing but these adds
+  // to 0 = 0, and "debet ≠ kredit" is a poor way to say "you left the amounts
+  // out" to someone looking at two sides that plainly match.
+  if (lines.some((l) => l.debit === 0 && l.credit === 0)) return "amountRequired";
   // A return is booked with the rows the other way round, not with a negative
   // amount, so a negative here is always a mistake.
   if (lines.some((l) => l.debit < 0 || l.credit < 0)) return "negativeAmounts";
-
-  const debit = lines.reduce((s, l) => s + l.debit, 0);
-  const credit = lines.reduce((s, l) => s + l.credit, 0);
-  // The zero check is what stops an empty voucher (0 = 0) counting as balanced;
-  // beyond that, balance is exact.
-  if (debit === 0 || debit !== credit) return "unbalanced";
+  // Asked through the same function the chip uses, so the button and the chip
+  // cannot end up disagreeing about what balancing means.
+  if (!voucherBalance(lines).balanced) return "unbalanced";
   return null;
 }

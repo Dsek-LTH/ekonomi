@@ -68,9 +68,9 @@ export const userHoldsCard = cache(async (userId: string): Promise<boolean> => {
   return n > 0;
 });
 
-// The member's payout details, for the profile popover and the reimbursement
-// hint in the new/edit wizard. Deduped per request: the layout and the page
-// underneath it both need them.
+// The member's payout details, for /profile and the reimbursement hint in the
+// new/edit wizard. Deduped per request: the layout and the page underneath it
+// both need them.
 export const getPayoutAccount = cache(
   async (userId: string): Promise<{ clearing: string; account: string }> => {
     const u = await prisma.user.findUnique({

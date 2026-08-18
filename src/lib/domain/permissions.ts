@@ -48,9 +48,31 @@ export const canBookkeep = canAccessBookkeeping;
 /** May send a wrongly-approved expense back for changes. */
 export const canReturnApproved = canAccessBookkeeping;
 
-/** Books in Fortnox under their own login — drives the Fortnox status in the
- *  profile menu. */
+/** Books in Fortnox under their own login — drives the Fortnox status on
+ *  /profile. */
 export const canLogInToFortnox = (roles: readonly Role[]) => hasAny(roles, TREASURY_ROLES);
+
+// ── Alkohollager ──────────────────────────────────────────────────
+//
+// Keeping the lagerbokföring is not bookkeeping, and the people who do it are
+// not the people who book vouchers — so this hangs off its own role rather
+// than off BOOKKEEPING_ROLES. Admins are included because they are included
+// everywhere, and because somebody has to be able to fix it at 2am.
+const STOCK_ROLES: readonly Role[] = ["STOCKARE", ...ADMIN_ROLES];
+
+/** Read the stock overview and the log. */
+export const canViewStock = (roles: readonly Role[]) => hasAny(roles, STOCK_ROLES);
+
+/**
+ * Register movements, run an event, close a stocktake, edit a product's
+ * calibration.
+ *
+ * The same set as `canViewStock` today, and separate anyway: the two answer
+ * different questions, and the first one to widen — a board that may read the
+ * stock without touching it — should not have to be untangled from the other
+ * at that point.
+ */
+export const canManageStock = (roles: readonly Role[]) => hasAny(roles, STOCK_ROLES);
 
 /** May mark an exported utlägg as no longer exported. Undoing an export only
  *  unwinds OUR record — the voucher stays in Fortnox — so it is limited to the
@@ -137,6 +159,7 @@ export const ROLES: readonly Role[] = [
   "VICE_SKATTMASTARE",
   "SKATTFORMAN",
   "RESULTATANSVARIG",
+  "STOCKARE",
   "ORDINARIE",
 ];
 

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import { AppShell, SIDEBAR_COOKIE } from "@/components/shell/app-shell";
+import { AppShell, NAV_PINNED_COOKIE } from "@/components/shell/app-shell";
 import { RouteHistoryRecorder } from "@/components/shell/route-history";
 import { RouteProgressBar } from "@/components/shell/route-progress";
 import {
@@ -14,9 +14,10 @@ import { NotificationBanners, NotificationsProvider } from "@/components/shell/n
 import { ConfirmProvider } from "@/components/confirm-dialog";
 import { FortnoxAuthResult } from "@/components/shell/fortnox-auth-result";
 import { requireUser } from "@/lib/server/current-user";
-import { canLogInToFortnox } from "@/lib/domain/permissions";
-import { getFortnoxSession } from "@/lib/data/fortnox";
 import { userHoldsCard } from "@/lib/data/users";
+import { getFortnoxSession } from "@/lib/data/fortnox";
+import { canLogInToFortnox } from "@/lib/domain/permissions";
+import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
 
 // Always render against fresh DB data on a full load. Each page loads its own
 // data (Server Components); the layout only resolves the session user + chrome.
@@ -29,21 +30,32 @@ export default async function AppLayout({
 }) {
   const currentUser = await requireUser();
 
-  // Only the treasury books in Fortnox, so only they get the status in their
-  // profile menu — and only they cost a query for it.
-  const showsFortnox = canLogInToFortnox(currentUser.roles);
-  const [holdsCard, cookieStore, fortnoxSession] = await Promise.all([
+  // The treasury books under their own Fortnox login, and that login is
+  // short-lived by design (see FortnoxStatus) — so whether it still holds is
+  // something the frame carries for them, not something they go to /profile to
+  // find out after an export has already failed. One indexed lookup, and only
+  // for the handful of roles it can be true of.
+  const booksInFortnox = canLogInToFortnox(currentUser.roles);
+  const [holdsCard, fortnoxSession, cookieStore] = await Promise.all([
     userHoldsCard(currentUser.id),
+    booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     cookies(),
-    showsFortnox ? getFortnoxSession(currentUser.id) : null,
   ]);
-  // Read here rather than in the client so the sidebar renders at its stored
-  // width on the first paint instead of flashing open. The receipt panel is
-  // remembered the same way, and for the same reason.
-  const sidebarCollapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === "1";
+  // Read here rather than in the client so the frame renders in its stored
+  // shape on the first paint instead of settling into it after hydration — a
+  // receipt flashing open at the wrong width, or a pinned sidebar snapping from
+  // 64px to 256 and shoving the page sideways as it goes.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
   const storedWidth = Number(cookieStore.get(RECEIPT_WIDTH_COOKIE)?.value);
   const receiptWidth = Number.isFinite(storedWidth) && storedWidth > 0 ? storedWidth : DEFAULT_WIDTH;
+  // Unset means the rail, which is the answer for the screens this was built
+  // for; pinning is the wider screen opting out.
+  const navPinned = cookieStore.get(NAV_PINNED_COOKIE)?.value === "1";
+  // Read again here rather than handed down from the root layout: what that one
+  // does with it is put a class on <html>, and a layout cannot pass values to
+  // the layouts nested inside it. The cookie is the shared channel, and reading
+  // it twice in one request costs nothing.
+  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>
@@ -68,9 +80,14 @@ export default async function AppLayout({
             defaultCollapsed={receiptCollapsed}
             defaultWidth={receiptWidth}
           >
+            {/* `fortnox` absent is "this reader has no Fortnox login of their
+                own", which is most of them, and the nav shows nothing at all.
+                Present with a null session is the treasury signed out — the
+                one state the sidebar exists to catch. */}
             <AppShell
-              defaultCollapsed={sidebarCollapsed}
-              fortnox={showsFortnox ? { session: fortnoxSession } : undefined}
+              defaultPinned={navPinned}
+              theme={theme}
+              fortnox={booksInFortnox ? { session: fortnoxSession } : undefined}
             >
               {children}
             </AppShell>

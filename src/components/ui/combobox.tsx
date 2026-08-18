@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
+import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
 
 export interface ComboOption {
@@ -32,6 +33,10 @@ type SharedProps = {
   buttonClassName?: string; // replaces the default field appearance when given
   chevronClassName?: string; // for triggers on a coloured background
   invalid?: boolean;
+  // Takes focus on mount. For fields a click has just brought into existence —
+  // a new allocation row's cost centre — where the alternative is tabbing back
+  // to the thing you asked for.
+  autoFocus?: boolean;
   "aria-label"?: string;
 };
 
@@ -100,6 +105,7 @@ function ComboboxBase({
   buttonClassName,
   chevronClassName,
   invalid,
+  autoFocus,
   "aria-label": ariaLabel,
 }: SharedProps & {
   values: string[];
@@ -171,6 +177,14 @@ function ComboboxBase({
   useEffect(() => {
     if (open) searchRef.current?.focus();
   }, [open]);
+
+  // The trigger, not the menu: the field is where you were sent, and the
+  // trigger's type-to-open means the first character you type opens the search
+  // with it anyway. Opening on its own would drop a menu over the page for
+  // anyone who added a row to fill the amount in first.
+  useEffect(() => {
+    if (autoFocus) triggerRef.current?.focus();
+  }, [autoFocus]);
 
   // The options aren't focusable, so nothing scrolls the list on its own —
   // whichever key moved the highlight (arrows or Tab), bring it into view.
@@ -285,6 +299,11 @@ function ComboboxBase({
       {open && rect && createPortal(
         <div
           ref={panelRef}
+          // Marks the menu as this field's, for anything outside that has to
+          // tell "focus left the field" from "focus went into its menu" — the
+          // menu is portalled to <body>, so containment can't answer that. The
+          // voucher table's auto-balance reads it.
+          data-combobox-panel=""
           style={menuStyle()}
           // Above everything, dialogs included. The menu is portalled to
           // <body>, so it shares a stacking context with the confirm dialog and
@@ -368,19 +387,9 @@ function ComboboxBase({
                       its own on/off state whether or not it is the picked one —
                       a box that is either filled or empty. The single-select
                       below has only ever one, and marks it with a bare check.
-                      The fill is `accent-soft`, not `accent`: the dark theme's
-                      accent is a pale pink that no foreground sits on legibly. */}
-                  {multiple && (
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded border",
-                        isPicked(o.value) ? "border-accent bg-accent-soft" : "border-border",
-                      )}
-                    >
-                      {isPicked(o.value) && <IconCheck className="size-3" />}
-                    </span>
-                  )}
+                      The box is drawn by components/ui/checkbox, which is where
+                      it went when the budget sheet wanted the same one. */}
+                  {multiple && <CheckMark on={isPicked(o.value)} />}
                   <span className="mr-auto truncate">{o.label}</span>
                   {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0" />}
                 </button>

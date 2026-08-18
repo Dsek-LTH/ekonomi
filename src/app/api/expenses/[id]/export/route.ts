@@ -7,6 +7,8 @@ import { prisma } from "@/lib/server/db";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectBuffer } from "@/lib/server/storage";
+import { storeExpenseDocument } from "@/lib/expense/document";
+import { mergeCoverAndReceipt, PdfMergeError } from "@/lib/server/pdf-merge";
 import {
   connectFileToVoucher,
   createVoucher,
@@ -79,16 +81,68 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   //
   // An expense with no receipt at all still exports; that's a bookkeeping
   // judgement made when it was booked, not something to relitigate here.
+  //
+  // What goes up is the utläggsräkning: the cover page naming who attested each
+  // cost-centre slice, with the receipt behind it. That is the whole point of
+  // the page — in Fortnox a voucher's attachment is the only place the approval
+  // trail can be seen, and a bare receipt does not carry it.
+  //
+  // The cover is written here, at export, and the receipt is already stored;
+  // they are joined on the way out rather than archived merged, so the
+  // receipt's bytes are held once. See lib/server/pdf-merge.ts.
+  //
+  // A cover that cannot be drawn stops the export, and deliberately — unlike
+  // the document route, which falls back to showing the underlag bare rather
+  // than nothing. The asymmetry is the point: looking at an utlägg without its
+  // cover costs the reader a page they can see elsewhere, while *filing* one
+  // without it puts a voucher in Fortnox with no attest trail, which is the
+  // exact condition this whole document exists to remove. A failure here is
+  // also actionable — somebody pressed a button and can press it again.
   const receipt = expense.receipts[0];
   let fileId: string | null = null;
-  if (receipt) {
+  let coverWarning: string | null = null;
+  {
     // Which half failed is what the bookkeeper needs to know, so the step is
     // carried as a code the client words.
-    let step = "readReceipt";
+    let step = "renderCover";
     try {
-      const { bytes } = await getObjectBuffer(receipt.objectKey);
+      const stored = await storeExpenseDocument(id);
+      if (!stored.ok) {
+        throw new Error(
+          stored.reason === "renderFailed" ? stored.detail : `cover ${stored.reason}`,
+        );
+      }
+      step = "readReceipt";
+      const cover = new Uint8Array((await getObjectBuffer(stored.key)).bytes);
+      const underlag = receipt
+        ? {
+            bytes: new Uint8Array((await getObjectBuffer(receipt.objectKey)).bytes),
+            mimeType: receipt.mimeType,
+          }
+        : null;
+
+      // A receipt that will not merge must not stop the utlägg being booked:
+      // the file came from a supplier and we do not get to choose its shape.
+      // The cover goes up alone and the bookkeeper is told, which leaves the
+      // receipt to be attached by hand — the same shape as `attachWarning`
+      // below, and far better than an export that cannot run.
+      let bytes: Uint8Array;
+      try {
+        bytes = await mergeCoverAndReceipt(cover, underlag);
+      } catch (e) {
+        if (!(e instanceof PdfMergeError)) throw e;
+        coverWarning = e.message;
+        console.error(`[fortnox] ${id}: exporting the cover without its underlag`, e);
+        bytes = cover;
+      }
+
       step = "uploadReceipt";
-      fileId = await uploadInboxFile(token, bytes, receipt.filename, receipt.mimeType);
+      fileId = await uploadInboxFile(
+        token,
+        Buffer.from(bytes),
+        stored.filename,
+        "application/pdf",
+      );
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       console.error(`[fortnox] ${id}: step ${step} failed`, e);
@@ -161,5 +215,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     voucher: created,
     label,
     attachWarning,
+    // The export worked and the cover is on the voucher, but its underlag is
+    // not — worded beside the success the same way `attachWarning` is, because
+    // the thing left to do by hand is the same kind of thing.
+    coverWarning,
   });
 }

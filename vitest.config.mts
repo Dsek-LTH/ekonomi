@@ -17,7 +17,12 @@ const src = resolve(root, "src");
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/lib/**/*.test.ts"],
+    // lib/ is where most of it is, but the rule is what a test *is* here, not
+    // where it sits: a plain function over plain data. The budget screen's
+    // local patches (app/(app)/budget/[budgetId]/patch-budget.ts) are exactly
+    // that — and they restate what a route does, which is the kind of thing
+    // that has to be held to it.
+    include: ["src/**/*.test.ts"],
   },
   resolve: {
     alias: {

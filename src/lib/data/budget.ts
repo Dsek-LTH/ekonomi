@@ -66,8 +66,42 @@ export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
  */
 export type EvaluatedBudget = Record<string, unknown>;
 
+/** What a caller can leave out of the payload, and why it would want to. */
+export interface EvaluatedBudgetOptions {
+  /**
+   * The year's outcome from the ledger. Costly — a group-by over every posting
+   * of the financial year, plus the chart and the cost-centre list to name them
+   * — and editing a budget cannot change any of it. The page asks for it; the
+   * re-fetch after a write does not, and the client keeps the copy it has.
+   */
+  actuals?: boolean;
+  /**
+   * The figures every formula resolves to. Left out, the payload is the budget's
+   * rows and nothing derived from them, and the caller works the values out
+   * itself — which the budget page does anyway on every cell it commits, with
+   * this same `evaluate`. The page's first paint wants them; the re-fetch after
+   * a write does not, and they are the larger half of that response.
+   */
+  evaluated?: boolean;
+  /**
+   * Whether to hand back plain JSON — dates as strings — rather than the Prisma
+   * rows as they came. On for the page, which passes this straight into a client
+   * component and must hand it the same shapes the fetch does. Off for the
+   * route, where `NextResponse.json` does exactly this on the way out and doing
+   * it here as well is a second pass over the whole payload.
+   */
+  serialize?: boolean;
+}
+
 /** The evaluated budget, or null when there is no budget with that id. */
-export async function getEvaluatedBudget(id: string): Promise<EvaluatedBudget | null> {
+export async function getEvaluatedBudget(
+  id: string,
+  {
+    actuals: withActuals = true,
+    evaluated: withEvaluated = true,
+    serialize = true,
+  }: EvaluatedBudgetOptions = {},
+): Promise<EvaluatedBudget | null> {
   const budget = await prisma.budget.findUnique({
     where: { id },
     include: {
@@ -142,10 +176,20 @@ export async function getEvaluatedBudget(id: string): Promise<EvaluatedBudget | 
     cc.accounts.map((acct) => `${sheetKey(cc)}:${acct.accountCode}`),
   );
 
-  const { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, badAccounts, errors } = evaluate(varInputs, liInputs, [...EXTRA_COLUMN_KEYS], adjustments, knownAccounts);
+  const figures = withEvaluated
+    ? evaluate(varInputs, liInputs, [...EXTRA_COLUMN_KEYS], adjustments, knownAccounts)
+    : null;
 
-  const actualsSynced = (await financialYearIdForCalendarYear(budget.year)) != null;
-  const actuals = await actualSheets(budget.year, budget.costCenters);
+  // Left out entirely rather than sent empty: a caller that didn't ask for the
+  // outcome has its own copy, and an `actuals: []` would overwrite it with
+  // "there isn't any", which is a different thing and reads as one on screen.
+  const outcome = withActuals
+    ? {
+        actuals: await actualSheets(budget.year, budget.costCenters),
+        actualsSynced: (await financialYearIdForCalendarYear(budget.year)) != null,
+        actualsYear: budget.year,
+      }
+    : {};
 
   const payload = {
     ...budget,
@@ -155,27 +199,29 @@ export async function getEvaluatedBudget(id: string): Promise<EvaluatedBudget | 
         ? { ...cc.costCenter, resultUnit: resultUnitNameForCode(cc.costCenter.code, prefixes) }
         : null,
     })),
-    evaluated: {
-      vars: Object.fromEntries(vars),
-      accounts: Object.fromEntries(accounts),
-      lineItems: Object.fromEntries(liValues),
-      cells: Object.fromEntries(cells),
-      badLineItems,
-      badVariables,
-      badAccounts,
-      errors,
-    },
-    actuals,
-    actualsSynced,
-    actualsYear: budget.year,
+    ...(figures
+      ? {
+          evaluated: {
+            vars: Object.fromEntries(figures.vars),
+            accounts: Object.fromEntries(figures.accounts),
+            lineItems: Object.fromEntries(figures.lineItems),
+            cells: Object.fromEntries(figures.cells),
+            badLineItems: figures.badLineItems,
+            badVariables: figures.badVariables,
+            badAccounts: figures.badAccounts,
+            errors: figures.errors,
+          },
+        }
+      : {}),
+    ...outcome,
   };
 
-  // Through JSON on the way out, which is the point rather than an accident.
-  // The route serialises this anyway; doing it here means the page hands the
-  // client the same thing the fetch does — dates as ISO strings, not Date
-  // objects — so seeding state from one and replacing it with the other cannot
-  // produce two different shapes.
-  return JSON.parse(JSON.stringify(payload)) as EvaluatedBudget;
+  // Through JSON on the way out, which is the point rather than an accident:
+  // the page hands the client the same thing the fetch does — dates as ISO
+  // strings, not Date objects — so seeding state from one and replacing it with
+  // the other cannot produce two different shapes. The route turns this off,
+  // because serialising the response is what it is about to do anyway.
+  return (serialize ? JSON.parse(JSON.stringify(payload)) : payload) as EvaluatedBudget;
 }
 
 // The year's actual outcome from the Fortnox ledger, shaped as a side of a

@@ -38,14 +38,40 @@ export function OverlayScroll({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   // Null while there is nothing to scroll, which is also when nothing is drawn.
-  const [thumb, setThumb] = useState<{ top: number; height: number } | null>(null);
+  // Only the *height* is state: it is a function of how much there is to
+  // scroll, so it changes when the box or its contents change and at no other
+  // time. Where the thumb sits changes on every frame of a scroll, and that is
+  // deliberately not state — see `position`.
+  const [thumb, setThumb] = useState<{ height: number } | null>(null);
   const [dragging, setDragging] = useState(false);
+  // What `position` needs to do its arithmetic without touching the DOM for it.
+  const track = useRef({ travel: 0, scrollable: 0 });
+
+  /**
+   * Move the thumb to where the box is currently scrolled to.
+   *
+   * Straight to the node, not through state. This runs on every scroll event —
+   * once a frame while a wheel or a thumb-drag is in flight — and a `setState`
+   * there re-rendered this component for each one; it measured at roughly a
+   * millisecond of scripting per pointermove while the thumb was being
+   * dragged, for a bar 6px wide. A transform also keeps it off the layout
+   * path, so the browser composites it rather than laying the panel out again.
+   */
+  const position = useCallback(() => {
+    const el = scrollRef.current;
+    const node = thumbRef.current;
+    if (!el || !node) return;
+    const { travel, scrollable } = track.current;
+    const progress = scrollable > 0 ? el.scrollTop / scrollable : 0;
+    node.style.transform = `translateY(${INSET + progress * travel}px)`;
+  }, []);
 
   const measure = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const { scrollTop, scrollHeight, clientHeight } = el;
+    const { scrollHeight, clientHeight } = el;
     // The +1 absorbs the sub-pixel difference a fractional layout leaves
     // behind, which would otherwise draw a full-height thumb on a box that
     // does not scroll.
@@ -53,12 +79,14 @@ export function OverlayScroll({
       setThumb(null);
       return;
     }
-    const track = clientHeight - INSET * 2;
-    const height = Math.max(MIN_THUMB, (clientHeight / scrollHeight) * track);
-    const travel = track - height;
-    const progress = scrollTop / (scrollHeight - clientHeight);
-    setThumb({ top: INSET + progress * travel, height });
-  }, []);
+    const length = clientHeight - INSET * 2;
+    const height = Math.max(MIN_THUMB, (clientHeight / scrollHeight) * length);
+    track.current = { travel: length - height, scrollable: scrollHeight - clientHeight };
+    // Same height as last time is the ordinary case — the observer fires for
+    // every size change, and most of them do not move this.
+    setThumb((prev) => (prev?.height === height ? prev : { height }));
+    position();
+  }, [position]);
 
   // Re-measured when the box changes size *and* when what is in it does — the
   // queue loses a day to a booking, or gains one when lines are moved onto a
@@ -70,6 +98,13 @@ export function OverlayScroll({
     if (contentRef.current) observer.observe(contentRef.current);
     return () => observer.disconnect();
   }, [measure]);
+
+  // The first paint after the thumb appears: `measure` positioned it while
+  // there was no node to position, so it starts at translateY(0) — which is
+  // wrong for a box restored mid-scroll.
+  useEffect(() => {
+    if (thumb) position();
+  }, [thumb, position]);
 
   /**
    * Dragging the thumb, in the thumb's own units: a pixel of thumb is
@@ -92,8 +127,7 @@ export function OverlayScroll({
 
     const startY = e.clientY;
     const startTop = el.scrollTop;
-    const travel = el.clientHeight - INSET * 2 - thumb.height;
-    const scrollable = el.scrollHeight - el.clientHeight;
+    const { travel, scrollable } = track.current;
 
     const move = (ev: PointerEvent) => {
       // A thumb with nowhere to travel — a box barely longer than its view —
@@ -119,19 +153,26 @@ export function OverlayScroll({
     // `group` so the thumb can firm up when the pointer is anywhere in the
     // panel, which is the moment someone is about to reach for it.
     <div className="group relative">
-      <div ref={scrollRef} onScroll={measure} className={cn("no-native-scrollbar", className)}>
+      {/* `position`, not `measure`: scrolling moves the thumb, it does not
+          change how long it is. What does change its length — the box or its
+          contents resizing — the observer above is already watching for. */}
+      <div ref={scrollRef} onScroll={position} className={cn("no-native-scrollbar", className)}>
         <div ref={contentRef}>{children}</div>
       </div>
 
       {thumb && (
         <div
+          ref={thumbRef}
           // Not in the accessibility tree and not a tab stop: the box scrolls
           // with the keyboard on its own, and a screen reader has the rows.
           aria-hidden
           onPointerDown={onThumbDown}
-          style={{ top: thumb.top, height: thumb.height }}
+          // `top: 0` and a transform for the rest: the offset is written by
+          // `position` on every scroll frame, and a transform is the one way to
+          // move something that costs no layout.
+          style={{ top: 0, height: thumb.height }}
           className={cn(
-            "absolute right-1 w-1.5 cursor-default rounded-full",
+            "absolute right-1 w-1.5 cursor-default rounded-full will-change-transform",
             // Translucent over whatever it crosses, and blurring it rather than
             // merely tinting it — the thumb reads as a piece of glass laid on
             // the list instead of a bar drawn into it.

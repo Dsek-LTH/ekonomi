@@ -44,7 +44,10 @@ export default async function BudgetComparePage({
   ];
 
   const [loaded, all] = await Promise.all([
-    Promise.all(ids.map((id) => getEvaluatedBudget(id))),
+    // No outcome and no serialising pass: this page reads each budget through
+    // `snapshotOf`, which takes its sheets and its evaluated figures and never
+    // the ledger — and a snapshot is what crosses to the client, not the budget.
+    Promise.all(ids.map((id) => getEvaluatedBudget(id, { actuals: false, serialize: false }))),
     getBudgetSummaries(),
   ]);
 
