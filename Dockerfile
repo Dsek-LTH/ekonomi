@@ -46,6 +46,10 @@ RUN pnpm build
 # and the generated client the seed imports. Runs to completion and exits —
 # compose starts it before the app, and `pnpm db:seed` can be run in it too.
 FROM builder AS migrator
+# Files in the image are readable and traversable by an arbitrary UID.  OKD's
+# restricted SCC replaces this image user with one from the namespace range;
+# group 0 keeps this usable without an /etc/passwd entry for that UID.
+USER 1001:0
 CMD ["pnpm", "prisma", "migrate", "deploy"]
 
 # ── runner ────────────────────────────────────────────────────────────
@@ -55,11 +59,13 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 # The standalone output, its static assets and public/ are the whole app.
-# `node` (uid 1000) ships with the image; the app writes nothing to disk —
-# receipts go to S3 — so it owns nothing and runs unprivileged.
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/public ./public
+# It writes nothing to disk — receipts go to S3 — so its filesystem can stay
+# read-only.  Use group 0 ownership rather than the image's `node` account:
+# OKD's restricted SCC runs containers with an arbitrary non-root UID, which
+# must still be able to read every runtime file.
+COPY --from=builder --chown=1001:0 /app/.next/standalone ./
+COPY --from=builder --chown=1001:0 /app/.next/static ./.next/static
+COPY --from=builder --chown=1001:0 /app/public ./public
 
 # The utläggsräkning's template and the faces it is set in, read from disk at
 # render time rather than bundled. Next's standalone output traces imports, and
@@ -75,10 +81,13 @@ COPY --from=builder --chown=node:node /app/public ./public
 # There is no typesetter to install beside them: Typst comes in as an npm
 # dependency with a musl build for this image, so `pnpm install` is the whole
 # of it.
-COPY --from=builder --chown=node:node \
+COPY --from=builder --chown=1001:0 \
      /app/src/lib/expense/cover ./src/lib/expense/cover
 
-USER node
+# Non-root by default outside OKD. On OKD this is replaced by the namespace's
+# arbitrary UID; neither the app nor the migration stage requires a passwd
+# entry or writable image filesystem.
+USER 1001:0
 EXPOSE 3000
 
 # Any answer at all means the server is up: a signed-out request is a redirect,
