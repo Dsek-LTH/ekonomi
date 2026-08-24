@@ -49,12 +49,16 @@ RUN pnpm build
 # The builder kept whole: node_modules with the Prisma CLI, prisma/migrations,
 # and the generated client the seed imports. Runs to completion and exits —
 # compose starts it before the app, and `pnpm db:seed` can be run in it too.
+#
+# Invoke Prisma through Node rather than Corepack's `pnpm` shim. The latter
+# downloads/caches pnpm on first use under the current user's home directory;
+# OKD supplies an arbitrary UID with `/` as its home, which is not writable.
 FROM builder AS migrator
 # Files in the image are readable and traversable by an arbitrary UID.  OKD's
 # restricted SCC replaces this image user with one from the namespace range;
 # group 0 keeps this usable without an /etc/passwd entry for that UID.
 USER 1001:0
-CMD ["pnpm", "prisma", "migrate", "deploy"]
+CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
 # ── runner ────────────────────────────────────────────────────────────
 FROM base AS runner
