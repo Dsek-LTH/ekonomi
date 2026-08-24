@@ -46,18 +46,21 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
           <div className="space-y-1.5">
             {expense.allocations.map((a) => (
               <div key={a.id} className="rounded-lg bg-surface px-3 py-2 text-sm">
-                {/* The amount is the only thing here that must never be cut;
-                    the cost-centre name gives way first and the resultUnit or
-                    approver second. Every one of these is a single long
-                    unbroken word in Swedish, so without somewhere to truncate the
-                    two halves met with no space between them on a phone and the
-                    row pushed the whole page sideways. */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 shrink truncate">
+                {/* Two lines on a phone, one from sm.
+                    All three of these — the cost centre, the amount, the
+                    approver — are things you read, and on 329px of card they
+                    were three truncating boxes fighting for it: the name came
+                    out at about 110px, which for a Swedish compound is the
+                    first syllable and an ellipsis. Given a line of its own it
+                    simply fits. The second line then has room for the two
+                    short things, one at each end.
+                    The amount is still the one that must never be cut. */}
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="min-w-0 truncate sm:shrink">
                     <span className="font-medium">{a.costCenterCode}</span>
                     <span className="ml-1.5 text-muted">{a.costCenterName}</span>
                   </div>
-                  <div className="flex min-w-0 shrink items-center gap-3 text-right">
+                  <div className="flex min-w-0 items-center justify-between gap-3 sm:shrink sm:justify-end sm:text-right">
                     <span className="shrink-0"><Amount value={a.amount} signed /></span>
                     {a.approvedById ? (
                       <span className="flex min-w-0 items-center gap-1 text-xs text-success">
@@ -109,19 +112,38 @@ export function VerificationCard({
           ) : undefined
         }
       />
+      {/* Three columns from sm, two below it.
+          The table was `min-w-[460px]` in a sideways scroller, which on 361px of
+          phone meant dragging a voucher about to read it. What gives is a column
+          that was never carrying its width: a line of a double entry is a debit
+          *or* a credit, never both, so on a narrow screen the two become one
+          amount with the side written above it. Nothing is dropped — the same
+          figure, and the word that says which column it would have been in.
+
+          Hidden with `hidden`/`sm:table-cell` on both the header and the body,
+          so every row shows the same set and the columns stay in step. Safe here
+          precisely because there is no `<colgroup>`: this table is auto-layout
+          and sizes itself from the cells that are actually there. */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[460px] text-sm">
+        <table className="w-full min-w-0 text-sm sm:min-w-[460px]">
           <thead>
             <tr className="text-left text-xs text-muted">
               <th className="py-2 pl-inset pr-3 font-medium">{t("account")}</th>
-              <th className="px-3 py-2 text-right font-medium">{t("debit")}</th>
-              <th className="py-2 pl-3 pr-inset text-right font-medium">{t("credit")}</th>
+              <th className="py-2 pl-3 pr-inset text-right font-medium sm:hidden">
+                {t("amount")}
+              </th>
+              <th className="hidden px-3 py-2 text-right font-medium sm:table-cell">{t("debit")}</th>
+              <th className="hidden py-2 pl-3 pr-inset text-right font-medium sm:table-cell">
+                {t("credit")}
+              </th>
             </tr>
           </thead>
           <tbody>
             {verification.lines.map((l) => (
               <tr key={l.id} className="border-t border-border align-top">
-                <td className="py-2 pl-inset pr-3">
+                {/* `break-words`: an account name is one unbroken Swedish
+                    compound, and in a 240px column there is nothing to wrap at. */}
+                <td className="break-words py-2 pl-inset pr-3">
                   <span className="font-medium tabular-nums">{l.account}</span>{" "}
                   <span className="text-muted">{l.accountName}</span>
                   {l.costCenterCode && <span className="text-muted"> · {l.costCenterCode}</span>}
@@ -129,10 +151,18 @@ export function VerificationCard({
                     <span className="block text-xs text-muted">{l.description}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">
+                <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right sm:hidden">
+                  <span className="block text-[11px] text-muted">
+                    {l.debit ? t("debit") : t("credit")}
+                  </span>
+                  <span className="tabular-nums">
+                    <Amount value={l.debit || l.credit} />
+                  </span>
+                </td>
+                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
                   {l.debit ? <Amount value={l.debit} /> : ""}
                 </td>
-                <td className="py-2 pl-3 pr-inset text-right tabular-nums">
+                <td className="hidden py-2 pl-3 pr-inset text-right tabular-nums sm:table-cell">
                   {l.credit ? <Amount value={l.credit} /> : ""}
                 </td>
               </tr>

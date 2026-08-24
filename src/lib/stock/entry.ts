@@ -9,6 +9,7 @@
 // exists is the route's question, whether the *movement* makes sense is this
 // one's.
 
+import { LEVELS, openCount, type OpenBottles } from "./levels";
 import type { StockEntryKind, StockKind } from "@/lib/domain/types";
 
 /**
@@ -20,70 +21,99 @@ export type EntryFault =
   | "nothingMoved"
   | "purchaseNotPositive"
   | "removalNotNegative"
-  | "unitsOnVolumeOnly"
+  | "purchaseArrivesSealed"
+  | "nothingSpilled"
+  | "spillMovesNoStock"
   | "volumeOnUnitProduct"
   | "readingsOnUnitProduct"
-  | "readingsAndVolume"
+  | "levelsOnReturnOnly"
   | "correctionNeedsTarget";
 
-/** A movement, as the rule needs it. */
+/**
+ * A movement, as the rule needs it.
+ *
+ * `volumeMl` is already resolved: when the movement came from a weighing, the
+ * caller has converted the grams through the product's calibration before
+ * asking. So a body that states *both* readings and a volume never reaches
+ * here — that is a malformed request rather than an impossible movement, and
+ * the schema refuses it (lib/api/schemas/stock.ts).
+ */
 export interface ProposedEntry {
   kind: StockEntryKind;
+  /** Cans, or sealed bottles. */
   units: number;
-  volumeMl: number;
-  openBottles: number;
-  readings?: readonly number[];
+  /** What it does to the open bottles at each level. */
+  open?: OpenBottles;
+  /** On a spill: how many things it destroyed. Its own figure — see below. */
+  spilledQty?: number;
   correctsId?: string | null;
 }
 
 /**
  * The kinds whose sign is fixed by what they mean.
  *
- * A purchase adds and a serving or a spill removes; nothing else about the row
- * says so, and a serving entered as +83 would read as a delivery to everyone
- * who came after. COUNT and CORRECTION are deliberately absent: a count can go
- * either way — that is the whole point of counting — and so can a correction.
+ * A delivery and a homecoming add; a checkout takes away. Nothing else about
+ * the row says which, and a checkout entered as +3 would read as stock
+ * appearing to everyone who came after.
+ *
+ * COUNT and CORRECTION are deliberately absent: a count can go either way —
+ * that is the whole point of counting — and so can a correction. WASTE is
+ * absent because it moves no stock at all, so it has no sign to get right.
  */
-const ADDS: readonly StockEntryKind[] = ["PURCHASE"];
-const REMOVES: readonly StockEntryKind[] = ["SERVING", "WASTE"];
+const ADDS: readonly StockEntryKind[] = ["PURCHASE", "RETURN"];
+const REMOVES: readonly StockEntryKind[] = ["CHECKOUT"];
 
 export function entryFault(
   entry: ProposedEntry,
   product: { kind: StockKind },
 ): EntryFault | null {
-  const { kind, units, volumeMl, openBottles, readings } = entry;
+  const { kind, units, open } = entry;
+  const movedLevels = LEVELS.some((level) => (open?.[level] ?? 0) !== 0);
+
+  // ── A spill, which is the one kind that moves no stock ──
+  //
+  // What was dropped left the cellar when it was checked out; taking it off the
+  // shelf again would remove it twice and the crate would come up short at the
+  // next stocktake. So its quantity is in a column of its own — and every rule
+  // below asks about the shelf columns, which is why a spill has to be answered
+  // here rather than falling through them. It used to fall through, and every
+  // spill came back as "nothing moved": the row was, correctly, moving no
+  // stock at all.
+  if (kind === "WASTE") {
+    if ((entry.spilledQty ?? 0) === 0) return "nothingSpilled";
+    if (units !== 0 || movedLevels) return "spillMovesNoStock";
+    return null;
+  }
 
   // A row that moves nothing is not a record of anything. It would sit in the
   // log forever, saying that on some date somebody moved no vodka.
-  if (units === 0 && volumeMl === 0 && openBottles === 0) return "nothingMoved";
+  if (units === 0 && !movedLevels) return "nothingMoved";
 
-  if (product.kind === "UNIT") {
-    // A can has no liquid of its own to account for — its volume is its count
-    // times what one holds. A millilitre figure here is a form filled in
-    // against the wrong product.
-    if (volumeMl !== 0 || openBottles !== 0) return "volumeOnUnitProduct";
-    if (readings && readings.length > 0) return "readingsOnUnitProduct";
+  // A can is never half a can. Levels against one are a form filled in on the
+  // wrong product.
+  if (product.kind === "UNIT" && movedLevels) return "volumeOnUnitProduct";
+
+  // A bottle only climbs the ladder on the way back in, because coming back is
+  // the one moment anybody looks at it and judges what is left. Anything else
+  // may take bottles off a rung; only a return may put one on.
+  //
+  // COUNT and CORRECTION are exempt: a count is somebody standing at the shelf
+  // looking at every bottle, which is the same act as judging a returning one,
+  // and a correction exists to undo whatever the log got wrong.
+  const raises = LEVELS.some((level) => (open?.[level] ?? 0) > 0);
+  if (raises && !["RETURN", "COUNT", "CORRECTION"].includes(kind)) {
+    return "levelsOnReturnOnly";
   }
 
-  // Both a weighing and a volume is two answers to one question, and nothing
-  // downstream could tell which was meant. The route derives the volume from
-  // the readings; a caller that has already done the arithmetic should send the
-  // readings and let it be redone.
-  if (readings && readings.length > 0 && volumeMl !== 0) return "readingsAndVolume";
-
-  if (ADDS.includes(kind) && (units < 0 || volumeMl < 0)) return "purchaseNotPositive";
-  if (REMOVES.includes(kind) && (units > 0 || volumeMl > 0)) return "removalNotNegative";
-
-  // "unitsOnVolumeOnly" is not a fault a UNIT product can have — units are all
-  // it has — and on a VOLUME product units are the sealed bottles, which are
-  // just as real. Kept in the type because the screens name the fault and the
-  // set is the contract; see the note on `openBottles` below.
-  if (product.kind === "VOLUME" && openBottles !== 0 && volumeMl === 0 && units === 0) {
-    // Opening a bottle moves a sealed one into the open count and its whole
-    // contents with it. An open-bottle count moving on its own leaves liquid
-    // unaccounted for in both directions.
-    return "unitsOnVolumeOnly";
+  if (ADDS.includes(kind) && units < 0) return "purchaseNotPositive";
+  if (REMOVES.includes(kind) && (units > 0 || openCount(open ?? {}) > 0)) {
+    return "removalNotNegative";
   }
+
+  // Everything bought arrives sealed. A delivery that moved a level is a
+  // delivery of half-empty bottles, which is not a thing that happens and is
+  // far more likely to be somebody in the wrong form.
+  if (kind === "PURCHASE" && movedLevels) return "purchaseArrivesSealed";
 
   // A correction that names nothing is just another movement, and the log loses
   // the one thing that made it a correction.

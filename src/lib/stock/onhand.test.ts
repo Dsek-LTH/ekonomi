@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  belowMinimum,
   impossible,
-  isReportedCategory,
   onHand,
   pureAlcoholMl,
   purchasedMl,
@@ -21,7 +19,7 @@ const vodka: StockSubject = {
 
 const cans: StockSubject = {
   kind: "UNIT",
-  category: "STARKOL",
+  category: "OL",
   unitMl: 330,
   abv: 5.2,
 };
@@ -29,62 +27,80 @@ const cans: StockSubject = {
 const move = (m: Partial<StockMovement>): StockMovement => ({
   kind: "PURCHASE",
   units: 0,
-  volumeMl: 0,
-  openBottles: 0,
   ...m,
 });
 
 describe("onHand", () => {
   it("has nothing on an empty log", () => {
-    expect(onHand(cans, [])).toEqual({ units: 0, openBottles: 0, openMl: 0, totalMl: 0 });
+    expect(onHand(cans, [])).toEqual({
+      units: 0,
+      open: {},
+      openBottles: 0,
+      totalMl: 0,
+      valueOre: 0,
+    });
   });
 
   it("counts a delivery and a night's serving", () => {
     const state = onHand(cans, [
       move({ kind: "PURCHASE", units: 120 }),
-      move({ kind: "SERVING", units: -83 }),
+      move({ kind: "CHECKOUT", units: -83 }),
       move({ kind: "WASTE", units: -2 }),
     ]);
     expect(state.units).toBe(35);
     expect(state.totalMl).toBe(35 * 330);
   });
 
-  it("keeps sealed bottles and open liquid apart", () => {
-    // Twelve bottles in; one opened (a sealed bottle becomes an open one
-    // holding its whole 700 ml); 120 ml poured out of it.
+  it("keeps sealed bottles and open ones apart", () => {
+    // Six sealed; one goes out and comes back opened at 60; another goes out
+    // at 60 and comes back at 20.
     const state = onHand(vodka, [
-      move({ kind: "PURCHASE", units: 12 }),
-      move({ kind: "CORRECTION", units: -1, openBottles: 1, volumeMl: 700 }),
-      move({ kind: "SERVING", volumeMl: -120 }),
+      move({ kind: "PURCHASE", units: 6 }),
+      move({ kind: "CHECKOUT", units: -1 }),
+      move({ kind: "RETURN", open: { 60: 1 } }),
+      move({ kind: "CHECKOUT", open: { 60: -1 } }),
+      move({ kind: "RETURN", open: { 20: 1 } }),
     ]);
-    expect(state.units).toBe(11);
+    expect(state.units).toBe(5);
+    expect(state.open).toEqual({ 60: 0, 20: 1 });
     expect(state.openBottles).toBe(1);
-    expect(state.openMl).toBe(580);
-    // Eleven sealed at 700 plus the 580 still in the open one.
-    expect(state.totalMl).toBe(11 * 700 + 580);
+  });
+
+  it("adds the open bottles' estimated litres to the sealed ones' real ones", () => {
+    // Five sealed at 700, plus one bottle judged a fifth full.
+    const state = onHand(vodka, [move({ units: 5, open: { 20: 1 } })]);
+    expect(state.totalMl).toBeCloseTo(5 * 700 + 140, 6);
+  });
+
+  it("values the sealed bottles and nothing else", () => {
+    // Opening one is the sealed count falling with no purchase behind it, so
+    // the write-off needs no rule of its own.
+    const state = onHand(vodka, [
+      move({ kind: "PURCHASE", units: 6, valueDeltaOre: 149_400 }),
+      move({ kind: "CHECKOUT", units: -1, valueDeltaOre: -24_900 }),
+      move({ kind: "RETURN", open: { 60: 1 } }),
+    ]);
+    expect(state.units).toBe(5);
+    expect(state.openBottles).toBe(1);
+    // The open bottle is worth nothing, however full it is.
+    expect(state.valueOre).toBe(124_500);
   });
 
   it("does not care what order the log arrives in", () => {
-    // A row entered late for an earlier date has to land in the same total as
-    // one entered on the day, or every screen would depend on how the query
-    // happened to sort.
     const log = [
-      move({ kind: "PURCHASE", units: 120 }),
-      move({ kind: "SERVING", units: -83 }),
+      move({ kind: "PURCHASE", units: 120, valueDeltaOre: 90_000 }),
+      move({ kind: "CHECKOUT", units: -83, valueDeltaOre: -62_250 }),
       move({ kind: "COUNT", units: 4 }),
     ];
     expect(onHand(cans, [...log].reverse())).toEqual(onHand(cans, log));
   });
 
   it("counts a stocktake's difference like any other movement", () => {
-    // What a count found is what the shelf has. It is the report that separates
-    // the kinds, not the shelf.
     expect(onHand(cans, [move({ kind: "COUNT", units: -6 })]).units).toBe(-6);
   });
 
   it("has no total for a product nobody has sized", () => {
-    // Better than reporting 0 ml for twelve real bottles.
-    const unsized: StockSubject = { kind: "UNIT", category: "OVRIGT" };
+    const unsized: StockSubject = { kind: "UNIT", category: "OL" };
     const state = onHand(unsized, [move({ units: 12 })]);
     expect(state.units).toBe(12);
     expect(state.totalMl).toBeNull();
@@ -93,49 +109,30 @@ describe("onHand", () => {
 
 describe("impossible", () => {
   it("passes an ordinary shelf", () => {
-    expect(impossible({ units: 11, openBottles: 1, openMl: 580, totalMl: 8280 })).toBe(false);
+    expect(impossible(vodka, onHand(vodka, [move({ units: 5, open: { 40: 1 } })]))).toBe(false);
+    expect(impossible(cans, onHand(cans, [move({ units: 35 })]))).toBe(false);
   });
 
   it("catches negative stock, which is always a fault and never a fact", () => {
-    expect(impossible({ units: -1, openBottles: 0, openMl: 0, totalMl: -700 })).toBe(true);
-    expect(impossible({ units: 0, openBottles: -1, openMl: 0, totalMl: 0 })).toBe(true);
-    expect(impossible({ units: 0, openBottles: 1, openMl: -5, totalMl: -5 })).toBe(true);
+    expect(impossible(cans, onHand(cans, [move({ units: -1 })]))).toBe(true);
   });
 
-  it("catches liquid with no bottle to be in", () => {
-    // What a mis-typed weighing looks like: the bottles were closed out but the
-    // millilitres were not.
-    expect(impossible({ units: 3, openBottles: 0, openMl: 240, totalMl: 2340 })).toBe(true);
+  it("catches a rung gone negative", () => {
+    // A bottle taken off a level the log never saw a bottle arrive at.
+    expect(impossible(vodka, onHand(vodka, [move({ open: { 40: -1 } })]))).toBe(true);
   });
 
-  it("accepts an open bottle that has just been emptied", () => {
-    // 0 ml in one open bottle is a real state — the bottle is on the bar,
-    // empty, and has not been thrown out yet.
-    expect(impossible({ units: 3, openBottles: 1, openMl: 0, totalMl: 2100 })).toBe(false);
-  });
-});
-
-describe("belowMinimum", () => {
-  it("says nothing when nobody set a level", () => {
-    expect(belowMinimum({ units: 0, openBottles: 0, openMl: 0, totalMl: 0 }, null)).toBe(false);
-  });
-
-  it("measures a sized product by its volume", () => {
-    const state = onHand(vodka, [move({ units: 2 })]);
-    expect(belowMinimum(state, 2100)).toBe(true);
-    expect(belowMinimum(state, 1400)).toBe(false);
-  });
-
-  it("falls back to units for a product with no volume", () => {
-    const unsized: StockSubject = { kind: "UNIT", category: "OVRIGT" };
-    expect(belowMinimum(onHand(unsized, [move({ units: 3 })]), 5)).toBe(true);
+  it("accepts bottles that are open but empty of value", () => {
+    // No sealed bottles and one open: nothing is worth anything, and that is
+    // an ordinary Sunday rather than a fault.
+    expect(impossible(vodka, onHand(vodka, [move({ open: { 20: 1 } })]))).toBe(false);
   });
 });
 
 describe("purchasedMl", () => {
   const year: StockMovement[] = [
     move({ kind: "PURCHASE", units: 24 }),
-    move({ kind: "SERVING", units: -20 }),
+    move({ kind: "CHECKOUT", units: -20 }),
     move({ kind: "WASTE", units: -1 }),
     move({ kind: "COUNT", units: -1 }),
     move({ kind: "PURCHASE", units: 48 }),
@@ -147,14 +144,12 @@ describe("purchasedMl", () => {
     expect(purchasedMl(cans, year)).toBe((24 + 48) * 330);
   });
 
-  it("counts liquid bought as part of a bottle purchase too", () => {
-    // Rare, but real: half a bottle taken over from another committee arrives
-    // as volume rather than as a sealed unit.
-    expect(purchasedMl(vodka, [move({ kind: "PURCHASE", units: 2, volumeMl: 350 })])).toBe(1750);
+  it("counts a spirit's purchases by the bottle, since everything bought is sealed", () => {
+    expect(purchasedMl(vodka, [move({ kind: "PURCHASE", units: 2 })])).toBe(1400);
   });
 
   it("refuses to guess for a product nobody has sized", () => {
-    const unsized: StockSubject = { kind: "UNIT", category: "OVRIGT" };
+    const unsized: StockSubject = { kind: "UNIT", category: "OL" };
     expect(purchasedMl(unsized, year)).toBeNull();
   });
 });
@@ -174,23 +169,7 @@ describe("pureAlcoholMl", () => {
   });
 
   it("has no answer for a product with no strength recorded", () => {
-    expect(pureAlcoholMl({ kind: "UNIT", category: "OVRIGT" }, 500)).toBeNull();
-  });
-});
-
-describe("isReportedCategory", () => {
-  it("covers the five the form wants a purchase volume for", () => {
-    expect(isReportedCategory("SPRITDRYCK")).toBe(true);
-    expect(isReportedCategory("VIN")).toBe(true);
-    expect(isReportedCategory("ANDRA_JASTA")).toBe(true);
-    expect(isReportedCategory("STARKOL")).toBe(true);
-    expect(isReportedCategory("ALKOHOLDRYCKSLIKNANDE")).toBe(true);
-  });
-
-  it("leaves out the ones the form only asks turnover for, and our own", () => {
-    expect(isReportedCategory("FOLKOL")).toBe(false);
-    expect(isReportedCategory("LATTDRYCK")).toBe(false);
-    expect(isReportedCategory("OVRIGT")).toBe(false);
+    expect(pureAlcoholMl({ kind: "UNIT", category: "OL" }, 500)).toBeNull();
   });
 });
 
@@ -201,7 +180,7 @@ describe("unitVolume", () => {
   });
 
   it("treats a zero or missing size as unknown", () => {
-    expect(unitVolume({ kind: "UNIT", category: "OVRIGT", unitMl: 0 })).toBeNull();
+    expect(unitVolume({ kind: "UNIT", category: "OL", unitMl: 0 })).toBeNull();
     expect(unitVolume({ kind: "VOLUME", category: "SPRITDRYCK" })).toBeNull();
   });
 });

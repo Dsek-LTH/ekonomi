@@ -1,16 +1,55 @@
 "use client";
 
+import { createContext, useContext, useState } from "react";
+
 import { cn } from "@/lib/ui/utils";
+import { useMediaQuery } from "@/lib/ui/media";
 import { Card } from "./card";
+import { IconChevronDown, IconList } from "./icons";
+import { Modal, ModalHeader } from "./modal";
+
+/**
+ * Where the panel stops being a full-width list and becomes a column beside the
+ * detail — which is to say the breakpoint its screen stands the two side by
+ * side at. Written out as literal classes rather than built from the key:
+ * Tailwind reads these out of the source as text and never sees a template
+ * string.
+ */
+const BANDS = {
+  lg: { column: "lg:w-64", below: "(max-width: 1023px)" },
+  xl: { column: "xl:w-64", below: "(max-width: 1279px)" },
+} as const;
+
+/** Told to close by a row that has just been picked. See `SidebarItem`. */
+const PickedCtx = createContext<(() => void) | null>(null);
 
 // The master column of a master–detail screen (the result unit list under
 // Inställningar, the cost-centre list in a budget): a fixed-width
 // panel of selectable rows, sections and inline footers.
+//
+// Above the breakpoint it is that column, sticky beside the detail, and the two
+// are on screen together. Below it the screens used to stack — panel on top,
+// detail under — and that is where it went wrong: the budget's panel is 786px
+// of compare, search, list and add-row, so changing cost centre meant scrolling
+// back up past all of it and then down again. The income queue had already
+// noticed and capped its own list at `max-h-80`, which spends less of the screen
+// on the same errand rather than fixing it.
+//
+// So below the breakpoint the panel is a bar and a dialog: the bar says what is
+// selected and stays pinned while you work, and it opens the panel's own
+// contents unchanged. Nothing is dropped or reshaped — the grouped list keeps
+// its headings, its figures and its per-group actions, because it is the same
+// tree either way.
+//
+// A screen that gives no `bar` keeps the old stacking, which is right for a
+// panel short enough to sit above its detail.
 export function SidebarPanel({
   children,
   className,
   ref,
-  width = "lg:w-64",
+  at = "lg",
+  bar,
+  sheetLabel,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -20,21 +59,65 @@ export function SidebarPanel({
    * (see lib/ui/use-sticky-follow.ts).
    */
   ref?: React.Ref<HTMLElement>;
+  /** The breakpoint this screen stands its detail beside the panel at. */
+  at?: keyof typeof BANDS;
   /**
-   * Where the panel stops being a full-width list and becomes a fixed column —
-   * which is to say the breakpoint its screen stands the detail beside it at.
-   * A prop of its own rather than something to pass through `className`: `cn`
-   * joins classes instead of merging them, so an override there would leave two
-   * `lg:w-*` utilities in the attribute for Tailwind's emission order to settle.
-   * Screens that stack for longer name their own — see the income queue, which
-   * has the document panel to fit as well and waits until xl.
+   * What the collapsed bar says — normally the selected row's own line. Given
+   * this, the panel collapses below the breakpoint; without it, it stacks.
    */
-  width?: string;
+  bar?: React.ReactNode;
+  /** What the dialog is announced and headed as. Required alongside `bar`. */
+  sheetLabel?: string;
 }) {
+  const band = BANDS[at];
+  const collapsed = useMediaQuery(band.below);
+  const [open, setOpen] = useState(false);
+
+  if (bar && collapsed) {
+    return (
+      <>
+        {/* `top-14` under the phone's app bar; from md the frame is fixed and
+            the main column is the scrollport, so the bar sticks to the top of
+            that instead. z-10 to stay under the app bar's own 20. */}
+        <div className="sticky top-14 z-10 md:top-0">
+          <Card className="overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-haspopup="dialog"
+              className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors active:bg-surface"
+            >
+              <IconList aria-hidden className="size-4 shrink-0 text-muted" />
+              <span className="min-w-0 flex-1 truncate">{bar}</span>
+              <IconChevronDown aria-hidden className="size-4 shrink-0 text-muted" />
+            </button>
+          </Card>
+        </div>
+
+        {open && (
+          <Modal
+            label={sheetLabel ?? ""}
+            onClose={() => setOpen(false)}
+            className="max-w-md"
+          >
+            <ModalHeader title={sheetLabel ?? ""} />
+            {/* The panel's own tree, unwrapped: it already brings its rules,
+                its headings and its own inner scroller, and a ModalBody's
+                padding around it would inset a list that is meant to reach the
+                dialog's edges. */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <PickedCtx.Provider value={() => setOpen(false)}>{children}</PickedCtx.Provider>
+            </div>
+          </Modal>
+        )}
+      </>
+    );
+  }
+
   return (
-    // Until then the master–detail screens stack, so the panel is a full-width
-    // list above the detail rather than a 16rem column beside it.
-    <aside ref={ref} className={cn("w-full shrink-0", width, className)}>
+    // Until the breakpoint the master–detail screens stack, so the panel is a
+    // full-width list above the detail rather than a 16rem column beside it.
+    <aside ref={ref} className={cn("w-full shrink-0", band.column, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on
           a master-detail screen, and it used to be the same shape with no
           elevation — which read as the list being a level behind. */}
@@ -58,11 +141,20 @@ export function SidebarItem({
   children,
   ...rest
 }: React.ComponentProps<"button"> & { active: boolean }) {
+  // Picking a row is the one thing that means "done with the list", so inside
+  // the collapsed panel's dialog it closes it. Only this: the search box, the
+  // comparison picker and a group's own "+" are all things you do *in* the
+  // list, and a dialog that shut on the first keystroke would be unusable.
+  const picked = useContext(PickedCtx);
+
   return (
     <button
       {...rest}
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        onClick?.(e);
+        picked?.();
+      }}
       aria-current={active ? "true" : undefined}
       className={cn(
         "w-full px-4 py-2.5 text-left text-sm",

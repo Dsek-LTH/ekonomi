@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:phone": "bash scripts/dev-phone.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -35,6 +36,7 @@
     "@myriaddreamin/typst-ts-node-compiler": "^0.7.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "barcode-detector": "^3.2.2",
     "next": "^16.3.0",
     "next-auth": "5.0.0-beta.32",
     "next-intl": "^4.13.4",

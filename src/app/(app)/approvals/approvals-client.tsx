@@ -72,7 +72,10 @@ export function ApprovalsClient({
       // a narrow cut of one list but two different questions, so the track is
       // the one place that says which was asked.
       title={t("title")}
-      description={t("description")}
+      // No description, for the reason given on the same field in
+      // expenses-client.tsx: the header wraps on a narrow screen, and a
+      // paragraph between the title and the track pushed the track onto a line
+      // of its own well below the heading it belongs to.
       collections={
         canToggleScope
           ? {

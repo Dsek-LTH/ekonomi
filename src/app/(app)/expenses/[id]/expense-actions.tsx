@@ -6,7 +6,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
-import { IconCheck, IconUndo } from "@/components/ui/icons";
+import { IconCheck, IconDots, IconUndo } from "@/components/ui/icons";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import type { FortnoxStatus } from "@/lib/domain/types";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
@@ -169,10 +169,16 @@ export function ExpenseActions({
   // Only buttons here. What's stopping an action lives in ExpenseActionNotice,
   // below the header — see there for why.
   return (
-    <div className="flex flex-col items-start gap-2 sm:items-end">
-      <div className="flex flex-wrap items-center gap-2.5">
+    // On a phone this row is the whole width of the card header, and the two
+    // buttons used to share it as equals — a filled "Skicka in" and a filled
+    // "Mer", wrapped onto their own line and taking 250 of 361px between them.
+    // Two primaries is one too many: what the page is waiting for should have
+    // the width, and everything else should have as little of it as it can
+    // manage. So the first fills the row and the second is its glyph.
+    <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
+      <div className="flex w-full items-center gap-2.5 sm:w-auto sm:flex-wrap">
         {primary.href ? (
-          <ButtonLink href={primary.href}>
+          <ButtonLink href={primary.href} className="flex-1 sm:flex-none">
             {primary.icon}
             {primary.label}
           </ButtonLink>
@@ -180,14 +186,28 @@ export function ExpenseActions({
           // The spinner goes on the primary action and nowhere else in this
           // row: it is the one that started the request, and the rest are
           // merely disabled while it runs.
-          <Button loading={busy} disabled={primary.disabled} onClick={primary.onClick}>
+          <Button
+            loading={busy}
+            disabled={primary.disabled}
+            onClick={primary.onClick}
+            className="flex-1 sm:flex-none"
+          >
             {primary.icon}
             {primary.label}
           </Button>
         )}
 
         {rest.length > 0 && (
-          <Menu label={t("more")} variant="secondary" disabled={busy}>
+          <Menu
+            label={t("more")}
+            variant="secondary"
+            disabled={busy}
+            compact
+            // Drawn only where the word is not: on a wide screen "Mer" says it
+            // better than three dots, and both would be saying it twice.
+            icon={<IconDots className="size-4 sm:hidden" />}
+            className="shrink-0"
+          >
             {rest.map((a, i) => (
               // Fragment, not a div: role="menu" expects its menuitems as
               // children, and a wrapper element between them breaks that.

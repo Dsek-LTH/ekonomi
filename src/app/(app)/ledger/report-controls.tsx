@@ -61,7 +61,7 @@ function Field({
 // The pills are shorter than a Combobox trigger (h-9, see components/ui/field
 // .tsx), and a row that mixes the two heights reads as misaligned however it is
 // aligned. Every control in the panel is therefore field-height.
-const PILLS = "[&>button]:h-9";
+const PILLS = "[&>button]:h-11 sm:[&>button]:h-9";
 
 // One row of the panel. Hairline above, none on the first — the rows are the
 // structure, so they get the rule rather than the whole panel getting padding.
@@ -119,6 +119,7 @@ export function ReportParameters({
       <Row>
         <Field label={t("year")} className="w-28">
           <Combobox
+            size="sm"
             options={yearOptions}
             value={query.year != null ? String(query.year) : ""}
             onChange={(v) => onQuery({ year: Number(v) })}
@@ -130,6 +131,7 @@ export function ReportParameters({
         </Field>
         <Field label={t("from")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
           <Combobox
+            size="sm"
             options={months}
             value={query.from ?? ""}
             onChange={(v) => onQuery({ from: v })}
@@ -140,6 +142,7 @@ export function ReportParameters({
         </Field>
         <Field label={t("to")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
           <Combobox
+            size="sm"
             options={months}
             value={query.to ?? ""}
             onChange={(v) => onQuery({ to: v })}
@@ -153,6 +156,7 @@ export function ReportParameters({
       <Row>
         <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
           <Combobox
+            size="sm"
             options={ccOptions}
             value={query.costCenter == null ? CC_ALL : query.costCenter || CC_NONE}
             onChange={(v) =>
@@ -209,6 +213,7 @@ export function ReportParameters({
           && (budgets.length > 1 || (budgets.length === 1 && query.budget !== budgets[0].id)) && (
           <Field label={t("budget")} className="w-full sm:w-64">
             <Combobox
+            size="sm"
               // Year first, then the budget's own name. The year is what tells
               // two years' "Ursprunglig" apart, and it is what makes picking one
               // from another year a deliberate act rather than a slip; typing

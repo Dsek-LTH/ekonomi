@@ -379,7 +379,51 @@ export default function BudgetClient({
             what makes it stick at all — the row stretches its items, so the
             panel was already as tall as the sheet beside it, and a sticky box
             with no scroll range of its own never moves. */}
-        <SidebarPanel ref={stickyList} className="lg:sticky lg:self-start">
+        <SidebarPanel
+          ref={stickyList}
+          className="lg:sticky lg:self-start"
+          sheetLabel={t("pickCostCenter")}
+          // What the collapsed bar says: whichever of the four things this pane
+          // is showing. A cost centre brings its result with it, because that is
+          // the figure you came to the sheet for and it is one the bar can carry
+          // for free.
+          bar={
+            selected === RAMBUDGET ? (
+              t("frameBudget")
+            ) : selected === VARS ? (
+              t("variables")
+            ) : selected === CHANGES ? (
+              t("changes")
+            ) : cc ? (
+              <span className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate">
+                  {cc.costCenter ? (
+                    <>
+                      <span className="font-mono text-xs text-muted">{cc.costCenter.code}</span>{" "}
+                      {cc.costCenter.name}
+                    </>
+                  ) : (
+                    sheetName(cc, t("unnamed"))
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 text-xs tabular-nums",
+                    ccTotals(cc, ev).result > 0
+                      ? "text-success"
+                      : ccTotals(cc, ev).result < 0
+                        ? "text-danger"
+                        : "text-muted",
+                  )}
+                >
+                  {fmtSigned(ccTotals(cc, ev).result)}
+                </span>
+              </span>
+            ) : (
+              t("pickCostCenter")
+            )
+          }
+        >
           {/* The two things that act on the budget as a whole, at the head of
               the column that lists its sheets — the pane on the right is one
               sheet at a time, and both of these change every one of them. They
@@ -389,6 +433,7 @@ export default function BudgetClient({
           <div className="flex items-center gap-1.5 border-b border-border p-2">
             {/* Nothing is compared until asked for — see use-comparison.tsx. */}
             <Combobox
+              size="sm"
               options={[
                 { value: "", label: t("noComparison") },
                 ...compareOptions.map((o) => ({ value: o.value, label: o.label })),

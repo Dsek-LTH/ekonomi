@@ -16,28 +16,32 @@ export type PaymentType = "CARD" | "REIMBURSEMENT";
 
 // ── Alkohollager ──────────────────────────────────────────────────
 
-// How a product's stock is counted: whole units (cans, wares) or sealed bottles
-// plus the liquid in the opened ones (spirits). See lib/stock/measure.ts.
+// How a product's stock is counted: whole units (cans) or sealed bottles plus
+// open ones at a fill level. See lib/stock/levels.ts.
 export type StockKind = "UNIT" | "VOLUME";
 
-// The drink types a restaurangrapport is broken down by, as
-// Folkhälsomyndigheten names them — not our vocabulary to choose. OVRIGT is
-// everything this app tracks that the form never asks about.
+// The drink types the bar keeps its stock in. All five need a purchased volume
+// on the restaurangrapport, so there is no "reported" subset any more.
 export type DrinkCategory =
   | "SPRITDRYCK"
   | "VIN"
-  | "ANDRA_JASTA"
-  | "STARKOL"
-  | "ALKOHOLDRYCKSLIKNANDE"
-  | "FOLKOL"
-  | "LATTDRYCK"
-  | "OVRIGT";
+  | "OVRIG_JASTDRYCK"
+  | "OL"
+  | "ALKOHOLDRYCKSLIKNANDE";
 
 // Why stock moved. The report keeps these apart — bought is a volume, served is
 // turnover, spilled is neither — so the log does too.
-export type StockEntryKind = "PURCHASE" | "SERVING" | "WASTE" | "COUNT" | "CORRECTION";
-
-export type StockReadingPhase = "OUT" | "BACK" | "COUNT";
+//
+// CHECKOUT and RETURN are the pair a pub night makes: bottles leave the store
+// and come back, and the return is the one moment anybody looks at a bottle and
+// says what is left in it. See lib/stock/levels.ts.
+export type StockEntryKind =
+  | "PURCHASE"
+  | "CHECKOUT"
+  | "RETURN"
+  | "WASTE"
+  | "COUNT"
+  | "CORRECTION";
 
 // Where a day's takings came from. ZETTLE_FEE is Zettle's own transaction
 // fees, which are a cost rather than income and book the other way round.

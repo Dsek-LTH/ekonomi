@@ -40,9 +40,24 @@ export function CardHeader({
     // form, so on a narrow screen it wraps onto its own line under the title
     // rather than squeezing both.
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-inset py-4">
+      {/* `min-w-0` alone was not enough, which is the trap: it lets the box
+          shrink, and then the text inside it refuses to. A booking description,
+          a cost-centre name, a receipt filename — in Swedish these are single
+          unbroken compounds with nothing to wrap at, so they ran straight past
+          the card's edge and took the page's width with them. The verification
+          card was where it showed, but the bug was here and every card had it.
+          `break-words` rather than `truncate` on the title: a title that used to
+          wrap onto a second line should keep doing that, and only the string
+          that cannot wrap needs forcing. The subtitle is clamped as well, so a
+          long one cannot grow the header without limit; its full text is on the
+          element for a pointer, and in the card below for everyone else. */}
       <div className="min-w-0">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+        <h2 className="break-words text-base font-semibold">{title}</h2>
+        {subtitle && (
+          <p title={subtitle} className="mt-0.5 line-clamp-2 break-words text-sm text-muted">
+            {subtitle}
+          </p>
+        )}
       </div>
       {action}
     </div>

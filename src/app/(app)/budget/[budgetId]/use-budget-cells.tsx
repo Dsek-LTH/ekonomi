@@ -4,6 +4,7 @@
 // background). Returned to the budget client and threaded into the sheets.
 // (Edit mode itself belongs to the sheet that owns the keyboard nav.)
 import { useState } from "react";
+import { usePhone } from "@/lib/ui/media";
 import { toStored, toDisplay, type BudgetGrid } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
 import { recomputeBudget } from "./recompute";
@@ -24,6 +25,15 @@ interface Opts {
 }
 
 export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load, api }: Opts) {
+  // On a phone a Belopp cell is ~110px rather than 260, so it shows the answer
+  // and keeps the working for the tap. Idle, a formula cell normally reads
+  // "2 × TROJA_POLICY = 700"; at that width the equation would fill the box and
+  // push the one number anybody is scanning for out of sight, which is worse
+  // than not showing it. Focus already swaps the cell to its formula, and the
+  // `title` carries it either way — so the working is one tap deep rather than
+  // gone. See cost-center-sheet.tsx for the rest of the narrow geometry.
+  const compact = usePhone();
+
   // Buffered in-progress cell edits, keyed `${id}:${field}`.
   const [pending, setPending] = useState<Record<string, string>>({});
   // Which formula cell is currently focused (shows the formula instead of the value).
@@ -155,7 +165,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         ? (pretty || raw)
         : bad
           ? "fel"
-          : isFormula
+          : isFormula && !compact
             ? `${pretty} = ${show(computed)}`
             : show(computed);
     if (!isAdmin) {

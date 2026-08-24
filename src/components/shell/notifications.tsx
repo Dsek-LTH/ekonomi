@@ -129,7 +129,12 @@ export function NotificationBanners() {
   return (
     // The container ignores the pointer so the page stays usable around the
     // banners; each banner takes it back for its own close button.
-    <div className="pointer-events-none fixed inset-x-0 top-[4.25rem] z-60 flex justify-center px-4 md:top-6">
+    // Above the dialogs, not below them. A toast reports what just happened,
+    // and what just happened is usually the thing somebody pressed in a dialog
+    // — at z-60 the answer to "save this product" appeared behind the form
+    // that asked. Modals sit at 200 and a combobox's menu at 210, so this
+    // clears both.
+    <div className="pointer-events-none fixed inset-x-0 top-[4.25rem] z-[220] flex justify-center px-4 md:top-6">
       <div className="flex w-full max-w-lg flex-col gap-2">
         {list.items.map((n) => {
           const t = TONE_STYLE[n.tone];

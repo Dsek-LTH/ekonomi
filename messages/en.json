@@ -28,7 +28,8 @@
       "VICE_SKATTMASTARE": "Vice treasurer",
       "SKATTFORMAN": "Assistant treasurer",
       "RESULTATANSVARIG": "Result unit owner",
-      "ORDINARIE": "Member"
+      "ORDINARIE": "Member",
+      "STOCKARE": "Stockare"
     },
     "table": {
       "show": "Show",
@@ -40,10 +41,15 @@
       "dateTo": "To",
       "dateFromTitle": "From date",
       "dateToTitle": "To date",
+      "filters": "Filters",
+      "filtersDone": "Done",
+      "clearFilters": "Clear",
+      "dateRange": "Date",
       "perPage": "per page",
       "showing": "Showing {from}–{to} of {total}",
       "prevPage": "Previous page",
-      "nextPage": "Next page"
+      "nextPage": "Next page",
+      "expand": "Show the rows behind"
     },
     "error": {
       "action": "The action failed",
@@ -65,7 +71,8 @@
       "searchPlaceholder": "Search…",
       "empty": "No matches",
       "clear": "Clear",
-      "nSelected": "{count} selected"
+      "nSelected": "{count} selected",
+      "create": "Create “{text}”"
     }
   },
   "dashboard": {
@@ -583,20 +590,59 @@
       "unitNotFound": "That result unit does not exist.",
       "unitHasIncome": "{name} already has income settings.",
       "keyFromName": "The name \"{name}\" yields no usable key — it needs letters or digits."
+    },
+    "stock": {
+      "calibrationNoVolume": "The bottle's volume has to be more than nothing.",
+      "correctionNeedsTarget": "A correction has to name the row it corrects.",
+      "correctionTargetNotFound": "The row to be corrected was not found.",
+      "correctionWrongProduct": "The row to be corrected belongs to another product.",
+      "countedOnStocktakeOnly": "Counted figures belong to a stocktake only.",
+      "eanInvalid": "That does not look like a valid barcode.",
+      "eanUnknown": "No product has that barcode.",
+      "expenseNotFound": "The expense was not found.",
+      "levelsOnReturnOnly": "A level is set when the bottle comes back, not when it is taken out.",
+      "lotNotFound": "The delivery was not found.",
+      "lotWrongProduct": "That delivery belongs to another product.",
+      "moreThanWentOut": "More than went out on that occasion.",
+      "noAccess": "You do not have access to the stock.",
+      "notThatManyOpen": "There are not that many open bottles at that level.",
+      "notThatManySealed": "There are not that many sealed bottles.",
+      "nothingMoved": "Nothing has been filled in to record.",
+      "nothingReturned": "Say what came back.",
+      "nothingSpilled": "Say how much was destroyed.",
+      "openBottlesFirst": "Open bottles have to go first. Take them along, or leave the sealed one.",
+      "productNotFound": "The product was not found.",
+      "purchaseArrivesSealed": "A purchase arrives sealed.",
+      "purchaseNotPositive": "A purchase adds to the stock and cannot be negative.",
+      "removalNotNegative": "Servings and waste take from the stock.",
+      "tagNotFound": "The occasion was not found.",
+      "tagOnNightOnly": "Purchases and stocktakes do not belong to an occasion.",
+      "tagRequired": "Takeouts, returns and spills have to belong to an occasion.",
+      "volumeOnUnitProduct": "This product is counted in units and has no volume of its own.",
+      "cellMoved": "Somebody else booked on this occasion in the meantime. The figures are being re-read — check them and try again.",
+      "spillMovesNoStock": "A spill moves no stock — the goods left the cellar when they were taken out.",
+      "entryNotFound": "The row was not found.",
+      "onTheSheet": "The row belongs to an occasion. Change it on the occasion's page.",
+      "recountInstead": "A stocktake is corrected with another stocktake.",
+      "wouldGoNegative": "Stock would go negative.",
+      "moreBottlesThanWentOut": "More bottles home than the occasion took out.",
+      "sizeRequired": "The volume per unit is needed.",
+      "eanTaken": "That barcode already belongs to {name}.",
+      "nameTaken": "There is already a product called {name}.",
+      "productInUse": "The product has {count, plural, =1 {1 movement} other {# movements}} in the log and cannot be removed."
     }
   },
   "nav": {
     "overview": "Overview",
     "groupExpenses": "Expenses & Approval",
     "expenses": "Expenses",
-    "cardPurchases": "Card purchases",
     "approvals": "To approve",
     "groupBudget": "Budget",
     "budget": "Budget",
     "outcome": "Outcome",
     "groupBookkeeping": "Bookkeeping",
     "bookkeeping": "Bookkeeping",
-    "bank": "Bank & matching",
+    "bank": "Bank transactions",
     "groupAdmin": "Administration",
     "settings": "Settings",
     "fortnox": "Fortnox",
@@ -610,13 +656,18 @@
     "backToApp": "Back to the app",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
+    "doneMenu": "Done",
     "collapseMenu": "Collapse menu",
     "fortnoxSignIn": "Sign in to Fortnox",
     "fortnoxSignedIn": "Signed in to Fortnox",
     "pinMenu": "Keep menu open",
     "skipToContent": "Skip to content",
     "mainNav": "Main navigation",
-    "income": "Income"
+    "income": "Income",
+    "stock": "Stock",
+    "stockLog": "Stock log",
+    "groupStock": "Stock",
+    "stockEvents": "Occasions"
   },
   "allocation": {
     "pick": "Pick a cost center…",
@@ -644,6 +695,7 @@
     "retry": "Try again",
     "alt": "Receipt",
     "collapse": "Collapse the receipt",
+    "close": "Close the receipt",
     "replace": "Replace the receipt",
     "dropzone": "Drag your receipt here, or pick a file",
     "pickReceiptLead": "Add the receipt",
@@ -727,30 +779,8 @@
       "approved": "Approved"
     }
   },
-  "cardPurchases": {
-    "title": "Card purchases",
-    "description": "Every purchase on your guild card, and whether it has been accounted for.",
-    "descriptionShort": "Your guild card purchases.",
-    "noCardTitle": "You have no guild card",
-    "noCardDescription": "Card purchases show up here for anyone who holds a guild card. Talk to the treasurer if you should have one.",
-    "tab": {
-      "unaccounted": "Not accounted for",
-      "accounted": "Accounted for",
-      "all": "All"
-    },
-    "colDate": "Date",
-    "colMerchant": "Merchant",
-    "colCard": "Card",
-    "colAmount": "Amount",
-    "colExpense": "Expense",
-    "expenseStarted": "Started",
-    "account": "Account for it",
-    "searchPlaceholder": "Search purchases…",
-    "noMatch": "No purchases match the filter."
-  },
   "bank": {
-    "title": "Bank & matching",
-    "description": "Upload a bank statement (CSV) and see which transactions are matched.",
+    "title": "Bank transactions",
     "tab": {
       "all": "All",
       "matched": "Matched",
@@ -788,7 +818,15 @@
       "cards": "A card purchase is tied to its card by a trailing K#### in Referens. Card numbers not seen before are added under Sektionskort automatically.",
       "duplicates": "Rows already imported are skipped — the same file can be uploaded again without creating duplicates.",
       "limits": "Maximum 5 MB. The character encoding (Windows-1252) is handled for you."
-    }
+    },
+    "scopeLabel": "Scope",
+    "scope": {
+      "mine": "Mine",
+      "all": "All"
+    },
+    "colCard": "Card",
+    "account": "Account for it",
+    "expenseStarted": "Started"
   },
   "bookkeeping": {
     "title": "Bookkeeping",
@@ -1010,6 +1048,7 @@
       "linkToAria": "Link to a cost center",
       "noFreeCostCenters": "No free cost centers",
       "clone": "Clone the cost center",
+      "sheetActions": "Actions",
       "copyContents": "Copy the contents",
       "selectRow": "Select the row",
       "selectAccount": "Select account {code}",
@@ -1047,6 +1086,8 @@
       "sum": "Total",
       "originally": "orig. {amount}",
       "originallyLabel": "orig.",
+      "showCompareColumns": "Show comparison columns",
+      "hideCompareColumns": "Hide comparison columns",
       "totalIncome": "Total income",
       "totalCosts": "Total costs",
       "incompleteSum": "incomplete – a row could not be computed"
@@ -1658,5 +1699,341 @@
       "searchPlaceholder": "Search committee, cost centre or voucher…",
       "empty": "Nothing is booked yet."
     }
+  },
+  "stock": {
+    "title": "Stock",
+    "description": "The alcohol stock: what is on the shelf, what came in and what went out.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "The movement was recorded.",
+    "saveFailed": "Could not record the movement",
+    "litres": "{litres} l",
+    "attention": "{count, plural, =1 {1 product needs a look} other {# products need a look}}",
+    "counts": {
+      "products": "{count, plural, =1 {1 product} other {# products}}",
+      "rows": "{count, plural, =1 {1 movement} other {# movements}}"
+    },
+    "holding": {
+      "volume": "{sealed} sealed · {open} open",
+      "unit": "{units} units"
+    },
+    "flag": {
+      "impossible": "Impossible balance"
+    },
+    "empty": {
+      "title": "No products yet",
+      "description": "Add what you keep a stock of and the log starts counting.",
+      "action": "Add products"
+    },
+    "category": {
+      "SPRITDRYCK": "Spirits",
+      "VIN": "Wine",
+      "OVRIG_JASTDRYCK": "Other fermented drinks",
+      "OL": "Beer",
+      "ALKOHOLDRYCKSLIKNANDE": "Alcohol-like preparations"
+    },
+    "kind": {
+      "PURCHASE": "Purchase",
+      "WASTE": "Spill",
+      "COUNT": "Stocktake",
+      "CORRECTION": "Correction",
+      "CHECKOUT": "Out",
+      "RETURN": "In"
+    },
+    "kindName": {
+      "UNIT": "Counted in units",
+      "VOLUME": "Bottle, weighed"
+    },
+    "field": {
+      "date": "Date",
+      "units": "Quantity",
+      "sealed": "Sealed bottle",
+      "note": "Note",
+      "levelOf": "{level} % left"
+    },
+    "fault": {
+      "nothingMoved": "Nothing has been filled in to record",
+      "purchaseNotPositive": "A purchase adds to the stock and cannot be negative",
+      "removalNotNegative": "Servings and waste take from the stock",
+      "volumeOnUnitProduct": "This product is counted in units and has no volume of its own",
+      "correctionNeedsTarget": "A correction has to name the row it corrects",
+      "calibrationNoVolume": "The bottle's volume has to be more than nothing",
+      "openBottlesFirst": "Open bottles have to go first — take them along, or leave the sealed one",
+      "notThatManyOpen": "There are not that many open bottles at that level",
+      "notThatManySealed": "There are not that many sealed bottles",
+      "levelsOnReturnOnly": "A level is set when the bottle comes back, not when it is taken out",
+      "purchaseArrivesSealed": "A purchase arrives sealed",
+      "moreThanWentOut": "More bottles than went out — check the count",
+      "nothingReturned": "Say what came back",
+      "spillMovesNoStock": "A spill moves no stock",
+      "nothingSpilled": "Say how much was destroyed",
+      "moreBottlesThanWentOut": "More bottles home than went out",
+      "nameRequired": "The product needs a name",
+      "eanRequired": "The barcode is needed — scan it or type it (8–14 digits)",
+      "abvRequired": "The strength is needed for the restaurangrapport",
+      "sizeRequired": "The volume is needed for the report's litres",
+      "costRequired": "The cost price is needed before the stock can be valued"
+    },
+    "log": {
+      "title": "Stock log",
+      "description": "Every movement, newest first. Rows are never edited — a wrong row is corrected by a new one.",
+      "empty": "No movements in this selection.",
+      "recorded": "entered {date}",
+      "readings": "weighed: {list} g",
+      "expense": "Expense",
+      "filter": {
+        "product": "Product",
+        "allProducts": "All products",
+        "searchProduct": "Search products…",
+        "kind": "What happened",
+        "allKinds": "Everything",
+        "from": "From",
+        "to": "To"
+      },
+      "col": {
+        "date": "Date",
+        "product": "Product",
+        "kind": "What happened",
+        "units": "Quantity",
+        "volume": "Volume",
+        "actor": "Recorded by",
+        "note": "Note",
+        "open": "Open bottles",
+        "value": "Value",
+        "out": "Out",
+        "tag": "Occasion"
+      },
+      "searchPlaceholder": "Search the log…",
+      "showRevisions": "Show the breakdown",
+      "duringTheNight": "During the night",
+      "counted": "Counted"
+    },
+    "products": {
+      "new": "New product",
+      "edit": "Edit",
+      "remove": "Remove",
+      "removed": "The product was removed.",
+      "removeFailed": "Could not remove the product",
+      "removeTitle": "Remove {name}?",
+      "removeDescription": "Only a product nothing has been booked on can be removed. One that has been used stays in the log.",
+      "empty": "No products added yet.",
+      "saved": "The product was saved.",
+      "saveFailed": "Could not save the product",
+      "dialogHint": "The weights are what convert a reading on the scale into millilitres.",
+      "field": {
+        "name": "Name",
+        "kind": "Counted as",
+        "category": "Drink type",
+        "categorySearch": "Search drink types…",
+        "abv": "Alcohol by volume",
+        "nominalMl": "Bottle volume (ml)",
+        "unitMl": "Volume per unit (ml)",
+        "ean": "Barcode (EAN)",
+        "eanHint": "Lets the product be scanned in the cellar.",
+        "cost": "Cost price incl. deposit (kr)"
+      },
+      "col": {
+        "name": "Product",
+        "category": "Drink type",
+        "kind": "Counted as",
+        "size": "Volume",
+        "abv": "ABV",
+        "onHand": "In stock",
+        "litres": "Litres",
+        "value": "Value"
+      },
+      "search": "Search products…",
+      "noSize": "no size set",
+      "purchase": "Purchase",
+      "stocktake": "Stocktake",
+      "products": "Products"
+    },
+    "scan": {
+      "action": "Scan",
+      "title": "Scan a barcode",
+      "subtitle": "Point the camera at the barcode on the tin or the bottle.",
+      "hint": "Hold the code inside the frame.",
+    "flip": "Switch camera",
+      "found": "Picked {name}.",
+      "unknown": "No product has that barcode. Add the product first.",
+      "noCamera": "The camera could not be started. Type the code below instead.",
+      "needsHttps": "The camera needs a secure connection (https). Open the page over https, or type the code below.",
+      "noPermission": "The camera is blocked. Allow camera access for this site in your browser settings.",
+      "noCameraFound": "No camera was found on this device.",
+      "code": "Barcode",
+      "codeHint": "Type the code, or fire it in with a handheld reader and press enter.",
+      "look": "Look up",
+      "noReader": "The barcode reader could not be loaded. Type the code instead."
+    },
+    "notice": {
+      "worth": "The stock's value goes up by {value}, from the product's purchase price.",
+      "noCostPrice": "This product has no purchase price, so the delivery goes on the shelf worth nothing. Fill the price in under Stock products first if the stock value is to be right."
+    },
+    "purchase": {
+      "title": "Register a delivery",
+      "bottles": "Bottles",
+      "units": "Units",
+      "sealedHint": "Everything bought arrives sealed."
+    },
+    "delivery": {
+      "open": "Record a delivery",
+      "title": "Record a delivery",
+      "description": "A whole delivery at once: scan or search for each product and type how many came in.",
+      "sheet": "Delivery",
+      "counts": "{count, plural, =0 {No products yet} =1 {1 product} other {# products}}",
+      "total": "Total",
+      "col": {
+        "product": "Product",
+        "in": "In"
+      },
+      "each": "at {price}",
+      "unpriced": "no purchase price",
+      "noteHint": "Goes on every row — an invoice number, say.",
+      "notePlaceholder": "Invoice 12345",
+      "addProduct": "Type or pick a product…",
+      "addSearch": "Search products…",
+      "newProduct": "Add “{name}”",
+      "remove": "Remove row",
+      "scan": "Scan a barcode — adds the product, or jumps to its row if the delivery already has it",
+      "failed": "That row could not be booked.",
+      "save": "Save delivery",
+      "saved": "{count, plural, =1 {1 row booked} other {# rows booked}}",
+      "unsaved": "{count, plural, =1 {1 row waiting to be saved} other {# rows waiting to be saved}}",
+      "nothingToSave": "Nothing to save yet.",
+      "discard": "Clear",
+      "discardTitle": "Clear the delivery?",
+      "discardMessage": "{count, plural, =1 {1 filled-in row} other {# filled-in rows}} will be removed. Nothing has been booked, so there is no getting it back."
+    },
+    "stocktake": {
+      "title": "Stocktake",
+      "lead": "Type what is actually on the shelf. The difference from the log is booked as an adjustment.",
+      "sealed": "Sealed bottles",
+      "units": "Units",
+      "expected": "The log says {count}",
+      "difference": "Differs from the log ({sealed} sealed). The adjustment goes into the log.",
+      "agrees": "Agrees with the log — nothing to adjust.",
+      "noteHint": "Say why it differs, if you know."
+    },
+    "filterCategory": "Drink type",
+    "product": {
+      "inStock": "In stock",
+      "sealed": "Sealed bottles",
+      "units": "Units",
+      "value": "Stock value",
+      "noCostPrice": "No purchase price set — the stock value comes to nothing",
+      "impossible": "The balance does not add up. Take a stocktake to correct it.",
+      "wholeLog": "The whole log",
+      "details": "Details",
+      "ean": "Barcode",
+      "noEan": "No barcode",
+      "size": "Volume each",
+      "abv": "Strength",
+      "unitCost": "Cost price incl. deposit",
+      "totalVolume": "Total volume",
+      "occasions": "Out and in",
+      "occasionsHint": "What the product did at each occasion. If somebody changed a night's figures, it is behind the arrow.",
+      "searchOccasions": "Search occasions…",
+      "noOccasions": "The product has not been out to an occasion yet.",
+      "cellar": "Deliveries, stocktakes and corrections",
+      "cellarHint": "What has been done with the product in the cellar, most recently entered first.",
+      "searchCellar": "Search cellar events…",
+      "noCellar": "Nothing has been booked in the cellar on this product yet.",
+      "correction": "Correction",
+      "correctionOf": "Correction of {kind}",
+      "countedTo": "counted {qty}"
+    },
+    "tag": {
+      "title": "Occasions",
+      "description": "Every night and event stock has been taken out for. What went out, less what came back and what was spilled, is what was used.",
+      "occasions": "Occasions",
+      "counts": "{count, plural, =1 {1 occasion} other {# occasions}}",
+      "search": "Search occasions…",
+      "empty": "No occasions yet. Create one before taking stock out.",
+      "new": "New occasion",
+      "newHint": "An occasion is a night or an event. Everything taken out and brought back is booked against it.",
+      "create": "Create",
+      "saveFailed": "The occasion could not be created.",
+      "stillOut": "Still out",
+      "sold": "What was used",
+      "nothing": "Nothing has been booked on this occasion yet. Add a product below.",
+      "openCaveat": "While stock is still at the bar it counts as used. Register the return and the figure settles.",
+      "movements": "{count, plural, =1 {1 movement in the log} other {# movements in the log}}",
+      "field": {
+        "name": "Name",
+        "nameHint": "What you call the night. The name is picked from a list afterwards, so the spelling only has to be settled once.",
+        "namePlaceholder": "Wednesday pub",
+        "date": "Date"
+      },
+      "level": {
+        "sealed": "Whole",
+        "rung": "{level} %"
+      },
+      "col": {
+        "product": "Product",
+        "name": "Occasion",
+        "date": "Date",
+        "products": "Products",
+        "out": "Out",
+        "back": "Back",
+        "spilled": "Spilled",
+        "sold": "Used",
+        "soldValue": "Value",
+        "value": "Value"
+      },
+      "sheet": {
+        "title": "Out, in and spill",
+        "column": "Which column",
+        "addProduct": "Type or pick a product…",
+        "addSearch": "Search products…",
+        "remove": "Remove row",
+        "failed": "That could not be booked. The figures are being re-read.",
+        "locked": {
+          "nothingOnShelf": "Nothing was at that level when the occasion began. What you have brought back tonight cannot go out again — it would not count for anything either way.",
+          "nothingOut": "Nothing has gone out on this occasion yet, so nothing can come back or break."
+        },
+        "newProduct": "Add “{name}”",
+        "search": "Search products on the sheet…",
+        "noMatch": "Nothing on this occasion matches “{text}”. Add it on an empty row below.",
+        "scan": "Scan a barcode — adds the product, or jumps to its row if the occasion already has it",
+        "save": "Save",
+        "discard": "Clear",
+        "unsaved": "{count, plural, =1 {1 cell waiting to be saved} other {# cells waiting to be saved}}",
+        "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} · {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
+        "nothingToSave": "Nothing to save yet.",
+        "discardTitle": "Clear what has been filled in?",
+        "discardMessage": "{count, plural, =1 {1 changed cell} other {# changed cells}} will be removed. Nothing has been booked, so there is no getting it back."
+      }
+    },
+    "changes": {
+      "title": "Activity",
+      "none": "Nothing has been changed yet.",
+      "inTheCellar": "In the cellar",
+      "col": {
+        "at": "When",
+        "actor": "Who",
+        "product": "Product",
+        "tag": "Occasion",
+        "what": "What",
+        "change": "Change"
+      },
+      "search": "Search activity…"
+    },
+    "entry": {
+      "fix": "Correct",
+      "title": "Correct the row",
+      "hint": "{kind}, {date}. Type what it should have been — the difference is worked out for you.",
+      "qty": "Quantity",
+      "qtyHint": "Says {was} now. Zero removes the row entirely.",
+      "remove": "Remove the row",
+      "save": "Save",
+      "failed": "The row could not be changed."
+    },
+    "asOf": {
+      "label": "As of",
+      "value": "Stock value",
+      "notice": "The figures show the stock as it stood on {date}. Movements after that date are left out.",
+      "today": "Show today"
+    },
+    "ml": "{ml} ml"
   }
 }

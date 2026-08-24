@@ -12,11 +12,32 @@ const CONTROL =
 
 // "md" is the form control; "sm" is the compact one that sits in a card header,
 // a filter bar or a table row. Sizes live here so those don't get re-typed.
-type Size = "sm" | "md";
-const SIZES: Record<Size, string> = {
-  sm: "h-9 rounded-lg px-2.5",
+//
+// Exported because the combobox is one of these controls and used to carry its
+// own copy of the compact one — so a combobox beside a date input was six
+// pixels shorter than it and a different corner radius, in every form in the
+// app. Sharing the strings is what makes "the same size" true rather than
+// approximately true.
+export type ControlSize = "sm" | "md";
+type Size = ControlSize;
+// "sm" is two heights, not one. 36px is a density for a pointer, and it is what
+// every filter bar in the app was built at — on a phone that is a control you
+// aim at rather than one you hit, eight pixels under what both Apple and
+// Google ask for. So below sm it stands at 44 and from sm up it goes back to
+// the density a mouse earns.
+//
+// One height per band written into the same string, rather than left to call
+// sites: a toolbar is five of these in a row and any one of them opting out
+// would be the row that no longer lines up.
+export const CONTROL_SIZES: Record<ControlSize, string> = {
+  sm: "h-11 rounded-lg px-2.5 sm:h-9",
+  // No height of its own: md is sized by its padding, which puts it at 42px —
+  // near enough to the 44 a finger wants that forcing it would only make every
+  // form on a phone taller. The textarea shares this string and has no business
+  // being 44px tall either.
   md: "rounded-xl px-3.5 py-2.5",
 };
+const SIZES = CONTROL_SIZES;
 const control = (size: Size, className?: string) => cn(CONTROL, SIZES[size], className);
 
 function fieldContent(
@@ -86,8 +107,69 @@ export function Input({
   className,
   size = "md",
   ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & { size?: Size }) {
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+  size?: Size;
+  // React 19 passes `ref` as an ordinary prop, so this needs declaring and
+  // nothing else. A screen that moves focus for you — the stock register hands
+  // it back and forth between a product and a count for a whole pallet — has to
+  // be able to reach the element.
+  ref?: React.Ref<HTMLInputElement>;
+}) {
   return <input className={control(size, className)} {...props} />;
+}
+
+/**
+ * An input with something fastened to the end of it, inside the same border: a
+ * unit, or a button that fills the field in for you.
+ *
+ * Extracted from the strength field, which drew the box, the bare input and the
+ * "%" by hand — and then the barcode field wanted the same shape for its
+ * scanner, which had been sitting *beside* the input as a separate control. Two
+ * boxes in a row read as two things to fill in; one box with a button in the
+ * corner reads as one field with a shortcut, which is what it is.
+ *
+ * The ring goes round the pair rather than round the input: `focus-ring-within`
+ * draws it on the box and suppresses the input's own (see globals.css), so
+ * focusing the text does not outline half a field.
+ *
+ * `className` dresses the box, because the box is what the control looks like —
+ * a suffix that is a button wants `pr-1` there so it can sit near the edge.
+ * `inputClassName` is for the text itself (`tabular-nums`, an alignment).
+ *
+ * No disabled styling: CONTROL's `disabled:` rules key off the input, and here
+ * the input is not the element carrying them. Nothing needs it yet; a field
+ * that does should grow it here rather than around it.
+ */
+export function SuffixedInput({
+  suffix,
+  size = "md",
+  className,
+  inputClassName,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+  suffix: React.ReactNode;
+  size?: Size;
+  className?: string;
+  inputClassName?: string;
+  ref?: React.Ref<HTMLInputElement>;
+}) {
+  return (
+    <div className={cn("focus-ring-within flex items-center gap-1.5", control(size), className)}>
+      {/* w-0 with a floor, not `w-full`: a flex child sized by its content
+          refuses to shrink past it, and a long barcode would push the suffix
+          out of the box rather than scroll under it. */}
+      <input
+        {...props}
+        className={cn(
+          // CONTROL's own placeholder rule is on the box, where `::placeholder`
+          // matches nothing — so it is restated on the element that has one.
+          "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted/60",
+          inputClassName,
+        )}
+      />
+      {suffix}
+    </div>
+  );
 }
 
 export function Textarea({

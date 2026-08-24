@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { MultiCombobox } from "./combobox";
 import { EmptyNote } from "./empty-state";
-import { DateInput } from "./field";
+import { DateInput, FieldGroup } from "./field";
 import { SearchInput } from "./search-input";
-import { IconChevronLeft, IconChevronRight } from "./icons";
+import { IconChevronLeft, IconChevronRight, IconFilter } from "./icons";
 import { FilterTabs } from "./filter-tabs";
+import { Button } from "./button";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
 import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState } from "@/lib/data/use-list-query";
 
 // The table every data list is drawn with: the filter bar (search / date range
@@ -89,12 +91,16 @@ export interface Column<T> {
   mobile?: MobileSlot;
 }
 
-//   title    – the card's headline, top left. Its header is not shown, so a cell
-//              that already renders a second line (title + reference) keeps it.
-//   trailing – the value opposite the title: the amount, or the status.
-//   meta     – a label/value line in the card body, labelled by `header`.
-//   actions  – buttons, on their own row at the bottom, unlabelled.
-//   hide     – left out of the card; the column is desktop-only.
+//   title    – the row's headline, on the left. Its header is not shown.
+//   trailing – the value opposite it: the amount, or the status.
+//   meta     – run together into the muted line under the headline, in column
+//              order, separated by dots. The header is announced to a screen
+//              reader and shown to nobody, so a cell in this slot has to read
+//              on its own: "24 st", not "24".
+//   actions  – buttons at the right-hand end, unlabelled.
+//   hide     – left out of the row; the column is desktop-only. This is the one
+//              to reach for on a wide table — the muted line holds two or three
+//              things before it starts truncating.
 // Unset means `meta`. If no column claims `title` the first one is used, so a
 // list that has not been annotated still reads as a card rather than a stack of
 // anonymous label/value pairs.
@@ -152,6 +158,8 @@ export function DataTable<T>({
   rowKey,
   rowClassName,
   rowHref,
+  expansion,
+  expandAll,
   empty,
 }: {
   columns: Column<T>[];
@@ -199,9 +207,29 @@ export function DataTable<T>({
    * the link underneath is doing the actual work.
    */
   rowHref?: (row: T) => string;
+  /**
+   * What sits underneath a row when it is opened, or nothing for a row with
+   * nothing behind it.
+   *
+   * For a row that *stands for* several — a stock movement and the corrections
+   * that got it to its figure. The list stays one line per thing that happened,
+   * and what is behind a line is a chevron away rather than another six lines
+   * everybody has to read past. A row that returns nothing here gets no
+   * chevron, so the control appears exactly where there is something to see.
+   */
+  expansion?: (row: T) => React.ReactNode;
+  /** Open every expandable row. For a "show everything" switch above the list. */
+  expandAll?: boolean;
   empty?: React.ReactNode;
 }) {
   const t = useTranslations("common.table");
+  const [opened, setOpened] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setOpened((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
   const slots = useMemo(() => mobileSlots(cols), [cols]);
 
@@ -216,6 +244,31 @@ export function DataTable<T>({
 
   const hasText = cols.some((c) => c.searchable);
   const hasDate = cols.some((c) => c.dateRange);
+
+  // ── The toolbar on a phone ──
+  //
+  // Below sm the bar was a column, and every control in it claimed a row of its
+  // own: a filter, a search box, a date range and an action came to about 196px
+  // of toolbar under a card header, before a single row of data. On a 393pt
+  // screen that is most of what you can see spent on the means of narrowing a
+  // list you cannot yet read.
+  //
+  // So the narrowing folds into one button and the row it opens. The search
+  // stays out, because it is the one that is used without being thought about;
+  // everything else is set once and then read off the badge. The badge is the
+  // whole reason this is safe — a filter you cannot see is a filter you forget
+  // is on, and a list quietly missing rows is worse than a tall toolbar.
+  //
+  // From sm nothing here applies: the controls sit in the row as they always
+  // did, and the trigger is not rendered.
+  const [filtering, setFiltering] = useState(false);
+  const activeFilters =
+    controls.picks.length + (controls.dateFrom ? 1 : 0) + (controls.dateTo ? 1 : 0);
+  const clearFilters = () => {
+    controls.setPicks([]);
+    controls.setDateFrom("");
+    controls.setDateTo("");
+  };
 
   return (
     <>
@@ -238,34 +291,67 @@ export function DataTable<T>({
 
       {(hasText || hasDate || filter || action) && (
         <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
-          {/* Ahead of the search box: it names which kinds of row you're looking
-              at, which is the coarser question, and it keeps a fixed width while
-              the search takes whatever is left. */}
-          {filter && (
-            <MultiCombobox
-              className="sm:w-52 sm:shrink-0"
-              options={filter.options}
-              values={controls.picks}
-              onChange={controls.setPicks}
-              placeholder={filter.label}
-              aria-label={filter.label}
-            />
-          )}
+          {/* `sm:contents` — below sm this is one row holding the trigger and
+              the search; from sm it dissolves and its children take their own
+              places in the toolbar, in the order they are written. Which is how
+              the wide layout stays exactly what it was while the narrow one is
+              something else entirely. */}
+          <div className="flex min-w-0 items-center gap-2 sm:contents">
+            {/* Ahead of the search box: it names which kinds of row you're
+                looking at, which is the coarser question, and it keeps a fixed
+                width while the search takes whatever is left. */}
+            {filter && (
+              <MultiCombobox
+                // The toolbar is the compact register: sm, like the date
+                // inputs beside it.
+                size="sm"
+                className="hidden sm:block sm:w-52 sm:shrink-0"
+                options={filter.options}
+                values={controls.picks}
+                onChange={controls.setPicks}
+                placeholder={filter.label}
+                aria-label={filter.label}
+              />
+            )}
 
-          {hasText && (
-            <SearchInput
-              className="sm:min-w-48 sm:flex-1"
-              value={controls.query}
-              placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-              onChange={(e) => controls.setQuery(e.target.value)}
-            />
-          )}
+            {/* What the two of them become on a phone. Icon and count only —
+                the word would be the widest thing in a row whose whole point is
+                giving the width to the search box. */}
+            {(filter || hasDate) && (
+              <button
+                type="button"
+                onClick={() => setFiltering(true)}
+                aria-label={t("filters")}
+                title={t("filters")}
+                className={cn(
+                  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors sm:hidden",
+                  activeFilters > 0
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-border bg-background text-muted",
+                )}
+              >
+                <IconFilter className="size-4" />
+                {activeFilters > 0 && (
+                  <span className="tabular-nums">{activeFilters}</span>
+                )}
+              </button>
+            )}
+
+            {hasText && (
+              <SearchInput
+                className="min-w-0 flex-1 sm:min-w-48 sm:flex-1"
+                value={controls.query}
+                placeholder={searchPlaceholder ?? t("searchPlaceholder")}
+                onChange={(e) => controls.setQuery(e.target.value)}
+              />
+            )}
+          </div>
 
           {hasDate && (
             // The two dates stay on one line together at every width — they
             // read as a range — but share it rather than each claiming 10rem,
             // which is what used to push the bar past a phone's screen.
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
                 <DateInput
                   size="sm"
@@ -289,11 +375,75 @@ export function DataTable<T>({
           )}
 
           {/* Last, and pushed to the far end on a wide screen — the search box
-              is what takes the space between. On a phone the bar is a column
-              and this is simply the row after the search, which is where a
-              button that adds to the list below belongs anyway. */}
-          {action && <div className="flex items-center gap-2 sm:ml-auto">{action}</div>}
+              is what takes the space between.
+
+              On a phone it is a row of its own and it fills it. A button that
+              adds to the list below is the page's primary action, and a primary
+              action sitting a third of the way across an otherwise empty row
+              reads as something that failed to lay out rather than something
+              somebody placed. `[&>*]:` reaches whatever the caller passed —
+              a Button, a link, a Menu's wrapper — because a toolbar cannot know
+              which of those it was given. */}
+          {action && (
+            <div className="flex items-center gap-2 [&>*]:flex-1 sm:ml-auto sm:[&>*]:flex-none">
+              {action}
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Set once, then read off the badge. Deliberately the same dialog the
+          rest of the app collects things in, rather than a bar that grows: what
+          is being done here is filling in a short form, and the sheet is what
+          this app opens for that. */}
+      {filtering && (
+        <Modal label={t("filters")} onClose={() => setFiltering(false)} className="max-w-md">
+          <ModalHeader title={t("filters")} />
+          <ModalBody>
+            {filter && (
+              <FieldGroup label={filter.label}>
+                <MultiCombobox
+                  options={filter.options}
+                  values={controls.picks}
+                  onChange={controls.setPicks}
+                  placeholder={filter.label}
+                  aria-label={filter.label}
+                />
+              </FieldGroup>
+            )}
+            {hasDate && (
+              <FieldGroup label={t("dateRange")}>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <DateInput
+                      value={controls.dateFrom}
+                      onChange={(e) => controls.setDateFrom(e.target.value)}
+                      aria-label={t("dateFromTitle")}
+                      placeholder={t("dateFrom")}
+                    />
+                  </div>
+                  <span className="text-xs text-muted">–</span>
+                  <div className="min-w-0 flex-1">
+                    <DateInput
+                      value={controls.dateTo}
+                      onChange={(e) => controls.setDateTo(e.target.value)}
+                      aria-label={t("dateToTitle")}
+                      placeholder={t("dateTo")}
+                    />
+                  </div>
+                </div>
+              </FieldGroup>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            {/* Nothing is pending — every control above has already applied
+                itself — so this is "put it all back", not "cancel". */}
+            <Button variant="ghost" onClick={clearFilters} disabled={activeFilters === 0}>
+              {t("clearFilters")}
+            </Button>
+            <Button onClick={() => setFiltering(false)}>{t("filtersDone")}</Button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {data.length === 0 ? (
@@ -301,15 +451,35 @@ export function DataTable<T>({
       ) : (
         <>
           <div className="divide-y divide-border md:hidden">
-            {pageRows.map((row) => (
-              <MobileRow
-                key={rowKey(row)}
-                row={row}
-                slots={slots}
-                className={rowClassName?.(row)}
-                href={rowHref?.(row)}
-              />
-            ))}
+            {pageRows.map((row) => {
+              const key = rowKey(row);
+              const under = expansion?.(row);
+              const open = Boolean(under) && (expandAll || opened.has(key));
+              return (
+                <div key={key}>
+                  <MobileRow
+                    row={row}
+                    slots={slots}
+                    className={rowClassName?.(row)}
+                    href={rowHref?.(row)}
+                  />
+                  {under && (
+                    <button
+                      type="button"
+                      onClick={() => toggle(key)}
+                      aria-expanded={open}
+                      className="flex w-full items-center gap-1.5 px-inset pb-3 text-xs text-muted"
+                    >
+                      <IconChevronRight
+                        className={cn("size-3.5 transition-transform", open && "rotate-90")}
+                      />
+                      {t("expand")}
+                    </button>
+                  )}
+                  {open && <div className="px-inset pb-3">{under}</div>}
+                </div>
+              );
+            })}
           </div>
 
           {/* Six columns of Swedish resultUnit names add up to more than the card
@@ -344,9 +514,12 @@ export function DataTable<T>({
               <tbody className="divide-y divide-border">
                 {pageRows.map((row) => {
                   const href = rowHref?.(row);
+                  const key = rowKey(row);
+                  const under = expansion?.(row);
+                  const open = Boolean(under) && (expandAll || opened.has(key));
                   return (
+                  <Fragment key={key}>
                   <tr
-                    key={rowKey(row)}
                     className={cn(
                       href && "relative cursor-pointer hover:bg-surface/50",
                       rowClassName?.(row),
@@ -377,12 +550,38 @@ export function DataTable<T>({
                           >
                             {c.cell(row)}
                           </Link>
+                        ) : c === slots.title && under ? (
+                          // The chevron goes on the thing the row is named
+                          // after, which is what somebody clicks to ask "what
+                          // is this made of".
+                          <span className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggle(key)}
+                              aria-expanded={open}
+                              className="relative z-10 -ml-1 shrink-0 rounded p-0.5 text-muted hover:bg-surface hover:text-foreground"
+                            >
+                              <IconChevronRight
+                                className={cn("size-3.5 transition-transform", open && "rotate-90")}
+                              />
+                              <span className="sr-only">{t("expand")}</span>
+                            </button>
+                            {c.cell(row)}
+                          </span>
                         ) : (
                           c.cell(row)
                         )}
                       </td>
                     ))}
                   </tr>
+                  {open && (
+                    <tr className="bg-surface/40">
+                      <td colSpan={cols.length} className={cn(CELL_X, "py-0")}>
+                        {under}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                   );
                 })}
               </tbody>
@@ -402,8 +601,33 @@ export function DataTable<T>({
   );
 }
 
-// One row as a card: headline and its trailing value on top, the remaining
-// columns as label/value lines under a rule, actions last.
+/**
+ * One row on a phone: a list row, not a card.
+ *
+ * It was a card — headline and value on top, then every remaining column as a
+ * labelled line under a rule. Two things were wrong with it, and the first was
+ * the one people actually hit. The rule *inside* a card was the same hairline
+ * as the `divide-y` *between* cards, and the gaps inside (12px) were within four
+ * pixels of the gap between (16px) — so nothing on the screen said where one
+ * record stopped and the next began, and a list of four read as a list of ten.
+ *
+ * The second is that a column with no `mobile` set falls through to `meta`
+ * (see `mobileSlots`), so a table that never thought about its phone layout put
+ * *every* column on the card with its header restated beside it. The stock log
+ * came to seven labelled lines per movement — a table transposed, which is the
+ * one thing a narrow screen is worst at reading.
+ *
+ * So: a headline with its value, one muted line of everything else run together
+ * under it, and a chevron. The labels go because they are the table's, not the
+ * row's — a value that cannot be read without its header is a value whose cell
+ * should say more (`24 st`, not `24`). Where that leaves something out, it is
+ * on the page the row opens, which is the reading a phone was going to need
+ * anyway.
+ *
+ * The headers are not lost to a screen reader: each one is still announced
+ * before its value, which costs a sighted reader nothing and is the whole
+ * difference between "Starköl · 24 st" and a list of unattributed figures.
+ */
 function MobileRow<T>({
   row,
   slots,
@@ -413,7 +637,7 @@ function MobileRow<T>({
   row: T;
   slots: MobileGroups<T>;
   className?: string;
-  /** Where the card goes when opened — see `rowHref`. */
+  /** Where the row goes when opened — see `rowHref`. */
   href?: string;
 }) {
   const cell = (c: Column<T>) => c.cell(row);
@@ -425,51 +649,93 @@ function MobileRow<T>({
   return (
     <div
       className={cn(
-        "px-inset py-4",
+        // min-h rather than a height: a headline long enough to wrap should take
+        // the room, and 64px is what a row that does not wrap comes to — a
+        // thumb's worth, and a rhythm the eye can count down the screen.
+        "flex min-h-16 items-center gap-3 px-inset py-3",
         href && "relative cursor-pointer active:bg-surface/50",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 text-sm">
-          {/* Same arrangement as the table: the headline is the link, and its
-              hit area covers the card. The actions further down sit above it
-              (they are later in the stacking order), so a delete button on a
-              card is still a delete button and not a navigation. */}
+      <div className="min-w-0 flex-1">
+        {/* Same arrangement as the table: the headline is the link, and its hit
+            area covers the row. The actions sit above it (they are later in the
+            stacking order), so a delete button on a row is still a delete
+            button and not a navigation. */}
+        {/* `truncate` twice over: on the box, for a cell that is plain text,
+            and on its children, for one that renders its own second line (an
+            utlägg's title over its reference). A block child starts a new line
+            box whatever the parent's `white-space` says, so both lines are
+            there and both end in an ellipsis rather than at the screen edge. */}
+        <div className="truncate text-sm font-medium *:truncate">
           {href ? (
-            <Link href={href} className="before:absolute before:inset-0 hover:underline focus-visible:underline">
+            <Link href={href} className="before:absolute before:inset-0">
               {title}
             </Link>
           ) : (
             title
           )}
         </div>
-        {trailing.length > 0 && (
-          <div className="flex shrink-0 flex-col items-end gap-1 text-sm font-semibold tabular-nums">
-            {trailing.map(([c, node]) => (
-              <div key={c.key}>{node}</div>
+
+        {meta.length > 0 && (
+          // A flex row, and a <div>, for one reason each — both learned the hard
+          // way from the same cell.
+          //
+          // A <div> because a column's `cell` may return whatever it likes, and
+          // several return block elements. `<p>` cannot legally hold a <div>, so
+          // the browser hoists it out and hydration finds a tree it did not
+          // build. That is not the cell's fault: rendering anything at all is
+          // the contract everywhere else in this table, and it is the row that
+          // has to be able to hold it.
+          //
+          // A flex row because a block child inside ordinary inline flow starts
+          // a line of its own, which would quietly turn this one-line summary
+          // into two or three. As flex items they stay on the row whatever they
+          // are, and what does not fit is clipped — which is what the row opens
+          // to show.
+          // `gap-x-1` as well as the dots: a single cell may itself render two
+          // blocks (a card holder's name over its last four digits), and as
+          // flex items those would meet with nothing between them.
+          <div className="mt-0.5 flex min-w-0 items-center gap-x-1 overflow-hidden text-xs text-muted">
+            {meta.map(([c, node], i) => (
+              <Fragment key={c.key}>
+                {i > 0 && (
+                  <span aria-hidden className="mx-0.5 shrink-0 text-muted/50">
+                    ·
+                  </span>
+                )}
+                <span className="min-w-0 shrink-0 truncate last:shrink">
+                  <span className="sr-only">{c.header}: </span>
+                  {node}
+                </span>
+              </Fragment>
             ))}
           </div>
         )}
       </div>
 
-      {meta.length > 0 && (
-        <dl className="mt-3 space-y-1.5 border-t border-border pt-3">
-          {meta.map(([c, node]) => (
-            <div key={c.key} className="flex items-baseline justify-between gap-3 text-sm">
-              <dt className="shrink-0 text-xs text-muted">{c.header}</dt>
-              <dd className="min-w-0 text-right">{node}</dd>
-            </div>
+      {trailing.length > 0 && (
+        <div className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-semibold tabular-nums">
+          {trailing.map(([c, node]) => (
+            <div key={c.key}>{node}</div>
           ))}
-        </dl>
+        </div>
       )}
 
       {actions.length > 0 && (
-        <div className="relative mt-3 flex flex-wrap items-center justify-end gap-2">
+        <div className="relative flex shrink-0 items-center gap-1">
           {actions.map(([c, node]) => (
             <div key={c.key}>{node}</div>
           ))}
         </div>
+      )}
+
+      {/* The one thing the old card never said: that this opens something. Its
+          cue was `hover:underline`, which a phone has no way to show. Dropped
+          where the row carries actions — two right-hand affordances on a 390px
+          row is a row you have to aim at. */}
+      {href && actions.length === 0 && (
+        <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted/50" />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useTranslations } from "next-intl";
 import { Spinner } from "@/components/ui/spinner";
+import { useMediaQuery } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
 
 // pdf.js parses in a Web Worker, so it needs a URL to load that worker from.
@@ -104,6 +105,11 @@ export default function ReceiptViewerImpl({
 }: ReceiptViewerProps) {
   const t = useTranslations("receipt");
 
+  // A finger rather than a pointer. Not the `md` breakpoint the rest of the app
+  // branches on: what changes here is what the hardware can raster and whether
+  // there is a cursor to dress, neither of which is a question about width.
+  const coarse = useMediaQuery("(pointer: coarse)");
+
   const [fullscreen, setFullscreen] = useState(false);
   // Which document is open. Clamped rather than trusted: a receipt replaced
   // while the panel is on it shortens the list under the reader.
@@ -154,6 +160,10 @@ export default function ReceiptViewerImpl({
   // handler on TransformWrapper.
   const [zoom, setZoom] = useState(1);
   const zoomSettle = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // What `zoom` currently is, readable from inside the transform handler — which
+  // runs on every frame of every gesture and must not be re-created for each new
+  // value of it.
+  const settledZoom = useRef(1);
   // Closing the panel mid-gesture leaves a timer holding a setter for a
   // component that is gone.
   useEffect(() => () => clearTimeout(zoomSettle.current), []);
@@ -180,6 +190,13 @@ export default function ReceiptViewerImpl({
   // unmounts. Not the library's onPanningStart/Stop, which fire for a trackpad
   // scroll too and would flicker the cursor on every wheel gesture.
   const [dragging, setDragging] = useState(false);
+  // Only for a pointer that has a cursor to change. On a touchscreen this state
+  // dressed nothing and cost a full re-render of the viewer — the Document and
+  // every Page in it — at the exact moment a finger landed to start a drag,
+  // which is the moment a drag can least afford one.
+  const startDrag = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch") setDragging(true);
+  };
   useEffect(() => {
     if (!dragging) return;
     const stop = () => setDragging(false);
@@ -344,10 +361,17 @@ export default function ReceiptViewerImpl({
   // viewport by it (its Page/Canvas), so this is the same knob, turned by us.
   const pixelRatio = useMemo(() => {
     if (!isPdf || !pdfWidth) return undefined;
-    const base = Math.max(
-      2,
-      typeof window === "undefined" ? 1 : window.devicePixelRatio || 1,
-    );
+    const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+    // The 2 is a floor on a desktop and a ceiling on a phone, and it is the same
+    // 2 for the same reason: two device pixels per CSS pixel is where a receipt
+    // stops getting more legible.
+    //
+    // A monitor reporting 1 is below that and gets raised to it. A phone reports
+    // 2 or 3 and is already at or past it — and there the extra density is not
+    // free, because a phone is compositing the same A4 sheet with a fraction of
+    // the memory bandwidth. At 3 a page is a canvas half again as wide and more
+    // than twice the pixels, for detail on a 6-inch screen nobody can resolve.
+    const base = coarse ? Math.min(dpr, 2) : Math.max(2, dpr);
     // The ceiling is per page and a document is now all of its pages at once,
     // so the budget is shared out. Square root because the cap is a width and
     // what it is really rationing is area: n pages each capped at
@@ -359,7 +383,7 @@ export default function ReceiptViewerImpl({
       MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, numPages)),
     );
     return Math.max(1, Math.min(base * zoom, share));
-  }, [isPdf, pdfWidth, zoom, numPages]);
+  }, [isPdf, pdfWidth, zoom, numPages, coarse]);
 
   // Nothing to show. The panel decides what an empty list means — a dropzone,
   // a notice that there is no underlag — and only reaches for the viewer when
@@ -377,13 +401,44 @@ export default function ReceiptViewerImpl({
       doubleClick={{ mode: "zoomIn" }}
       wheel={{ step: 0.005, wheelDisabled: trackpadMode }}
       trackPadPanning={{ disabled: false }}
+      // The pan, on the compositor instead of the main thread.
+      //
+      // The library writes a plain 2D `translate(x,y) scale(s)` to the content
+      // element on every frame — deliberately, its comment says, because a 3D
+      // transform blurs SVG on Safari. A 2D transform is not a reason for the
+      // browser to give the element a layer of its own, so each frame repainted
+      // everything inside it: on a phone, a stack of A4 canvases at 3× density,
+      // sixty times a second. Dragging a receipt crawled.
+      //
+      // `translate3d` promotes it, and from then on a pan is the compositor
+      // moving one texture. The blur the library is guarding against is about
+      // vector content magnified by the transform; there is none here — pages
+      // are canvases, and the zoom re-rasterises them at the new scale anyway
+      // (see `pixelRatio`), which is a sharper answer than the 2D transform's.
+      customTransform={(x, y, scale) =>
+        `translate3d(${x}px, ${y}px, 0) scale(${scale})`
+      }
       // Fires on every frame of a pan as well as a zoom, so it is settled
       // before it reaches state: re-rasterising an A4 page sixty times a second
-      // would cost far more than the sharpness it buys. Panning does not change
-      // `scale`, so those frames set the same value and React drops them.
+      // would cost far more than the sharpness it buys.
+      //
+      // A pan does not change `scale`, and those frames are the overwhelming
+      // majority — so they leave without touching the timer at all. Rescheduling
+      // it per frame was work for nothing (React dropped the equal value at the
+      // end of it), done in the middle of the gesture it was slowing down.
       onTransform={(_ref, state) => {
+        const scale = state.scale;
+        // Back at the scale we last rendered: nothing to re-rasterise, and any
+        // settle still pending is now aimed at the wrong number.
+        if (scale === settledZoom.current) {
+          clearTimeout(zoomSettle.current);
+          return;
+        }
         clearTimeout(zoomSettle.current);
-        zoomSettle.current = setTimeout(() => setZoom(state.scale), ZOOM_SETTLE_MS);
+        zoomSettle.current = setTimeout(() => {
+          settledZoom.current = scale;
+          setZoom(scale);
+        }, ZOOM_SETTLE_MS);
       }}
     >
         {({ zoomIn, zoomOut, resetTransform }) => (
@@ -476,6 +531,10 @@ export default function ReceiptViewerImpl({
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "0.5rem",
+                // Says in advance what `customTransform` above then does, so the
+                // layer is standing before the first frame of a gesture rather
+                // than being built during it.
+                willChange: "transform",
               }}
             >
               {/* One measured box around whatever is being shown — a stack of
@@ -541,8 +600,11 @@ export default function ReceiptViewerImpl({
     return createPortal(
       <div
         ref={containerRef}
-        onPointerDown={() => setDragging(true)}
-        className={cn("fixed inset-0 z-100 overflow-hidden bg-black/90", cursor)}
+        onPointerDown={startDrag}
+        className={cn(
+          "fixed inset-0 z-100 touch-none overflow-hidden bg-black/90",
+          cursor,
+        )}
       >
         {content}
       </div>,
@@ -555,8 +617,17 @@ export default function ReceiptViewerImpl({
       ref={containerRef}
       onPointerEnter={() => (hovered.current = true)}
       onPointerLeave={() => (hovered.current = false)}
-      onPointerDown={() => setDragging(true)}
-      className={cn("relative overflow-hidden bg-surface/40", cursor, className)}
+      onPointerDown={startDrag}
+      // touch-none says the gestures in here are the viewer's, all of them.
+      // Without it the browser opens every touch by holding the first moves back
+      // to see whether they were meant for a scroll it might have to run itself
+      // — which is the drag starting late, every time. There is nothing to
+      // scroll (this element is overflow-hidden), so it was only ever a wait.
+      className={cn(
+        "relative touch-none overflow-hidden bg-surface/40",
+        cursor,
+        className,
+      )}
     >
       {content}
     </div>

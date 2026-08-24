@@ -119,8 +119,8 @@ export function SkeletonTable({
           )}
           {toolbar && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Skeleton className="h-9 rounded-lg sm:w-52 sm:shrink-0" />
-              <Skeleton className="h-9 rounded-lg sm:min-w-48 sm:flex-1" />
+              <Skeleton className="h-11 rounded-lg sm:h-9 sm:w-52 sm:shrink-0" />
+              <Skeleton className="h-11 rounded-lg sm:h-9 sm:min-w-48 sm:flex-1" />
             </div>
           )}
         </div>

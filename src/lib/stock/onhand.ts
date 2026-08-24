@@ -9,17 +9,18 @@
 // Pure over plain data, so the rule the overview draws and the rule the report
 // files are one rule, and both can be tested without a database.
 
+import { LEVELS, openCount, openMl, type OpenBottles } from "./levels";
 import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/types";
 
 /** One row of the log, as everything here needs it. */
 export interface StockMovement {
   kind: StockEntryKind;
-  /** Whole units for a UNIT product; sealed bottles for a VOLUME one. */
+  /** Cans, or *sealed* bottles. */
   units: number;
-  /** Millilitres in opened bottles. VOLUME only. */
-  volumeMl: number;
-  /** The change in how many bottles are open. VOLUME only. */
-  openBottles: number;
+  /** What it did to the open bottles at each level. VOLUME only. */
+  open?: OpenBottles;
+  /** What it did to the stock's value, in öre. See lib/stock/value.ts. */
+  valueDeltaOre?: number;
 }
 
 /** What a product is, as far as counting it goes. */
@@ -34,18 +35,28 @@ export interface StockSubject {
 
 /** What is on the shelf, in every unit anybody asks for it in. */
 export interface OnHand {
-  /** Cans, or sealed bottles. */
+  /** Cans, or *sealed* bottles — the ones still worth their purchase price. */
   units: number;
-  /** How many bottles are open. VOLUME only; 0 for a UNIT product. */
+  /** Open bottles, per level. Empty for a UNIT product. */
+  open: OpenBottles;
+  /** How many bottles are open at all. */
   openBottles: number;
-  /** Liquid in those open bottles. VOLUME only. */
-  openMl: number;
   /**
-   * Everything, in millilitres — sealed units at their nominal volume plus
-   * what is in the open ones. Null when the product has never been told how
-   * much a unit holds, because then no honest total exists.
+   * Liquid, in millilitres, sealed and open together.
+   *
+   * Null when nobody has said how much one holds. For a spirit the open part is
+   * an estimate stacked on estimates — four rungs of a ladder somebody eyeballs
+   * — so it is a figure for a screen and never for a valuation.
    */
   totalMl: number | null;
+  /**
+   * What it is worth, in öre, at moving average cost.
+   *
+   * Sealed bottles only. An opened bottle is written off the moment it is
+   * opened, which needs no rule of its own: value rides on `units`, and opening
+   * a bottle is `units` falling with no purchase behind it.
+   */
+  valueOre: number;
 }
 
 /** How much one whole unit of this product holds, or null if nobody has said. */
@@ -69,20 +80,29 @@ export function unitVolume(p: StockSubject): number | null {
  */
 export function onHand(product: StockSubject, log: readonly StockMovement[]): OnHand {
   let units = 0;
-  let openBottles = 0;
-  let openMl = 0;
+  let valueOre = 0;
+  const open: OpenBottles = {};
   for (const m of log) {
     units += m.units;
-    openBottles += m.openBottles;
-    openMl += m.volumeMl;
+    valueOre += m.valueDeltaOre ?? 0;
+    if (m.open) {
+      for (const level of LEVELS) {
+        const n = m.open[level] ?? 0;
+        if (n !== 0) open[level] = (open[level] ?? 0) + n;
+      }
+    }
   }
 
   const per = unitVolume(product);
   return {
     units,
-    openBottles,
-    openMl,
-    totalMl: per == null ? null : units * per + openMl,
+    open,
+    openBottles: openCount(open),
+    // Sealed bottles at their whole volume plus whatever the open ones are
+    // judged to hold. A can has no open state, so its litres are just the
+    // count.
+    totalMl: per == null ? null : units * per + (product.kind === "VOLUME" ? openMl(open, per) : 0),
+    valueOre,
   };
 }
 
@@ -95,21 +115,13 @@ export function onHand(product: StockSubject, log: readonly StockMovement[]): On
  * millilitres with no open bottle to hold them is the same class of fault, and
  * the one a mis-typed weighing produces.
  */
-export function impossible(state: OnHand): boolean {
-  return (
-    state.units < 0 ||
-    state.openBottles < 0 ||
-    state.openMl < 0 ||
-    (state.openBottles === 0 && state.openMl > 0)
-  );
+export function impossible(product: StockSubject, state: OnHand): boolean {
+  if (state.units < 0) return true;
+  if (product.kind !== "VOLUME") return false;
+  // A negative count of open bottles at any rung: a bottle taken out that the
+  // log never saw arrive, or a level picked that was not there.
+  return LEVELS.some((level) => (state.open[level] ?? 0) < 0);
 }
-
-/** Below the level somebody set, and worth restocking. */
-export const belowMinimum = (state: OnHand, minimum: number | null | undefined): boolean => {
-  if (minimum == null) return false;
-  const measured = state.totalMl ?? state.units;
-  return measured < minimum;
-};
 
 /**
  * Millilitres bought in, for the restaurangrapport's "inköpt volym".
@@ -128,9 +140,12 @@ export function purchasedMl(
 ): number | null {
   const per = unitVolume(product);
   if (per == null) return null;
+  // Sealed units only, and everything bought is sealed — a delivery of opened
+  // bottles is not a thing. So the litres bought are the count times the size,
+  // for a spirit exactly as for a can.
   return log
     .filter((m) => m.kind === "PURCHASE")
-    .reduce((sum, m) => sum + m.units * per + m.volumeMl, 0);
+    .reduce((sum, m) => sum + m.units * per, 0);
 }
 
 /**
@@ -147,21 +162,3 @@ export function pureAlcoholMl(product: StockSubject, ml: number): number | null 
   if (product.abv == null) return null;
   return Math.round((ml * product.abv) / 100);
 }
-
-/**
- * The drink types the restaurangrapport wants a purchase volume for.
- *
- * Not every category: folköl and lättdrycker appear on the form under turnover
- * alone, and OVRIGT is ours — the wares and the glassware, which the form has
- * never heard of.
- */
-export const REPORTED_CATEGORIES: readonly DrinkCategory[] = [
-  "SPRITDRYCK",
-  "VIN",
-  "ANDRA_JASTA",
-  "STARKOL",
-  "ALKOHOLDRYCKSLIKNANDE",
-];
-
-export const isReportedCategory = (c: DrinkCategory): boolean =>
-  REPORTED_CATEGORIES.includes(c);

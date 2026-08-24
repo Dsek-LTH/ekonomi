@@ -90,6 +90,8 @@ export function ClientDataTable<T>({
   rowKey,
   rowClassName,
   rowHref,
+  expansion,
+  expandAll,
   empty,
 }: {
   columns: Column<T>[];
@@ -104,6 +106,9 @@ export function ClientDataTable<T>({
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
+  /** What sits under a row when opened — see DataTable's own `expansion`. */
+  expansion?: (row: T) => React.ReactNode;
+  expandAll?: boolean;
   empty?: React.ReactNode;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
@@ -154,6 +159,8 @@ export function ClientDataTable<T>({
       rowKey={rowKey}
       rowClassName={rowClassName}
       rowHref={rowHref}
+      expansion={expansion}
+      expandAll={expandAll}
       empty={empty}
     />
   );

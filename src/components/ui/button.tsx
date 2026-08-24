@@ -39,9 +39,16 @@ const VARIANTS: Record<Variant, string> = {
     "bg-background text-danger border border-border hover:bg-danger-soft hover:border-danger",
 };
 
+// "md" is the button a page's actions are drawn at, and like the compact
+// control register (CONTROL_SIZES in ui/field.tsx) it stands taller on a phone:
+// 40px is a comfortable pointer target and four short of a thumb's.
+//
+// "sm" is left alone. It is the button that sits inside a table row or beside a
+// field, where it is measured against what it stands next to rather than
+// against a finger, and growing it would push those rows apart.
 const SIZES: Record<Size, string> = {
   sm: "h-8 px-3.5 text-[13px]",
-  md: "h-10 px-5 text-sm",
+  md: "h-11 px-5 text-sm sm:h-10",
   lg: "h-12 px-7 text-base",
 };
 

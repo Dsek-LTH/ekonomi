@@ -999,7 +999,30 @@ export default function IncomeReviewClient({
               items by default, so the panel was already as tall as the detail
               beside it, and a sticky box that is as tall as its own scroll
               range has nothing to stick for. */}
-          <SidebarPanel width="xl:w-64" className="xl:sticky xl:top-8 xl:self-start">
+          <SidebarPanel
+            at="xl"
+            className="xl:sticky xl:top-8 xl:self-start"
+            sheetLabel={t("counts.reports", { count: drafts.length })}
+            // The day being reviewed, as the row in the queue states it: the
+            // verksamhet, the day it is for, and what it comes to. Below xl the
+            // queue is a dialog behind this bar rather than 364px of list above
+            // the report — see components/ui/sidebar-list.tsx.
+            bar={
+              selected ? (
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    {selected.unitName ?? t("table.fees")}
+                    <span className="ml-1.5 text-xs text-muted">
+                      {formatDate(selected.date)}
+                    </span>
+                  </span>
+                  <Amount value={selected.total} />
+                </span>
+              ) : (
+                t("counts.reports", { count: drafts.length })
+              )
+            }
+          >
             {/* What the queue holds, and the one thing you can do to all of it.
                 The same pair the table view puts in its card header — this is
                 the same list in the other shape, and a bulk action belongs to
@@ -1196,13 +1219,13 @@ export default function IncomeReviewClient({
                     />
                   </Field>
                   <Field label={tBook("voucherDate")}>
-                    <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted">
+                    <div className="flex h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
                       <IconLock className="size-3.5 shrink-0" />
                       <span className="tabular-nums">{selected.date}</span>
                     </div>
                   </Field>
                   <Field label={tBook("voucherText")}>
-                    <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted">
+                    <div className="flex h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
                       <IconLock className="size-3.5 shrink-0" />
                       <span className="truncate">
                         {incomeVoucherDescription(selected.source, selected.unitDescription)}

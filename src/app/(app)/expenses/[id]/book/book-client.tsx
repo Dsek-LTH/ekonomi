@@ -323,7 +323,7 @@ export default function BookExpenseClient({
             {/* Prefix and input are one field, so the ring goes round the pair
                 — focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}
-            <div className="focus-ring-within flex h-9 w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm">
+            <div className="focus-ring-within flex h-11 w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm sm:h-9">
               {/* The prefix comes from the submitter's identity, so its width is
                   out of our hands. Nowrap-and-never-shrink made the box wider
                   than the card body on a long one; it truncates instead, and the

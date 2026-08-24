@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconUpload, IconTrash } from "@/components/ui/icons";
@@ -17,6 +18,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import {
   bankAmountColumn,
+  bankCardColumn,
   bankDateColumn,
   bankDescriptionColumn,
   bankHolderColumn,
@@ -24,31 +26,66 @@ import {
 } from "@/components/columns/bank-columns";
 import { useFormat } from "@/lib/ui/use-format";
 import type { RowPage } from "@/lib/data/list-query";
-import type { BankTransaction } from "@/lib/domain/types";
+import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
+
+/** Whose purchases are being read: the section's, or the reader's own. */
+export type BankScope = "mine" | "all";
 
 export default function BankClient({
   page,
+  scope,
+  canPickScope,
+  cards,
+  viewerId,
 }: {
   page: RowPage<BankTransaction>;
+  /** Settled on the server — see page.tsx. Never decided here. */
+  scope: BankScope;
+  canPickScope: boolean;
+  /** The reader's own cards, to decide whether the card column earns its width. */
+  cards: SectionCard[];
+  viewerId: string;
 }) {
   const t = useTranslations("bank");
   const { user } = useRole();
   const { date } = useFormat();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const controls = useUrlTableControls(page.total);
+  const controls = useUrlTableControls(page.total, scope === "mine" ? "UNMATCHED" : "ALL");
   const canImport = canBookkeep(user.roles);
   const importing = pending === "import";
 
+  // In the URL, like every other filter on a list: which purchases you were
+  // looking at is a thing people send each other, and it is the same parameter
+  // the server reads to decide what to fetch.
+  function setScope(next: string) {
+    const q = new URLSearchParams(params.toString());
+    q.set("scope", next);
+    // The tab defaults differ per scope, and a tab carried across from the
+    // other one would leave the address bar describing a filter this scope did
+    // not open on. Paging likewise: page 4 of the section's feed is not page 4
+    // of your own.
+    q.delete("tab");
+    q.delete("page");
+    router.push(`${pathname}?${q.toString()}`);
+  }
+
+  // Unaccounted first, because on either scope it is the only tab with anything
+  // to do in it. Which means neither scope may leave the default unstated —
+  // DataTable falls back to its first tab, and the server to no filter at all,
+  // and the two would describe different lists. See parseListQuery.
   const tabs: TabFilter = [
-    { value: "ALL", label: t("tab.all") },
     // No predicates — the tab is a filter the server applies (see
     // getBankTransactionPage), so the rows arrive already narrowed to it.
-    { value: "MATCHED", label: t("tab.matched") },
     { value: "UNMATCHED", label: t("tab.unmatched") },
+    { value: "MATCHED", label: t("tab.matched") },
+    { value: "ALL", label: t("tab.all") },
   ];
 
   async function upload(file: File) {
@@ -93,7 +130,11 @@ export default function BankClient({
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
-    bankHolderColumn(t("colHolder")),
+    // Whose card it sat on, or — when they are all yours — which of your cards.
+    // The second only earns its width once somebody holds more than one.
+    scope === "all"
+      ? bankHolderColumn(t("colHolder"))
+      : bankCardColumn(t("colCard"), cards.length <= 1),
     // Was a status pill saying "Matchad · DEK26-0039". It said the same thing
     // this does, in more words and without going anywhere — and the tabs above
     // already sort matched from unmatched, which is the only part a pill was
@@ -104,18 +145,32 @@ export default function BankClient({
     {
       key: "actions",
       header: "",
-      align: "center",
-      hidden: !canImport,
+      align: "right",
       mobile: "actions",
+      // Two actions on one column, and which of them a row offers depends on
+      // the row rather than on the page. "Redovisa" used to exist only on
+      // Kortköp, which meant a treasurer looking at the section's feed found
+      // their own unaccounted purchase and a delete button — the one thing they
+      // could not do to it was the thing they wanted.
       cell: (tx) => (
-        <IconButton
-          tone="danger"
-          onClick={() => deleteTxn(tx.id)}
-          loading={pending === tx.id}
-          label={tx.matchedExpenseId ? t("deleteBlocked") : t("delete")}
-        >
-          <IconTrash className="size-4" />
-        </IconButton>
+        <span className="flex items-center justify-end gap-1">
+          {tx.cardHolderId === viewerId && !tx.matchedExpenseId && (
+            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="sm">
+              <IconUpload className="size-4" />
+              {t("account")}
+            </ButtonLink>
+          )}
+          {canImport && (
+            <IconButton
+              tone="danger"
+              onClick={() => deleteTxn(tx.id)}
+              loading={pending === tx.id}
+              label={tx.matchedExpenseId ? t("deleteBlocked") : t("delete")}
+            >
+              <IconTrash className="size-4" />
+            </IconButton>
+          )}
+        </span>
       ),
     },
   ];
@@ -123,7 +178,19 @@ export default function BankClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
+      collections={
+        canPickScope
+          ? {
+              label: t("scopeLabel"),
+              value: scope,
+              onChange: setScope,
+              options: [
+                { value: "mine", label: t("scope.mine") },
+                { value: "all", label: t("scope.all") },
+              ],
+            }
+          : undefined
+      }
     >
       {/* Transaction list */}
       <Card>

@@ -21,6 +21,7 @@ import {
   IconX,
 } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
+import { usePhone } from "@/lib/ui/media";
 
 // The receipt as part of the app frame rather than part of the page.
 //
@@ -104,8 +105,18 @@ export function useReceiptTabShowing(): boolean {
   return Boolean(source) && collapsed && !isAwaitingUpload(source);
 }
 
-/** A page waiting for a receipt keeps the panel open — there'd be nothing to
- *  fold away, and folding is how you'd lose the only way to add one. */
+/**
+ * A page waiting for a receipt keeps the panel open — there'd be nothing to
+ * fold away, and folding is how you'd lose the only way to add one.
+ *
+ * From md, where the panel is a column beside the form. Below it the panel is
+ * the whole screen, and "keeps it open" turned into "cannot be left": a new
+ * utlägg on a phone opened onto a full-screen dropzone with no close button,
+ * with the form it belongs to behind it and no way through. The reasoning above
+ * does not hold there either — the folded tab is still on the edge of the
+ * screen, so the way to add one is a tap away rather than lost. See `open` and
+ * `controls` in ReceiptPanelColumn.
+ */
 const isAwaitingUpload = (source: Source | null) =>
   Boolean(source && source.docs.length === 0 && source.upload);
 
@@ -252,8 +263,11 @@ export function ReceiptPanelColumn() {
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
 
+  // Below md the panel is an overlay over the whole screen rather than a column
+  // beside the page, which changes what "open" is allowed to mean.
+  const narrow = usePhone();
   const awaitingUpload = isAwaitingUpload(source);
-  const open = !collapsed || awaitingUpload;
+  const open = !collapsed || (awaitingUpload && !narrow);
 
   // What to do the moment the panel has something to show. Neither of these is
   // persisted — it's the situation deciding, not the reader, and their own
@@ -374,12 +388,17 @@ export function ReceiptPanelColumn() {
   // it so the two read as one set of tools.
   const controls = (
     <div className="absolute left-2 top-2 z-20 flex items-center gap-1.5">
-      {!awaitingUpload && (
+      {/* On a phone this is drawn even while a receipt is still wanted. From md
+          it is not: there the panel is a column beside the form, so an open one
+          costs nothing and folding it away would only hide the dropzone the
+          page is asking you to use. Over the whole screen that same rule is a
+          view with no way out. */}
+      {(!awaitingUpload || narrow) && (
         <button
           type="button"
           onClick={() => setCollapsed(true)}
-          title={t("collapse")}
-          aria-label={t("collapse")}
+          title={narrow ? t("close") : t("collapse")}
+          aria-label={narrow ? t("close") : t("collapse")}
           aria-expanded
           className={FLOATING_BTN}
         >

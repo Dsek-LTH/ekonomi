@@ -59,14 +59,16 @@ export function PersonSearch({
     };
   }, [query]);
 
-  // Close when clicking outside.
+  // Close when clicking outside. `pointerdown` rather than `mousedown`: iOS only
+  // synthesises mouse events for targets it considers clickable, so a tap on
+  // the ordinary page behind this list dismissed nothing. See ui/combobox.tsx.
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
       if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
   // Derived rather than stored, so clearing the field needs no state update.

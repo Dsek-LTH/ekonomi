@@ -90,6 +90,10 @@ export const expensePaymentTypeColumn = (
   sortable: true,
   searchable: true,
   className: "whitespace-nowrap",
+  // Off the phone row. It is one of two values, it is on the page the row
+  // opens, and the muted line holds two or three things before it truncates —
+  // so this is the one that makes room for the date and the reference.
+  mobile: "hide",
   cell: (e) => <Tag>{paymentLabel(e.paymentType)}</Tag>,
 });
 
@@ -128,6 +132,12 @@ export const expenseStatusColumn = (header: string): Column<Expense> => ({
   header,
   value: (e) => EXPENSE_STATUSES.indexOf(e.status),
   sortable: true,
+  // Opposite the title on a phone, stacked over the amount, rather than run
+  // into the muted line with the date and the reference. Where an utlägg has
+  // got to is the reason most people open this list at all, and a pill is a
+  // shape you read at a glance — which is worth the right-hand column and is
+  // wasted in a row of dot-separated text.
+  mobile: "trailing",
   cell: (e) => <StatusPill status={e.status} />,
 });
 

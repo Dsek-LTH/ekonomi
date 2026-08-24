@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscape } from "@/lib/ui/escape";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -10,8 +11,10 @@ import { LanguageSwitcher } from "./language-switcher";
 import { Avatar } from "../ui/avatar";
 import { IconFortnox } from "./fortnox-mark";
 import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
+import { MobileNav } from "./mobile-nav";
 import {
-  IconBank,
+  IconBox,
+  IconCalendar,
   IconIncome,
   IconBook,
   IconBudget,
@@ -25,6 +28,7 @@ import {
   IconGrid,
   IconHelp,
   IconHierarchy,
+  IconList,
   IconMenu,
   IconReceipt,
   IconUsers,
@@ -33,6 +37,7 @@ import {
   canAccessBookkeeping,
   canAccessBudget,
   canAccessSettings,
+  canViewStock,
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
@@ -46,14 +51,14 @@ import { cn } from "@/lib/ui/utils";
 // `label` is a key under the `nav` namespace, not text: the table is built once
 // at module scope, where there is no locale yet, so the wording is resolved at
 // render time instead.
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   icon: (p: { className?: string }) => React.ReactNode;
   visible: (user: CurrentUser) => boolean;
 };
 
-type NavGroup = {
+export type NavGroup = {
   label: string;
   items: NavItem[];
 };
@@ -111,8 +116,17 @@ const NAV_GROUPS: NavGroup[] = [
     label: "groupExpenses",
     items: [
       { href: "/expenses", label: "expenses", icon: IconReceipt, visible: ALL },
-      // Only meaningful to someone who actually holds a guild card.
-      { href: "/card-purchases", label: "cardPurchases", icon: IconCard, visible: (u) => u.holdsCard },
+      // The bank feed, which used to be two links: "Kortköp" here for a card
+      // holder and "Bank & matchning" under Bokföring for the treasury. One
+      // page reads both ways now (see (app)/bank/page.tsx), so it is one link —
+      // and it belongs here rather than under Bokföring, because for most of
+      // the people who open it the errand is turning a purchase into an utlägg.
+      {
+        href: "/bank",
+        label: "bank",
+        icon: IconCard,
+        visible: (u) => u.holdsCard || canAccessBookkeeping(u.roles),
+      },
       { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.roles) },
     ],
   },
@@ -138,16 +152,34 @@ const NAV_GROUPS: NavGroup[] = [
         visible: (u) => canAccessBookkeeping(u.roles),
       },
       {
-        href: "/bank",
-        label: "bank",
-        icon: IconBank,
-        visible: (u) => canAccessBookkeeping(u.roles),
-      },
-      {
         href: "/income",
         label: "income",
         icon: IconIncome,
         visible: (u) => canAccessBookkeeping(u.roles),
+      },
+    ],
+  },
+  {
+    label: "groupStock",
+    items: [
+      // Its own group rather than a line under Bokföring: keeping the
+      // lagerbokföring is a different job, done by different people, and the
+      // roles that see this see nothing else in the app.
+      { href: "/stock", label: "stock", icon: IconBox, visible: (u) => canViewStock(u.roles) },
+      // Above the log, because it is where the work happens: taking stock out
+      // and bringing it back is registered on the occasion it belongs to. The
+      // log is what you open when a figure looks wrong.
+      {
+        href: "/stock/tags",
+        label: "stockEvents",
+        icon: IconCalendar,
+        visible: (u) => canViewStock(u.roles),
+      },
+      {
+        href: "/stock/log",
+        label: "stockLog",
+        icon: IconList,
+        visible: (u) => canViewStock(u.roles),
       },
     ],
   },
@@ -195,8 +227,29 @@ export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
   ].map((item) => [item.href, item.label]),
 );
 
-/** Below this the rail is gone and the same panel is a drawer over the page. */
-const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+/**
+ * The nav's name for wherever we are, by longest matching route.
+ *
+ * For the phone's top bar, which said "D-sektionen" on every screen — the one
+ * thing a reader already knows. Longest match and not first: /stock, /stock/tags
+ * and /stock/log are all sections in their own right, and a prefix test that
+ * stopped at the first hit would call all three of them Lager.
+ *
+ * Nothing for a route the nav does not list (/profile, an utlägg's own page).
+ * Those are pages under a section rather than sections, and they carry their own
+ * heading and back link; the bar falls back to the brand.
+ */
+const sectionLabel = (path: string): string | null => {
+  let best: string | null = null;
+  let longest = 0;
+  for (const [href, label] of Object.entries(SECTION_LABELS)) {
+    if ((path === href || path.startsWith(`${href}/`)) && href.length > longest) {
+      best = label;
+      longest = href.length;
+    }
+  }
+  return best;
+};
 
 export function AppShell({
   children,
@@ -222,52 +275,51 @@ export function AppShell({
   const pathname = usePathname();
   const { user } = useRole();
   const t = useTranslations("nav");
-  // One "held open" flag for both bands, because it is the same panel either
-  // way: below md the hamburger sets it, from md it is the pin. Hovering opens
-  // the panel too, but only in CSS (see the aside) — a hover that re-rendered
-  // the whole shell on the way in and out would be paying React for something
-  // the compositor already does.
+  // Two flags, because there are now two navs and they are not the same thing
+  // held open at two widths.
+  //
+  // `pinned` is the rail's, and only the rail's: a standing preference about
+  // the shape of the desktop frame, restored from a cookie so a pinned nav
+  // renders pinned on the first paint. Hovering opens the panel too, but only
+  // in CSS (see the aside) — a hover that re-rendered the whole shell on the
+  // way in and out would be paying React for what the compositor already does.
   const [pinned, setPinned] = useState(defaultPinned);
 
-  // Only the pin is a preference worth keeping; the drawer being open on a
-  // phone is not, so below md the cookie is left alone.
+  // The phone's menu, which always starts shut. It used to share `pinned`, and
+  // that quietly meant a reader who had pinned the rail on a laptop arrived on
+  // their phone with the menu open over every page — the cookie is a fact about
+  // a frame that does not exist below md.
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const togglePin = () => {
     setPinned((v) => {
       const next = !v;
-      if (!isMobile()) {
-        document.cookie = `${NAV_PINNED_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
-      }
+      document.cookie = `${NAV_PINNED_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
       return next;
     });
   };
 
-  useEffect(() => {
-    if (!pinned) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPinned(false);
-    window.addEventListener("keydown", onKey);
-    // Only matters below md, where the document is what scrolls and the panel
-    // is covering it: without this the page slides around behind the open
-    // drawer. From md the shell is `overflow-hidden` already, and the pinned
-    // rail is a column in the row rather than something over the page, so
-    // locking the body there would be freezing a scroll nothing is covering.
-    if (isMobile()) {
-      const prevOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        window.removeEventListener("keydown", onKey);
-        document.body.style.overflow = prevOverflow;
-      };
-    }
-    return () => window.removeEventListener("keydown", onKey);
-  }, [pinned]);
+  // Escape closes whichever of them is open, and only the topmost layer hears
+  // it — a combobox inside the menu answers first. See lib/ui/escape.ts.
+  useEscape(menuOpen, () => setMenuOpen(false));
+  useEscape(pinned && !menuOpen, () => setPinned(false));
 
-  // Following a link is the natural "done with the menu" signal on a phone, so
-  // every navigable thing inside the panel releases the drawer on the way out.
-  // From md it is not a drawer over anything — a pin is a standing preference
-  // about the shape of the frame, and navigating is not a request to undo it.
-  const closeNav = () => {
-    if (isMobile()) setPinned(false);
-  };
+  useEffect(() => {
+    if (!menuOpen) return;
+    // Below md the document is what scrolls and the menu is covering all of it,
+    // so without this the page slides about behind an opaque screen.
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [menuOpen]);
+
+  // Following a link is the natural "done with the menu" signal, so every
+  // navigable thing inside it closes it on the way out. Harmless from md, where
+  // nothing is open: the rail's pin is a preference about the frame, and
+  // navigating is not a request to undo it.
+  const closeNav = () => setMenuOpen(false);
 
   // Everything in the panel that is text rather than icon fades with the width,
   // so a label is never caught halfway through the rail's edge. Below md there
@@ -390,6 +442,9 @@ export function AppShell({
     }))
     .filter((group) => group.items.length > 0);
 
+  const sectionKey = sectionLabel(pathname);
+  const section = sectionKey ? t(sectionKey) : null;
+
   const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
   const receiptTab = useReceiptTabShowing();
 
@@ -415,17 +470,20 @@ export function AppShell({
         {t("skipToContent")}
       </a>
 
-      {/* Backdrop for the mobile drawer. Below md only: from md the panel is a
-          hover overlay, and dimming the page every time the pointer brushed the
-          left edge would be strobing. */}
-      {pinned && (
-        <button
-          type="button"
-          aria-label={t("closeMenu")}
-          onClick={closeNav}
-          className="fixed inset-0 z-30 cursor-default bg-black/40 md:hidden"
-        />
-      )}
+      {/* The phone's navigation. A sibling of the rail rather than a state of
+          it: below md the rail is not rendered at all, and this is. */}
+      <MobileNav
+        open={menuOpen}
+        onClose={closeNav}
+        overview={inSettings ? null : OVERVIEW}
+        groups={groups}
+        help={HELP}
+        inSettings={inSettings}
+        isActive={isActive}
+        user={user}
+        theme={theme}
+        fortnox={fortnox}
+      />
 
       {/* The nav.
 
@@ -436,13 +494,14 @@ export function AppShell({
           over the page instead of shoving it sideways — a page that reflowed
           every time the pointer crossed the nav would be unusable.
 
-          Below md the wrapper goes back to being a `fixed` box of no width,
-          holding the drawer. `md:relative` with all-zero insets is the same
-          position it would take as a static column, so the offsets can stay. */}
+          Below md it is not here at all: the phone has a screen of its own
+          (components/shell/mobile-nav.tsx) rather than this panel at a
+          different width, because everything about this one is measured for a
+          64px rail and a pointer. */}
       <div
         className={cn(
-          "group pointer-events-none fixed inset-y-0 left-0 z-40 print:hidden",
-          "md:pointer-events-auto md:relative md:z-30 md:shrink-0",
+          "group pointer-events-none hidden print:hidden",
+          "md:block md:pointer-events-auto md:relative md:z-30 md:shrink-0",
           "md:transition-[width] md:duration-200 md:ease-out",
           pinned ? "md:w-64" : "md:w-16",
         )}
@@ -592,15 +651,19 @@ export function AppShell({
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:hidden print:hidden">
           <button
             type="button"
-            onClick={() => setPinned(true)}
+            onClick={() => setMenuOpen(true)}
             aria-label={t("openMenu")}
             className="-ml-1 flex size-9 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-surface"
           >
             <IconMenu className="size-5" />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/symbol_rosa.svg" alt="" className="h-7" />
-          <p className="text-sm font-semibold">D-sektionen</p>
+          <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-7" />
+          {/* Where you are, not what app this is. The mark beside it already
+              answers the second question, and it is the same answer on every
+              screen; this is the line a phone's own nav bar spends on the
+              screen you are actually looking at. */}
+          <p className="min-w-0 truncate text-sm font-semibold">{section ?? "D-sektionen"}</p>
         </header>
 
         <main

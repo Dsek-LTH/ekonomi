@@ -83,6 +83,11 @@ export function ExpensesClient({
     {
       key: "attest",
       header: t("col.attest"),
+      // Off the phone row. It is a line per allocation — a tick, a name and a
+      // cost centre each — which is a column of its own on a table and cannot
+      // be a clause in a one-line summary. The same thing, laid out for a
+      // narrow screen, is on the utlägg's own page under Fördelning.
+      mobile: "hide",
       cell: (e) =>
         e.allocations.length === 0 ? (
           <span className="text-muted">—</span>
@@ -133,7 +138,12 @@ export function ExpensesClient({
       // two you are on, and a heading that said it too would be the same word
       // twice on one screen.
       title={t("title")}
-      description={t("description")}
+      // No description. The header wraps on a narrow screen, and a paragraph
+      // between the title and the Mina/Alla track pushed the track onto a line
+      // of its own well below the heading it belongs to — the two are meant to
+      // read as one, and on the list you land on most often the sentence was
+      // costing more than it said.
+
       collections={
         canToggleScope
           ? {

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Field, Textarea } from "@/components/ui/field";
 import { IconAlert } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
+import { useEscape } from "@/lib/ui/escape";
 
 // One reusable confirmation dialog for every destructive / irreversible action,
 // replacing window.confirm() and ad-hoc inline confirm UI. Use via useConfirm():
@@ -102,13 +103,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   // this Tab walked straight out of the dialog and on through the page behind
   // it — where every control was still operable while a modal claimed to be
   // blocking them.
+  // Escape declines, and declines only this — anything opened on top of it
+  // answers first. See lib/ui/escape.ts.
+  useEscape(Boolean(pending), () => settle(false));
+
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        settle(false);
-        return;
-      }
       if (e.key === "Tab") {
         const focusable = boxRef.current?.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',

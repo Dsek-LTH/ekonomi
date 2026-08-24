@@ -8,6 +8,7 @@ import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { lineKeys, sheetTotals, ZERO_TOTALS, type JoinedAccount, type JoinedSheet } from "@/lib/budget/compare";
 import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { useFormat } from "@/lib/ui/use-format";
+import { usePhone } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
@@ -82,14 +83,21 @@ export function CostCenterSheet(props: {
   // out of the flow, so that neither can push the other about: the boxes line
   // up straight down the sheet whatever the numbers beside them are doing, and
   // a row without a number keeps its box in the same place as the rest.
-  const gut = (n: number | undefined, box?: React.ReactNode) => (
-    <td className="relative select-none border-r border-border/60 px-1 align-middle">
-      <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted/50">
-        {n ?? ""}
-      </span>
-      <span className="flex h-8 items-center justify-center">{box}</span>
-    </td>
-  );
+  // `table-fixed` sizes the column from the colgroup and never from what is in
+  // it, so a 0px column whose cells still carry padding, a border and a tick box
+  // does not collapse — it overflows into the column beside it. On a phone the
+  // cell is emptied rather than squeezed.
+  const gut = (n: number | undefined, box?: React.ReactNode) =>
+    narrow ? (
+      <td className="p-0" />
+    ) : (
+      <td className="relative select-none border-r border-border/60 px-1 align-middle">
+        <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted/50">
+          {n ?? ""}
+        </span>
+        <span className="flex h-8 items-center justify-center">{box}</span>
+      </td>
+    );
 
   // Row delete. Revealed on row hover (like the drag grip) so a long sheet isn't
   // a column of bins — keyboard focus reveals it too, so it stays reachable
@@ -119,11 +127,24 @@ export function CostCenterSheet(props: {
   // too: an account it budgets for that this sheet doesn't (`ghostAccounts`),
   // and rows inside a shared account that this one lacks. Those render read-only
   // and unbudgeted — the point of showing them is that the blank is the finding.
-  const showCompare = compare !== null;
+  // Below md the sheet has 361px of screen and 506px of fixed columns, so
+  // something has to give. What gives is the chrome — see the widths below —
+  // and the comparison, which adds another 200px and is the one thing here
+  // somebody asked for rather than always needed.
+  const narrow = usePhone();
+  const [compareOnPhone, setCompareOnPhone] = useState(false);
+  /** Whether the phone strip is showing what the tiles used to say underneath. */
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const showCompare = compare !== null && (!narrow || compareOnPhone);
   const compareTotals = compare ? sheetTotals(compare.sheet, 1) : ZERO_TOTALS;
   const compareAccounts = new Map((compare?.sheet.accounts ?? []).map((a) => [a.code, a]));
   const ownCodes = new Set(cc.accounts.map((a) => a.accountCode));
-  const ghostAccounts = (compare?.sheet.accounts ?? []).filter((a) => !ownCodes.has(a.code));
+  // Only while the comparison's columns are showing: a ghost row is an account
+  // the *other* side has, and its whole content is in those columns. Without
+  // them it would be a row with a name and nothing else.
+  const ghostAccounts = showCompare
+    ? (compare?.sheet.accounts ?? []).filter((a) => !ownCodes.has(a.code))
+    : [];
   // Two empty trailing cells to keep non-Summa rows aligned when they show.
   const actualPad = showCompare ? <><td className="border-l border-border/40" /><td /></> : null;
 
@@ -135,9 +156,31 @@ export function CostCenterSheet(props: {
   // w-full, so it always fits its container with no horizontal scrollbar.
   // The action column holds a trash icon on every row, plus the comment toggle
   // (icon + count) on account rows — wide enough for both without wrapping.
-  const GUT_W = 58, ACT_W = 78;
+  //
+  // Two sets of them, because the desktop set came to 506px of fixed columns
+  // and a phone has 361px of screen: Beskrivning — the column you actually read
+  // — was collapsing to nothing and the sheet was something you dragged
+  // sideways. Every pixel reclaimed below is chrome rather than content:
+  //
+  //   gutter  58 → 0    a row number and a drag grip. Dragging a row on a touch
+  //                     screen, inside a table that is itself scrolling
+  //                     sideways, is not a gesture anybody completes.
+  //   konto  110 → 26   on an account row this holds the code; on a line row it
+  //                     holds an elbow and the grip, and nothing else. 26px is
+  //                     the elbow.
+  //   belopp 260 → 110  260 is the width of "2 × TROJA_POLICY = 700". At 110 the
+  //                     cell shows the 700 and keeps the equation for the tap
+  //                     (see `compact` in use-budget-cells.tsx).
+  //   action  78 → 40   one icon instead of two side by side.
+  //
+  // Which leaves ~185px for Beskrivning instead of nothing.
+  const GUT_W = narrow ? 0 : 58, ACT_W = narrow ? 40 : 78;
   const staticWidth = (c: ColumnDef): number | undefined =>
-    c.key === "beskrivning" ? undefined : c.key === "konto" ? 110 : 260;
+    c.key === "beskrivning"
+      ? undefined
+      : c.key === "konto"
+        ? (narrow ? 26 : 110)
+        : (narrow ? 110 : 260);
 
   // One line-item cell, rendered per column.
   function lineCell(col: ColumnDef, li: LineItem, account: Account) {
@@ -786,7 +829,7 @@ export function CostCenterSheet(props: {
           // account — including an account with no rows of its own, which has
           // nothing else to aim at.
           <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
-          <td className="w-9 border-r border-border/60" />
+          <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
             {columns.map((col) => {
               const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40 focus:bg-accent-soft/40";
               const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
@@ -989,11 +1032,15 @@ export function CostCenterSheet(props: {
           </colgroup>
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-muted">
-              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted/50">#</th>
+              {narrow ? (
+                <th className="p-0" />
+              ) : (
+                <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted/50">#</th>
+              )}
               {columns.map((col) => (
                 <Hc key={col.key} letter={col.letter} align={col.kind === "number" ? "right" : undefined}>{col.custom ? col.name : tCol(col.name)}</Hc>
               ))}
-              {compare && <th className="border-l border-border/60 px-2 py-2 text-right font-medium">{compare.label}</th>}
+              {showCompare && compare && <th className="border-l border-border/60 px-2 py-2 text-right font-medium">{compare.label}</th>}
               {showCompare && <th className="border-r border-border/60 px-2 py-2 text-right font-medium">{tLedger("col.diff")}</th>}
               <th className="border-l border-border/60" />
             </tr>
@@ -1006,48 +1053,132 @@ export function CostCenterSheet(props: {
     );
   }
 
+  // Written once and drawn twice — the strip on a phone and the tiles above md
+  // must never be able to disagree about what the sheet comes to.
+  const summary = [
+    { label: t("totalIncome"), v: totals.income, a: compareTotals.income, incomeLike: true, signed: false, impact: undefined as number | undefined },
+    { label: t("totalCosts"), v: totals.cost, a: compareTotals.cost, incomeLike: false, signed: false, impact: undefined as number | undefined },
+    { label: tRam("result"), v: totals.result, a: compareTotals.result, signed: true, incomeLike: true, impact: changeImpact },
+  ];
+
   return (
     <div ref={sheetRef} {...sheetProps}>
-      {/* summary — StatRow's auto-fit, so the three drop to one column on a
-          phone instead of squeezing six-figure amounts into a third of it.
-          Not a <Card>, on purpose and for the same reason the
-          sheets below don't look like the rest of the app: no shadow, and the
-          figures in the sheet's own flat notation rather than the app's Amount
-          (see DESIGN.md → Money). A tile here carries three things a stat card
-          doesn't — the compared side, the difference from it, and how far the
-          editorial changes have moved the result — so it is written out. */}
-      <StatRow>
-        {[
-          { label: t("totalIncome"), v: totals.income, a: compareTotals.income, incomeLike: true },
-          { label: t("totalCosts"), v: totals.cost, a: compareTotals.cost, incomeLike: false },
-          { label: tRam("result"), v: totals.result, a: compareTotals.result, signed: true, incomeLike: true, impact: changeImpact },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-border bg-background px-4 py-3">
-            <p className="text-xs text-muted">{s.label}</p>
-            <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
-              {s.signed ? fmtSigned(s.v) : fmt(s.v)}
-            </p>
-            {compare && (
-              <p className="mt-1 text-xs text-muted">
-                {compare.label} <span className="tabular-nums text-foreground">{fmt(s.a)}</span>
-                <span className={cn("ml-2 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>{fmtSigned(s.a - s.v)}</span>
-              </p>
-            )}
-            {/* The result is the one in force; this is how far it has moved from
-                the adopted one, and in which direction. */}
-            {s.impact !== undefined && s.impact !== 0 && (
-              <p className="mt-1 text-xs text-muted">
-                {tRam("changes")}{" "}
-                <span className={cn("tabular-nums", diffClass(s.impact, true))}>{fmtSigned(s.impact)}</span>
-                <span className="ml-2">
-                  {t("originallyLabel")}{" "}
-                  <span className="tabular-nums text-foreground">{fmtSigned(s.v - s.impact)}</span>
+      {/* summary — the same three figures in two shapes.
+          Not a <Card>, on purpose and for the same reason the sheets below
+          don't look like the rest of the app: no shadow, and the figures in the
+          sheet's own flat notation rather than the app's Amount (see DESIGN.md
+          → Money). A tile carries three things a stat card doesn't — the
+          compared side, the difference from it, and how far the editorial
+          changes have moved the result. */}
+
+      {/* On a phone: one strip, pinned under the app bar.
+          StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
+          one column — so the three tiles stacked to 266–362px, and most of the
+          first screenful of a budget was three numbers. Here they are 56px, and
+          they stay on screen while you scroll the rows that decide them, which
+          is when the result is actually worth looking at. What the tiles said
+          underneath — the compared side and what the changes have done — is one
+          tap down rather than always printed. */}
+      <div className="sticky top-14 z-10 rounded-2xl border border-border bg-background shadow-[var(--shadow-card)] md:hidden">
+        <button
+          type="button"
+          onClick={() => setSummaryOpen((o) => !o)}
+          aria-expanded={summaryOpen}
+          className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
+        >
+          {summary.map((s) => (
+            <span key={s.label} className="min-w-0">
+              <span className="block truncate text-[11px] text-muted">{s.label}</span>
+              <span
+                className={cn(
+                  "block truncate text-sm font-semibold tabular-nums",
+                  s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
+                )}
+              >
+                {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+              </span>
+            </span>
+          ))}
+        </button>
+
+        {summaryOpen && (
+          <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
+            {compare &&
+              summary.map((s) => (
+                <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
+                  <span className="truncate">
+                    {s.label} · {compare.label}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-foreground">
+                    {fmt(s.a)}
+                    <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
+                      {fmtSigned(s.a - s.v)}
+                    </span>
+                  </span>
+                </p>
+              ))}
+            {changeImpact !== 0 && (
+              <p className="flex items-baseline justify-between gap-2 text-muted">
+                <span className="truncate">{tRam("changes")}</span>
+                <span className="shrink-0 tabular-nums">
+                  <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
+                  <span className="ml-2 text-muted">
+                    {t("originallyLabel")}{" "}
+                    <span className="tabular-nums text-foreground">
+                      {fmtSigned(totals.result - changeImpact)}
+                    </span>
+                  </span>
                 </span>
               </p>
             )}
+            {/* The comparison's own columns add ~200px to a sheet that has
+                361px to spend, so on a phone they are asked for rather than
+                assumed. Off, the sheet fits; on, it scrolls sideways — which is
+                a fair price for a thing you turned on. */}
+            {compare && (
+              <button
+                type="button"
+                onClick={() => setCompareOnPhone((v) => !v)}
+                className="text-xs font-medium text-accent"
+              >
+                {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
+              </button>
+            )}
           </div>
-        ))}
-      </StatRow>
+        )}
+      </div>
+
+      {/* From md: the three tiles, exactly as they were. */}
+      <div className="hidden md:block">
+        <StatRow>
+          {summary.map((s) => (
+            <div key={s.label} className="rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-xs text-muted">{s.label}</p>
+              <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
+                {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+              </p>
+              {compare && (
+                <p className="mt-1 text-xs text-muted">
+                  {compare.label} <span className="tabular-nums text-foreground">{fmt(s.a)}</span>
+                  <span className={cn("ml-2 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>{fmtSigned(s.a - s.v)}</span>
+                </p>
+              )}
+              {/* The result is the one in force; this is how far it has moved from
+                  the adopted one, and in which direction. */}
+              {s.impact !== undefined && s.impact !== 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  {tRam("changes")}{" "}
+                  <span className={cn("tabular-nums", diffClass(s.impact, true))}>{fmtSigned(s.impact)}</span>
+                  <span className="ml-2">
+                    {t("originallyLabel")}{" "}
+                    <span className="tabular-nums text-foreground">{fmtSigned(s.v - s.impact)}</span>
+                  </span>
+                </p>
+              )}
+            </div>
+          ))}
+        </StatRow>
+      </div>
 
       {/* What is ticked, and what it can be made into. It appears only once
           something is, so the sheet is as quiet as it was until you start. */}

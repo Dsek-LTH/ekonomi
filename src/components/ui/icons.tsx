@@ -113,6 +113,54 @@ export const IconIncome = (p: P) => (
   </Svg>
 );
 
+// A crate of bottles: the stock, and the one thing in the nav that is a
+// physical object rather than a document.
+export const IconBox = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />
+    <path d="M3 7.5 12 12l9-4.5M12 12v9" />
+  </Svg>
+);
+
+// A barcode between the corners of a viewfinder. The scanning control, whether
+// or not there is a camera behind it — the same button also takes a code typed
+// in, or fired at the field by a handheld reader.
+export const IconScan = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4H7M17 4h2.5A1.5 1.5 0 0 1 21 5.5V8M21 16v2.5a1.5 1.5 0 0 1-1.5 1.5H17M7 20H4.5A1.5 1.5 0 0 1 3 18.5V16" />
+    <path d="M7.5 8.5v7M11 8.5v7M14.5 8.5v7M17.5 8.5v7" />
+  </Svg>
+);
+
+// Switching between the cameras a machine has: the lens, and the turn that puts
+// the other one behind it. Drawn as a lens rather than a camera body because at
+// 18px a body with arrows inside it is a smudge — the arrows need the room.
+export const IconCameraFlip = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M12 4a8 8 0 0 1 8 8" />
+    <path d="M18.9 10.5 20 12l1.1-1.5" />
+    <path d="M12 20a8 8 0 0 1-8-8" />
+    <path d="M5.1 13.5 4 12l-1.1 1.5" />
+  </Svg>
+);
+
+// An occasion — a night with a date, which is the only thing that identifies
+// one. The dot is the day it is.
+export const IconCalendar = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z" />
+    <path d="M4 10h16M8 3v4M16 3v4M12 14.5h.01" />
+  </Svg>
+);
+
+// The log — rows in date order, which is all it ever is.
+export const IconList = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+  </Svg>
+);
+
 export const IconBank = (p: P) => (
   <Svg {...p}>
     <path d="M4 10h16M5 10 12 4l7 6M6 10v8M10 10v8M14 10v8M18 10v8M4 21h16" />
@@ -180,6 +228,28 @@ export const IconSearch = (p: P) => (
   <Svg {...p}>
     <circle cx="11" cy="11" r="7" />
     <path d="m21 21-4.35-4.35" />
+  </Svg>
+);
+
+// Sliders rather than a funnel. A funnel says "narrow this down", which is the
+// same thing, but the sliders say it while also looking adjustable — and this
+// one opens a sheet you set things in rather than applying anything itself.
+export const IconFilter = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+    <circle cx="9" cy="7" r="2" />
+    <circle cx="15" cy="12" r="2" />
+    <circle cx="9" cy="17" r="2" />
+  </Svg>
+);
+
+// The overflow mark: what a menu of "everything else" is called when there is
+// no room to call it anything.
+export const IconDots = (p: P) => (
+  <Svg {...p}>
+    <circle cx="5" cy="12" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="19" cy="12" r="1.4" />
   </Svg>
 );
 

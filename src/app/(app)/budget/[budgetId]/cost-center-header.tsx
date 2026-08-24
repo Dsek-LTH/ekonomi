@@ -10,7 +10,7 @@
 import { useTranslations } from "next-intl";
 import { Combobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
-import { IconButton } from "@/components/ui/icon-button";
+import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconCopy, IconTrash } from "@/components/ui/icons";
 import { useConfirm } from "@/components/confirm-dialog";
 import { sheetName } from "@/lib/budget";
@@ -46,7 +46,20 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+    // Two rows below sm, one from sm up.
+    //
+    // It was a single `flex-wrap` row holding a 224px combobox, a text link and
+    // two icon buttons — on 361px of phone the combobox alone took the width, so
+    // the group wrapped into a ragged three or four lines and left the remove
+    // button sitting inline beside a text link. Which is the part that read
+    // wrong rather than merely looked untidy: a destructive action should not be
+    // one of a row of equals.
+    //
+    // So identity and the overflow menu share the top line, the picker takes the
+    // width it needs under them, and everything that acts on the sheet as a
+    // whole is in the menu — where "Ta bort" is below a rule instead of beside
+    // a link.
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {linked ? (
           <>
@@ -72,9 +85,12 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
       </div>
 
       {canEdit && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           {/* Searchable: a section has scores of cost centres, and the one you
-              want is found by typing its code far quicker than by scrolling. */}
+              want is found by typing its code far quicker than by scrolling.
+              It stays out of the menu because it is the field that ends the
+              unlinked state, which is the one thing a sheet in that state is
+              waiting for — and a field you set is not an action you pick. */}
           <Combobox
             options={[
               { value: "", label: t("unlinked") },
@@ -89,30 +105,33 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
             searchPlaceholder={tAlloc("search")}
             emptyText={t("noFreeCostCenters")}
             aria-label={t("linkToAria")}
-            className="w-56"
+            className="min-w-0 flex-1 sm:w-56 sm:flex-none"
           />
-          {/* Copying the contents, as against cloning the sheet: this one puts
-              every account on the clipboard to be pasted into a cost centre
-              that already exists. A row or a single account is copied from the
-              sheet itself with ⌘C — there is nothing to stand in for a whole
-              sheet, so it says so in words. */}
-          {cc.accounts.length > 0 && (
-            <button
-              type="button"
-              onClick={onCopyContents}
-              className="text-sm font-medium text-accent hover:underline"
-            >
-              {t("copyContents")}
-            </button>
-          )}
-          {/* The copy lands unconnected — the cost centre this one holds is
-              taken, and which one the copy is for is the next thing to decide. */}
-          <IconButton label={t("clone")} onClick={onClone}>
-            <IconCopy className="size-4" />
-          </IconButton>
-          <IconButton label={t("removeFromBudget")} tone="danger" onClick={remove}>
-            <IconTrash className="size-4" />
-          </IconButton>
+          {/* Named rather than a bare glyph. The three things in here act on
+              the sheet as a whole — one of them removes it from the budget —
+              and a row of unlabelled icons is how somebody duplicates a sheet
+              meaning to copy its contents. */}
+          <Menu label={t("sheetActions")} variant="secondary" align="end" className="shrink-0">
+            {/* Copying the contents, as against cloning the sheet: this one puts
+                every account on the clipboard to be pasted into a cost centre
+                that already exists. A row or a single account is copied from the
+                sheet itself with ⌘C — there is nothing to stand in for a whole
+                sheet, so it says so in words. */}
+            {cc.accounts.length > 0 && (
+              <MenuItem onClick={onCopyContents}>{t("copyContents")}</MenuItem>
+            )}
+            {/* The copy lands unconnected — the cost centre this one holds is
+                taken, and which one the copy is for is the next thing to decide. */}
+            <MenuItem onClick={onClone}>
+              <IconCopy className="size-4" />
+              {t("clone")}
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
+              <IconTrash className="size-4" />
+              {t("removeFromBudget")}
+            </MenuItem>
+          </Menu>
         </div>
       )}
     </div>

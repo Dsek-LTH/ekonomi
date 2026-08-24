@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
+import { useEscape } from "@/lib/ui/escape";
+import { CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
 
@@ -24,12 +26,35 @@ type SharedProps = {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
+  /**
+   * What to do about a value that is not in the list yet.
+   *
+   * The list is strict — only something in `options` can be committed — which
+   * is right for a cost centre and wrong for anything a person is allowed to
+   * invent. Given this, the menu offers the text they typed as a thing to
+   * create, and hands it back. What that means is the caller's business: a
+   * product needs a drink type and a bottle size before it can exist, so the
+   * stock sheet opens the product form with the name filled in rather than
+   * conjuring a half-made row.
+   */
+  onCreate?: (text: string) => void;
+  /** The offer, given what was typed. Defaults to a plain "Create …". */
+  createLabel?: (text: string) => string;
   clearLabel?: string;
   disabled?: boolean;
   // How the selected value sits on the trigger. "center" is for grid/table
   // cells, where a left-aligned value reads as misaligned against its column.
   align?: "left" | "center";
   className?: string;
+  /**
+   * How tall it stands, from the same table every other control uses.
+   *
+   * "md" by default, because a combobox is a form control and the fields it
+   * sits beside are md — it used to be hardcoded to the compact size, which is
+   * why it never quite lined up with a date input. Filter bars and table
+   * toolbars pass "sm".
+   */
+  size?: ControlSize;
   buttonClassName?: string; // replaces the default field appearance when given
   chevronClassName?: string; // for triggers on a coloured background
   invalid?: boolean;
@@ -98,9 +123,12 @@ function ComboboxBase({
   placeholder,
   searchPlaceholder,
   emptyText,
+  onCreate,
+  createLabel,
   clearLabel,
   disabled,
   align = "left",
+  size = "md",
   className,
   buttonClassName,
   chevronClassName,
@@ -138,6 +166,13 @@ function ComboboxBase({
     ? options.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
     : options;
 
+  /** Whether to offer what was typed as something to make. Only when there is
+   *  text and nothing in the list already is it. */
+  const offer =
+    Boolean(onCreate) &&
+    q.length > 0 &&
+    !options.some((o) => o.label.trim().toLowerCase() === q);
+
   // One picked value reads as itself; several can't, so the trigger counts them
   // instead. Nothing picked falls through to the placeholder.
   const triggerLabel =
@@ -160,17 +195,53 @@ function ComboboxBase({
     if (!multiple) { close(); triggerRef.current?.focus(); }
   }
 
+  // Escape shuts the menu and hands the caret back to the trigger — and shuts
+  // *only* the menu. It used to be handled on the search box, which worked, but
+  // a dialog listening on the document heard the same key and closed itself
+  // too. See lib/ui/escape.ts.
+  useEscape(open, () => {
+    close();
+    triggerRef.current?.focus();
+  });
 
-  // Fixed-position menu, flipped up / clamped so it never spills off-screen.
+
+  /**
+   * Where the menu goes: below by default, above only when below will not do.
+   *
+   * It used to flip up whenever the viewport had less than 300 px under the
+   * field — 300 being the menu's *tallest* it could ever be, with a full list
+   * scrolled. A five-item menu is a third of that, so a field with plenty of
+   * room under it kept opening upwards for no reason anybody watching could see.
+   *
+   * So the height is estimated from what the menu actually holds, and if even
+   * that will not fit, the list shrinks and scrolls rather than the whole thing
+   * jumping over the field. Flipping is the last resort it was meant to be:
+   * only when there is genuinely more room the other way.
+   */
+  const GAP = 4;
+  const EDGE = 8;
+  /** Search box and its border, plus the list's own padding. */
+  const CHROME = 58;
+  const ROW = 30;
+
   function menuStyle(): React.CSSProperties {
     if (!rect) return {};
     const width = Math.max(rect.width, 240);
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
-    const below = window.innerHeight - rect.bottom;
-    const dropUp = below < 300 && rect.top > below;
+    const left = Math.min(Math.max(EDGE, rect.left), window.innerWidth - width - EDGE);
+
+    // Counted from the whole list rather than what is filtered right now, so
+    // the menu does not hop about as somebody types.
+    const listRows = options.length + (onClear ? 1 : 0) + (onCreate ? 1 : 0);
+    const wanted = CHROME + Math.min(240, Math.max(1, listRows) * ROW);
+
+    const under = window.innerHeight - rect.bottom - GAP - EDGE;
+    const over = rect.top - GAP - EDGE;
+    const dropUp = under < wanted && over > under;
+    const maxHeight = Math.max(140, Math.min(wanted, dropUp ? over : under));
+
     return dropUp
-      ? { position: "fixed", bottom: window.innerHeight - rect.top + 4, left, width }
-      : { position: "fixed", top: rect.bottom + 4, left, width };
+      ? { position: "fixed", bottom: window.innerHeight - rect.top + GAP, left, width, maxHeight }
+      : { position: "fixed", top: rect.bottom + GAP, left, width, maxHeight };
   }
 
   // Focus the search when opening; close on outside click, scroll, resize.
@@ -194,24 +265,55 @@ function ComboboxBase({
       ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }, [active, open]);
+  // Outside taps close it; the page moving underneath re-places it.
+  //
+  // Both halves were written for a pointer and neither survived an iPhone.
+  //
+  // `mousedown` was the wrong event. iOS only synthesises mouse events for
+  // things it considers clickable — a link, a button, something with a click
+  // handler or `cursor: pointer` — so a tap on the ordinary page behind the
+  // menu fired nothing at all and the menu would not dismiss. `pointerdown` is
+  // native there and fires for every target.
+  //
+  // And the menu used to *close* on scroll or resize, on the grounds that a
+  // fixed menu whose field has moved is a menu in the wrong place. True, but on
+  // iOS opening the menu focuses the search box, focusing the search box raises
+  // the keyboard, and the keyboard fires both a resize and a scroll — so the
+  // menu shut itself the instant it opened, every time, which is the whole of
+  // "the combobox doesn't work". Following the field is the better answer
+  // anyway: the menu stays where it belongs instead of vanishing because
+  // something nudged the page.
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       close();
     };
-    // Close when an ancestor/page scrolls (the fixed menu would be misplaced),
-    // but NOT when scrolling inside the menu's own option list.
-    const onScroll = (e: Event) => { if (!panelRef.current?.contains(e.target as Node)) close(); };
-    const onResize = () => close();
-    document.addEventListener("mousedown", onDown);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
+    // Not while scrolling the menu's own list — that moves nothing.
+    const follow = (e?: Event) => {
+      if (e && panelRef.current?.contains(e.target as Node)) return;
+      const el = triggerRef.current;
+      // The field has gone from the page under us — a row deleted while its
+      // menu was open. There is nothing left to point at.
+      if (!el || !el.isConnected) return close();
+      setRect(el.getBoundingClientRect());
+    };
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("resize", follow);
+    window.addEventListener("scroll", follow, true);
+    // The keyboard on iOS changes the visual viewport without necessarily
+    // moving the layout one, and `menuStyle` measures itself against
+    // `window.innerHeight` — so the menu has to be told, or it keeps sizing
+    // itself to a screen half of which is now keyboard.
+    window.visualViewport?.addEventListener("resize", follow);
+    window.visualViewport?.addEventListener("scroll", follow);
     return () => {
-      document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll, true);
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("resize", follow);
+      window.removeEventListener("scroll", follow, true);
+      window.visualViewport?.removeEventListener("resize", follow);
+      window.visualViewport?.removeEventListener("scroll", follow);
     };
   }, [open]);
 
@@ -219,7 +321,6 @@ function ComboboxBase({
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
     else if (e.key === "Enter") { e.preventDefault(); const o = filtered[active]; if (o) commit(o.value); }
-    else if (e.key === "Escape") { e.preventDefault(); close(); triggerRef.current?.focus(); }
     else if (e.key === "Tab") {
       // Tab walks the options like the arrows do, wrapping at both ends, rather
       // than leaving the field — with the menu open the list is what you're
@@ -271,7 +372,8 @@ function ComboboxBase({
         className={cn(
           "relative flex w-full items-center text-sm disabled:opacity-50",
           align === "center" ? "justify-center text-center" : "justify-between gap-1.5 text-left",
-          buttonClassName ?? "h-9 rounded-lg border border-border bg-background px-2.5",
+          buttonClassName ??
+            cn(CONTROL_SIZES[size], "border border-border bg-background"),
           invalid && "text-danger",
         )}
       >
@@ -312,9 +414,9 @@ function ComboboxBase({
           // wrongly cover something else, because a menu only stays open while
           // its own trigger is on top: an outside mousedown closes it, which is
           // how anything above it would have been opened in the first place.
-          className="z-[210] overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
+          className="z-[210] flex flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
         >
-          <div className="border-b border-border p-2">
+          <div className="shrink-0 border-b border-border p-2">
             <input
               ref={searchRef}
               role="combobox"
@@ -337,7 +439,7 @@ function ComboboxBase({
             role="listbox"
             aria-multiselectable={multiple || undefined}
             tabIndex={-1}
-            className="max-h-60 overflow-y-auto p-1"
+            className="min-h-0 flex-1 overflow-y-auto p-1"
           >
             {onClear && picked.length > 0 && (
               <li>
@@ -354,8 +456,26 @@ function ComboboxBase({
                 </button>
               </li>
             )}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !offer && (
               <li className="px-3 py-2 text-sm text-muted">{emptyText ?? t("empty")}</li>
+            )}
+            {/* Below the matches, not instead of them: somebody typing "norr"
+                wants to see the two beers that start with it before being
+                offered a third. */}
+            {offer && (
+              <li>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => {
+                    close();
+                    onCreate?.(query.trim());
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-surface"
+                >
+                  {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
+                </button>
+              </li>
             )}
             {filtered.map((o, i) => (
               <li key={o.value}>

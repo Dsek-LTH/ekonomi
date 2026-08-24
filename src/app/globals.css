@@ -84,7 +84,13 @@
 
   /* Neutrals */
   --color-background: #1c1c1e;
-  --color-canvas: #000000;
+  /* The page ground sits one step BELOW the cards, not at the bottom of the
+     scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
+     read as a hole the app was floating over rather than the paper it is
+     printed on. Five units under the card background — the same gap the light
+     theme puts between #fafafa and #ffffff, so the two themes separate a card
+     from its ground by the same amount. */
+  --color-canvas: #17171a;
   --color-surface: #2c2c2e;
   --color-border: #3a3a3c;
 
@@ -257,6 +263,37 @@ button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),
 summary {
   cursor: pointer;
+}
+
+/* ── Type size on the phone ──────────────────────────────────────
+   Safari on iPhone zooms the page in whenever it focuses a control whose text
+   is under 16px — and it does not zoom back out afterwards. The page is left
+   magnified, the layout has moved, and the next tap is aimed at where things
+   used to be. Our controls are 14px (`text-sm` on CONTROL in ui/field.tsx), so
+   every field, search box and combobox did this.
+
+   Fixed by giving the text the 16px Safari is asking for, rather than by
+   pinning the viewport with `maximum-scale=1`. That stops the zoom too, and it
+   also stops somebody zooming in to read a receipt number — which is not ours
+   to take away to save ourselves a stylesheet rule.
+
+   Only below sm, where the controls already stand taller for a finger (see
+   CONTROL_SIZES in ui/field.tsx). From sm up the type goes back to the density
+   the app is drawn at, exactly as the heights do.
+
+   OUTSIDE Tailwind's layers, like the focus ring below, so it beats the
+   `text-sm` and `text-xs` on the elements themselves — but wrapped in :where()
+   so it carries no specificity at all, and any rule that genuinely wants a
+   different size still wins. Checkboxes, radios and the rest have no text to
+   zoom to and are sized in pixels, so they stay out of it. */
+@media (max-width: 639.98px) {
+  :where(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]),
+    select,
+    textarea
+  ) {
+    font-size: 16px;
+  }
 }
 
 /* ── Focus ───────────────────────────────────────────────────────

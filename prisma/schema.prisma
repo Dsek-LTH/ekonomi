@@ -130,6 +130,8 @@ model User {
   resultUnitOwnerships ResultUnitOwner[]       @relation("ResultUnitOwnerUser")
   incomeBatches        IncomeBatch[]           @relation("IncomeBatchCreator")
   stockEntries         StockEntry[]            @relation("StockEntryActor")
+  stockTags            StockTag[]              @relation("StockTagCreator")
+  stockChanges         StockChange[]           @relation("StockChangeActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1244,29 +1246,31 @@ enum StockKind {
   /// Cans, bottles of beer, wares: whole units, and a delivery carries a
   /// best-before date.
   UNIT
-  /// Spirits: sealed bottles are counted, opened ones are weighed. Two numbers
-  /// per product — how many are open, and how much is in them together.
+  /// Spirits. Sealed bottles are counted; opened ones are counted at the fill
+  /// level somebody eyeballed them at — 80, 60, 40 or 20 per cent.
+  ///
+  /// Nothing is measured, because nothing is measurable here: the bar looks at
+  /// a bottle and calls it a quarter, a half, three quarters. A model carrying
+  /// millilitres would be stating a precision the estimate does not have.
   VOLUME
 }
 
-/// The drink types a restaurangrapport is broken down by, named as
-/// Folkhälsomyndigheten names them. Not our vocabulary to choose: the report is
-/// filed against these words, and a category we invented would have to be
-/// mapped onto them by hand every year.
+/// The drink types the bar keeps its stock in, and files its report against.
 ///
-/// Purchase volumes are required for the first five. FOLKOL and LATTDRYCK
-/// appear in the turnover section only, and OVRIGT is everything this feature
-/// tracks that the report never asks about — wares, cleaning supplies, the
-/// glassware.
+/// Every one of them needs a purchased volume on the restaurangrapport, so
+/// there is no longer a "reported" subset — the whole list is reported, which
+/// is why nothing here asks which of them count.
+///
+/// OL covers beer of every strength. Folkhälsomyndigheten's own form splits
+/// starköl from folköl and asks a purchased volume only for the former, so if
+/// the bar ever serves folköl this enum has to grow a value back before the
+/// report can be filed from it.
 enum DrinkCategory {
   SPRITDRYCK
   VIN
-  ANDRA_JASTA
-  STARKOL
+  OVRIG_JASTDRYCK
+  OL
   ALKOHOLDRYCKSLIKNANDE
-  FOLKOL
-  LATTDRYCK
-  OVRIGT
 }
 
 /// Why stock moved. Kept apart because the report keeps them apart: what was
@@ -1276,9 +1280,19 @@ enum StockEntryKind {
   /// Bought in. The only kind whose volume reaches the restaurangrapport's
   /// "inköpt volym".
   PURCHASE
-  /// Served at an event, or otherwise consumed.
-  SERVING
+  /// Left the store for a pub or a sittning, and is expected back.
+  CHECKOUT
+  /// Came back from one, at whatever level the bottles are now at. The only
+  /// kind that may put a bottle *onto* the ladder or move it up it, because it
+  /// is the only moment anybody looks at a bottle and judges it.
+  RETURN
   /// Spilled, broken, poured away, out of date.
+  ///
+  /// There is no SERVING beside it. Drink is served from what was taken to a
+  /// pub, so what was drunk is the difference between the checkout and the
+  /// return — never a movement anybody types. A kind for it would have been
+  /// unreachable from the app and would have meant the same thing as a return
+  /// that came home lower, which is how the old REJECTED status went wrong.
   WASTE
   /// What a count found that the log did not predict.
   COUNT
@@ -1286,59 +1300,50 @@ enum StockEntryKind {
   CORRECTION
 }
 
-/// Which weighing a reading belongs to.
-enum StockReadingPhase {
-  OUT
-  BACK
-  COUNT
-}
-
 /// A thing the bar keeps a stock of.
-///
-/// The calibration columns are the heart of it and are why a product is more
-/// than a name. For a VOLUME product, `tareGrams` and `fullGrams` are what turn
-/// a reading on the scale into millilitres without anyone needing to know the
-/// liquid's density — the two weights bracket `nominalMl`, and everything in
-/// between is linear.
 model StockProduct {
   id       String        @id @default(cuid())
   name     String
   kind     StockKind
   category DrinkCategory
 
-  /// Alcohol by volume, per cent — 40.00 for vodka, null for wares. Kept
-  /// because litres of pure alcohol is volume × this, and nothing else can
-  /// reconstruct it afterwards.
+  /// The barcode on the tin or the bottle. Unique, so scanning one in the
+  /// cellar identifies the product outright; null for anything without one.
+  ean String? @unique
+
+  /// Alcohol by volume, per cent — 40.00 for vodka, null for wares.
+  ///
+  /// Litres of pure alcohol is volume × this, and nothing else can reconstruct
+  /// it afterwards.
   abv Decimal? @db.Decimal(5, 2)
 
   /// UNIT: what one unit holds, in millilitres. 330 for a can. This is what
   /// turns a count of cans into the litres the report asks for.
   unitMl Int?
 
-  /// VOLUME: the bottle as sold, in millilitres — 700.
+  /// VOLUME: the bottle as sold, in millilitres — 700. What a sealed bottle
+  /// holds, and the whole an open one's level is a fraction of.
   nominalMl Int?
-  /// VOLUME: an empty bottle on the scale, in grams.
-  tareGrams Int?
-  /// VOLUME: a sealed bottle on the scale, in grams.
-  fullGrams Int?
 
-  /// What the bar charges, in öre, including VAT. The restaurangrapport asks
-  /// for a "normalpris" per drink type; this is where that comes from.
-  normalPriceOre Int?
-
-  /// Below this, the overview says so. In units for UNIT, in millilitres for
-  /// VOLUME. Null asks nothing.
-  minimumLevel Int?
-
-  active Boolean @default(true)
+  /// What one whole unit costs to buy, in öre — a sealed bottle, a can.
+  ///
+  /// The only price a product carries. What the bar *charges* is not tracked
+  /// here: a stock is valued at what it cost, and the restaurangrapport's
+  /// normalpris belongs with the turnover figures, which come from the income
+  /// side of the app rather than from a shelf.
+  ///
+  /// What the stock is worth is the sum of `StockEntry.valueDeltaOre`, never
+  /// this times a count — see lib/stock/value.ts.
+  costPriceOre Int?
 
   entries StockEntry[]
+  changes StockChange[]
   lots    StockLot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([active, category])
+  @@index([category])
 }
 
 /// A delivery of countable stock, and the best-before that came with it.
@@ -1381,13 +1386,95 @@ model StockEntry {
 
   kind StockEntryKind
 
-  /// Whole units for a UNIT product; sealed bottles for a VOLUME one.
-  units       Int @default(0)
-  /// Millilitres of liquid in opened bottles. VOLUME only.
-  volumeMl    Int @default(0)
-  /// How the number of open bottles changed. VOLUME only, and separate from
-  /// `volumeMl` because opening a bottle moves one without moving the other.
-  openBottles Int @default(0)
+  /// Whole units: cans for a UNIT product, *sealed* bottles for a VOLUME one.
+  units Int @default(0)
+
+  /// Open bottles, at the four levels the bar estimates them at.
+  ///
+  /// Four columns rather than a child table, because the ladder is fixed by how
+  /// a person looks at a bottle rather than by anything configurable — and
+  /// because this way the whole shelf is one `SUM()` with no join. Changing the
+  /// ladder is a migration, which is the honest price of it being this cheap.
+  ///
+  /// Signed, like everything else here. Taking the 40 % bottle out is
+  /// `open40: -1`; a bottle coming back lower is one level down and another up
+  /// in the same row.
+  open80 Int @default(0)
+  open60 Int @default(0)
+  open40 Int @default(0)
+  open20 Int @default(0)
+
+  /// How many things a tagged spill destroyed: cans, or bottles.
+  ///
+  /// Its own column because a spill under a tag must not move the shelf. The
+  /// stock left the cellar when it was checked out; subtracting it again here
+  /// would remove it twice, and the crate would come up two short at the next
+  /// stocktake. So the quantity columns above stay at nothing for a spill and
+  /// this pair carries what was lost.
+  ///
+  /// A count rather than a volume, like everything else here. It used to hold
+  /// millilitres for a spirit, which meant nobody could say "we dropped one" —
+  /// they had to work out what was in it first, and the figure could not be
+  /// read back as the thing that happened.
+  spilledQty Int @default(0)
+
+  /// Which rung this row is about: 0 for a whole thing — a sealed bottle, or
+  /// any can — and 80/60/40/20 for an opened one.
+  ///
+  /// It says nothing the columns above do not already imply. It is here so the
+  /// database can *enforce* what the sheet means: with the unique index below,
+  /// one occasion has at most one row per product, direction and rung. That is
+  /// what makes a cell on the sheet a row in the table rather than a running
+  /// total of however many rows happen to have been written, and it is what
+  /// lets a figure be corrected by being changed instead of by being cancelled
+  /// out with a second row nobody wanted to read.
+  ///
+  /// Zero rather than null on purpose: Postgres counts nulls as distinct in a
+  /// unique index, so a nullable rung would let a product's whole-bottle cell
+  /// be written twice over.
+  level Int @default(0)
+
+  /// On a stocktake: what was actually counted at this rung.
+  ///
+  /// The row still stores a difference in the columns above, because the log is
+  /// a log of differences — but a count is a *statement* about the shelf, and
+  /// the statement is the absolute. Keeping it is what lets the difference be
+  /// worked out again whenever anything before the count changes, which is what
+  /// makes an inventering mean what everybody already thinks it means: at this
+  /// date the stock was this, and that is the baseline. Without it, correcting
+  /// an old delivery quietly moved every figure after the count too.
+  ///
+  /// Null on everything that is not a count, and on counts written before this
+  /// existed — nothing recorded what those were counting, so their difference
+  /// is left exactly as it was given. See lib/stock/replay.ts.
+  countedQty Int?
+
+  /// The occasion this belongs to — see StockTag. Required for the three kinds
+  /// that make up a night, absent on a delivery or a stocktake.
+  ///
+  /// Also half of what makes a row a cell: the unique index below applies only
+  /// where this is set, because Postgres treats nulls as distinct. A delivery
+  /// may therefore repeat as often as deliveries do, while a night's Ut figure
+  /// for a product is one row that gets edited.
+  tagId String?
+  tag   StockTag? @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  /// What this movement did to the value of the stock, in öre.
+  ///
+  /// It rides on `units` alone. An open bottle is worth nothing to the stock,
+  /// which is what makes "written off the moment it is opened" free rather than
+  /// a special case: opening one *is* the sealed count falling with no purchase
+  /// behind it.
+  ///
+  /// Positive on a purchase: what was actually paid. Negative on sealed bottles
+  /// leaving, at the moving average cost at that moment — computed on the way
+  /// in and never afterwards, because the average moves with every purchase and
+  /// a figure recomputed later would not be what this movement was worth.
+  ///
+  /// The stock's value is the sum of this column, the same way its quantity is
+  /// the sum of the two above. Emptying a product takes its value to exactly
+  /// zero — see `costOfRemoval` in lib/stock/value.ts.
+  valueDeltaOre Int @default(0)
 
   /// When it happened in the world, and when somebody wrote it down. They
   /// differ often — a Friday's serving entered on Monday — and the gap is the
@@ -1410,31 +1497,116 @@ model StockEntry {
 
   note String?
 
-  readings StockReading[]
-
   createdAt DateTime @default(now())
 
   @@index([productId, occurredAt])
   @@index([occurredAt])
   @@index([kind, occurredAt])
+  @@index([tagId])
+  /// One occasion, one product, one direction, one rung: one row.
+  ///
+  /// The sheet's cell, enforced. Without it "the Ut figure for this beer on
+  /// this night" is whatever a sum over some rows comes to, and correcting it
+  /// means adding another row — which is where the log filled up with movements
+  /// nobody made. Untagged rows are exempt because `tagId` is null on them and
+  /// Postgres counts nulls as distinct, which is the behaviour wanted here: a
+  /// cellar takes as many deliveries of a product as it takes.
+  @@unique([tagId, productId, kind, level])
 }
 
-/// One bottle on the scale. The observation behind a VOLUME entry.
+/// An occasion stock is taken out for: a pub, a sittning, a party.
 ///
-/// A row per bottle rather than a summed total, because the count is part of
-/// the arithmetic: converting grams to millilitres subtracts one tare per
-/// bottle (see lib/stock/measure.ts). A pre-summed figure could not be
-/// recomputed if the tare were ever corrected, which is the whole reason these
-/// are kept.
-model StockReading {
-  id      String     @id @default(cuid())
-  entryId String
-  entry   StockEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+/// It exists because a night is not a date. A pub that runs past midnight is
+/// two dates, a committee may take stock out twice in an evening, and two
+/// events can run on one night — so grouping by day, or by "the last checkout",
+/// answers none of them. The tag says which movements belong together, and
+/// once they are grouped the arithmetic is the whole of what a night sold:
+///
+///   sold = taken out − brought back − spilled
+///
+/// Deliberately never closed. What is still on the bar and what has been drunk
+/// are the same number until somebody carries the crates back, and a status
+/// that claimed to know the difference would be a status somebody had to
+/// remember to set. A tag mid-flight simply reads as having sold what is
+/// currently out, and its page says as much.
+/// What somebody did to a stock row, as opposed to what the row says.
+///
+/// The stock log answers "what happened to our stock"; this answers "who did
+/// that". They were one thing for a while and it served neither: every
+/// correction showed up in the ledger as a movement, so a mistyped delivery of
+/// 200 bottles stayed on the books forever as a purchase that never happened,
+/// with a second row cancelling it.
+///
+/// Now a row is edited in place and this records the edit. Which is also what
+/// makes editing defensible — the alcohol act asks that the bookkeeping be
+/// arranged so the activity can be checked, and an editable ledger with no
+/// record of its edits is not that.
+///
+/// Deliberately not a relation to StockEntry. A row that is removed is *gone*
+/// from the ledger — it was a mistake, not a movement, and leaving it behind a
+/// "deleted" flag would mean every `SUM()` over the log needed to remember to
+/// exclude it, which is one forgotten `where` away from a wrong shelf. So the
+/// entry id is kept as plain text and this table outlives what it describes.
+model StockChange {
+  id String @id @default(cuid())
 
-  grams Int
-  phase StockReadingPhase
+  /// The row this happened to. Plain text: it may no longer exist.
+  entryId String
+
+  /// Read two ways, which is the whole point of keying it like this: everything
+  /// that happened to an occasion, and everything that happened to a product.
+  /// A delivery has no occasion, and it is the deliveries that most need the
+  /// second reading.
+  productId String
+  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  tagId     String?
+  tag       StockTag?    @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  action StockChangeAction
+
+  /// What sort of movement it was, and which rung — enough to name the cell in
+  /// a sentence without joining back to a row that may be gone.
+  kind  StockEntryKind
+  level Int            @default(0)
+
+  /// The figure as the person saw it: what the cell said before, and after.
+  /// Null on the side that does not exist — a row being made has no before, and
+  /// one being removed has no after.
+  ///
+  /// The cell's own figure rather than the ledger's signed delta: 24 out reads
+  /// as 24 here, because 24 is what somebody typed and this is a record of what
+  /// people did.
+  fromQty Int?
+  toQty   Int?
+
+  at      DateTime @default(now())
+  actorId String
+  actor   User     @relation("StockChangeActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tagId, at])
+  @@index([productId, at])
+  @@index([entryId])
+}
+
+enum StockChangeAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model StockTag {
+  id   String   @id @default(cuid())
+  name String
+  /// The night it is about, which is not the same as when its rows were
+  /// written — a Friday pub is entered on the Monday as often as not.
+  date DateTime @db.Date
+
+  entries StockEntry[]
+  changes StockChange[]
 
   createdAt DateTime @default(now())
+  actorId   String
+  actor     User     @relation("StockTagCreator", fields: [actorId], references: [id], onDelete: Restrict)
 
-  @@index([entryId])
+  @@index([date, name])
 }

@@ -474,7 +474,12 @@ export default function NewExpenseClient({
               />
             </Field>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            {/* Two up at every width, not only from sm. A date and an amount
+                are short fields — ten characters and eight — and a column of
+                full-width boxes on a phone makes a four-field form look like a
+                long one and pushes the fördelning below the fold. `gap-3`
+                rather than `gap-5` while they are sharing 329px. */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-5">
               <Field
                 label={t("purchaseDate")}
                 error={

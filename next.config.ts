@@ -62,7 +62,21 @@ const nextConfig: NextConfig = {
     // (turbopackFileSystemCacheForBuild), which is off by default anyway.
     turbopackFileSystemCacheForDev: false,
   },
-  allowedDevOrigins: ['192.168.1.76'],
+  // Who may load /_next/* from the dev server when the page was not served from
+  // localhost. Next blocks cross-origin dev requests otherwise, which is why
+  // the LAN addresses are listed: reaching the dev server from a phone means
+  // arriving on one of them.
+  //
+  // The wildcard is for `pnpm dev:phone`, which puts the dev server behind a
+  // Cloudflare quick tunnel — see scripts/dev-phone.sh. The hostname is random
+  // per run, so it cannot be listed the way an address can. Development only;
+  // `allowedDevOrigins` has no meaning in a build.
+  allowedDevOrigins: [
+    "192.168.1.76",
+    "192.168.0.14",
+    "172.20.10.4",
+    "*.trycloudflare.com",
+  ],
   // The framework's version is not the visitor's business.
   poweredByHeader: false,
   async headers() {

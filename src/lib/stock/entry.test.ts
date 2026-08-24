@@ -7,8 +7,6 @@ const VOLUME = { kind: "VOLUME" as const };
 const entry = (e: Partial<ProposedEntry>): ProposedEntry => ({
   kind: "PURCHASE",
   units: 0,
-  volumeMl: 0,
-  openBottles: 0,
   ...e,
 });
 
@@ -17,13 +15,18 @@ describe("entryFault", () => {
     expect(entryFault(entry({ kind: "PURCHASE", units: 120 }), UNIT)).toBeNull();
   });
 
-  it("passes a night's serving", () => {
-    expect(entryFault(entry({ kind: "SERVING", units: -83 }), UNIT)).toBeNull();
+  it("passes stock going out to a pub", () => {
+    expect(entryFault(entry({ kind: "CHECKOUT", units: -83 }), UNIT)).toBeNull();
   });
 
-  it("passes a weighing that took liquid out of open bottles", () => {
+  it("passes an open bottle being taken out", () => {
+    expect(entryFault(entry({ kind: "CHECKOUT", open: { 40: -1 } }), VOLUME)).toBeNull();
+  });
+
+  it("passes a bottle coming back a rung lower", () => {
+    // One leaving 80 and arriving at 40, which is what a return is.
     expect(
-      entryFault(entry({ kind: "SERVING", volumeMl: -180, readings: [1070, 540] }), VOLUME),
+      entryFault(entry({ kind: "RETURN", open: { 80: -1, 40: 1 } }), VOLUME),
     ).toBeNull();
   });
 
@@ -41,9 +44,15 @@ describe("entryFault", () => {
     );
   });
 
-  it("refuses a serving or a spill that adds stock", () => {
-    expect(entryFault(entry({ kind: "SERVING", units: 12 }), UNIT)).toBe("removalNotNegative");
-    expect(entryFault(entry({ kind: "WASTE", units: 2 }), UNIT)).toBe("removalNotNegative");
+  it("refuses a checkout that adds stock", () => {
+    expect(entryFault(entry({ kind: "CHECKOUT", units: 12 }), UNIT)).toBe("removalNotNegative");
+  });
+
+  it("refuses a homecoming that takes stock away", () => {
+    // A return only ever puts bottles back — the checkout took them off.
+    expect(entryFault(entry({ kind: "RETURN", units: -1 }), UNIT)).toBe(
+      "purchaseNotPositive",
+    );
   });
 
   it("lets a count go either way", () => {
@@ -53,50 +62,55 @@ describe("entryFault", () => {
     expect(entryFault(entry({ kind: "COUNT", units: -6 }), UNIT)).toBeNull();
   });
 
-  it("refuses millilitres against a product counted in cans", () => {
-    // A can's volume is its count times what one holds. A millilitre figure
-    // here is a form filled in against the wrong product.
-    expect(entryFault(entry({ kind: "SERVING", volumeMl: -330 }), UNIT)).toBe(
-      "volumeOnUnitProduct",
-    );
-    expect(entryFault(entry({ kind: "COUNT", units: 1, openBottles: 1 }), UNIT)).toBe(
+  it("refuses a fill level against a product counted in cans", () => {
+    // A can is never half a can.
+    expect(entryFault(entry({ kind: "RETURN", open: { 40: 1 } }), UNIT)).toBe(
       "volumeOnUnitProduct",
     );
   });
 
-  it("refuses a weighing against a product counted in cans", () => {
-    expect(entryFault(entry({ kind: "SERVING", units: -4, readings: [800] }), UNIT)).toBe(
-      "readingsOnUnitProduct",
+  it("refuses putting a bottle onto the ladder anywhere but a return", () => {
+    // A level is judged when a bottle is looked at, and a bottle is looked at
+    // when it comes back. Everything else may take bottles off a rung; only a
+    // return may put one on.
+    expect(entryFault(entry({ kind: "CHECKOUT", open: { 40: 1 } }), VOLUME)).toBe(
+      "levelsOnReturnOnly",
+    );
+    expect(entryFault(entry({ kind: "CHECKOUT", open: { 80: 1 } }), VOLUME)).toBe(
+      "levelsOnReturnOnly",
     );
   });
 
-  it("refuses a body that states both a weighing and a volume", () => {
-    // Two answers to one question, and nothing downstream could tell which was
-    // meant. The route derives the volume from the readings.
+  it("lets a count and a correction move a bottle up", () => {
+    // A count is somebody standing at the shelf judging every bottle, which is
+    // the same act as judging a returning one — and a correction exists to undo
+    // whatever the log got wrong.
+    expect(entryFault(entry({ kind: "COUNT", open: { 60: 1 } }), VOLUME)).toBeNull();
     expect(
-      entryFault(entry({ kind: "SERVING", volumeMl: -180, readings: [1070] }), VOLUME),
-    ).toBe("readingsAndVolume");
-  });
-
-  it("refuses an open-bottle count that moves on its own", () => {
-    // Opening a bottle moves a sealed one into the open count and its contents
-    // with it. On its own it leaves liquid unaccounted for.
-    expect(entryFault(entry({ kind: "CORRECTION", openBottles: 1 }), VOLUME)).toBe(
-      "unitsOnVolumeOnly",
-    );
-  });
-
-  it("passes opening a bottle, which moves all three at once", () => {
-    expect(
-      entryFault(
-        entry({ kind: "CORRECTION", units: -1, openBottles: 1, volumeMl: 700, correctsId: null }),
-        VOLUME,
-      ),
-    ).toBe("correctionNeedsTarget");
-    // The same movement as a count, which needs no target.
-    expect(
-      entryFault(entry({ kind: "COUNT", units: -1, openBottles: 1, volumeMl: 700 }), VOLUME),
+      entryFault(entry({ kind: "CORRECTION", open: { 60: 1 }, correctsId: "x" }), VOLUME),
     ).toBeNull();
+  });
+
+  it("passes a delivery of sealed bottles", () => {
+    expect(entryFault(entry({ kind: "PURCHASE", units: 6 }), VOLUME)).toBeNull();
+  });
+
+  it("refuses a delivery that arrives part-used", () => {
+    // Everything bought arrives sealed. A purchase touching a rung is far more
+    // likely to be somebody in the wrong form than a crate of half-drunk gin.
+    //
+    // Upward, the ladder rule catches it first and says the more useful thing —
+    // a level is judged on a return, and this is not one.
+    expect(entryFault(entry({ kind: "PURCHASE", units: 6, open: { 40: 1 } }), VOLUME)).toBe(
+      "levelsOnReturnOnly",
+    );
+    expect(entryFault(entry({ kind: "PURCHASE", units: 6, open: { 40: -1 } }), VOLUME)).toBe(
+      "purchaseArrivesSealed",
+    );
+  });
+
+  it("lets bottles leave empty, which is how a bottle ends", () => {
+    expect(entryFault(entry({ kind: "COUNT", open: { 20: -1 } }), VOLUME)).toBeNull();
   });
 
   it("refuses a correction that names nothing", () => {
@@ -106,5 +120,48 @@ describe("entryFault", () => {
       "correctionNeedsTarget",
     );
     expect(entryFault(entry({ kind: "CORRECTION", units: -1, correctsId: "x" }), UNIT)).toBeNull();
+  });
+});
+
+describe("entryFault, on a spill", () => {
+  // A spill is the one kind that moves no stock: what was dropped left the
+  // cellar when it was checked out, and taking it off the shelf again would
+  // remove it twice. Its quantity lives in a column of its own, so every rule
+  // about the shelf columns has to be answered before them rather than by them.
+  it("accepts one that only says what was destroyed", () => {
+    expect(entryFault({ kind: "WASTE", units: 0, spilledQty: 2 }, { kind: "UNIT" })).toBeNull();
+  });
+
+  it("does not read an untouched shelf as nothing happening", () => {
+    // The bug this exists for: a spill fell through to the "moves nothing"
+    // rule and every one of them came back as `nothingMoved`, because the row
+    // was — correctly — moving no stock at all.
+    expect(entryFault({ kind: "WASTE", units: 0, spilledQty: 1 }, { kind: "VOLUME" })).not.toBe(
+      "nothingMoved",
+    );
+  });
+
+  it("insists it destroyed something", () => {
+    expect(entryFault({ kind: "WASTE", units: 0, spilledQty: 0 }, { kind: "UNIT" })).toBe(
+      "nothingSpilled",
+    );
+    expect(entryFault({ kind: "WASTE", units: 0 }, { kind: "UNIT" })).toBe("nothingSpilled");
+  });
+
+  it("refuses one that also moves the shelf", () => {
+    // Both columns filled in would take the stock away twice.
+    expect(
+      entryFault({ kind: "WASTE", units: -2, spilledQty: 2 }, { kind: "UNIT" }),
+    ).toBe("spillMovesNoStock");
+    expect(
+      entryFault({ kind: "WASTE", units: 0, open: { 40: -1 }, spilledQty: 1 }, { kind: "VOLUME" }),
+    ).toBe("spillMovesNoStock");
+  });
+
+  it("lets one be taken back", () => {
+    // Undoing a spill somebody entered twice. It is the same shape pointing the
+    // other way, and it needs no `reversal` flag: a spill has no sign rule,
+    // having no stock to move.
+    expect(entryFault({ kind: "WASTE", units: 0, spilledQty: -2 }, { kind: "UNIT" })).toBeNull();
   });
 });
