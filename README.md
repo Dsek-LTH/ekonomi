@@ -183,9 +183,9 @@ Two things worth knowing:
 
 - **Migrations run before the app does.** A `migrate` service runs
   `prisma migrate deploy` and the app waits for it to succeed, so a stack that
-  is up is one whose schema matches its code. Seeding stays manual — it wipes
-  the domain tables:
-  `docker compose --profile app run --rm migrate pnpm db:seed`.
+  is up is one whose schema matches its code. Seeding is intentionally not
+  available in the production migration image: it wipes domain tables and must
+  only be run through the local development workflow.
 - **The image carries no configuration.** `.env` is in `.dockerignore`;
   compose passes the environment in at run time, as k8s will. The only values
   compose sets itself are `DATABASE_URL` and `S3_ENDPOINT`, because `localhost`
@@ -415,7 +415,7 @@ means rewriting history for everyone. Keep them next to the repo instead.
 ## Production
 
 The app ships as the image `Dockerfile` builds: Next's standalone output on
-`node:22-alpine`, running unprivileged, holding no configuration of its own and
+`node:22-bookworm-slim`, running unprivileged, holding no configuration of its own and
 nothing it needs to write to disk. It listens on `PORT` (3000 by default) and
 exits non-zero on a misconfigured environment rather than serving 500s, so a
 bad deploy fails instead of going green. `prisma migrate deploy` is a separate

@@ -4,24 +4,27 @@
 # Needed for OKD builds because they don't have --target
 ARG TARGET_STAGE=runner
 
-# The app's production image. Four stages, so the thing that ships holds no
-# compiler, no lockfile and no source: deps → builder → runner, plus a
-# `migrator` stage that keeps the Prisma CLI around for `migrate deploy`.
+# The app's production image. The serving image holds no compiler, lockfile, or
+# source: deps → builder → runner. A separate `migrator` stage contains only
+# Prisma and the migration files, without the Next build output.
 #
 # Local development does not need any of this — `pnpm dev` against
 # `pnpm db:up` is still the shorter path. This is for running the whole stack
 # (`pnpm app:up`) and for the image the k8s cluster runs.
 
 # ── base ──────────────────────────────────────────────────────────────
-# Alpine keeps the runtime small. sharp and Prisma both matter here: sharp
-# resolves a musl build of libvips from its own optional dependencies, and
-# Prisma 7 compiles queries in WASM rather than a platform-specific engine
-# binary, so neither needs a glibc image.
-FROM node:22-alpine AS base
+# Debian slim keeps the image compact while using glibc. This avoids Alpine's
+# musl DNS resolver behavior, which can be unreliable behind some cluster DNS
+# configurations. sharp and the Typst compiler both publish glibc prebuilds;
+# Prisma 7 compiles queries in WASM rather than a platform-specific engine.
+FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable
+RUN apt-get update \
+ && apt-get install --no-install-recommends -y openssl \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable
 WORKDIR /app
 
 # ── deps ──────────────────────────────────────────────────────────────
@@ -46,14 +49,23 @@ RUN pnpm prisma generate
 RUN pnpm build
 
 # ── migrator ──────────────────────────────────────────────────────────
-# The builder kept whole: node_modules with the Prisma CLI, prisma/migrations,
-# and the generated client the seed imports. Runs to completion and exits —
-# compose starts it before the app, and `pnpm db:seed` can be run in it too.
+# Prisma deploy needs its CLI, configuration, and migration SQL; it does not
+# need the application source, generated client, Next build output, or the
+# application's dependency tree. Its own lockfile keeps this small dependency
+# set reproducible and independently cacheable.
+FROM base AS migrator-deps
+WORKDIR /migrator
+COPY prisma/migrator/package.json prisma/migrator/package-lock.json ./
+RUN npm ci --omit=dev
+
+FROM base AS migrator
 #
 # Invoke Prisma through Node rather than Corepack's `pnpm` shim. The latter
 # downloads/caches pnpm on first use under the current user's home directory;
 # OKD supplies an arbitrary UID with `/` as its home, which is not writable.
-FROM builder AS migrator
+COPY --from=migrator-deps --chown=1001:0 /migrator/node_modules ./node_modules
+COPY --chown=1001:0 prisma ./prisma
+COPY --chown=1001:0 prisma.config.ts ./
 # Files in the image are readable and traversable by an arbitrary UID.  OKD's
 # restricted SCC replaces this image user with one from the namespace range;
 # group 0 keeps this usable without an /etc/passwd entry for that UID.

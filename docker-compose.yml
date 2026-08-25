@@ -94,8 +94,8 @@ services:
 
   # Brings the schema up to date, then exits. The app waits for it to succeed,
   # so a stack that starts is a stack whose database matches the code. Seeding
-  # is separate and manual — it wipes the domain tables:
-  #   docker compose --profile app run --rm migrate pnpm db:seed
+  # is deliberately not in this production migration image: it wipes domain
+  # tables and needs application source, neither of which belongs in a deploy.
   migrate:
     build:
       context: .
