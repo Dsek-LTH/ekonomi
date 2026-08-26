@@ -17,7 +17,7 @@ ARG TARGET_STAGE=runner
 # musl DNS resolver behavior, which can be unreliable behind some cluster DNS
 # configurations. sharp and the Typst compiler both publish glibc prebuilds;
 # Prisma 7 compiles queries in WASM rather than a platform-specific engine.
-FROM node:22-bookworm-slim AS base
+FROM docker.io/node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1
