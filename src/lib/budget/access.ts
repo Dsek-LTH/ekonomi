@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canChangeLockedBudget, isAdmin } from "@/lib/domain/permissions";
-import { fail, gate } from "@/lib/api/guard";
+import { fail, gate, type Gate } from "@/lib/api/guard";
 
 // Which entity the route was handed. Exactly one key.
 export type BudgetTarget =
@@ -57,23 +57,39 @@ async function findLock(target: BudgetTarget): Promise<{ lockedAt: Date | null }
 }
 
 /**
- * Whether this request may write to the budget `target` belongs to. Returns the
- * response to send back when it may not, and `null` when it may — so a route
- * reads:
+ * Whether this request may write to the budget `target` belongs to.
+ *
+ * The same `{ ok }` shape as `gate()` in lib/api/guard.ts, and deliberately —
+ * this *is* the gate for the budget routes, the only authority check most of
+ * them make. It used to answer with a response-or-null:
  *
  *     const denied = await denyBudgetWrite({ account: id });
  *     if (denied) return denied;
+ *
+ * which reads fine and fails badly. Nothing afterwards used `denied`, so a
+ * handler that dropped the second line compiled, ran, and was unguarded — the
+ * one shape of mistake that must not be silent. Answering like `gate` means the
+ * actor comes back with the verdict, the handler has to unwrap it to get at
+ * them, and forgetting is a type error rather than an open door.
+ *
+ *     const g = await allowBudgetWrite({ account: id });
+ *     if (!g.ok) return g.res;
+ *
+ * The other `deny*` helpers keep their shape on purpose. `denyDeletingAdjusted`
+ * below and `denyNoFortnox` are preconditions rather than gates — they answer
+ * "is there a reason to refuse this", not "who is acting" — and
+ * `denyExpenseView` is applied to an actor the handler has already resolved
+ * through `gate`. None of them can be the only thing standing between a request
+ * and a write.
  */
-export async function denyBudgetWrite(target: BudgetTarget): Promise<NextResponse | null> {
+export async function allowBudgetWrite(target: BudgetTarget): Promise<Gate> {
   const g = await gate(isAdmin);
-  if (!g.ok) return g.res;
+  if (!g.ok) return g;
 
   const lock = await findLock(target);
-  if (!lock) return fail(404, "notFound");
-  if (lock.lockedAt) {
-    return fail(409, "budget.locked");
-  }
-  return null;
+  if (!lock) return { ok: false, res: fail(404, "notFound") };
+  if (lock.lockedAt) return { ok: false, res: fail(409, "budget.locked") };
+  return g;
 }
 
 // The other door, redaktionella ändringar. The gate above is the ordinary one,

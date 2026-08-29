@@ -23,13 +23,8 @@ import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import {
-  BalanceChip,
-  VoucherBlockerChip,
-  VoucherEditor,
   filledVoucherRows,
-  makeVoucherRow,
   type VoucherEditorRow,
-  type VoucherLockedRow,
 } from "@/components/voucher-editor";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
@@ -45,28 +40,32 @@ import {
   IconViewSplit,
   IconViewTable,
 } from "@/components/ui/icons";
-import { Notice } from "@/components/ui/notice";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { productDisplayName, productRows } from "@/lib/income/product-groups";
 import { Combobox } from "@/components/ui/combobox";
-import { DragHandle, insideRect } from "@/components/ui/drag";
+import { DragHandle } from "@/components/ui/drag";
 import { ClientDataTable } from "@/components/ui/client-data-table";
-import type { Column } from "@/components/ui/data-table";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { useTableControls } from "@/lib/data/use-list-query";
-import { Tag } from "@/components/ui/status-pill";
-import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
-import { voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { incomeVoucherDescription } from "@/lib/income/voucher";
-import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import type { IncomeMoveTarget, IncomeReportRow, IncomeReviewQueue } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 
+import {
+  costCentreFor,
+  defaultRows,
+  documentUrl,
+  isDuplicate,
+  voucherFor as voucherDraft,
+} from "./voucher-draft";
+import { AlreadyBookedNotice, EmptyReportCard, VoucherCard } from "./report-detail";
+import { reviewColumns } from "./review-columns";
+import { useLineDrag } from "./use-line-drag";
 import { FetchPanel } from "./fetch-panel";
 import { incomeSections } from "./sections";
 import { MoveLinesDialog, accountOptions, suggestedAccount, type MoveRequest } from "./move-dialog";
@@ -75,98 +74,6 @@ import {
   type NewReportRequest,
   type NewReportSource,
 } from "./new-report-dialog";
-
-/**
- * Is this day one the section may already have booked?
- *
- * Either because this database has the verifikation, or because Fortnox holds
- * one for the same source, verksamhet and day. Both are shown rather than
- * hidden — a day missing from the queue cannot be told apart from a day the
- * fetch never covered — and both colour the row.
- */
-const isDuplicate = (r: IncomeReportRow) => Boolean(r.duplicateOf || r.existingVoucher);
-
-/**
- * Where to read a day's intäktsräkning.
- *
- * Stamped with when the report last changed, which makes a corrected day a
- * different address. A draft's PDF is rendered on the way past and the browser
- * is told it may keep it for five minutes — right for stepping back to a day
- * you just looked at, wrong the moment lines are moved on or off it, when the
- * cached copy is a picture of takings that have gone elsewhere.
- */
-const documentUrl = (report: IncomeReportRow) =>
-  `/api/income/reports/${report.id}/document?v=${encodeURIComponent(report.updatedAt)}`;
-
-/** Where the money landed, which is a property of how it was paid. */
-const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
-  report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount;
-
-/**
- * Which cost centre this day's rows start on.
- *
- * The report's own, if it has one — the import copies the committee's default
- * onto it, and review may have changed it since. Failing that the default
- * itself, because a day fetched before the committee had one would otherwise
- * open with the field blank and refuse to book, with the answer sitting in the
- * settings all along. Fees have no committee, so theirs comes from the setting
- * that decides where Zettle's fees land.
- *
- * The booking route falls back the same way, in the same order, so a day booked
- * without anyone touching it gets exactly what this shows.
- */
-function costCentreFor(report: IncomeReportRow, settings: IncomeSettingsRow): string {
-  if (report.costCenterCode) return report.costCenterCode;
-  if (report.source === "ZETTLE_FEE") return settings.zettleFeeCostCenterCode ?? "";
-  return report.defaultCostCenterCode ?? "";
-}
-
-/**
- * The voucher this day would get if nobody touched it: one row per revenue
- * account, the day's cost centre on each.
- *
- * The same rows lib/income/voucher.ts builds on the server, which is what makes
- * the editor a starting point rather than a second opinion — book without
- * editing and the two agree exactly. Zero-valued accounts are dropped for the
- * same reason they are there: a row for nothing is noise in the ledger.
- */
-function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow): VoucherEditorRow[] {
-  const costCenterCode = costCentreFor(report, settings);
-
-  if (report.source === "ZETTLE_FEE") {
-    // A fee is a cost: the fee account is debited and the clearing account —
-    // the locked row — is credited.
-    return [
-      makeVoucherRow({
-        account: settings.zettleFeeAccount,
-        costCenterCode,
-        debit: report.total.toFixed(2),
-      }),
-    ];
-  }
-
-  // One row per revenue account the day's products routed to, summed — the
-  // accounts are already on the lines, put there by the prefix routing at
-  // import, so nothing here has to guess at one.
-  const byAccount = new Map<string, number>();
-  for (const line of report.lines) {
-    byAccount.set(line.account, (byAccount.get(line.account) ?? 0) + line.total);
-  }
-  return [...byAccount.entries()]
-    .filter(([, total]) => Math.abs(total) >= 0.005)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([account, total]) =>
-      makeVoucherRow({
-        account,
-        costCenterCode,
-        // A negative total is a net refund against that account, which is a
-        // debit — booked as the row the other way round rather than as a
-        // negative credit, which is what a ledger can actually represent.
-        credit: total > 0 ? total.toFixed(2) : "",
-        debit: total < 0 ? (-total).toFixed(2) : "",
-      }),
-    );
-}
 
 export default function IncomeReviewClient({
   queue,
@@ -240,14 +147,6 @@ export default function IncomeReviewClient({
   // The day and the payment method both come from the group in the queue whose
   // button was pressed, so the dialog has one thing to ask rather than three.
   const [newFor, setNewFor] = useState<{ date: string; source: NewReportSource } | null>(null);
-  // A drag in flight: which day the lines are being taken from, and which ones.
-  // Held here rather than read out of the drag event because the queue has to
-  // know it during `dragover` — which is the one moment the DataTransfer will
-  // not let anything read its payload.
-  const [dragging, setDragging] = useState<{ reportId: string; lineIds: string[] } | null>(null);
-  // The queue row the pointer is currently over, for the drop highlight.
-  const [dropOn, setDropOn] = useState<string | null>(null);
-
   // The selection survives a refresh by id; when the day it pointed at is gone
   // — just booked, or moved away entirely — the list's first day stands in.
   const selected = drafts.find((d) => d.id === selectedId) ?? drafts[0] ?? null;
@@ -271,8 +170,6 @@ export default function IncomeReviewClient({
     return () => controller.abort();
   }, [selected, drafts]);
 
-  const accountName = (number: string) =>
-    accounts.find((a) => a.number === number.trim())?.name ?? "";
 
   const rowsFor = (report: IncomeReportRow) => edits[report.id] ?? defaultRows(report, settings);
   const setRows = (report: IncomeReportRow, rows: VoucherEditorRow[]) =>
@@ -298,99 +195,23 @@ export default function IncomeReviewClient({
   };
 
   /**
-   * The voucher exactly as it will be posted: the locked clearing row, then the
-   * edited ones. Both the button's enabled state and the request read this, so
-   * the button can only be live for a voucher the server will accept.
+   * The voucher exactly as it will be posted. Both the button's enabled state
+   * and the request read this, so the button can only be live for a voucher the
+   * server will accept — see ./voucher-draft, where the rules live.
    */
-  function voucherFor(report: IncomeReportRow) {
-    const clearing = clearingAccountFor(report, settings);
-    const rows = rowsFor(report);
-    // Where the money went, from the day's point of view. Takings land in the
-    // clearing account (a debit); fees leave it, as does a day that came to a
-    // net refund.
-    const incoming = report.source !== "ZETTLE_FEE" && report.total >= 0;
-    const magnitude = Math.abs(report.total);
-
-    const locked: VoucherLockedRow = {
-      account: clearing,
-      accountName: accountName(clearing),
-      description: t(`source.${report.source}`),
-      debit: incoming ? magnitude : 0,
-      credit: incoming ? 0 : magnitude,
-      hint: t("book.clearingHint"),
-      label: t("book.clearingLocked"),
-    };
-
-    const lines = [
-      {
-        account: clearing,
-        accountName: accountName(clearing),
-        // Deliberately none. A clearing account is a bank balance, not a
-        // dimension of anybody's budget — a cost centre here would make every
-        // committee's outcome count the money twice.
-        costCenterCode: null as string | null,
-        debit: sekToOre(locked.debit),
-        credit: sekToOre(locked.credit),
+  const voucherFor = (report: IncomeReportRow) =>
+    voucherDraft({
+      report,
+      rows: rowsFor(report),
+      settings,
+      accounts,
+      costCenters,
+      label: {
+        source: t(`source.${report.source}`),
+        clearingHint: t("book.clearingHint"),
+        clearingLocked: t("book.clearingLocked"),
       },
-      // The editor's spare rows are not lines of the voucher — see
-      // filledVoucherRows. Sent as they are, every day would be blocked on
-      // three rows with no account.
-      ...filledVoucherRows(rows).map((r) => ({
-        account: r.account.trim(),
-        accountName: accountName(r.account),
-        description: r.description || undefined,
-        costCenterCode: r.costCenterCode || null,
-        debit: parseOre(r.debit),
-        credit: parseOre(r.credit),
-      })),
-    ];
-
-    // Summed in öre and converted for display. The difference used to be taken
-    // between two kronor floats and then compared to 0, which is the comparison
-    // lib/domain/voucher.ts exists to keep out of the screens.
-    const balance = voucherBalance(lines);
-    const totalDebit = oreToSEK(balance.debit);
-    const totalCredit = oreToSEK(balance.credit);
-    // Two questions. `balanced` is whether the sides meet; `blocker` is whether
-    // it may be written at all, which is stricter — an unpicked account blocks a
-    // voucher that adds up perfectly well, and the chip should not call that a
-    // difference. The same rule the route applies, on the same rows, in the same
-    // unit, so the screen and the server cannot disagree.
-    const blocker = voucherBlocker(lines);
-    const knownAccounts = filledVoucherRows(rows).every((r) =>
-      accounts.some((a) => a.number === r.account.trim()),
-    );
-    const knownCostCenters = filledVoucherRows(rows).every(
-      (r) => !r.costCenterCode.trim() || costCenters.some((c) => c.code === r.costCenterCode.trim()),
-    );
-    // The locked row is nobody's choice here, but it is still an account that
-    // has to exist: a clearing account missing from the chart is a settings
-    // mistake that would otherwise be found by Fortnox, at export, on a voucher
-    // this app had already called booked.
-    const clearingKnown = accounts.some((a) => a.number === clearing);
-
-    return {
-      locked,
-      rows,
-      lines,
-      totalDebit,
-      totalCredit,
-      difference: oreToSEK(balance.difference),
-      balanced: balance.balanced,
-      blocker,
-      clearing,
-      clearingKnown,
-      canBook:
-        !blocker &&
-        knownAccounts &&
-        knownCostCenters &&
-        clearingKnown &&
-        rows.length > 0 &&
-        // Already booked here: the verifikation exists, and a second is refused
-        // by the database. A voucher merely in Fortnox is only a warning.
-        !report.duplicateOf,
-    };
-  }
+    });
 
   /** Move to the next day still waiting, or the previous one if this was last. */
   function advance(fromId: string) {
@@ -665,86 +486,17 @@ export default function IncomeReviewClient({
 
   // The table view of the working set: every fetched day at once, with the two
   // decisions available on each without leaving it.
-  const tableColumns: Column<IncomeReportRow>[] = [
-    {
-      key: "date",
-      header: t("table.date"),
-      value: (r) => r.date,
-      sortable: true,
-      dateRange: true,
-      className: "whitespace-nowrap",
-      cell: (r) => formatDate(r.date),
+  const tableColumns = reviewColumns({
+    t,
+    settings,
+    formatDate,
+    pending,
+    onOpen: (r) => {
+      setSelectedId(r.id);
+      setMode("review");
     },
-    {
-      key: "unit",
-      header: t("table.committee"),
-      value: (r) => r.unitName ?? t("table.fees"),
-      sortable: true,
-      searchable: true,
-      mobile: "title",
-      cell: (r) => (
-        <div className="min-w-0">
-          <span className="flex items-center gap-1.5">
-            {isDuplicate(r) && <IconAlert className="size-3.5 shrink-0 text-warning" />}
-            <span className="font-medium">{r.unitName ?? t("table.fees")}</span>
-          </span>
-          <span className="block text-xs text-muted">
-            {t(`source.${r.source}`)}
-            {r.duplicateOf && ` · ${t("review.alreadyBookedShort")}`}
-            {r.existingVoucher && ` · ${t("review.inFortnox", { voucher: r.existingVoucher })}`}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "costCenter",
-      header: t("table.costCenter"),
-      value: (r) => costCentreFor(r, settings),
-      sortable: true,
-      searchable: true,
-      className: "tabular-nums",
-      cell: (r) => costCentreFor(r, settings) || <Tag tone="warning">{t("review.noCostCenter")}</Tag>,
-    },
-    {
-      key: "total",
-      header: t("table.total"),
-      value: (r) => r.total,
-      sortable: true,
-      align: "right",
-      mobile: "trailing",
-      cell: (r) => <Amount value={r.total} />,
-    },
-    {
-      key: "actions",
-      header: "",
-      align: "right",
-      mobile: "actions",
-      cell: (r) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setSelectedId(r.id);
-              setMode("review");
-            }}
-          >
-            {t("review.open")}
-          </Button>
-          {r.status === "DRAFT" && (
-            <Button
-              size="sm"
-              onClick={() => book(r)}
-              loading={pending === `book-${r.id}`}
-              disabled={!costCentreFor(r, settings) || Boolean(r.duplicateOf)}
-            >
-              {t("actions.book")}
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ];
+    onBook: book,
+  });
 
   const voucher = selected ? voucherFor(selected) : null;
   // A report waiting for sales to be moved onto it. It has no intäktsräkning
@@ -809,76 +561,11 @@ export default function IncomeReviewClient({
       : []),
   ];
 
-  // ── Dragging lines onto another day in the queue ──────────────────
-  //
-  // The shortcut for the ordinary case: a couple of mis-rung products, and the
-  // day they belong to is already on screen in the queue beside them. The drop
-  // moves them there and then, on the account the destination suggests — which
-  // for a verksamhet with several is the one they already had, so the account
-  // is put right afterwards in the table, where it is now editable. The
-  // checkbox-and-dialog path is still there, and is still the way to decide
-  // accounts first, do it from the keyboard, or move to a unit with no report
-  // that day (which has no row here to drop on).
-
-  /** Where a dragged line may land: the same day and source, another verksamhet. */
-  function isDropTarget(target: IncomeReportRow): boolean {
-    const from = dragging && drafts.find((d) => d.id === dragging.reportId);
-    if (!from) return false;
-    return (
-      target.id !== from.id &&
-      target.date === from.date &&
-      target.source === from.source &&
-      Boolean(target.resultUnitId) &&
-      target.resultUnitId !== from.resultUnitId
-    );
-  }
-
-  function dropLines(target: IncomeReportRow, payload: string) {
-    let dropped: { reportId: string; lineIds: string[] };
-    try {
-      dropped = JSON.parse(payload);
-    } catch {
-      return;
-    }
-    const from = drafts.find((d) => d.id === dropped.reportId);
-    if (!from || !target.resultUnitId || !isDropTarget(target)) return;
-
-    // The same suggestion the dialog opens on, applied without asking: one
-    // account among the destination's prefixes is not a choice, and more than
-    // one leaves the line where it is until someone says otherwise.
-    const unit = moveTargets.find((u) => u.resultUnitId === target.resultUnitId);
-    const lines = dropped.lineIds.flatMap((id) => {
-      const line = from.lines.find((l) => l.id === id);
-      if (!line) return [];
-      const account = suggestedAccount(unit, line.account);
-      return [account === line.account ? { id } : { id, account }];
-    });
-    if (lines.length === 0) return;
-
-    void move(from, { toResultUnitId: target.resultUnitId, lines });
-  }
-
-  // Gated on the payload's own type, exactly as the budget sheet's targets are,
-  // so a drag from anywhere else on the page is ignored rather than swallowed.
-  // The DataTransfer API lower-cases the keys it reports in `types`.
-  const dropProps = (report: IncomeReportRow) => ({
-    onDragOver: (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes("incomelines") || !isDropTarget(report)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (dropOn !== report.id) setDropOn(report.id);
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      if (insideRect(e)) return;
-      setDropOn((id) => (id === report.id ? null : id));
-    },
-    onDrop: (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes("incomelines")) return;
-      e.preventDefault();
-      setDropOn(null);
-      setDragging(null);
-      dropLines(report, e.dataTransfer.getData("incomeLines"));
-    },
+  // Dragging lines onto another day in the queue — see ./use-line-drag.
+  const { dragging, startDrag, endDrag, dropOn, isDropTarget, dropProps } = useLineDrag({
+    drafts,
+    moveTargets,
+    onMove: move,
   });
 
   // The days, grouped by the day they were sold — which is what a heading in a
@@ -1140,21 +827,7 @@ export default function IncomeReviewClient({
                   duplicate check matches on together with it
                   (lib/income/duplicate.ts). */}
               {/* Named where the decision is made, not only in the list. */}
-              {(selected.duplicateOf || selected.existingVoucher) && (
-                <Notice>
-                  {selected.duplicateOf && (
-                    <p>
-                      {t("review.alreadyBookedWarning")}{" "}
-                      {selected.duplicateOf.voucherLabel && (
-                        <span className="tabular-nums">{selected.duplicateOf.voucherLabel}</span>
-                      )}
-                    </p>
-                  )}
-                  {selected.existingVoucher && (
-                    <p>{t("review.inFortnoxWarning", { voucher: selected.existingVoucher })}</p>
-                  )}
-                </Notice>
-              )}
+              <AlreadyBookedNotice report={selected} t={t} />
 
               <Card>
                 <CardBody
@@ -1241,69 +914,22 @@ export default function IncomeReviewClient({
                   derived from lines it has none of — what it says instead is
                   what to do with it. */}
               {isEmpty ? (
-                <Card>
-                  <CardHeader title={t("newReport.emptyTitle")} />
-                  <CardBody className="space-y-4">
-                    <Notice tone="info">{t("newReport.emptyBody")}</Notice>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="dangerOutline"
-                        onClick={() => deleteEmptyReport(selected)}
-                        loading={pending === `delete-${selected.id}`}
-                      >
-                        {t("newReport.delete")}
-                      </Button>
-                    </div>
-                  </CardBody>
-                </Card>
+                <EmptyReportCard
+                  t={t}
+                  onDelete={() => deleteEmptyReport(selected)}
+                  deleting={pending === `delete-${selected.id}`}
+                />
               ) : (
                 <>
-                  {/* The header names the card and carries the day's total. It
-                      no longer repeats the verksamhet or the date — those are
-                      the two cards above, the picker that sets the one and the
-                      locked field that states the other. */}
-                  <Card className="overflow-hidden">
-                    <CardHeader
-                      title={t("book.title")}
-                    />
-
-                    <VoucherEditor
-                      rows={voucher.rows}
-                      onChange={(rows) => setRows(selected, rows)}
-                      accounts={accounts}
-                      costCenters={costCenters}
-                      locked={voucher.locked}
-                      totalDebit={voucher.totalDebit}
-                      totalCredit={voucher.totalCredit}
-                    />
-                    {/* The rows' own unknowns are named by the editor; this one is
-                        about the locked row, and it is fixed somewhere else — so it
-                        says where. */}
-                    {!voucher.clearingKnown && (
-                      <div className="px-inset pb-4">
-                        <Notice>{t("book.unknownClearingAccount", { account: voucher.clearing })}</Notice>
-                      </div>
-                    )}
-                    <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-                      <BalanceChip
-                        balanced={voucher.balanced}
-                        difference={formatSEK(voucher.difference)}
-                      />
-                      <div className="flex items-center gap-2.5">
-                        {/* Why the button is dead — an empty row leaves a
-                            balanced voucher that still cannot be booked, and
-                            without this nothing on the screen would admit why. */}
-                        <VoucherBlockerChip blocker={voucher.blocker} />
-                        <Button
-                          onClick={() => book(selected)}
-                          loading={pending === `book-${selected.id}`}
-                          disabled={!voucher.canBook}
-                        >
-                          {t("actions.bookAndNext")}
-                        </Button>
-                      </div>
-                    </CardBody>
-                  </Card>
+                  <VoucherCard
+                    voucher={voucher}
+                    accounts={accounts}
+                    costCenters={costCenters}
+                    onRows={(rows) => setRows(selected, rows)}
+                    onBook={() => book(selected)}
+                    booking={pending === `book-${selected.id}`}
+                    t={t}
+                  />
 
                   {/* What was sold, which is what the intäktsräkning beside this is
                       a rendering of. Below the voucher rather than beside it: the
@@ -1443,12 +1069,9 @@ export default function IncomeReviewClient({
                                           JSON.stringify({ reportId: selected.id, lineIds }),
                                         );
                                         e.dataTransfer.effectAllowed = "move";
-                                        setDragging({ reportId: selected.id, lineIds });
+                                        startDrag(selected.id, lineIds);
                                       }}
-                                      onDragEnd={() => {
-                                        setDragging(null);
-                                        setDropOn(null);
-                                      }}
+                                      onDragEnd={endDrag}
                                     />
                                   </td>
                                   <td className="py-2 pl-2">

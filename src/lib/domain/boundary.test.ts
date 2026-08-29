@@ -62,7 +62,11 @@ describe.each(["domain", "ui"])("lib/%s stays pure", (folder) => {
 // promise, and adding to it is how a new pure module gets the same protection.
 const PINNED_PURE: Record<string, string[]> = {
   budget: ["changes.ts", "compare.ts", "eval.ts", "grid.ts", "index.ts", "paste.ts"],
-  ledger: ["bas.ts"],
+  // report-shape.ts is the report as it goes over the wire, imported by both
+  // report.ts (which queries) and the ledger screen (which runs in the
+  // browser). Its purity is the whole point of it: the client takes these
+  // types without the query layer coming along behind them.
+  ledger: ["bas.ts", "report-shape.ts"],
   fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
 };
 

@@ -20,6 +20,10 @@
       "REIMBURSEMENT": {
         "label": "Out of pocket",
         "description": "You paid for it yourself and get the money back."
+      },
+      "MILEAGE": {
+        "label": "Mileage",
+        "description": "You drove your own car on the section's errand."
       }
     },
     "role": {
@@ -73,6 +77,35 @@
       "clear": "Clear",
       "nSelected": "{count} selected",
       "create": "Create “{text}”"
+    },
+    "action": {
+      "goToProfile": "Go to My profile"
+    },
+    "capability": {
+      "ADMIN": "Full authority",
+      "ADMIN_hint": "Attest and edit anybody's expense.",
+      "SETTINGS": "Settings",
+      "SETTINGS_hint": "Reach Settings, this page included.",
+      "BOOKKEEPING": "Bookkeeping",
+      "BOOKKEEPING_hint": "See every expense and book its voucher. Send back one that was approved by mistake.",
+      "ATTEST_VIEW": "Approvals view",
+      "ATTEST_VIEW_hint": "See the approvals queue. What can actually be attested is decided per expense.",
+      "BUDGET_VIEW": "Budget",
+      "BUDGET_VIEW_hint": "See the budget pages.",
+      "STOCK_VIEW": "Stock",
+      "STOCK_VIEW_hint": "Read the stock overview and the log.",
+      "STOCK_MANAGE": "Stock management",
+      "STOCK_MANAGE_hint": "Book stock movements and run an occasion, from takeout to stocktake.",
+      "BUDGET_COMMENT": "Budget comments",
+      "BUDGET_COMMENT_hint": "Comment on a budget account.",
+      "BUDGET_LOCK": "Lock budget",
+      "BUDGET_LOCK_hint": "Lock an adopted budget, and unlock it.",
+      "BUDGET_CHANGE_LOCKED": "Budget departures",
+      "BUDGET_CHANGE_LOCKED_hint": "Record departures and transfers on a locked budget.",
+      "FORTNOX_LOGIN": "Fortnox login",
+      "FORTNOX_LOGIN_hint": "Book in Fortnox under their own login.",
+      "EXPORT_UNDO": "Undo export",
+      "EXPORT_UNDO_hint": "Mark an exported expense as no longer exported."
     }
   },
   "dashboard": {
@@ -142,9 +175,11 @@
       "match": "Match it against a bank transaction before you can submit.",
       "payout": "Add your clearing and account number under My profile before you can submit.",
       "receipt": "Upload the receipt before you can submit.",
+      "mileage": "Enter the odometer before and after the journey before you can send it.",
       "incomplete": "Fill in the description, date, amount and cost distribution before you can submit.",
       "futureDate": "The purchase date is in the future. Correct it to the day of the purchase before you can submit.",
-      "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase. This receipt is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong."
+      "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase. This receipt is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong.",
+      "tooLateMileage": "A mileage claim must be filed within {days} days of the journey. This journey is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong."
     },
     "noMatchHint": "Can't find the purchase? Check the amount first. Only transactions for exactly the same amount can be picked. If it is still missing, the bank statement may not have been imported yet, so ask the treasurer to import the latest bank file under Bank & matching.",
     "event": {
@@ -222,7 +257,8 @@
         }
       },
       "editedFields": "Changed: {fields}",
-      "voucherComment": "Voucher {label}"
+      "voucherComment": "Voucher {label}",
+      "journeyDate": "Date driven"
     },
     "mutations": {
       "transition": {
@@ -312,6 +348,79 @@
       "grossAmount": "Amount",
       "allocations": "Cost distribution",
       "paymentType": "Payment type"
+    },
+    "newMenu": {
+      "label": "New expense",
+      "ordinary": "Ordinary expense",
+      "ordinaryHint": "You have a receipt: card or your own",
+      "mileage": "Mileage",
+      "mileageHint": "You drove your own car on the section's errand"
+    }
+  },
+  "mileage": {
+    "newTitle": "New mileage claim",
+    "newDescription": "Drove your own car on the section's errand? Enter the odometer before and after, and we work out the compensation.",
+    "description": "Errand",
+    "descriptionHint": "What the journey was for, e.g. \"Collect the sponsor package in Malmö\".",
+    "step": {
+      "journey": "The journey"
+    },
+    "journeyDate": "Date driven",
+    "dateFuture": "The journey is in the future. Correct the date to the day you drove.",
+    "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey and cannot be accepted later. Contact the skattmästare for further help",
+    "odometer": {
+      "label": "Odometer",
+      "hint": "What the odometer read when you got into the car and when you got out. The distance is the difference.",
+      "start": "At the start",
+      "end": "At the end"
+    },
+    "total": "Compensation",
+    "sum": "{km} km · {rate} kr/km",
+    "distance": "Distance",
+    "km": "{km} km",
+    "otherType": "Was it something else?",
+    "otherTypeLink": "Make an ordinary expense instead",
+    "deadlineHint": "A mileage claim must be filed within {days} days of the journey. If you drove several times, file one claim per journey.",
+    "documentName": "Expense report",
+    "documentTitle": "The expense report",
+    "documentPending": "The expense report is drawn once the claim is saved. The journey is stated on it, and it is what follows the claim into the books.",
+    "editTitle": "Edit mileage claim {id}",
+    "editTitleDraft": "Edit mileage claim",
+    "editDescription": "Correct the journey or the distribution.",
+    "blocker": {
+      "noReadings": "Enter the odometer both before and after the journey.",
+      "notForward": "The reading after the journey must be higher than the one before. Check that the two are the right way round.",
+      "noRate": "No rate per kilometre has been set for the day of the journey. Ask the treasurer."
+    },
+    "rates": {
+      "title": "Mileage rate",
+      "description": "What a kilometre is worth, and from which day. Every journey is valued at the rate in force on the day it was driven. A change here never re-values a claim already filed.",
+      "current": "In force",
+      "col": {
+        "validFrom": "Valid from",
+        "rate": "Rate",
+        "note": "Note",
+        "createdBy": "Added by"
+      },
+      "perKm": "{amount} kr/km",
+      "perMil": "{amount} kr/mil",
+      "new": "New rate",
+      "editTitle": "Edit rate",
+      "newTitle": "New rate",
+      "validFrom": "Valid from",
+      "rate": "Kronor per mil",
+      "rateHint": "Skatteverket's standard rate is 25 kr/mil. Stored as öre per kilometre.",
+      "note": "Note",
+      "notePlaceholder": "e.g. \"Skatteverket's standard rate 2026\"",
+      "save": "Save",
+      "saved": "Rate saved",
+      "saveFailed": "The rate could not be saved",
+      "remove": "Remove",
+      "removed": "Rate removed",
+      "removeFailed": "The rate could not be removed",
+      "removeTitle": "Remove the rate?",
+      "removeDescription": "Journeys already valued at it keep their amount. New journeys on those dates get whichever rate applied before.",
+      "empty": "No rate has been set yet. Without one, no mileage claims can be filed."
     }
   },
   "login": {
@@ -544,13 +653,13 @@
       "noReports": "The file held no reports in the chosen period.",
       "noCommittees": "No committees are set up. Add them in settings.",
       "noPrefixes": "No product prefixes are set up.",
-      "noFallbackPrefix": "No prefix is marked as the fallback — products matching nothing have nowhere to go.",
+      "noFallbackPrefix": "No prefix is marked as the fallback. Products that match nothing have nowhere to go.",
       "prefixAccountNotNumeric": "A prefix points at an invalid account: {detail}",
       "reportNotFound": "That report does not exist.",
       "noUnexportAccess": "Only the treasury can undo a booking or an export.",
       "unexportOnlyExported": "Only exported reports can be un-exported (this one is {status}).",
       "reopenOnlyBooked": "Only booked reports can be opened for editing (this one is {status}).",
-      "deleteExportedFirst": "The report is exported. Undo the export first — and reverse the voucher in Fortnox.",
+      "deleteExportedFirst": "The report is exported. Undo the export first, then reverse the voucher in Fortnox.",
       "bookOnlyDraft": "Only reports waiting to be booked can be booked (this one is {status}).",
       "editOnlyBeforeBooking": "The report is {status} and can no longer be changed.",
       "exportOnlyBooked": "Only booked reports can be exported (this one is {status}).",
@@ -565,7 +674,7 @@
       "moveSameUnit": "The items are already on that committee.",
       "noLines": "No items are selected.",
       "unknownLine": "One of the items is no longer on this report. Reload the page and try again.",
-      "moveUnitNoIncome": "That committee does not take money in — give it income settings first.",
+      "moveUnitNoIncome": "That committee does not take money in. Give it income settings first.",
       "moveDestinationBooked": "That committee's report for the day is already booked. The items cannot be moved there.",
       "noBatch": "There is no fetch to attach the report to. Fetch some sales first.",
       "unknownAccount": "Account {account} is not in the chart of accounts.",
@@ -582,14 +691,14 @@
       "committeeNotFound": "That committee does not exist.",
       "prefixExists": "The prefix {code} already exists.",
       "prefixNotFound": "That prefix does not exist.",
-      "cannotDeleteFallback": "The fallback prefix cannot be removed — mark another as the fallback first.",
+      "cannotDeleteFallback": "The fallback prefix cannot be removed. Mark another one as the fallback first.",
       "fallbackNotFound": "That amount rule does not exist.",
       "alreadyInFortnox": "Fortnox already holds a voucher for this day ({voucher}). Nothing was exported.",
-      "noAttestation": "The report has no attestor — whoever fetched it is no longer in the app.",
+      "noAttestation": "The report has no attestor. Whoever fetched it is no longer in the app.",
       "voucherTotalMismatch": "The voucher does not book the day's total. The debit side has to match the income statement.",
       "unitNotFound": "That result unit does not exist.",
       "unitHasIncome": "{name} already has income settings.",
-      "keyFromName": "The name \"{name}\" yields no usable key — it needs letters or digits."
+      "keyFromName": "The name \"{name}\" gives no usable key. It needs letters or digits."
     },
     "stock": {
       "calibrationNoVolume": "The bottle's volume has to be more than nothing.",
@@ -619,8 +728,8 @@
       "tagOnNightOnly": "Purchases and stocktakes do not belong to an occasion.",
       "tagRequired": "Takeouts, returns and spills have to belong to an occasion.",
       "volumeOnUnitProduct": "This product is counted in units and has no volume of its own.",
-      "cellMoved": "Somebody else booked on this occasion in the meantime. The figures are being re-read — check them and try again.",
-      "spillMovesNoStock": "A spill moves no stock — the goods left the cellar when they were taken out.",
+      "cellMoved": "Somebody else booked on this occasion in the meantime. The figures are being re-read. Check them and try again.",
+      "spillMovesNoStock": "A spill moves no stock. The goods left the cellar when they were taken out.",
       "entryNotFound": "The row was not found.",
       "onTheSheet": "The row belongs to an occasion. Change it on the occasion's page.",
       "recountInstead": "A stocktake is corrected with another stocktake.",
@@ -630,6 +739,17 @@
       "eanTaken": "That barcode already belongs to {name}.",
       "nameTaken": "There is already a product called {name}.",
       "productInUse": "The product has {count, plural, =1 {1 movement} other {# movements}} in the log and cannot be removed."
+    },
+    "mileage": {
+      "noReadings": "The mileage claim is missing an odometer reading before or after the journey.",
+      "notForward": "The reading after the journey must be higher than the one before.",
+      "noRate": "No rate per kilometre has been set for the day of the journey.",
+      "rateExists": "A rate valid from {date} already exists.",
+      "rateNotFound": "The rate does not exist."
+    },
+    "authority": {
+      "wouldLockOut": "That change would leave nobody able to open Settings. Give the permission to a role somebody actually holds first.",
+      "groupOutsideSection": "{group} is outside the section. Only groups under dsek. grant anything here."
     }
   },
   "nav": {
@@ -649,6 +769,7 @@
     "costCenters": "Cost centers",
     "resultUnits": "Result units",
     "cards": "Guild cards",
+    "mileageRates": "Mileage",
     "users": "Users",
     "faq": "FAQ",
     "profile": "My profile",
@@ -667,7 +788,8 @@
     "stock": "Stock",
     "stockLog": "Stock log",
     "groupStock": "Stock",
-    "stockEvents": "Occasions"
+    "stockEvents": "Occasions",
+    "roles": "Roles & permissions"
   },
   "allocation": {
     "pick": "Pick a cost center…",
@@ -704,6 +826,7 @@
     "uploading": "Uploading receipt…",
     "uploadingHint": "Saving the image to the receipt archive.",
     "expand": "Show the receipt",
+    "tab": "Receipt",
     "resize": "Resize the receipt panel"
   },
   "fortnox": {
@@ -816,7 +939,7 @@
       "source": "Export a Transaktionsrapport as CSV from the section's business account in Swedbank/Sparbanken.",
       "format": "Upload the file exactly as it comes. Columns are read by position (Radnr … Belopp), so a file reordered or re-saved in Excel is read wrongly.",
       "cards": "A card purchase is tied to its card by a trailing K#### in Referens. Card numbers not seen before are added under Sektionskort automatically.",
-      "duplicates": "Rows already imported are skipped — the same file can be uploaded again without creating duplicates.",
+      "duplicates": "Rows already imported are skipped. Upload the same file again and you get no duplicates.",
       "limits": "Maximum 5 MB. The character encoding (Windows-1252) is handled for you."
     },
     "scopeLabel": "Scope",
@@ -1198,7 +1321,7 @@
   "faq": {
     "categories": "Categories",
     "title": "Questions & answers",
-    "description": "Buying, reporting and approving for the guild — all of \"How to utlägg\" as one page you can search.",
+    "description": "All of \"How to utlägg\" as one page you can search. What to do when you have spent guild money, and what to do when it lands on you to approve.",
     "searchPlaceholder": "Search the questions…",
     "all": "All",
     "matches": "{count, plural, =0 {No matches} =1 {# match} other {# matches}}",
@@ -1218,7 +1341,7 @@
       "noMatch": "No member matches.",
       "onlyBaseRole": "Only holds {role}, the baseline every member has.",
       "rolesTitle": "Roles",
-      "rolesSubtitle": "Roles govern access and approval authority, and follow the mandates in Authentik — they are changed there, not here. {role} is not listed, since every member holds it.",
+      "rolesSubtitle": "Roles govern access and approval authority. They follow the mandates in Authentik and are changed there, not here. {role} is not listed, since every member holds it.",
       "nobodyHasRole": "Nobody holds this role."
     },
     "cards": {
@@ -1327,8 +1450,6 @@
       "noPrefix": "No prefix",
       "noPrefixLower": "no prefix",
       "noPrefixHint": "Without a prefix the result unit owns no cost centers.",
-      "ownersFailed": "Could not save the result unit owners",
-      "noOwners": "Nobody holds the result unit owner role. Assign it under Users first.",
       "unassigned": "No result unit",
       "unassignedSubtitle": "No prefix matches these, so only administrators can approve their expenses.",
       "unassignedEmpty": "Every cost center belongs to a result unit. Nothing to fix.",
@@ -1360,7 +1481,11 @@
         "noPrefixHint": "No product prefixes yet. Products starting with one are booked to its account.",
         "disabledHint": "This unit takes no money in. Add income to fetch and book its sales."
       },
-      "saveFailed": "Could not save."
+      "saveFailed": "Could not save.",
+      "noOwnerGroups": "No Authentik group is mapped to this result unit. The mapping lives in lib/server/authentik-roles.ts.",
+      "noOwnersHolding": "Nobody holds the post right now.",
+      "unmappedTitle": "Mappings without a result unit",
+      "unmappedBody": "The Authentik mapping names result units that do not exist here. Whoever holds those posts becomes resultatansvarig for nothing. Rename the result unit below, or correct the mapping in lib/server/authentik-roles.ts."
     },
     "fortnox": {
       "description": "Connection, chart of accounts and general ledger.",
@@ -1410,7 +1535,7 @@
     },
     "income": {
       "title": "Income",
-      "description": "Which committee and which account a sold product belongs to — the routing table the income service uses.",
+      "description": "Which committee and which account a sold product belongs to. This is the routing table the income service reads.",
       "save": "Save",
       "saved": "Saved",
       "saveFailed": "Could not save",
@@ -1447,7 +1572,7 @@
         "remove": "Remove",
         "removeTitle": "Remove {name}?",
         "removeBody": "The income settings and prefixes are removed. The result unit itself stays.",
-        "retireBody": "It has booked reports and is retired rather than removed — it stops appearing in the routing table, and the reports stay.",
+        "retireBody": "It has booked reports, so it is retired rather than removed. It stops appearing in the routing table. The reports stay.",
         "defaultCostCenter": "Default cost centre",
         "noCostCenter": "No cost centre",
         "noFallback": "No prefix is marked as the fallback. Products matching nothing have nowhere to go, and fetches will be refused.",
@@ -1479,6 +1604,55 @@
         "messagePlaceholder": "c-Cola",
         "remove": "Remove"
       }
+    },
+    "roles": {
+      "title": "Roles & permissions",
+      "description": "Which Authentik group grants which role here, and what each role may do.",
+      "groupsTitle": "Groups → roles",
+      "groupsSubtitle": "Roles are read from Authentik at every sign-in. This is where you decide what each group grants.",
+      "addGroup": "Add group",
+      "addGroupLabel": "Authentik group name",
+      "noGroups": "No groups yet.",
+      "groupExists": "{group} is already in the list.",
+      "outsideSection": "{group} is outside the section. Only groups under dsek. grant anything here.",
+      "unmappedHint": "Groups members are actually in that grant nothing here. Most of them should not.",
+      "searchPlaceholder": "Search groups and roles…",
+      "noMatches": "No group matches that.",
+      "filterLabel": "Which groups to show",
+      "filter": {
+        "all": "All",
+        "mapped": "Grants something",
+        "unmapped": "Grants nothing",
+        "silent": "Reaches nobody"
+      },
+      "noRoles": "No roles",
+      "noResultUnits": "No result units",
+      "rolesFor": "Roles for {group}",
+      "resultUnitsFor": "Result units for {group}",
+      "holderCount": "{count, plural, =0 {nobody} =1 {1 person} other {# people}}",
+      "nobodyHolds": "Nobody is in this group",
+      "probablyTypo": "Grants nobody anything",
+      "removeGroupLabel": "Remove {group}",
+      "removeGroupTitle": "Remove the mapping?",
+      "removeGroupBody": "{group} will stop granting roles and result units. This affects {count, plural, =0 {nobody right now} =1 {1 person} other {# people}}.",
+      "removeGroupAction": "Remove",
+      "capabilitiesTitle": "Roles → permissions",
+      "capabilitiesSubtitle": "What each role may do. Applies from the next page load, for everyone holding the role.",
+      "capabilityColumn": "Permission",
+      "attestNote": "Attest authority is not on this grid. It is a rule in the code, not a tickbox. Whether an expense is yours to attest depends on whose it is, what roles the person who filed it holds, and which result unit the cost centre falls under. The approvals view above only decides whether the queue is visible.",
+      "staleCounts": "{count, plural, =1 {1 member has} other {# members have}} not signed in since group lists started being kept, and so are not counted in the group figures below. The role figures cover every member.",
+      "saved": "Saved.",
+      "savedAffecting": "Saved. {count, plural, =1 {1 person} other {# people}} got new roles.",
+      "saveFailed": "Could not save.",
+      "confirmManyTitle": "This is a large group",
+      "confirmManyBody": "{group} has {count} members. All of them get the change immediately.",
+      "confirmManyAction": "Save anyway",
+      "confirmWideTitle": "A lot of people get this permission",
+      "confirmWideBody": "{role} has {count} people. All of them get {capability} immediately.",
+      "confirmWideAction": "Grant it",
+      "confirmOwnTitle": "You are taking something from yourself",
+      "confirmOwnBody": "You hold the {role} role. Removing {capability} from it removes it from you too.",
+      "confirmOwnAction": "Remove anyway"
     }
   },
   "errorPage": {
@@ -1493,7 +1667,7 @@
   "income": {
     "costCentreFailed": "The cost centre could not be changed.",
     "title": "Income",
-    "description": "Fetch sales from Zettle and Swish, review, and book.",
+    "description": "Fetch sales from Zettle and Swish. Look them over and book them.",
     "serviceUnavailable": "The income service is not configured. Set INTAKT_URL and INTAKT_TOKEN to fetch and render reports.",
     "source": {
       "SWISH": "Swish",
@@ -1541,7 +1715,7 @@
       "title": "No days to book"
     },
     "batch": {
-      "description": "{count} reports — one per committee per day.",
+      "description": "{count} reports, one per committee per day.",
       "empty": "No reports in this fetch."
     },
     "table": {
@@ -1575,7 +1749,7 @@
       "action": "Move…",
       "unitField": "Committee",
       "mergeTitle": "Merge into {unit}'s report?",
-      "mergeBody": "{unit} already has a report for {date}. {count, plural, one {# item moves} other {# items move}} into it and the two days become one — they cannot be separated again.",
+      "mergeBody": "{unit} already has a report for {date}. {count, plural, one {# item moves} other {# items move}} into it and the two days become one. You cannot split them again.",
       "mergeConfirm": "Move",
       "dragHint": "Drag onto another committee's report for the same day",
       "picked": "{count, plural, one {# selected} other {# selected}}",
@@ -1587,7 +1761,7 @@
       "destinationPlaceholder": "Pick a committee…",
       "setAll": "Set all to:",
       "setAllTo": "Set every row to account {account}",
-      "noAccounts": "This committee has no product prefixes — pick an account per row.",
+      "noAccounts": "This committee has no product prefixes. Pick an account for each row.",
       "account": "New account",
       "accountFor": "Account for {product}",
       "wasAccount": "Currently books to {account}",
@@ -1603,17 +1777,17 @@
       "action": "New report",
       "actionFor": "New report for {date}",
       "title": "New report",
-      "subtitle": "{date} · {source} — an empty report to move sales onto.",
+      "subtitle": "{date} · {source}. An empty report to move sales onto.",
       "unit": "Committee",
       "unitHint": "Whose takings the report becomes.",
       "unitPlaceholder": "Pick a committee…",
-      "alreadyExists": "That committee already has a report for the day. It opens instead — two reports for one day could not both be booked.",
+      "alreadyExists": "That committee already has a report for the day, so that one opens instead. Two reports for one day could not both be booked.",
       "footerHint": "The report is created empty.",
       "cancel": "Cancel",
       "confirm": "Create report",
       "open": "Open the report",
       "done": "The report was created.",
-      "opened": "That committee already had a report for the day — it is now open.",
+      "opened": "That committee already had a report for the day. It is open now.",
       "failed": "The report could not be created.",
       "emptyTitle": "Empty report",
       "emptyBody": "This report holds no sales yet. Drag items onto it from another report for the same day, or select them there and choose Move. Wrong committee: delete this report and make another.",
@@ -1627,16 +1801,16 @@
     "undo": {
       "unexport": "Undo export",
       "unexportTitle": "Undo the export?",
-      "unexportBody": "Voucher {voucher} stays in Fortnox — this app merely stops counting the day as exported. Exporting again creates a second voucher, so reverse the first one in Fortnox first.",
+      "unexportBody": "Voucher {voucher} stays in Fortnox. All this does is stop the app counting the day as exported. Export again and you get a second voucher, so reverse the first one in Fortnox before you do.",
       "unexportConfirm": "Undo export",
       "unexportDone": "The export was undone.",
       "reopen": "Edit",
       "reopenTitle": "Open the day for editing?",
-      "reopenBody": "The voucher and the booked income statement are deleted, and the day rejoins the To book queue. It waits there until you book it again — or until the next fetch clears the queue.",
+      "reopenBody": "The voucher and the booked income statement are deleted, and the day rejoins the To book queue. It waits there until you book it again, or until the next fetch clears the queue.",
       "reopenConfirm": "Open",
       "delete": "Delete",
       "deleteTitle": "Delete {date}?",
-      "deleteBody": "{unit}'s report, its sold items and its voucher are removed. This cannot be undone — but fetching the same period again brings the day back.",
+      "deleteBody": "{unit}'s report, its sold items and its voucher are removed. You cannot undo that. Fetching the same period again does bring the day back.",
       "deleteConfirm": "Delete",
       "deleteDone": "The report was deleted.",
       "failed": "That did not work."
@@ -1758,25 +1932,25 @@
       "volumeOnUnitProduct": "This product is counted in units and has no volume of its own",
       "correctionNeedsTarget": "A correction has to name the row it corrects",
       "calibrationNoVolume": "The bottle's volume has to be more than nothing",
-      "openBottlesFirst": "Open bottles have to go first — take them along, or leave the sealed one",
+      "openBottlesFirst": "Open bottles have to go first. Take them along, or leave the sealed one",
       "notThatManyOpen": "There are not that many open bottles at that level",
       "notThatManySealed": "There are not that many sealed bottles",
       "levelsOnReturnOnly": "A level is set when the bottle comes back, not when it is taken out",
       "purchaseArrivesSealed": "A purchase arrives sealed",
-      "moreThanWentOut": "More bottles than went out — check the count",
+      "moreThanWentOut": "More bottles than went out. Check the count",
       "nothingReturned": "Say what came back",
       "spillMovesNoStock": "A spill moves no stock",
       "nothingSpilled": "Say how much was destroyed",
       "moreBottlesThanWentOut": "More bottles home than went out",
       "nameRequired": "The product needs a name",
-      "eanRequired": "The barcode is needed — scan it or type it (8–14 digits)",
+      "eanRequired": "The barcode is needed. Scan it or type it in (8–14 digits)",
       "abvRequired": "The strength is needed for the restaurangrapport",
       "sizeRequired": "The volume is needed for the report's litres",
       "costRequired": "The cost price is needed before the stock can be valued"
     },
     "log": {
       "title": "Stock log",
-      "description": "Every movement, newest first. Rows are never edited — a wrong row is corrected by a new one.",
+      "description": "Every movement, newest first. Nobody edits a row here. You correct a wrong one by booking another.",
       "empty": "No movements in this selection.",
       "recorded": "entered {date}",
       "readings": "weighed: {list} g",
@@ -1830,7 +2004,10 @@
         "unitMl": "Volume per unit (ml)",
         "ean": "Barcode (EAN)",
         "eanHint": "Lets the product be scanned in the cellar.",
-        "cost": "Cost price incl. deposit (kr)"
+        "cost": "Cost price incl. deposit (kr)",
+        "systembolagetId": "Systembolaget article number",
+        "systembolagetIdHint": "The digits at the end of the product's address on systembolaget.se. Paste the whole link if you like. The number gets picked out of it.",
+        "systembolagetIdInvalid": "No article number in there. Paste the product's link from systembolaget.se, or type just the digits."
       },
       "col": {
         "name": "Product",
@@ -1853,7 +2030,7 @@
       "title": "Scan a barcode",
       "subtitle": "Point the camera at the barcode on the tin or the bottle.",
       "hint": "Hold the code inside the frame.",
-    "flip": "Switch camera",
+      "flip": "Switch camera",
       "found": "Picked {name}.",
       "unknown": "No product has that barcode. Add the product first.",
       "noCamera": "The camera could not be started. Type the code below instead.",
@@ -1888,13 +2065,13 @@
       },
       "each": "at {price}",
       "unpriced": "no purchase price",
-      "noteHint": "Goes on every row — an invoice number, say.",
+      "noteHint": "Goes on every row. An invoice number, say.",
       "notePlaceholder": "Invoice 12345",
       "addProduct": "Type or pick a product…",
       "addSearch": "Search products…",
       "newProduct": "Add “{name}”",
       "remove": "Remove row",
-      "scan": "Scan a barcode — adds the product, or jumps to its row if the delivery already has it",
+      "scan": "Scan a barcode. It adds the product. If the delivery already has it, you jump to its row",
       "failed": "That row could not be booked.",
       "save": "Save delivery",
       "saved": "{count, plural, =1 {1 row booked} other {# rows booked}}",
@@ -1911,7 +2088,7 @@
       "units": "Units",
       "expected": "The log says {count}",
       "difference": "Differs from the log ({sealed} sealed). The adjustment goes into the log.",
-      "agrees": "Agrees with the log — nothing to adjust.",
+      "agrees": "Agrees with the log. Nothing to adjust.",
       "noteHint": "Say why it differs, if you know."
     },
     "filterCategory": "Drink type",
@@ -1920,7 +2097,7 @@
       "sealed": "Sealed bottles",
       "units": "Units",
       "value": "Stock value",
-      "noCostPrice": "No purchase price set — the stock value comes to nothing",
+      "noCostPrice": "No purchase price set, so the stock value comes to nothing",
       "impossible": "The balance does not add up. Take a stocktake to correct it.",
       "wholeLog": "The whole log",
       "details": "Details",
@@ -1956,7 +2133,6 @@
       "stillOut": "Still out",
       "sold": "What was used",
       "nothing": "Nothing has been booked on this occasion yet. Add a product below.",
-      "openCaveat": "While stock is still at the bar it counts as used. Register the return and the figure settles.",
       "movements": "{count, plural, =1 {1 movement in the log} other {# movements in the log}}",
       "field": {
         "name": "Name",
@@ -1988,20 +2164,24 @@
         "remove": "Remove row",
         "failed": "That could not be booked. The figures are being re-read.",
         "locked": {
-          "nothingOnShelf": "Nothing was at that level when the occasion began. What you have brought back tonight cannot go out again — it would not count for anything either way.",
+          "nothingOnShelf": "Nothing was at that level when the occasion began. What you have brought back tonight cannot go out again. It would not count for anything either way.",
           "nothingOut": "Nothing has gone out on this occasion yet, so nothing can come back or break."
         },
         "newProduct": "Add “{name}”",
         "search": "Search products on the sheet…",
         "noMatch": "Nothing on this occasion matches “{text}”. Add it on an empty row below.",
-        "scan": "Scan a barcode — adds the product, or jumps to its row if the occasion already has it",
+        "scan": "Scan a barcode. It adds the product. If the occasion already has it, you jump to its row",
         "save": "Save",
         "discard": "Clear",
         "unsaved": "{count, plural, =1 {1 cell waiting to be saved} other {# cells waiting to be saved}}",
         "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} · {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
         "nothingToSave": "Nothing to save yet.",
         "discardTitle": "Clear what has been filled in?",
-        "discardMessage": "{count, plural, =1 {1 changed cell} other {# changed cells}} will be removed. Nothing has been booked, so there is no getting it back."
+        "discardMessage": "{count, plural, =1 {1 changed cell} other {# changed cells}} will be removed. Nothing has been booked, so there is no getting it back.",
+        "rowActions": "Change the row",
+        "swap": "Switch product",
+        "swapTo": "Switch to…",
+        "swapCancel": "Cancel the switch"
       }
     },
     "changes": {
@@ -2021,7 +2201,7 @@
     "entry": {
       "fix": "Correct",
       "title": "Correct the row",
-      "hint": "{kind}, {date}. Type what it should have been — the difference is worked out for you.",
+      "hint": "{kind}, {date}. Type what it should have been. We work out the difference.",
       "qty": "Quantity",
       "qtyHint": "Says {was} now. Zero removes the row entirely.",
       "remove": "Remove the row",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildQueue, queueActionFor } from "./queue";
-import type { Expense, ExpenseStatus, Role } from "./types";
+import type { Capability, Expense, ExpenseStatus, Role } from "./types";
+import { DEFAULT_ROLE_CAPABILITIES } from "@/lib/server/authority-defaults";
 
 // The dashboard's whole content. What makes this worth testing is the property
 // the old role-block dashboard did not have: one utlägg is waiting on at most
@@ -9,7 +10,18 @@ import type { Expense, ExpenseStatus, Role } from "./types";
 const ME = "u_me";
 const SOMEONE_ELSE = "u_other";
 
-const viewer = (roles: Role[], id = ME) => ({ id, roles });
+// A viewer holding these roles, with the capabilities those roles have on the
+// day the database is created (lib/server/authority-defaults.ts). Which roles
+// carry which capability is editable now, so a case below saying "the ordförande
+// cannot export" is a statement about the section's starting policy — which is
+// exactly what it always was, when that policy was a list in permissions.ts.
+const capsFor = (roles: Role[]): Capability[] => [
+  ...new Set(
+    DEFAULT_ROLE_CAPABILITIES.filter((r) => roles.includes(r.role)).map((r) => r.capability),
+  ),
+];
+
+const viewer = (roles: Role[], id = ME) => ({ id, roles, capabilities: capsFor(roles) });
 
 // Only the fields the queue actually reads; cast once here rather than building
 // a full Expense in every case.

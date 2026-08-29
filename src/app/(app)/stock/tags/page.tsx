@@ -6,5 +6,5 @@ import StockTagsClient from "./tags-client";
 export default async function StockTagsPage() {
   const user = await requirePage(canViewStock);
   const tags = await getStockTags(200);
-  return <StockTagsClient tags={tags} canManage={canManageStock(user.roles)} />;
+  return <StockTagsClient tags={tags} canManage={canManageStock(user.capabilities)} />;
 }

@@ -11,7 +11,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
 import { Combobox } from "@/components/ui/combobox";
@@ -23,21 +22,23 @@ import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
-import type { CostCenter, ResultUnit, ResultUnitCostCenter, User } from "@/lib/domain/types";
+import type { CostCenter, ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 
 // Sentinel for the "no result unit" entry in the left-hand list.
 const UNASSIGNED = "__unassigned__";
 
 export function ResultUnitsClient({
   resultUnits,
-  users,
   unassigned,
   costCenters,
   incomeEnabled,
 }: {
   resultUnits: ResultUnit[];
-  users: User[];
   unassigned: ResultUnitCostCenter[];
+  /**
+   * Result unit names the Authentik mapping grants that no result unit here is
+   * called. Each one is a group conferring nothing — see getUnmappedResultUnits.
+   */
   /** For the income section's default-cost-centre picker. */
   costCenters: CostCenter[];
   /** False when the app runs without the intakt service — see intaktConfigured. */
@@ -51,7 +52,7 @@ export function ResultUnitsClient({
   const tCostCenters = useTranslations("admin.costCenters");
   const tIncome = useTranslations("admin.resultUnits.income");
   const confirm = useConfirm();
-  const { pending, busy, mutate } = useMutation();
+  const { pending, mutate } = useMutation();
 
   const [selectedId, setSelectedId] = useState<string>(
     () => resultUnits[0]?.id ?? UNASSIGNED,
@@ -73,8 +74,6 @@ export function ResultUnitsClient({
     label: `${c.code} — ${c.name}`,
     short: c.code,
   }));
-
-  const ownerCandidates = users.filter((u) => u.roles.includes("RESULTATANSVARIG"));
 
   const q = search.trim().toLowerCase();
   const visible = useMemo(
@@ -234,19 +233,6 @@ export function ResultUnitsClient({
     });
   }
 
-  function toggleOwner(c: ResultUnit, userId: string) {
-    const ids = c.owners.map((m) => m.id);
-    const next = ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId];
-    mutate(`/api/result-units/${c.id}/owners`, {
-      // Keyed per owner, not per result unit: every chip in the row goes
-      // through here, and a shared key would spin all of them at once.
-      key: `owner-${c.id}-${userId}`,
-      method: "PUT",
-      body: { userIds: next },
-      error: t("ownersFailed"),
-    });
-  }
-
   function costCentreGroups(list: ResultUnitCostCenter[]) {
     const needle = ccSearch.trim().toLowerCase();
     const filtered = needle
@@ -331,7 +317,9 @@ export function ResultUnitsClient({
   const unassignedActive = unassigned.filter((cc) => cc.active).length;
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="space-y-4">
+
+      <div className="flex flex-col gap-4 lg:flex-row">
       <SidebarPanel>
         <div className="border-b border-border p-3">
           <Input
@@ -752,25 +740,43 @@ export function ResultUnitsClient({
                   </div>
                 )}
 
-                {/* Owners */}
+                {/* Resultatansvariga — read-only: both halves come from
+                    Authentik. The groups are the mapping in
+                    lib/server/authentik-roles.ts, the holders are whoever is in
+                    them. Showing the groups and not just the names is what makes
+                    an empty list diagnosable: nobody holds the post, or the
+                    mapping points at a group that does not exist. */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-muted">{tRole("RESULTATANSVARIG")}</p>
-                  {ownerCandidates.length === 0 ? (
-                    <p className="text-sm text-muted">{t("noOwners")}</p>
+                  {selected.ownerGroups.length === 0 ? (
+                    <p className="text-sm text-muted">{t("noOwnerGroups")}</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {ownerCandidates.map((u) => (
-                        <Chip
-                          key={u.id}
-                          active={selected.owners.some((m) => m.id === u.id)}
-                          loading={pending === `owner-${selected.id}-${u.id}`}
-                          disabled={busy}
-                          onClick={() => toggleOwner(selected, u.id)}
-                        >
-                          {u.name}
-                        </Chip>
-                      ))}
-                    </div>
+                    <>
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {selected.ownerGroups.map((g) => (
+                          <code
+                            key={g}
+                            className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-muted"
+                          >
+                            {g}
+                          </code>
+                        ))}
+                      </div>
+                      {selected.owners.length === 0 ? (
+                        <p className="text-sm text-muted">{t("noOwnersHolding")}</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {selected.owners.map((u) => (
+                            <span
+                              key={u.id}
+                              className="h-7 rounded-full border border-accent bg-accent-soft px-3 text-xs font-medium leading-7 text-accent"
+                            >
+                              {u.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -787,6 +793,7 @@ export function ResultUnitsClient({
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

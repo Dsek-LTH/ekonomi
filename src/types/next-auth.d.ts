@@ -3,8 +3,8 @@ import type { DefaultSession } from "next-auth";
 // Our app fields on the session, the JWT, and the object a provider's `profile`
 // callback returns.
 //
-// Deliberately *not* the roles. A JWT is stamped at sign-in and refreshed on a
-// schedule of Authentik's choosing, so a role carried in it is a claim about
+// Deliberately *not* the roles. A JWT is stamped at sign-in and never written
+// again (see `session` in auth.ts), so a role carried in it is a claim about
 // the past; both halves of the app read the live ones instead
 // (lib/server/current-user.ts, and lib/api/guard.ts through it). Leaving the
 // field off the type is what stops a future call site reaching for a stale
@@ -12,8 +12,6 @@ import type { DefaultSession } from "next-auth";
 declare module "next-auth" {
   interface Session {
     user: { id: string; studentId?: string } & DefaultSession["user"];
-    /** "RefreshTokenError" when Authentik would not renew the session. */
-    error?: string;
   }
 
   // What auth.ts's `profile` callback returns, and therefore what the `user`

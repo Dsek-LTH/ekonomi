@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { denyBudgetWrite, denyDeletingAdjusted } from "@/lib/budget/access";
+import { allowBudgetWrite, denyDeletingAdjusted } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchSheet } from "@/lib/api/schemas/budget";
@@ -17,8 +17,8 @@ import { PatchSheet } from "@/lib/api/schemas/budget";
 // afterwards.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ costCenter: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ costCenter: id });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PatchSheet);
   if (!parsed.ok) return parsed.res;
@@ -55,8 +55,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 // Its accounts and rows go with it (cascade); other budgets are untouched.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ costCenter: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ costCenter: id });
+  if (!g.ok) return g.res;
   const adjusted = await denyDeletingAdjusted({ costCenter: id });
   if (adjusted) return adjusted;
   await prisma.budgetCostCenter.delete({ where: { id } });

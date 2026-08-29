@@ -1,0 +1,132 @@
+// What the authority tables hold before anybody edits them.
+//
+// These three lists were the whole of lib/server/authentik-roles.ts and the
+// role sets in lib/domain/permissions.ts, until authority became rows. They are
+// kept because "the state the section started from" is worth being able to name
+// after a screen has been editing it for a year — a seeded dev database gets
+// them, and so does anyone who asks a settings screen to put a table back.
+//
+// They are not the source of truth for a running deployment. The database is.
+// Nothing reads these to answer a question about authority; the only callers
+// are the ones that *write* the tables.
+//
+// The 20260828120000_authority_is_data migration carries the same values in
+// SQL, because a migration cannot import this file and because what it does is
+// a different thing anyway: it is a one-time record of the day the lists
+// stopped being code, and must keep saying what they said that day however
+// these are edited afterwards.
+import "server-only";
+
+import type { Capability, Role } from "@/lib/domain/types";
+
+/** Authentik group → role. */
+export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
+  { group: "dsek.ordf", role: "ORDFORANDE" },
+  { group: "dsek.skattm.mastare", role: "SKATTMASTARE" },
+  { group: "dsek.skattm.vice_mastare", role: "VICE_SKATTMASTARE" },
+  { group: "dsek.skattm.fm", role: "SKATTFORMAN" },
+
+  // Alkohollagret. Deliberately a handful of named posts rather than the whole
+  // `dsek.sex.*` tree: keeping the lagerbokföring is a job a few people do, and
+  // the tree would hand it to every functionary in the committee. `dsek.sex.olfm`
+  // and `dsek.sex.vinfm` — ölförman and vinförman — are absent on purpose.
+  { group: "dsek.sex.mastare", role: "STOCKARE" },
+  { group: "dsek.sex.vice_mastare", role: "STOCKARE" },
+  { group: "dsek.sex.hov.mstr", role: "STOCKARE" },
+  { group: "dsek.sex.pub.mastare", role: "STOCKARE" },
+  { group: "dsek.sex.pub.vice_mastare", role: "STOCKARE" },
+  { group: "dsek.sex.bar.mstr", role: "STOCKARE" },
+  { group: "dsek.sex.bar.vice_mstr", role: "STOCKARE" },
+];
+
+/**
+ * Authentik group → result unit, by name.
+ *
+ * By name because a default cannot know an id — the rows are resolved against
+ * whatever ResultUnit table exists when these are applied, and a name with no
+ * unit behind it is simply skipped. The stored mapping is a foreign key.
+ *
+ * The signers are the guild's own (Dsek-LTH/web expenses/config.ts). Where their
+ * committee head is not a `.mastare` — the three `.ordf` heads, Overphös,
+ * Övermarskalken — the group is written out; there is no shape to pattern-match,
+ * and pattern-matching post names is how the two wrong guesses this list used to
+ * contain got in.
+ */
+export const DEFAULT_GROUP_RESULT_UNITS: readonly { group: string; unit: string }[] = [
+  { group: "dsek.aktu.mastare", unit: "Aktivitetsutskottet" },
+  { group: "dsek.cafe.mastare", unit: "Caféutskottet" },
+  { group: "dsek.cpu.mastare", unit: "CPU" },
+  { group: "dsek.fram.ordf", unit: "Framtidsutskottet" },
+  { group: "dsek.infu.mastare", unit: "Infoutskottet" },
+  { group: "dsek.km.mastare", unit: "Källarmästeriet" },
+  { group: "dsek.overmarskalk", unit: "Medaljkommittén" },
+  { group: "dsek.nari.mastare", unit: "Näringslivsutskottet" },
+  { group: "dsek.noll.stab.oph", unit: "Nollningsutskottet" },
+  { group: "dsek.sex.mastare", unit: "Sexmästeriet" },
+  { group: "dsek.srd.ordf", unit: "Studierådet" },
+  { group: "dsek.tackm.mastare", unit: "Tackmästeriet" },
+  { group: "dsek.triv.mastare", unit: "Trivselutskottet" },
+  { group: "dsek.val.ordf", unit: "Valberedningen" },
+];
+
+/**
+ * Role → capability.
+ *
+ * BUDGET_VIEW is on every role because `canAccessBudget` used to be `() => true`
+ * — the budget is the section's, not the treasury's. Written out rather than
+ * left implicit so that taking it away from a role is a decision somebody makes
+ * on the screen, not a default nobody chose.
+ */
+export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capability }[] = [
+  { role: "SKATTMASTARE", capability: "ADMIN" },
+  { role: "ORDFORANDE", capability: "ADMIN" },
+
+  { role: "SKATTMASTARE", capability: "BOOKKEEPING" },
+  { role: "ORDFORANDE", capability: "BOOKKEEPING" },
+  { role: "VICE_SKATTMASTARE", capability: "BOOKKEEPING" },
+  { role: "SKATTFORMAN", capability: "BOOKKEEPING" },
+
+  // The treasury proper — the people who actually work inside Fortnox. Narrower
+  // than bookkeeping on purpose: the chair has bookkeeping access in this app
+  // but no Fortnox login and no business unwinding an export.
+  { role: "SKATTMASTARE", capability: "FORTNOX_LOGIN" },
+  { role: "VICE_SKATTMASTARE", capability: "FORTNOX_LOGIN" },
+  { role: "SKATTFORMAN", capability: "FORTNOX_LOGIN" },
+  { role: "SKATTMASTARE", capability: "EXPORT_UNDO" },
+  { role: "VICE_SKATTMASTARE", capability: "EXPORT_UNDO" },
+  { role: "SKATTFORMAN", capability: "EXPORT_UNDO" },
+
+  // Inställningar is the treasurer's alone. The chair counts as an admin for
+  // expense authority and has no business in here.
+  { role: "SKATTMASTARE", capability: "SETTINGS" },
+
+  { role: "STOCKARE", capability: "STOCK_VIEW" },
+  { role: "SKATTMASTARE", capability: "STOCK_VIEW" },
+  { role: "ORDFORANDE", capability: "STOCK_VIEW" },
+  { role: "STOCKARE", capability: "STOCK_MANAGE" },
+  { role: "SKATTMASTARE", capability: "STOCK_MANAGE" },
+  { role: "ORDFORANDE", capability: "STOCK_MANAGE" },
+
+  { role: "SKATTMASTARE", capability: "BUDGET_VIEW" },
+  { role: "ORDFORANDE", capability: "BUDGET_VIEW" },
+  { role: "VICE_SKATTMASTARE", capability: "BUDGET_VIEW" },
+  { role: "SKATTFORMAN", capability: "BUDGET_VIEW" },
+  { role: "RESULTATANSVARIG", capability: "BUDGET_VIEW" },
+  { role: "STOCKARE", capability: "BUDGET_VIEW" },
+  { role: "ORDINARIE", capability: "BUDGET_VIEW" },
+
+  { role: "SKATTMASTARE", capability: "BUDGET_COMMENT" },
+  { role: "ORDFORANDE", capability: "BUDGET_COMMENT" },
+  { role: "RESULTATANSVARIG", capability: "BUDGET_COMMENT" },
+
+  // Sealing the adopted figures is the treasurer's call alone — the chair edits
+  // budgets like any other admin but does not get to freeze them, or to move
+  // money after the budget is voted through.
+  { role: "SKATTMASTARE", capability: "BUDGET_LOCK" },
+  { role: "SKATTMASTARE", capability: "BUDGET_CHANGE_LOCKED" },
+
+  { role: "SKATTMASTARE", capability: "ATTEST_VIEW" },
+  { role: "ORDFORANDE", capability: "ATTEST_VIEW" },
+  { role: "VICE_SKATTMASTARE", capability: "ATTEST_VIEW" },
+  { role: "RESULTATANSVARIG", capability: "ATTEST_VIEW" },
+];

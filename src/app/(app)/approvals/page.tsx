@@ -25,7 +25,7 @@ export default async function ApprovalsPage({
   // stuck utlägg wherever it sits. It widens nothing — `expenseScopeOf` already
   // resolves these roles to "everything", so this is a different question about
   // the same set, not a reach past it. Anyone else isn't offered the toggle.
-  const canToggleScope = canAccessBookkeeping(user.roles);
+  const canToggleScope = canAccessBookkeeping(user.capabilities);
   const showOwnOnly = !canToggleScope || query.view !== "ALL";
 
   // Two different questions, each asked of the database directly.

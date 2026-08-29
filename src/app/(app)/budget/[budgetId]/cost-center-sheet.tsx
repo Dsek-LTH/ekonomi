@@ -5,35 +5,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, type AccountKind } from "@/lib/budget";
-import { lineKeys, sheetTotals, ZERO_TOTALS, type JoinedAccount, type JoinedSheet } from "@/lib/budget/compare";
+import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
 import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { useFormat } from "@/lib/ui/use-format";
 import { usePhone } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconComment, IconElbow, IconTrash } from "@/components/ui/icons";
+import { IconTrash } from "@/components/ui/icons";
 import { StatRow } from "./stat-row";
 import { resultImpact } from "@/lib/budget/changes";
 
-import { DragHandle, insideRect } from "@/components/ui/drag";
+import { insideRect } from "@/components/ui/drag";
 import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
 import {
-  withAccount,
-  withComment,
-  withLine,
-  withLineOrder,
-  withNewAccount,
-  withoutAccount,
-  withoutComment,
-  withoutLine,
-  withSheet,
+  withAccount, withLine, withLineOrder, withNewAccount, withSheet
 } from "./patch-budget";
 import { useCellEdit } from "./use-cell-edit";
+import { useSheetClipboard } from "./use-sheet-clipboard";
+import { SheetProvider, type SheetValue } from "./sheet-context";
+import { SectionCard } from "./sheet-section";
 import { useNotify } from "@/components/shell/notifications";
 import type { AccountRecord } from "@/lib/domain/types";
-import { Combobox } from "@/components/ui/combobox";
-import type { Account, BudgetCC, BudgetClip, Comment, Evaluated, LineItem, Draft, CellFn, FormulaFn, ApiFn } from "./budget-types";
+import type { Account, BudgetCC, BudgetClip, Evaluated, LineItem, Draft, CellFn, FormulaFn, ApiFn } from "./budget-types";
 
 /** This sheet, joined against the one side it is being compared with. */
 export interface SheetCompare { label: string; sheet: JoinedSheet }
@@ -183,36 +177,6 @@ export function CostCenterSheet(props: {
         : (narrow ? 110 : 260);
 
   // One line-item cell, rendered per column.
-  function lineCell(col: ColumnDef, li: LineItem, account: Account) {
-    const k = col.key;
-    if (k === "konto") return (
-      // The account-number column, on a row that has no number of its own. What
-      // it holds instead is the elbow: down out of the account above, right into
-      // this row — the same mark the income screen puts on a product's variant,
-      // and the same reading. The grip keeps the left of the cell; `ml-auto`
-      // holds the elbow against the row it points at, whether or not the grip
-      // is there to be seen.
-      <td key={k} className="border-r border-border/60 p-0">
-        <span className="flex items-center py-1.5 pl-1.5 pr-2">
-          {isAdmin && (
-            <DragHandle
-              onPointerDown={(e) => startLineDrag(e, account, li)}
-              className={cn(
-                "flex items-center text-muted/30 hover:text-muted",
-                draggingLineId === li.id && "text-muted opacity-100",
-              )}
-              title={t("dragToReorder")}
-            />
-          )}
-          <IconElbow className="ml-auto size-3.5 shrink-0 text-muted/40" />
-        </span>
-      </td>
-    );
-    if (k === "beskrivning")
-      return <td key={k} className="border-r border-border/60 p-0">{renderCell({ id: li.id, field: "description", actual: li.description, className: "pl-5 text-muted", placeholder: tCol("beskrivning"), url: liUrl(li.id), payload: (v) => ({ description: v }), gated: true })}</td>;
-    const val = ev.lineItems[li.id];
-    return <td key={k} className="border-r border-border/60 p-0 text-right">{renderFormula({ id: li.id, field: "expression", raw: li.expression, computed: val, sheet: ccCode, bad: badLine.has(li.id), placeholder: "0", url: liUrl(li.id), payload: (v) => ({ expression: v }), gated: true })}</td>;
-  }
 
   const draft = (id: string): Draft => newRow[id] ?? { description: "", expression: "" };
   const setDraft = (id: string, patch: Partial<Draft>) =>
@@ -245,7 +209,6 @@ export function CostCenterSheet(props: {
     accounts
       .filter((a) => (a.number === keep ? true : a.active && !used.has(a.number)))
       .map((a) => ({ value: a.number, label: `${a.number} · ${a.name}`, short: a.number }));
-  const accountOptions = accountOptionsFor();
 
   async function createAccount(kind: AccountKind, code: string) {
     if (!code.trim()) return;
@@ -377,154 +340,31 @@ export function CostCenterSheet(props: {
     setPlacement(ids);
   }, []);
 
-  /**
-   * Copying rows and accounts from one cost centre into another.
-   *
-   * What travels is what is ticked: a box on every row and every account, in
-   * the sheet's left-hand margin beside the row numbers. Ticking says nothing
-   * about what happens next — ⌘/Ctrl+C takes the ticked rows (or the row you are
-   * standing in, if none are), ⌘/Ctrl+V puts them into whatever account you are
-   * standing in, on any sheet in the budget.
-   *
-   * The clipboard itself belongs to the page (`clip`), because leaving this
-   * sheet is the entire point and this component goes with it.
-   *
-   * The rows are named to the server by id, not by content — see the paste
-   * route, which is also what re-points equations inside a copied block at the
-   * copies. Nothing about a row is described twice.
-   */
-  const [ticked, setTicked] = useState<{ rows: Set<string>; accounts: Set<string> }>({
-    rows: new Set(),
-    accounts: new Set(),
+  // Ticking rows, and copying them onto another sheet — see ./use-sheet-clipboard.
+  const { toggle, clearTicks, marked, sheetKeys, isTicked, copySelection } = useSheetClipboard({
+    accounts: cc.accounts,
+    linesOf,
+    clip,
+    onCopy,
+    canPaste: isAdmin,
+    onPaste: (c, accountId) =>
+      // Only this sheet's accounts change, so only those are taken from the
+      // answer: the cost centre it is linked to is the page's own, and the
+      // response has no opinion about the result unit derived from it.
+      api(
+        `/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`,
+        "POST",
+        c.kind === "accounts" ? { accountIds: c.ids } : { accountId, lineItemIds: c.ids },
+        (b, data) => withSheet(b, cc.id, (sheet) => ({ ...sheet, accounts: (data as BudgetCC).accounts })),
+      ),
+    notify,
+    t,
   });
-
-  const toggle = (kind: "rows" | "accounts", id: string) =>
-    setTicked((was) => {
-      const next = new Set(was[kind]);
-      if (!next.delete(id)) next.add(id);
-      return { ...was, [kind]: next };
-    });
-  const clearTicks = () => setTicked({ rows: new Set(), accounts: new Set() });
-
-  /**
-   * What is ticked *on this sheet*, in the order the sheet draws it.
-   *
-   * This sheet's, because the ticks outlive it: the component stays mounted as
-   * the cost centre beside it changes, and a row ticked two sheets ago is not
-   * something a copy here should quietly take. Drawing order, because that is
-   * the order the rows will be pasted in.
-   */
-  function selection(): { accounts: string[]; rows: string[] } {
-    const accounts: string[] = [];
-    const rows: string[] = [];
-    for (const account of cc.accounts) {
-      if (ticked.accounts.has(account.id)) accounts.push(account.id);
-      for (const li of linesOf(account)) if (ticked.rows.has(li.id)) rows.push(li.id);
-    }
-    return { accounts, rows };
-  }
-  const marked = selection();
-
-  /** Which row and account the focus is in, read off the row's own markers. */
-  function focusedRow(): { accountId: string; lineId?: string } | null {
-    const el = document.activeElement as HTMLElement | null;
-    const line = el?.closest<HTMLElement>("tr[data-line]");
-    if (line?.dataset.account) return { accountId: line.dataset.account, lineId: line.dataset.line };
-    const account = el?.closest<HTMLElement>("tr[data-account-row]");
-    if (account?.dataset.accountRow) return { accountId: account.dataset.accountRow };
-    return null;
-  }
-
-  /**
-   * Put the ticked things on the clipboard. Accounts win where both are ticked:
-   * an account brings its rows with it, so the rows inside one are already in
-   * the copy and taking them twice would paste them twice.
-   */
-  function copySelection(): boolean {
-    if (marked.accounts.length > 0) {
-      const label = cc.accounts.find((a) => a.id === marked.accounts[0])?.accountCode ?? "";
-      onCopy({ kind: "accounts", ids: marked.accounts, label });
-      notify.success(t("copiedAccounts", { count: marked.accounts.length }));
-      return true;
-    }
-    if (marked.rows.length > 0) {
-      onCopy({ kind: "rows", ids: marked.rows, label: String(marked.rows.length) });
-      notify.success(t("copiedRows", { count: marked.rows.length }));
-      return true;
-    }
-    return false;
-  }
-
-  /** ⌘C with nothing ticked: the one row being stood in, which is what it looks
-   *  like it should do. An account's own line takes the account, rows and all. */
-  function copyHere(): boolean {
-    if (copySelection()) return true;
-    const at = focusedRow();
-    if (!at) return false;
-    if (!at.lineId) {
-      const account = cc.accounts.find((a) => a.id === at.accountId);
-      if (!account) return false;
-      onCopy({ kind: "accounts", ids: [account.id], label: account.accountCode });
-      notify.success(t("copiedAccounts", { count: 1 }));
-      return true;
-    }
-    onCopy({ kind: "rows", ids: [at.lineId], label: "1" });
-    notify.success(t("copiedRows", { count: 1 }));
-    return true;
-  }
-
-  function pasteHere(): boolean {
-    if (!clip || !isAdmin) return false;
-    const at = focusedRow();
-    const body =
-      clip.kind === "accounts"
-        ? { accountIds: clip.ids }
-        : at
-          ? { accountId: at.accountId, lineItemIds: clip.ids }
-          : null;
-    // Rows have to land in an account, and which one is not for this to guess.
-    if (!body) {
-      notify.info(t("pasteNeedsAccount"));
-      return true;
-    }
-    // Only this sheet's accounts change, so only those are taken from the
-    // answer: the cost centre it is linked to is the page's own, and the
-    // response has no opinion about the result unit derived from it.
-    api(`/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`, "POST", body, (b, data) =>
-      withSheet(b, cc.id, (sheet) => ({ ...sheet, accounts: (data as BudgetCC).accounts })),
-    );
-    return true;
-  }
-
-  /**
-   * The sheet's own keys, taken before the cell layer sees them — that one
-   * swallows anything it doesn't recognise while a cell is merely selected.
-   *
-   * Nothing is taken while a cell is being edited: ⌘C there is copying text out
-   * of a formula, and it has nothing to do with the rows.
-   */
-  function sheetKeys(e: React.KeyboardEvent): boolean {
-    if (cellEdit.className.includes("is-editing")) return false;
-    if (!e.metaKey && !e.ctrlKey) return false;
-    if (e.key === "c" || e.key === "C") {
-      // Nothing copied means nothing taken: the browser's own copy still works
-      // anywhere in the sheet that isn't a row.
-      if (!copyHere()) return false;
-      e.preventDefault();
-      return true;
-    }
-    if (e.key === "v" || e.key === "V") {
-      if (!pasteHere()) return false;
-      e.preventDefault();
-      return true;
-    }
-    return false;
-  }
 
   const sheetProps = {
     ...cellEdit,
     onKeyDownCapture: (e: React.KeyboardEvent) => {
-      if (sheetKeys(e)) return;
+      if (sheetKeys(e, cellEdit.className.includes("is-editing"))) return;
       cellEdit.onKeyDownCapture(e);
     },
   };
@@ -533,7 +373,7 @@ export function CostCenterSheet(props: {
    *  square — the one the multi-select picker marks its options with. */
   function tickBox(kind: "rows" | "accounts", id: string, label: string) {
     return (
-      <Checkbox checked={ticked[kind].has(id)} onChange={() => toggle(kind, id)} label={label} />
+      <Checkbox checked={isTicked(kind, id)} onChange={() => toggle(kind, id)} label={label} />
     );
   }
 
@@ -638,420 +478,16 @@ export function CostCenterSheet(props: {
     };
   }, [draggingLineId, api, lift, place]);
 
-  function accountBlock(account: Account) {
-    const accountKey = `${ccCode}:${account.accountCode}`;
-    const total = ev.accounts[accountKey];
-    const totalIncomplete = badAccount.has(accountKey);
-    const open = openComments.has(account.id);
-    const d = draft(account.id);
-    const incomeLike = effectiveKind(account.accountCode, account.kindOverride) === "INCOME";
-
-    // The same account on the other side. Rows are matched on their description
-    // (lineKeys), so `keys[i]` is what this sheet's i-th row is known as over
-    // there, and anything left over is a row only they have.
-    const cmp = compareAccounts.get(account.accountCode);
-    // Off the rows as drawn, not as they arrived: a row being dragged is in a
-    // different place, and its comparison has to travel with it.
-    const lines = linesOf(account);
-    const keys = lineKeys(lines);
-    const cmpLines = new Map((cmp?.lines ?? []).map((l) => [l.key, l]));
-    const ghostLines = (cmp?.lines ?? []).filter((l) => !keys.includes(l.key));
-
-    // Editorial changes in force on this account. They are already inside
-    // `total` — the evaluator adds them (lib/budget/eval.ts) — so the rows below
-    // are what makes the figure explicable rather than merely different from
-    // what was adopted.
-    const adjRows = adjustments.get(account.id) ?? [];
-    const adjTotal = adjRows.reduce((sum, r) => sum + r.amount, 0);
-    return (
-      <tbody key={account.id} className="border-b border-border">
-        {/* Marked like the rows below it: standing in this line and copying
-            takes the account and everything under it. */}
-        <tr data-account-row={account.id} className="group bg-background">
-          {gut(
-            grid.accountRow.get(`${ccCode}|${account.id}`),
-            isAdmin && tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
-          )}
-          <td className="group relative border-r border-border/60 bg-brand p-0 align-middle">
-            {isAdmin && (
-              <DragHandle
-                onDragStart={(e) => { e.dataTransfer.setData("accountId", account.id); e.dataTransfer.effectAllowed = "move"; }}
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center px-1.5 text-on-brand/60 hover:text-on-brand group-hover:pointer-events-auto"
-                title={t("dragToSection")}
-              />
-            )}
-            {isAdmin ? (
-              <Combobox
-                options={accountOptionsFor(account.accountCode)}
-                value={account.accountCode}
-                onChange={(v) => {
-                  if (v === account.accountCode) return;
-                  // The code pulls the name with it, resolved from the chart, so
-                  // both are taken off the answer — and only those two, since
-                  // the account's rows are not in it.
-                  api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v }, (b, data) =>
-                    withAccount(b, account.id, (a) => ({
-                      ...a,
-                      accountCode: (data as Account).accountCode,
-                      accountName: (data as Account).accountName,
-                    })),
-                  );
-                }}
-                placeholder={tBook("accountPlaceholder")}
-                searchPlaceholder={tBook("accountSearch")}
-                emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-                align="center"
-                buttonClassName="px-2 py-1.5 font-mono text-sm font-semibold text-on-brand"
-                chevronClassName="text-on-brand/60"
-                aria-label={t("accountNumber")}
-              />
-            ) : (
-              <div className="px-2 py-1.5 text-center font-mono text-sm font-semibold text-on-brand">
-                {account.accountCode}
-              </div>
-            )}
-          </td>
-          {/* Read-only: the name follows the account code from the chart. */}
-          <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
-            {account.accountName}
-          </td>
-          {actualPad}
-          <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
-            <span className="flex items-center">
-              {isAdmin && del(
-                () => api(`/api/budget-accounts/${account.id}`, "DELETE", undefined, (b) =>
-                  withoutAccount(b, account.id),
-                ),
-                t("removeAccount"),
-              )}
-            </span>
-          </td>
-        </tr>
-
-        {lines.map((li, i) => (
-          <tr
-            key={li.id}
-            // What a drag reads the sheet by: every row it may land among says
-            // which row it is and whose account it belongs to.
-            data-line={li.id}
-            data-account={account.id}
-            // Only ever set, never cleared: a row carried into another account
-            // is a different <tr> under a different <tbody>, and React mounts
-            // the new one around the same time it drops the old.
-            ref={(el) => {
-              if (el && draggingLineId === li.id) liftRef.current = el;
-            }}
-            className={cn(
-              "group border-t border-border/40 transition-colors hover:bg-surface/40",
-              // Lifted: over the rows it passes, on the sheet's own background
-              // so they don't read through it, and outlined so it is a row in
-              // hand rather than one that happens to overlap. Outline and not a
-              // shadow: box-shadow is not painted on the rows of a
-              // border-collapse table, which this is.
-              //
-              // `pointer-events-none` is what lets the drag see the sheet
-              // underneath it — the row is directly under the pointer the whole
-              // way, and it cannot be the answer to what it is over.
-              draggingLineId === li.id &&
-                "pointer-events-none relative z-10 bg-background outline outline-1 outline-border",
-              // Ticked, and so part of what a copy would take.
-              ticked.rows.has(li.id) && "bg-accent-soft/40",
-            )}
-          >
-            {gut(
-              grid.lineRow.get(`${ccCode}|${li.id}`),
-              isAdmin && tickBox("rows", li.id, t("selectRow")),
-            )}
-            {columns.map((col) => lineCell(col, li, account))}
-            {showCompare && (
-              <CompareCells other={cmpLines.get(keys[i])?.values[1]} own={ev.lineItems[li.id]} incomeLike={incomeLike} />
-            )}
-            <td className="px-1 text-left text-muted">
-              {isAdmin && del(
-                () => api(liUrl(li.id), "DELETE", undefined, (b) => withoutLine(b, li.id)),
-                tAlloc("removeRow"),
-              )}
-            </td>
-          </tr>
-        ))}
-
-        {/* Editorial changes, one row each, under the adopted rows they change.
-            Never editable — a change is amended by recording another one, not
-            by rewriting it (see the changes view). */}
-        {adjRows.map((row) => (
-          <tr key={row.change.id} className="border-t border-border/40 bg-warning-soft/40">
-            {gut(undefined)}
-            {columns.map((col) => {
-              if (col.key === "beskrivning") return (
-                <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-                  <span className="flex items-center gap-1.5 pl-3">
-                    <span className="shrink-0 font-medium text-warning">
-                      {tChanges("label", { kind: row.change.kind, seq: row.change.seq })}
-                    </span>
-                    <span className="min-w-0 truncate text-muted" title={row.change.reason}>
-                      {row.change.reason}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted/70">
-                      {date(row.change.createdAt)}
-                    </span>
-                  </span>
-                </td>
-              );
-              if (col.key === "expression") return (
-                <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-right font-medium tabular-nums">
-                  {fmtSigned(row.amount)}
-                </td>
-              );
-              return <td key={col.key} className="border-r border-border/60" />;
-            })}
-            {actualPad}
-            <td />
-          </tr>
-        ))}
-
-        {/* Rows only the other side has. Nothing here is editable: they are not
-            this budget's rows, and adding them is a decision, not a formality. */}
-        {ghostLines.map((l) => (
-          <tr key={`ghost-${l.key}`} className="border-t border-border/40 text-muted">
-            {gut(undefined)}
-            {columns.map((col) => (
-              <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-                {col.key === "beskrivning" && <span className="pl-3">{l.description || "—"}</span>}
-              </td>
-            ))}
-            <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />
-            <td />
-          </tr>
-        ))}
-
-        {isAdmin && (
-          // Also where a dragged row lands when it is carried this far down an
-          // account — including an account with no rows of its own, which has
-          // nothing else to aim at.
-          <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
-          <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
-            {columns.map((col) => {
-              const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40 focus:bg-accent-soft/40";
-              const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
-              if (col.key === "beskrivning") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={t("newLine")} value={d.description} onChange={(e) => setDraft(account.id, { description: e.target.value })} onKeyDown={onEnter} placeholder={t("newLine")} className={cn(base, "pl-5 text-sm text-muted")} /></td>;
-              if (col.key === "expression") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={tCol("expression")} value={d.expression} onChange={(e) => setDraft(account.id, { expression: e.target.value })} onKeyDown={onEnter} onBlur={() => createLine(account.id)} placeholder={tCol("expression").toLowerCase()} className={cn(base, "text-right font-mono text-xs")} /></td>;
-              return <td key={col.key} className="border-r border-border/60" />;
-            })}
-            {actualPad}
-            <td />
-          </tr>
-        )}
-
-        {/* Account total, summed below the individual lines (under Belopp). The
-            two trailing cells carry the compared figure and its diff vs budget. */}
-        <tr className="border-t border-border/60 bg-surface/40">
-          {gut(undefined)}
-          <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted">
-            {t("sum")}
-            {/* What the account said before the changes — the number that was
-                voted through, kept beside the one in force so neither has to be
-                worked out from the other. */}
-            {adjTotal !== 0 && total !== undefined && (
-              <span className="ml-2 font-normal normal-case tracking-normal text-muted/70">
-                {t("originally", { amount: fmt(total - adjTotal) })}
-              </span>
-            )}
-            {/* Says the sum is short a row rather than letting a partial total
-                pass for the budgeted amount. The rows themselves are already
-                marked; this is the figure they add up to admitting it. */}
-            {totalIncomplete && (
-              <span className="ml-2 font-normal normal-case tracking-normal text-warning">
-                {t("incompleteSum")}
-              </span>
-            )}
-          </td>
-          <td className={cn("px-2 py-1.5 text-right font-semibold tabular-nums", totalIncomplete && "text-warning", total !== undefined && total < 0 && !totalIncomplete && "text-danger")}>{fmt(total)}</td>
-          {showCompare && <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />}
-          <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
-            {canComment && (
-              <button
-                onClick={() => setOpenComments((s) => { const n = new Set(s); if (n.has(account.id)) n.delete(account.id); else n.add(account.id); return n; })}
-                title={t("comments")}
-                aria-label={t("commentsCount", { count: account.comments.length })}
-                aria-expanded={open}
-                className={cn(
-                  "flex items-center gap-1 rounded-lg px-1.5 py-1 tabular-nums transition hover:bg-surface hover:text-foreground",
-                  // Accent while the thread is open; a plain (unmuted) icon means
-                  // "there is something to read here" without opening it.
-                  open ? "text-accent" : account.comments.length > 0 && "text-foreground",
-                )}
-              >
-                <IconComment className="size-4" />
-                {account.comments.length > 0 && account.comments.length}
-              </button>
-            )}
-          </td>
-        </tr>
-
-        {open && (
-          <tr className="bg-surface/20">
-            {/* sheet-field: what's in here is a form field, not a sheet cell —
-                it keeps the app's focus ring and this row draws no cell box. */}
-            <td colSpan={totalCols} className="sheet-field px-4 py-3">
-              <div className="space-y-2">
-                {account.comments.length === 0 && <p className="text-xs text-muted">{t("noComments")}</p>}
-                {account.comments.map((cm) => (
-                  <div key={cm.id} className="group flex items-start gap-2 text-sm">
-                    <span className="shrink-0 font-medium">{cm.author.name}</span>
-                    <span className="flex-1 text-muted">{cm.body}</span>
-                    {(cm.author.id === userId || isAdmin) && (
-                      <span className="shrink-0">{del(
-                        () => api(`/api/budget-comments/${cm.id}`, "DELETE", undefined, (b) =>
-                          withoutComment(b, cm.id),
-                        ),
-                        t("removeComment"),
-                      )}</span>
-                    )}
-                  </div>
-                ))}
-                {canComment && (
-                  <input
-                    value={commentDraft[account.id] ?? ""}
-                    onChange={(e) => setCommentDraft((m) => ({ ...m, [account.id]: e.target.value }))}
-                    onKeyDown={async (e) => {
-                      if (e.key !== "Enter") return;
-                      const body = (commentDraft[account.id] ?? "").trim();
-                      if (!body) return;
-                      const ok = await api(
-                        `/api/budget-accounts/${account.id}/comments`,
-                        "POST",
-                        { body },
-                        (b, data) => withComment(b, account.id, data as Comment),
-                      );
-                      if (ok) setCommentDraft((m) => ({ ...m, [account.id]: "" }));
-                    }}
-                    placeholder={t("commentPlaceholder")}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
-                  />
-                )}
-              </div>
-            </td>
-          </tr>
-        )}
-      </tbody>
-    );
-  }
 
   // A whole account only the other side has: it is budgeted for (or was spent
   // on) over there and not at all here. Shown in full, read-only, so the gap is
   // legible down to the row — this is the case a left join would have hidden.
-  function ghostAccountBlock(account: JoinedAccount) {
-    const incomeLike = account.kind === "INCOME";
-    return (
-      <tbody key={`ghost-${account.code}`} className="border-b border-border">
-        <tr className="bg-background text-muted">
-          {gut(undefined)}
-          {/* A ghost row's account cell is the real cell held back, so it keeps
-              the pink but at a fraction. The label follows the ground rather
-              than the fill: at this alpha the fill lands pale over white and
-              dark over the dark canvas, and a fixed near-black label was 2.3:1
-              in the dark theme. */}
-          <td className="border-r border-border/60 bg-brand/25 px-2 py-1.5 text-center font-mono text-sm font-semibold text-foreground">
-            {account.code}
-          </td>
-          <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
-            {account.name}
-            <span className="ml-2 text-xs font-normal">· {tRam("notInThisBudget")}</span>
-          </td>
-          <CompareCells other={account.totals[1]} own={undefined} incomeLike={incomeLike} strong />
-          <td />
-        </tr>
-        {account.lines.map((l) => (
-          <tr key={l.key} className="border-t border-border/40 text-muted">
-            {gut(undefined)}
-            {columns.map((col) => (
-              <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-                {col.key === "beskrivning" && <span className="pl-3">{l.description || "—"}</span>}
-              </td>
-            ))}
-            <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />
-            <td />
-          </tr>
-        ))}
-      </tbody>
-    );
-  }
 
   // The "+ new account" row at the foot of a section. One picker over the chart —
   // the name follows from the account, so there is nothing else to type.
-  function addAccountRow(kind: AccountKind) {
-    if (!isAdmin) return null;
-    return (
-      <tbody>
-        <tr className="bg-background">
-          <td className="w-9 border-r border-border/60" />
-          <td className="p-0" colSpan={columns.length + 1}>
-            <Combobox
-              options={accountOptions}
-              value=""
-              onChange={(v) => createAccount(kind, v)}
-              placeholder={t(kind === "INCOME" ? "newIncomeAccount" : "newCostAccount")}
-              searchPlaceholder={tBook("accountSearch")}
-              emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-              buttonClassName="w-full bg-transparent px-2 py-1.5 text-sm text-muted/60 hover:bg-accent-soft/40"
-              aria-label={t("addAccount")}
-            />
-          </td>
-          {actualPad}
-        </tr>
-      </tbody>
-    );
-  }
 
   // One section (income / costs) as its own rounded card. The whole card
   // is a drop zone — dropping an account row here flips it to this kind.
-  function sectionCard(kind: AccountKind, label: string, accts: Account[], ghosts: JoinedAccount[], total: number) {
-    const active = dropKind === kind;
-    return (
-      <div
-        {...dropProps(kind)}
-        className={cn(
-          "budget-grid overflow-x-auto rounded-2xl border bg-background transition-colors",
-          active ? "border-accent ring-1 ring-accent" : "border-border",
-        )}
-      >
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">
-            {label}
-            {active && <span className="ml-2 text-xs font-normal text-muted">— {t("dropHere")}</span>}
-          </h3>
-          <span className="text-sm tabular-nums text-muted">{fmt(total)}</span>
-        </div>
-        <table className="w-full border-collapse text-sm table-fixed">
-          <colgroup>
-            <col style={{ width: GUT_W }} />
-            {columns.map((col) => { const w = staticWidth(col); return <col key={col.key} style={w ? { width: w } : undefined} />; })}
-            {showCompare && <col style={{ width: 104 }} />}
-            {showCompare && <col style={{ width: 96 }} />}
-            <col style={{ width: ACT_W }} />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-border text-left text-xs font-medium text-muted">
-              {narrow ? (
-                <th className="p-0" />
-              ) : (
-                <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted/50">#</th>
-              )}
-              {columns.map((col) => (
-                <Hc key={col.key} letter={col.letter} align={col.kind === "number" ? "right" : undefined}>{col.custom ? col.name : tCol(col.name)}</Hc>
-              ))}
-              {showCompare && compare && <th className="border-l border-border/60 px-2 py-2 text-right font-medium">{compare.label}</th>}
-              {showCompare && <th className="border-r border-border/60 px-2 py-2 text-right font-medium">{tLedger("col.diff")}</th>}
-              <th className="border-l border-border/60" />
-            </tr>
-          </thead>
-          {accts.map(accountBlock)}
-          {ghosts.map(ghostAccountBlock)}
-          {addAccountRow(kind)}
-        </table>
-      </div>
-    );
-  }
 
   // Written once and drawn twice — the strip on a phone and the tiles above md
   // must never be able to disagree about what the sheet comes to.
@@ -1061,212 +497,211 @@ export function CostCenterSheet(props: {
     { label: tRam("result"), v: totals.result, a: compareTotals.result, signed: true, incomeLike: true, impact: changeImpact },
   ];
 
+  // Everything the rows below need, gathered once. The sheet is four nested
+  // levels of table and every one of them asks the same questions, so they ask
+  // this rather than being handed forty-odd props each — see ./sheet-context.
+  const sheet: SheetValue = {
+    cc, ccCode, budgetId, columns, grid, ev, accounts, adjustments, compare, showCompare,
+    isAdmin, canComment, userId,
+    renderCell, renderFormula, api, date,
+    narrow, gut, del, actualPad, totalCols, gutWidth: GUT_W, actionsWidth: ACT_W, staticWidth,
+    t, tCol, tRam, tChanges, tAlloc, tBook, tLedger,
+    income, cost, totals, compareTotals, compareAccounts, changeImpact,
+    badAccount, badLine, liUrl, accountOptionsFor,
+    dropKind, dropProps,
+    isTicked, marked, tickBox,
+    draggingLineId, liftRef, linesOf, startLineDrag,
+    draft, setDraft, createLine, createAccount,
+    openComments, setOpenComments, commentDraft, setCommentDraft,
+  };
+
   return (
-    <div ref={sheetRef} {...sheetProps}>
-      {/* summary — the same three figures in two shapes.
-          Not a <Card>, on purpose and for the same reason the sheets below
-          don't look like the rest of the app: no shadow, and the figures in the
-          sheet's own flat notation rather than the app's Amount (see DESIGN.md
-          → Money). A tile carries three things a stat card doesn't — the
-          compared side, the difference from it, and how far the editorial
-          changes have moved the result. */}
+    <SheetProvider value={sheet}>
+      <div ref={sheetRef} {...sheetProps}>
+        {/* summary — the same three figures in two shapes.
+            Not a <Card>, on purpose and for the same reason the sheets below
+            don't look like the rest of the app: no shadow, and the figures in the
+            sheet's own flat notation rather than the app's Amount (see DESIGN.md
+            → Money). A tile carries three things a stat card doesn't — the
+            compared side, the difference from it, and how far the editorial
+            changes have moved the result. */}
 
-      {/* On a phone: one strip, pinned under the app bar.
-          StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
-          one column — so the three tiles stacked to 266–362px, and most of the
-          first screenful of a budget was three numbers. Here they are 56px, and
-          they stay on screen while you scroll the rows that decide them, which
-          is when the result is actually worth looking at. What the tiles said
-          underneath — the compared side and what the changes have done — is one
-          tap down rather than always printed. */}
-      <div className="sticky top-14 z-10 rounded-2xl border border-border bg-background shadow-[var(--shadow-card)] md:hidden">
-        <button
-          type="button"
-          onClick={() => setSummaryOpen((o) => !o)}
-          aria-expanded={summaryOpen}
-          className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
-        >
-          {summary.map((s) => (
-            <span key={s.label} className="min-w-0">
-              <span className="block truncate text-[11px] text-muted">{s.label}</span>
-              <span
-                className={cn(
-                  "block truncate text-sm font-semibold tabular-nums",
-                  s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
-                )}
-              >
-                {s.signed ? fmtSigned(s.v) : fmt(s.v)}
-              </span>
-            </span>
-          ))}
-        </button>
-
-        {summaryOpen && (
-          <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
-            {compare &&
-              summary.map((s) => (
-                <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
-                  <span className="truncate">
-                    {s.label} · {compare.label}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-foreground">
-                    {fmt(s.a)}
-                    <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
-                      {fmtSigned(s.a - s.v)}
-                    </span>
-                  </span>
-                </p>
-              ))}
-            {changeImpact !== 0 && (
-              <p className="flex items-baseline justify-between gap-2 text-muted">
-                <span className="truncate">{tRam("changes")}</span>
-                <span className="shrink-0 tabular-nums">
-                  <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
-                  <span className="ml-2 text-muted">
-                    {t("originallyLabel")}{" "}
-                    <span className="tabular-nums text-foreground">
-                      {fmtSigned(totals.result - changeImpact)}
-                    </span>
-                  </span>
+        {/* On a phone: one strip, pinned under the app bar.
+            StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
+            one column — so the three tiles stacked to 266–362px, and most of the
+            first screenful of a budget was three numbers. Here they are 56px, and
+            they stay on screen while you scroll the rows that decide them, which
+            is when the result is actually worth looking at. What the tiles said
+            underneath — the compared side and what the changes have done — is one
+            tap down rather than always printed. */}
+        <div className="sticky top-14 z-10 rounded-2xl border border-border bg-background shadow-[var(--shadow-card)] md:hidden">
+          <button
+            type="button"
+            onClick={() => setSummaryOpen((o) => !o)}
+            aria-expanded={summaryOpen}
+            className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
+          >
+            {summary.map((s) => (
+              <span key={s.label} className="min-w-0">
+                <span className="block truncate text-[11px] text-muted">{s.label}</span>
+                <span
+                  className={cn(
+                    "block truncate text-sm font-semibold tabular-nums",
+                    s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
+                  )}
+                >
+                  {s.signed ? fmtSigned(s.v) : fmt(s.v)}
                 </span>
-              </p>
-            )}
-            {/* The comparison's own columns add ~200px to a sheet that has
-                361px to spend, so on a phone they are asked for rather than
-                assumed. Off, the sheet fits; on, it scrolls sideways — which is
-                a fair price for a thing you turned on. */}
-            {compare && (
-              <button
-                type="button"
-                onClick={() => setCompareOnPhone((v) => !v)}
-                className="text-xs font-medium text-accent"
-              >
-                {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+              </span>
+            ))}
+          </button>
 
-      {/* From md: the three tiles, exactly as they were. */}
-      <div className="hidden md:block">
-        <StatRow>
-          {summary.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-border bg-background px-4 py-3">
-              <p className="text-xs text-muted">{s.label}</p>
-              <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
-                {s.signed ? fmtSigned(s.v) : fmt(s.v)}
-              </p>
-              {compare && (
-                <p className="mt-1 text-xs text-muted">
-                  {compare.label} <span className="tabular-nums text-foreground">{fmt(s.a)}</span>
-                  <span className={cn("ml-2 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>{fmtSigned(s.a - s.v)}</span>
+          {summaryOpen && (
+            <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
+              {compare &&
+                summary.map((s) => (
+                  <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
+                    <span className="truncate">
+                      {s.label} · {compare.label}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-foreground">
+                      {fmt(s.a)}
+                      <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
+                        {fmtSigned(s.a - s.v)}
+                      </span>
+                    </span>
+                  </p>
+                ))}
+              {changeImpact !== 0 && (
+                <p className="flex items-baseline justify-between gap-2 text-muted">
+                  <span className="truncate">{tRam("changes")}</span>
+                  <span className="shrink-0 tabular-nums">
+                    <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
+                    <span className="ml-2 text-muted">
+                      {t("originallyLabel")}{" "}
+                      <span className="tabular-nums text-foreground">
+                        {fmtSigned(totals.result - changeImpact)}
+                      </span>
+                    </span>
+                  </span>
                 </p>
               )}
-              {/* The result is the one in force; this is how far it has moved from
-                  the adopted one, and in which direction. */}
-              {s.impact !== undefined && s.impact !== 0 && (
-                <p className="mt-1 text-xs text-muted">
-                  {tRam("changes")}{" "}
-                  <span className={cn("tabular-nums", diffClass(s.impact, true))}>{fmtSigned(s.impact)}</span>
-                  <span className="ml-2">
-                    {t("originallyLabel")}{" "}
-                    <span className="tabular-nums text-foreground">{fmtSigned(s.v - s.impact)}</span>
-                  </span>
-                </p>
+              {/* The comparison's own columns add ~200px to a sheet that has
+                  361px to spend, so on a phone they are asked for rather than
+                  assumed. Off, the sheet fits; on, it scrolls sideways — which is
+                  a fair price for a thing you turned on. */}
+              {compare && (
+                <button
+                  type="button"
+                  onClick={() => setCompareOnPhone((v) => !v)}
+                  className="text-xs font-medium text-accent"
+                >
+                  {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
+                </button>
               )}
             </div>
-          ))}
-        </StatRow>
+          )}
+        </div>
+
+        {/* From md: the three tiles, exactly as they were. */}
+        <div className="hidden md:block">
+          <StatRow>
+            {summary.map((s) => (
+              <div key={s.label} className="rounded-2xl border border-border bg-background px-4 py-3">
+                <p className="text-xs text-muted">{s.label}</p>
+                <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
+                  {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+                </p>
+                {compare && (
+                  <p className="mt-1 text-xs text-muted">
+                    {compare.label} <span className="tabular-nums text-foreground">{fmt(s.a)}</span>
+                    <span className={cn("ml-2 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>{fmtSigned(s.a - s.v)}</span>
+                  </p>
+                )}
+                {/* The result is the one in force; this is how far it has moved from
+                    the adopted one, and in which direction. */}
+                {s.impact !== undefined && s.impact !== 0 && (
+                  <p className="mt-1 text-xs text-muted">
+                    {tRam("changes")}{" "}
+                    <span className={cn("tabular-nums", diffClass(s.impact, true))}>{fmtSigned(s.impact)}</span>
+                    <span className="ml-2">
+                      {t("originallyLabel")}{" "}
+                      <span className="tabular-nums text-foreground">{fmtSigned(s.v - s.impact)}</span>
+                    </span>
+                  </p>
+                )}
+              </div>
+            ))}
+          </StatRow>
+        </div>
+
+        {/* What is ticked, and what it can be made into. It appears only once
+            something is, so the sheet is as quiet as it was until you start. */}
+        {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface/60 px-4 py-2 text-sm">
+            <span className="font-medium">
+              {marked.accounts.length > 0
+                ? t("markedAccounts", { count: marked.accounts.length })
+                : t("markedRows", { count: marked.rows.length })}
+            </span>
+            <button
+              type="button"
+              onClick={copySelection}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              {t("copyMarked")}
+            </button>
+            <span className="text-xs text-muted">⌘/Ctrl+C</span>
+            <button
+              type="button"
+              onClick={clearTicks}
+              className="ml-auto text-xs font-medium text-accent hover:underline"
+            >
+              {t("clearMarked")}
+            </button>
+          </div>
+        )}
+
+        {/* What is on the clipboard, and what to do with it. Here rather than
+            against every account: a copy is one thing at a time, and it is the
+            same one wherever in the budget you have gone to put it. It is also
+            the only place the shortcut is written down, which is what stops the
+            whole feature from being a secret. */}
+        {isAdmin && clip && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
+            <span className="font-medium">
+              {clip.kind === "rows"
+                ? t("copiedRows", { count: clip.ids.length })
+                : t("copiedAccountCode", { code: clip.label })}
+            </span>
+            <span className="text-xs text-muted">
+              {clip.kind === "rows" ? t("pasteRowsHint") : t("pasteAccountsHint")}
+            </span>
+            <button
+              type="button"
+              onClick={() => onCopy(null)}
+              className="ml-auto text-xs font-medium text-accent hover:underline"
+            >
+              {t("clearClipboard")}
+            </button>
+          </div>
+        )}
+
+        <SectionCard
+          kind="INCOME"
+          label={tRam("income")}
+          accts={income}
+          ghosts={ghostAccounts.filter((a) => a.kind === "INCOME")}
+          total={totals.income}
+        />
+        <SectionCard
+          kind="COST"
+          label={tRam("costs")}
+          accts={cost}
+          ghosts={ghostAccounts.filter((a) => a.kind === "COST")}
+          total={totals.cost}
+        />
       </div>
-
-      {/* What is ticked, and what it can be made into. It appears only once
-          something is, so the sheet is as quiet as it was until you start. */}
-      {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface/60 px-4 py-2 text-sm">
-          <span className="font-medium">
-            {marked.accounts.length > 0
-              ? t("markedAccounts", { count: marked.accounts.length })
-              : t("markedRows", { count: marked.rows.length })}
-          </span>
-          <button
-            type="button"
-            onClick={copySelection}
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            {t("copyMarked")}
-          </button>
-          <span className="text-xs text-muted">⌘/Ctrl+C</span>
-          <button
-            type="button"
-            onClick={clearTicks}
-            className="ml-auto text-xs font-medium text-accent hover:underline"
-          >
-            {t("clearMarked")}
-          </button>
-        </div>
-      )}
-
-      {/* What is on the clipboard, and what to do with it. Here rather than
-          against every account: a copy is one thing at a time, and it is the
-          same one wherever in the budget you have gone to put it. It is also
-          the only place the shortcut is written down, which is what stops the
-          whole feature from being a secret. */}
-      {isAdmin && clip && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
-          <span className="font-medium">
-            {clip.kind === "rows"
-              ? t("copiedRows", { count: clip.ids.length })
-              : t("copiedAccountCode", { code: clip.label })}
-          </span>
-          <span className="text-xs text-muted">
-            {clip.kind === "rows" ? t("pasteRowsHint") : t("pasteAccountsHint")}
-          </span>
-          <button
-            type="button"
-            onClick={() => onCopy(null)}
-            className="ml-auto text-xs font-medium text-accent hover:underline"
-          >
-            {t("clearClipboard")}
-          </button>
-        </div>
-      )}
-
-      {sectionCard("INCOME", tRam("income"), income, ghostAccounts.filter((a) => a.kind === "INCOME"), totals.income)}
-      {sectionCard("COST", tRam("costs"), cost, ghostAccounts.filter((a) => a.kind === "COST"), totals.cost)}
-    </div>
-  );
-}
-
-// The compared figure and its difference from the budgeted one — the two cells
-// that follow Belopp whenever a comparison is on. An absent figure on the other
-// side leaves the difference blank rather than reading it as a fall to zero;
-// an absent figure on this side is a real zero, since not budgeting for
-// something is budgeting nothing for it.
-function CompareCells({ other, own, incomeLike, strong }: {
-  other: number | undefined; own: number | undefined; incomeLike: boolean; strong?: boolean;
-}) {
-  const diff = other === undefined ? undefined : other - (own ?? 0);
-  return (
-    <>
-      <td className={cn("border-l border-border/40 px-2 py-1.5 text-right tabular-nums text-muted", strong && "font-semibold")}>
-        {fmt(other)}
-      </td>
-      <td className={cn("px-2 py-1.5 text-right tabular-nums", strong && "font-semibold", diff !== undefined && diffClass(diff, incomeLike))}>
-        {fmtSigned(diff)}
-      </td>
-    </>
-  );
-}
-
-// Column header with its A1 letter shown before the name (the six general
-// columns are unnamed, so they show just their letter).
-function Hc({ letter, align, title, children }: {
-  letter: string; align?: "right"; title?: string; children: React.ReactNode;
-}) {
-  return (
-    <th title={title} className={cn("border-r border-border/60 px-2 py-2", align === "right" ? "text-right" : "text-left")}>
-      <span className="mr-1 font-mono text-[10px] font-normal text-muted/40">{letter}</span>{children}
-    </th>
+    </SheetProvider>
   );
 }

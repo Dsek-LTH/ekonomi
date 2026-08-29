@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { IconHelp } from "@/components/ui/icons";
+import { useDismissOnOutside } from "@/lib/ui/dismiss";
+import { useEscape } from "@/lib/ui/escape";
 import { cn } from "@/lib/ui/utils";
 
 // A "?" beside a control, with the explanation the control itself has no room
@@ -31,23 +33,15 @@ export function InfoHint({
   const id = useId();
   const wrap = useRef<HTMLSpanElement>(null);
 
-  // Escape closes, and so does a click anywhere else — a panel opened by a tap
+  // Escape closes, and so does a press anywhere else — a panel opened by a tap
   // has no pointer leaving it to close it again.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    const onPointer = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointer);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open]);
+  //
+  // Escape goes through the shared stack rather than a listener of this hint's
+  // own. The listener here was a plain one that never stopped the event, so a
+  // hint opened inside a dialog handed the same keypress to the dialog behind
+  // it and one press closed both. See lib/ui/escape.ts.
+  useEscape(open, () => setOpen(false));
+  useDismissOnOutside(open, wrap, () => setOpen(false));
 
   return (
     <span

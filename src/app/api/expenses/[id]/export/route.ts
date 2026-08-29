@@ -35,6 +35,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     include: {
       verification: { include: { lines: { include: { costCenter: true } } } },
       receipts: { orderBy: { createdAt: "desc" }, take: 1 },
+      // No odometer readings loaded here: a milersättning's journey is printed
+      // on the cover, and the cover reads them itself.
     },
   });
   if (!expense) return fail(404, "expense.notFound");
@@ -85,7 +87,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // What goes up is the utläggsräkning: the cover page naming who attested each
   // cost-centre slice, with the receipt behind it. That is the whole point of
   // the page — in Fortnox a voucher's attachment is the only place the approval
-  // trail can be seen, and a bare receipt does not carry it.
+  // trail can be seen, and a bare receipt does not carry it. For a
+  // milersättning it is that page and nothing else: the journey is printed on
+  // it, and there is no receipt for driving your own car.
   //
   // The cover is written here, at export, and the receipt is already stored;
   // they are joined on the way out rather than archived merged, so the
@@ -114,6 +118,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       }
       step = "readReceipt";
       const cover = new Uint8Array((await getObjectBuffer(stored.key)).bytes);
+      // What goes behind the cover: the receipt, where there is one. A
+      // milersättning has none and needs none — its journey is a section of the
+      // cover, so the one file uploaded here is already the whole utläggsräkning
+      // and its underlag together.
       const underlag = receipt
         ? {
             bytes: new Uint8Array((await getObjectBuffer(receipt.objectKey)).bytes),

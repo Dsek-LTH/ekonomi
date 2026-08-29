@@ -60,9 +60,9 @@ export default function BudgetClient({
   const { date } = useFormat();
   const notify = useNotify();
   const { mutate } = useMutation();
-  const isAdmin = isAdminRole(user.roles);
-  const canComment = canCommentBudget(user.roles);
-  const canLock = canLockBudget(user.roles);
+  const isAdmin = isAdminRole(user.capabilities);
+  const canComment = canCommentBudget(user.capabilities);
+  const canLock = canLockBudget(user.capabilities);
 
   // The budget lives in client state because editing it is a client concern:
   // committing a cell re-evaluates every formula in the browser (see
@@ -198,7 +198,7 @@ export default function BudgetClient({
   // The other door: a locked budget is changed by recording a deviation or a
   // transfer beside it, which is the treasurer's alone (see
   // canChangeLockedBudget) and only exists while it is locked.
-  const canChange = canChangeLockedBudget(user.roles) && locked;
+  const canChange = canChangeLockedBudget(user.capabilities) && locked;
 
   // Cell renderers + buffered-edit / focus state + optimistic commit.
   const { renderCell, renderFormula } = useBudgetCells({ grid, isAdmin: canEdit, budget, setBudget, mutate, load, api });

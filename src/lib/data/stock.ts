@@ -23,6 +23,8 @@ export interface StockProductDto {
   nominalMl?: number;
   costPriceOre?: number;
   ean?: string;
+  /** Systembolaget's article number — see lib/stock/systembolaget.ts. */
+  systembolagetId?: string;
 }
 
 /** A product with what is on the shelf, which is the only way a screen wants it. */
@@ -54,6 +56,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
       nominalMl: true,
       costPriceOre: true,
       ean: true,
+      systembolagetId: true,
     },
   });
   return rows.map((p) => ({
@@ -66,6 +69,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
     nominalMl: opt(p.nominalMl),
     costPriceOre: opt(p.costPriceOre),
     ean: opt(p.ean),
+    systembolagetId: opt(p.systembolagetId),
   }));
 }
 

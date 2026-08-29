@@ -109,14 +109,27 @@ export function costCentreWhereForPrefixes(prefixes: string[]) {
 // Cached on the user id — a primitive, so it dedupes across every caller in a
 // request rather than only within one. Expense scoping, attest annotation and
 // the transition route all ask this same question.
+//
+// User.resultUnits holds *names*, derived from the Authentik group list at
+// sign-in (lib/server/authentik-roles.ts). The prefixes are resolved from those
+// names here rather than stored alongside them: a prefix added or moved in
+// Inställningar takes effect on the next request, where a copy on the user row
+// would go stale until everyone signed in again.
+//
+// A name with no ResultUnit row behind it contributes nothing — the mapping is
+// written by hand and can name a unit that does not exist. That is reported in
+// Inställningar → Resultatenheter rather than being left to surface as an
+// attest queue that is silently empty.
 const ownershipsOf = cache(async (userId: string) => {
-  const rows = await prisma.resultUnitOwner.findMany({
-    where: { userId },
-    include: { resultUnit: { include: { prefixes: { select: { value: true } } } } },
-  });
+  const [user, prefixes] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { resultUnits: true } }),
+    getPrefixes(),
+  ]);
+  const names = user?.resultUnits ?? [];
+  const owned = new Set(names);
   return {
-    names: rows.map((r) => r.resultUnit.name),
-    prefixes: rows.flatMap((r) => r.resultUnit.prefixes.map((p) => p.value)),
+    names,
+    prefixes: prefixes.filter((p) => owned.has(p.resultUnitName)).map((p) => p.value),
   };
 });
 
@@ -124,8 +137,9 @@ const NO_RESULT_UNITS = { names: [] as string[], prefixes: [] as string[] };
 
 /**
  * The result units `actor` answers for — empty for anyone not holding
- * RESULTATANSVARIG. An ownership only confers authority while the role backs
- * it, so the role is checked here rather than at every call site.
+ * RESULTATANSVARIG. The role and the units come from the same line of the same
+ * mapping, so this check is belt-and-braces rather than a second rule; it holds
+ * even for a row left behind by an older mapping.
  */
 export async function ownedResultUnits(actor: {
   id: string;

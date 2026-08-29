@@ -32,7 +32,7 @@ export default async function StockProductPage({
       product={product}
       occasions={occasions}
       cellar={cellar}
-      canManage={canManageStock(user.roles)}
+      canManage={canManageStock(user.capabilities)}
     />
   );
 }

@@ -35,7 +35,7 @@ export default async function AppLayout({
   // something the frame carries for them, not something they go to /profile to
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
-  const booksInFortnox = canLogInToFortnox(currentUser.roles);
+  const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
   const [holdsCard, fortnoxSession, cookieStore] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,

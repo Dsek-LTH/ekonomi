@@ -9,10 +9,9 @@
 // simply never appears until you search for them.
 //
 // Read-only, since sign-in moved to Authentik: roles are derived from the
-// Authentik group list on every sign-in and token refresh
-// (lib/server/authentik-roles.ts), so a role granted here would last until the
-// holder's next request and then quietly revert. The place to change one is the
-// mandate in Authentik. What this page is for now is answering "who holds
+// Authentik group list at each sign-in (lib/server/authentik-roles.ts), so a
+// role granted here would last until the holder next signed in and then quietly
+// revert. The place to change one is the mandate in Authentik. What this page is for now is answering "who holds
 // what, right now" — and showing when the answer is not what somebody expected,
 // which is the first thing you want to know when a mapping is wrong.
 import { useState } from "react";

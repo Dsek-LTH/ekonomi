@@ -199,6 +199,29 @@ export function beforeTheNight(
 }
 
 /**
+ * The two readings of a sheet a cell is judged against.
+ *
+ * They are not the same map, and treating them as one was a bug in both the
+ * browser and the route. Take eight beers out and, before saving, say one was
+ * dropped: judged against the log alone the night has taken nothing out, so a
+ * spill of one is one more than went out and is refused. The figure is on the
+ * screen; the rule was looking somewhere else.
+ *
+ * So the night's own arithmetic — what went out, what came home, what broke —
+ * reads `sheet`, which is what the sheet says now. Everything about the cellar
+ * reads `booked`, because the shelf has moved for the rows in the log and for
+ * nothing else: counting an unsaved checkout against it would spend the same
+ * bottles twice.
+ */
+export interface SheetState {
+  /** What the sheet reads: the log, plus whatever has been typed into it and
+   *  not yet saved (in the route, plus every cell of the request). */
+  sheet: Map<string, number>;
+  /** What the log holds, which is what `shelf` reflects. */
+  booked: Map<string, number>;
+}
+
+/**
  * Whether a cell may be set to this.
  *
  * Checked one cell at a time, because that is now how it is written — and the
@@ -209,15 +232,17 @@ export function beforeTheNight(
 export function cellFault(
   product: TagSubject,
   shelf: BottleStock,
-  cells: Map<string, number>,
+  state: SheetState,
   ref: CellRef,
   next: number,
 ): CellFault | null {
-  const now = cellValue(cells, ref);
+  // Against the log, not the sheet: this is what the cellar has already given
+  // up for this cell, and so what changing it moves.
+  const now = cellValue(state.booked, ref);
   const delta = next - now;
 
   // ── The night ──
-  const after = new Map(cells);
+  const after = new Map(state.sheet);
   after.set(cellKey(ref), next);
   const totals = totalsFromCells(product, ref.productId, after);
   if (totals.out - totals.back - totals.spilled < 0) return "moreThanWentOut";
@@ -237,7 +262,7 @@ export function cellFault(
   // measured against the shelf as it stands, because undoing a return really
   // does take those bottles off it.
   if (ref.kind === "CHECKOUT") {
-    if (next > beforeTheNight(shelf, cells, ref.productId, ref.level)) {
+    if (next > beforeTheNight(shelf, state.booked, ref.productId, ref.level)) {
       return ref.level === WHOLE ? "notThatManySealed" : "notThatManyOpen";
     }
   } else if (ref.level === WHOLE) {
@@ -253,7 +278,7 @@ export function cellFault(
   // bottles away from it.
   if (ref.kind === "CHECKOUT" && ref.level === WHOLE && delta > 0) {
     const standing = LEVELS.reduce(
-      (n, level) => n + beforeTheNight(shelf, cells, ref.productId, level),
+      (n, level) => n + beforeTheNight(shelf, state.booked, ref.productId, level),
       0,
     );
     if (standing > 0) return "openBottlesFirst";

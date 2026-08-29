@@ -22,11 +22,11 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { DateInput } from "@/components/ui/field";
-import { EmptyNote } from "@/components/ui/empty-state";
 import { IconBox, IconPlus } from "@/components/ui/icons";
 import { Notice } from "@/components/ui/notice";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
+import { unitVolume } from "@/lib/stock/onhand";
 import { CATEGORIES, ProductDialog } from "./product-dialog";
 
 const kr = (ore: number) =>
@@ -92,6 +92,25 @@ export default function StockClient({
       cell: (p) => (
         <span className="font-medium">{p.name}</span>
       ),
+    },
+    {
+      // What one of them holds — a bottle's nominal size or a can's, whichever
+      // the product is counted in. Not the same question as the litres column
+      // further right: that one is the shelf, this one is the thing on it, and
+      // it is the column somebody scanning the list for "the 33 or the 50"
+      // reads. Through unitVolume so the list and the product page pick the
+      // field the same way, including a recorded 0 meaning nobody has said.
+      key: "size",
+      header: t("products.col.size"),
+      align: "right",
+      className: "tabular-nums",
+      value: (p) => unitVolume(p) ?? -1,
+      sortable: true,
+      mobile: "meta",
+      cell: (p) => {
+        const ml = unitVolume(p);
+        return ml == null ? <span className="text-muted">—</span> : t("ml", { ml });
+      },
     },
     {
       key: "category",
@@ -235,7 +254,7 @@ export default function StockClient({
               </div>
             ) : undefined
           }
-          empty={<EmptyNote>{t("empty.description")}</EmptyNote>}
+          empty={t("empty.description")}
         />
       </Card>
 

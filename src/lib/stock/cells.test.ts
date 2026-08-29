@@ -10,6 +10,7 @@ import {
   rowOf,
   totalsFromCells,
   type CellRow,
+  type SheetState,
 } from "./cells";
 import { tagTotals, type TagSubject } from "./tag";
 
@@ -153,66 +154,123 @@ describe("totalsFromCells", () => {
   });
 });
 
+/**
+ * A sheet with nothing unsaved on it — what it reads and what the log holds are
+ * the same map.
+ *
+ * Which is what every case below describes but one, and that one is the point:
+ * see "cellFault, before anything is saved".
+ */
+const saved = (cells: Map<string, number>): SheetState => ({ sheet: cells, booked: cells });
+
 describe("cellFault", () => {
   const shelf = { sealed: 200, open: {} };
   const nothing = new Map<string, number>();
 
   it("allows what the shelf can give up", () => {
-    expect(cellFault(cans, shelf, nothing, out(), 120)).toBeNull();
+    expect(cellFault(cans, shelf, saved(nothing), out(), 120)).toBeNull();
   });
 
   it("refuses more than the shelf holds", () => {
-    expect(cellFault(cans, shelf, nothing, out(), 240)).toBe("notThatManySealed");
+    expect(cellFault(cans, shelf, saved(nothing), out(), 240)).toBe("notThatManySealed");
   });
 
   it("refuses a rung the cellar has nothing on", () => {
     const bottles = { sealed: 4, open: { 80: 1 } };
-    expect(cellFault(vodka, bottles, nothing, out(60), 1)).toBe("notThatManyOpen");
-    expect(cellFault(vodka, bottles, nothing, out(80), 1)).toBeNull();
+    expect(cellFault(vodka, bottles, saved(nothing), out(60), 1)).toBe("notThatManyOpen");
+    expect(cellFault(vodka, bottles, saved(nothing), out(80), 1)).toBeNull();
   });
 
   it("keeps the bar's rule that open bottles leave first", () => {
     const bottles = { sealed: 5, open: { 20: 1 } };
-    expect(cellFault(vodka, bottles, nothing, out(WHOLE), 1)).toBe("openBottlesFirst");
+    expect(cellFault(vodka, bottles, saved(nothing), out(WHOLE), 1)).toBe("openBottlesFirst");
   });
 
   it("does not apply that rule to a bottle coming back", () => {
     // Putting one on the shelf is never the choice the rule guards against.
     const bottles = { sealed: 5, open: { 20: 1 } };
     const cells = cellTotals([stored({ units: -2 })]);
-    expect(cellFault(vodka, bottles, cells, back(WHOLE), 1)).toBeNull();
+    expect(cellFault(vodka, bottles, saved(cells), back(WHOLE), 1)).toBeNull();
   });
 
   it("refuses more coming home than ever went out", () => {
     const cells = cellTotals([stored({ units: -10 })]);
-    expect(cellFault(cans, shelf, cells, back(), 14)).toBe("moreThanWentOut");
-    expect(cellFault(cans, shelf, cells, back(), 10)).toBeNull();
+    expect(cellFault(cans, shelf, saved(cells), back(), 14)).toBe("moreThanWentOut");
+    expect(cellFault(cans, shelf, saved(cells), back(), 10)).toBeNull();
   });
 
   it("counts a spill against the night as well", () => {
     const cells = cellTotals([stored({ units: -10 }), stored({ kind: "RETURN", units: 8 })]);
-    expect(cellFault(cans, shelf, cells, spill(), 4)).toBe("moreThanWentOut");
-    expect(cellFault(cans, shelf, cells, spill(), 2)).toBeNull();
+    expect(cellFault(cans, shelf, saved(cells), spill(), 4)).toBe("moreThanWentOut");
+    expect(cellFault(cans, shelf, saved(cells), spill(), 2)).toBeNull();
   });
 
   it("lets a figure be lowered without asking the shelf for anything", () => {
     // Correcting 120 down to 100 puts twenty cans back. The cellar is never
     // short of room, so this can only ever be allowed.
     const cells = cellTotals([stored({ units: -120 })]);
-    expect(cellFault(cans, { sealed: 0, open: {} }, cells, out(), 100)).toBeNull();
+    expect(cellFault(cans, { sealed: 0, open: {} }, saved(cells), out(), 100)).toBeNull();
   });
 
   it("refuses lowering a return below what the shelf could give back", () => {
     // Undoing a homecoming takes the cans off the shelf again, and they have to
     // still be there.
     const cells = cellTotals([stored({ units: -50 }), stored({ kind: "RETURN", units: 20 })]);
-    expect(cellFault(cans, { sealed: 5, open: {} }, cells, back(), 0)).toBe("notThatManySealed");
-    expect(cellFault(cans, { sealed: 40, open: {} }, cells, back(), 0)).toBeNull();
+    expect(cellFault(cans, { sealed: 5, open: {} }, saved(cells), back(), 0)).toBe("notThatManySealed");
+    expect(cellFault(cans, { sealed: 40, open: {} }, saved(cells), back(), 0)).toBeNull();
   });
 
   it("has nothing to say about a cell set to what it already is", () => {
     const cells = cellTotals([stored({ units: -120 })]);
-    expect(cellFault(cans, { sealed: 0, open: {} }, cells, out(), 120)).toBeNull();
+    expect(cellFault(cans, { sealed: 0, open: {} }, saved(cells), out(), 120)).toBeNull();
+  });
+});
+
+describe("cellFault, before anything is saved", () => {
+  // Reported from the bar: eight beers out, nothing saved yet, and one of them
+  // dropped — refused, on the grounds that nothing had gone out. It had: it was
+  // on the screen. The rule was reading the log where it should have been
+  // reading the sheet.
+  //
+  // Which half reads which is the whole of it. The night's arithmetic is about
+  // what the sheet says; only the cellar's is about what the log holds, because
+  // the shelf has moved for those rows and for no others.
+  const shelf = { sealed: 200, open: {} };
+  const nothingSaved = new Map<string, number>();
+
+  it("counts a checkout that is only typed in", () => {
+    const typed = cellTotals([stored({ units: -8 })]);
+    const state = { sheet: typed, booked: nothingSaved };
+    expect(cellFault(cans, shelf, state, spill(), 1)).toBeNull();
+    expect(cellFault(cans, shelf, state, back(), 8)).toBeNull();
+    // And still refuses what the night cannot have done, saved or not.
+    expect(cellFault(cans, shelf, state, back(), 9)).toBe("moreThanWentOut");
+  });
+
+  it("lets a row be cleared column by column", () => {
+    // Taking a product off the sheet zeroes every one of its cells. Each zero
+    // used to be judged with its neighbours still at their old figures, so
+    // clearing Ut while Spill still read 1 was "more than went out" — the Ut
+    // cell was held back from the save and only the spill was cleared.
+    const cleared = new Map<string, number>();
+    const booked = cellTotals([
+      stored({ units: -8 }),
+      stored({ kind: "WASTE", spilledQty: 1 }),
+    ]);
+    const state = { sheet: cleared, booked };
+    expect(cellFault(cans, shelf, state, out(), 0)).toBeNull();
+    expect(cellFault(cans, shelf, state, spill(), 0)).toBeNull();
+  });
+
+  it("still measures the cellar against the log, not against the sheet", () => {
+    // The shelf has not moved for a figure nobody has saved. Counting an
+    // unsaved checkout against it as well would spend the same bottles twice.
+    const typed = cellTotals([stored({ units: -150 })]);
+    const state = { sheet: typed, booked: new Map<string, number>() };
+    expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 150)).toBeNull();
+    expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 201)).toBe(
+      "notThatManySealed",
+    );
   });
 });
 
@@ -240,7 +298,7 @@ describe("cellFault, against what the night found", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 60, open: { 60: 2 } }),
     );
-    expect(cellFault(vodka, shelf, cells, out(60), 2)).toBe("notThatManyOpen");
+    expect(cellFault(vodka, shelf, saved(cells), out(60), 2)).toBe("notThatManyOpen");
   });
 
   it("still allows taking out what the cellar had before", () => {
@@ -248,8 +306,8 @@ describe("cellFault, against what the night found", () => {
     // takeable and the two are not.
     const shelf = { sealed: 0, open: { 60: 5 } };
     const cells = cellsOf(stored({ kind: "RETURN", level: 60, open: { 60: 2 } }));
-    expect(cellFault(vodka, shelf, cells, out(60), 3)).toBeNull();
-    expect(cellFault(vodka, shelf, cells, out(60), 4)).toBe("notThatManyOpen");
+    expect(cellFault(vodka, shelf, saved(cells), out(60), 3)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(cells), out(60), 4)).toBe("notThatManyOpen");
   });
 
   it("counts what it has already taken from a rung as still its own", () => {
@@ -257,8 +315,8 @@ describe("cellFault, against what the night found", () => {
     // fourth is not.
     const shelf = { sealed: 0, open: { 40: 2 } };
     const cells = cellsOf(stored({ level: 40, open: { 40: -1 } }));
-    expect(cellFault(vodka, shelf, cells, out(40), 3)).toBeNull();
-    expect(cellFault(vodka, shelf, cells, out(40), 4)).toBe("notThatManyOpen");
+    expect(cellFault(vodka, shelf, saved(cells), out(40), 3)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(cells), out(40), 4)).toBe("notThatManyOpen");
   });
 
   it("does not let a night's own returns lock its sealed bottles away", () => {
@@ -269,12 +327,12 @@ describe("cellFault, against what the night found", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 60, open: { 60: 2 } }),
     );
-    expect(cellFault(vodka, shelf, cells, out(WHOLE), 3)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(cells), out(WHOLE), 3)).toBeNull();
   });
 
   it("still keeps the rule for dregs that were there all along", () => {
     const shelf = { sealed: 5, open: { 20: 1 } };
-    expect(cellFault(vodka, shelf, new Map(), out(WHOLE), 1)).toBe("openBottlesFirst");
+    expect(cellFault(vodka, shelf, saved(new Map()), out(WHOLE), 1)).toBe("openBottlesFirst");
   });
 
   it("lets a return be undone while the bottles are still on the shelf", () => {
@@ -283,8 +341,8 @@ describe("cellFault, against what the night found", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 60, open: { 60: 2 } }),
     );
-    expect(cellFault(vodka, shelf, cells, back(60), 0)).toBeNull();
-    expect(cellFault(vodka, shelf, cells, back(60), 1)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(cells), back(60), 0)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(cells), back(60), 1)).toBeNull();
   });
 });
 
@@ -301,14 +359,14 @@ describe("cellFault, bringing back more than went out", () => {
 
   it("refuses the one too many", () => {
     // Out 2 × 700 = 1400 ml. Home 2 × 560 = 1120, and 420 more would be 1540.
-    expect(cellFault(vodka, shelf, night, back(60), 1)).toBe("moreThanWentOut");
+    expect(cellFault(vodka, shelf, saved(night), back(60), 1)).toBe("moreThanWentOut");
   });
 
   it("refuses a third bottle even where the millilitres would allow it", () => {
     // 280 ml is unaccounted for, which is a 40 % bottle's worth — but both
     // bottles are already home. The missing 280 ml was drunk; it is not a third
     // bottle waiting to be carried back.
-    expect(cellFault(vodka, shelf, night, back(40), 1)).toBe("moreBottlesThanWentOut");
+    expect(cellFault(vodka, shelf, saved(night), back(40), 1)).toBe("moreBottlesThanWentOut");
   });
 
   it("allows the second bottle home when only one has come back", () => {
@@ -316,7 +374,7 @@ describe("cellFault, bringing back more than went out", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 80, open: { 80: 1 } }),
     ]);
-    expect(cellFault(vodka, shelf, one, back(40), 1)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(one), back(40), 1)).toBeNull();
   });
 
   it("lets an overshoot already in the log be cleared", () => {
@@ -330,8 +388,8 @@ describe("cellFault, bringing back more than went out", () => {
       stored({ kind: "RETURN", level: 60, open: { 60: 1 } }),
     ]);
     const held = { sealed: 3, open: { 80: 2, 60: 1 } };
-    expect(cellFault(vodka, held, wrong, back(60), 0)).toBeNull();
-    expect(cellFault(vodka, held, wrong, back(80), 1)).toBeNull();
+    expect(cellFault(vodka, held, saved(wrong), back(60), 0)).toBeNull();
+    expect(cellFault(vodka, held, saved(wrong), back(80), 1)).toBeNull();
   });
 });
 
@@ -348,12 +406,12 @@ describe("cellFault, counted in bottles", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 20, open: { 20: 2 } }),
     ]);
-    expect(cellFault(vodka, shelf, twoBack, back(40), 1)).toBe("moreBottlesThanWentOut");
+    expect(cellFault(vodka, shelf, saved(twoBack), back(40), 1)).toBe("moreBottlesThanWentOut");
   });
 
   it("allows the two that did go out, at any level", () => {
-    expect(cellFault(vodka, shelf, twoOut, back(20), 2)).toBeNull();
-    expect(cellFault(vodka, shelf, twoOut, back(20), 3)).toBe("moreBottlesThanWentOut");
+    expect(cellFault(vodka, shelf, saved(twoOut), back(20), 2)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(twoOut), back(20), 3)).toBe("moreBottlesThanWentOut");
   });
 
   it("counts a dropped bottle as one that will not be coming home", () => {
@@ -361,22 +419,22 @@ describe("cellFault, counted in bottles", () => {
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 40, open: { 40: 1 } }),
     ]);
-    expect(cellFault(vodka, shelf, oneBack, spill(40), 1)).toBeNull();
-    expect(cellFault(vodka, shelf, oneBack, spill(40), 2)).toBe("moreBottlesThanWentOut");
+    expect(cellFault(vodka, shelf, saved(oneBack), spill(40), 1)).toBeNull();
+    expect(cellFault(vodka, shelf, saved(oneBack), spill(40), 2)).toBe("moreBottlesThanWentOut");
   });
 
   it("still catches an overshoot in millilitres before counting vessels", () => {
     // Two out, two home — but home fuller than they left, which is a different
     // impossibility and deserves its own sentence.
     const twoOutOpen = cellTotals([stored({ level: 20, open: { 20: -2 } })]);
-    expect(cellFault(vodka, { sealed: 0, open: { 20: 2 } }, twoOutOpen, back(80), 2)).toBe(
+    expect(cellFault(vodka, { sealed: 0, open: { 20: 2 } }, saved(twoOutOpen), back(80), 2)).toBe(
       "moreThanWentOut",
     );
   });
 
   it("leaves cans alone, where the two questions are one", () => {
     const out10 = cellTotals([stored({ units: -10 })]);
-    expect(cellFault(cans, { sealed: 50, open: {} }, out10, back(), 10)).toBeNull();
-    expect(cellFault(cans, { sealed: 50, open: {} }, out10, back(), 11)).toBe("moreThanWentOut");
+    expect(cellFault(cans, { sealed: 50, open: {} }, saved(out10), back(), 10)).toBeNull();
+    expect(cellFault(cans, { sealed: 50, open: {} }, saved(out10), back(), 11)).toBe("moreThanWentOut");
   });
 });

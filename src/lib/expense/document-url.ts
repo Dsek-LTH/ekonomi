@@ -1,8 +1,8 @@
 // Which documents an utlägg stands in the receipt panel, and in what order.
 //
-// Two of them, kept apart: the utläggsräkning — the cover page naming who
-// attested what — and the underlag itself, with the panel's pager moving
-// between them.
+// Two of them, kept apart: the underlag itself and the utläggsräkning — the
+// cover page naming who attested what — with the panel's pager moving between
+// them.
 //
 // They used to arrive as one merged PDF, and merging is still what goes to
 // Fortnox (lib/server/pdf-merge.ts). But merging is a *printing* operation: a
@@ -24,6 +24,12 @@ const DRAFT = "DRAFT";
 export interface ExpenseDocumentSubject {
   id: string;
   status: string;
+  /**
+   * How it was paid. Only MILEAGE matters here, and only because it has no
+   * underlag to stand behind the cover: the journey is printed on the cover
+   * itself, so there is one document rather than two.
+   */
+  paymentType?: string;
   /** Absent when the utlägg has no underlag. The DTOs spell that `undefined`
    *  and the database `null`; neither caller should have to care which. */
   receiptId?: string | null;
@@ -44,9 +50,17 @@ export interface PanelDocument {
 }
 
 /**
- * The documents to stand in the receipt panel, in reading order: the cover,
- * then the underlag it fronts — the order they were stapled in when this was
- * one file, so paging forward lands where turning the page used to.
+ * The documents to stand in the receipt panel, in reading order: the underlag
+ * first, then the cover that fronts it in the export. A milersättning is the
+ * one utlägg that returns a single document — see below.
+ *
+ * The other way round is the order they are stapled in for Fortnox, and it is
+ * what this returned at first. But the panel is opened to *read the receipt* —
+ * that is the document nobody else has seen and the one every screen using the
+ * panel is asking a question about — and putting the cover first meant every
+ * reader landed on a page the app generated from data already on screen beside
+ * it, and had to page past it. The stapling order is pdf-merge.ts's business;
+ * this is a reading order, and reading starts at the underlag.
  *
  * Empty in one case, and deliberately. No receipt: the utlägg still has a
  * cover, but showing it alone would fill the panel with a document and take
@@ -57,7 +71,9 @@ export interface PanelDocument {
  * attested, and nothing has been; it would be a page of dashes under a
  * reference the utlägg has not been given yet (that happens at submission), and
  * it would cost a render of the typesetter every time somebody opened their own
- * half-finished utlägg.
+ * half-finished utlägg. A mileage draft is the exception, and has to be: its
+ * cover carries the journey, and a panel that showed nothing until submission
+ * would leave the submitter no way to check what they had typed.
  */
 export function expenseDocuments(
   // Nullable, because the booking screen holds its utlägg before it has
@@ -67,7 +83,18 @@ export function expenseDocuments(
   /** What to call the underlag when it is an image and needs alt text. */
   alt?: string,
 ): PanelDocument[] {
-  if (!expense?.receiptId) return [];
+  if (!expense) return [];
+
+  // A milersättning has no underlag of its own: there is nothing to photograph
+  // about driving your own car, so the journey it rests on is a section of the
+  // utläggsräkning rather than a document behind it. One document, and the only
+  // kind of utlägg whose cover is shown while it is still a draft — that page
+  // is the only place the journey can be read.
+  if (expense.paymentType === "MILEAGE") {
+    return [{ src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" }];
+  }
+
+  if (!expense.receiptId) return [];
 
   const underlag: PanelDocument = {
     src: `/api/receipts/${expense.receiptId}`,
@@ -80,7 +107,7 @@ export function expenseDocuments(
   // receipt cannot change it. The receipt is addressed by its own id, which is
   // a new URL when it is replaced.
   return [
-    { src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" },
     underlag,
+    { src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" },
   ];
 }

@@ -29,6 +29,7 @@ import { entryFault } from "@/lib/stock/entry";
 import type { OpenBottles } from "@/lib/stock/levels";
 import { impossible, onHand } from "@/lib/stock/onhand";
 import { replayProduct } from "@/lib/server/stock-replay";
+import { bulkTransaction } from "@/lib/server/tx";
 
 /** The figure a row shows a person: positive, in things. */
 const shown = (e: { kind: string; units: number; spilledQty: number; level: number; open80: number; open60: number; open40: number; open20: number }): number => {
@@ -93,7 +94,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const fault = entryFault({ kind: entry.kind, units, open, spilledQty }, product);
   if (fault) return fail(422, `stock.${fault}`);
 
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await bulkTransaction(async (tx) => {
     await tx.stockEntry.update({
       where: { id },
       data: {
@@ -163,7 +164,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   });
   if (!product) return fail(404, "stock.productNotFound");
 
-  const gone = await prisma.$transaction(async (tx) => {
+  const gone = await bulkTransaction(async (tx) => {
     await tx.stockEntry.delete({ where: { id } });
     const sums = await tx.stockEntry.aggregate({
       where: { productId: entry.productId },

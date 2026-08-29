@@ -80,6 +80,38 @@ describe("submitBlocker", () => {
     expect(submitBlocker({ ...ready, hasReceipt: false })).toBe("receipt");
   });
 
+  it("asks a milersättning for its journey, not for a receipt", () => {
+    // A mileage claim has no receipt and is not meant to have one: the journey
+    // it rests on is typeset onto its utläggsräkning from the odometer
+    // readings, so what stands in the receipt check's place is whether those
+    // describe a journey.
+    const mileage = {
+      ...ready,
+      paymentType: "MILEAGE" as const,
+      matchedTransactionId: undefined,
+      submitterHasPayout: true,
+      hasReceipt: false,
+      mileageBlocker: null,
+    };
+    expect(submitBlocker(mileage)).toBeNull();
+    expect(submitBlocker({ ...mileage, mileageBlocker: "notForward" })).toBe("mileage");
+  });
+
+  it("asks a milersättning for a payout account, like any out-of-pocket claim", () => {
+    // The section owes the claimant their petrol exactly as it owes them a
+    // receipt they paid, and it cannot pay either without an account number.
+    expect(
+      submitBlocker({
+        ...ready,
+        paymentType: "MILEAGE" as const,
+        matchedTransactionId: undefined,
+        hasReceipt: false,
+        mileageBlocker: null,
+        submitterHasPayout: false,
+      }),
+    ).toBe("payout");
+  });
+
   it("blocks a half-typed date", () => {
     // The date field is a mask, so the form can be left mid-entry. Neither of
     // these is the day anything was bought.
@@ -126,6 +158,24 @@ describe("submitBlocker", () => {
         purchaseDate: "2026-01-01",
       }),
     ).toBe("tooLate");
+  });
+
+  it("holds the deadline over a milersättning too", () => {
+    // The claimant's own petrol out of the claimant's own account, with
+    // nothing on any statement to say it happened — as uncheckable when stale
+    // as a stale receipt, and refused on the same day.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
+    const drove = {
+      ...ready,
+      paymentType: "MILEAGE" as const,
+      matchedTransactionId: undefined,
+      submitterHasPayout: true,
+      hasReceipt: false,
+      mileageBlocker: null,
+    };
+    expect(submitBlocker({ ...drove, purchaseDate: "2026-06-04" })).toBeNull(); // 60 days
+    expect(submitBlocker({ ...drove, purchaseDate: "2026-06-03" })).toBe("tooLate"); // 61
   });
 
   it("holds no deadline over a sektionskort purchase", () => {

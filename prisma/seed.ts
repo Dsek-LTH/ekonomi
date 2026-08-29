@@ -7,6 +7,11 @@ import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/gener
 
 // Standalone run (pnpm db:seed) — load .env ourselves.
 import { loadEnvFile } from "./load-env";
+import {
+  DEFAULT_GROUP_RESULT_UNITS,
+  DEFAULT_GROUP_ROLES,
+  DEFAULT_ROLE_CAPABILITIES,
+} from "../src/lib/server/authority-defaults";
 
 loadEnvFile();
 import { bucket, deleteKeys, listObjects } from "./storage-admin";
@@ -64,8 +69,7 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
-  await prisma.resultUnitOwner.deleteMany();
-  await prisma.resultUnit.deleteMany(); // cascades → prefixes + owners
+  await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
   await prisma.costCenter.deleteMany();
   await prisma.user.deleteMany();
@@ -125,13 +129,12 @@ async function main() {
     return id;
   };
 
-  // ── Cost centers (+ result units and their ownerships) ───────────
+  // ── Cost centers (+ result units) ────────────────────────────────
   // ResultUnit membership is derived from code prefixes, so each seeded
   // result unit gets its cost centre's full code as its prefix — matching that
   // one code and nothing else.
   const costCenterByCode = new Map<string, string>();
   const resultUnitByName = new Map<string, string>();
-  const ownerships = new Set<string>(); // "userId|resultUnitId" dedupe
   for (const c of COST_CENTERS) {
     const cc = await prisma.costCenter.create({
       data: { code: c.code, name: c.name },
@@ -155,17 +158,54 @@ async function main() {
         data: { resultUnitId, value: c.code.toUpperCase() },
       });
     }
-
-    if (c.ownerName) {
-      const key = `${userId(c.ownerName)}|${resultUnitId}`;
-      if (!ownerships.has(key)) {
-        ownerships.add(key);
-        await prisma.resultUnitOwner.create({
-          data: { userId: userId(c.ownerName), resultUnitId },
-        });
-      }
-    }
   }
+
+  // Resultatansvar is held by result unit *name* on the user row — the shape
+  // the Authentik mapping writes (lib/server/authentik-roles.ts). A dev sign-in
+  // has no group list, so seeding the column is the only way the seeded
+  // resultatansvariga answer for anything.
+  const seededUnits = new Map<string, string[]>();
+  for (const c of COST_CENTERS) {
+    if (!c.ownerName || !c.resultUnit) continue;
+    const units = seededUnits.get(c.ownerName) ?? [];
+    if (!units.includes(c.resultUnit)) units.push(c.resultUnit);
+    seededUnits.set(c.ownerName, units);
+  }
+  for (const [name, units] of seededUnits) {
+    await prisma.user.update({
+      where: { id: userId(name) },
+      data: { resultUnits: units },
+    });
+  }
+
+  // ── Authority ───────────────────────────────────────────────────
+  //
+  // Put back the state the section started from: which Authentik group confers
+  // which role and result unit, and what each role may do
+  // (lib/server/authority-defaults.ts).
+  //
+  // Rewritten from scratch rather than left alone, because a seed is supposed
+  // to produce one known database and these tables are editable — a dev who
+  // spent yesterday testing the settings screen should not start today holding
+  // whatever they left behind. The group → result unit rows have to be here in
+  // any case: they are foreign keys into ResultUnit, and the wipe above took
+  // them with it.
+  await prisma.groupRole.deleteMany();
+  await prisma.groupResultUnit.deleteMany();
+  await prisma.roleCapability.deleteMany();
+
+  await prisma.groupRole.createMany({ data: [...DEFAULT_GROUP_ROLES] });
+  await prisma.roleCapability.createMany({ data: [...DEFAULT_ROLE_CAPABILITIES] });
+
+  // Only the units this seed actually created. The defaults name the section's
+  // real committees and the fixtures are a smaller, invented set, so most of
+  // them have nothing to point at — and a mapping row cannot name a unit that
+  // does not exist.
+  const groupUnits = DEFAULT_GROUP_RESULT_UNITS.flatMap(({ group, unit }) => {
+    const resultUnitId = resultUnitByName.get(unit);
+    return resultUnitId ? [{ group, resultUnitId }] : [];
+  });
+  if (groupUnits.length > 0) await prisma.groupResultUnit.createMany({ data: groupUnits });
 
   // ── Bank transactions ───────────────────────────────────────────
   const txByMockId = new Map<string, string>(); // mock "t3" → real id

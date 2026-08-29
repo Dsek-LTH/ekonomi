@@ -41,7 +41,7 @@ import type { Viewer } from "./expense-scope";
 export async function attestScopeWhere(viewer: Viewer): Promise<Prisma.ExpenseWhereInput> {
   const notMine: Prisma.ExpenseWhereInput = { submitterId: { not: viewer.id } };
 
-  if (isAdmin(viewer.roles)) return notMine;
+  if (isAdmin(viewer.capabilities)) return notMine;
 
   const authority: Prisma.ExpenseWhereInput[] = [];
 

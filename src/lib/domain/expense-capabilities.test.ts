@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { expenseCapabilities } from "./expense-capabilities";
-import type { CostAllocation, Expense, ExpenseStatus, Role } from "./types";
+import type { Capability, CostAllocation, Expense, ExpenseStatus, Role } from "./types";
+import { DEFAULT_ROLE_CAPABILITIES } from "@/lib/server/authority-defaults";
+import { today } from "./date";
 
 // What the detail page offers, and to whom. This used to be derived in the
 // browser from a hand-written second copy of the rules the API enforces; the
@@ -34,7 +36,22 @@ const expense = (over: Partial<Expense> = {}): Expense => ({
   ...over,
 });
 
-const viewer = (roles: Role[], id = "someone-else") => ({ id, roles });
+// A viewer holding these roles, with the capabilities those roles have on the
+// day the database is created (lib/server/authority-defaults.ts). Which roles
+// carry which capability is editable now, so a case below saying "the ordförande
+// cannot export" is a statement about the section's starting policy — which is
+// exactly what it always was, when that policy was a list in permissions.ts.
+const capsFor = (roles: Role[]): Capability[] => [
+  ...new Set(
+    DEFAULT_ROLE_CAPABILITIES.filter((r) => roles.includes(r.role)).map((r) => r.capability),
+  ),
+];
+
+const viewer = (roles: Role[], id = "someone-else") => ({
+  id,
+  roles,
+  capabilities: capsFor(roles),
+});
 
 describe("exporting to Fortnox", () => {
   // The drift this file was written for. Exporting is a real Fortnox call made
@@ -129,6 +146,65 @@ describe("attesting", () => {
       allocations: [alloc({ canAttest: true, approvedById: "me" })],
     });
     expect(expenseCapabilities(booked, viewer(["RESULTATANSVARIG"], "me")).canWithdrawAttest).toBe(false);
+  });
+});
+
+describe("submitting a milersättning", () => {
+  // The claim carries its journey rather than a receipt, so the receipt check
+  // does not apply to it and the journey check has to. This was the hole:
+  // `mileageBlocker` was never passed, so neither check ran and the detail page
+  // offered "Skicka in" on a claim the transition route would refuse.
+  //
+  // Driven today, not on the shared fixture's March date: a milersättning is
+  // out-of-pocket, so it has the 60-day filing deadline — which is a blocker of
+  // its own and, rightly, reported ahead of anything else. These cases are
+  // about the journey check, so the date is kept out of their way.
+  const mileage = (over: Partial<Expense> = {}) =>
+    expense({
+      paymentType: "MILEAGE",
+      status: "DRAFT",
+      submitterId: "member",
+      purchaseDate: today(),
+      mileage: { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 },
+      ...over,
+    });
+  const owner = viewer(["ORDINARIE"], "member");
+
+  it("is offered on a claim whose journey is complete and valued", () => {
+    const can = expenseCapabilities(mileage(), owner);
+    expect(can.submitBlocker).toBeNull();
+    expect(can.canSubmit).toBe(true);
+  });
+
+  it("is refused while the readings do not make a journey", () => {
+    const can = expenseCapabilities(
+      mileage({ mileage: { odometerStart: 12300, odometerEnd: null, km: null, orePerKm: 250 } }),
+      owner,
+    );
+    expect(can.submitBlocker).toBe("mileage");
+    expect(can.canSubmit).toBe(false);
+  });
+
+  it("is refused while nothing has priced the day it was driven", () => {
+    const can = expenseCapabilities(
+      mileage({ mileage: { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: null } }),
+      owner,
+    );
+    expect(can.submitBlocker).toBe("mileage");
+  });
+
+  it("is never asked for a receipt", () => {
+    // The one thing a mileage claim must not be blocked on: it has no receipt
+    // and is not meant to have one.
+    expect(expenseCapabilities(mileage(), owner).submitBlocker).not.toBe("receipt");
+  });
+
+  it("still has the filing deadline over it", () => {
+    // Out of the claimant's own pocket, so the same 60 days — and said ahead
+    // of the journey check, since past the deadline there is nothing to fix.
+    expect(expenseCapabilities(mileage({ purchaseDate: "2020-01-01" }), owner).submitBlocker).toBe(
+      "tooLate",
+    );
   });
 });
 

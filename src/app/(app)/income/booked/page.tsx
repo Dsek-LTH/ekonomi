@@ -12,5 +12,5 @@ export default async function BookedIncomePage() {
   // Undoing any of this — unexporting, unbooking, deleting — is the treasury's
   // to do, not everyone with bookkeeping access. Decided here, where the roles
   // are, and enforced again by every route behind the buttons.
-  return <BookedClient reports={reports} canManage={canUnexport(user.roles)} />;
+  return <BookedClient reports={reports} canManage={canUnexport(user.capabilities)} />;
 }

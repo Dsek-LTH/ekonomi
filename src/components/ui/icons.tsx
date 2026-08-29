@@ -58,6 +58,17 @@ export const IconCard = (p: P) => (
   </Svg>
 );
 
+// Milersättning — the settings screen for it, and nothing else so far. A car
+// from the side: the bonnet line, the body, and the two wheels sitting on it.
+export const IconCar = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 16.5v-4l1.8-4.2A2 2 0 0 1 7.6 7h8.8a2 2 0 0 1 1.8 1.3L20 12.5v4" />
+    <path d="M4 12.5h16" />
+    <circle cx="7.5" cy="16.5" r="1.6" />
+    <circle cx="16.5" cy="16.5" r="1.6" />
+  </Svg>
+);
+
 export const IconPlus = (p: P) => (
   <Svg {...p}>
     <path d="M12 5v14M5 12h14" />
@@ -253,6 +264,15 @@ export const IconDots = (p: P) => (
   </Svg>
 );
 
+// Swapping one thing for another — the stock sheet's "byt produkt". Two arrows
+// passing, rather than a circular refresh: nothing here is being reloaded, one
+// row is becoming a different product.
+export const IconSwap = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 8h13l-3.2-3.2M20 16H7l3.2 3.2" />
+  </Svg>
+);
+
 export const IconTrash = (p: P) => (
   <Svg {...p}>
     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -290,6 +310,17 @@ export const IconLockOpen = (p: P) => (
   <Svg {...p}>
     <rect x="4" y="10.5" width="16" height="10.5" rx="2" />
     <path d="M8 10.5V6.5a4 4 0 0 1 7.8-1.2" />
+  </Svg>
+);
+
+// A shield, for Roller & behörigheter. Not a lock: a lock is a state something
+// is in — a budget is locked, a voucher is not — and this is standing authority
+// rather than a thing that has been shut. The tick inside says the same as the
+// grid the page is mostly made of.
+export const IconShield = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3l7.5 3v5.5c0 4.3-3 8.2-7.5 9.5-4.5-1.3-7.5-5.2-7.5-9.5V6L12 3Z" />
+    <path d="m9 11.8 2.1 2.1L15 10" />
   </Svg>
 );
 

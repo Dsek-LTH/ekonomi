@@ -120,12 +120,65 @@
   columns: (1fr, 1fr, 1fr, 1fr),
   column-gutter: 16pt,
   field("Utlägg", data.reference),
-  field("Kvittodatum", orDash(data.purchaseDate)),
+  field(data.dateLabel, orDash(data.purchaseDate)),
   field("Utlägget avser", data.submitter.name),
   field("STIL-ID", orDash(data.submitter.studentId)),
 )
 
 #field("Beskrivning", data.title)
+
+// ── Resan ─────────────────────────────────────────────────────────────
+//
+// Only on a milersättning, and there it stands in for the receipt: the pages
+// after this one are the underlag for every other kind of utlägg, and a mileage
+// claim has none — there is nothing to photograph about driving your own car.
+// So the evidence is set out here, on the page that is filed either way, rather
+// than in a second document repeating this one's reference and submitter.
+//
+// The two readings and their difference, side by side and written to the same
+// precision, so the subtraction is one a reader can do by eye. A claim that only
+// stated the distance would be asking to be taken on trust, which is the one
+// thing an underlag must never do.
+#if data.journey != none [
+  #v(8pt)
+  #text(size: heading-size, weight: "bold")[Resan]
+  #v(9pt)
+
+  #block[
+  #set text(size: table-size, fill: ink)
+  #table(
+    // Sized to their headings, not split evenly. "Mätarställning vid start" is
+    // the widest thing in the table and an even split gave it about two thirds
+    // of what it needs, so it wrapped and took the whole header row to two
+    // lines with it. `auto` lets each column ask for what it holds; the slack
+    // collects in the one 1fr column, which puts it between the pair of
+    // readings and the figures worked out from them — the gap falls where the
+    // meaning changes.
+    columns: (auto, auto, 1fr, auto),
+    align: (right + top, right + top, right + top, right + top),
+    stroke: none,
+    inset: (x: 0pt, y: 7pt),
+    column-gutter: 12pt,
+    table.hline(stroke: rule-strong),
+    table.header(
+      th("Mätarställning vid start"),
+      th("Vid slut"),
+      th("Sträcka"),
+      th("Ersättning"),
+    ),
+    table.hline(stroke: rule-hair),
+    figures(text(fill: muted)[#data.journey.odometerStart]),
+    figures(text(fill: muted)[#data.journey.odometerEnd]),
+    // The distance carries the weight: it is the one figure on the row that the
+    // money is worked out from, and the two readings beside it are its
+    // evidence. What it comes to is in the attest table below, where every
+    // other krona on the page is.
+    figures(text(weight: "medium")[#data.journey.distance]),
+    figures(text(fill: muted)[#data.journey.rate]),
+    table.hline(stroke: rule-hair),
+  )
+  ]
+]
 
 // ── Attesteringar ─────────────────────────────────────────────────────
 //
@@ -190,5 +243,11 @@
 // Said out loud, because the pages after this one are not part of this
 // document in any way the reader can tell — they were stapled on afterwards
 // (lib/server/pdf-merge.ts) and could as easily not have been.
-#v(20pt)
-#text(size: 9.5pt, fill: muted)[Underlaget för utlägget följer på nästa sida.]
+//
+// Not on a milersättning, which is the one utlägg whose underlag is above: the
+// journey is on this page and no page follows it, so the sentence would be
+// sending a reader after something that is not there.
+#if data.journey == none [
+  #v(20pt)
+  #text(size: 9.5pt, fill: muted)[Underlaget för utlägget följer på nästa sida.]
+]

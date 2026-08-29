@@ -20,6 +20,10 @@
       "REIMBURSEMENT": {
         "label": "Eget utlägg",
         "description": "Du betalade själv och får tillbaka pengarna."
+      },
+      "MILEAGE": {
+        "label": "Milersättning",
+        "description": "Du körde egen bil på sektionens ärende."
       }
     },
     "role": {
@@ -73,6 +77,35 @@
       "clear": "Rensa",
       "nSelected": "{count} valda",
       "create": "Skapa ”{text}”"
+    },
+    "action": {
+      "goToProfile": "Till Min profil"
+    },
+    "capability": {
+      "ADMIN": "Full behörighet",
+      "ADMIN_hint": "Attestera och redigera vems utlägg som helst.",
+      "SETTINGS": "Inställningar",
+      "SETTINGS_hint": "Nå Inställningar, den här sidan inräknad.",
+      "BOOKKEEPING": "Bokföring",
+      "BOOKKEEPING_hint": "Se alla utlägg och bokföra verifikaten. Skicka tillbaka det som attesterats fel.",
+      "ATTEST_VIEW": "Attestvyn",
+      "ATTEST_VIEW_hint": "Se kön att attestera. Vad som faktiskt går att attestera avgörs per utlägg.",
+      "BUDGET_VIEW": "Budget",
+      "BUDGET_VIEW_hint": "Se budgetsidorna.",
+      "STOCK_VIEW": "Lager",
+      "STOCK_VIEW_hint": "Läsa lageröversikten och loggen.",
+      "STOCK_MANAGE": "Lagerföring",
+      "STOCK_MANAGE_hint": "Registrera lagerrörelser och köra ett tillfälle, från uttag till inventering.",
+      "BUDGET_COMMENT": "Budgetkommentarer",
+      "BUDGET_COMMENT_hint": "Kommentera ett budgetkonto.",
+      "BUDGET_LOCK": "Låsa budget",
+      "BUDGET_LOCK_hint": "Låsa en antagen budget, och låsa upp den.",
+      "BUDGET_CHANGE_LOCKED": "Budgetavsteg",
+      "BUDGET_CHANGE_LOCKED_hint": "Föra in avsteg och förflyttningar i en låst budget.",
+      "FORTNOX_LOGIN": "Fortnox-inloggning",
+      "FORTNOX_LOGIN_hint": "Bokföra i Fortnox under sin egen inloggning.",
+      "EXPORT_UNDO": "Ångra export",
+      "EXPORT_UNDO_hint": "Markera ett exporterat utlägg som inte längre exporterat."
     }
   },
   "dashboard": {
@@ -142,9 +175,11 @@
       "match": "Matcha mot en banktransaktion innan du kan skicka in.",
       "payout": "Lägg till clearing- och kontonummer i Min profil innan du kan skicka in.",
       "receipt": "Ladda upp kvittot innan du kan skicka in.",
+      "mileage": "Fyll i mätarställningen före och efter resan innan du kan skicka in.",
       "incomplete": "Komplettera beskrivning, datum, belopp och kostnadsfördelning innan du kan skicka in.",
       "futureDate": "Kvittodatumet ligger i framtiden. Rätta det till dagen köpet gjordes innan du kan skicka in.",
-      "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet. Det här kvittot är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel."
+      "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet. Det här kvittot är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel.",
+      "tooLateMileage": "Milersättning måste redovisas inom {days} dagar från resan. Den här resan är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel."
     },
     "noMatchHint": "Hittar du inte köpet? Kolla beloppet först. Bara transaktioner på exakt samma summa går att välja. Om köpet ändå saknas kan kontoutdraget vara oimporterat, så be kassören läsa in senaste bankfilen under Bank & matchning.",
     "event": {
@@ -222,7 +257,8 @@
         }
       },
       "editedFields": "Ändrade: {fields}",
-      "voucherComment": "Verifikat {label}"
+      "voucherComment": "Verifikat {label}",
+      "journeyDate": "Resdag"
     },
     "mutations": {
       "transition": {
@@ -312,6 +348,79 @@
       "grossAmount": "Belopp",
       "allocations": "Kostnadsfördelning",
       "paymentType": "Betalsätt"
+    },
+    "newMenu": {
+      "label": "Nytt utlägg",
+      "ordinary": "Vanligt utlägg",
+      "ordinaryHint": "Du har ett kvitto: kort eller eget",
+      "mileage": "Milersättning",
+      "mileageHint": "Du körde egen bil på sektionens ärende"
+    }
+  },
+  "mileage": {
+    "newTitle": "Ny milersättning",
+    "newDescription": "Körde du egen bil på sektionens ärende? Fyll i mätarställningen före och efter, så räknar vi ut ersättningen.",
+    "description": "Ärende",
+    "descriptionHint": "Vad resan gällde, t.ex. \"Hämta sponsorpaket i Malmö\".",
+    "step": {
+      "journey": "Resan"
+    },
+    "journeyDate": "Resdag",
+    "dateFuture": "Resan ligger i framtiden. Rätta datumet till dagen du körde.",
+    "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan och kan inte tas emot senare. Hör av dig till skattmästaren för ytterligare hjälp",
+    "odometer": {
+      "label": "Mätarställning",
+      "hint": "Vad mätaren stod på när du satte dig i bilen och när du klev ur. Sträckan är skillnaden.",
+      "start": "Vid start",
+      "end": "Vid slut"
+    },
+    "total": "Ersättning",
+    "sum": "{km} km · {rate} kr/km",
+    "distance": "Sträcka",
+    "km": "{km} km",
+    "otherType": "Gällde det något annat?",
+    "otherTypeLink": "Gör ett vanligt utlägg i stället",
+    "deadlineHint": "Milersättning redovisas inom {days} dagar från resan. Körde du flera gånger gör du en milersättning per resa.",
+    "documentName": "Utläggsräkning",
+    "documentTitle": "Utläggsräkningen",
+    "documentPending": "Utläggsräkningen ritas när utlägget sparats. Resan står på den, och det är den som följer med till bokföringen.",
+    "editTitle": "Ändra milersättning {id}",
+    "editTitleDraft": "Ändra milersättning",
+    "editDescription": "Rätta resan eller kostnadsfördelningen.",
+    "blocker": {
+      "noReadings": "Fyll i mätarställningen både före och efter resan.",
+      "notForward": "Mätarställningen efter resan måste vara högre än före. Kontrollera att siffrorna står i rätt ordning.",
+      "noRate": "Det finns ingen fastställd ersättning per kilometer för resdagen. Hör av dig till skattmästaren."
+    },
+    "rates": {
+      "title": "Milersättning",
+      "description": "Vad en kilometer är värd, och från vilken dag. Varje resa räknas med den ersättning som gällde den dagen den kördes. En ändring här påverkar aldrig redan inskickade utlägg.",
+      "current": "Gäller nu",
+      "col": {
+        "validFrom": "Gäller från",
+        "rate": "Ersättning",
+        "note": "Anteckning",
+        "createdBy": "Infört av"
+      },
+      "perKm": "{amount} kr/km",
+      "perMil": "{amount} kr/mil",
+      "new": "Ny ersättning",
+      "editTitle": "Ändra ersättning",
+      "newTitle": "Ny ersättning",
+      "validFrom": "Gäller från",
+      "rate": "Kronor per mil",
+      "rateHint": "Skatteverkets schablon är 25 kr/mil. Lagras som öre per kilometer.",
+      "note": "Anteckning",
+      "notePlaceholder": "T.ex. \"Skatteverkets schablon 2026\"",
+      "save": "Spara",
+      "saved": "Ersättningen sparad",
+      "saveFailed": "Ersättningen kunde inte sparas",
+      "remove": "Ta bort",
+      "removed": "Ersättningen borttagen",
+      "removeFailed": "Ersättningen kunde inte tas bort",
+      "removeTitle": "Ta bort ersättningen?",
+      "removeDescription": "Resor som redan räknats med den behåller sitt belopp. Nya resor på de datumen får den ersättning som gällde innan.",
+      "empty": "Ingen ersättning är fastställd ännu. Utan en kan inga milersättningar skickas in."
     }
   },
   "login": {
@@ -544,13 +653,13 @@
       "noReports": "Filen innehöll inga rapporter i den valda perioden.",
       "noCommittees": "Inga verksamheter är uppsatta. Lägg upp dem under inställningar.",
       "noPrefixes": "Inga produktprefix är uppsatta.",
-      "noFallbackPrefix": "Inget prefix är markerat som reserv — produkter utan prefix har ingenstans att ta vägen.",
+      "noFallbackPrefix": "Inget prefix är markerat som reserv. Produkter utan igenkänt prefix har ingenstans att ta vägen.",
       "prefixAccountNotNumeric": "Ett prefix pekar på ett ogiltigt konto: {detail}",
       "reportNotFound": "Rapporten finns inte.",
       "noUnexportAccess": "Bara skattmästeriet kan ångra en bokföring eller en export.",
       "unexportOnlyExported": "Bara exporterade rapporter kan avmarkeras (den här är {status}).",
       "reopenOnlyBooked": "Bara bokförda rapporter kan öppnas för ändring (den här är {status}).",
-      "deleteExportedFirst": "Rapporten är exporterad. Avmarkera exporten först — och makulera verifikationen i Fortnox.",
+      "deleteExportedFirst": "Rapporten är exporterad. Avmarkera exporten först. Makulera sedan verifikationen i Fortnox.",
       "bookOnlyDraft": "Bara rapporter som väntar på bokföring kan bokföras (den här är {status}).",
       "editOnlyBeforeBooking": "Rapporten är {status} och kan inte längre ändras.",
       "exportOnlyBooked": "Bara bokförda rapporter kan exporteras (den här är {status}).",
@@ -565,7 +674,7 @@
       "moveSameUnit": "Varorna ligger redan på den verksamheten.",
       "noLines": "Inga varor är valda.",
       "unknownLine": "Någon av varorna finns inte längre på rapporten. Ladda om sidan och försök igen.",
-      "moveUnitNoIncome": "Verksamheten tar inte emot intäkter — ge den intäktsinställningar först.",
+      "moveUnitNoIncome": "Verksamheten tar inte emot intäkter. Ge den intäktsinställningar först.",
       "moveDestinationBooked": "Verksamhetens rapport för den dagen är redan bokförd. Varorna kan inte flyttas dit.",
       "noBatch": "Ingen hämtning finns att koppla rapporten till. Hämta försäljning först.",
       "unknownAccount": "Kontot {account} finns inte i kontoplanen.",
@@ -582,14 +691,14 @@
       "committeeNotFound": "Verksamheten finns inte.",
       "prefixExists": "Prefixet {code} finns redan.",
       "prefixNotFound": "Prefixet finns inte.",
-      "cannotDeleteFallback": "Reservprefixet kan inte tas bort — markera ett annat som reserv först.",
+      "cannotDeleteFallback": "Reservprefixet kan inte tas bort. Markera ett annat som reserv först.",
       "fallbackNotFound": "Beloppsregeln finns inte.",
       "alreadyInFortnox": "Det finns redan en verifikation i Fortnox för den här dagen ({voucher}). Ingenting exporterades.",
-      "noAttestation": "Rapporten har ingen attestant — den som hämtade den finns inte längre i appen.",
+      "noAttestation": "Rapporten har ingen attestant. Den som hämtade den finns inte längre i appen.",
       "voucherTotalMismatch": "Verifikationen bokför inte dagens summa. Debet måste motsvara intäktsräkningens belopp.",
       "unitNotFound": "Resultatenheten finns inte.",
       "unitHasIncome": "{name} har redan intäktsinställningar.",
-      "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel — det behöver innehålla bokstäver eller siffror."
+      "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel. Det behöver bokstäver eller siffror."
     },
     "stock": {
       "calibrationNoVolume": "Flaskans volym måste vara större än noll.",
@@ -619,8 +728,8 @@
       "tagOnNightOnly": "Inköp och inventering hör inte till ett tillfälle.",
       "tagRequired": "Uttag, återlämning och spill måste höra till ett tillfälle.",
       "volumeOnUnitProduct": "Produkten räknas i styck och har ingen egen volym.",
-      "cellMoved": "Någon annan har bokfört på tillfället under tiden. Siffrorna läses om — kontrollera dem och försök igen.",
-      "spillMovesNoStock": "Ett spill flyttar inget lager — varan lämnade lagret när den togs ut.",
+      "cellMoved": "Någon annan har bokfört på tillfället under tiden. Siffrorna läses om. Kontrollera dem och försök igen.",
+      "spillMovesNoStock": "Ett spill flyttar inget lager. Varan lämnade lagret när den togs ut.",
       "entryNotFound": "Raden hittades inte.",
       "onTheSheet": "Raden hör till ett tillfälle. Ändra den på tillfällets sida.",
       "recountInstead": "En inventering rättas med en ny inventering.",
@@ -630,6 +739,17 @@
       "eanTaken": "Streckkoden används redan av {name}.",
       "nameTaken": "Det finns redan en produkt som heter {name}.",
       "productInUse": "Produkten har {count, plural, =1 {1 rörelse} other {# rörelser}} i loggen och går inte att ta bort."
+    },
+    "mileage": {
+      "noReadings": "Milersättningen saknar mätarställning före eller efter resan.",
+      "notForward": "Mätarställningen efter resan måste vara högre än före.",
+      "noRate": "Det finns ingen fastställd ersättning per kilometer för resdagen.",
+      "rateExists": "Det finns redan en ersättning som gäller från {date}.",
+      "rateNotFound": "Ersättningen finns inte."
+    },
+    "authority": {
+      "wouldLockOut": "Ändringen skulle lämna ingen som kan öppna Inställningar. Ge behörigheten till en roll någon faktiskt har först.",
+      "groupOutsideSection": "{group} ligger utanför sektionen. Bara grupper under dsek. ger något här."
     }
   },
   "nav": {
@@ -649,6 +769,7 @@
     "costCenters": "Kostnadsställen",
     "resultUnits": "Resultatenheter",
     "cards": "Sektionskort",
+    "mileageRates": "Milersättning",
     "users": "Användare",
     "faq": "Frågor & svar",
     "profile": "Min profil",
@@ -667,7 +788,8 @@
     "stock": "Lager",
     "stockLog": "Lagerlogg",
     "groupStock": "Lager",
-    "stockEvents": "Tillfällen"
+    "stockEvents": "Tillfällen",
+    "roles": "Roller & behörigheter"
   },
   "allocation": {
     "pick": "Välj kostnadsställe…",
@@ -704,6 +826,7 @@
     "uploading": "Laddar upp kvitto…",
     "uploadingHint": "Sparar bilden i kvittoarkivet.",
     "expand": "Visa kvittot",
+    "tab": "Kvitto",
     "resize": "Ändra kvittopanelens bredd"
   },
   "fortnox": {
@@ -816,7 +939,7 @@
       "source": "Exportera en Transaktionsrapport som CSV från 1931 i Swedbank/Sparbanken.",
       "format": "Ladda upp filen precis som den är. Kolumnerna läses efter position (Radnr … Belopp), så en fil som sorterats om eller sparats om i Excel läses fel.",
       "cards": "Kortköp knyts till rätt kort via ett avslutande K#### i Referens. Nya kortnummer läggs upp automatiskt under Sektionskort.",
-      "duplicates": "Rader som redan importerats hoppas över. Samma fil kan laddas upp igen utan dubbletter.",
+      "duplicates": "Rader som redan importerats hoppas över. Ladda upp samma fil igen och det blir inga dubbletter.",
       "limits": "Max 5 MB."
     },
     "scopeLabel": "Omfattning",
@@ -1198,7 +1321,7 @@
   "faq": {
     "categories": "Kategorier",
     "title": "Frågor & svar",
-    "description": "Att handla, redovisa och attestera för sektionen — hela \"How to utlägg\" som en sida du kan söka i.",
+    "description": "Hela \"How to utlägg\" som en sida du kan söka i. Vad du gör när du lagt ut för sektionen, och vad du gör när det hamnar på dig att attestera.",
     "searchPlaceholder": "Sök bland frågorna…",
     "all": "Alla",
     "matches": "{count, plural, =0 {Inga träffar} =1 {# träff} other {# träffar}}",
@@ -1218,7 +1341,7 @@
       "noMatch": "Ingen medlem matchar.",
       "onlyBaseRole": "Har bara {role}, grundnivån alla medlemmar har.",
       "rolesTitle": "Roller",
-      "rolesSubtitle": "Rollerna styr åtkomst och attesträttigheter, och följer mandaten i Authentik — de ändras där, inte här. {role} listas inte, eftersom alla medlemmar har den.",
+      "rolesSubtitle": "Rollerna styr åtkomst och attesträttigheter. De följer mandaten i Authentik och ändras där, inte här. {role} listas inte, eftersom alla medlemmar har den.",
       "nobodyHasRole": "Ingen har den här rollen."
     },
     "cards": {
@@ -1327,8 +1450,6 @@
       "noPrefix": "Inget prefix",
       "noPrefixLower": "inget prefix",
       "noPrefixHint": "Utan prefix äger resultatenheten inga kostnadsställen.",
-      "ownersFailed": "Kunde inte spara resultatansvariga",
-      "noOwners": "Ingen har rollen resultatansvarig. Tilldela den under Användare först.",
       "unassigned": "Utan resultatenhet",
       "unassignedSubtitle": "Inget prefix matchar dessa, så bara administratörer kan attestera deras utlägg.",
       "unassignedEmpty": "Varje kostnadsställe tillhör en resultatenhet. Inget att åtgärda.",
@@ -1360,7 +1481,11 @@
         "noPrefixHint": "Inga produktprefix än. Varor som börjar på ett prefix bokförs mot dess konto.",
         "disabledHint": "Enheten tar inte in några pengar. Lägg till intäkter för att hämta och bokföra dess försäljning."
       },
-      "saveFailed": "Kunde inte spara."
+      "saveFailed": "Kunde inte spara.",
+      "noOwnerGroups": "Ingen Authentik-grupp är kopplad till den här resultatenheten. Kopplingen görs i lib/server/authentik-roles.ts.",
+      "noOwnersHolding": "Ingen innehar posten just nu.",
+      "unmappedTitle": "Kopplingar utan resultatenhet",
+      "unmappedBody": "Authentik-kopplingen pekar ut resultatenheter som inte finns här. Den som innehar posten blir resultatansvarig utan att ansvara för något. Byt namn på resultatenheten nedan, eller rätta kopplingen i lib/server/authentik-roles.ts."
     },
     "fortnox": {
       "description": "Anslutning, kontoplan och huvudbok.",
@@ -1410,7 +1535,7 @@
     },
     "income": {
       "title": "Intäkter",
-      "description": "Vilken verksamhet och vilket konto en såld vara hör till — routingtabellen intäktstjänsten använder.",
+      "description": "Vilken verksamhet och vilket konto en såld vara hör till. Det är routingtabellen som intäktstjänsten läser.",
       "save": "Spara",
       "saved": "Sparat",
       "saveFailed": "Kunde inte spara",
@@ -1447,7 +1572,7 @@
         "remove": "Ta bort",
         "removeTitle": "Ta bort {name}?",
         "removeBody": "Intäktsinställningarna och prefixen tas bort. Resultatenheten finns kvar.",
-        "retireBody": "Verksamheten har bokförda rapporter och avslutas i stället för att tas bort — den slutar synas i routningen men rapporterna finns kvar.",
+        "retireBody": "Verksamheten har bokförda rapporter och avslutas i stället för att tas bort. Den slutar synas i routningen. Rapporterna finns kvar.",
         "defaultCostCenter": "Standardkostnadsställe",
         "noCostCenter": "Inget kostnadsställe",
         "noFallback": "Inget prefix är markerat som reserv. Produkter utan igenkänt prefix har ingenstans att ta vägen, och hämtningar kommer att nekas.",
@@ -1479,6 +1604,55 @@
         "messagePlaceholder": "c-Cola",
         "remove": "Ta bort"
       }
+    },
+    "roles": {
+      "title": "Roller & behörigheter",
+      "description": "Vilken Authentik-grupp som ger vilken roll här, och vad varje roll får göra.",
+      "groupsTitle": "Grupper → roller",
+      "groupsSubtitle": "Rollerna hämtas från Authentik vid varje inloggning. Här bestämmer du vad varje grupp ger.",
+      "addGroup": "Lägg till grupp",
+      "addGroupLabel": "Namn på Authentik-grupp",
+      "noGroups": "Inga grupper ännu.",
+      "groupExists": "{group} finns redan i listan.",
+      "outsideSection": "{group} ligger utanför sektionen. Bara grupper under dsek. ger något här.",
+      "unmappedHint": "Grupper som medlemmar faktiskt sitter i men som inte ger något här. De flesta ska inte göra det.",
+      "searchPlaceholder": "Sök grupper och roller…",
+      "noMatches": "Ingen grupp matchar det.",
+      "filterLabel": "Vilka grupper som visas",
+      "filter": {
+        "all": "Alla",
+        "mapped": "Ger något",
+        "unmapped": "Ger inget",
+        "silent": "Når ingen"
+      },
+      "noRoles": "Inga roller",
+      "noResultUnits": "Inga resultatenheter",
+      "rolesFor": "Roller för {group}",
+      "resultUnitsFor": "Resultatenheter för {group}",
+      "holderCount": "{count, plural, =0 {ingen} =1 {1 person} other {# personer}}",
+      "nobodyHolds": "Ingen sitter i gruppen",
+      "probablyTypo": "Ger ingen något",
+      "removeGroupLabel": "Ta bort {group}",
+      "removeGroupTitle": "Ta bort kopplingen?",
+      "removeGroupBody": "{group} slutar ge roller och resultatenheter. Det påverkar {count, plural, =0 {ingen just nu} =1 {1 person} other {# personer}}.",
+      "removeGroupAction": "Ta bort",
+      "capabilitiesTitle": "Roller → behörigheter",
+      "capabilitiesSubtitle": "Vad varje roll får göra. Gäller från nästa sidladdning, för alla som har rollen.",
+      "capabilityColumn": "Behörighet",
+      "attestNote": "Attesträtt står inte här. Det är en regel i koden, inte en kryssruta. Om ett utlägg är ditt att attestera beror på vems det är, vad inlämnaren har för roller och vilken resultatenhet kostnadsstället tillhör. Attestvyn ovan styr bara om kön syns.",
+      "staleCounts": "{count, plural, =1 {1 medlem} other {# medlemmar}} har inte loggat in sedan grupplistorna började sparas, och räknas därför inte i gruppernas siffror nedan. Rollsiffrorna omfattar alla medlemmar.",
+      "saved": "Sparat.",
+      "savedAffecting": "Sparat. {count, plural, =1 {1 person} other {# personer}} fick nya roller.",
+      "saveFailed": "Kunde inte spara.",
+      "confirmManyTitle": "Gruppen är stor",
+      "confirmManyBody": "{group} har {count} medlemmar. Alla får ändringen direkt.",
+      "confirmManyAction": "Spara ändå",
+      "confirmWideTitle": "Många får den här behörigheten",
+      "confirmWideBody": "{role} har {count} personer. Alla får {capability} direkt.",
+      "confirmWideAction": "Ge behörigheten",
+      "confirmOwnTitle": "Du tar bort något från dig själv",
+      "confirmOwnBody": "Du har rollen {role}. Tar du bort {capability} från den förlorar du den också.",
+      "confirmOwnAction": "Ta bort ändå"
     }
   },
   "errorPage": {
@@ -1493,7 +1667,7 @@
   "income": {
     "costCentreFailed": "Kunde inte ändra kostnadsstället.",
     "title": "Intäkter",
-    "description": "Hämta försäljning från Zettle och Swish, granska och bokför.",
+    "description": "Hämta försäljning från Zettle och Swish. Granska och bokför.",
     "serviceUnavailable": "Intäktstjänsten är inte konfigurerad. Sätt INTAKT_URL och INTAKT_TOKEN för att kunna hämta och rendera rapporter.",
     "source": {
       "SWISH": "Swish",
@@ -1541,7 +1715,7 @@
       "title": "Inga dagar att bokföra"
     },
     "batch": {
-      "description": "{count} rapporter — en per verksamhet och dag.",
+      "description": "{count} rapporter, en per verksamhet och dag.",
       "empty": "Inga rapporter i den här hämtningen."
     },
     "table": {
@@ -1575,7 +1749,7 @@
       "action": "Flytta…",
       "unitField": "Verksamhet",
       "mergeTitle": "Slå ihop med {unit}s rapport?",
-      "mergeBody": "{unit} har redan en rapport för {date}. {count, plural, one {# vara} other {# varor}} flyttas dit och de två dagarna blir en — det går inte att dela upp dem igen.",
+      "mergeBody": "{unit} har redan en rapport för {date}. {count, plural, one {# vara} other {# varor}} flyttas dit och de två dagarna blir en. Det går inte att dela upp dem igen.",
       "mergeConfirm": "Flytta",
       "dragHint": "Dra till en annan verksamhet samma dag",
       "picked": "{count, plural, one {# vald} other {# valda}}",
@@ -1587,7 +1761,7 @@
       "destinationPlaceholder": "Välj verksamhet…",
       "setAll": "Sätt alla till:",
       "setAllTo": "Sätt alla rader till konto {account}",
-      "noAccounts": "Verksamheten har inga produktprefix — välj konto per rad.",
+      "noAccounts": "Verksamheten har inga produktprefix. Välj konto för varje rad.",
       "account": "Nytt konto",
       "accountFor": "Konto för {product}",
       "wasAccount": "Bokförs nu på {account}",
@@ -1603,17 +1777,17 @@
       "action": "Ny rapport",
       "actionFor": "Ny rapport för {date}",
       "title": "Ny rapport",
-      "subtitle": "{date} · {source} — en tom rapport att flytta försäljning till.",
+      "subtitle": "{date} · {source}. En tom rapport att flytta försäljning till.",
       "unit": "Verksamhet",
       "unitHint": "Vems intäkter rapporten blir.",
       "unitPlaceholder": "Välj verksamhet…",
-      "alreadyExists": "Verksamheten har redan en rapport för den dagen. Den öppnas i stället — två rapporter för samma dag går inte att bokföra båda två.",
+      "alreadyExists": "Verksamheten har redan en rapport för den dagen, så den öppnas i stället. Två rapporter för samma dag går inte att bokföra båda två.",
       "footerHint": "Rapporten skapas tom.",
       "cancel": "Avbryt",
       "confirm": "Skapa rapport",
       "open": "Öppna rapporten",
       "done": "Rapporten skapades.",
-      "opened": "Verksamheten hade redan en rapport för den dagen — den är öppnad.",
+      "opened": "Verksamheten hade redan en rapport för den dagen. Den är öppnad.",
       "failed": "Kunde inte skapa rapporten.",
       "emptyTitle": "Tom rapport",
       "emptyBody": "Rapporten innehåller ingen försäljning än. Dra hit varor från en annan rapport samma dag, eller markera dem där och välj Flytta. Är det fel verksamhet: ta bort rapporten och skapa en ny.",
@@ -1627,16 +1801,16 @@
     "undo": {
       "unexport": "Avmarkera export",
       "unexportTitle": "Avmarkera exporten?",
-      "unexportBody": "Verifikationen {voucher} ligger kvar i Fortnox — appen slutar bara räkna dagen som exporterad. Exporterar du igen skapas en andra verifikation, så makulera den första i Fortnox först.",
+      "unexportBody": "Verifikationen {voucher} ligger kvar i Fortnox. Appen slutar bara räkna dagen som exporterad. Exporterar du igen skapas en andra verifikation, så makulera den första i Fortnox innan dess.",
       "unexportConfirm": "Avmarkera",
       "unexportDone": "Exporten avmarkerad.",
       "reopen": "Ändra",
       "reopenTitle": "Öppna dagen för ändring?",
-      "reopenBody": "Verifikationen och den bokförda intäktsräkningen tas bort, och dagen hamnar i kön Att bokföra igen. Där ligger den tills du bokför den på nytt — eller tills nästa hämtning rensar kön.",
+      "reopenBody": "Verifikationen och den bokförda intäktsräkningen tas bort, och dagen hamnar i kön Att bokföra igen. Där ligger den tills du bokför den på nytt, eller tills nästa hämtning rensar kön.",
       "reopenConfirm": "Öppna",
       "delete": "Ta bort",
       "deleteTitle": "Ta bort {date}?",
-      "deleteBody": "{unit}s rapport, dess sålda varor och dess verifikation tas bort. Det går inte att ångra — men en ny hämtning av samma period hämtar dagen igen.",
+      "deleteBody": "{unit}s rapport, dess sålda varor och dess verifikation tas bort. Det går inte att ångra. En ny hämtning av samma period tar tillbaka dagen.",
       "deleteConfirm": "Ta bort",
       "deleteDone": "Rapporten togs bort.",
       "failed": "Åtgärden misslyckades."
@@ -1758,25 +1932,25 @@
       "volumeOnUnitProduct": "Produkten räknas i styck och har ingen egen volym",
       "correctionNeedsTarget": "En rättelse måste peka ut raden den rättar",
       "calibrationNoVolume": "Flaskans volym måste vara större än noll",
-      "openBottlesFirst": "Öppnade flaskor måste tas ut först — ta med dem, eller lämna den oöppnade",
+      "openBottlesFirst": "Öppnade flaskor måste tas ut först. Ta med dem, eller lämna den oöppnade",
       "notThatManyOpen": "Det finns inte så många öppnade flaskor på den nivån",
       "notThatManySealed": "Det finns inte så många oöppnade flaskor",
       "levelsOnReturnOnly": "Nivån sätts när flaskan kommer tillbaka, inte när den tas ut",
       "purchaseArrivesSealed": "Ett inköp kommer oöppnat",
-      "moreThanWentOut": "Fler flaskor än som togs ut — kontrollera antalet",
+      "moreThanWentOut": "Fler flaskor än som togs ut. Kontrollera antalet",
       "nothingReturned": "Säg vad som kom tillbaka",
       "spillMovesNoStock": "Ett spill flyttar inget lager",
       "nothingSpilled": "Ange hur mycket som gick sönder",
       "moreBottlesThanWentOut": "Fler flaskor tillbaka än som togs ut",
       "nameRequired": "Produkten behöver ett namn",
-      "eanRequired": "Streckkoden behövs — skanna den eller skriv in den (8–14 siffror)",
+      "eanRequired": "Streckkoden behövs. Skanna den eller skriv in den (8–14 siffror)",
       "abvRequired": "Alkoholhalten behövs till restaurangrapporten",
       "sizeRequired": "Volymen behövs till restaurangrapportens liter",
       "costRequired": "Inköpspriset behövs för att lagret ska kunna värderas"
     },
     "log": {
       "title": "Lagerlogg",
-      "description": "Varje rörelse, senast först. Rader ändras aldrig — en felaktig rad rättas med en ny.",
+      "description": "Varje rörelse, senast först. Ingen ändrar en rad här. En felaktig rad rättar du med en ny.",
       "empty": "Inga rörelser i det här urvalet.",
       "recorded": "infört {date}",
       "readings": "vägt: {list} g",
@@ -1830,7 +2004,10 @@
         "unitMl": "Volym per styck (ml)",
         "ean": "Streckkod (EAN)",
         "eanHint": "Gör att produkten kan skannas fram i förrådet.",
-        "cost": "Inköpspris inkl. pant (kr)"
+        "cost": "Inköpspris inkl. pant (kr)",
+        "systembolagetId": "Systembolagets artikelnummer",
+        "systembolagetIdHint": "Siffrorna sist i produktens adress på systembolaget.se. Klistra in hela länken om du vill. Numret plockas ut.",
+        "systembolagetIdInvalid": "Hittar inget artikelnummer. Klistra in produktens länk från systembolaget.se, eller skriv bara siffrorna."
       },
       "col": {
         "name": "Produkt",
@@ -1853,7 +2030,7 @@
       "title": "Skanna streckkod",
       "subtitle": "Rikta kameran mot streckkoden på burken eller flaskan.",
       "hint": "Håll koden inom ramen.",
-    "flip": "Byt kamera",
+      "flip": "Byt kamera",
       "found": "{name} valdes.",
       "unknown": "Ingen produkt har den streckkoden. Lägg upp produkten först.",
       "noCamera": "Kameran kunde inte startas. Skriv in koden nedan i stället.",
@@ -1894,7 +2071,7 @@
       "addSearch": "Sök produkt…",
       "newProduct": "Lägg upp ”{name}”",
       "remove": "Ta bort raden",
-      "scan": "Skanna streckkod — lägger till produkten, eller hoppar till raden om den redan står på leveransen",
+      "scan": "Skanna streckkod. Produkten läggs till. Står den redan på leveransen hoppar du till dess rad",
       "failed": "Raden kunde inte bokföras.",
       "save": "Spara leverans",
       "saved": "{count, plural, =1 {1 rad bokfördes} other {# rader bokfördes}}",
@@ -1911,7 +2088,7 @@
       "units": "Antal",
       "expected": "Loggen säger {count}",
       "difference": "Skiljer sig från loggen ({sealed} oöppnade). Justeringen skrivs in i loggen.",
-      "agrees": "Stämmer med loggen — inget att justera.",
+      "agrees": "Stämmer med loggen. Inget att justera.",
       "noteHint": "Skriv gärna varför det skiljer, om ni vet."
     },
     "filterCategory": "Dryckesslag",
@@ -1920,7 +2097,7 @@
       "sealed": "Oöppnade flaskor",
       "units": "Antal",
       "value": "Lagervärde",
-      "noCostPrice": "Inget inköpspris satt — lagervärdet blir noll",
+      "noCostPrice": "Inget inköpspris satt, så lagervärdet blir noll",
       "impossible": "Saldot går inte ihop. Inventera produkten för att rätta det.",
       "wholeLog": "Hela loggen",
       "details": "Uppgifter",
@@ -1956,7 +2133,6 @@
       "stillOut": "Kvar ute",
       "sold": "Vad som gick åt",
       "nothing": "Inget är bokfört på det här tillfället ännu. Lägg till en produkt nedan.",
-      "openCaveat": "Så länge varor står kvar i baren räknas de som sålda. Registrera återlämningen så stämmer siffran.",
       "movements": "{count, plural, =1 {1 rörelse i loggen} other {# rörelser i loggen}}",
       "field": {
         "name": "Namn",
@@ -1988,20 +2164,24 @@
         "remove": "Ta bort raden",
         "failed": "Raden kunde inte bokföras. Siffrorna läses om.",
         "locked": {
-          "nothingOnShelf": "Inget fanns på den nivån när tillfället började. Det du lämnat tillbaka i kväll går inte att ta ut igen — det räknas ändå inte.",
+          "nothingOnShelf": "Inget fanns på den nivån när tillfället började. Det du lämnat tillbaka i kväll går inte att ta ut igen. Det räknas ändå inte.",
           "nothingOut": "Inget är utlämnat på tillfället ännu, så inget kan komma tillbaka eller gå sönder."
         },
         "newProduct": "Lägg upp ”{name}”",
         "search": "Sök produkt i listan…",
         "noMatch": "Inget på tillfället matchar ”{text}”. Lägg till det på en tom rad nedan.",
-        "scan": "Skanna streckkod — lägger till produkten, eller hoppar till raden om den redan står på tillfället",
+        "scan": "Skanna streckkod. Produkten läggs till. Står den redan på tillfället hoppar du till dess rad",
         "save": "Spara",
         "discard": "Rensa",
         "unsaved": "{count, plural, =1 {1 ruta väntar på att sparas} other {# rutor väntar på att sparas}}",
         "unsavedWithFaults": "{count, plural, =1 {1 ruta väntar} other {# rutor väntar}} · {faults, plural, =1 {1 går inte att bokföra} other {# går inte att bokföra}}",
         "nothingToSave": "Inget att spara ännu.",
         "discardTitle": "Rensa det ifyllda?",
-        "discardMessage": "{count, plural, =1 {1 ändrad ruta} other {# ändrade rutor}} tas bort. Inget är bokfört, så det går inte att få tillbaka."
+        "discardMessage": "{count, plural, =1 {1 ändrad ruta} other {# ändrade rutor}} tas bort. Inget är bokfört, så det går inte att få tillbaka.",
+        "rowActions": "Ändra raden",
+        "swap": "Byt produkt",
+        "swapTo": "Byt till…",
+        "swapCancel": "Avbryt bytet"
       }
     },
     "changes": {
@@ -2021,7 +2201,7 @@
     "entry": {
       "fix": "Rätta",
       "title": "Rätta raden",
-      "hint": "{kind}, {date}. Skriv vad det skulle ha varit — mellanskillnaden räknas ut åt dig.",
+      "hint": "{kind}, {date}. Skriv vad det skulle ha varit. Mellanskillnaden räknas ut åt dig.",
       "qty": "Antal",
       "qtyHint": "Står på {was} nu. Noll tar bort raden helt.",
       "remove": "Ta bort raden",

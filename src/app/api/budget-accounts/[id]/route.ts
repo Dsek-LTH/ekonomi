@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { denyBudgetWrite, denyDeletingAdjusted } from "@/lib/budget/access";
+import { allowBudgetWrite, denyDeletingAdjusted } from "@/lib/budget/access";
 import { resolveBudgetAccount } from "@/lib/budget/account-validation";
 import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -8,8 +8,8 @@ import { PatchAccount } from "@/lib/api/schemas/budget";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ account: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ account: id });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PatchAccount);
   if (!parsed.ok) return parsed.res;
@@ -37,8 +37,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ account: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ account: id });
+  if (!g.ok) return g.res;
   const adjusted = await denyDeletingAdjusted({ account: id });
   if (adjusted) return adjusted;
   await prisma.budgetAccount.delete({ where: { id } });

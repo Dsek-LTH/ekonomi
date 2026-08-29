@@ -12,7 +12,27 @@ export type Role =
   | "STOCKARE"
   | "ORDINARIE";
 
-export type PaymentType = "CARD" | "REIMBURSEMENT";
+// One thing a role may be allowed to do. Which roles hold which is a table
+// (RoleCapability) edited in Inställningar → Roller; this list is not, because
+// each value is a question some call site asks and one nobody asks would be a
+// tickbox that does nothing. Every value has exactly one helper in
+// lib/domain/permissions.ts. See the enum in prisma/schema.prisma for what each
+// one covers, and why the attest rule is not among them.
+export type Capability =
+  | "ADMIN"
+  | "BOOKKEEPING"
+  | "FORTNOX_LOGIN"
+  | "EXPORT_UNDO"
+  | "SETTINGS"
+  | "STOCK_VIEW"
+  | "STOCK_MANAGE"
+  | "BUDGET_VIEW"
+  | "BUDGET_COMMENT"
+  | "BUDGET_LOCK"
+  | "BUDGET_CHANGE_LOCKED"
+  | "ATTEST_VIEW";
+
+export type PaymentType = "CARD" | "REIMBURSEMENT" | "MILEAGE";
 
 // ── Alkohollager ──────────────────────────────────────────────────
 
@@ -66,13 +86,24 @@ export interface User {
   name: string;
   email: string;
   roles: Role[];
+  /**
+   * What those roles are currently allowed to do — resolved per request from
+   * the RoleCapability table (lib/server/capabilities.ts), never stored on the
+   * row and never carried in the session.
+   *
+   * This is what every gate reads. `roles` is still here because a few rules
+   * genuinely turn on which role you hold rather than on what it may do — the
+   * attest rule's vice-skattmästare and resultatansvarig clauses — and because
+   * the settings screens list people by role.
+   */
+  capabilities: Capability[];
   initials: string;
 }
 
-// The signed-in user, plus the capabilities that aren't stored on the User
-// record itself. Only ever describes the acting user — everyone else is a plain
-// `User`, where card holdership is neither known nor relevant (the admin page
-// reads it off `Card.holderId` instead).
+// The signed-in user, plus what isn't stored on the User record itself. Only
+// ever describes the acting user — everyone else is a plain `User`, where card
+// holdership is neither known nor relevant (the admin page reads it off
+// `Card.holderId` instead).
 export interface CurrentUser extends User {
   holdsCard: boolean;
 }
@@ -103,6 +134,10 @@ export interface ResultUnit {
   resultUnit: string; // the name
   // Cost-centre code prefixes that decide membership, e.g. "SKT" → SKT01, SKT02.
   prefixes: { id: string; value: string }[];
+  // The Authentik groups that make someone resultatansvarig for this unit, and
+  // who currently holds them. Both are read-only here: the mapping lives in
+  // lib/server/authentik-roles.ts and the membership lives in Authentik.
+  ownerGroups: string[];
   owners: { id: string; name: string }[];
   // The cost centres the prefixes currently match, resolved live.
   costCenters: ResultUnitCostCenter[];
@@ -206,6 +241,28 @@ export interface FortnoxStatus {
   };
 }
 
+/**
+ * The journey a milersättning is, as the client reads it.
+ *
+ * The odometer at each end and what the distance between them came to. The
+ * distance is carried rather than left to be subtracted again on every screen
+ * that shows it — one rule, in lib/mileage/claim.ts, and everything downstream
+ * reads its answer.
+ */
+export interface MileageJourney {
+  /** The odometer when the journey began and when it ended, in kilometres.
+   *  Null for a reading not given yet — a draft may hold one and not the
+   *  other, and 0 is a real reading. */
+  odometerStart: number | null;
+  odometerEnd: number | null;
+  /** `odometerEnd - odometerStart`, or null while the two do not make a
+   *  journey. */
+  km: number | null;
+  /** What a kilometre was worth on the day, in öre. Null on a claim that was
+   *  never valued. */
+  orePerKm: number | null;
+}
+
 export interface Expense {
   id: string; // the row's own id — what pages and API routes are keyed on
   // The human reference, e.g. "DEK26-0042". Absent until the utlägg is submitted
@@ -224,6 +281,16 @@ export interface Expense {
   matchedTransactionId?: string;
   receiptId?: string; // newest uploaded receipt, if any
   receiptMimeType?: string; // its stored type (image/jpeg or application/pdf)
+  /**
+   * The journey, for a MILEAGE utlägg. Absent for every other payment type,
+   * which has none.
+   *
+   * `grossAmount` is what it comes to and `purchaseDate` is the day it was
+   * driven; the amount is the server's, computed in lib/mileage/claim.ts. The
+   * rate it was valued at rides the claim, so the utläggsräkning drawn from it
+   * a year later still adds up to what was paid.
+   */
+  mileage?: MileageJourney;
   submitterHasPayout: boolean; // submitter has clearing + account number on file
   verification?: Verification; // present once booked
   revisions: RevisionEntry[];

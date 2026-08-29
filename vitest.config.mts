@@ -14,6 +14,16 @@ const src = resolve(root, "src");
 // Anything that actually queries (lib/data/*'s loaders, lib/ledger/report.ts)
 // is deliberately out of scope — testing those means standing up Postgres,
 // which is a different kind of test with a different budget.
+//
+// Route handlers are in scope, and were the gap this rule accidentally left. A
+// handler is an ordinary async function over a Request; what needs a world is
+// not the handler but the two things beneath it — the session and the database
+// — and both can be replaced at their lowest point (`lib/server/current-user`
+// and `lib/server/db`), leaving everything above them real: the actual gate,
+// the actual schema, the actual response. See
+// app/api/authority/capabilities/route.test.ts for the shape. It matters
+// because every authority gate in the app is a route handler, and testing only
+// the pure layer underneath meant testing the half that was not breaking.
 export default defineConfig({
   test: {
     environment: "node",

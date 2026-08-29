@@ -59,6 +59,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           nominalMl: body.nominalMl,
           ean: body.ean,
           costPriceOre: body.costPriceOre,
+          systembolagetId: body.systembolagetId,
         },
         select: { id: true },
       }),

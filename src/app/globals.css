@@ -382,6 +382,76 @@ summary {
   }
 }
 
+/* The receipt panel's fold-away — see components/receipt/receipt-panel.tsx.
+   A panel that simply stops being there leaves the reader with no idea where it
+   went, and what it went to is a strip on the edge of the screen. So the panel
+   slides off toward that edge and the tab is what it leaves behind, arriving
+   with one ring that widens and fades, the once.
+
+   Only on a fold the reader asked for: the tab wears no motion at all on an
+   ordinary page load, when there is no question of where anything went. The
+   `translate` property and not `transform`, because that is the one Tailwind's
+   `-translate-y-1/2` writes — animating the other would centre the tab twice.
+
+   `prefers-reduced-motion` is answered by the blunt rule above: both are cut to
+   nothing, and both end on the tab's resting state, so it simply arrives. */
+@keyframes receipt-tab-in {
+  from {
+    opacity: 0;
+    translate: 0 0.75rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* From md the tab is on the right edge rather than the bottom one, so it comes
+   in from the side — and carries a -50% of its own height in the very property
+   the animation writes, which the resting state needs back on every frame.
+   Redefining the keyframes inside the media query rather than branching the
+   class keeps one name in the component; the last matching definition wins.
+   48rem is Tailwind's `md`. */
+@media (min-width: 48rem) {
+  @keyframes receipt-tab-in {
+    from {
+      opacity: 0;
+      translate: 0.75rem -50%;
+    }
+    to {
+      opacity: 1;
+      translate: 0 -50%;
+    }
+  }
+}
+
+@keyframes receipt-tab-ring {
+  from {
+    box-shadow: 0 0 0 0 var(--color-accent);
+    opacity: 0.45;
+  }
+  to {
+    box-shadow: 0 0 0 0.85rem transparent;
+    opacity: 0;
+  }
+}
+
+.receipt-tab-arriving {
+  animation: receipt-tab-in 220ms var(--ease-out-quint) both;
+}
+
+/* The ring is a layer of its own rather than the tab's own shadow: the tab
+   carries a card shadow at rest, and animating that away and back would take
+   the shape's edge with it. */
+.receipt-tab-arriving::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: receipt-tab-ring 850ms 220ms ease-out both;
+}
+
 /* Budget sheets read like a spreadsheet, not like the rest of the app: light
    hairline gridlines, roomy rows, a soft hover, neutral fills. Scoped to the
    table wrappers (class `budget-grid`). */

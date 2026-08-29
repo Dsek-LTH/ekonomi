@@ -32,7 +32,7 @@
 // answers map onto three requests: a figure where there was none creates the
 // row, a different figure changes it, and an emptied cell removes it. The log
 // keeps the correction either way, as a StockChange.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -48,12 +48,11 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
-import { BarcodeScanner } from "@/components/stock/barcode-scanner";
+import { useProductScan } from "@/components/stock/use-product-scan";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
-import { nextCell, stepCell } from "@/lib/ui/grid-nav";
+import { useGridFocus } from "@/lib/ui/use-grid-focus";
 import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
-import { ProductDialog } from "../product-dialog";
 import { cn } from "@/lib/ui/utils";
 
 /** Öre, to the öre — this is read against an invoice. */
@@ -117,14 +116,12 @@ export default function DeliveryClient({
   const setNote = (v: string) => setDraft((d) => ({ ...d, note: v }));
 
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
-  /** A product being invented mid-sheet: what is known of it so far. */
-  const [naming, setNaming] = useState<{ name?: string; ean?: string } | null>(null);
   /** A product just added, waiting for the caret. */
   const [seeking, setSeeking] = useState<string | null>(null);
 
   /** Every cell's input, so the keyboard can move between them. */
-  const inputs = useRef(new Map<string, HTMLInputElement>());
+  // The caret's own layer — shared with the stocktake sheet.
+  const { focusCell, register, handleKey } = useGridFocus();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
@@ -289,38 +286,12 @@ export default function DeliveryClient({
     setSeeking(id);
   }
 
-  /**
-   * A product invented while filling the sheet in.
-   *
-   * A delivery is exactly when a product first exists — somebody has just
-   * bought it — so the form opens with what is known of it, and the row picks
-   * it up once it is real.
-   */
-  const invent = (text: string) => setNaming({ name: text });
-
-  /**
-   * A barcode, turned into a row you can type into.
-   *
-   * Scan, type how many, scan the next: that is the whole errand, and it is why
-   * a scan puts the caret in the box rather than merely putting the product on
-   * the sheet. A code the sheet already has jumps to its row instead of adding
-   * a second one.
-   */
-  async function lookUp(ean: string) {
-    setScanning(false);
-    const found = await mutate<{ id: string; name: string }>(
-      `/api/stock/products/by-ean?ean=${encodeURIComponent(ean)}`,
-      { key: "scan", method: "GET", refresh: false, error: t("scan.unknown") },
-    );
-    if (!found) {
-      // Scanning something the cellar has never seen is exactly when a product
-      // gets created, and sending somebody to another page to do it is how half
-      // a pallet ends up unlogged.
-      setNaming({ ean });
-      return;
-    }
-    add(found.id);
-  }
+  // Scanning a barcode onto the sheet, and inventing a product that isn't
+  // there yet — shared with the stocktake tag, which does the same errand.
+  const { scan, invent, overlay } = useProductScan({
+    unknownError: t("scan.unknown"),
+    onScanned: (id) => add(id),
+  });
 
   // ── Walking the sheet ──
   //
@@ -330,17 +301,6 @@ export default function DeliveryClient({
   // would take the caret through each row's product link and remove button on
   // the way.
   const grid: (string | null)[][] = rows.map((id) => [id]);
-
-  const canFocus = (id: string): boolean => {
-    const el = inputs.current.get(id);
-    return Boolean(el && el.offsetParent !== null);
-  };
-
-  function focusCell(id: string | null): boolean {
-    if (!id || !canFocus(id)) return false;
-    inputs.current.get(id)?.focus();
-    return true;
-  }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -353,30 +313,10 @@ export default function DeliveryClient({
   }, [seeking, products, rows]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function onCellKey(e: React.KeyboardEvent<HTMLInputElement>, id: string) {
-    // Escape puts a cell back to what is booked and stays in it — the way out
-    // of a half-typed sum without having to remember what was there.
-    if (e.key === "Escape") {
-      setTyped((prev) => ({ ...prev, [id]: "" }));
-      e.preventDefault();
-      return;
-    }
-
-    const back = e.shiftKey;
-    let target: string | null = null;
-    if (e.key === "Tab") target = nextCell(grid, id, back ? -1 : 1, canFocus);
-    else if (e.key === "Enter") target = stepCell(grid, id, back ? -1 : 1, 0, canFocus);
-    else if (e.key === "ArrowDown") target = stepCell(grid, id, 1, 0, canFocus);
-    else if (e.key === "ArrowUp") target = stepCell(grid, id, -1, 0, canFocus);
-    // Up and down only: left and right belong to the text, and there is nowhere
-    // sideways to go on a sheet one column wide.
-    else return;
-
-    const moved = focusCell(target);
-    // Tab falls through when there is nowhere left to go, so the sheet can
-    // still be left by keyboard rather than becoming a trap.
-    if (moved || e.key !== "Tab") e.preventDefault();
-  }
+  // One column, so there is nowhere sideways to go and left/right stay with
+  // the text.
+  const onCellKey = (e: React.KeyboardEvent<HTMLInputElement>, id: string) =>
+    handleKey(e, id, grid, { onEscape: (k) => setTyped((prev) => ({ ...prev, [k]: "" })) });
 
   // ── A cell ──
   //
@@ -390,10 +330,7 @@ export default function DeliveryClient({
     const working = raw !== undefined && focusKey !== id && isExpression(raw);
     return (
       <input
-        ref={(el) => {
-          if (el) inputs.current.set(id, el);
-          else inputs.current.delete(id);
-        }}
+        ref={register(id)}
         inputMode="numeric"
         className={cn(
           "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted/50 focus-inset",
@@ -557,7 +494,7 @@ export default function DeliveryClient({
                   <IconButton
                     label={t("delivery.scan")}
                     title={t("delivery.scan")}
-                    onClick={() => setScanning(true)}
+                    onClick={scan}
                   >
                     <IconScan className="size-4" />
                   </IconButton>
@@ -597,19 +534,7 @@ export default function DeliveryClient({
           above is short by whatever it cost. */}
       {unpriced.length > 0 && <Notice tone="warning">{t("notice.noCostPrice")}</Notice>}
 
-      {scanning && <BarcodeScanner onCode={lookUp} onCancel={() => setScanning(false)} />}
-
-      {/* Invented on the sheet, finished here: a product needs a drink type, a
-          strength and a price before it can go on a shelf. */}
-      {naming !== null && (
-        <ProductDialog
-          product={null}
-          name={naming.name}
-          ean={naming.ean}
-          onClose={() => setNaming(null)}
-          onCreated={(id) => add(id)}
-        />
-      )}
+      {overlay}
     </PageShell>
   );
 }

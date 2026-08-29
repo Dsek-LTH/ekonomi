@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
+import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
@@ -283,13 +284,12 @@ function ComboboxBase({
   // "the combobox doesn't work". Following the field is the better answer
   // anyway: the menu stays where it belongs instead of vanishing because
   // something nudged the page.
+  // The trigger and the panel are both the layer: the panel is portalled out of
+  // the trigger's subtree, so a press on it is not a press "inside" the field.
+  useDismissOnOutside(open, [triggerRef, panelRef], close);
+
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
-      close();
-    };
     // Not while scrolling the menu's own list — that moves nothing.
     const follow = (e?: Event) => {
       if (e && panelRef.current?.contains(e.target as Node)) return;
@@ -299,7 +299,6 @@ function ComboboxBase({
       if (!el || !el.isConnected) return close();
       setRect(el.getBoundingClientRect());
     };
-    document.addEventListener("pointerdown", onDown);
     window.addEventListener("resize", follow);
     window.addEventListener("scroll", follow, true);
     // The keyboard on iOS changes the visual viewport without necessarily
@@ -309,7 +308,6 @@ function ComboboxBase({
     window.visualViewport?.addEventListener("resize", follow);
     window.visualViewport?.addEventListener("scroll", follow);
     return () => {
-      document.removeEventListener("pointerdown", onDown);
       window.removeEventListener("resize", follow);
       window.removeEventListener("scroll", follow, true);
       window.visualViewport?.removeEventListener("resize", follow);

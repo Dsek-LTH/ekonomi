@@ -36,6 +36,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import { bulkTransaction } from "@/lib/server/tx";
 import type { IncomeReportStatus } from "@/lib/domain/types";
 
 /**
@@ -142,11 +143,22 @@ export async function setLineAccounts(
   const missing = wanted.find((a) => !accountName.has(a));
   if (missing) return { ok: false, reason: "unknownAccount", account: missing };
 
-  await prisma.$transaction(async (tx) => {
+  await bulkTransaction(async (tx) => {
+    // Grouped by the account they land on rather than written one at a time.
+    // Setting an account is nearly always the same account for every line in a
+    // selection, so this is usually a single statement — and a report with a
+    // few hundred lines is no longer a few hundred round trips inside one
+    // transaction.
+    const byAccount = new Map<string, string[]>();
     for (const line of lines) {
-      await tx.incomeLine.update({
-        where: { id: line.id },
-        data: { account: line.account, accountName: accountName.get(line.account) ?? "" },
+      const ids = byAccount.get(line.account);
+      if (ids) ids.push(line.id);
+      else byAccount.set(line.account, [line.id]);
+    }
+    for (const [account, ids] of byAccount) {
+      await tx.incomeLine.updateMany({
+        where: { id: { in: ids } },
+        data: { account, accountName: accountName.get(account) ?? "" },
       });
     }
     // The report itself is untouched — an account says where the money books,
@@ -242,7 +254,7 @@ export async function moveIncomeLines(
   // exactly this. Say so instead.
   if (!target && siblings.length > 0) return { ok: false, reason: "moveDestinationBooked" };
 
-  return prisma.$transaction(async (tx) => {
+  return bulkTransaction(async (tx) => {
     let destinationId = target?.id;
     const destinationCreated = !destinationId;
 

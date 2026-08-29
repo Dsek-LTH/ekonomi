@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
-import { EmptyNote } from "@/components/ui/empty-state";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockTagDto } from "@/lib/data/stock";
 import { EventDialog } from "./event-dialog";
@@ -116,7 +115,7 @@ export default function StockTagsClient({
           action={
             canManage ? <Button onClick={() => setMaking(true)}>{t("tag.new")}</Button> : undefined
           }
-          empty={<EmptyNote>{t("tag.empty")}</EmptyNote>}
+          empty={t("tag.empty")}
         />
       </Card>
 

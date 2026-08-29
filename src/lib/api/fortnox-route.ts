@@ -8,7 +8,7 @@
 import { NextResponse } from "next/server";
 import { FortnoxError, getConnection, getServiceToken } from "@/lib/fortnox";
 import { fail, gate, type Actor } from "@/lib/api/guard";
-import type { Role } from "@/lib/domain/types";
+import type { Capability } from "@/lib/domain/types";
 
 /**
  * "Not connected" is a 409 rather than a 403: the caller has the right, the
@@ -34,7 +34,7 @@ export type ServiceGate =
  * `denyNoFortnox` instead — there is no token for them to be handed.
  */
 export async function gateFortnoxService(
-  can: (roles: readonly Role[]) => boolean,
+  can: (caps: readonly Capability[]) => boolean,
   denied: string,
 ): Promise<ServiceGate> {
   const g = await gate(can, denied);

@@ -4,7 +4,7 @@ import { canAccessBudget, canLockBudget } from "@/lib/domain/permissions";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchBudget } from "@/lib/api/schemas/budget";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { getEvaluatedBudget } from "@/lib/data/budget";
 
 // GET /api/budgets/[id] — one budget, evaluated, with the year's outcome beside
@@ -55,7 +55,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!g.ok) return g.res;
 
     const lock = body.locked;
-    // This branch runs before `denyBudgetWrite`, which is what establishes the
+    // This branch runs before `allowBudgetWrite`, which is what establishes the
     // budget exists everywhere else in this file — so locking one that isn't
     // there reached Prisma unguarded and came back a 500.
     const budget = await orNotFound(
@@ -73,8 +73,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json(budget);
   }
 
-  const denied = await denyBudgetWrite({ budget: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ budget: id });
+  if (!g.ok) return g.res;
 
   const data: { name?: string; year?: number } = {};
 
@@ -87,7 +87,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
 
-  // `denyBudgetWrite` has established it exists; this covers the gap between
+  // `allowBudgetWrite` has established it exists; this covers the gap between
   // that statement and this one.
   const budget = await orNotFound(
     () => prisma.budget.update({ where: { id }, data }),
@@ -102,8 +102,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 // have no budget as easily as it may have five.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ budget: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ budget: id });
+  if (!g.ok) return g.res;
 
   const deleted = await orNotFound(
     () => prisma.budget.delete({ where: { id } }),

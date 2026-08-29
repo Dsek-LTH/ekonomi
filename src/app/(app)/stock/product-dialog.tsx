@@ -19,6 +19,7 @@ import { Notice } from "@/components/ui/notice";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { StockProductDto } from "@/lib/data/stock";
 import type { CreateStockProduct } from "@/lib/api/schemas/stock";
+import { parseSystembolagetId } from "@/lib/stock/systembolaget";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
@@ -41,6 +42,7 @@ type Draft = {
   nominalMl: string;
   costPrice: string;
   ean: string;
+  systembolagetId: string;
 };
 
 const emptyDraft = (): Draft => ({
@@ -52,6 +54,7 @@ const emptyDraft = (): Draft => ({
   nominalMl: "",
   costPrice: "",
   ean: "",
+  systembolagetId: "",
 });
 
 const draftOf = (p: StockProductDto): Draft => ({
@@ -63,6 +66,7 @@ const draftOf = (p: StockProductDto): Draft => ({
   nominalMl: p.nominalMl?.toString() ?? "",
   costPrice: p.costPriceOre != null ? (p.costPriceOre / 100).toString() : "",
   ean: p.ean ?? "",
+  systembolagetId: p.systembolagetId ?? "",
 });
 
 /** Empty means "not stated", which is a different thing from zero. */
@@ -122,6 +126,12 @@ export function ProductDialog({
    * The same rule the route refuses on, so the button is never live for
    * something the server would reject.
    */
+  // Optional, so an empty box is fine — but something typed that is not an
+  // article number is a mistake worth stopping, not worth silently storing as
+  // nothing.
+  const sbFault =
+    d.systembolagetId.trim() !== "" && parseSystembolagetId(d.systembolagetId) === null;
+
   const fault =
     d.name.trim() === ""
       ? "nameRequired"
@@ -150,6 +160,10 @@ export function ProductDialog({
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
       costPriceOre: Math.round((num(d.costPrice) ?? 0) * 100),
       ean: d.ean.trim(),
+      // Whatever was pasted, reduced to the article number — the route takes
+      // only digits. Null rather than undefined so clearing the field clears
+      // the column; undefined in a PATCH means "leave it alone".
+      systembolagetId: parseSystembolagetId(d.systembolagetId),
     };
     const saved = await mutate<{ id: string }>(
       product ? `/api/stock/products/${product.id}` : "/api/stock/products",
@@ -208,6 +222,22 @@ export function ProductDialog({
             }
           />
         </FieldGroup>
+
+        {/* Takes a pasted product URL as readily as the bare number: the number
+            is only ever found on the product's page, so the address bar is what
+            the person filling this in actually has. Reduced to digits on save. */}
+        <Field
+          label={t("products.field.systembolagetId")}
+          hint={t("products.field.systembolagetIdHint")}
+          error={sbFault ? t("products.field.systembolagetIdInvalid") : undefined}
+        >
+          <Input
+            value={d.systembolagetId}
+            onChange={(e) => set("systembolagetId", e.target.value)}
+            placeholder="141215"
+            className="tabular-nums"
+          />
+        </Field>
 
         {/* FieldGroup, not Field: a combobox's trigger is a <button>, and a
             <label> forwards a click anywhere in its box to the first labelable
@@ -295,7 +325,7 @@ export function ProductDialog({
         <Button variant="secondary" onClick={onClose}>
           {t("cancel")}
         </Button>
-        <Button onClick={save} disabled={Boolean(fault)} loading={pending !== null}>
+        <Button onClick={save} disabled={Boolean(fault) || sbFault} loading={pending !== null}>
           {t("save")}
         </Button>
       </div>

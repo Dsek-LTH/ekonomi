@@ -2,7 +2,17 @@
 // of narrowing the page does. Shared by the client, its toolbar and its tables.
 import type { ReportKind } from "@/lib/ledger/bas";
 
-export type GroupMode = "SUMMED" | "SPECIFIED";
+// The report itself is shaped by the server that builds it. Re-exported
+// rather than restated so this file keeps being the one import the ledger
+// screen needs, without being a second opinion about what a report is.
+export type {
+  GroupMode,
+  LedgerReport,
+  ReportAccount,
+  ReportGroup,
+  ReportSection,
+} from "@/lib/ledger/report-shape";
+import type { GroupMode, LedgerReport } from "@/lib/ledger/report-shape";
 export type ComparisonMode = "NONE" | "PRIOR" | "BUDGET";
 
 export interface LedgerYear {
@@ -13,44 +23,6 @@ export interface LedgerYear {
   toDate: string;
 }
 
-export interface ReportAccount {
-  account: string;
-  accountName: string;
-  amount: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
-
-export interface ReportSection {
-  /** Names the section in messages — `ledger.section.<key>`. */
-  key: string;
-  accounts: ReportAccount[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
-
-export interface ReportGroup {
-  costCenterCode: string | null;
-  costCenterName: string | null;
-  sections: ReportSection[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
-
-export interface LedgerReport {
-  kind: ReportKind;
-  group: GroupMode;
-  groups: ReportGroup[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
 
 export interface BudgetOption {
   id: string;

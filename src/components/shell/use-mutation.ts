@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useProgressRouter } from "./route-progress";
 import { useNotify } from "./notifications";
-import { resolveApiError } from "@/lib/ui/api-error";
+import { apiErrorAction, resolveApiError } from "@/lib/ui/api-error";
 
 type MutateOptions = {
   /** Marks which control is busy — compare against `pending`. Defaults to the url. */
@@ -90,6 +90,10 @@ export function useMutation() {
           notify.error(
             resolveApiError(t, data) ??
               `${error ?? t("common.error.action")} (${res.status})`,
+            // Some codes name somewhere to go; the banner offers it as a button
+            // rather than leaving the reader to find it. Undefined for the rest,
+            // which is every other failure in the app.
+            { action: apiErrorAction(t, data) ?? undefined },
           );
           return null;
         }

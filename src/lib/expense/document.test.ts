@@ -15,6 +15,9 @@ const base = {
   purchaseDate: new Date("2026-03-19T00:00:00Z"),
   paymentType: "REIMBURSEMENT",
   grossAmount: 6900,
+  odometerStart: null,
+  odometerEnd: null,
+  mileageOrePerKm: null,
   submitter: { name: "Emil Helander", studentId: "em8241he-s" },
   allocations: [
     {
@@ -40,6 +43,19 @@ describe("buildCoverData", () => {
   it("words a section card differently from an out-of-pocket utlägg", () => {
     expect(buildCoverData({ ...base, paymentType: "CARD" }, TODAY).paymentType).toBe(
       "Sektionskort",
+    );
+    expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).paymentType).toBe(
+      "Milersättning",
+    );
+  });
+
+  it("names the date for what it is on each kind of utlägg", () => {
+    // A milersättning has no receipt, so "Kvittodatum" over the day of its
+    // last journey would name a document that does not exist — on a page that
+    // is filed as evidence.
+    expect(buildCoverData(base, TODAY).dateLabel).toBe("Kvittodatum");
+    expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe(
+      "Sista resdag",
     );
   });
 
@@ -104,6 +120,66 @@ describe("buildCoverData", () => {
     expect(d.reference).toBe("—");
     expect(d.purchaseDate).toBeNull();
     expect(d.submitter.studentId).toBeNull();
+  });
+});
+
+// Swedish groups thousands with a non-breaking space, which is what
+// Intl.NumberFormat emits and what an assertion written with an ordinary space
+// would silently fail on. Named, so the expectations below read as numbers
+// rather than as escape sequences.
+const NB = "\u00a0";
+
+type ForCover = Parameters<typeof buildCoverData>[0];
+
+const mileage = (over: Partial<ForCover> = {}): ForCover => ({
+  ...base,
+  paymentType: "MILEAGE",
+  title: "Hämta sponsorpaket",
+  odometerStart: 12300,
+  odometerEnd: 12342,
+  mileageOrePerKm: 250,
+  ...over,
+});
+
+describe("buildCoverData, the journey", () => {
+  // The section that used to be a second PDF. Everything it says is decided
+  // here, which is why these read as assertions about wording rather than about
+  // a document.
+  it("is absent from an utlägg that rests on a receipt", () => {
+    expect(buildCoverData(base, TODAY).journey).toBeNull();
+    expect(buildCoverData({ ...base, paymentType: "CARD" }, TODAY).journey).toBeNull();
+  });
+
+  it("states the journey the way a körjournal would", () => {
+    const j = buildCoverData(mileage(), TODAY).journey!;
+    expect(j.odometerStart).toBe(`12${NB}300,0 km`);
+    expect(j.odometerEnd).toBe(`12${NB}342,0 km`);
+    expect(j.distance).toBe("42,0 km");
+    expect(j.rate).toBe("2,50 kr/km");
+  });
+
+  it("writes the readings and the difference to the same precision", () => {
+    // The subtraction is one the reader is invited to do by eye; two numbers
+    // written to different precisions is the one thing that would stop them.
+    const j = buildCoverData(
+      mileage({ odometerStart: 12300.1, odometerEnd: 12345.6 }),
+      TODAY,
+    ).journey!;
+    expect([j.odometerStart, j.odometerEnd, j.distance]).toEqual([
+      `12${NB}300,1 km`,
+      `12${NB}345,6 km`,
+      "45,5 km",
+    ]);
+  });
+
+  it("says a dash for a reading nobody has given yet", () => {
+    const j = buildCoverData(mileage({ odometerEnd: null }), TODAY).journey!;
+    expect(j.odometerEnd).toBe("—");
+    expect(j.distance).toBe("—");
+  });
+
+  it("says a dash for a journey no rate covered", () => {
+    expect(buildCoverData(mileage({ mileageOrePerKm: null }), TODAY).journey!.rate).toBe("—");
   });
 });
 

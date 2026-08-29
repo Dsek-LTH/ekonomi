@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IconChevronDown } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
+import { useDismissOnOutside } from "@/lib/ui/dismiss";
 
 // A button that drops a short list of actions beneath itself. For the case where
 // one button is really two or three variants of the same verb — "new budget",
@@ -29,6 +30,7 @@ export function Menu({
   loading = false,
   align = "end",
   compact = false,
+  iconOnly = false,
   className,
   children,
 }: {
@@ -48,6 +50,16 @@ export function Menu({
    */
   compact?: boolean;
   /**
+   * The icon alone, at every width, with `label` left as the accessible name.
+   *
+   * For a menu that belongs to a row rather than to a page: a sheet with forty
+   * products has forty of these, and a word beside each one is a column of
+   * repeated text where the row's own content should be. `compact` is the
+   * page-header version of the same idea — it keeps the word where there is
+   * room for it — and the two are not the same question.
+   */
+  iconOnly?: boolean;
+  /**
    * An action picked from this menu is still running. The trigger carries the
    * spinner because the item that started it is gone — the menu closes on
    * choosing, so the trigger is the only thing left to say so.
@@ -66,18 +78,7 @@ export function Menu({
 
   // Clicking away closes it, and Escape closes it and hands focus back to the
   // button — otherwise a keyboard user is left standing on nothing.
-  useEffect(() => {
-    if (!open) return;
-    // `pointerdown`, not `mousedown`: iOS only synthesises mouse events for
-    // targets it thinks are clickable, so a tap on the plain page behind an
-    // open menu fired nothing and the menu stayed up. See the same note in
-    // ui/combobox.tsx.
-    const onDown = (e: PointerEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
-  }, [open]);
+  useDismissOnOutside(open, boxRef, close);
 
   // Escape closes the menu and hands focus back to the button — and closes
   // only the menu, even inside a dialog that would once have gone with it.
@@ -97,8 +98,8 @@ export function Menu({
         aria-haspopup="menu"
         aria-expanded={open}
         // Named even when the word is not drawn.
-        aria-label={compact ? label : undefined}
-        title={compact ? label : undefined}
+        aria-label={compact || iconOnly ? label : undefined}
+        title={compact || iconOnly ? label : undefined}
         onClick={() => setOpen((o) => !o)}
         // The wrapper decides how wide this is, not the label. Everywhere a
         // menu currently stands it is a flex item that shrinks to its content,
@@ -108,17 +109,19 @@ export function Menu({
         className="w-full"
       >
         {icon}
-        <span className={cn(compact && "hidden sm:inline")}>{label}</span>
-        <IconChevronDown
-          className={cn(
-            "size-4 transition-transform duration-150",
-            open && "rotate-180",
-            // Nothing to point at once the label is gone — the icon is the
-            // whole button, and a chevron beside it is half the width again for
-            // no more meaning.
-            compact && "hidden sm:block",
-          )}
-        />
+        {!iconOnly && <span className={cn(compact && "hidden sm:inline")}>{label}</span>}
+        {!iconOnly && (
+          <IconChevronDown
+            className={cn(
+              "size-4 transition-transform duration-150",
+              open && "rotate-180",
+              // Nothing to point at once the label is gone — the icon is the
+              // whole button, and a chevron beside it is half the width again
+              // for no more meaning.
+              compact && "hidden sm:block",
+            )}
+          />
+        )}
       </Button>
 
       {open && (

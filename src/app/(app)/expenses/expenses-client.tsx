@@ -3,10 +3,10 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { ButtonLink } from "@/components/ui/button";
+import { NewExpenseMenu } from "@/components/new-expense-menu";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconPlus, IconCheck } from "@/components/ui/icons";
+import { IconCheck } from "@/components/ui/icons";
 import type { CollectionOption } from "@/components/ui/collection-switch";
 import { DataTable, type Column, type SelectFilter } from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
@@ -160,10 +160,7 @@ export function ExpensesClient({
           title={t("emptyTitle")}
           description={t("emptyDescription")}
           action={
-            <ButtonLink href="/expenses/new">
-              <IconPlus className="size-4" />
-              {t("new")}
-            </ButtonLink>
+            <NewExpenseMenu />
           }
         />
       ) : (
@@ -181,10 +178,7 @@ export function ExpensesClient({
               // below them — see `accentOutline` in components/ui/button.tsx.
               // The empty state's copy of this button keeps the fill, because
               // there it is the only thing on the screen to do.
-              <ButtonLink href="/expenses/new" variant="accentOutline">
-                <IconPlus className="size-4" />
-                {t("new")}
-              </ButtonLink>
+              <NewExpenseMenu variant="accentOutline" />
             }
             searchPlaceholder={t("searchPlaceholder")}
             rowKey={(e) => e.id}

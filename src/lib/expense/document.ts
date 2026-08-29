@@ -7,14 +7,21 @@
 // where the receipt is stapled behind it on the way to Fortnox. See
 // lib/server/pdf-merge.ts for why.
 //
+// A milersättning is the one utlägg with nothing to staple: there is no receipt
+// for driving your own car, so the journey it rests on is a section of this page
+// rather than a document of its own. It was a second PDF once, drawn from the
+// same row and repeating the same reference, submitter and total under a
+// different heading — see `buildJourney`.
+//
 // The engine is behind cover/typst.ts and reached only through `renderCover`,
 // so nothing in this file knows what typesets anything.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { expenseDocumentKey, putObject } from "@/lib/server/storage";
+import { journeyKm } from "@/lib/mileage/claim";
 import { CoverRenderError, renderCover } from "./cover/typst";
-import type { ExpenseCoverData } from "./cover/types";
+import type { ExpenseCoverData, ExpenseCoverJourney } from "./cover/types";
 
 /**
  * Why an utlägg has no cover page. Each maps to a message key under
@@ -32,22 +39,39 @@ export type StoredDocument = { ok: true; key: string; filename: string };
 export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
+const nf = (digits: number) =>
+  new Intl.NumberFormat("sv-SE", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+
 /** öre → "1 069,00 kr", the way the rest of the app writes money in Swedish. */
 function kr(ore: number): string {
-  return `${new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(ore / 100)} kr`;
+  return `${nf(2).format(ore / 100)} kr`;
 }
+
+/**
+ * A reading, always with its tenth: "12 300,0 km".
+ *
+ * The distance beside it is a subtraction the reader is invited to do, and two
+ * numbers written to different precisions is the one thing that would stop them
+ * doing it — so the readings and the difference are all written the same way,
+ * even where the tenth is a zero.
+ */
+const km = (n: number): string => `${nf(1).format(n)} km`;
+
+/** An absent value is said, not left blank. Matches `orDash` in the template. */
+const DASH = "—";
 
 const isoDate = (d: Date | null | undefined): string | null =>
   d ? d.toISOString().slice(0, 10) : null;
 
-/** How the two payment types are worded on the page. Fixed Swedish, not a
+/** How each payment type is worded on the page. Fixed Swedish, not a
  *  translation lookup: see the note on ExpenseCoverData. */
 const PAYMENT_TYPE: Record<string, string> = {
   REIMBURSEMENT: "Privat utlägg",
   CARD: "Sektionskort",
+  MILEAGE: "Milersättning",
 };
 
 /**
@@ -64,6 +88,13 @@ type ExpenseForCover = {
   purchaseDate: Date | null;
   paymentType: string;
   grossAmount: number | null;
+  /** The odometer at each end of the journey, for a milersättning. Null on
+   *  anything else, and on a half-filled draft. */
+  odometerStart: number | null;
+  odometerEnd: number | null;
+  /** What a kilometre was worth on the day, in öre. Null where the claim was
+   *  never valued — a draft saved before a rate covered its date. */
+  mileageOrePerKm: number | null;
   submitter: { name: string; studentId: string | null };
   allocations: {
     amount: number;
@@ -73,6 +104,32 @@ type ExpenseForCover = {
     approvedBy: { name: string } | null;
   }[];
 };
+
+/**
+ * The journey behind a milersättning, or null where there is not one.
+ *
+ * This is the whole of what used to be a second document. A mileage claim has
+ * no receipt, so the page that fronts the underlag *is* the underlag: the
+ * readings go on the cover, under the same reference and the same submitter,
+ * and Fortnox is handed one file instead of two saying the same things twice.
+ *
+ * A half-filled draft is stated in dashes rather than refused. Such a claim
+ * cannot be submitted (`claimBlocker` sees to that), but it can be looked at,
+ * and "—" is the honest word for a reading nobody has given.
+ */
+function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
+  if (expense.paymentType !== "MILEAGE") return null;
+  const distance = journeyKm(expense.odometerStart, expense.odometerEnd);
+  return {
+    odometerStart: expense.odometerStart == null ? DASH : km(expense.odometerStart),
+    odometerEnd: expense.odometerEnd == null ? DASH : km(expense.odometerEnd),
+    distance: distance == null ? DASH : km(distance),
+    rate:
+      expense.mileageOrePerKm == null
+        ? DASH
+        : `${nf(2).format(expense.mileageOrePerKm / 100)} kr/km`,
+  };
+}
 
 /**
  * An utlägg as the cover page states it.
@@ -94,6 +151,11 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
     reference: expense.reference ?? "—",
     title: expense.title,
     purchaseDate: isoDate(expense.purchaseDate),
+    // What that date *is*, which is not the same question for all three types.
+    // A milersättning has no receipt, so "Kvittodatum" over the day of its last
+    // journey would be naming a document that does not exist on a page that is
+    // filed as evidence.
+    dateLabel: expense.paymentType === "MILEAGE" ? "Sista resdag" : "Kvittodatum",
     paymentType: PAYMENT_TYPE[expense.paymentType] ?? expense.paymentType,
     created: isoDate(today)!,
     submitter: {
@@ -111,6 +173,7 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
       approvedBy: a.approvedBy?.name ?? null,
       approvedAt: isoDate(a.approvedAt),
     })),
+    journey: buildJourney(expense),
   };
 }
 
@@ -135,6 +198,9 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
       purchaseDate: true,
       paymentType: true,
       grossAmount: true,
+      odometerStart: true,
+      odometerEnd: true,
+      mileageOrePerKm: true,
       submitter: { select: { name: true, studentId: true } },
       allocations: {
         // By cost-centre code, so two renders of the same utlägg put the rows
@@ -154,7 +220,18 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
   if (!expense) return { ok: false, reason: "expenseNotFound" };
 
   try {
-    const bytes = await renderCover(buildCoverData(expense, new Date()));
+    const bytes = await renderCover(
+      buildCoverData(
+        {
+          ...expense,
+          // Decimal(9,1) columns, and `buildCoverData` is written over plain
+          // data so it can be tested with a plain object.
+          odometerStart: expense.odometerStart == null ? null : Number(expense.odometerStart),
+          odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+        },
+        new Date(),
+      ),
+    );
     return { ok: true, bytes, filename: coverFilename(expense.reference, expenseId) };
   } catch (e) {
     const detail = e instanceof CoverRenderError ? e.message : String(e);

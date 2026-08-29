@@ -25,6 +25,52 @@ datasource db {
 
 // ── Enums ─────────────────────────────────────────────────────────
 
+// One thing a role may be allowed to do. The editable half of authority: which
+// roles hold which of these is a table (RoleCapability), maintained in
+// Inställningar → Roller.
+//
+// The list itself is not editable, and cannot be: a capability is a name a call
+// site asks about, so one nobody checks would be a tickbox that does nothing.
+// Every value here has exactly one helper in lib/domain/permissions.ts, and
+// that is the whole of the contract.
+//
+// What is deliberately NOT in here is the attest rule. Whether you may attest
+// one particular allocation depends on whose utlägg it is, what the submitter
+// holds, and whether the cost centre falls under a result unit you answer for —
+// see canAttestAllocation. That is not a permission a role has, it is a
+// question about two people and a row, and a tickbox claiming to grant it would
+// be a tickbox that lies. ATTEST_VIEW below grants sight of the attest queue,
+// which is what `hasAttestRole` has always meant.
+enum Capability {
+  /// Full authority over other people's utlägg — attest any of them, edit any
+  /// of them. Woven into the attest rule and its query, not merely a page.
+  ADMIN
+  /// Bokföring: see every utlägg, book vouchers, return a wrongly-approved one.
+  BOOKKEEPING
+  /// Books in Fortnox under their own login (drives the status on /profile).
+  FORTNOX_LOGIN
+  /// Mark an exported utlägg as no longer exported.
+  EXPORT_UNDO
+  /// Reach Inställningar. At least one live person must always hold this — see
+  /// lib/server/capabilities.ts.
+  SETTINGS
+  /// Read the stock overview and the log.
+  STOCK_VIEW
+  /// Register movements, run an event, close a stocktake.
+  STOCK_MANAGE
+  /// See the budget pages.
+  BUDGET_VIEW
+  /// Comment on a budget account.
+  BUDGET_COMMENT
+  /// Lock an adopted budget, and unlock it.
+  BUDGET_LOCK
+  /// Record a budgetavsteg or budgetförflyttning on a locked budget.
+  BUDGET_CHANGE_LOCKED
+  /// See the attest queue. Whether any single utlägg in it can actually be
+  /// attested is still canAttestAllocation's answer, per row.
+  ATTEST_VIEW
+}
+
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
 // so it's stored as an array. Access and attest authority are derived from the
 // set of roles in lib/permissions.ts — never from a single value.
@@ -49,6 +95,13 @@ enum Role {
 enum PaymentType {
   CARD // section card — matched against the purchase before signing
   REIMBURSEMENT // out-of-pocket — matched against the payout after signing
+  // Milersättning: driving one's own car on the section's errand. A
+  // reimbursement in every way that matters after submission — it is a debt to
+  // the member, matched against the payout, booked against the same account —
+  // and its own thing in exactly two: there is no receipt to upload, and the
+  // amount is not typed but computed from the odometer readings on the utlägg
+  // itself. One journey per claim; see the Milersättning block on Expense.
+  MILEAGE
 }
 
 // One value per state a reader can be in, and no more. There used to be a
@@ -103,10 +156,31 @@ model User {
   email String @unique
   name  String
 
-  // Derived from the Authentik group list on sign-in and on every token
-  // refresh (lib/server/authentik-roles.ts). Authority is still read from this
-  // column and never from the token — see lib/server/current-user.ts.
+  // Derived from the Authentik group list at sign-in, and only there
+  // (lib/server/authentik-roles.ts) — which is why a session lasts a day, see
+  // `session` in src/auth.ts. Authority is still read from this column and
+  // never from the token — see lib/server/current-user.ts.
   roles Role[] @default([ORDINARIE]) // one or more section roles; authority derived in lib/permissions.ts
+
+  // The result units this person answers for, by ResultUnit.name — derived
+  // from the same group list, in the same place, at the same moment as
+  // `roles`. Names rather than ids because the mapping is written against the
+  // section's vocabulary (lib/server/authentik-roles.ts) and a cuid means
+  // nothing there; a name with no row behind it simply grants nothing, which
+  // the settings screen reports.
+  resultUnits String[] @default([])
+
+  // The Authentik group list as it stood at this person's last sign-in.
+  //
+  // Not authority — `roles` and `resultUnits` above are, and they are what every
+  // gate reads. This is the evidence they were derived from, kept so the
+  // derivation can be run again without the person being here: change the
+  // mapping in Inställningar → Roller and everyone it touches is recomputed on
+  // the spot, rather than one by one over the next day as they happen to sign
+  // in. It is also the only way the settings screen can say what a change is
+  // about to do, and the only way a mapping written against a group nobody
+  // holds — a typo, silent by design — can be pointed at.
+  authentikGroups String[] @default([])
 
   // Bank details for REIMBURSEMENT payouts (Swedish clearing + account no.)
   bankClearingNumber String?
@@ -127,14 +201,29 @@ model User {
   revokedBudgetChanges BudgetChange[]          @relation("BudgetChangeRevoker")
   fortnoxConnections   FortnoxConnection[]     @relation("FortnoxConnector")
   fortnoxSession       FortnoxUserSession?     @relation("FortnoxUserSession")
-  resultUnitOwnerships ResultUnitOwner[]       @relation("ResultUnitOwnerUser")
   incomeBatches        IncomeBatch[]           @relation("IncomeBatchCreator")
   stockEntries         StockEntry[]            @relation("StockEntryActor")
   stockTags            StockTag[]              @relation("StockTagCreator")
   stockChanges         StockChange[]           @relation("StockChangeActor")
+  mileageRates         MileageRate[]           @relation("MileageRateAuthor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // ── Indexes ─────────────────────────────────────────────────────
+  //
+  // The three array columns are all queried by containment, not by value:
+  // `roles hasSome` behind every capability check (lib/server/capabilities.ts),
+  // `resultUnits has` when a result unit is deleted or renamed, and
+  // `authentikGroups isEmpty` on the settings screen. Postgres answers those
+  // with `&&` and `@>`, which a btree cannot serve at all — so without these
+  // each one is a sequential scan of the whole member table.
+  //
+  // Harmless at the section's current size and not a thing to discover later:
+  // the capability lookup is on the request path for every gated page in the
+  // app, so it is the one that stops being free first.
+  @@index([roles], type: Gin)
+  @@index([resultUnits], type: Gin)
+  @@index([authentikGroups], type: Gin)
 }
 
 // Kostnadsställe — the org unit an expense is booked against.
@@ -150,6 +239,65 @@ model User {
 enum CostCenterSource {
   FORTNOX
   LOCAL
+}
+
+// ── Authority ─────────────────────────────────────────────────────
+//
+// Two tables and one rule: an Authentik group confers roles and result units
+// (GroupRole, GroupResultUnit), and a role confers capabilities
+// (RoleCapability). Everything the app asks about authority resolves through
+// these — see lib/server/authentik-roles.ts for the first half and
+// lib/server/capabilities.ts for the second.
+//
+// The rows used to be three tables in lib/server/authentik-roles.ts, deployed.
+// They are data now because the section edits them: a committee is renamed, a
+// unit is handed to someone who is not its head, a role is given the run of a
+// page it did not have. What is NOT data is the Role and Capability enums
+// themselves — those are names the code says out loud, and a row naming one
+// that does not exist would be a grant nothing can honour.
+
+/// An Authentik group, and a role holding it confers. Several rows per group.
+model GroupRole {
+  /// Lowercased, exactly as Authentik writes it: "dsek.sex.mastare".
+  group String
+  role  Role
+
+  createdAt DateTime @default(now())
+
+  @@id([group, role])
+  @@index([group])
+}
+
+/// An Authentik group, and a result unit holding it makes you answer for.
+///
+/// A row here also confers RESULTATANSVARIG — the role and the reach come from
+/// the same line, so neither can be granted without the other
+/// (lib/server/authentik-roles.ts).
+model GroupResultUnit {
+  group        String
+  resultUnitId String
+  /// Cascades: a result unit that no longer exists cannot be answered for, and
+  /// leaving the row would be an ownership pointing at nothing. This is the
+  /// whole reason the mapping is a foreign key and not a name — it used to be a
+  /// name, and a typo in it granted silently nothing.
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([group, resultUnitId])
+  @@index([group])
+  @@index([resultUnitId])
+}
+
+/// A role, and one thing it is allowed to do.
+model RoleCapability {
+  role       Role
+  capability Capability
+
+  createdAt DateTime @default(now())
+
+  @@id([role, capability])
+  @@index([role])
 }
 
 model CostCenter {
@@ -348,7 +496,12 @@ model ResultUnit {
   name String @unique // "Skattmästeriet"
 
   prefixes ResultUnitPrefix[]
-  owners   ResultUnitOwner[]
+
+  // Who answers for this unit is NOT stored here — no row names a person. What
+  // is stored is which Authentik *groups* answer for it (GroupResultUnit); the
+  // people follow from whoever holds those groups at their next sign-in, so a
+  // handover in Authentik is a handover here with nothing to remember.
+  groups GroupResultUnit[]
 
   // The income half, for a unit that takes money in — see ResultUnitIncome.
   // Optional, and read by nothing outside the income module.
@@ -372,25 +525,6 @@ model ResultUnitPrefix {
 
   createdAt DateTime @default(now())
 
-  @@index([resultUnitId])
-}
-
-// Resultatansvarig ↔ resultatenhet. Many-to-many: one person may answer for
-// several result units and a result unit may have several ansvariga. This drives
-// attest authority: a resultatansvarig may attest/handle allocations whose cost
-// centre belongs to a result unit they own (see lib/permissions.ts).
-model ResultUnitOwner {
-  id String @id @default(cuid())
-
-  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
-  resultUnitId String
-
-  user   User   @relation("ResultUnitOwnerUser", fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, resultUnitId])
   @@index([resultUnitId])
 }
 
@@ -437,6 +571,35 @@ model Expense {
   // already gone over: the cover describes the version being amended.
   documentKey      String?
   documentFilename String?
+
+  // ── Milersättning ────────────────────────────────────────────────
+  //
+  // One journey, on the utlägg itself rather than in a table beside it: a
+  // milersättning *is* a journey, and somebody who drove three times files
+  // three of them. That is not a limitation dressed as a decision — each
+  // journey is attested on its own, lands on its own cost centre and is paid
+  // as its own claim, which a sheet of journeys sharing one amount could not
+  // do.
+  //
+  // What is recorded is the odometer at each end, not a distance somebody
+  // worked out. The distance is `odometerEnd - odometerStart`, and the two
+  // readings are the thing that can be checked: a claim states what the car
+  // said when it was got into and what it said when it was got out of, which
+  // is a fact about the world in a way "42 km" is not.
+  //
+  // Null on every other payment type. One decimal because a trip meter has
+  // one and plenty of dashboards show it; whole kilometres simply arrive with
+  // a zero after the comma.
+  odometerStart Decimal? @db.Decimal(9, 1)
+  odometerEnd   Decimal? @db.Decimal(9, 1)
+
+  /// What a kilometre was worth on the day of the journey, in öre.
+  ///
+  /// Written onto the claim when it is saved, never looked up when it is read.
+  /// The schablon changes at a new year, and a claim already filed must not
+  /// re-value when it does — the same reason a stock entry carries its own
+  /// price. See lib/mileage/rate.ts.
+  mileageOrePerKm Int?
 
   allocations  ExpenseCostAllocation[]
   receipts     Receipt[]
@@ -1311,6 +1474,18 @@ model StockProduct {
   /// cellar identifies the product outright; null for anything without one.
   ean String? @unique
 
+  /// Systembolaget's article number — the digits at the end of the product's
+  /// URL, e.g. 141215 in
+  /// `systembolaget.se/produkt/ol/norrlands-guld-141215/`.
+  ///
+  /// Stored as text rather than an integer: it is an identifier the way a
+  /// barcode is, never arithmetic, and a leading zero in one would be a digit
+  /// lost. Not unique — the same article can be kept as two products (a
+  /// 33 cl can and a 50 cl bottle share neither EAN nor article number, but a
+  /// re-listed article can repeat), and a uniqueness error at save time would
+  /// be a worse answer than two rows an operator can see.
+  systembolagetId String?
+
   /// Alcohol by volume, per cent — 40.00 for vodka, null for wares.
   ///
   /// Litres of pure alcohol is volume × this, and nothing else can reconstruct
@@ -1499,10 +1674,6 @@ model StockEntry {
 
   createdAt DateTime @default(now())
 
-  @@index([productId, occurredAt])
-  @@index([occurredAt])
-  @@index([kind, occurredAt])
-  @@index([tagId])
   /// One occasion, one product, one direction, one rung: one row.
   ///
   /// The sheet's cell, enforced. Without it "the Ut figure for this beer on
@@ -1512,6 +1683,10 @@ model StockEntry {
   /// Postgres counts nulls as distinct, which is the behaviour wanted here: a
   /// cellar takes as many deliveries of a product as it takes.
   @@unique([tagId, productId, kind, level])
+  @@index([productId, occurredAt])
+  @@index([occurredAt])
+  @@index([kind, occurredAt])
+  @@index([tagId])
 }
 
 /// An occasion stock is taken out for: a pub, a sittning, a party.
@@ -1609,4 +1784,34 @@ model StockTag {
   actor     User     @relation("StockTagCreator", fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([date, name])
+}
+
+// ── Milersättning ──────────────────────────────────────────────────
+
+/// What a kilometre is worth, from a given day.
+///
+/// A table rather than a constant because the figure is Skatteverket's and
+/// moves at a new year, and a deploy is the wrong way to find that out. The row
+/// in force on a date is the newest one whose `validFrom` is not after it; see
+/// lib/mileage/rate.ts, which is where that rule is written once.
+model MileageRate {
+  id String @id @default(cuid())
+
+  /// Öre per kilometre. 250 is the 25 kr/mil schablon.
+  orePerKm Int
+
+  /// The first day this rate applies. Unique: two rates starting on the same
+  /// day is not a period anybody could resolve.
+  validFrom DateTime @unique @db.Date
+
+  /// Free text for whoever comes after — "Skatteverkets schablon 2026".
+  note String?
+
+  createdBy   User?   @relation("MileageRateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([validFrom])
 }

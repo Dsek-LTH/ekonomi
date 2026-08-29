@@ -40,7 +40,11 @@ export default async function ExpenseDetailPage({
   // Before the bank rows, because it decides which of them this page is allowed
   // to carry.
   const can = expense
-    ? expenseCapabilities(expense, { id: user.id, roles: user.roles })
+    ? expenseCapabilities(expense, {
+        id: user.id,
+        roles: user.roles,
+        capabilities: user.capabilities,
+      })
     : null;
 
   const matched = expense?.matchedTransactionId ? [expense.matchedTransactionId] : [];

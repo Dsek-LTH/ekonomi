@@ -172,7 +172,7 @@ export default function BookExpenseClient({
     );
   }
 
-  const mayBook = canBookkeep(user.roles);
+  const mayBook = canBookkeep(user.capabilities);
   if (!mayBook) {
     return (
       <EmptyState
@@ -280,12 +280,14 @@ export default function BookExpenseClient({
       {/* The receipt stands beside the whole frame, full height, and stays put
           while this table scrolls — which is the entire point of booking with
           it open. Declared here, rendered by the shell. */}
-      {/* The utläggsräkning as well as the underlag: the cover page naming who
-          attested each cost centre, and behind it the receipt itself, paged to
-          from the toolbar. This is the screen where that matters most — those
-          two are exactly what this booking will put on the voucher in Fortnox,
-          so the bookkeeper is reading what they are about to send rather than
-          half of it. See lib/expense/document-url.ts. */}
+      {/* The underlag as well as the utläggsräkning: the receipt itself, and
+          behind it the cover page naming who attested each cost centre, paged
+          to from the toolbar. This is the screen where that matters most —
+          those two are exactly what this booking will put on the voucher in
+          Fortnox, so the bookkeeper is reading what they are about to send
+          rather than half of it. It opens on the receipt, since that is the
+          document the voucher is being written from; the attest trail is the
+          page behind. See lib/expense/document-url.ts. */}
       <ReceiptPanelSource
         documents={documents}
         // Said in the panel, not in the page. A voucher with no underlag is

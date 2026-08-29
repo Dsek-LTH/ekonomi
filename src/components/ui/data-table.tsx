@@ -220,7 +220,13 @@ export function DataTable<T>({
   expansion?: (row: T) => React.ReactNode;
   /** Open every expandable row. For a "show everything" switch above the list. */
   expandAll?: boolean;
-  empty?: React.ReactNode;
+  /**
+   * What to say when there is nothing to show. A string, not a node: the table
+   * wraps it in an `EmptyNote` itself, and six callers each passed a second one
+   * in — `<p>` inside `<p>`, which the browser unpicks and hydration then finds
+   * a tree it did not build. The type is what stops the seventh.
+   */
+  empty?: string;
 }) {
   const t = useTranslations("common.table");
   const [opened, setOpened] = useState<Set<string>>(new Set());

@@ -39,8 +39,17 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
           rows below hold names long enough to take the whole card past the edge
           of a phone. */}
       <CardBody className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-4 sm:grid-cols-2">
-        <Detail label={t("purchaseDate")} value={date(expense.purchaseDate)} />
+        {/* A milersättning has no purchase date — what it has is the day it
+            was driven, which is what the field holds and what the filing
+            deadline runs from. Calling it "Kvittodatum" here would name a
+            document the claim does not have, the same way it would on the
+            cover page. */}
+        <Detail
+          label={expense.paymentType === "MILEAGE" ? t("journeyDate") : t("purchaseDate")}
+          value={date(expense.purchaseDate)}
+        />
         <Detail label={t("amount")} value={<Amount value={expense.grossAmount} size="md" signed />} />
+        {expense.mileage && <JourneyDetail journey={expense.mileage} />}
         <div className="min-w-0 sm:col-span-2">
           <p className="mb-1.5 text-[13px] text-muted">{t("distribution")}</p>
           <div className="space-y-1.5">
@@ -85,6 +94,49 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * The journey on the detail page.
+ *
+ * The same reading the panel beside it is showing on the typeset
+ * utläggsräkning, said again in the page's own language — because the panel can be folded away, and
+ * an attester deciding whether to approve should not have to open a PDF to see
+ * what they are approving.
+ *
+ * The subtraction is set out rather than only its answer: two odometer readings
+ * and the distance between them is a figure a reader can check, which is the
+ * whole reason the readings are what gets recorded.
+ */
+function JourneyDetail({ journey }: { journey: NonNullable<Expense["mileage"]> }) {
+  const t = useTranslations("mileage");
+  const nf = (min: number, max: number) =>
+    new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
+  const reading = (km: number | null) => (km == null ? "—" : nf(1, 1).format(km));
+
+  return (
+    <div className="min-w-0 sm:col-span-2">
+      <p className="mb-1.5 text-[13px] text-muted">{t("odometer.label")}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
+        <span className="tabular-nums">
+          {reading(journey.odometerStart)}
+          <span aria-hidden className="mx-1.5 text-muted">→</span>
+          {reading(journey.odometerEnd)}
+          <span className="ml-1.5 text-muted">km</span>
+        </span>
+        <span className="flex items-center gap-3 tabular-nums">
+          <span className="font-medium">
+            {journey.km == null ? "—" : t("km", { km: nf(0, 1).format(journey.km) })}
+          </span>
+          {journey.orePerKm != null && (
+            <span className="text-xs text-muted">
+              {t("rates.perKm", { amount: nf(2, 2).format(journey.orePerKm / 100) })}
+            </span>
+          )}
+        </span>
+      </div>
+    </div>
   );
 }
 

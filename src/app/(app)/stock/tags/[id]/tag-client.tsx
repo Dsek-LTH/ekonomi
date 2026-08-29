@@ -36,26 +36,31 @@
 // and three. That matches the errand — you are carrying crates one direction at
 // a time — and it is the only arrangement that keeps a row on one line without
 // asking anybody to drag a grid sideways in a cellar.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { DateInput } from "@/components/ui/field";
 import { EmptyNote } from "@/components/ui/empty-state";
-import { FilterTabs } from "@/components/ui/filter-tabs";
-import { Notice } from "@/components/ui/notice";
-import { SearchInput } from "@/components/ui/search-input";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconElbow, IconLock, IconScan, IconX } from "@/components/ui/icons";
+import {
+  IconDots,
+  IconElbow,
+  IconLock,
+  IconScan,
+  IconSwap,
+  IconTrash,
+  IconX,
+} from "@/components/ui/icons";
+import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
-import { BarcodeScanner } from "@/components/stock/barcode-scanner";
+import { useProductScan } from "@/components/stock/use-product-scan";
+import { SheetHeader, SheetSaveBar } from "./sheet-chrome";
 import {
   CELL_KINDS,
   WHOLE,
@@ -67,11 +72,10 @@ import {
 } from "@/lib/stock/cells";
 import { LEVELS, type BottleStock, type OpenBottles } from "@/lib/stock/levels";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
-import { atTextEdge, nextCell, stepCell } from "@/lib/ui/grid-nav";
+import { useGridFocus } from "@/lib/ui/use-grid-focus";
 import type { StockChangeDto, StockLevelDto, StockTagDetailDto } from "@/lib/data/stock";
 import type { TagTotals } from "@/lib/stock/tag";
 import { ChangeFeed } from "@/components/stock/change-feed";
-import { ProductDialog } from "../../product-dialog";
 import type { WriteStockCells } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
 
@@ -122,17 +126,18 @@ export default function TagClient({
   const [added, setAdded] = useState<string[]>([]);
   const [column, setColumn] = useState<CellKind>("CHECKOUT");
   const [occurredAt, setOccurredAt] = useState(tag.date);
-  const [scanning, setScanning] = useState(false);
-  /** A product being invented mid-sheet: what is known of it so far. */
-  const [naming, setNaming] = useState<{ name?: string; ean?: string } | null>(null);
   /** A product a scan has just put on the sheet, waiting for the caret. */
   const [seeking, setSeeking] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   /** Which cell has the caret. A cell shows its working only while it does. */
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  /** The row whose product is being changed: its name is a picker until it is
+   *  chosen or the change is called off. */
+  const [swapping, setSwapping] = useState<string | null>(null);
 
   /** Every cell's input, so the keyboard can move between them. */
-  const inputs = useRef(new Map<string, HTMLInputElement>());
+  // The caret's own layer: the map of cell → input, and the keys that move it.
+  const { focusCell, register, handleKey } = useGridFocus();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const lineOf = useMemo(() => new Map(tag.lines.map((l) => [l.productId, l])), [tag.lines]);
@@ -325,7 +330,20 @@ export default function TagClient({
     const ref = refOf(key);
     const product = byId.get(ref.productId);
     if (!product) continue;
-    const bad = cellFault(product, shelfOf(product), base, ref, number(key));
+    // `live`, not `base`: the night's arithmetic is about what the sheet says,
+    // and most of a sheet is unsaved for most of an evening. Judged against the
+    // log alone, eight beers typed into Ut had not gone out yet — so a spill of
+    // one was refused as more than went out, and clearing a row column by
+    // column faulted on whichever column was cleared first. The cellar half of
+    // the rule still reads `base`, because the shelf has moved for those rows
+    // and for no others. See SheetState in lib/stock/cells.ts.
+    const bad = cellFault(
+      product,
+      shelfOf(product),
+      { sheet: live, booked: base },
+      ref,
+      number(key),
+    );
     if (bad) faults.set(key, bad);
   }
 
@@ -450,6 +468,61 @@ export default function TagClient({
 
 
 
+  /**
+   * The same row, a different product.
+   *
+   * Picking the wrong beer off a shelf of forty is the commonest mistake there
+   * is on this sheet, and until now the only way back was to remove the row and
+   * type the evening's figures again. The counts were never the mistake, so
+   * they travel: what was out, what came home and what broke are carried over
+   * as they read, typed and saved alike.
+   *
+   * Saved figures travel by being zeroed on the old product and written on the
+   * new one, which the sheet already knows how to say — both are ordinary cells
+   * in the next save, and the route applies them in one transaction. So the log
+   * ends up with the movement on the product it happened to, and StockChange
+   * records that it moved.
+   *
+   * Only between products of the same kind. A spirit's rungs have nowhere to go
+   * on a can, and silently dropping four of the five figures is not a swap. The
+   * picker offers no others.
+   */
+  function swap(fromId: string, toId: string) {
+    const from = byId.get(fromId);
+    if (!from || fromId === toId || !byId.has(toId)) return;
+
+    // Read first, write second. What each cell reads comes from `typed` and
+    // `base` as this render has them, and reading it inside the updater would
+    // be reading one of the two out of the state React is handing back.
+    const moves = CELL_KINDS.flatMap((kind) =>
+      sheetLines(from).map((level) => ({
+        fromKey: cellKey({ productId: fromId, kind, level }),
+        toKey: cellKey({ productId: toId, kind, level }),
+        // The saved figure, or whatever has been typed over it.
+        qty: number(cellKey({ productId: fromId, kind, level })),
+      })),
+    );
+
+    setTyped((prev) => {
+      const next = { ...prev };
+      for (const { fromKey, toKey, qty } of moves) {
+        // Clear the old one the way `drop` does: "" where a row is booked and
+        // has to be told to go, nothing at all where there never was one.
+        if ((base.get(fromKey) ?? 0) !== 0) next[fromKey] = "";
+        else delete next[fromKey];
+        // The target is never already on the sheet — the picker only offers
+        // products that are not — so there is nothing here to overwrite.
+        if (qty > 0) next[toKey] = String(qty);
+      }
+      return next;
+    });
+    setAdded((prev) => {
+      const without = prev.filter((id) => id !== fromId);
+      return without.includes(toId) || lineOf.has(toId) ? without : [...without, toId];
+    });
+    setSwapping(null);
+  }
+
   function add(productId: string) {
     if (!byId.has(productId)) return;
     setAdded((prev) => (prev.includes(productId) ? prev : [...prev, productId]));
@@ -460,48 +533,25 @@ export default function TagClient({
     setSeeking(productId);
   }
 
-  /**
-   * A product invented while filling the sheet in.
-   *
-   * The name is all the sheet knows, and a stock product needs more than that:
-   * a drink type, and for a spirit the bottle size its rungs are fractions of.
-   * So the form opens with the name in it rather than a half-made product
-   * appearing on the row — and once it exists, the row it was typed into picks
-   * it up.
-   */
-  function invent(text: string) {
-    setNaming({ name: text });
-  }
-
-  /**
-   * A barcode, turned into a row you can type into.
-   *
-   * The errand this is for is a trolley: scan, type how many, scan the next.
-   * So a scan does not merely put the product on the sheet — it puts the caret
-   * in the box for the column you are working in, because otherwise every scan
-   * is followed by hunting for the row it just made.
-   *
-   * A code nothing answers to opens the product form with the barcode already
-   * in it. Scanning something the cellar has never seen is exactly when a new
-   * product gets created, and sending somebody to another page to do it is how
-   * the trolley ends up half unlogged.
-   */
-  async function lookUp(ean: string) {
-    setScanning(false);
-    const found = await mutate<{ id: string; name: string }>(
-      `/api/stock/products/by-ean?ean=${encodeURIComponent(ean)}`,
-      { key: "scan", method: "GET", refresh: false, error: t("scan.unknown") },
-    );
-    if (!found) {
-      setNaming({ ean });
-      return;
-    }
-    // A sheet narrowed to something else would hide the row the scan just
-    // asked for, and the caret would have nowhere to land.
-    setSearch("");
-    add(found.id);
-    setSeeking(found.id);
-  }
+  // Scanning a barcode onto the sheet, and inventing a product that isn't
+  // there yet — shared with the delivery sheet, which does the same errand.
+  //
+  // A scan clears the search as well as adding the row: a sheet narrowed to
+  // something else would hide the row the scan just asked for, and the caret
+  // would have nowhere to land. A product invented in the dialog does not,
+  // because nobody typed a search to get there.
+  const { scan, invent, overlay } = useProductScan({
+    unknownError: t("scan.unknown"),
+    onScanned: (id) => {
+      setSearch("");
+      add(id);
+      setSeeking(id);
+    },
+    onCreated: (id) => {
+      add(id);
+      setSeeking(id);
+    },
+  });
 
   // ── The grid ──
   //
@@ -564,26 +614,6 @@ export default function TagClient({
   }
 
   /**
-   * Whether a cell can take the caret at all.
-   *
-   * A hidden column has no offsetParent. The phone shows one column at a time,
-   * and a keystroke must never send focus somewhere invisible.
-   */
-  const canFocus = (key: string): boolean => {
-    const el = inputs.current.get(key);
-    return Boolean(el && el.offsetParent !== null);
-  };
-
-  /** Put the caret in a cell. What is there gets selected, so typing replaces it. */
-  function focusCell(key: string | null): boolean {
-    if (!key || !canFocus(key)) return false;
-    // Focusing swaps the cell to its working, so the selecting is done in the
-    // input's own onFocus, after that render.
-    inputs.current.get(key)?.focus();
-    return true;
-  }
-
-  /**
    * Put the caret in the first box a newly added product can take.
    *
    * Reached both ways in: picked from the row at the bottom, or scanned. Which
@@ -614,38 +644,12 @@ export default function TagClient({
   }, [seeking, products, added]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function onCellKey(e: React.KeyboardEvent<HTMLInputElement>, key: string) {
-    // Escape puts a cell back to what is booked and stays in it — the way out
-    // of a half-typed sum without having to remember what was there.
-    if (e.key === "Escape") {
-      setTyped((prev) => ({ ...prev, [key]: bookedText(key) }));
-      e.preventDefault();
-      return;
-    }
-
-    const back = e.shiftKey;
-    const seq = (dir: 1 | -1) => nextCell(grid, key, dir, canFocus);
-    const dir = (dr: number, dc: number) => stepCell(grid, key, dr, dc, canFocus);
-
-    let target: string | null = null;
-    if (e.key === "Tab") target = seq(back ? -1 : 1);
-    // Enter goes down, the way it does in a sheet — and falls to the next line
-    // when there is nothing below, so a ladder still ends somewhere useful.
-    else if (e.key === "Enter") target = dir(back ? -1 : 1, 0) ?? seq(back ? -1 : 1);
-    else if (e.key === "ArrowDown") target = dir(1, 0);
-    else if (e.key === "ArrowUp") target = dir(-1, 0);
-    // Left and right belong to the text until there is none left in that
-    // direction: a cell can hold `24*10+30` and somebody may be inside it.
-    else if (e.key === "ArrowLeft" && atTextEdge(e.currentTarget, -1)) target = dir(0, -1);
-    else if (e.key === "ArrowRight" && atTextEdge(e.currentTarget, 1)) target = dir(0, 1);
-    else return;
-
-    const moved = focusCell(target);
-    // Tab falls through when there is nowhere left to go, so the grid can still
-    // be left by keyboard rather than becoming a trap. An arrow that reached the
-    // edge simply does nothing, which is what an edge is.
-    if (moved || e.key !== "Tab") e.preventDefault();
-  }
+  const onCellKey = (e: React.KeyboardEvent<HTMLInputElement>, key: string) =>
+    handleKey(e, key, grid, {
+      // Three columns wide, and a cell can hold `24*10+30`.
+      horizontal: true,
+      onEscape: (k) => setTyped((prev) => ({ ...prev, [k]: bookedText(k) })),
+    });
 
   // ── A cell ──
   //
@@ -673,10 +677,7 @@ export default function TagClient({
     const working = raw !== undefined && focusKey !== key && isExpression(raw);
     return (
       <input
-        ref={(el) => {
-          if (el) inputs.current.set(key, el);
-          else inputs.current.delete(key);
-        }}
+        ref={register(key)}
         inputMode="numeric"
         className={cn(
           cellInput,
@@ -716,54 +717,17 @@ export default function TagClient({
       width="wide"
     >
       <Card>
-        <CardHeader
-          title={t("tag.sheet.title")}
-          action={
-            canManage ? (
-              <div className="flex items-center gap-2">
-                <div className="w-36">
-                  <DateInput
-                    size="sm"
-                    value={occurredAt}
-                    onChange={(e) => setOccurredAt(e.target.value)}
-                    aria-label={t("field.date")}
-                  />
-                </div>
-              </div>
-            ) : undefined
-          }
+        <SheetHeader
+          t={t}
+          canManage={canManage}
+          occurredAt={occurredAt}
+          onOccurredAt={setOccurredAt}
+          search={search}
+          onSearch={setSearch}
+          kinds={CELL_KINDS}
+          column={column}
+          onColumn={setColumn}
         />
-
-        {/* Narrowing the sheet to the thing in your hand. A night can run to
-            thirty products, and scrolling past twenty-nine of them to find the
-            one on the trolley is most of the work. */}
-        <div className="border-b border-border px-inset py-2">
-          <div className="w-full sm:w-72">
-            <SearchInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("tag.sheet.search")}
-              aria-label={t("tag.sheet.search")}
-            />
-          </div>
-        </div>
-
-        {/* The phone's whole answer to three columns: one at a time. Hidden
-            where there is room for all three, since switching would then be a
-            step that buys nothing. */}
-        <div className="border-b border-border px-inset md:hidden">
-          <FilterTabs
-            options={CELL_KINDS.map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
-            value={column}
-            onChange={setColumn}
-            // A third of the row each. These three are not a filter sitting in
-            // a corner — they are the sheet's one control on a phone, and the
-            // column being typed in should be as wide a target as the two that
-            // are not.
-            fill
-            aria-label={t("tag.sheet.column")}
-          />
-        </div>
 
         {/* No CardBody: the sheet is ruled to the card's own edge, the way the
             voucher editor is. A body would inset it by `px-inset` and the
@@ -819,40 +783,96 @@ export default function TagClient({
                     <tr className={cn("divide-x divide-border", isVolume && "bg-surface/40")}>
                       <td className="group px-2 py-1.5 align-middle">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="min-w-0">
-                            <Link
-                              href={`/stock/${productId}`}
-                              className="font-medium hover:underline"
-                            >
-                              {product.name}
-                            </Link>
-                            <span className="ml-2 text-xs text-muted">
-                              {isVolume
-                                ? t("holding.volume", {
-                                    sealed: shelf.sealed,
-                                    open: LEVELS.reduce((n, l) => n + (shelf.open[l] ?? 0), 0),
-                                  })
-                                : t("holding.unit", { units: shelf.sealed })}
-                            </span>
-                            {fault && (
-                              <span className="ml-2 text-xs text-danger">
-                                {t(`fault.${fault}`)}
+                          {swapping === productId ? (
+                            // The row's name, while it is being changed. In
+                            // place rather than in a dialog: what is being
+                            // answered is "which product is this row", and the
+                            // row is where that question is.
+                            <div className="flex min-w-0 flex-1 items-center gap-1">
+                              <div className="min-w-0 flex-1">
+                                <Combobox
+                                  autoFocus
+                                  size="sm"
+                                  value=""
+                                  onChange={(toId) => swap(productId, toId)}
+                                  // Never one already on the sheet — two rows
+                                  // for one product is what the unique index on
+                                  // a cell forbids — and never one counted
+                                  // differently: a spirit's rungs have nowhere
+                                  // to land on a can.
+                                  options={products
+                                    .filter(
+                                      (p) => !rows.includes(p.id) && p.kind === product.kind,
+                                    )
+                                    .map((p) => ({ value: p.id, label: p.name }))}
+                                  placeholder={t("tag.sheet.swapTo")}
+                                  searchPlaceholder={t("tag.sheet.addSearch")}
+                                  aria-label={t("tag.sheet.swap")}
+                                  align="left"
+                                />
+                              </div>
+                              <IconButton
+                                label={t("tag.sheet.swapCancel")}
+                                onClick={() => setSwapping(null)}
+                              >
+                                <IconX className="size-4" />
+                              </IconButton>
+                            </div>
+                          ) : (
+                            <span className="min-w-0">
+                              <Link
+                                href={`/stock/${productId}`}
+                                className="font-medium hover:underline"
+                              >
+                                {product.name}
+                              </Link>
+                              <span className="ml-2 text-xs text-muted">
+                                {isVolume
+                                  ? t("holding.volume", {
+                                      sealed: shelf.sealed,
+                                      open: LEVELS.reduce((n, l) => n + (shelf.open[l] ?? 0), 0),
+                                    })
+                                  : t("holding.unit", { units: shelf.sealed })}
                               </span>
-                            )}
-                          </span>
-                          {/* Taking a product off the occasion entirely. It
-                              removes its rows rather than zeroing them: picking
-                              the wrong beer is not a movement of nothing, it is
-                              no movement, and the log should say so. */}
-                          {canManage && (
-                            <button
-                              type="button"
-                              onClick={() => drop(productId)}
-                              className="shrink-0 rounded-md p-0.5 text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
-                              aria-label={t("tag.sheet.remove")}
+                              {fault && (
+                                <span className="ml-2 text-xs text-danger">
+                                  {t(`fault.${fault}`)}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {/* What can be done to the row itself, as opposed to
+                              its figures. Two things, so a menu rather than two
+                              icons competing for the same corner — and icon
+                              only, because forty rows carrying a word each is a
+                              column of repeated text where the products should
+                              be. */}
+                          {canManage && swapping !== productId && (
+                            <Menu
+                              label={t("tag.sheet.rowActions")}
+                              iconOnly
+                              variant="ghost"
+                              size="sm"
+                              icon={<IconDots className="size-4" />}
+                              className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 md:opacity-100"
                             >
-                              <IconX className="size-4" />
-                            </button>
+                              <MenuItem onClick={() => setSwapping(productId)}>
+                                <IconSwap className="size-4 shrink-0 text-muted" />
+                                {t("tag.sheet.swap")}
+                              </MenuItem>
+                              {/* Taking a product off the occasion entirely. It
+                                  removes its rows rather than zeroing them:
+                                  picking the wrong beer is not a movement of
+                                  nothing, it is no movement, and the log should
+                                  say so. */}
+                              <MenuItem
+                                onClick={() => drop(productId)}
+                                className="text-danger hover:bg-danger-soft"
+                              >
+                                <IconTrash className="size-4 shrink-0" />
+                                {t("tag.sheet.remove")}
+                              </MenuItem>
+                            </Menu>
                           )}
                         </div>
                       </td>
@@ -953,7 +973,7 @@ export default function TagClient({
                         <IconButton
                           label={t("tag.sheet.scan")}
                           title={t("tag.sheet.scan")}
-                          onClick={() => setScanning(true)}
+                          onClick={scan}
                         >
                           <IconScan className="size-4" />
                         </IconButton>
@@ -970,50 +990,17 @@ export default function TagClient({
           </TableScroll>
         )}
 
-        {/* Nothing on this sheet is in the log until this is pressed. The count
-            is the check that matters: a night is forty cells and a figure typed
-            into the column beside the one you meant is invisible on the way
-            past — but "38 rutor väntar" when you expected 37 is not.
-            Sticky, because a sheet with thirty products runs well past the
-            bottom of a phone and a save button you have to hunt for is one that
-            gets left unpressed. */}
         {canManage && (
-          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-border bg-background px-inset py-3">
-            <span className="text-sm text-muted">
-              {changed.length === 0
-                ? t("tag.sheet.nothingToSave")
-                : faults.size > 0
-                  ? t("tag.sheet.unsavedWithFaults", {
-                      count: changed.length,
-                      faults: faults.size,
-                    })
-                  : t("tag.sheet.unsaved", { count: changed.length })}
-            </span>
-            <div className="flex items-center gap-2">
-              {changed.length > 0 && (
-                <Button variant="secondary" onClick={discard} disabled={pending !== null}>
-                  {t("tag.sheet.discard")}
-                </Button>
-              )}
-              <Button
-                onClick={save}
-                // Every faulty cell is one the server would refuse anyway; the
-                // rows already say which and why. Held back rather than blocking
-                // the save, so one bad figure cannot strand the other thirty-nine.
-                disabled={changed.filter((k) => !faults.has(k)).length === 0}
-                loading={pending === "save"}
-              >
-                {t("tag.sheet.save")}
-              </Button>
-            </div>
-          </div>
+          <SheetSaveBar
+            t={t}
+            changed={changed}
+            faults={faults}
+            pending={pending}
+            onSave={save}
+            onDiscard={discard}
+          />
         )}
       </Card>
-
-      {/* The one thing an occasion with no closing step cannot know, said
-          rather than hidden: until the crates come back, "gick åt" and "still
-          standing at the bar" are the same number. */}
-      {tag.unreturned && <Notice tone="info">{t("tag.openCaveat")}</Notice>}
 
       {/* The sheet above says where the night's figures ended up. This says how
           they got there, and who. Its own card because they are two questions:
@@ -1027,22 +1014,7 @@ export default function TagClient({
         {t("tag.movements", { count: tag.entries })}
       </Link>
 
-      {scanning && <BarcodeScanner onCode={lookUp} onCancel={() => setScanning(false)} />}
-
-      {/* Invented on the sheet, finished here: a product needs a drink type,
-          and a spirit needs the bottle size its rungs are fractions of. */}
-      {naming !== null && (
-        <ProductDialog
-          product={null}
-          name={naming.name}
-          ean={naming.ean}
-          onClose={() => setNaming(null)}
-          onCreated={(id) => {
-            add(id);
-            setSeeking(id);
-          }}
-        />
-      )}
+      {overlay}
     </PageShell>
   );
 }

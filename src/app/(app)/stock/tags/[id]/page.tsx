@@ -22,7 +22,7 @@ export default async function StockTagPage({ params }: { params: Promise<{ id: s
       tag={tag}
       products={products}
       changes={changes}
-      canManage={canManageStock(user.roles)}
+      canManage={canManageStock(user.capabilities)}
     />
   );
 }

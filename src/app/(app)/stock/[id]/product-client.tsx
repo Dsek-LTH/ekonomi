@@ -21,7 +21,6 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { EmptyNote } from "@/components/ui/empty-state";
 import { PurchaseDialog, StocktakeDialog } from "../product-actions";
 import { ProductDialog } from "../product-dialog";
 import type { CellarRowDto, ProductOccasionDto, StockLevelDto } from "@/lib/data/stock";
@@ -32,6 +31,7 @@ import { useTableControls } from "@/lib/data/use-list-query";
 import { EntryDialog } from "../entry-dialog";
 import { LEVELS, bottlesAt } from "@/lib/stock/levels";
 import { cn } from "@/lib/ui/utils";
+import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
 
 const kr = (ore: number) =>
   `${new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(ore / 100)} kr`;
@@ -156,6 +156,28 @@ export default function StockProductClient({
                   <span className="tabular-nums">{product.ean}</span>
                 ) : (
                   <span className="text-muted">{t("product.noEan")}</span>
+                )
+              }
+            />
+            <Detail
+              label={t("products.field.systembolagetId")}
+              value={
+                product.systembolagetId ? (
+                  // Linked because the number is only useful as a way back to
+                  // the page it came from — a price, a new vintage, the article
+                  // being delisted. Through their search rather than a stored
+                  // address: the canonical URL carries a slug that changes when
+                  // a product is renamed, and the number does not.
+                  <a
+                    href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="tabular-nums text-accent hover:underline"
+                  >
+                    {product.systembolagetId}
+                  </a>
+                ) : (
+                  <span className="text-muted">—</span>
                 )
               }
             />
@@ -397,7 +419,7 @@ function OccasionTable({ rows, kind }: { rows: ProductOccasionDto[]; kind: strin
       rowKey={(r) => r.tagId}
       searchPlaceholder={t("product.searchOccasions")}
       expansion={(r) => (r.changes.length ? <ChangeFeed changes={r.changes} scope="tag" /> : null)}
-      empty={<EmptyNote>{t("product.noOccasions")}</EmptyNote>}
+      empty={t("product.noOccasions")}
     />
   );
 }
@@ -524,7 +546,7 @@ function CellarTable({
       controls={controls}
       rowKey={(r) => r.id}
       searchPlaceholder={t("product.searchCellar")}
-      empty={<EmptyNote>{t("product.noCellar")}</EmptyNote>}
+      empty={t("product.noCellar")}
     />
   );
 }

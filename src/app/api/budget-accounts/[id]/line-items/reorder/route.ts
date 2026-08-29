@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/server/db";
 import { parseBody } from "@/lib/api/parse";
 import { ReorderLineItems } from "@/lib/api/schemas/budget";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
 
 // POST /api/budget-accounts/[id]/line-items/reorder — this account's rows, in
@@ -13,13 +13,13 @@ import { fail } from "@/lib/api/guard";
 // in it at once. Whichever account a row leaves keeps the order it had — the
 // rows still in it are untouched, and a gap in their numbering means nothing.
 //
-// Anything outside the budget is dropped rather than refused: `denyBudgetWrite`
+// Anything outside the budget is dropped rather than refused: `allowBudgetWrite`
 // answers for this budget alone, so an id from another one is an id this
 // request was never entitled to move.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await ctx.params;
-  const denied = await denyBudgetWrite({ account: accountId });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ account: accountId });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, ReorderLineItems);
   if (!parsed.ok) return parsed.res;

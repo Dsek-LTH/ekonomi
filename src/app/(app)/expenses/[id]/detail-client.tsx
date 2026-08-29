@@ -99,12 +99,14 @@ function ExpenseDetail({
       {/* The receipt is the app's panel now, not a card in this page — the page
           declares it and the shell stands it beside all of this, full height.
 
-          Two documents, not one: the utläggsräkning — the cover page naming
-          who attested what — and the underlag behind it, with the panel's
-          pager between them. Stapled together they are what gets attached to
-          the voucher in Fortnox, and being able to read that here is most of
-          the reason to render it at all; a document you cannot see until it is
-          in somebody else's system is one nobody checks.
+          Two documents, not one: the underlag, and behind it the
+          utläggsräkning — the cover page naming who attested what — with the
+          panel's pager between them. It opens on the receipt, which is what
+          somebody comes to this page to look at; the cover is a page further
+          on. Stapled together the two are what gets attached to the voucher in
+          Fortnox, and being able to read that here is most of the reason to
+          render it at all; a document you cannot see until it is in somebody
+          else's system is one nobody checks.
 
           A draft has no cover worth drawing and shows its receipt alone.
           See lib/expense/document-url.ts. */}
@@ -114,7 +116,7 @@ function ExpenseDetail({
         emptyDescription={t("noReceipt")}
       />
 
-      <ExpenseActionNotice can={can} fortnox={fortnox} />
+      <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
       {/* min-w-0: without it a grid item's own min-width is auto, so one long
           unbroken string — a cost-centre name, a receipt filename — widens the

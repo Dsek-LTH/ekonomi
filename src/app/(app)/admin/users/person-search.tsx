@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
+import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { cn } from "@/lib/ui/utils";
 import type { User } from "@/lib/domain/types";
 
@@ -59,17 +60,7 @@ export function PersonSearch({
     };
   }, [query]);
 
-  // Close when clicking outside. `pointerdown` rather than `mousedown`: iOS only
-  // synthesises mouse events for targets it considers clickable, so a tap on
-  // the ordinary page behind this list dismissed nothing. See ui/combobox.tsx.
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
-  }, [open]);
+  useDismissOnOutside(open, boxRef, () => setOpen(false));
 
   // Derived rather than stored, so clearing the field needs no state update.
   const shown = query.trim() ? results.filter((u) => !exclude.includes(u.id)) : [];

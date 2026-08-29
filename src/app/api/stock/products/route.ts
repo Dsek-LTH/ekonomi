@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       nominalMl: body.nominalMl ?? null,
       ean: body.ean ?? null,
       costPriceOre: body.costPriceOre ?? null,
+      systembolagetId: body.systembolagetId ?? null,
     },
     select: { id: true },
   }).catch((err: unknown) => {

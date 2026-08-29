@@ -13,6 +13,7 @@ import {
   type PrefixRow,
 } from "@/lib/server/result-units";
 import { oreToSEK as ore } from "@/lib/domain/money";
+import { journeyKm } from "@/lib/mileage/claim";
 import {
   canAccessBookkeeping,
   canAttestAllocation,
@@ -20,6 +21,7 @@ import {
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type {
+  Capability,
   CostAllocation,
   Expense,
   Role,
@@ -133,6 +135,21 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     matchedTransactionId: e.matchedTransactionId ?? undefined,
     receiptId: e.receipts[0]?.id,
     receiptMimeType: e.receipts[0]?.mimeType,
+    // Absent, not empty, for anything that is not a milersättning — see the
+    // field on the Expense interface. The readings live on the utlägg itself,
+    // so this costs no join.
+    mileage:
+      e.paymentType === "MILEAGE"
+        ? {
+            odometerStart: e.odometerStart == null ? null : Number(e.odometerStart),
+            odometerEnd: e.odometerEnd == null ? null : Number(e.odometerEnd),
+            km: journeyKm(
+              e.odometerStart == null ? null : Number(e.odometerStart),
+              e.odometerEnd == null ? null : Number(e.odometerEnd),
+            ),
+            orePerKm: e.mileageOrePerKm,
+          }
+        : undefined,
     submitterHasPayout: Boolean(
       e.submitter.bankClearingNumber && e.submitter.bankAccountNumber,
     ),
@@ -143,11 +160,17 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
 
 export type { Viewer };
 
-// Per-request attest context: the viewer's roles + result units, resolved once,
-// plus the prefix table used to place each allocation in a result unit.
+// Per-request attest context: what the viewer may do and what they answer for,
+// resolved once, plus the prefix table used to place each allocation in a result
+// unit.
+//
+// Both roles and capabilities, because the attest rule reads both: ADMIN is a
+// capability, the vice-skattmästare and resultatansvarig clauses are roles.
+// See canAttestAllocation in lib/domain/permissions.ts.
 type AttestCtx = {
   viewerId: string;
   viewerRoles: Role[];
+  viewerCapabilities: Capability[];
   ownedResultUnits: string[];
   prefixes: PrefixRow[];
 };
@@ -160,6 +183,7 @@ async function attestCtx(viewer: Viewer): Promise<AttestCtx> {
   return {
     viewerId: viewer.id,
     viewerRoles: viewer.roles,
+    viewerCapabilities: viewer.capabilities,
     ownedResultUnits: owned.names,
     prefixes,
   };
@@ -184,6 +208,7 @@ function annotateAttest(
   );
   for (const a of mapped.allocations) {
     a.canAttest = canAttestAllocation({
+      actorCapabilities: ctx.viewerCapabilities,
       actorRoles: ctx.viewerRoles,
       actorIsSubmitter,
       actorOwnedResultUnits: ctx.ownedResultUnits,
@@ -191,7 +216,7 @@ function annotateAttest(
       allocationResultUnit: resultUnitById.get(a.id) ?? null,
     });
   }
-  mapped.canReturn = canReturnApproved(ctx.viewerRoles);
+  mapped.canReturn = canReturnApproved(ctx.viewerCapabilities);
 }
 
 // ── The list screens ──────────────────────────────────────────────
@@ -393,12 +418,12 @@ export async function getDashboardExpenses(
   };
 
   const candidates: Prisma.ExpenseWhereInput[] = [waitingOnSubmitter];
-  if (hasAttestRole(viewer.roles)) {
+  if (hasAttestRole(viewer.capabilities)) {
     candidates.push({
       AND: [await attestScopeWhere(viewer), { status: { in: ["PENDING_APPROVAL"] } }],
     });
   }
-  if (canAccessBookkeeping(viewer.roles)) {
+  if (canAccessBookkeeping(viewer.capabilities)) {
     candidates.push({ status: { in: ["APPROVED", "BOOKED"] } });
   }
 

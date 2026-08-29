@@ -11,7 +11,7 @@ export default async function ProfilePage() {
 
   // The only place the treasury's own Fortnox login is read for display — the
   // sidebar no longer carries a copy of it.
-  const showsFortnox = canLogInToFortnox(user.roles);
+  const showsFortnox = canLogInToFortnox(user.capabilities);
   const [payout, fortnoxSession, cookieStore] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },

@@ -5,12 +5,12 @@
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 
-const PaymentType = z.enum(["CARD", "REIMBURSEMENT"]);
+const PaymentType = z.enum(["CARD", "REIMBURSEMENT", "MILEAGE"]);
 
 /** POST /api/expenses — opens a draft for the wizard to attach a receipt to. */
 export const CreateExpense = z.object({
   // Anything other than REIMBURSEMENT used to fall through to CARD, including a
-  // typo. It is one of the two or it is a bad request.
+  // typo. It is one of the three or it is a bad request.
   paymentType: PaymentType.default("CARD"),
   title: Trimmed.default(""),
   matchedTransactionId: Clearable(Id).optional(),
@@ -24,6 +24,19 @@ export const AllocationInput = z.object({
   comment: Trimmed.optional(),
 });
 export type AllocationInput = z.infer<typeof AllocationInput>;
+
+/**
+ * An odometer reading, in kilometres.
+ *
+ * One decimal, matching the column — a trip meter has one and plenty of
+ * dashboards show it. Not negative, and bounded well past what any car reaches,
+ * because a slipped digit here is a slipped digit in an amount.
+ *
+ * Zero is a real reading: a trip meter that was just zeroed, and a car straight
+ * off the lot. So the two are `Clearable` rather than falsy-checked anywhere —
+ * "not given yet" is null, and a draft is allowed to have one.
+ */
+const Odometer = z.number().min(0).max(9_999_999).multipleOf(0.1);
 
 /**
  * PATCH /api/expenses/[id].
@@ -40,6 +53,21 @@ export const PatchExpense = z.object({
   grossAmount: Clearable(Ore).optional(),
   paymentType: PaymentType.optional(),
   allocations: z.array(AllocationInput).optional(),
+  /**
+   * The odometer at each end of the journey, for a milersättning.
+   *
+   * No distance and no amount: what the claim is worth is the server's to work
+   * out from the difference and the rate in force on the day of the journey
+   * (lib/mileage/claim.ts). Sending either would be sending the one figure on
+   * the whole form that decides how much money leaves the section, which is not
+   * a client's to decide — so a request that carries these has its
+   * `grossAmount` written from them whatever else it said.
+   *
+   * Clearable, because a draft may hold one reading and not the other, and
+   * because taking one back out is something somebody correcting a typo does.
+   */
+  odometerStart: Clearable(Odometer).optional(),
+  odometerEnd: Clearable(Odometer).optional(),
 });
 export type PatchExpense = z.infer<typeof PatchExpense>;
 

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { appendInOrder, nextSortOrder } from "@/lib/server/sort-order";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { cloneCostCenter } from "@/lib/budget/clone";
+import { bulkTransaction } from "@/lib/server/tx";
 import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateSheet } from "@/lib/api/schemas/budget";
@@ -13,8 +14,8 @@ import { CreateSheet } from "@/lib/api/schemas/budget";
 //                      centre (see cloneCostCenter)
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: budgetId } = await ctx.params;
-  const denied = await denyBudgetWrite({ budget: budgetId });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ budget: budgetId });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateSheet);
   if (!parsed.ok) return parsed.res;
@@ -30,7 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (!source || source.budgetId !== budgetId) {
       return fail(404, "budget.sheetNotFound");
     }
-    const cloneId = await prisma.$transaction((tx) => cloneCostCenter(tx, cloneFromId));
+    const cloneId = await bulkTransaction((tx) => cloneCostCenter(tx, cloneFromId));
     const clone = await prisma.budgetCostCenter.findUnique({ where: { id: cloneId! } });
     return NextResponse.json(clone, { status: 201 });
   }

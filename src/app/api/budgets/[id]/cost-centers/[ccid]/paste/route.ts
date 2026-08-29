@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { lockForAppend, nextSortOrder } from "@/lib/server/sort-order";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PasteIntoSheet } from "@/lib/api/schemas/budget";
@@ -26,8 +26,8 @@ import { rebindCopiedRefs } from "@/lib/budget/paste";
 // read, let alone copy.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string; ccid: string }> }) {
   const { id: budgetId, ccid: ccId } = await ctx.params;
-  const denied = await denyBudgetWrite({ costCenter: ccId });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ costCenter: ccId });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PasteIntoSheet);
   if (!parsed.ok) return parsed.res;

@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
+import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconCheck, IconDots, IconUndo } from "@/components/ui/icons";
-import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
-import type { FortnoxStatus } from "@/lib/domain/types";
+import type { FortnoxStatus, PaymentType } from "@/lib/domain/types";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useProgressRouter } from "@/components/shell/route-progress";
 
@@ -248,37 +248,37 @@ export function ExpenseActions({
 export function ExpenseActionNotice({
   can,
   fortnox,
+  paymentType,
 }: {
   can: ExpenseCapabilities;
   fortnox: FortnoxStatus;
+  /** Only so the filing-deadline sentence can name what it is about — a
+   *  milersättning has no receipt to call old. See SubmitBlockerNote. */
+  paymentType?: PaymentType;
 }) {
   const t = useTranslations("expenses.detail");
-  const tBlocker = useTranslations("expenses.submitBlocker");
 
-  const notes = [
-    // `days` is only read by the filing-deadline hint; next-intl ignores it on
-    // the others, which is cheaper than picking values per blocker.
-    can.submitBlocker
-      ? tBlocker(can.submitBlocker, { days: REIMBURSEMENT_DEADLINE_DAYS })
-      : null,
-    // The export button is rendered but dead without Fortnox, and its own
-    // tooltip can't say so — Button sets `disabled:pointer-events-none`. Which
-    // half is missing decides where you have to go: the section's connection is
-    // set up once under Bokföring, your own login is yours to renew.
+  // The export button is rendered but dead without Fortnox, and its own
+  // tooltip can't say so — Button sets `disabled:pointer-events-none`. Which
+  // half is missing decides where you have to go: the section's connection is
+  // set up once under Bokföring, your own login is yours to renew.
+  const fortnoxNote =
     can.canExport && !canExportNow(fortnox)
       ? fortnox.connected
         ? t("fortnoxNotSignedIn")
         : t("fortnoxNotConnected")
-      : null,
-  ].filter((n): n is string => Boolean(n));
+      : null;
 
-  if (notes.length === 0) return null;
+  if (!can.submitBlocker && !fortnoxNote) return null;
 
   return (
     <Notice>
-      {notes.map((note) => (
-        <p key={note}>{note}</p>
-      ))}
+      {/* Its own component rather than a line of text: one blocker sends the
+          submitter to another page, and the sentence carries the link there. */}
+      {can.submitBlocker && (
+        <SubmitBlockerNote blocker={can.submitBlocker} paymentType={paymentType} />
+      )}
+      {fortnoxNote && <p>{fortnoxNote}</p>}
     </Notice>
   );
 }

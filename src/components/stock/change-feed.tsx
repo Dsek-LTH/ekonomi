@@ -23,7 +23,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
-import { EmptyNote } from "@/components/ui/empty-state";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockChangeDto } from "@/lib/data/stock";
 import { cn } from "@/lib/ui/utils";
@@ -135,7 +134,7 @@ export function ChangeFeed({
       controls={controls}
       rowKey={(c) => c.id}
       searchPlaceholder={t("changes.search")}
-      empty={<EmptyNote>{empty ?? t("changes.none")}</EmptyNote>}
+      empty={empty ?? t("changes.none")}
     />
   );
 }

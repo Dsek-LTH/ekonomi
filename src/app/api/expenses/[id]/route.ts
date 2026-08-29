@@ -14,6 +14,7 @@ import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchExpense } from "@/lib/api/schemas/expense";
+import { valueForStorage } from "@/lib/mileage/store";
 import {
   canEditExpense,
   denyExpenseDelete,
@@ -69,14 +70,65 @@ export async function PATCH(
   if (body.purchaseDate && isFutureDate(body.purchaseDate)) {
     return fail(422, "expense.futureDate");
   }
+  // Stored as @db.Date, i.e. midnight UTC, so the ISO day is the day meant.
+  // Declared here rather than beside the diff below because the mileage
+  // valuation needs it first.
+  const dateStr = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
   const purchaseDate =
     body.purchaseDate === undefined
       ? expense.purchaseDate
       : body.purchaseDate === null
         ? null
         : new Date(body.purchaseDate);
-  const grossAmount = body.grossAmount === undefined ? expense.grossAmount : body.grossAmount;
   const paymentType = body.paymentType ?? expense.paymentType;
+
+  // The odometer at each end, and what the journey between them is worth.
+  //
+  // Absent means "leave it", like every other field here — so a save that only
+  // touches the distribution does not have to re-send the readings. The rate is
+  // resolved against the date this edit *leaves behind*, not the one it sends:
+  // correcting a journey's day to one under a different schablon has to move
+  // the amount with it, or the claim would go on being worth what the old day
+  // said.
+  //
+  // Null on every other payment type, and *cleared* by an edit that moves off
+  // MILEAGE. The three columns describe a journey, and an utlägg that is no
+  // longer a milersättning has none — they used to be spread in only when there
+  // was something to value, which left the readings and the schablon sitting on
+  // a receipt claim for the rest of its life, with the timeline going on to
+  // record edits to them.
+  const isMileage = paymentType === "MILEAGE";
+  const odometerStart = !isMileage
+    ? null
+    : body.odometerStart === undefined
+      ? expense.odometerStart == null
+        ? null
+        : Number(expense.odometerStart)
+      : body.odometerStart;
+  const odometerEnd = !isMileage
+    ? null
+    : body.odometerEnd === undefined
+      ? expense.odometerEnd == null
+        ? null
+        : Number(expense.odometerEnd)
+      : body.odometerEnd;
+
+  const valued = isMileage
+    ? await valueForStorage({
+        date: purchaseDate ? dateStr(purchaseDate)! : "",
+        odometerStart,
+        odometerEnd,
+      })
+    : null;
+
+  // On a milersättning the amount is never the client's — it is the distance
+  // between the two readings at the day's rate, and this is where that is
+  // settled whatever the request said.
+  const grossAmount = valued
+    ? valued.grossAmount
+    : body.grossAmount === undefined
+      ? expense.grossAmount
+      : body.grossAmount;
 
   // Switching off the section card gives the bank transaction back.
   //
@@ -139,7 +191,6 @@ export async function PATCH(
   }
 
   // Build diff.
-  const dateStr = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
   type JsonScalar = string | number | null;
   const diff: Record<string, { from: JsonScalar; to: JsonScalar }> = {};
   const note = (field: string, from: JsonScalar, to: JsonScalar) => {
@@ -148,6 +199,18 @@ export async function PATCH(
   note("title", expense.title, title);
   note("purchaseDate", dateStr(expense.purchaseDate), dateStr(purchaseDate));
   note("grossAmount", expense.grossAmount, grossAmount);
+  // Each on its own, so the timeline can say which end of the journey was
+  // corrected rather than only that "the mileage changed".
+  note(
+    "odometerStart",
+    expense.odometerStart == null ? null : Number(expense.odometerStart),
+    odometerStart,
+  );
+  note(
+    "odometerEnd",
+    expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+    odometerEnd,
+  );
   note("paymentType", expense.paymentType, paymentType);
 
   const allocsChanged =
@@ -203,6 +266,15 @@ export async function PATCH(
           purchaseDate,
           grossAmount,
           paymentType,
+          // All three together, on a milersättning and only there: the
+          // readings, and the rate that valued the distance between them.
+          // Written onto the claim rather than looked up when it is read, so
+          // the amount stays checkable after the schablon moves — and written
+          // unconditionally so that moving off MILEAGE takes them back off,
+          // rather than leaving a journey on a claim that no longer has one.
+          odometerStart,
+          odometerEnd,
+          mileageOrePerKm: valued?.orePerKm ?? null,
           ...(dropMatch ? { matchedTransactionId: null } : {}),
         },
       });

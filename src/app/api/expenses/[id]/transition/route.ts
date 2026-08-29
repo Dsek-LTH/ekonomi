@@ -19,7 +19,10 @@ import {
   SUBMITTABLE_STATUSES,
   isAttestWithdrawable,
   isLateReimbursement,
+  isOutOfPocket,
 } from "@/lib/domain/status";
+import { claimBlocker } from "@/lib/mileage/claim";
+import { getMileageRates } from "@/lib/mileage/store";
 import { cancelsOut } from "@/lib/domain/matching";
 import { isFutureDate } from "@/lib/domain/date";
 import type { ExpenseStatus } from "@/lib/generated/prisma/client";
@@ -130,6 +133,7 @@ export async function POST(
   // The allocation's result unit comes from its cost-centre code prefix.
   const mayAttest = (a: (typeof expense.allocations)[number]) =>
     canAttestAllocation({
+      actorCapabilities: actor.capabilities,
       actorRoles: actor.roles,
       actorIsSubmitter,
       actorOwnedResultUnits: actorOwned,
@@ -254,7 +258,7 @@ export async function POST(
   // already-attested expense back to CHANGES_REQUESTED. Clears all allocation
   // approvals so it re-enters the attest flow.
   if (action === "return_approved") {
-    if (!canReturnApproved(actor.roles)) {
+    if (!canReturnApproved(actor.capabilities)) {
       return fail(403, "expense.noReopenAccess");
     }
     if (expense.status !== "APPROVED") {
@@ -297,7 +301,7 @@ export async function POST(
   // it means the next export creates a second voucher for the same utlägg.
   // Hence the required reason and the narrow role gate.
   if (action === "unexport") {
-    if (!canUnexport(actor.roles)) {
+    if (!canUnexport(actor.capabilities)) {
       return fail(403, "expense.noUnexportAccess");
     }
     if (expense.status !== "EXPORTED") {
@@ -367,7 +371,7 @@ export async function POST(
     // do it on their behalf; nobody else may, however complete the utlägg
     // happens to be. Mirrors `mayAct` in lib/domain/expense-capabilities.ts,
     // which is what decides whether the button is offered.
-    if (!actorIsSubmitter && !isAdmin(actor.roles)) {
+    if (!actorIsSubmitter && !isAdmin(actor.capabilities)) {
       return fail(403, "expense.noSubmitAccess");
     }
     // Complete information is required before an expense can go for attest.
@@ -398,7 +402,27 @@ export async function POST(
     // And the underlag it all rests on. The wizard won't let you past the
     // details without one, but the wizard isn't the only way in here — this is
     // the rule, and that is a convenience on top of it.
-    if (expense.receipts.length === 0) {
+    //
+    // A milersättning has no underlag to upload: nobody photographs driving
+    // their own car, and the journey it rests on is typeset onto the
+    // utläggsräkning from the odometer readings. So what is required of it is
+    // that the two readings are there and describe a journey that can be priced — the same answer the form was showing while
+    // it was being filled in, asked again here where it is actually enforced.
+    // See lib/mileage/claim.ts.
+    if (expense.paymentType === "MILEAGE") {
+      const blocker = claimBlocker(
+        {
+          // Whole and not in the future by the two checks above, so the date
+          // this is valued against is the one the claim will be paid on.
+          date: expense.purchaseDate.toISOString().slice(0, 10),
+          odometerStart:
+            expense.odometerStart == null ? null : Number(expense.odometerStart),
+          odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+        },
+        await getMileageRates(),
+      );
+      if (blocker) return fail(422, `mileage.${blocker}`);
+    } else if (expense.receipts.length === 0) {
       return fail(422, "expense.receiptRequired");
     }
     if (expense.paymentType === "CARD" && !expense.matchedTransactionId) {
@@ -412,9 +436,11 @@ export async function POST(
     ) {
       return fail(422, "expense.matchStale");
     }
-    // Reimbursements need the submitter's payout account to pay them back.
+    // Out-of-pocket claims need the submitter's payout account to pay them
+    // back — a milersättning as much as a receipt they paid, since both are
+    // the section owing a member money rather than money it has already spent.
     if (
-      expense.paymentType === "REIMBURSEMENT" &&
+      isOutOfPocket(expense.paymentType) &&
       (!expense.submitter.bankClearingNumber || !expense.submitter.bankAccountNumber)
     ) {
       return fail(422, "expense.payoutRequired");

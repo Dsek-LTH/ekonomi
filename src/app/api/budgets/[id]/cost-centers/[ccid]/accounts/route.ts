@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { appendInOrder, nextSortOrder } from "@/lib/server/sort-order";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { resolveBudgetAccount } from "@/lib/budget/account-validation";
 import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -8,8 +8,8 @@ import { CreateAccount } from "@/lib/api/schemas/budget";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string; ccid: string }> }) {
   const { ccid: budgetCostCenterId } = await ctx.params;
-  const denied = await denyBudgetWrite({ costCenter: budgetCostCenterId });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ costCenter: budgetCostCenterId });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateAccount);
   if (!parsed.ok) return parsed.res;

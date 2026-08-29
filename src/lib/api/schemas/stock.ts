@@ -37,6 +37,20 @@ const Abv = z.number().min(0).max(100);
 const Ean = Trimmed.regex(/^\d{8,14}$/, { error: "a barcode is 8 to 14 digits" });
 
 /**
+ * Systembolaget's article number, digits only.
+ *
+ * The form takes a pasted product URL as well and reduces it to this before
+ * sending (lib/stock/systembolaget.ts) — the route accepts only the number, so
+ * what is stored is one thing and not sometimes a link.
+ *
+ * Nullable rather than optional-only: clearing the field has to be expressible,
+ * and `undefined` in a PATCH means "leave it alone".
+ */
+const SystembolagetId = Trimmed.regex(/^\d{3,10}$/, {
+  error: "a Systembolaget article number is 3 to 10 digits",
+});
+
+/**
  * A product, and everything it needs before it can be one.
  *
  * Nothing here is optional, and each part earns it. The barcode is how stock
@@ -59,6 +73,7 @@ export const CreateStockProduct = z.object({
   unitMl: z.int().positive().nullish(),
   nominalMl: z.int().positive().nullish(),
   costPriceOre: Ore.min(0),
+  systembolagetId: SystembolagetId.nullish(),
 });
 export type CreateStockProduct = z.infer<typeof CreateStockProduct>;
 

@@ -9,6 +9,23 @@
 // Amounts leave this module in SEK, already oriented for display (see lib/bas):
 // income and equity read positive, costs read negative.
 import { prisma } from "@/lib/server/db";
+// The wire shapes live in ./report-shape, which the ledger screen imports
+// too — they are the contract between this module and that one, and a
+// contract written down twice is not one.
+export type {
+  GroupMode,
+  LedgerReport,
+  ReportAccount,
+  ReportGroup,
+  ReportSection,
+} from "./report-shape";
+import type {
+  GroupMode,
+  LedgerReport,
+  ReportAccount,
+  ReportGroup,
+  ReportSection,
+} from "./report-shape";
 import {
   accountRangeFor,
   orient,
@@ -17,50 +34,8 @@ import {
   type ReportKind,
 } from "./bas";
 
-export type GroupMode = "SUMMED" | "SPECIFIED";
-
 const ore = (v: number | null | undefined) => (v ?? 0) / 100;
 const NO_CC = ""; // the "no cost centre" bucket key
-
-export interface ReportAccount {
-  account: string;
-  accountName: string;
-  amount: number; // SEK, oriented — period movement
-  opening: number | null; // SEK, oriented — balance report only
-  closing: number | null; // SEK, oriented — balance report only
-  comparison: number | null; // SEK, oriented — prior year or budget
-}
-
-export interface ReportSection {
-  /** Names the section in messages — see BasSection. */
-  key: string;
-  accounts: ReportAccount[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
-
-// One per cost centre in SPECIFIED mode; a single unnamed group in SUMMED mode.
-export interface ReportGroup {
-  costCenterCode: string | null;
-  costCenterName: string | null;
-  sections: ReportSection[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
-
-export interface LedgerReport {
-  kind: ReportKind;
-  group: GroupMode;
-  groups: ReportGroup[];
-  total: number;
-  opening: number | null;
-  closing: number | null;
-  comparison: number | null;
-}
 
 // One account within one cost centre, in raw öre (debit − credit) before the
 // display orientation is applied.

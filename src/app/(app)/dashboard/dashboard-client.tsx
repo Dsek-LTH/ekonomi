@@ -4,11 +4,11 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { ButtonLink } from "@/components/ui/button";
+import { NewExpenseMenu } from "@/components/new-expense-menu";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/status-pill";
-import { IconPlus, IconChevronRight } from "@/components/ui/icons";
+import { IconChevronRight } from "@/components/ui/icons";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
@@ -159,10 +159,7 @@ export function DashboardClient({
                     {t("allExpenses")}
                     <IconChevronRight className="size-4" />
                   </Link>
-                  <ButtonLink href="/expenses/new" size="sm">
-                    <IconPlus className="size-4" />
-                    {t("newExpense")}
-                  </ButtonLink>
+                  <NewExpenseMenu size="sm" />
                 </div>
               }
             />
@@ -230,10 +227,7 @@ function FirstRun() {
         </ol>
 
         <div className="mt-8">
-          <ButtonLink href="/expenses/new">
-            <IconPlus className="size-4" />
-            {t("cta")}
-          </ButtonLink>
+          <NewExpenseMenu label={t("cta")} />
         </div>
       </div>
     </Card>

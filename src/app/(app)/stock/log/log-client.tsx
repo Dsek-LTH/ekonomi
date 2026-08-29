@@ -32,7 +32,6 @@ import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { MultiCombobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EmptyNote } from "@/components/ui/empty-state";
 import { DateInput } from "@/components/ui/field";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto, StockLogRowDto } from "@/lib/data/stock";
@@ -331,7 +330,7 @@ export default function StockLogClient({
           // spirit, of several rungs. This is what it is made of.
           expansion={(r) => (r.parts?.length ? <Parts row={r} /> : null)}
           expandAll={showRevisions}
-          empty={<EmptyNote>{t("log.empty")}</EmptyNote>}
+          empty={t("log.empty")}
         />
       </Card>
     </PageShell>

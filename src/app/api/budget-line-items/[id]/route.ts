@@ -3,12 +3,12 @@ import { prisma } from "@/lib/server/db";
 import { orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchLineItem } from "@/lib/api/schemas/budget";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ lineItem: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ lineItem: id });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PatchLineItem);
   if (!parsed.ok) return parsed.res;
@@ -34,7 +34,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.values = merged;
   }
 
-  // `denyBudgetWrite` walked this id up to its budget, so it existed a moment
+  // `allowBudgetWrite` walked this id up to its budget, so it existed a moment
   // ago; this covers it being gone by now.
   const item = await orNotFound(() => prisma.budgetLineItem.update({ where: { id }, data }));
   if (item instanceof NextResponse) return item;
@@ -43,8 +43,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const denied = await denyBudgetWrite({ lineItem: id });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ lineItem: id });
+  if (!g.ok) return g.res;
   const deleted = await orNotFound(() => prisma.budgetLineItem.delete({ where: { id } }));
   if (deleted instanceof NextResponse) return deleted;
   return new Response(null, { status: 204 });

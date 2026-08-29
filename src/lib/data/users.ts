@@ -5,19 +5,36 @@ import { cache } from "react";
 import { prisma } from "@/lib/server/db";
 import { initials } from "@/lib/ui/format";
 import { ASSIGNABLE_ROLES } from "@/lib/domain/permissions";
-import type { Role, User } from "@/lib/domain/types";
+import { roleCapabilities } from "@/lib/server/capabilities";
+import type { Capability, Role, User } from "@/lib/domain/types";
 
-// A user row as the UI shape. The initials are derived rather than stored, so
-// every query that returns people goes through here.
-const toUser = (u: { id: string; name: string; email: string; roles: Role[] }): User => ({
-  id: u.id,
-  name: u.name,
-  email: u.email,
-  roles: u.roles,
-  initials: initials(u.name),
-});
+// Rows as the UI shape. The initials are derived rather than stored, and the
+// capabilities are resolved rather than either, so every query that returns
+// people goes through here.
+//
+// The whole list at once rather than a mapper per row: the capability matrix is
+// one query, request-cached, and resolving it here means a screen listing the
+// section can say what each person may actually do — the question the roles
+// beside their name are only half an answer to.
+async function toUsers(
+  rows: { id: string; name: string; email: string; roles: Role[] }[],
+): Promise<User[]> {
+  const matrix = await roleCapabilities();
+  return rows.map((u) => {
+    const caps = new Set<Capability>();
+    for (const role of u.roles) for (const cap of matrix.get(role) ?? []) caps.add(cap);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      roles: u.roles,
+      capabilities: [...caps],
+      initials: initials(u.name),
+    };
+  });
+}
 
-// The four columns `toUser` actually maps. Named once: a User row also carries
+// The four columns `toUsers` actually maps. Named once: a User row also carries
 // the member's bank details, and a loader that selects the whole row hands them
 // to every caller — today they are dropped in the mapper, but the next field
 // added to the shape would ship them without anyone deciding to.
@@ -28,7 +45,7 @@ export async function getUsers(): Promise<User[]> {
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: userSelect,
   });
-  return users.map(toUser);
+  return toUsers(users);
 }
 
 // Only the members who hold something beyond the baseline ORDINARIE. With a
@@ -40,7 +57,7 @@ export async function getRoleHolders(): Promise<User[]> {
     orderBy: [{ name: "asc" }, { id: "asc" }],
     select: userSelect,
   });
-  return users.map(toUser);
+  return toUsers(users);
 }
 
 // Name/email search for the person pickers. Capped, since the point is to find
@@ -59,7 +76,7 @@ export async function searchUsers(query: string, take = 20): Promise<User[]> {
     take,
     select: userSelect,
   });
-  return users.map(toUser);
+  return toUsers(users);
 }
 
 // Does this user hold a section card? Drives one nav item; a count, not a list.

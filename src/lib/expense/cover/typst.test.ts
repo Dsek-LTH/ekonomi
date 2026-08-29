@@ -16,9 +16,13 @@ const data: ExpenseCoverData = {
   reference: "DEK26-0042",
   title: "FREETRAILER: Hyrning av släp",
   purchaseDate: "2026-03-19",
+  dateLabel: "Kvittodatum",
   paymentType: "Privat utlägg",
   created: "2026-08-14",
   submitter: { name: 'Emil "jajebums" Helander', studentId: "em8241he-s" },
+  // Not a milersättning — its underlag is a real receipt and follows on the
+  // next page, so the page draws no journey section.
+  journey: null,
   total: "1 069,00 kr",
   allocations: [
     {
@@ -64,6 +68,31 @@ describe("renderCover", () => {
           approvedAt: null,
         },
       ],
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
+
+  it("renders a milersättning's journey on the same one page", async () => {
+    // The section that used to be a second document. It is set above the attest
+    // table, so the page it is on is still the page it has always been.
+    const bytes = await renderCover({
+      ...data,
+      paymentType: "Milersättning",
+      dateLabel: "Sista resdag",
+      journey: {
+        odometerStart: "12\u00a0300,0 km",
+        odometerEnd: "12\u00a0342,0 km",
+        distance: "42,0 km",
+        rate: "2,50 kr/km",
+      },
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
+
+  it("draws a journey of dashes for a half-filled draft", async () => {
+    const bytes = await renderCover({
+      ...data,
+      journey: { odometerStart: "12\u00a0300,0 km", odometerEnd: "—", distance: "—", rate: "—" },
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });

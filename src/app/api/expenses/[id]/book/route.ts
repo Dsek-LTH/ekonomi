@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
+import type { PaymentType } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { BookVoucher } from "@/lib/api/schemas/expense";
@@ -51,9 +52,15 @@ function prepareLines(
 // left the section's bank, a private outlay is a debt to the member. The UI
 // renders that row as fixed, and this is the same rule on the server — the
 // client is a convenience, not the gate.
+//
+// Milersättning falls on the member-debt side without a branch of its own, and
+// that is the right answer rather than a lucky one: the section owes the
+// claimant their petrol exactly as it owes them a receipt they paid. The test
+// is "did the section's own account already pay for this", which only the card
+// answers yes to.
 async function checkPaymentLine(
   lines: NormLine[],
-  expense: { paymentType: "CARD" | "REIMBURSEMENT"; grossAmount: number | null },
+  expense: { paymentType: PaymentType; grossAmount: number | null },
 ): Promise<{ code: string; account: string } | null> {
   const settings = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
   const account =
@@ -131,7 +138,7 @@ async function loadForBooking(id: string) {
 // The rows, validated against the utlägg they belong to.
 async function prepareVoucher(
   body: BookVoucher,
-  expense: { paymentType: "CARD" | "REIMBURSEMENT"; grossAmount: number | null },
+  expense: { paymentType: PaymentType; grossAmount: number | null },
 ) {
   const prepared = prepareLines(body);
   if (!prepared.ok) return { ok: false as const, res: fail(prepared.status, prepared.error) };

@@ -26,7 +26,7 @@ import {
   submitBlocker,
   type SubmitBlocker,
 } from "./status";
-import type { Expense, Role } from "./types";
+import type { Capability, Expense, Role } from "./types";
 
 export type ExpenseCapabilities = {
   canSubmit: boolean;
@@ -55,14 +55,32 @@ export type ExpenseCapabilities = {
 
 export function expenseCapabilities(
   expense: Expense,
-  viewer: { id: string; roles: readonly Role[] },
+  viewer: { id: string; roles: readonly Role[]; capabilities: readonly Capability[] },
 ): ExpenseCapabilities {
-  const bookkeeper = canBookkeep(viewer.roles);
-  const admin = isAdmin(viewer.roles);
+  const bookkeeper = canBookkeep(viewer.capabilities);
+  const admin = isAdmin(viewer.capabilities);
   const isOwner = expense.submitterId === viewer.id;
   const submittable = isSubmittable(expense.status);
   const mayAct = isOwner || admin;
-  const blocker = submitBlocker({ ...expense, hasReceipt: Boolean(expense.receiptId) });
+  const blocker = submitBlocker({
+    ...expense,
+    hasReceipt: Boolean(expense.receiptId),
+    // A milersättning is asked for its journey rather than a receipt, and
+    // without this it was asked for neither: `mileageBlocker` came through
+    // undefined, the check passed, and the detail page offered "Skicka in" on
+    // a claim the transition route would refuse.
+    //
+    // Read off the claim rather than re-derived from the rate table, which is
+    // not on this side of the wire: `km` is null until the two readings make a
+    // journey, and `orePerKm` is null until one was valued — which is exactly
+    // what claimBlocker refuses on. The wording is the form's business; all
+    // that is needed here is whether something is wrong.
+    mileageBlocker:
+      expense.paymentType === "MILEAGE" &&
+      (expense.mileage?.km == null || expense.mileage?.orePerKm == null)
+        ? "incomplete"
+        : null,
+  });
 
   const canSubmit = submittable && mayAct && !blocker;
   const canApprove =
@@ -80,8 +98,8 @@ export function expenseCapabilities(
   // counts as bookkeeping in this app and has no Fortnox account, and was being
   // offered a button whose first step would have asked them to sign in to
   // something they cannot sign in to.
-  const canExport = canLogInToFortnox(viewer.roles) && expense.status === "BOOKED";
-  const mayUnexport = canUnexport(viewer.roles) && expense.status === "EXPORTED";
+  const canExport = canLogInToFortnox(viewer.capabilities) && expense.status === "BOOKED";
+  const mayUnexport = canUnexport(viewer.capabilities) && expense.status === "EXPORTED";
   const canRequestChanges =
     expense.status === "PENDING_APPROVAL" && expense.allocations.some((a) => a.canAttest);
   // Status *and* standing. Being allowed to see an utlägg is not being allowed

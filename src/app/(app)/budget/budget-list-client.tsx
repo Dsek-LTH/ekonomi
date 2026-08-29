@@ -35,7 +35,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
   const t = useTranslations("budget.list");
   const { user } = useRole();
   const confirm = useConfirm();
-  const admin = isAdmin(user.roles);
+  const admin = isAdmin(user.capabilities);
 
   const { pending, mutate } = useMutation();
   const controls = useTableControls({ sortKey: "year", sortDir: "desc" });

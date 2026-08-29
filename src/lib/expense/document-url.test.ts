@@ -5,21 +5,23 @@ import { expenseDocuments } from "./document-url";
 const submitted = { id: "exp1", status: "APPROVED", receiptId: "rec1" };
 
 describe("expenseDocuments", () => {
-  it("stands the cover in front of the underlag", () => {
+  it("opens on the underlag and keeps the cover behind it", () => {
     // Two documents, not one merged file: the pager moves between them, and
     // the receipt is shown as it was stored rather than laid on a white sheet.
+    // The underlag is first because that is what the panel is opened to read;
+    // the cover leads only in the file stapled for Fortnox.
     expect(expenseDocuments({ ...submitted, receiptMimeType: "image/png" })).toEqual([
-      { src: "/api/expenses/exp1/document", mimeType: "application/pdf" },
       { src: "/api/receipts/rec1", mimeType: "image/png", filename: undefined },
+      { src: "/api/expenses/exp1/document", mimeType: "application/pdf" },
     ]);
   });
 
   it("takes a photo for a receipt whose type the DTO didn't carry", () => {
-    expect(expenseDocuments(submitted)[1].mimeType).toBe("image/jpeg");
+    expect(expenseDocuments(submitted)[0].mimeType).toBe("image/jpeg");
   });
 
   it("names the underlag for a reader who cannot see it", () => {
-    expect(expenseDocuments(submitted, "Kvitto · Tejp")[1].filename).toBe("Kvitto · Tejp");
+    expect(expenseDocuments(submitted, "Kvitto · Tejp")[0].filename).toBe("Kvitto · Tejp");
   });
 
   it("leaves the panel to say there is no underlag", () => {
@@ -49,6 +51,24 @@ describe("expenseDocuments", () => {
     ]) {
       expect(expenseDocuments({ ...submitted, status })).toHaveLength(2);
     }
+  });
+
+  it("gives a milersättning one document, the cover it is printed on", () => {
+    // Nothing to photograph about driving your own car, so the journey is a
+    // section of the utläggsräkning rather than a document behind it. Two
+    // pages saying the same reference, submitter and total is what this
+    // replaced.
+    expect(
+      expenseDocuments({ id: "exp1", status: "APPROVED", paymentType: "MILEAGE" }),
+    ).toEqual([{ src: "/api/expenses/exp1/document", mimeType: "application/pdf" }]);
+  });
+
+  it("shows a mileage draft that same cover, unlike any other draft", () => {
+    // The one place its journey can be read, so suppressing it until submission
+    // would leave the submitter nothing to check.
+    expect(
+      expenseDocuments({ id: "exp1", status: "DRAFT", paymentType: "MILEAGE" }),
+    ).toEqual([{ src: "/api/expenses/exp1/document", mimeType: "application/pdf" }]);
   });
 
   it("takes a missing utlägg without being asked to check first", () => {

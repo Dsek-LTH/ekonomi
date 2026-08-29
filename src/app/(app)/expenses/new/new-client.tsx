@@ -8,11 +8,13 @@ import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
+import { wizardChrome } from "./wizard-chrome";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { DetailList, DetailRow } from "@/components/ui/detail-list";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { Stepper } from "@/components/ui/stepper";
+import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { IconCheck, IconLink } from "@/components/ui/icons";
 import {
   PAYMENT_TYPES,
@@ -69,7 +71,6 @@ export default function NewExpenseClient({
   const router = useProgressRouter();
   const t = useTranslations("expenses.wizard");
   const tPayment = useTranslations("common.payment");
-  const tBlocker = useTranslations("expenses.submitBlocker");
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const tList = useTranslations("expenses");
@@ -101,10 +102,19 @@ export default function NewExpenseClient({
   // the member's own account — which is what this used to do, quietly, because
   // the transaction stayed matched to the utlägg through the switch. Someone
   // who meant to claim their own money back wants a new utlägg, not this one.
+  //
+  // MILEAGE is never among them, and is not offered here at all. Which *form*
+  // you need is a different question from how this purchase was paid, and it is
+  // answered before either form exists — on the "Nytt utlägg" menu, see
+  // components/new-expense-menu.tsx. It was a third card in the group below for
+  // a while: a door standing among two switches, at the bottom of a step, which
+  // discarded everything typed above it when taken.
   const paymentTypes = presetTxn
     ? (["CARD"] as PaymentType[])
     : PAYMENT_TYPES.filter(
-        (pt) => holdsCard || pt !== "CARD" || existing?.paymentType === "CARD",
+        (pt) =>
+          pt !== "MILEAGE" &&
+          (holdsCard || pt !== "CARD" || existing?.paymentType === "CARD"),
       );
   const [paymentType, setPaymentType] = useState<PaymentType>(
     existing?.paymentType ?? (holdsCard ? "CARD" : "REIMBURSEMENT"),
@@ -420,25 +430,18 @@ export default function NewExpenseClient({
     done(id);
   }
 
+  const chrome = wizardChrome({
+    existing,
+    t,
+    draftLabel: t("draftLabel"),
+    listLabel: tNav("expenses"),
+  });
+
   return (
     <PageShell
-      title={
-        editing
-          ? existing!.reference
-            ? t("editTitle", { id: existing!.reference })
-            : t("editTitleDraft")
-          : t("newTitle")
-      }
-      description={editing ? t("editDescription") : t("newDescription")}
-      back={
-        // Editing belongs to the expense it changes; a new one to the list.
-        editing
-          ? {
-              href: `/expenses/${existing!.id}`,
-              label: existing!.reference ?? t("draftLabel"),
-            }
-          : { href: "/expenses", label: tNav("expenses") }
-      }
+      title={chrome.title}
+      description={chrome.description}
+      back={chrome.back}
       width="content"
     >
       <Stepper steps={stepLabels} current={step} />
@@ -686,9 +689,11 @@ export default function NewExpenseClient({
             </div>
 
             {submittable && blocker && (
-              <p className="text-xs text-warning">
-                {tBlocker(blocker, { days: REIMBURSEMENT_DEADLINE_DAYS })}
-              </p>
+              <SubmitBlockerNote
+                blocker={blocker}
+                paymentType={paymentType}
+                className="text-xs text-warning"
+              />
             )}
             <StepFooter onBack={() => setStep(step - 1)} onSave={saveDraft} saveLabel={saveLabel} saveDisabled={!canPersist} saving={exit === "draft"}>
               {submittable && !blocker && (

@@ -10,14 +10,28 @@ import type { ExpenseStatus, PaymentType } from "@/lib/domain/types";
 // Only "eget utlägg". A sektionskort purchase is already the section's own money
 // out of the section's own account; it shows up on the bank statement whether
 // anyone accounts for it or not, so a late one still has to be accounted for.
+//
+// Milersättning counts as one. The claimant's own petrol, out of the claimant's
+// own account, and there is nothing on any statement to say it happened — so a
+// stale one is exactly as uncheckable as a stale receipt. For a claim of
+// several journeys the day counted from is the latest of them; see
+// lib/mileage/claim.ts.
 export const REIMBURSEMENT_DEADLINE_DAYS = 60;
+
+/** Payment types the section pays back to a member, rather than having paid
+ *  already from its own account. What the deadline and the payout account both
+ *  hang on, so the two cannot come to disagree about which is which. */
+export const OUT_OF_POCKET: readonly PaymentType[] = ["REIMBURSEMENT", "MILEAGE"];
+
+export const isOutOfPocket = (paymentType: PaymentType): boolean =>
+  OUT_OF_POCKET.includes(paymentType);
 
 export function isLateReimbursement(
   purchaseDate: string,
   paymentType: PaymentType,
 ): boolean {
   return (
-    paymentType === "REIMBURSEMENT" &&
+    isOutOfPocket(paymentType) &&
     isCompleteDate(purchaseDate) &&
     daysAgo(purchaseDate) > REIMBURSEMENT_DEADLINE_DAYS
   );
@@ -37,6 +51,17 @@ type SubmitCandidate = {
    * is a receipt and nothing has an id for it yet.
    */
   hasReceipt: boolean;
+  /**
+   * For a milersättning, why its journey cannot be sent yet — the answer
+   * `claimBlocker` gave (lib/mileage/claim.ts), or null when the two odometer
+   * readings are in order. Undefined for every other payment type, which has
+   * no journey.
+   *
+   * Passed in rather than computed here: this module is the language-neutral
+   * domain and knows nothing about rate tables, and the wizard has already
+   * worked the answer out to draw the form with it.
+   */
+  mileageBlocker?: string | null;
   allocations: { amount: number; costCenterCode: string }[];
 };
 
@@ -49,6 +74,7 @@ export type SubmitBlocker =
   | "match"
   | "payout"
   | "receipt"
+  | "mileage"
   | "incomplete"
   | "futureDate"
   | "tooLate";
@@ -60,12 +86,22 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
   // useless. Safe this early — it wants a whole date and checks for one itself.
   if (isLateReimbursement(e.purchaseDate, e.paymentType)) return "tooLate";
   if (e.paymentType === "CARD" && !e.matchedTransactionId) return "match";
-  if (e.paymentType === "REIMBURSEMENT" && !e.submitterHasPayout) return "payout";
-  // An utlägg is a claim on the section's money, and the receipt is the only
-  // evidence it happened — bokföringslagen wants that underlag kept, and an
-  // attester has nothing to attest without it. Named separately from the rest
-  // of the missing details because it's the one that can't be typed in.
-  if (!e.hasReceipt) return "receipt";
+  if (isOutOfPocket(e.paymentType) && !e.submitterHasPayout) return "payout";
+  // A milersättning has no receipt to ask for — the journey it rests on is
+  // typeset onto its utläggsräkning from the odometer readings — so what stands
+  // where the receipt check stands is whether those readings describe a journey
+  // that can be priced. Named apart from "incomplete" for
+  // the same reason "receipt" is: what to go and fix is a different field from
+  // the details below.
+  if (e.paymentType === "MILEAGE") {
+    if (e.mileageBlocker) return "mileage";
+  } else if (!e.hasReceipt) {
+    // An utlägg is a claim on the section's money, and the receipt is the only
+    // evidence it happened — bokföringslagen wants that underlag kept, and an
+    // attester has nothing to attest without it. Named separately from the
+    // rest of the missing details because it's the one that can't be typed in.
+    return "receipt";
+  }
   // A return is a negative amount, so the amount is only missing when it's zero
   // (or not a number at all) — `!` covers both.
   // A half-typed date ("2026", "2026-07") counts as missing, not as a date:
@@ -188,4 +224,8 @@ export const TONE_CLASSES: Record<Tone, string> = {
 
 // Payment types in the order they're offered. Labels and descriptions live
 // under `common.payment.<TYPE>` in messages/*.json.
-export const PAYMENT_TYPES: readonly PaymentType[] = ["CARD", "REIMBURSEMENT"];
+//
+// Milersättning last, and offered to everyone: it is the least common of the
+// three, and the only one that takes you to a different form rather than
+// changing the shape of this one — see the wizard's first step.
+export const PAYMENT_TYPES: readonly PaymentType[] = ["CARD", "REIMBURSEMENT", "MILEAGE"];

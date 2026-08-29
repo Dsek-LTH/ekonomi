@@ -2,7 +2,7 @@
 // section cards, cost centres, result units and their prefixes, the Fortnox
 // connection, and payout details.
 import { z } from "zod";
-import { Clearable, Id, NonEmpty, Trimmed, UpperCode } from "./common";
+import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
 
 /** POST /api/cards — register a section card. */
 export const CreateCard = z.object({
@@ -43,12 +43,6 @@ export const ResultUnitBody = z.object({
   name: NonEmpty,
 });
 export type ResultUnitBody = z.infer<typeof ResultUnitBody>;
-
-/** PUT /api/result-units/[id]/owners — the whole set, not a delta. */
-export const SetOwners = z.object({
-  userIds: z.array(Id),
-});
-export type SetOwners = z.infer<typeof SetOwners>;
 
 /** POST /api/result-units/[id]/prefixes. */
 export const AddPrefix = z.object({
@@ -97,3 +91,87 @@ export const FortnoxSync = z.object({
   financialYearId: z.int().positive().optional(),
 });
 export type FortnoxSync = z.infer<typeof FortnoxSync>;
+
+/**
+ * POST /api/mileage/rates and PATCH /api/mileage/rates/[id] — what a kilometre
+ * is worth, from a given day.
+ *
+ * `orePerKm` rather than kronor per mil, which is how the figure is quoted and
+ * how the form asks for it: the conversion is the screen's, so the stored unit
+ * is the one every calculation uses and nothing downstream has to remember a
+ * factor of ten. Bounded because a slipped decimal here is a slipped decimal on
+ * every claim filed after it — 100 kr/km is not a schablon anyone has set.
+ */
+export const MileageRateInput = z.object({
+  orePerKm: z.int().positive().max(10000),
+  validFrom: IsoDate,
+  note: Clearable(Trimmed).optional(),
+});
+export type MileageRateInput = z.infer<typeof MileageRateInput>;
+
+// ── Authority (Inställningar → Roller) ────────────────────────────
+//
+// Roles and capabilities arrive as bare strings and are checked against the
+// vocabulary here rather than trusted: these two bodies are the only way into
+// the tables every gate in the app reads, so a value the code has no meaning for
+// must be refused at the edge rather than stored and puzzled over later.
+
+const RoleName = z.enum([
+  "SKATTMASTARE",
+  "ORDFORANDE",
+  "VICE_SKATTMASTARE",
+  "SKATTFORMAN",
+  "RESULTATANSVARIG",
+  "STOCKARE",
+  "ORDINARIE",
+]);
+
+const CapabilityName = z.enum([
+  "ADMIN",
+  "BOOKKEEPING",
+  "FORTNOX_LOGIN",
+  "EXPORT_UNDO",
+  "SETTINGS",
+  "STOCK_VIEW",
+  "STOCK_MANAGE",
+  "BUDGET_VIEW",
+  "BUDGET_COMMENT",
+  "BUDGET_LOCK",
+  "BUDGET_CHANGE_LOCKED",
+  "ATTEST_VIEW",
+]);
+
+/**
+ * PUT /api/authority/groups — what one Authentik group confers.
+ *
+ * The whole grant for one group, not a delta: the screen edits a row as a unit,
+ * and sending the finished state means two people saving at once cannot
+ * interleave into a grant neither of them chose.
+ *
+ * Lower-cased here because that is the one form everything downstream compares
+ * (`normaliseGroup` in lib/server/authentik-roles.ts) — a row stored with a
+ * capital would simply never match anybody.
+ */
+export const PutGroupGrant = z.object({
+  group: NonEmpty.toLowerCase(),
+  roles: z.array(RoleName),
+  resultUnitIds: z.array(Id),
+});
+export type PutGroupGrant = z.infer<typeof PutGroupGrant>;
+
+/** DELETE is by group name, which is the row's identity. */
+export const DeleteGroupGrant = z.object({ group: NonEmpty.toLowerCase() });
+export type DeleteGroupGrant = z.infer<typeof DeleteGroupGrant>;
+
+/**
+ * PUT /api/authority/capabilities — everything one role may do.
+ *
+ * Again the finished state for one role rather than a tick or an untick. The
+ * grid is small enough to send whole, and a lockout check is only meaningful
+ * against an outcome.
+ */
+export const PutRoleCapabilities = z.object({
+  role: RoleName,
+  capabilities: z.array(CapabilityName),
+});
+export type PutRoleCapabilities = z.infer<typeof PutRoleCapabilities>;

@@ -14,7 +14,7 @@ import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  IconChevronLeft,
+  IconChevronDown,
   IconChevronRight,
   IconReceipt,
   IconUpload,
@@ -263,6 +263,20 @@ export function ReceiptPanelColumn() {
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
 
+  // The fold-away, which is a piece of motion rather than a piece of state:
+  // `leaving` keeps the panel on screen for the 200ms it takes to slide off the
+  // right edge, and `arriving` lets the tab it uncovers say, once, that it is
+  // where the receipt went. See the note by @keyframes receipt-tab-in.
+  //
+  // Both are set by the fold button rather than by watching `collapsed`,
+  // because only some folds are the reader's. A phone folds the panel by itself
+  // the moment a page brings one (see the effect below), and animating that
+  // would be an answer to a question nobody asked, on every page load.
+  const [leaving, setLeaving] = useState(false);
+  const [arriving, setArriving] = useState(false);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
   // Below md the panel is an overlay over the whole screen rather than a column
   // beside the page, which changes what "open" is allowed to mean.
   const narrow = usePhone();
@@ -378,6 +392,18 @@ export function ReceiptPanelColumn() {
 
   const upload = source.upload;
   const pick = () => fileInput.current?.click();
+
+  // Folding is the reader's, so it gets the motion: the panel leaves toward the
+  // edge, and the tab it uncovers marks itself once.
+  const foldAway = () => {
+    setLeaving(true);
+    setArriving(true);
+    setCollapsed(true);
+    timers.current.push(
+      window.setTimeout(() => setLeaving(false), 240),
+      window.setTimeout(() => setArriving(false), 1100),
+    );
+  };
   const take = (file: File | undefined) => {
     if (file && upload && !upload.uploading) upload.onFile(file);
   };
@@ -396,7 +422,7 @@ export function ReceiptPanelColumn() {
       {(!awaitingUpload || narrow) && (
         <button
           type="button"
-          onClick={() => setCollapsed(true)}
+          onClick={foldAway}
           title={narrow ? t("close") : t("collapse")}
           aria-label={narrow ? t("close") : t("collapse")}
           aria-expanded
@@ -508,61 +534,147 @@ export function ReceiptPanelColumn() {
   );
 
   // Folded, it reserves no width at all — the page gets the whole frame, and
-  // the way back is a tab on the edge of the screen. Fixed rather than a column
-  // in the flex row, so nothing has to be given up to keep it reachable; the
-  // same element at every width, since it was already the right answer on a
-  // phone.
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        title={t("expand")}
-        aria-label={t("expand")}
-        aria-expanded={false}
-        className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-border bg-background px-1.5 py-3 text-muted shadow-[var(--shadow-card)] transition-colors hover:bg-surface hover:text-foreground print:hidden"
-      >
-        <IconChevronLeft className="size-4 shrink-0" />
-        <IconReceipt className="size-4 shrink-0" />
-      </button>
-    );
-  }
+  // the way back is on the edge of the screen. Fixed rather than a column in
+  // the flex row, so nothing has to be given up to keep it reachable.
+  //
+  // It says the word. Two stacked glyphs on a 28px strip in `text-muted` read as
+  // a seam in the layout rather than as a control — the chevron only means
+  // "something is over there" to someone who already knows what, and on a phone
+  // this is the *only* thing anyone ever sees of the receipt, because the panel
+  // folds itself away the moment a page brings one. So: the word, and the
+  // outlined-accent register the app already uses for a control that must be
+  // findable without being the loudest thing on the page (see `accentOutline` in
+  // ui/button.tsx — accent rather than brand, because a border owes 3:1 and the
+  // brand pink cannot pay it).
+  //
+  // Which edge, though, is not the same question at both widths. On a wide
+  // screen it is the right one, because that is the side the panel opens into
+  // and the tab is the panel's own edge showing. A phone has no such side — the
+  // panel there is the whole screen — so the right edge is just the middle of
+  // the reading column, out of reach of the thumb holding the device and on top
+  // of whatever the page put there. The bottom is where a phone keeps the thing
+  // you can pull up, so that is where this goes: one element, laid out the way
+  // each width wants it rather than one width's answer worn at both.
+  const tab = (
+    <button
+      type="button"
+      onClick={() => setCollapsed(false)}
+      title={t("expand")}
+      // No aria-label: the tab now says what it is, and a label of "Visa
+      // kvittot" over a face reading "Kvitto" is the mismatch WCAG 2.5.3 is
+      // about — someone driving this by voice says what they can see. The
+      // content names it, aria-expanded says what pressing it does, and the
+      // title carries the longer phrasing for a pointer.
+      aria-expanded={false}
+      className={cn(
+        "fixed z-30 flex items-center justify-center gap-2 print:hidden",
+        // A phone: a strip across the bottom, in the band a thumb reaches
+        // without the hand shifting its grip. The bottom padding clears the
+        // home indicator, the same way the phone's nav does
+        // (shell/mobile-nav.tsx) — without it the word sits under the bar iOS
+        // draws over the foot of the screen.
+        "bottom-0 left-0 right-0 rounded-t-2xl px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]",
+        // From md: the tab on the right, beside the column it opens into.
+        // Every override is same-family on purpose — `cn` joins rather than
+        // merges, so `md:bottom-auto` beating `bottom-0` is Tailwind's variant
+        // ordering doing it, not luck with `inset-*` against `right-*`.
+        "md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2",
+        "md:flex-col md:gap-1.5 md:rounded-l-xl md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
+        // The right edge stays borderless at both widths — it is off-screen on
+        // a phone and against the frame's edge on a desktop.
+        "border-b-0 border-l-0 border-r-0 border-t border-accent md:border-b md:border-l",
+        "bg-background text-accent shadow-[var(--shadow-card)] transition-colors hover:bg-accent-soft",
+        arriving && "receipt-tab-arriving",
+      )}
+    >
+      <IconReceipt className="size-5 shrink-0 md:size-4" />
+      {/* Sideways from md, where the tab is 38px wide and the word is the point
+          of it. `writing-mode` and not a rotation: rotating would leave the
+          glyphs laid out horizontally in a box the wrong shape, and the parent
+          would still be sized for it. */}
+      <span className="text-sm font-medium leading-none tracking-wide md:text-[11px] md:[writing-mode:vertical-rl]">
+        {t("tab")}
+      </span>
+      {/* Points the way out of the edge it sits on: up off the bottom of a
+          phone, sideways off the right of a desktop. Last in the DOM because
+          that is the order the strip reads in — `order-first` puts it back on
+          top in the column, where the affordance wants to be above the label
+          rather than under it. */}
+      {/* One chevron turned, rather than two icons swapped at the breakpoint:
+          `rotate-90` on the down-chevron is already how this app writes a
+          left-pointing one (shell/app-shell.tsx, the "back to app" link). */}
+      <IconChevronDown className="size-4 shrink-0 rotate-180 md:order-first md:rotate-90" />
+    </button>
+  );
 
   // Open, it's one element in both layouts, not one per breakpoint: two would
   // both mount, and each would load and parse the receipt for itself.
+  //
+  // And one element across the fold, too: the aside keeps its place in this
+  // tree while it is leaving, so React keeps the instance and the browser has
+  // something to interpolate from. Returning the tab *instead of* the panel
+  // would mount a new node already sitting off-screen, and there would be no
+  // motion at all — only a disappearance, which is the thing being fixed.
+  const leavingNow = leaving && !open;
+
   return (
-    <aside
-      ref={panelRef}
-      // The drag writes this same property straight onto the node; this is the
-      // value it starts from and the value React puts back on release.
-      style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
-      className={cn(
-        // Below md it covers the screen; from md it's a column in the frame.
-        // md:relative, not md:static: the drag handle and the fold button are
-        // positioned against this panel, and `static` would hand them to
-        // whatever ancestor happened to be positioned instead — which put the
-        // handle somewhere off the panel entirely, with nothing to grab.
-        "fixed inset-0 z-40 flex flex-col bg-background print:hidden",
-        "md:relative md:z-auto md:h-screen md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
+    <>
+      {(open || leavingNow) && (
+        <aside
+          ref={panelRef}
+          aria-hidden={leavingNow || undefined}
+          // The drag writes this same property straight onto the node; this is
+          // the value it starts from and the value React puts back on release.
+          style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
+          className={cn(
+            // Below md it covers the screen; from md it's a column in the frame.
+            "flex flex-col bg-background print:hidden",
+            "fixed inset-y-0 left-0 right-0 z-40 transition-[translate] duration-200 ease-out",
+            leavingNow
+              ? // Out towards whichever edge the tab is on: down off the bottom
+                // of a phone, right off the side of a desktop. The panel and
+                // the tab are the same object at two sizes, and a panel that
+                // left one way to become a tab somewhere else would say they
+                // were not.
+                //
+                // On the way out it is `fixed` at both widths, which is what
+                // makes the desktop case cost nothing: out of the flex row, so
+                // the main column takes the width back in the same frame the
+                // panel starts sliding, and the panel itself moves on the
+                // compositor. Shrinking it in place would have been the other
+                // reading, but that resizes the viewer 12 times on the way —
+                // the exact re-measure the drag above goes to such lengths to
+                // avoid. Nothing in here is clickable while it leaves.
+                "pointer-events-none translate-y-full md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
+              : // md:relative, not md:static: the drag handle and the fold
+                // button are positioned against this panel, and `static` would
+                // hand them to whatever ancestor happened to be positioned
+                // instead — which put the handle somewhere off the panel
+                // entirely, with nothing to grab.
+                "md:relative md:inset-auto md:z-auto md:h-screen md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
+          )}
+        >
+          {/* The drag handle is the border itself, widened to something a
+              pointer can actually catch, and it only shows what it is on hover —
+              a permanent stripe down the middle of the screen would read as a
+              divider between two apps rather than something to pull. It sits
+              fully inside the panel: half of it hanging over the edge would be
+              clipped by the shell's own overflow, leaving half the target it
+              looks like. */}
+          <div
+            onPointerDown={startDrag}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("resize")}
+            className={cn(
+              "absolute inset-y-0 left-0 z-30 hidden w-3 cursor-col-resize touch-none transition-colors md:block",
+              dragging ? "bg-accent/40" : "hover:bg-accent/30",
+            )}
+          />
+          {viewer}
+        </aside>
       )}
-    >
-      {/* The drag handle is the border itself, widened to something a pointer
-          can actually catch, and it only shows what it is on hover — a
-          permanent stripe down the middle of the screen would read as a
-          divider between two apps rather than something to pull. It sits fully
-          inside the panel: half of it hanging over the edge would be clipped
-          by the shell's own overflow, leaving half the target it looks like. */}
-      <div
-        onPointerDown={startDrag}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={t("resize")}
-        className={cn(
-          "absolute inset-y-0 left-0 z-30 hidden w-3 cursor-col-resize touch-none transition-colors md:block",
-          dragging ? "bg-accent/40" : "hover:bg-accent/30",
-        )}
-      />
-      {viewer}
-    </aside>
+      {!open && tab}
+    </>
   );
 }

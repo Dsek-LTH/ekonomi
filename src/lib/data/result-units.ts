@@ -10,11 +10,15 @@ import type { ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 // each one currently owns. The cost centres are resolved from the prefixes, so
 // the list always reflects what a code would actually match right now.
 export async function getResultUnits(): Promise<ResultUnit[]> {
-  const [resultUnits, costCenters, prefixes, accounts] = await Promise.all([
+  const [resultUnits, costCenters, prefixes, accounts, ansvariga] = await Promise.all([
     prisma.resultUnit.findMany({
       include: {
         prefixes: { orderBy: { value: "asc" } },
-        owners: { include: { user: { select: { id: true, name: true } } } },
+        // The Authentik groups that make someone answer for this unit. A
+        // foreign key now rather than a name written in a file, which is why
+        // there is no longer a "mapped to a unit that does not exist" case for
+        // the screen to report — the database will not hold one.
+        groups: { select: { group: true }, orderBy: { group: "asc" } },
         // The income half, read here so a unit is one object on the screen that
         // edits it. Nothing outside the income section reads it.
         income: {
@@ -34,8 +38,25 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
     // Only to name the accounts the product prefixes point at — and to let the
     // screen say when one is not in the chart at all.
     prisma.account.findMany({ select: { number: true, name: true } }),
+    // Everyone who answers for anything. Derived from the Authentik group list
+    // at sign-in, so this is a report of who currently holds the mapped groups
+    // — not something the screen can edit.
+    prisma.user.findMany({
+      where: { resultUnits: { isEmpty: false } },
+      select: { id: true, name: true, resultUnits: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
   const accountName = new Map(accounts.map((a) => [a.number, a.name]));
+
+  const ansvarigaOf = new Map<string, { id: string; name: string }[]>();
+  for (const u of ansvariga) {
+    for (const unit of u.resultUnits) {
+      const list = ansvarigaOf.get(unit) ?? [];
+      list.push({ id: u.id, name: u.name });
+      ansvarigaOf.set(unit, list);
+    }
+  }
 
   const membersOf = new Map<string, ResultUnitCostCenter[]>();
   for (const cc of costCenters) {
@@ -52,9 +73,8 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
       id: c.id,
       resultUnit: c.name,
       prefixes: c.prefixes.map((p) => ({ id: p.id, value: p.value })),
-      owners: c.owners
-        .map((m) => ({ id: m.user.id, name: m.user.name }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
+      ownerGroups: c.groups.map((g) => g.group),
+      owners: ansvarigaOf.get(c.name) ?? [],
       costCenters: members,
       // Retired cost centres shouldn't inflate the headline count.
       costCenterCount: members.filter((cc) => cc.active).length,

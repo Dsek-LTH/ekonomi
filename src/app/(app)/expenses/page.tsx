@@ -19,7 +19,7 @@ export default async function ExpensesPage({
   // has. What the viewer may see at all is applied underneath it either way
   // (getExpensePage always intersects with the viewer's scope), so a hand-typed
   // ?view=ALL widens nothing for someone with no business seeing more.
-  const canToggleScope = canAccessBookkeeping(user.roles) || hasAttestRole(user.roles);
+  const canToggleScope = canAccessBookkeeping(user.capabilities) || hasAttestRole(user.capabilities);
   const showOwnOnly = !canToggleScope || query.view !== "ALL";
 
   const page = await getExpensePage(user, { kind: showOwnOnly ? "mine" : "all" }, query);

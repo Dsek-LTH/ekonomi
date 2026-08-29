@@ -109,7 +109,8 @@ export function ClientDataTable<T>({
   /** What sits under a row when opened — see DataTable's own `expansion`. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
-  empty?: React.ReactNode;
+  /** Passed straight to DataTable — a string, see its note there. */
+  empty?: string;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
   const activeTab = tabs?.find((o) => o.value === controls.tab) ?? tabs?.[0];

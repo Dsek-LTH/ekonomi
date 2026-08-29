@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessBudget, isAdmin } from "@/lib/domain/permissions";
 import { copyBudgetContents } from "@/lib/budget/clone";
+import { bulkTransaction } from "@/lib/server/tx";
 import { getBudgetSummaries } from "@/lib/data/budget";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     if (!source) return fail(404, "budget.sourceNotFound");
   }
 
-  const budget = await prisma.$transaction(async (tx) => {
+  const budget = await bulkTransaction(async (tx) => {
     const created = await tx.budget.create({ data: { year, name, createdById: g.actor.id } });
     if (copyFromId) await copyBudgetContents(tx, copyFromId, created.id);
     return created;

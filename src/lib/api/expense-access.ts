@@ -38,7 +38,7 @@ export async function denyExpenseView(
 /** Whether `actor` may change this expense's own fields: the submitter, or an
  *  admin. Editing is additionally limited by status — see `isEditable`. */
 export const canEditExpense = (actor: Actor, expense: { submitterId: string }) =>
-  expense.submitterId === actor.id || isAdmin(actor.roles);
+  expense.submitterId === actor.id || isAdmin(actor.capabilities);
 
 /**
  * Whether `actor` may delete this expense — and the receipts hanging off it.
@@ -49,7 +49,7 @@ export function denyExpenseDelete(
   actor: Actor,
   expense: { submitterId: string; status: string },
 ): NextResponse | null {
-  if (isAdmin(actor.roles)) return null;
+  if (isAdmin(actor.capabilities)) return null;
   const isOwner = expense.submitterId === actor.id;
   if (isOwner && !isSigned(expense.status)) return null;
   return fail(403, isOwner ? "expense.deleteSignedAdminOnly" : "expense.noDeleteAccess");

@@ -11,7 +11,7 @@
 // Authority is worth one indexed lookup per request.
 import { NextResponse } from "next/server";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
-import type { Role } from "@/lib/domain/types";
+import type { Capability, Role } from "@/lib/domain/types";
 
 // ── What a handler answers with ────────────────────────────────────
 //
@@ -62,7 +62,13 @@ export async function orNotFound<T>(
 }
 
 /** Who is acting, with the roles they hold right now. */
-export type Actor = { id: string; roles: Role[] };
+/**
+ * Who is acting, and what they may do. Both, because the two answer different
+ * questions: `capabilities` is what every gate reads, and `roles` is what the
+ * handful of genuinely relational rules still turn on — the attest rule's
+ * vice-skattmästare and resultatansvarig clauses (lib/domain/permissions.ts).
+ */
+export type Actor = { id: string; roles: Role[]; capabilities: Capability[] };
 
 export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse };
 
@@ -103,7 +109,7 @@ export const fail = (
  * handler ungated.
  */
 export async function gate(
-  can?: (roles: readonly Role[]) => boolean,
+  can?: (caps: readonly Capability[]) => boolean,
   denied = "auth.denied",
 ): Promise<Gate> {
   const id = await resolveUserId();
@@ -116,7 +122,7 @@ export async function gate(
   const row = await loadUser(id);
   if (!row) return { ok: false, res: fail(401, "auth.signedOut") };
 
-  const actor: Actor = { id, roles: row.roles };
-  if (can && !can(actor.roles)) return { ok: false, res: fail(403, denied) };
+  const actor: Actor = { id, roles: row.roles, capabilities: row.capabilities };
+  if (can && !can(actor.capabilities)) return { ok: false, res: fail(403, denied) };
   return { ok: true, actor };
 }

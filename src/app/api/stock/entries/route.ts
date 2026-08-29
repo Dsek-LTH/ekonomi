@@ -16,6 +16,7 @@ import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock
 import { onHand } from "@/lib/stock/onhand";
 import { costBasis, valueDelta } from "@/lib/stock/value";
 import { replayProduct } from "@/lib/server/stock-replay";
+import { bulkTransaction } from "@/lib/server/tx";
 import { getStockLog } from "@/lib/data/stock";
 import type { StockEntryKind } from "@/lib/domain/types";
 
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
       })),
     ].filter((w) => product.kind === "VOLUME" || w.level === 0);
 
-    const made = await prisma.$transaction(async (tx) => {
+    const made = await bulkTransaction(async (tx) => {
       const ids: string[] = [];
       for (const w of wanted) {
         const row = await tx.stockEntry.create({
@@ -333,7 +334,7 @@ export async function POST(req: Request) {
 
   // A delivery dated before rows that already exist changes what they cost, and
   // any row before a count changes what the count's difference has to be.
-  await prisma.$transaction(async (tx) => replayProduct(tx, product.id, product.costPriceOre));
+  await bulkTransaction(async (tx) => replayProduct(tx, product.id, product.costPriceOre));
 
   return NextResponse.json({ id: entry.id }, { status: 201 });
 }

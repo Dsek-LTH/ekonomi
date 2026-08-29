@@ -78,7 +78,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const g = await gate(canAccessBookkeeping, "auth.denied");
   if (!g.ok) return g.res;
 
-  if (!canUnexport(g.actor.roles)) {
+  if (!canUnexport(g.actor.capabilities)) {
     const empty = await prisma.incomeReport.findFirst({
       where: { id, status: "DRAFT", lines: { none: {} } },
       select: { id: true },

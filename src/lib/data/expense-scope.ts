@@ -17,10 +17,10 @@ import { prisma } from "@/lib/server/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { costCentreWhereForPrefixes, ownedResultUnits } from "@/lib/server/result-units";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
-import type { Role } from "@/lib/domain/types";
+import type { Capability, Role } from "@/lib/domain/types";
 
 /** Who is asking. Both a page's session user and an API `Actor` fit this. */
-export type Viewer = { id: string; roles: Role[] };
+export type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
 /**
  * What one viewer may reach. Either everything, or their own plus whatever the
@@ -33,7 +33,7 @@ export type ExpenseScope =
 
 /** Resolve `viewer` to their scope. This is the only place the policy lives. */
 export async function expenseScopeOf(viewer: Viewer): Promise<ExpenseScope> {
-  if (canAccessBookkeeping(viewer.roles)) return { everything: true };
+  if (canAccessBookkeeping(viewer.capabilities)) return { everything: true };
   const { prefixes } = await ownedResultUnits(viewer);
   return { everything: false, userId: viewer.id, resultUnitPrefixes: prefixes };
 }

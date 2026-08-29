@@ -32,12 +32,41 @@ export interface ExpenseCoverAllocation {
   approvedAt: string | null;
 }
 
+/**
+ * The journey behind a milersättning, as the page states it.
+ *
+ * A mileage claim has no receipt to staple behind the cover — nobody
+ * photographs driving their own car — so what would otherwise be a second
+ * document is a section of this one: the odometer at each end, the difference
+ * between them, and what a kilometre was worth on the day. The readings are why
+ * it is worth printing at all; a distance alone is a number somebody arrived
+ * at, and these are what the car said.
+ *
+ * Null for every other kind of utlägg, whose underlag is a real receipt and
+ * follows on the next page.
+ */
+export interface ExpenseCoverJourney {
+  /** "12 300,0 km" — the odometer when the journey began. */
+  odometerStart: string;
+  odometerEnd: string;
+  /** "42,0 km" — the difference, which is the distance claimed. */
+  distance: string;
+  /** "2,50 kr/km", or a dash where the day had no rate. */
+  rate: string;
+}
+
 export interface ExpenseCoverData {
   /** "DEK26-0042". An utlägg with no reference yet falls back to its title. */
   reference: string;
   title: string;
   /** ISO date of the purchase, or null when nobody recorded one. */
   purchaseDate: string | null;
+  /**
+   * What to call that date. "Kvittodatum" for an utlägg with a receipt behind
+   * it, "Sista resdag" for a milersättning, which has no receipt and whose date
+   * is the day of its last journey — see lib/expense/document.ts.
+   */
+  dateLabel: string;
   /** "Privat utlägg" / "Sektionskort" — already worded. */
   paymentType: string;
   /** ISO date the cover was drawn. */
@@ -49,6 +78,8 @@ export interface ExpenseCoverData {
   };
   total: string;
   allocations: ExpenseCoverAllocation[];
+  /** The journey, for a milersättning. Null for anything else — see above. */
+  journey: ExpenseCoverJourney | null;
 }
 
 /**

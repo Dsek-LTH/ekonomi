@@ -29,7 +29,7 @@ export default async function BankPage({
   const user = await requireUser();
   const params = await searchParams;
 
-  const canSeeAll = canAccessBookkeeping(user.roles);
+  const canSeeAll = canAccessBookkeeping(user.capabilities);
   const holdsCard = await userHoldsCard(user.id);
   // Neither a card nor the books: there is no reading of this feed for them.
   if (!canSeeAll && !holdsCard) redirect("/dashboard");

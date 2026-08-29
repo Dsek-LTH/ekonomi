@@ -32,6 +32,7 @@ import { canManageStock } from "@/lib/domain/permissions";
 import { entryFault } from "@/lib/stock/entry";
 import { onHand } from "@/lib/stock/onhand";
 import { replayProduct } from "@/lib/server/stock-replay";
+import { bulkTransaction } from "@/lib/server/tx";
 import {
   cellFault,
   cellKey,
@@ -69,7 +70,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (products.length !== productIds.length) return fail(404, "stock.productNotFound");
   const byId = new Map(products.map((p) => [p.id, p]));
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await bulkTransaction(async (tx) => {
     // What the occasion says now, and what the cellar holds.
     const existing = await tx.stockEntry.findMany({
       where: { tagId: id, productId: { in: productIds } },
@@ -95,7 +96,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       spilledQty: e.spilledQty,
     });
     const rowFor = new Map(existing.map((e) => [cellKey(asRow(e)), e]));
-    const cells = cellTotals(existing.map(asRow));
+    const booked = cellTotals(existing.map(asRow));
+
+    /**
+     * The sheet as this request leaves it, worked out before a single cell is
+     * written.
+     *
+     * A request is one statement about a night, not a queue of them, and it has
+     * to be judged as one. Cell by cell against the stored figures, "eight out
+     * and one dropped" was refused: whichever of the two was checked first, the
+     * other had not happened yet — so the night had taken nothing out and a
+     * spill of one was one too many. Which half of the same save you lost
+     * depended on the order the browser happened to send them in.
+     *
+     * Against this map the answer is the same whatever that order is. The
+     * cellar checks still read `booked`, which is what the shelf reflects — see
+     * SheetState in lib/stock/cells.ts.
+     */
+    const sheet = new Map(booked);
+    for (const cell of body.cells) {
+      sheet.set(
+        cellKey({ productId: cell.productId, kind: cell.kind as CellKind, level: cell.level }),
+        cell.qty,
+      );
+    }
 
     const shelves = await tx.stockEntry.groupBy({
       by: ["productId"],
@@ -138,7 +162,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (cell.qty === now) continue;
 
       const product = byId.get(cell.productId)!;
-      const bad = cellFault(product, shelfOf(cell.productId), cells, ref, cell.qty);
+      const bad = cellFault(product, shelfOf(cell.productId), { sheet, booked }, ref, cell.qty);
       if (bad) return { fault: bad } as const;
 
       const columns = entryColumns(ref, cell.qty);
@@ -222,7 +246,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
       }
 
-      cells.set(key, cell.qty);
+      // `booked` is deliberately not advanced here. It and `shelfOf` both
+      // describe the cellar as this request found it, and they have to keep
+      // describing the same moment: the shelf is read once, before the loop,
+      // so a `booked` that crept forward with each write would be measuring
+      // new figures against an old shelf. The night's side of the rule is
+      // already whole — `sheet` holds every cell of this request from the
+      // start.
       touched.add(cell.productId);
       written++;
     }

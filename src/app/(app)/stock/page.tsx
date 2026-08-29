@@ -26,7 +26,7 @@ export default async function StockPage({
       // browser it is whatever that machine's clock says, which near midnight
       // is a different day from the one the markup was built with.
       today={today()}
-      canManage={canManageStock(user.roles)}
+      canManage={canManageStock(user.capabilities)}
     />
   );
 }

@@ -3,6 +3,9 @@
 // amounts are in plain SEK here and converted to öre on insert.
 import type { BankTransaction, CostCenter, User } from "../src/lib/domain/types";
 
+/** A seeded person: the User columns that are actually inserted. */
+export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
+
 export interface SeedExpense {
   // The human reference. Null for an utlägg that hasn't been submitted for
   // attest yet — that is when the number is handed out, so a draft has none.
@@ -24,7 +27,11 @@ export interface SeedExpense {
 // fixed rather than generated — app/login/page.tsx names them, and a reseed
 // must not move them. Everyone else referenced in the fixtures gets a derived
 // one; see `studentIdFor` in seed.ts.
-export const CURRENT_USERS: Record<string, User & { studentId: string }> = {
+// `capabilities` is not among them: it is resolved from the RoleCapability
+// table per request (lib/server/capabilities.ts), never stored on a row, so a
+// fixture that carried one would be stating something the database has no
+// column for.
+export const CURRENT_USERS: Record<string, SeedUser> = {
   ORDINARIE: {
     id: "u1",
     studentId: "el1234li-s",

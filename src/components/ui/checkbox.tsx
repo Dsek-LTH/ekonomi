@@ -58,7 +58,17 @@ export function Checkbox({
   className?: string;
 }) {
   return (
-    <label className={cn("inline-flex cursor-pointer items-center", className)}>
+    // `relative`, so the input below is positioned against this label.
+    // `sr-only` is `position: absolute`, and with no positioned ancestor its
+    // containing block is the page itself — so it is not clipped by the frame's
+    // scroll container (`md:overflow-y-auto` in components/shell/app-shell) and
+    // sits wherever it happens to land in *document* coordinates. On a wide
+    // screen, where the frame is `h-screen` and must not scroll, that made the
+    // document scrollable; clicking a box focuses the input, the browser scrolls
+    // the document to reveal it, and the whole app slides off the top leaving an
+    // empty page behind. The roles grid is where it showed — eighty-four of
+    // these, two thousand pixels down — but the box was wrong, not the grid.
+    <label className={cn("relative inline-flex cursor-pointer items-center", className)}>
       <input
         type="checkbox"
         checked={checked}

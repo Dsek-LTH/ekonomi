@@ -58,7 +58,7 @@ export default function BankClient({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const controls = useUrlTableControls(page.total, scope === "mine" ? "UNMATCHED" : "ALL");
-  const canImport = canBookkeep(user.roles);
+  const canImport = canBookkeep(user.capabilities);
   const importing = pending === "import";
 
   // In the URL, like every other filter on a list: which purchases you were

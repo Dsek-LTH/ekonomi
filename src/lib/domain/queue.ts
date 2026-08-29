@@ -1,11 +1,11 @@
 import { canAccessBookkeeping, hasAttestRole } from "./permissions";
-import type { Expense, Role } from "./types";
+import type { Capability, Expense, Role } from "./types";
 
 // Exactly what deciding a queue needs: who is asking, and what they may do.
 // Narrower than `User` on purpose — a pure function that takes the whole record
 // invites callers to pass a whole record, and then the next reader cannot tell
 // which fields matter. Both `User` and `CurrentUser` satisfy it structurally.
-type Viewer = { id: string; roles: Role[] };
+type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
 // What the dashboard is: one question, "what needs you now", answered for
 // whoever is asking.
@@ -73,13 +73,13 @@ export function queueActionFor(
   // has to re-derive authority — it only has to check it has not been used yet.
   if (
     expense.status === "PENDING_APPROVAL" &&
-    hasAttestRole(user.roles) &&
+    hasAttestRole(user.capabilities) &&
     expense.allocations.some((a) => a.canAttest && !a.approvedById)
   ) {
     return "ATTEST";
   }
 
-  if (canAccessBookkeeping(user.roles)) {
+  if (canAccessBookkeeping(user.capabilities)) {
     if (expense.status === "APPROVED") return "BOOK";
     if (expense.status === "BOOKED") return "EXPORT";
   }

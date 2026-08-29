@@ -18,6 +18,7 @@ import {
   IconIncome,
   IconBook,
   IconBudget,
+  IconCar,
   IconCard,
   IconChart,
   IconCheck,
@@ -31,6 +32,7 @@ import {
   IconList,
   IconMenu,
   IconReceipt,
+  IconShield,
   IconUsers,
 } from "../ui/icons";
 import {
@@ -125,15 +127,24 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/bank",
         label: "bank",
         icon: IconCard,
-        visible: (u) => u.holdsCard || canAccessBookkeeping(u.roles),
+        visible: (u) => u.holdsCard || canAccessBookkeeping(u.capabilities),
       },
-      { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.roles) },
+      { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.capabilities) },
     ],
   },
   {
     label: "groupBudget",
     items: [
-      { href: "/budget", label: "budget", icon: IconBudget, visible: canAccessBudget },
+      {
+        href: "/budget",
+        label: "budget",
+        icon: IconBudget,
+        // Was `visible: canAccessBudget` when that helper took nothing and
+        // answered true — the budget is the section's, not the treasury's. It
+        // is a capability now, granted to every role by the migration, so the
+        // default is unchanged and narrowing it no longer needs a deploy.
+        visible: (u) => canAccessBudget(u.capabilities),
+      },
       {
         href: "/ledger",
         label: "outcome",
@@ -149,13 +160,13 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/bookkeeping",
         label: "bookkeeping",
         icon: IconBook,
-        visible: (u) => canAccessBookkeeping(u.roles),
+        visible: (u) => canAccessBookkeeping(u.capabilities),
       },
       {
         href: "/income",
         label: "income",
         icon: IconIncome,
-        visible: (u) => canAccessBookkeeping(u.roles),
+        visible: (u) => canAccessBookkeeping(u.capabilities),
       },
     ],
   },
@@ -165,7 +176,7 @@ const NAV_GROUPS: NavGroup[] = [
       // Its own group rather than a line under Bokföring: keeping the
       // lagerbokföring is a different job, done by different people, and the
       // roles that see this see nothing else in the app.
-      { href: "/stock", label: "stock", icon: IconBox, visible: (u) => canViewStock(u.roles) },
+      { href: "/stock", label: "stock", icon: IconBox, visible: (u) => canViewStock(u.capabilities) },
       // Above the log, because it is where the work happens: taking stock out
       // and bringing it back is registered on the occasion it belongs to. The
       // log is what you open when a figure looks wrong.
@@ -173,20 +184,20 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/stock/tags",
         label: "stockEvents",
         icon: IconCalendar,
-        visible: (u) => canViewStock(u.roles),
+        visible: (u) => canViewStock(u.capabilities),
       },
       {
         href: "/stock/log",
         label: "stockLog",
         icon: IconList,
-        visible: (u) => canViewStock(u.roles),
+        visible: (u) => canViewStock(u.capabilities),
       },
     ],
   },
   {
     label: "groupAdmin",
     items: [
-      { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.roles) },
+      { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.capabilities) },
     ],
   },
 ];
@@ -204,6 +215,11 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: "/admin/income", label: "income", icon: IconIncome, visible: ALL },
       { href: "/admin/result-units", label: "resultUnits", icon: IconHierarchy, visible: ALL },
       { href: "/admin/cards", label: "cards", icon: IconCard, visible: ALL },
+      { href: "/admin/mileage", label: "mileageRates", icon: IconCar, visible: ALL },
+      // Directly above Användare, which is the screen it explains: that one
+      // lists who holds what and cannot change it, and this is where what a
+      // holding *means* is decided.
+      { href: "/admin/roles", label: "roles", icon: IconShield, visible: ALL },
       { href: "/admin/users", label: "users", icon: IconUsers, visible: ALL },
     ],
   },
@@ -679,12 +695,17 @@ export function AppShell({
             // block clears the end of the scroll instead of butting against it.
             // The phone gutter drops to 16px: at 20px, page padding plus card
             // inset spent 36px of a 375px screen before any content.
-            "mx-auto w-full flex-1 pb-16 pl-4 pt-6 md:pb-20 md:pl-6 md:pt-8",
-            // The folded receipt tab is `fixed`, so it reserves no width and
-            // would otherwise sit on top of whatever reaches the right edge.
-            // Written as one side or the other, never both: `cn` joins rather
-            // than merges, so two `pr-` utilities would be settled by
-            // stylesheet order instead of by intent.
+            "mx-auto w-full flex-1 pl-4 pt-6 md:pl-6 md:pt-8",
+            // The folded receipt tab is `fixed`, so it reserves no space at all
+            // and sits on top of whatever reaches the edge it is on — which is
+            // a different edge at each width (receipt/receipt-panel.tsx). Below
+            // md it is a strip across the bottom, so the page owes it height;
+            // from md it is a tab on the right, so the page owes it width.
+            //
+            // Each written as one utility or the other, never both: `cn` joins
+            // rather than merges, so two `pb-` would be settled by stylesheet
+            // order instead of by intent.
+            receiptTab ? "pb-32 md:pb-20" : "pb-16 md:pb-20",
             receiptTab ? "pr-6 md:pr-12" : "pr-6 md:pr-6",
             // The budget sheets need more room; everything else stays centered.
             caps,

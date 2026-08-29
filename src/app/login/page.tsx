@@ -43,7 +43,7 @@ export default function LoginPage() {
           className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-background text-sm font-medium transition-colors hover:bg-surface"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/symbol_rosa.svg" alt="" aria-hidden className="size-5" />
+          <img src="/symbol_rosa.svg" alt="" aria-hidden className="h-5 w-auto" />
           {t("loginPrompt")}
         </button>
 
