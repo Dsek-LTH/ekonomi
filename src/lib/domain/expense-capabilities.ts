@@ -21,6 +21,7 @@ import {
 import {
   isAttestWithdrawable,
   isEditable,
+  isRecallable,
   isSigned,
   isSubmittable,
   submitBlocker,
@@ -36,6 +37,15 @@ export type ExpenseCapabilities = {
   canApprove: boolean;
   /** Viewer has signed at least one allocation and can still take it back. */
   canWithdrawAttest: boolean;
+  /**
+   * The submitter may take the whole utlägg back out of the queue, to a draft.
+   *
+   * Their own act, not the attester's `canWithdrawAttest`: what comes back is
+   * the claim itself, so it can be corrected — a purchase filed as an eget
+   * utlägg that turns out to have gone on the section card, most often, which
+   * is a change no attester can make for them.
+   */
+  canRecall: boolean;
   canRequestChanges: boolean;
   canReturn: boolean;
   canBook: boolean;
@@ -91,6 +101,9 @@ export function expenseCapabilities(
   const canWithdrawAttest =
     isAttestWithdrawable(expense.status) &&
     expense.allocations.some((a) => a.canAttest && a.approvedById === viewer.id);
+  // Whoever may send it may take it back. An admin can do either on somebody's
+  // behalf, exactly as they can submit for them.
+  const canRecall = isRecallable(expense.status) && mayAct;
   const canReturn = !!expense.canReturn && expense.status === "APPROVED";
   const canBook = bookkeeper && expense.status === "APPROVED";
   // Exporting is a real Fortnox call made under the bookkeeper's own login, so
@@ -118,6 +131,7 @@ export function expenseCapabilities(
     submitBlocker: submittable && mayAct ? blocker : null,
     canApprove,
     canWithdrawAttest,
+    canRecall,
     canRequestChanges,
     canReturn,
     canBook,
@@ -132,6 +146,7 @@ export function expenseCapabilities(
     hasAnyAction:
       hasPrimaryAction ||
       canWithdrawAttest ||
+      canRecall ||
       canRequestChanges ||
       canEdit ||
       canDelete ||

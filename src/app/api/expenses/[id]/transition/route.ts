@@ -18,6 +18,8 @@ import {
   REIMBURSEMENT_DEADLINE_DAYS,
   SUBMITTABLE_STATUSES,
   isAttestWithdrawable,
+  isRecallable,
+  isSigned,
   isLateReimbursement,
   isOutOfPocket,
 } from "@/lib/domain/status";
@@ -251,6 +253,72 @@ export async function POST(
     if (withdrawn instanceof NextResponse) return withdrawn;
 
     return NextResponse.json({ id, status: "PENDING_APPROVAL" });
+  }
+
+  // ── Take your own submission back ─────────────────────────────────────────
+  //
+  // The submitter's counterpart to the attester's `withdraw_attest` above, and a
+  // different act by a different person: that one takes back a signature, this
+  // takes back the whole claim. It exists for the correction no attester can
+  // make on the submitter's behalf — a purchase filed as an eget utlägg that
+  // turns out to have gone on the section card. Changing that means changing the
+  // payment type, and a card purchase needs a bank row matched to it, which may
+  // not have landed yet. So it comes back as a draft: theirs again, editable,
+  // and under no obligation to be finished today.
+  if (action === "recall") {
+    if (!actorIsSubmitter && !isAdmin(actor.capabilities)) {
+      return fail(403, "expense.noRecallAccess");
+    }
+    if (!isRecallable(expense.status)) {
+      // Once it is actually attested it is not the submitter's to pull back:
+      // somebody agreed to it, and undoing that is bookkeeping's call — see
+      // `return_approved` below.
+      return isSigned(expense.status)
+        ? fail(409, "expense.recallAfterApproved")
+        : fail(409, "expense.nothingToRecall", {
+            values: { status: { key: `common.status.${expense.status}` } },
+          });
+    }
+
+    const recalled = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Every signature on it, not only the ones the actor could see or give.
+        // An attest is a statement about the claim as it stood — "this 420 kr
+        // of Sexmästeriets money was spent privately and should be paid back" —
+        // and this action exists precisely to change what it stood for. Carrying
+        // them over would leave a row signed for a claim that no longer says
+        // what was signed.
+        await tx.expenseCostAllocation.updateMany({
+          where: { expenseId: expense.id, approvedById: { not: null } },
+          data: { approvedById: null, approvedAt: null },
+        });
+        // Conditional on the status it was read at: two people pressing at once,
+        // or an attester approving the last row while this was in flight, must
+        // not have this quietly win.
+        applied(
+          await tx.expense.updateMany({
+            where: { id: expense.id, status: "PENDING_APPROVAL" },
+            data: { status: "DRAFT" },
+          }),
+        );
+        // The reference is deliberately kept. It was handed out when the utlägg
+        // was first sent (see `claimReference`, which only draws a number for an
+        // utlägg that has none), so the same claim keeps the same number across
+        // a correction rather than burning a second one out of the year's
+        // sequence — and the timeline underneath it stays one story.
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "RECALLED",
+            actorId,
+            comment: comment || null,
+          },
+        });
+      }),
+    );
+    if (recalled instanceof NextResponse) return recalled;
+
+    return NextResponse.json({ id, status: "DRAFT" });
   }
 
   // ── Return a wrongly-approved expense for changes ─────────────────────────

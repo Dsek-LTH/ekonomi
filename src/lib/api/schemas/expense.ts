@@ -81,6 +81,9 @@ export type PatchExpense = z.infer<typeof PatchExpense>;
 export const TransitionExpense = z.object({
   action: z.enum([
     "submit",
+    // The submitter taking their own claim back out of the queue — apart from
+    // "withdraw_attest", which is an attester taking back a signature.
+    "recall",
     "request_changes",
     "approve",
     "withdraw_attest",

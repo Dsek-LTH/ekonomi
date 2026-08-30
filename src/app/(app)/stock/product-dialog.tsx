@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { AmountInput } from "@/components/ui/amount-input";
 import { Field, FieldGroup, Input, SuffixedInput } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconScan } from "@/components/ui/icons";
@@ -288,11 +289,7 @@ export function ProductDialog({
             />
           </Field>
           <Field label={t("products.field.cost")}>
-            <Input
-              value={d.costPrice}
-              onChange={(e) => set("costPrice", e.target.value)}
-              inputMode="decimal"
-            />
+            <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
           </Field>
         </div>
 

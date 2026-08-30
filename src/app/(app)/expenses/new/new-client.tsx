@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
+import { SignedAmountInput } from "@/components/ui/amount-input";
 import { PageShell } from "@/components/page-shell";
 import { wizardChrome } from "./wizard-chrome";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go — see `matchLead` below.
 import { formatSEK } from "@/lib/ui/format";
-import { isAmountInput, parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
+import { parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
@@ -502,21 +503,20 @@ export default function NewExpenseClient({
                   }
                 />
               </Field>
-              {/* Not type="number": it drops a lone leading "-" from .value, so a
-                  return is awkward to type, and it rejects "1 234,50". parseSEK
-                  reads both, and this matches the allocation amount fields.
-                  Anything that isn't on its way to an amount — a third decimal
-                  included, since öre is as fine as money gets here — is simply
-                  not taken, so the field keeps what it had. */}
+              {/* The keypad, the guard and the separator all live in
+                  AmountInput now — including the sign button, which is the only
+                  way to reach a negative amount on a phone: no mobile numeric
+                  keypad has a minus key. A return is the same utlägg with the
+                  sign flipped, so it is a case this field has to allow. */}
               <Field label={t("amount")}>
-                <Input
+                <SignedAmountInput
                   value={form.gross}
-                  inputMode="decimal"
-                  onChange={(e) => {
-                    if (!isAmountInput(e.target.value)) return;
-                    setForm({ ...form, gross: e.target.value });
+                  label={t("negateLabel")}
+                  title={t("negateAmount")}
+                  onChange={(gross) => {
+                    setForm({ ...form, gross });
                     if (allocations.length === 1) {
-                      setAllocations([{ ...allocations[0], amount: e.target.value }]);
+                      setAllocations([{ ...allocations[0], amount: gross }]);
                     }
                   }}
                 />

@@ -25,6 +25,7 @@ import { Notice } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { isAmountInput } from "@/lib/domain/money";
+import { amountFieldProps } from "@/components/ui/amount-input";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { cn, uid } from "@/lib/ui/utils";
@@ -586,9 +587,10 @@ export function VoucherEditor({
                   ) : (
                     <input
                       size={1}
-                      inputMode="decimal"
-                      value={r.debit}
-                      onChange={(e) => patchAmount(r.id, "debit", e.target.value)}
+                      {...amountFieldProps({
+                        value: r.debit,
+                        onChange: (v) => patchAmount(r.id, "debit", v),
+                      })}
                       className={amountInput}
                       // A field with no placeholder still needs a name: it disappears the moment you
                       // type, and a screen reader reading this row would otherwise
@@ -604,9 +606,10 @@ export function VoucherEditor({
                   ) : (
                     <input
                       size={1}
-                      inputMode="decimal"
-                      value={r.credit}
-                      onChange={(e) => patchAmount(r.id, "credit", e.target.value)}
+                      {...amountFieldProps({
+                        value: r.credit,
+                        onChange: (v) => patchAmount(r.id, "credit", v),
+                      })}
                       aria-label={`${tDetail("credit")} ${r.account || ""}`.trim()}
                       className={amountInput}
                     />

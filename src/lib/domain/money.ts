@@ -26,6 +26,33 @@ export function sekToOre(sek: number | null | undefined): number {
  */
 const AMOUNT_INPUT = /^-?[\d ]*(?:[.,]\d{0,2})?$/;
 
+/**
+ * The same amount, written the way a Swedish reader writes one.
+ *
+ * Both separators are accepted on the way in and always were — `parseSEK` reads
+ * either. This is about what the field shows afterwards, and it exists because
+ * of the keyboard: a phone's decimal pad offers the separator its *device*
+ * locale uses, so a Swedish member with an English phone can only type a full
+ * stop into a field labelled Belopp. Taking it and showing back a comma means
+ * the keypad they happen to have stops being their problem.
+ */
+export const commaForm = (input: string): string => input.replace(".", ",");
+
+/**
+ * The same amount with its sign turned over — "12,50" ⇄ "-12,50".
+ *
+ * A negative amount is a real and ordinary thing here: a return is the same
+ * utlägg with the sign flipped. But no mobile numeric keypad has a minus key —
+ * not iOS's, not Android's, at any `inputMode` — so on a phone the sign is not
+ * something that can be typed at all, and a control has to offer it instead.
+ *
+ * An empty field flips to "-", which is what somebody reaching for the sign
+ * before the digits means, and what `isAmountInput` already allows as partial
+ * input.
+ */
+export const flipSign = (input: string): string =>
+  input.startsWith("-") ? input.slice(1) : `-${input}`;
+
 /** Whether `input` is on its way to being an amount — see AMOUNT_INPUT. */
 export function isAmountInput(input: string): boolean {
   return AMOUNT_INPUT.test(input);

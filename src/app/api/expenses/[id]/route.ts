@@ -6,6 +6,7 @@ import { deleteObject } from "@/lib/server/storage";
 import {
   REIMBURSEMENT_DEADLINE_DAYS,
   isEditable,
+  isRecallable,
   isLateReimbursement,
 } from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
@@ -43,9 +44,15 @@ export async function PATCH(
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
   if (!isEditable(expense.status)) {
-    return fail(409, "expense.notEditableInStatus", {
-      values: { status: { key: `common.status.${expense.status}` } },
-    });
+    // The one refusal here that somebody can do something about says what:
+    // an utlägg out for attest is not stuck, it is held, and recalling it hands
+    // it back. Every other status on this branch is signed or beyond, where the
+    // answer is genuinely "not yours any more".
+    return isRecallable(expense.status)
+      ? fail(409, "expense.editWhilePendingAttest")
+      : fail(409, "expense.notEditableInStatus", {
+          values: { status: { key: `common.status.${expense.status}` } },
+        });
   }
   // Seeing an utlägg is not editing it: a resultatansvarig may open one of their
   // result unit's to attest, but the figures stay the submitter's (or an admin's).

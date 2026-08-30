@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
-import { isAmountInput, parseSEK } from "@/lib/domain/money";
+import { parseSEK } from "@/lib/domain/money";
+import { SignedAmountInput } from "@/components/ui/amount-input";
 import { Combobox } from "@/components/ui/combobox";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconX } from "@/components/ui/icons";
@@ -58,8 +59,13 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   }
 
   const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}`, short: c.code }));
-  const amt =
-    "w-28 shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-right text-sm tabular-nums";
+  // Only the width. The box, its border and its padding belong to the control
+  // now that the field is split — a class carrying its own border here would
+  // fight the one the sign turns red.
+  //
+  // Wider than the 7rem it was: the sign has a cell of its own in front of the
+  // figure, and a five-digit amount was already close to the edge.
+  const amt = "w-36 shrink-0";
 
   const comment = cn(
     // Full width while stacked; the line's leftover once it shares one.
@@ -98,23 +104,27 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               onChange={(e) => update(row.id, { comment: e.target.value })}
               className={comment}
             />
-            {/* Kept together: the amount, its unit and the row's remove button
+            {/* Kept together: the amount, its unit and the row's two buttons
                 are one thing, and wrapping the unit onto its own line would
-                read as a stray "kr". */}
+                read as a stray "kr". The sign button sits after the unit rather
+                than between it and the figure, where it read as "12,50 − kr". */}
             <div className="flex shrink-0 items-center gap-2">
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder={t("amountPlaceholder")}
+              {/* Bare, not the boxed AmountInput: the row draws its own frame
+                  around the amount, the unit and the remove button. The props
+                  carry the keypad, the guard and the separator all the same. */}
+              {/* No word here. The total above says "Retur", because that is
+                  what a negative total is; a row of the distribution is one
+                  line of a sum, and its sign only says whether it adds or
+                  subtracts. Five controls already share this row. */}
+              <SignedAmountInput
+                size="sm"
                 value={row.amount}
-                // Only what is on its way to an amount, öre included but no
-                // finer — the same rule the gross field and the voucher's
-                // amount columns hold to.
-                onChange={(e) => {
-                  if (!isAmountInput(e.target.value)) return;
-                  update(row.id, { amount: e.target.value });
-                }}
+                onChange={(amount) => update(row.id, { amount })}
+                title={t("negateAmount")}
+                placeholder={t("amountPlaceholder")}
+                aria-label={t("amountPlaceholder")}
                 className={amt}
+                inputClassName="text-right"
               />
               <span className="text-xs text-muted">kr</span>
               <IconButton

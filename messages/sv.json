@@ -196,7 +196,8 @@
       "REJECTED": "Avslog utlägget",
       "BOOKED": "Bokförde utlägget",
       "EXPORTED": "Exporterade till Fortnox",
-      "EXPORT_REVERTED": "Markerade som ej exporterad"
+      "EXPORT_REVERTED": "Markerade som ej exporterad",
+      "RECALLED": "Drog tillbaka inlämningen"
     },
     "detail": {
       "missingTitle": "Utlägget hittades inte",
@@ -258,7 +259,8 @@
       },
       "editedFields": "Ändrade: {fields}",
       "voucherComment": "Verifikat {label}",
-      "journeyDate": "Resdag"
+      "journeyDate": "Resdag",
+      "recall": "Dra tillbaka"
     },
     "mutations": {
       "transition": {
@@ -267,7 +269,8 @@
         "withdraw_attest": "Din attest drogs tillbaka.",
         "request_changes": "Återsänt med begäran om ändring.",
         "return_approved": "Utlägget återöppnades för ändring.",
-        "unexport": "Utlägget är markerat som ej exporterat."
+        "unexport": "Utlägget är markerat som ej exporterat.",
+        "recall": "Utlägget är tillbaka som utkast"
       },
       "withdraw": {
         "title": "Dra tillbaka din attest?",
@@ -290,6 +293,12 @@
         "confirm": "Ta bort",
         "failed": "Kunde inte ta bort",
         "done": "Utlägget togs bort."
+      },
+      "recall": {
+        "title": "Dra tillbaka utlägget?",
+        "message": "Utlägget går tillbaka till utkast och försvinner ur attestkön. Du kan sedan ändra det — till exempel från eget utlägg till sektionskort — och skicka in det igen. Referensnumret behålls.",
+        "messageAttested": "Utlägget går tillbaka till utkast och försvinner ur attestkön. {count, plural, =1 {En attest} other {# attester}} tas bort, eftersom de gäller utlägget så som det såg ut. Du kan sedan ändra det och skicka in det igen; referensnumret behålls.",
+        "confirm": "Dra tillbaka"
       }
     },
     "wizard": {
@@ -340,7 +349,9 @@
       "goesTo": "Skickas till {resultUnits} för attest.",
       "resultUnitConcerned": "berörd resultatenhet",
       "resubmit": "Skicka in igen",
-      "submit": "Skicka in för attest"
+      "submit": "Skicka in för attest",
+      "negateAmount": "Växla till negativt belopp (retur)",
+      "negateLabel": "Retur"
     },
     "field": {
       "title": "Beskrivning",
@@ -524,7 +535,11 @@
       "coverRenderFailed": "Utläggsräkningen kunde inte skapas: {detail}",
       "coverStoreFailed": "Utläggsräkningen kunde inte sparas. Försök igen.",
       "documentMissing": "Utläggsräkningen saknas i lagringen.",
-      "storageUnavailable": "Lagringen är inte tillgänglig just nu. Försök igen om en stund."
+      "storageUnavailable": "Lagringen är inte tillgänglig just nu. Försök igen om en stund.",
+      "noRecallAccess": "Bara den som skickade in utlägget kan dra tillbaka det.",
+      "recallAfterApproved": "Utlägget är redan attesterat och kan inte dras tillbaka. Be en av skattmästarna att öppna det igen.",
+      "nothingToRecall": "Utlägget ligger inte för attest ({status}), så det finns inget att dra tillbaka.",
+      "editWhilePendingAttest": "Utlägget ligger för attest och kan inte ändras. Dra tillbaka det först — då blir det ett utkast igen och du kan skicka in det på nytt."
     },
     "receipt": {
       "notFound": "Kvittot hittades inte",
@@ -798,7 +813,9 @@
     "commentPlaceholder": "Kommentar (valfri)…",
     "amountPlaceholder": "Belopp",
     "removeRow": "Ta bort rad",
-    "add": "+ Lägg till kostnadsställe"
+    "add": "+ Lägg till kostnadsställe",
+    "negateAmount": "Växla till negativt belopp",
+    "negateLabel": "Retur"
   },
   "receipt": {
     "prevDocument": "Föregående dokument",

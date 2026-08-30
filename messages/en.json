@@ -196,7 +196,8 @@
       "REJECTED": "Rejected the expense",
       "BOOKED": "Booked the expense",
       "EXPORTED": "Exported to Fortnox",
-      "EXPORT_REVERTED": "Marked as not exported"
+      "EXPORT_REVERTED": "Marked as not exported",
+      "RECALLED": "Withdrew the submission"
     },
     "detail": {
       "missingTitle": "Expense not found",
@@ -258,7 +259,8 @@
       },
       "editedFields": "Changed: {fields}",
       "voucherComment": "Voucher {label}",
-      "journeyDate": "Date driven"
+      "journeyDate": "Date driven",
+      "recall": "Withdraw"
     },
     "mutations": {
       "transition": {
@@ -267,7 +269,8 @@
         "withdraw_attest": "Your approval was withdrawn.",
         "request_changes": "Sent back with a request for changes.",
         "return_approved": "The expense was reopened for changes.",
-        "unexport": "The expense is marked as not exported."
+        "unexport": "The expense is marked as not exported.",
+        "recall": "The expense is back as a draft"
       },
       "withdraw": {
         "title": "Withdraw your approval?",
@@ -290,6 +293,12 @@
         "confirm": "Delete",
         "failed": "Could not delete",
         "done": "The expense was deleted."
+      },
+      "recall": {
+        "title": "Withdraw the expense?",
+        "message": "It goes back to a draft and leaves the attest queue. You can then change it — from an out-of-pocket purchase to the section card, say — and send it in again. It keeps its reference number.",
+        "messageAttested": "It goes back to a draft and leaves the attest queue. {count, plural, =1 {One approval is} other {# approvals are}} removed, because they were given for the expense as it stood. You can then change it and send it in again; it keeps its reference number.",
+        "confirm": "Withdraw"
       }
     },
     "wizard": {
@@ -340,7 +349,9 @@
       "goesTo": "Goes to {resultUnits} for approval.",
       "resultUnitConcerned": "the result unit concerned",
       "resubmit": "Submit again",
-      "submit": "Submit for approval"
+      "submit": "Submit for approval",
+      "negateAmount": "Toggle a negative amount (a return)",
+      "negateLabel": "Return"
     },
     "field": {
       "title": "Description",
@@ -524,7 +535,11 @@
       "coverRenderFailed": "The expense report cover could not be created: {detail}",
       "coverStoreFailed": "The expense report cover could not be stored. Try again.",
       "documentMissing": "The expense report cover is missing from storage.",
-      "storageUnavailable": "Storage is unavailable right now. Try again shortly."
+      "storageUnavailable": "Storage is unavailable right now. Try again shortly.",
+      "noRecallAccess": "Only the person who submitted the expense can withdraw it.",
+      "recallAfterApproved": "The expense is already attested and cannot be withdrawn. Ask one of the treasurers to reopen it.",
+      "nothingToRecall": "The expense is not awaiting attest ({status}), so there is nothing to withdraw.",
+      "editWhilePendingAttest": "The expense is out for attest and cannot be changed. Withdraw it first — it becomes a draft again and you can send it in anew."
     },
     "receipt": {
       "notFound": "The receipt was not found",
@@ -798,7 +813,9 @@
     "commentPlaceholder": "Comment (optional)…",
     "amountPlaceholder": "Amount",
     "removeRow": "Remove row",
-    "add": "+ Add cost center"
+    "add": "+ Add cost center",
+    "negateAmount": "Toggle a negative amount",
+    "negateLabel": "Return"
   },
   "receipt": {
     "prevDocument": "Previous document",

@@ -36,6 +36,13 @@ import { usePhone } from "@/lib/ui/media";
 // a page declares one with <ReceiptPanelSource>; the column lives in AppShell
 // and renders nothing at all until some page has.
 
+/**
+ * How long the fold takes, both ways. The same number as `--receipt-fold-ms` in
+ * globals.css, which draws the motion; this side only has to keep the panel
+ * mounted for exactly as long as it is moving.
+ */
+const RECEIPT_FOLD_MS = 240;
+
 export const RECEIPT_COLLAPSED_COOKIE = "receipt_collapsed";
 export const RECEIPT_WIDTH_COOKIE = "receipt_width";
 
@@ -263,16 +270,19 @@ export function ReceiptPanelColumn() {
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
 
-  // The fold-away, which is a piece of motion rather than a piece of state:
-  // `leaving` keeps the panel on screen for the 200ms it takes to slide off the
-  // right edge, and `arriving` lets the tab it uncovers say, once, that it is
-  // where the receipt went. See the note by @keyframes receipt-tab-in.
+  // The fold, which is a piece of motion rather than a piece of state:
+  // `leaving` keeps the panel on screen for as long as it takes to slide off
+  // the edge, `entering` runs the same move backwards when it comes back, and
+  // `arriving` lets the tab it uncovers say, once, that it is where the receipt
+  // went. See the notes by @keyframes receipt-tab-in and receipt-panel-in.
   //
-  // Both are set by the fold button rather than by watching `collapsed`,
+  // All three are set by the buttons rather than by watching `collapsed`,
   // because only some folds are the reader's. A phone folds the panel by itself
-  // the moment a page brings one (see the effect below), and animating that
-  // would be an answer to a question nobody asked, on every page load.
+  // the moment a page brings one (see the effect below), and a wide screen
+  // opens it again when an upload lands; animating either would be an answer to
+  // a question nobody asked, on every page load.
   const [leaving, setLeaving] = useState(false);
+  const [entering, setEntering] = useState(false);
   const [arriving, setArriving] = useState(false);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -309,6 +319,24 @@ export function ReceiptPanelColumn() {
     }
     was.current = now;
   }, [source, awaitingUpload, setCollapsed]);
+
+  // Let the panel go, one painted frame after it mounted at the edge.
+  //
+  // Two frames, not one: a single rAF can still be coalesced into the commit
+  // that mounted the panel, and a browser that has never painted the starting
+  // value has nothing to transition from — which is the bug this whole dance is
+  // about. The second frame guarantees the first has been seen.
+  useEffect(() => {
+    if (!entering) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setEntering(false));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [entering]);
 
   // The overlay below md covers the whole screen, so the page behind it must
   // not scroll under the finger.
@@ -396,13 +424,36 @@ export function ReceiptPanelColumn() {
   // Folding is the reader's, so it gets the motion: the panel leaves toward the
   // edge, and the tab it uncovers marks itself once.
   const foldAway = () => {
+    // Whichever way it was already going, it is going this way now. An enter
+    // animation still running would otherwise hold the panel at its resting
+    // place — a keyframe beats a transition — and it would vanish at the end of
+    // the fold instead of sliding out of it.
+    setEntering(false);
     setLeaving(true);
     setArriving(true);
     setCollapsed(true);
     timers.current.push(
-      window.setTimeout(() => setLeaving(false), 240),
+      window.setTimeout(() => setLeaving(false), RECEIPT_FOLD_MS),
       window.setTimeout(() => setArriving(false), 1100),
     );
+  };
+
+  // And back, through the same transition the fold uses rather than an
+  // animation of its own.
+  //
+  // The panel would otherwise mount at its resting place, where a transition
+  // has no previous value to move from and nothing happens at all — it simply
+  // appears. So it mounts held at the edge instead, `entering` keeping it
+  // there, and is let go on the next frame: from there it is the identical
+  // move the fold makes, played the other way.
+  //
+  // `entering` is dropped by the effect below and not on a timer, because what
+  // has to happen first is a *paint* — a frame in which the browser has seen
+  // the panel at the edge. A timeout races that; two frames cannot.
+  const unfold = () => {
+    setLeaving(false);
+    setEntering(true);
+    setCollapsed(false);
   };
   const take = (file: File | undefined) => {
     if (file && upload && !upload.uploading) upload.onFile(file);
@@ -558,7 +609,7 @@ export function ReceiptPanelColumn() {
   const tab = (
     <button
       type="button"
-      onClick={() => setCollapsed(false)}
+      onClick={unfold}
       title={t("expand")}
       // No aria-label: the tab now says what it is, and a label of "Visa
       // kvittot" over a face reading "Kvitto" is the mismatch WCAG 2.5.3 is
@@ -629,7 +680,13 @@ export function ReceiptPanelColumn() {
           className={cn(
             // Below md it covers the screen; from md it's a column in the frame.
             "flex flex-col bg-background print:hidden",
-            "fixed inset-y-0 left-0 right-0 z-40 transition-[translate] duration-200 ease-out",
+            // The motion lives in globals.css beside its own keyframes — the
+            // transition that folds it away, the animation that brings it back,
+            // and the one duration both are timed to.
+            "receipt-panel fixed inset-y-0 left-0 right-0 z-40",
+            // Promised while it moves, either way, and taken back after — see
+            // .receipt-panel-moving.
+            (entering || leavingNow) && "receipt-panel-moving",
             leavingNow
               ? // Out towards whichever edge the tab is on: down off the bottom
                 // of a phone, right off the side of a desktop. The panel and
@@ -651,7 +708,14 @@ export function ReceiptPanelColumn() {
                 // hand them to whatever ancestor happened to be positioned
                 // instead — which put the handle somewhere off the panel
                 // entirely, with nothing to grab.
-                "md:relative md:inset-auto md:z-auto md:h-screen md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
+                cn(
+                  "md:relative md:inset-auto md:z-auto md:h-screen md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
+                  // In its place in the layout from the first frame — the main
+                  // column gives up the width at once — but held out at the
+                  // edge until the frame after, so there is something to come
+                  // back from.
+                  entering && "translate-y-full md:translate-x-full md:translate-y-0",
+                ),
           )}
         >
           {/* The drag handle is the border itself, widened to something a

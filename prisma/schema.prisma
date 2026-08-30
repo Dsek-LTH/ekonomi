@@ -130,6 +130,11 @@ enum ExpenseEventType {
   MATCHED
   UNMATCHED
   SUBMITTED
+  /// The submitter took their own utlägg back out of the attest queue, to a
+  /// draft. Its own event rather than a CHANGES_REQUESTED with a different
+  /// actor: nobody asked for the change, and the timeline reads wrong if it
+  /// says somebody did.
+  RECALLED
   CHANGES_REQUESTED
   COST_CENTER_APPROVED
   ATTEST_WITHDRAWN

@@ -47,7 +47,7 @@ import {
   submitBlocker,
 } from "@/lib/domain/status";
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
-import { oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
+import { commaForm, oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
 import { claimBlocker, valueJourney } from "@/lib/mileage/claim";
 import type { MileageRateLike } from "@/lib/mileage/rate";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
@@ -303,6 +303,14 @@ export default function MileageClient({
         onChange={(e) => {
           if (!isOdometerInput(e.target.value)) return;
           onChange(e.target.value);
+        }}
+        // Shown back with the comma a Swedish reader writes, whichever
+        // separator the phone's keypad happened to offer — the same rule the
+        // amount fields hold to. On blur, not per keystroke: "12 300," is an
+        // ordinary thing to be half-way through typing.
+        onBlur={() => {
+          const shown = commaForm(value);
+          if (shown !== value) onChange(shown);
         }}
       />
     </Field>

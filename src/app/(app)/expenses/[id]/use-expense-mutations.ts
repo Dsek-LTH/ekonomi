@@ -11,6 +11,7 @@ export type TransitionAction =
   | "submit"
   | "approve"
   | "withdraw_attest"
+  | "recall"
   | "request_changes"
   | "return_approved"
   | "unexport";
@@ -49,6 +50,26 @@ export function useExpenseMutations(expenseId: string) {
       confirmLabel: t("withdraw.confirm"),
     });
     if (ok) await transition("withdraw_attest");
+  }
+
+  /**
+   * The submitter taking their whole claim back, to a draft.
+   *
+   * Always confirmed, and the wording depends on what it costs. On an utlägg
+   * nobody has touched it is an undo; on one somebody has already attested in
+   * part it also throws those signatures away, and somebody about to correct a
+   * payment type should know they are asking a colleague to sign again.
+   *
+   * `attested` is how many rows are signed — the caller counts them, since it
+   * is the one holding the utlägg.
+   */
+  async function recall(attested: number) {
+    const ok = await confirm({
+      title: t("recall.title"),
+      message: attested > 0 ? t("recall.messageAttested", { count: attested }) : t("recall.message"),
+      confirmLabel: t("recall.confirm"),
+    });
+    if (ok) await transition("recall");
   }
 
   // Export to Fortnox is a real API call (its own route), not a status flip, and
@@ -96,6 +117,7 @@ export function useExpenseMutations(expenseId: string) {
     matching: matcher.busy,
     transition,
     withdrawAttest,
+    recall,
     exportToFortnox,
     match,
     remove,

@@ -1,8 +1,9 @@
 // Which documents an utlägg stands in the receipt panel, and in what order.
 //
-// Two of them, kept apart: the underlag itself and the utläggsräkning — the
-// cover page naming who attested what — with the panel's pager moving between
-// them.
+// Two of them, kept apart: the utläggsräkning — the cover page naming who
+// attested what — and the underlag behind it, with the panel's pager moving
+// between them. They are in the order they are stapled in; the panel opens on
+// the second. See `expenseDocuments` for why those are not the same decision.
 //
 // They used to arrive as one merged PDF, and merging is still what goes to
 // Fortnox (lib/server/pdf-merge.ts). But merging is a *printing* operation: a
@@ -47,20 +48,29 @@ export interface PanelDocument {
   mimeType: string;
   /** Alt text, for a document that is an image. */
   filename?: string;
+  /** The one the panel opens on, whatever its place in the order. */
+  defaultOpen?: boolean;
 }
 
 /**
- * The documents to stand in the receipt panel, in reading order: the underlag
- * first, then the cover that fronts it in the export. A milersättning is the
- * one utlägg that returns a single document — see below.
+ * The documents to stand in the receipt panel: the utläggsräkning first, then
+ * the underlag it fronts — and the panel opens on the underlag. A milersättning
+ * is the one utlägg that returns a single document; see below.
  *
- * The other way round is the order they are stapled in for Fortnox, and it is
- * what this returned at first. But the panel is opened to *read the receipt* —
- * that is the document nobody else has seen and the one every screen using the
- * panel is asking a question about — and putting the cover first meant every
- * reader landed on a page the app generated from data already on screen beside
- * it, and had to page past it. The stapling order is pdf-merge.ts's business;
- * this is a reading order, and reading starts at the underlag.
+ * Order and landing page are two different questions, and this is the case
+ * where they part.
+ *
+ * The order is the one the two are stapled in for Fortnox (lib/server/
+ * pdf-merge.ts): the utläggsräkning is the front of the document, and a reader
+ * paging through what the section will actually file should meet it the way
+ * the section will. This used to be the other way round, with the underlag
+ * first, precisely so that the panel would open on it — which conflated the two
+ * questions and put the pages in an order nothing else in the app uses.
+ *
+ * The landing page is the underlag all the same. That is the document nobody
+ * else has seen, and the one every screen using this panel is asking a question
+ * about; the cover is generated from data already on screen beside it. So it is
+ * marked rather than moved.
  *
  * Empty in one case, and deliberately. No receipt: the utlägg still has a
  * cover, but showing it alone would fill the panel with a document and take
@@ -107,7 +117,7 @@ export function expenseDocuments(
   // receipt cannot change it. The receipt is addressed by its own id, which is
   // a new URL when it is replaced.
   return [
-    underlag,
     { src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" },
+    { ...underlag, defaultOpen: true },
   ];
 }

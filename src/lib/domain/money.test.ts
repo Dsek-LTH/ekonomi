@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isAmountInput, oreToSEK, parseOre, parseSEK, sekToOre } from "./money";
+import {
+  commaForm,
+  flipSign,
+  isAmountInput,
+  oreToSEK,
+  parseOre,
+  parseSEK,
+  sekToOre,
+} from "./money";
 
 describe("oreToSEK", () => {
   it("divides by 100", () => {
@@ -112,6 +120,48 @@ describe("round trip", () => {
   it("returns the same amount through öre and back", () => {
     for (const sek of [0, 1, 19.99, 123.45, -250, 1234.5, 0.01]) {
       expect(oreToSEK(sekToOre(sek))).toBe(sek);
+    }
+  });
+});
+
+describe("commaForm", () => {
+  it("shows back a comma whatever separator was typed", () => {
+    // The point of it: a phone's decimal pad offers its own locale's
+    // separator, so a Swedish member with an English phone can only type ".".
+    expect(commaForm("12.50")).toBe("12,50");
+    expect(commaForm("12,50")).toBe("12,50");
+  });
+
+  it("leaves an amount with no decimals alone", () => {
+    expect(commaForm("1 234")).toBe("1 234");
+    expect(commaForm("")).toBe("");
+  });
+
+  it("leaves a lone minus alone", () => {
+    expect(commaForm("-")).toBe("-");
+  });
+});
+
+describe("flipSign", () => {
+  it("turns a positive amount negative and back", () => {
+    expect(flipSign("12,50")).toBe("-12,50");
+    expect(flipSign("-12,50")).toBe("12,50");
+  });
+
+  it("flips an empty field to a lone minus", () => {
+    // Somebody reaching for the sign before the digits, which isAmountInput
+    // already allows as partial input.
+    expect(flipSign("")).toBe("-");
+    expect(isAmountInput(flipSign(""))).toBe(true);
+  });
+
+  it("takes the minus back off again", () => {
+    expect(flipSign("-")).toBe("");
+  });
+
+  it("always leaves something the field will accept", () => {
+    for (const v of ["", "12", "12,50", "-12,50", "1 234,50", "-"]) {
+      expect(isAmountInput(flipSign(v))).toBe(true);
     }
   });
 });

@@ -15,7 +15,7 @@ import {
   normaliseImage,
   normalisedName,
 } from "@/lib/server/images";
-import { isEditable } from "@/lib/domain/status";
+import { isEditable, isRecallable } from "@/lib/domain/status";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
@@ -50,9 +50,13 @@ export async function POST(
     return fail(403, "expense.noReceiptAccess");
   }
   if (!isEditable(expense.status)) {
-    return fail(409, "expense.notChangeableInStatus", {
-      values: { status: { key: `common.status.${expense.status}` } },
-    });
+    // Same rule as the PATCH beside it, and the same way out: swapping the
+    // underlag under an attester who is reading it is the edit this closes.
+    return isRecallable(expense.status)
+      ? fail(409, "expense.editWhilePendingAttest")
+      : fail(409, "expense.notChangeableInStatus", {
+          values: { status: { key: `common.status.${expense.status}` } },
+        });
   }
 
   // Before the body is touched. `req.formData()` reads the whole request into

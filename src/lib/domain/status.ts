@@ -125,12 +125,32 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
 // StatusPill and every other surface pull labels/colours from here so
 // the visual language stays uniform.
 
-// An expense is editable before it's signed (and not terminal). Used by the
-// detail page, the edit page, and the PATCH route.
+/**
+ * An utlägg is editable while it is still in the submitter's own hands.
+ *
+ * Not while it is out for attest. A claim in somebody's queue is a claim they
+ * are being asked to put their name to, and it has to hold still while they
+ * read it — an amount or a cost centre that can change under an attester means
+ * a signature that says something other than what was signed. PENDING_APPROVAL
+ * was on this list, so it could.
+ *
+ * The way back is `recall`: the submitter takes the whole claim out of the
+ * queue, it becomes a draft again, and it is theirs to change. That is one act
+ * somebody performs on purpose rather than an edit nobody is told about, and it
+ * clears the signatures already given — which is exactly the honesty an edit in
+ * place was quietly skipping.
+ *
+ * The same set as SUBMITTABLE_STATUSES today, and they are still two lists:
+ * "may I change this" and "may I send this" are different questions that happen
+ * to have the same answer, and folding them together would make the next status
+ * answer both at once by accident.
+ *
+ * Used by the detail page, the edit page, the receipt upload and the PATCH
+ * route — one rule, so closing it closes all four.
+ */
 export const EDITABLE_STATUSES: ExpenseStatus[] = [
   "DRAFT",
   "PENDING_MATCH",
-  "PENDING_APPROVAL",
   "CHANGES_REQUESTED",
 ];
 
@@ -159,6 +179,22 @@ const ATTEST_WITHDRAWABLE_STATUSES: ExpenseStatus[] = ["PENDING_APPROVAL", "APPR
 
 export const isAttestWithdrawable = (status: string): boolean =>
   ATTEST_WITHDRAWABLE_STATUSES.includes(status as ExpenseStatus);
+
+/**
+ * Whether the submitter may take their utlägg back out of the attest queue.
+ *
+ * Only while it is waiting. A claim that is fully attested has been agreed to
+ * by somebody, and pulling it back is a bookkeeping decision rather than the
+ * submitter's — that is `return_approved`, and it belongs to the people who
+ * would have to unwind the voucher. CHANGES_REQUESTED is already back in the
+ * submitter's hands and has nothing to withdraw from.
+ *
+ * Not to be confused with `isAttestWithdrawable`, which is the *attester*
+ * taking back a signature they gave. Two different people undoing two different
+ * acts, which is why they are two rules and two actions.
+ */
+export const isRecallable = (status: string): boolean =>
+  (status as ExpenseStatus) === "PENDING_APPROVAL";
 
 export const isPendingApproval = (status: string): boolean => status as ExpenseStatus === "PENDING_APPROVAL";
 

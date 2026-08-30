@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { useMutation } from "@/components/shell/use-mutation";
+import { AmountInput } from "@/components/ui/amount-input";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -224,13 +225,12 @@ export function IncomeSettingsClient({
           )}
 
           <div className="flex flex-wrap items-end gap-2">
-            <Input
+            <AmountInput
               value={newFallback.amount}
-              onChange={(e) => setNewFallback({ ...newFallback, amount: e.target.value })}
+              onChange={(amount) => setNewFallback({ ...newFallback, amount })}
               placeholder={t("fallbacks.amountPlaceholder")}
               size="sm"
               className="w-28"
-              inputMode="decimal"
               aria-label={t("fallbacks.amount")}
             />
             <Input

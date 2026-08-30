@@ -82,6 +82,19 @@ export interface ViewerDocument {
   mimeType: string;
   /** Alt text, for a document that is an image. */
   filename?: string;
+  /**
+   * Open the panel on this one rather than on the first.
+   *
+   * Reading order and landing page are two different questions, and an utlägg
+   * is the case where they part: the utläggsräkning is the front of the
+   * document and belongs first, but the receipt behind it is what somebody came
+   * to look at. Whoever builds the list decides both, in one place, rather than
+   * the panel taking an index that could drift out of step with it.
+   *
+   * The first one marked wins; none marked opens on the first, which is what
+   * every other caller means by saying nothing.
+   */
+  defaultOpen?: boolean;
 }
 
 export interface ReceiptViewerProps {
@@ -113,7 +126,8 @@ export default function ReceiptViewerImpl({
   const [fullscreen, setFullscreen] = useState(false);
   // Which document is open. Clamped rather than trusted: a receipt replaced
   // while the panel is on it shortens the list under the reader.
-  const [index, setIndex] = useState(0);
+  const opensAt = () => Math.max(0, documents.findIndex((d) => d.defaultOpen));
+  const [index, setIndex] = useState(opensAt);
   const at = Math.min(index, Math.max(0, documents.length - 1));
   const doc = documents[at];
   const src = doc?.src ?? "";
@@ -145,6 +159,18 @@ export default function ReceiptViewerImpl({
   // During the render rather than in an effect, so the document is never once
   // painted with the last one's page count: the reset is part of showing this
   // document, not something that happens to it afterwards.
+  // A different *set* of documents opens where its author says, rather than
+  // wherever the last set was left. The panel lives in the app shell and is
+  // never remounted, so without this the second utlägg you open inherits the
+  // page you had paged to on the first. Keyed on the addresses rather than on
+  // the array, which a page building the list inline rebuilds every render.
+  const docsKey = documents.map((d) => d.src).join("\u0000");
+  const [openedFor, setOpenedFor] = useState(docsKey);
+  if (openedFor !== docsKey) {
+    setOpenedFor(docsKey);
+    setIndex(opensAt());
+  }
+
   const [shown, setShown] = useState(src);
   if (shown !== src) {
     setShown(src);

@@ -262,3 +262,66 @@ describe("statuses are covered, not assumed", () => {
     }
   });
 });
+
+describe("taking your own submission back", () => {
+  // The submitter's counterpart to withdrawing an attest, and a different act:
+  // that one takes back a signature, this takes back the claim. It exists for
+  // the correction no attester can make on somebody's behalf — an eget utlägg
+  // that turns out to have gone on the section card.
+  const waiting = (over: Partial<Expense> = {}) =>
+    expense({ status: "PENDING_APPROVAL", submitterId: "member", ...over });
+
+  it("is offered to whoever submitted it", () => {
+    expect(expenseCapabilities(waiting(), viewer([], "member")).canRecall).toBe(true);
+  });
+
+  it("is offered to an admin, who may act on their behalf", () => {
+    // The same latitude they have to submit for somebody.
+    expect(expenseCapabilities(waiting(), viewer(["SKATTMASTARE"], "other")).canRecall).toBe(true);
+  });
+
+  it("is not offered to anybody else", () => {
+    // A resultatansvarig sees the utlägg and may attest it. Neither makes the
+    // claim theirs to withdraw.
+    expect(
+      expenseCapabilities(waiting(), viewer(["RESULTATANSVARIG"], "other")).canRecall,
+    ).toBe(false);
+  });
+
+  it("is not offered once it is actually attested", () => {
+    // Somebody agreed to it; undoing that is bookkeeping's call, not the
+    // submitter's. See `canReturn`.
+    for (const status of ["APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(waiting({ status }), viewer([], "member")).canRecall).toBe(false);
+    }
+  });
+
+  it("is not offered on one already back in the submitter's hands", () => {
+    for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(waiting({ status }), viewer([], "member")).canRecall).toBe(false);
+    }
+  });
+
+  it("is the only way to change one that is out for attest", () => {
+    // The pair that makes the rule usable: editing is closed while somebody is
+    // being asked to sign, and taking it back is what opens it again. Offering
+    // neither would strand the submitter; offering both would let a claim
+    // change under a reader.
+    const can = expenseCapabilities(waiting(), viewer([], "member"));
+    expect(can.canEdit).toBe(false);
+    expect(can.canRecall).toBe(true);
+  });
+
+  it("hands editing back once it is a draft again", () => {
+    const back = expenseCapabilities(waiting({ status: "DRAFT" }), viewer([], "member"));
+    expect(back.canEdit).toBe(true);
+    expect(back.canRecall).toBe(false);
+  });
+
+  it("counts as something the panel can offer", () => {
+    // A claim waiting for attest has no primary action for its own submitter —
+    // without this the panel would have said there was nothing to do at all.
+    const can = expenseCapabilities(waiting(), viewer([], "member"));
+    expect(can.hasAnyAction).toBe(true);
+  });
+});

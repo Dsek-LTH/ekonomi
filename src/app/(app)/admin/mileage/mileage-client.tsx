@@ -22,7 +22,8 @@ import { Tag } from "@/components/ui/status-pill";
 import { IconPlus, IconTrash } from "@/components/ui/icons";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { isAmountInput, parseSEK } from "@/lib/domain/money";
+import { parseSEK } from "@/lib/domain/money";
+import { AmountInput } from "@/components/ui/amount-input";
 import { rateOn } from "@/lib/mileage/rate";
 import { today } from "@/lib/domain/date";
 import type { MileageRateRow } from "@/lib/data/mileage";
@@ -121,14 +122,10 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
             <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </Field>
           <Field label={t("rate")} hint={t("rateHint")}>
-            <Input
-              inputMode="decimal"
-              value={krPerMil}
-              onChange={(e) => {
-                if (!isAmountInput(e.target.value)) return;
-                setKrPerMil(e.target.value);
-              }}
-            />
+            {/* A schablon is never negative, so no sign button — but the
+                separator is the same problem it is everywhere: a phone offers
+                the one its own locale uses. */}
+            <AmountInput value={krPerMil} onChange={setKrPerMil} />
           </Field>
           <Field label={t("note")}>
             <Input

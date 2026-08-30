@@ -57,6 +57,7 @@ export function ExpenseActions({
   busy,
   onTransition,
   onWithdrawAttest,
+  onRecall,
   onExport,
   onDelete,
 }: {
@@ -69,6 +70,7 @@ export function ExpenseActions({
     comment?: string,
   ) => Promise<boolean>;
   onWithdrawAttest: () => void;
+  onRecall: () => void;
   onExport: () => void;
   onDelete: () => void;
 }) {
@@ -144,6 +146,15 @@ export function ExpenseActions({
       label: t("withdrawAttest"),
       icon: <IconUndo className="size-4" />,
       onClick: onWithdrawAttest,
+    },
+    // The submitter's own, and never offered beside the attester's: one is
+    // taking back a signature, the other the whole claim, and the two are
+    // available to different people at different moments.
+    can.canRecall && {
+      key: "recall",
+      label: t("recall"),
+      icon: <IconUndo className="size-4" />,
+      onClick: onRecall,
     },
     can.canEdit && {
       key: "edit",

@@ -9,6 +9,7 @@ import {
   isAttestWithdrawable,
   isEditable,
   isInAttestChain,
+  isRecallable,
   isSigned,
   isSubmittable,
   submitBlocker,
@@ -257,12 +258,33 @@ describe("submitBlocker", () => {
 });
 
 describe("status predicates", () => {
-  it("lets an utlägg be edited until it is signed", () => {
+  it("lets an utlägg be edited while it is the submitter's own", () => {
     expect(isEditable("DRAFT")).toBe(true);
-    expect(isEditable("PENDING_APPROVAL")).toBe(true);
+    expect(isEditable("PENDING_MATCH")).toBe(true);
     expect(isEditable("CHANGES_REQUESTED")).toBe(true);
+  });
+
+  it("does not, while it is out for attest", () => {
+    // It has to hold still while somebody reads it: an amount that can change
+    // under an attester is a signature that says something other than what was
+    // signed. The way back is to recall it, which is deliberate and which
+    // clears the signatures already given.
+    expect(isEditable("PENDING_APPROVAL")).toBe(false);
+    expect(isRecallable("PENDING_APPROVAL")).toBe(true);
+  });
+
+  it("does not, once it is signed", () => {
     expect(isEditable("APPROVED")).toBe(false);
     expect(isEditable("BOOKED")).toBe(false);
+    expect(isEditable("EXPORTED")).toBe(false);
+  });
+
+  it("keeps editing and attesting disjoint", () => {
+    // The property the whole rule is for, said once: nothing is open for edits
+    // while it is somewhere in the attest chain.
+    for (const status of EDITABLE_STATUSES) {
+      expect(isInAttestChain(status)).toBe(false);
+    }
   });
 
   it("lets the owner send, and re-send, anything not yet attested", () => {
@@ -312,5 +334,24 @@ describe("status predicates", () => {
     for (const status of EDITABLE_STATUSES) {
       expect(SIGNED_STATUSES).not.toContain(status);
     }
+  });
+});
+
+describe("isRecallable", () => {
+  it("lets the submitter take back one that is only waiting", () => {
+    expect(isRecallable("PENDING_APPROVAL")).toBe(true);
+  });
+
+  it("does not, once somebody has actually attested it", () => {
+    // Then it is bookkeeping's to reopen — they are the ones who would have to
+    // unwind a voucher. See `return_approved`.
+    expect(isRecallable("APPROVED")).toBe(false);
+    expect(isRecallable("BOOKED")).toBe(false);
+    expect(isRecallable("EXPORTED")).toBe(false);
+  });
+
+  it("has nothing to take back from one already in the submitter's hands", () => {
+    expect(isRecallable("DRAFT")).toBe(false);
+    expect(isRecallable("CHANGES_REQUESTED")).toBe(false);
   });
 });

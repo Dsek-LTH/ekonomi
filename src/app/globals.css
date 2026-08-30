@@ -77,6 +77,10 @@
     /* One easing for everything that moves, so the app has a single hand.
         Exponential-ish ease-out: leaves fast, settles soft. */
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    /* How long the receipt panel takes to fold away or come back. Read by
+       both halves of the motion and by the timer that unmounts the panel
+       after it (RECEIPT_FOLD_MS), so the two cannot drift apart. */
+    --receipt-fold-ms: 240ms;
 }
 
 .dark {
@@ -423,6 +427,38 @@ summary {
       translate: 0 -50%;
     }
   }
+}
+
+/* The receipt panel's fold, both ways.
+   
+   One transition, and only on `translate`. The panel is on screen for the whole
+   of the move in both directions: folding away it slides to the edge, and
+   coming back it is mounted *at* the edge and let go on the next frame, so the
+   same transition carries it home. See `unfold` in receipt-panel.tsx for why
+   the way back needs that extra frame — a transition has nothing to move from
+   unless the browser has painted the starting value first.
+
+   `translate` alone, deliberately. The resize drag writes `--receipt-w`
+   straight onto the node a hundred times a sweep, and a width that eased would
+   lag the pointer by the whole of this duration.
+
+   `prefers-reduced-motion` is answered by the blunt rule above: cut to nothing,
+   ending on the resting state, so the panel simply arrives — which is what it
+   did before any of this existed. */
+.receipt-panel {
+  transition: translate var(--receipt-fold-ms) var(--ease-out-quint);
+}
+
+/* Promised while it moves, and taken back when it stops.
+   
+   The panel is the whole screen on a phone and it carries a rasterised PDF
+   page. Without the hint the browser has no reason to give that its own layer
+   until the move has already started, so the first frames re-rasterise the
+   canvas — which is the judder, and it is worst on exactly the hardware where
+   the panel is largest relative to the screen. A standing promise costs memory,
+   so the class carrying it is only on for the length of the move. */
+.receipt-panel-moving {
+  will-change: translate;
 }
 
 @keyframes receipt-tab-ring {
