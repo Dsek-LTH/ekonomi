@@ -1359,7 +1359,21 @@
       "onlyBaseRole": "Har bara {role}, grundnivån alla medlemmar har.",
       "rolesTitle": "Roller",
       "rolesSubtitle": "Rollerna styr åtkomst och attesträttigheter. De följer mandaten i Authentik och ändras där, inte här. {role} listas inte, eftersom alla medlemmar har den.",
-      "nobodyHasRole": "Ingen har den här rollen."
+      "nobodyHasRole": "Ingen har den här rollen.",
+      "explainFor": "Visa varför {name} har sina roller",
+      "whyTitle": "Varifrån rollerna kommer",
+      "whyLoading": "Hämtar rollernas ursprung…",
+      "whyFailed": "Kunde inte hämta varifrån rollerna kommer.",
+      "neverSeen": "Vi har ingen grupplista för den här personen — hen har inte loggat in sedan vi började spara den. Rollerna nedan kommer från en tidigare inloggning och går inte att härleda förrän hen loggar in igen.",
+      "noGrantedRoles": "Inga roller utöver grundnivån att härleda.",
+      "via": "från",
+      "leftover": "Ingen grupp ger den här",
+      "leftoverExplained": "En roll utan grupp bakom sig ligger kvar från en tidigare inloggning: mandatet finns inte längre i Authentik, men rollen står kvar på raden tills personen loggar in nästa gång. Den försvinner då av sig själv — kopplingen behöver inte ändras här.",
+      "resultUnitsTitle": "Resultatansvar för",
+      "unitMissing": "Resultatenheten finns inte",
+      "pending": "Vid nästa inloggning tillkommer: {items}. Personens grupper i Authentik har ändrats sedan raden skrevs.",
+      "groupsTitle": "Grupper vid senaste inloggningen",
+      "groupsHint": "Dämpade grupper ger ingenting här. Kopplingen mellan grupp och roll ändras under Roller."
     },
     "cards": {
       "title": "Sektionskort",

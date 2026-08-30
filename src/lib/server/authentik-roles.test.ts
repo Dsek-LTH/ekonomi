@@ -3,7 +3,13 @@ import {
   DEFAULT_GROUP_RESULT_UNITS,
   DEFAULT_GROUP_ROLES,
 } from "./authority-defaults";
-import { buildMapping, deriveGrants, reapplyGrants, sectionGroups } from "./authentik-roles";
+import {
+  buildMapping,
+  deriveGrants,
+  explainGrants,
+  reapplyGrants,
+  sectionGroups,
+} from "./authentik-roles";
 
 // The mapping is rows now, edited in Inställningar → Roller, so what a
 // deployment grants is not something a unit test can know. Two things still are,
@@ -91,6 +97,75 @@ describe("deriveGrants", () => {
     expect(deriveGrants(one, ["dsek.x.mastare"])).toEqual({
       roles: ["ORDINARIE", "RESULTATANSVARIG"],
       resultUnits: ["Något"],
+    });
+  });
+});
+
+
+// The half of the derivation that exists to be read by a person: which group
+// made somebody what they are. Its answers have to agree with `deriveGrants`
+// exactly — an explanation that disagrees with the grant it explains is worse
+// than none — which is why the two share a walk, and why the first case here
+// holds them against each other rather than against a literal.
+describe("explainGrants", () => {
+  const why = (groups: string[] | undefined) => explainGrants(DEFAULTS, groups);
+
+  it("says the same thing the grant does, for any list", () => {
+    const list = ["dsek.ordf", "dsek.infu.mastare", "authentik Admins", "dsek.medlem"];
+    const sources = why(list);
+    expect(sources.roles.map((r) => r.role)).toEqual(grants(list).roles);
+    expect(sources.resultUnits.map((u) => u.unit)).toEqual(grants(list).resultUnits);
+  });
+
+  it("names the group behind each role", () => {
+    const sources = why(["dsek.ordf"]);
+    expect(sources.roles).toContainEqual({ role: "ORDFORANDE", groups: ["dsek.ordf"] });
+  });
+
+  it("gives the baseline no group, because nothing grants it", () => {
+    expect(why([]).roles).toEqual([{ role: "ORDINARIE", groups: [] }]);
+  });
+
+  it("blames the result unit's own group for the resultatansvarig role", () => {
+    // The question this whole thing was built to answer: somebody is
+    // resultatansvarig and nobody can think of a mandate that would do that.
+    const one = buildMapping([], [{ group: "dsek.x.mastare", unit: "Något" }]);
+    const sources = explainGrants(one, ["dsek.x.mastare"]);
+    expect(sources.roles).toContainEqual({
+      role: "RESULTATANSVARIG",
+      groups: ["dsek.x.mastare"],
+    });
+    expect(sources.resultUnits).toEqual([{ unit: "Något", groups: ["dsek.x.mastare"] }]);
+  });
+
+  it("names every group behind a role held twice over", () => {
+    const sources = why(["dsek.infu.mastare", "dsek.cafe.mastare"]);
+    const owner = sources.roles.find((r) => r.role === "RESULTATANSVARIG");
+    expect(owner?.groups).toEqual(["dsek.infu.mastare", "dsek.cafe.mastare"]);
+  });
+
+  it("reports the groups of ours that grant nothing, and only those", () => {
+    const sources = why(["dsek.ordf", "dsek.medlem", "authentik Admins"]);
+    // Not `authentik Admins`: it is not ours, so it is not ours to report on.
+    expect(sources.silentGroups).toEqual(["dsek.medlem"]);
+    expect(sources.groups).toEqual(["dsek.ordf", "dsek.medlem"]);
+  });
+
+  it("counts a mapped-but-empty group as granting nothing", () => {
+    // What a group added on the settings screen looks like before anyone picks
+    // a role for it. It is as silent as one nobody mapped at all, and the
+    // screen that flags typos should see it the same way.
+    const blank = buildMapping([], []);
+    expect(explainGrants(blank, ["dsek.sex.mastare"]).silentGroups).toEqual([
+      "dsek.sex.mastare",
+    ]);
+  });
+
+  it("normalises and dedupes the list it read", () => {
+    expect(why([" DSEK.Ordf ", "dsek.ordf"]).groups).toEqual(["dsek.ordf"]);
+    expect(why([" DSEK.Ordf ", "dsek.ordf"]).roles).toContainEqual({
+      role: "ORDFORANDE",
+      groups: ["dsek.ordf"],
     });
   });
 });

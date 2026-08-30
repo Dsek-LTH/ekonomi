@@ -1359,7 +1359,21 @@
       "onlyBaseRole": "Only holds {role}, the baseline every member has.",
       "rolesTitle": "Roles",
       "rolesSubtitle": "Roles govern access and approval authority. They follow the mandates in Authentik and are changed there, not here. {role} is not listed, since every member holds it.",
-      "nobodyHasRole": "Nobody holds this role."
+      "nobodyHasRole": "Nobody holds this role.",
+      "explainFor": "Show why {name} holds their roles",
+      "whyTitle": "Where the roles come from",
+      "whyLoading": "Looking up where the roles come from…",
+      "whyFailed": "Could not look up where the roles come from.",
+      "neverSeen": "We have no group list for this member — they have not signed in since we started keeping one. The roles below come from an earlier sign-in and cannot be traced until they sign in again.",
+      "noGrantedRoles": "No roles beyond the baseline to trace.",
+      "via": "from",
+      "leftover": "No group grants this",
+      "leftoverExplained": "A role with no group behind it is left over from an earlier sign-in: the mandate is gone from Authentik, but the role stays on the row until the holder next signs in. It clears itself then — there is nothing to change in the mapping.",
+      "resultUnitsTitle": "Answers for",
+      "unitMissing": "No such result unit",
+      "pending": "Their next sign-in adds: {items}. Their Authentik groups have changed since the row was written.",
+      "groupsTitle": "Groups at their last sign-in",
+      "groupsHint": "Dimmed groups grant nothing here. Which group confers which role is edited under Roles."
     },
     "cards": {
       "title": "Guild cards",

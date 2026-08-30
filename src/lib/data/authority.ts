@@ -15,6 +15,8 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import { explainGrants, groupMapping } from "@/lib/server/authentik-roles";
+import { ROLES } from "@/lib/domain/permissions";
 import type { Capability, Role } from "@/lib/domain/types";
 
 export type GroupRow = {
@@ -121,5 +123,139 @@ export async function getAuthority(): Promise<AuthorityData> {
     roleCapabilities,
     roleHolders,
     membersWithoutGroups: withoutGroups,
+  };
+}
+
+// ── Why one person holds what they hold ───────────────────────────
+//
+// Authority is derived at sign-in and stored on the User row, which makes it
+// fast to read and impossible to interrogate: a role is a value in a column,
+// with nothing beside it saying where it came from. So when somebody turns out
+// to be resultatansvarig and nobody can think of a mandate that would do that,
+// the only way to find out used to be to open Authentik, read a group list, and
+// compare it by eye against the mapping — for a role that may well have been
+// derived from a group list that has since changed.
+//
+// The evidence is already kept (`User.authentikGroups`), and the derivation is
+// already a pure function of it, so this simply runs the derivation again with
+// its workings shown and lays the result against what the row actually says.
+// Three answers come out of that, and they are different problems:
+//
+//   • a role with groups behind it — the ordinary case, and the group name is
+//     what somebody goes and looks at next;
+//   • a role with nothing behind it — held here, granted by nothing. Either the
+//     mandate ended in Authentik and its holder has not signed in since (their
+//     stored group list is as stale as the role), or it predates the mapping
+//     entirely. It is a leftover either way, and it will not clear itself until
+//     they sign in;
+//   • a role the mapping grants that the row does not have yet — the mirror
+//     image, landing at their next sign-in.
+
+export type RoleReason = {
+  role: Role;
+  /** The person's groups that confer it. Empty for ORDINARIE, and for a leftover. */
+  groups: string[];
+  /** The floor every member stands on, not a grant. Has no groups by design. */
+  baseline: boolean;
+  /** Held, and nothing in their stored group list accounts for it. */
+  leftover: boolean;
+};
+
+export type UnitReason = {
+  /** A ResultUnit *name*, the way User.resultUnits stores it. */
+  unit: string;
+  groups: string[];
+  leftover: boolean;
+  /** Whether a result unit by that name still exists. One that does not grants
+   *  nothing — attest is matched by name (lib/domain/permissions.ts). */
+  exists: boolean;
+};
+
+export type UserAuthority = {
+  user: { id: string; name: string; email: string };
+  /** Their section groups, as of their last sign-in. */
+  groups: string[];
+  /** Groups they hold that the mapping grants nothing for. */
+  silentGroups: string[];
+  /** Every role on the row, in the app's role order, with what accounts for it. */
+  roles: RoleReason[];
+  /** Every result unit on the row, likewise. */
+  resultUnits: UnitReason[];
+  /** What the mapping would grant that the row does not carry — lands at their
+   *  next sign-in. Non-empty means the row is behind the mapping, which after a
+   *  mapping edit should not happen (`reapplyGrants` catches everyone up), so it
+   *  is worth saying out loud when it does. */
+  pendingRoles: Role[];
+  pendingUnits: string[];
+  /** No group list stored at all: they have not signed in since the column was
+   *  added, so nothing here can be explained — not even the roles they hold. */
+  neverSeen: boolean;
+};
+
+export async function getUserAuthority(userId: string): Promise<UserAuthority | null> {
+  const [user, mapping] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        resultUnits: true,
+        authentikGroups: true,
+      },
+    }),
+    groupMapping(),
+  ]);
+  if (!user) return null;
+
+  const sources = explainGrants(mapping, user.authentikGroups);
+  const behindRole = new Map(sources.roles.map((r) => [r.role, r.groups]));
+  const behindUnit = new Map(sources.resultUnits.map((u) => [u.unit, u.groups]));
+
+  // Only asked when they answer for something, and only about the names on
+  // their row: a name with no result unit behind it is held and inert, and the
+  // screen says so rather than showing it as authority they do not have.
+  const existing = user.resultUnits.length
+    ? new Set(
+        (
+          await prisma.resultUnit.findMany({
+            where: { name: { in: user.resultUnits } },
+            select: { name: true },
+          })
+        ).map((u) => u.name),
+      )
+    : new Set<string>();
+
+  // In the app's role order rather than the column's, which is insertion order
+  // from whichever sign-in last wrote it and means nothing to a reader.
+  const roles: RoleReason[] = ROLES.filter((r) => user.roles.includes(r)).map((role) => {
+    const groups = behindRole.get(role) ?? [];
+    return {
+      role,
+      groups,
+      baseline: role === "ORDINARIE",
+      leftover: role !== "ORDINARIE" && groups.length === 0,
+    };
+  });
+
+  const resultUnits: UnitReason[] = [...user.resultUnits]
+    .sort((a, b) => a.localeCompare(b, "sv"))
+    .map((unit) => {
+      const groups = behindUnit.get(unit) ?? [];
+      return { unit, groups, leftover: groups.length === 0, exists: existing.has(unit) };
+    });
+
+  return {
+    user: { id: user.id, name: user.name, email: user.email },
+    groups: sources.groups,
+    silentGroups: sources.silentGroups,
+    roles,
+    resultUnits,
+    pendingRoles: sources.roles.map((r) => r.role).filter((r) => !user.roles.includes(r)),
+    pendingUnits: sources.resultUnits
+      .map((u) => u.unit)
+      .filter((u) => !user.resultUnits.includes(u)),
+    neverSeen: user.authentikGroups.length === 0,
   };
 }

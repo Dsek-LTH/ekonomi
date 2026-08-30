@@ -41,6 +41,25 @@ export interface Grants {
   resultUnits: string[];
 }
 
+/**
+ * The same answer with its workings: every role and result unit, and the
+ * group(s) each one came out of.
+ *
+ * Groups are named rather than counted because the name is the actionable part
+ * — it is what somebody types into Authentik, or looks up in Inställningar →
+ * Roller, once they know which one to go and look at.
+ */
+export interface GrantSources {
+  /** The section groups this was read from, normalised and deduped, in order. */
+  groups: string[];
+  /** Each role granted, and the groups behind it. ORDINARIE has none. */
+  roles: { role: Role; groups: string[] }[];
+  /** Each result unit answered for, and the groups that hand it over. */
+  resultUnits: { unit: string; groups: string[] }[];
+  /** Groups of ours in the list that the mapping grants nothing for. */
+  silentGroups: string[];
+}
+
 // Which names are the section's, and the form they are compared in, live in
 // lib/domain/group-name.ts — the settings screen that edits this mapping needs
 // the same rule, and it runs in the browser.
@@ -80,12 +99,13 @@ export function buildMapping(
 }
 
 /**
- * What a group list confers, given a mapping. Pure.
+ * What a group list confers *and why*, given a mapping. Pure.
  *
  * Roles always include ORDINARIE: every signed-in member may submit their own
  * utlägg, and a role set that could come back empty would mean a person who is
  * authenticated and yet cannot use the app. It is a floor, not a mapping row —
- * there is no row to take it away with, deliberately.
+ * there is no row to take it away with, deliberately. It is the one entry with
+ * no group behind it, which is how a reader tells it apart from the rest.
  *
  * A group that maps to a result unit also confers RESULTATANSVARIG. The role
  * and the reach come from the same row, so neither can be granted without the
@@ -93,30 +113,72 @@ export function buildMapping(
  *
  * Unknown groups are ignored rather than rejected — Authentik gains groups for
  * reasons that have nothing to do with this app, and none of them should be an
- * error here.
+ * error here. They are still reported, in `silentGroups`: "he is in that group
+ * and it means nothing here" is the answer to half the questions this function
+ * gets asked.
+ *
+ * The workings are kept rather than thrown away because somebody eventually
+ * asks why a person holds a role — and answering that from the outside means
+ * running the derivation again by hand, against a mapping that has since been
+ * edited. `deriveGrants` below is a summary of this, so what the app grants and
+ * what it says about the grant cannot drift apart.
  */
-export function deriveGrants(
+export function explainGrants(
   mapping: GroupMapping,
   groups: readonly string[] | undefined,
-): Grants {
-  const roles = new Set<Role>(["ORDINARIE"]);
-  const resultUnits = new Set<string>();
+): GrantSources {
+  // Maps rather than Sets: same insertion order, and the order is the reading
+  // order — ORDINARIE first, then whatever each group adds as it is read.
+  const roles = new Map<Role, string[]>([["ORDINARIE", []]]);
+  const units = new Map<string, string[]>();
+  const seen: string[] = [];
+  const silent: string[] = [];
+
+  const note = <K>(into: Map<K, string[]>, key: K, group: string) => {
+    const behind = into.get(key);
+    if (!behind) into.set(key, [group]);
+    else if (!behind.includes(group)) behind.push(group);
+  };
 
   for (const raw of groups ?? []) {
     const group = normaliseGroup(raw);
     if (!isSectionGroup(group)) continue;
+    if (seen.includes(group)) continue; // a list can repeat; a reason should not
+    seen.push(group);
 
+    // A row with neither a role nor a unit on it is a group somebody added to
+    // the mapping and has not filled in yet. It grants exactly as much as a
+    // group nobody mapped at all, so it is reported the same way.
     const grant = mapping.get(group);
-    if (!grant) continue;
+    if (!grant || (grant.roles.length === 0 && grant.resultUnits.length === 0)) {
+      silent.push(group);
+      continue;
+    }
 
-    for (const role of grant.roles) roles.add(role);
-    if (grant.resultUnits.length > 0) roles.add("RESULTATANSVARIG");
-    for (const unit of grant.resultUnits) resultUnits.add(unit);
+    for (const role of grant.roles) note(roles, role, group);
+    if (grant.resultUnits.length > 0) note(roles, "RESULTATANSVARIG", group);
+    for (const unit of grant.resultUnits) note(units, unit, group);
   }
 
   return {
-    roles: [...roles],
-    resultUnits: [...resultUnits].sort((a, b) => a.localeCompare(b, "sv")),
+    groups: seen,
+    roles: [...roles].map(([role, behind]) => ({ role, groups: behind })),
+    resultUnits: [...units]
+      .map(([unit, behind]) => ({ unit, groups: behind }))
+      .sort((a, b) => a.unit.localeCompare(b.unit, "sv")),
+    silentGroups: silent,
+  };
+}
+
+/** What a group list confers, given a mapping. Pure. */
+export function deriveGrants(
+  mapping: GroupMapping,
+  groups: readonly string[] | undefined,
+): Grants {
+  const sources = explainGrants(mapping, groups);
+  return {
+    roles: sources.roles.map((r) => r.role),
+    resultUnits: sources.resultUnits.map((u) => u.unit),
   };
 }
 
