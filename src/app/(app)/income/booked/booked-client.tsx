@@ -2,14 +2,14 @@
 
 // Bokfört och exporterat: the section's record of what it took in.
 //
-// The durable half, and the only income state that outlives a fetch — what is
+// The durable half, and the only income state that outlives a fetch. What is
 // waiting to be booked is scratch that the next fetch replaces (see
 // review-client). So this is the answer to "did we book 3 September, and is it
 // in Fortnox yet".
 //
 // A different job from the review queue:
 // reading rather than deciding, often at a different time and by a different
-// person. Nothing here changes a voucher — once a day is booked the
+// person. Nothing here changes a voucher. Once a day is booked the
 // verifikation is what says where the money went, and the only step left is
 // pushing it to Fortnox.
 //
@@ -41,7 +41,7 @@ import { incomeSections } from "../sections";
 const SOURCES: IncomeSource[] = ["SWISH", "ZETTLE", "ZETTLE_FEE"];
 
 // Which state reads as what. This list is the booked half, so DRAFT is the odd
-// one out — a day still waiting has no business being read as done.
+// one out. A day still waiting has no business being read as done.
 const TONE: Record<IncomeReportStatus, "neutral" | "accent" | "success" | "warning"> = {
   DRAFT: "warning",
   BOOKED: "accent",
@@ -54,7 +54,7 @@ export default function BookedClient({
 }: {
   reports: IncomeReportRow[];
   /**
-   * Whether this viewer may undo any of it — unexport, reopen, delete.
+   * Whether this viewer may undo any of it: unexport, reopen, delete.
    *
    * The narrow treasury gate rather than bookkeeping access, decided on the
    * server where the roles are: undoing an export leaves a voucher in Fortnox
@@ -133,7 +133,7 @@ export default function BookedClient({
   /**
    * Take a booked day apart and hand it back to the review queue.
    *
-   * It becomes an ordinary draft there — waiting to be booked again, and swept
+   * It becomes an ordinary draft there, waiting to be booked again, and swept
    * away by the next fetch like any other, which is what "unbooked" should mean
    * for a day whose takings the next fetch will bring back anyway.
    */
@@ -151,7 +151,7 @@ export default function BookedClient({
     if (done) router.push(`/income?report=${report.id}`);
   }
 
-  /** Remove a day entirely — the report, its sold lines and its verifikation. */
+  /** Remove a day entirely: the report, its sold lines and its verifikation. */
   async function remove(report: IncomeReportRow) {
     const ok = await confirm({
       title: t("undo.deleteTitle", { date: formatDate(report.date) }),
@@ -205,7 +205,7 @@ export default function BookedClient({
       sortable: true,
       searchable: true,
       className: "tabular-nums",
-      cell: (r) => r.costCenterCode ?? "—",
+      cell: (r) => r.costCenterCode ?? "–",
     },
     {
       key: "status",
@@ -220,7 +220,7 @@ export default function BookedClient({
       value: (r) => r.voucherLabel ?? "",
       sortable: true,
       searchable: true,
-      cell: (r) => (r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "—"),
+      cell: (r) => (r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "–"),
     },
     {
       key: "total",
@@ -300,12 +300,12 @@ export default function BookedClient({
       })}
     >
 
-      {/* The stored intäktsräkning — these bytes, not a fresh render: they are
+      {/* The stored intäktsräkning, these bytes, not a fresh render: they are
           what the voucher was booked on and what Fortnox was given. */}
       <ReceiptPanelSource
         documentUrl={viewing ? `/api/income/reports/${viewing}/document` : null}
         mimeType="application/pdf"
-        filename={viewed ? `${t(`source.${viewed.source}`)} · ${formatDate(viewed.date)}` : undefined}
+        filename={viewed ? `${t(`source.${viewed.source}`)} – ${formatDate(viewed.date)}` : undefined}
       />
 
       <Card>

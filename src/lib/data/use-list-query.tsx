@@ -1,12 +1,12 @@
 "use client";
 
-// What a list screen is currently showing, as React state — the other half of
+// What a list screen is currently showing, as React state, the other half of
 // list-query.ts, which is the value itself and how it is spelled in a URL.
 //
 // It lived in components/ui for a while, beside spinner.tsx and chip.tsx, which
 // is the wrong shelf: this is not a UI primitive, it is the client end of the
 // list-query subsystem, and it re-exported that module's own types to get at
-// them. The distance showed — the URL-backed hook was parsing the address
+// them. The distance showed: the URL-backed hook was parsing the address
 // without the `defaultTab` the page had passed to `parseListQuery` four lines
 // away in another file, so the two disagreed about which tab was in force.
 //
@@ -41,7 +41,7 @@ type BaseControls = {
   tab: string;
   setTab: (v: string) => void;
   // Values active in DataTable's dropdown filter. Empty means it isn't
-  // narrowing anything, which is its resting state — unlike `tab`, where one
+  // narrowing anything, which is its resting state, unlike `tab`, where one
   // option is always in force.
   picks: string[];
   setPicks: (v: string[]) => void;
@@ -60,7 +60,7 @@ type BaseControls = {
   toggleSort: (key: string) => void;
   /**
    * The page's own segmented toggle (whose utlägg to show), where it has one.
-   * Carried here so it travels with the rest of the list's state — on a
+   * Carried here so it travels with the rest of the list's state. On a
    * URL-backed list it is a filter like any other and belongs in the address.
    */
   view: string;
@@ -70,7 +70,7 @@ type BaseControls = {
 /** A list the database narrowed. The total is what it reported. */
 export type ServerControls = BaseControls & {
   server: true;
-  /** Matching rows in the database, not on this page — the pager needs both. */
+  /** Matching rows in the database, not on this page. The pager needs both. */
   total: number;
 };
 
@@ -159,7 +159,7 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
 /** How long a search box sits still before the server is asked again. */
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Whatever was typed is worth asking about — the search box's rule. */
+/** Whatever was typed is worth asking about. The search box's rule. */
 const always = () => true;
 
 /** A whole date, or nothing at all. Anything in between is still being typed. */
@@ -169,14 +169,14 @@ const wholeOrEmpty = (v: string) => v === "" || isWholeDate(v);
  * A control whose value lives in the URL but is typed into.
  *
  * The URL is the state, and on these pages a URL change is a Server Component
- * render — a round trip. A controlled input reading straight from it therefore
+ * render, a round trip. A controlled input reading straight from it therefore
  * shows nothing until the trip lands, which means every character is thrown
  * away in front of you, and every character starts another trip.
  *
  * So the draft is echoed here and the URL is written on the caller's terms:
  *
  *   the search box  commits anything, once the typing stops
- *   a date          commits only a whole one, and empty to clear it — a
+ *   a date          commits only a whole one, and empty to clear it. A
  *                   half-typed date is not a filter, and parseListQuery drops
  *                   it on the way back in, which is what blanked the field
  *
@@ -193,7 +193,7 @@ function useUrlDraft(
   // from the URL moving because of us.
   const ours = useRef(committed);
 
-  // Re-seed when the URL's own value moves without us typing — Back, or a link.
+  // Re-seed when the URL's own value moves without us typing. Back, or a link.
   useEffect(() => {
     if (committed !== ours.current) {
       ours.current = committed;
@@ -221,7 +221,7 @@ function useUrlDraft(
 export function useUrlTableControls(
   total: number,
   /**
-   * The tab in force when the URL names none — the same value the page passed
+   * The tab in force when the URL names none, the same value the page passed
    * to `parseListQuery`, and the reason this is an argument at all.
    *
    * The page parses the URL to build its query, and this parses it again to
@@ -239,7 +239,7 @@ export function useUrlTableControls(
 
   // The URL is the state. Re-parsed on every render, which is cheap and means
   // Back, Forward and a pasted link all land in exactly the same place as a
-  // click — there is no second copy of this to keep in step.
+  // click. There is no second copy of this to keep in step.
   const q = parseListQuery(Object.fromEntries(params.entries()), { defaultTab });
 
   const commit = useCallback(
@@ -264,7 +264,7 @@ export function useUrlTableControls(
     commit({ [key]: v, page: 0 } as Partial<ListQuery>);
 
   // The three controls that are typed into rather than clicked. None of them
-  // can wait for a round trip per keystroke — see useUrlDraft.
+  // can wait for a round trip per keystroke. See useUrlDraft.
   const [query, setQuery] = useUrlDraft(q.q, (v) => commit({ q: v, page: 0 }), {
     ready: always,
     debounceMs: SEARCH_DEBOUNCE_MS,

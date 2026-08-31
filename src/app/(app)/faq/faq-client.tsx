@@ -1,6 +1,6 @@
 "use client";
 
-// Frågor & svar — the guild's "HOW TO UTLÄGG" turned into something you can
+// Frågor & svar, the guild's "HOW TO UTLÄGG" turned into something you can
 // search at the register with your phone in one hand, instead of a PDF you have
 // to remember you were sent. The text itself lives in messages/faq/<locale>.json
 // (see faq-content.ts); this file is only how it reads and how you find it.
@@ -35,11 +35,11 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(ALL);
   // Which questions have been clicked open or shut *against* what the page
-  // would show on its own — see `isOpen`.
+  // would show on its own. See `isOpen`.
   const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
   const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
 
-  // One lowercased haystack per question, built once — the answers don't change
+  // One lowercased haystack per question, built once. The answers don't change
   // between keystrokes.
   const index = useMemo(
     () => sections.flatMap((s) => s.items.map((i) => [i.id, searchText(i)] as const)),
@@ -58,7 +58,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   }, [query, index]);
 
   // What a question does when nobody has touched it. A search is a question,
-  // and a screen of collapsed headlines answers none of it — so a search opens
+  // and a screen of collapsed headlines answers none of it, so a search opens
   // what it found. Failing that, /faq#deadline opens the answer it names, which
   // is what makes these anchors worth putting in a reminder mail.
   const opensItself = (id: string) => (matches ? matches.has(id) : hash === id);
@@ -114,7 +114,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
           aria-label={t("searchPlaceholder")}
           className="sm:max-w-md"
         />
-        {/* Which slice of the questions, so the underline register — the pills
+        {/* Which slice of the questions, so the underline register (the pills
             these were would have read as "which set of questions is this
             page about", which is not a choice this page offers. */}
         <div className="border-b border-border">
@@ -172,7 +172,7 @@ function Question({
   // 200ms and the app's one easing (see DESIGN.md → Motion). The global
   // prefers-reduced-motion guard in globals.css cuts every duration here to
   // nothing, so the answer arrives instead of unfolding for anyone who asked
-  // for that — no separate branch needed.
+  // for that, no separate branch needed.
   const MOTION = "duration-200 ease-[var(--ease-out-quint)]";
   return (
     // The id is on the row, not the button: an anchor should land on the whole
@@ -195,7 +195,7 @@ function Question({
         />
       </button>
       {/* The answer stays mounted and is opened by animating the row it sits in
-          from 0fr to 1fr — the one way to transition to a height nobody has
+          from 0fr to 1fr, the one way to transition to a height nobody has
           measured, and it costs no JS and no ResizeObserver. A browser that
           won't interpolate `fr` still lands on the right two end states and
           just snaps between them.
@@ -214,7 +214,7 @@ function Question({
       >
         {/* Two wrappers, and both are load-bearing: the outer one is the grid
             row being animated and clips what overflows it, and the inner one
-            carries the padding — on the outer, the bottom padding would keep a
+            carries the padding. On the outer, the bottom padding would keep a
             closed answer 20px tall. */}
         <div className="overflow-hidden">
           <div className="px-inset pb-5">
@@ -275,7 +275,7 @@ function Block({ block }: { block: FaqBlock }) {
       return <AnswerTable head={block.head} rows={block.rows} />;
 
     case "link":
-      // Absolute or `tel:` — an in-app destination is an `action` block, and
+      // Absolute or `tel:`. An in-app destination is an `action` block, and
       // gets a button rather than a line of text.
       return (
         <p>
@@ -327,7 +327,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
           />
         </a>
       ) : (
-        // Stands in until the photo exists, and says which file to add — this
+        // Stands in until the photo exists, and says which file to add. This
         // page is maintained by whoever holds the treasury, and a frame that
         // renders nothing is a frame nobody knows how to fill.
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">

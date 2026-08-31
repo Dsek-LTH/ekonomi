@@ -1,6 +1,6 @@
 // Money is stored everywhere in the DB as an integer number of öre (1 SEK = 100
 // öre) to avoid floating-point drift. The UI works in SEK. These are the single
-// pair of converters — do not hand-roll `* 100` / `/ 100` elsewhere.
+// pair of converters. Do not hand-roll `* 100` / `/ 100` elsewhere.
 
 /** öre (integer) → SEK (decimal), for display/serialisation. */
 export function oreToSEK(ore: number | null | undefined): number {
@@ -16,7 +16,7 @@ export function sekToOre(sek: number | null | undefined): number {
  * What may stand in an amount field while it is being typed: digits, spaces as
  * thousand separators, one comma or dot, at most two decimals, optional minus.
  *
- * Two decimals because öre is the resolution money is stored at (see above) — a
+ * Two decimals because öre is the resolution money is stored at (see above). A
  * third is not a smaller amount, it is one that `sekToOre` rounds away, and a
  * figure that changes between typing it and saving it is the kind of thing
  * nobody notices until the voucher is off by an öre.
@@ -29,7 +29,7 @@ const AMOUNT_INPUT = /^-?[\d ]*(?:[.,]\d{0,2})?$/;
 /**
  * The same amount, written the way a Swedish reader writes one.
  *
- * Both separators are accepted on the way in and always were — `parseSEK` reads
+ * Both separators are accepted on the way in and always were. `parseSEK` reads
  * either. This is about what the field shows afterwards, and it exists because
  * of the keyboard: a phone's decimal pad offers the separator its *device*
  * locale uses, so a Swedish member with an English phone can only type a full
@@ -39,11 +39,11 @@ const AMOUNT_INPUT = /^-?[\d ]*(?:[.,]\d{0,2})?$/;
 export const commaForm = (input: string): string => input.replace(".", ",");
 
 /**
- * The same amount with its sign turned over — "12,50" ⇄ "-12,50".
+ * The same amount with its sign turned over: "12,50" ⇄ "-12,50".
  *
  * A negative amount is a real and ordinary thing here: a return is the same
- * utlägg with the sign flipped. But no mobile numeric keypad has a minus key —
- * not iOS's, not Android's, at any `inputMode` — so on a phone the sign is not
+ * utlägg with the sign flipped. But no mobile numeric keypad has a minus key,
+ * not iOS's, not Android's, at any `inputMode`, so on a phone the sign is not
  * something that can be typed at all, and a control has to offer it instead.
  *
  * An empty field flips to "-", which is what somebody reaching for the sign
@@ -53,7 +53,7 @@ export const commaForm = (input: string): string => input.replace(".", ",");
 export const flipSign = (input: string): string =>
   input.startsWith("-") ? input.slice(1) : `-${input}`;
 
-/** Whether `input` is on its way to being an amount — see AMOUNT_INPUT. */
+/** Whether `input` is on its way to being an amount. See AMOUNT_INPUT. */
 export function isAmountInput(input: string): boolean {
   return AMOUNT_INPUT.test(input);
 }

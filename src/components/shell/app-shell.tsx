@@ -45,9 +45,10 @@ import {
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import type { Theme } from "@/lib/ui/theme";
 
+import { owningRoute } from "@/lib/ui/routes";
 import { cn } from "@/lib/ui/utils";
 
-// Nav visibility is a capability predicate over the current user — their roles
+// Nav visibility is a capability predicate over the current user: their roles
 // for most items, plus non-role capabilities like card holdership.
 //
 // `label` is a key under the `nav` namespace, not text: the table is built once
@@ -69,7 +70,7 @@ const ALL = () => true;
 
 // How wide the main column may grow. One cap per section, not two: what the
 // rail costs the row is a constant 64px, and the panel it opens into overlays
-// the page rather than widening the column it stands beside — so there is no
+// the page rather than widening the column it stands beside, so there is no
 // width being handed back and forth for the content to compensate for.
 const CONTENT_MAX = {
   budget: "max-w-[1792px]",
@@ -81,9 +82,9 @@ const CONTENT_MAX = {
  * hover, and stays there if you pin it.
  *
  * It was a 16px strip of screen edge with a hairline on it, opening the same
- * panel. That bought the 13" layout its width back — with the intäkter list at
+ * panel. That bought the 13" layout its width back. With the intäkter list at
  * 256, the receipt at ~520 and the frame's own gutters, a permanent 256px
- * sidebar left the booking form around 320px — but tested on people who hadn't
+ * sidebar left the booking form around 320px. But tested on people who hadn't
  * been shown it, the hairline simply wasn't found. Worse than the navigation
  * being hard to reach: with the panel shut there was no current-section marker,
  * no brand, and no way to profile, theme, language or sign-out at all, since
@@ -120,7 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/expenses", label: "expenses", icon: IconReceipt, visible: ALL },
       // The bank feed, which used to be two links: "Kortköp" here for a card
       // holder and "Bank & matchning" under Bokföring for the treasury. One
-      // page reads both ways now (see (app)/bank/page.tsx), so it is one link —
+      // page reads both ways now (see (app)/bank/page.tsx), so it is one link,
       // and it belongs here rather than under Bokföring, because for most of
       // the people who open it the errand is turning a purchase into an utlägg.
       {
@@ -140,7 +141,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: "budget",
         icon: IconBudget,
         // Was `visible: canAccessBudget` when that helper took nothing and
-        // answered true — the budget is the section's, not the treasury's. It
+        // answered true. The budget is the section's, not the treasury's. It
         // is a capability now, granted to every role by the migration, so the
         // default is unchanged and narrowing it no longer needs a deploy.
         visible: (u) => canAccessBudget(u.capabilities),
@@ -178,10 +179,10 @@ const NAV_GROUPS: NavGroup[] = [
       // roles that see this see nothing else in the app.
       { href: "/stock", label: "stock", icon: IconBox, visible: (u) => canViewStock(u.capabilities) },
       // Above the log, because it is where the work happens: taking stock out
-      // and bringing it back is registered on the occasion it belongs to. The
+      // and bringing it back is registered on the event it belongs to. The
       // log is what you open when a figure looks wrong.
       {
-        href: "/stock/tags",
+        href: "/stock/events",
         label: "stockEvents",
         icon: IconCalendar,
         visible: (u) => canViewStock(u.capabilities),
@@ -204,7 +205,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 // Settings replace the app nav rather than nesting inside it. A settings
 // section may need its own list-and-detail layout, and with the app nav still
-// in place that would be a third column — so while the path is under /admin the
+// in place that would be a third column, so while the path is under /admin the
 // sidebar shows these instead, with a way back at the top.
 const SETTINGS_NAV: NavGroup[] = [
   {
@@ -229,8 +230,8 @@ const SETTINGS_NAV: NavGroup[] = [
  * Every section of the app by route, with the name the nav gives it.
  *
  * Exported for the back link. A nested page names one parent, but you can reach
- * it from any list that links to it — an utlägg is opened from Utlägg, from
- * Attest, from Bokföring and from Översikt — and "← Utlägg" is the wrong answer
+ * it from any list that links to it. An utlägg is opened from Utlägg, from
+ * Attest, from Bokföring and from Översikt, and "← Utlägg" is the wrong answer
  * on three of those. Derived from the nav itself so a section cannot be added
  * in one place and forgotten in the other. See components/back-link.tsx.
  */
@@ -244,28 +245,16 @@ export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * The nav's name for wherever we are, by longest matching route.
+ * Which section of the app a path belongs to, as the nav route that owns it.
+ * See lib/ui/routes' `owningRoute`, which is where the rule and its tests live.
  *
- * For the phone's top bar, which said "D-sektionen" on every screen — the one
- * thing a reader already knows. Longest match and not first: /stock, /stock/tags
- * and /stock/log are all sections in their own right, and a prefix test that
- * stopped at the first hit would call all three of them Lager.
- *
- * Nothing for a route the nav does not list (/profile, an utlägg's own page).
- * Those are pages under a section rather than sections, and they carry their own
- * heading and back link; the bar falls back to the brand.
+ * One rule for two readers. The sidebar lit every row whose route was a prefix
+ * of the path, so /stock/events lit Lager and Tillfällen together, while
+ * this same lookup, one screen away, was already answering "Tillfällen" for the
+ * phone's top bar. They cannot disagree now.
  */
-const sectionLabel = (path: string): string | null => {
-  let best: string | null = null;
-  let longest = 0;
-  for (const [href, label] of Object.entries(SECTION_LABELS)) {
-    if ((path === href || path.startsWith(`${href}/`)) && href.length > longest) {
-      best = label;
-      longest = href.length;
-    }
-  }
-  return best;
-};
+const sectionHref = (path: string): string | null =>
+  owningRoute(path, Object.keys(SECTION_LABELS));
 
 export function AppShell({
   children,
@@ -278,11 +267,11 @@ export function AppShell({
    *  pinned on the first paint rather than snapping wide after hydration. */
   defaultPinned?: boolean;
   /** The stored theme, read from its cookie by the same layout for the same
-   *  reason — it is only passing through, on its way to the footer's toggle. */
+   *  reason. It is only passing through, on its way to the footer's toggle. */
   theme: Theme;
   /**
    * The reader's own Fortnox login, when they are one of the roles that books
-   * under one. Absent for everybody else, and the nav shows nothing — the row
+   * under one. Absent for everybody else, and the nav shows nothing: the row
    * is an action only the treasury can take. A present-but-null session is
    * signed out. See the foot of the nav.
    */
@@ -297,13 +286,13 @@ export function AppShell({
   // `pinned` is the rail's, and only the rail's: a standing preference about
   // the shape of the desktop frame, restored from a cookie so a pinned nav
   // renders pinned on the first paint. Hovering opens the panel too, but only
-  // in CSS (see the aside) — a hover that re-rendered the whole shell on the
+  // in CSS (see the aside). A hover that re-rendered the whole shell on the
   // way in and out would be paying React for what the compositor already does.
   const [pinned, setPinned] = useState(defaultPinned);
 
   // The phone's menu, which always starts shut. It used to share `pinned`, and
   // that quietly meant a reader who had pinned the rail on a laptop arrived on
-  // their phone with the menu open over every page — the cookie is a fact about
+  // their phone with the menu open over every page. The cookie is a fact about
   // a frame that does not exist below md.
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -316,7 +305,7 @@ export function AppShell({
   };
 
   // Escape closes whichever of them is open, and only the topmost layer hears
-  // it — a combobox inside the menu answers first. See lib/ui/escape.ts.
+  // it, since a combobox inside the menu answers first. See lib/ui/escape.ts.
   useEscape(menuOpen, () => setMenuOpen(false));
   useEscape(pinned && !menuOpen, () => setPinned(false));
 
@@ -339,23 +328,23 @@ export function AppShell({
 
   // Everything in the panel that is text rather than icon fades with the width,
   // so a label is never caught halfway through the rail's edge. Below md there
-  // is no rail — the panel is the full-width drawer — so the base state is
+  // is no rail, because the panel is the full-width drawer, so the base state is
   // "shown" and only md up hides it; open, the panel is simply open and none of
   // it applies.
   //
   // The opacity states only. The `transition-*` belongs to each place this is
   // used, because one of them is also transitioning a transform and `cn` joins
-  // classes rather than merging them — `transition-opacity` alongside
+  // classes rather than merging them: `transition-opacity` alongside
   // `transition-transform` is not both, it is whichever Tailwind emitted last.
   //
   // These all track the panel's width, so they open on the same things it does
-  // and on nothing else — see the aside for why the keyboard's one is
+  // and on nothing else. See the aside for why the keyboard's one is
   // `:focus-visible` rather than `:focus-within`.
   const labelFade = pinned
     ? ""
     : "md:opacity-0 md:group-hover:opacity-100 md:group-has-[:focus-visible]:opacity-100";
 
-  // A group heading is a word, and a word in a 64px rail is nothing but noise —
+  // A group heading is a word, and a word in a 64px rail is nothing but noise,
   // so on the rail the headings become the rules they would have been sitting
   // above, and swap back to their labels as the panel opens.
   const groupRule = pinned
@@ -372,7 +361,7 @@ export function AppShell({
   // The quick switches at the foot. Unlike a label, these are rows of their own,
   // so fading them would leave the rail with 80px of blank footer above the
   // avatar and the avatar itself off the bottom of a phone-height panel. They
-  // have to give the height back too — hence a collapsing grid row rather than
+  // have to give the height back too, hence a collapsing grid row rather than
   // an opacity, which gets there without a hardcoded height that would have to
   // be re-measured every time a switch changes size.
   const switchReveal = pinned
@@ -381,7 +370,7 @@ export function AppShell({
 
   // The Fortnox box at the foot: a 36px square on the rail, holding nothing but
   // the mark, that opens into a full-width button with its label inside it. A
-  // width rather than a fade, because the border is the box — fading a label in
+  // width rather than a fade, because the border is the box. Fading a label in
   // and out of a box that stayed 36px wide would put the text outside it.
   //
   // `calc(100% - 4px)` and not `w-full`: the box carries the profile row's own
@@ -398,7 +387,7 @@ export function AppShell({
 
   // And its dot travels with the width: badged on the corner of the square
   // while it is one, and once there is a box to sit in, in from the trailing
-  // edge on the centre line — where the same dot sits on /profile. `top` and
+  // edge on the centre line, where the same dot sits on /profile. `top` and
   // `right` both animate, so it takes the same 200ms the panel does and arrives
   // with it rather than jumping when the transition ends.
   const fortnoxDot = pinned
@@ -410,9 +399,14 @@ export function AppShell({
         "md:group-has-[:focus-visible]:top-1/2 md:group-has-[:focus-visible]:right-[15px]",
       );
 
-  const isActive = (href: string) =>
-    pathname === href ||
-    (href !== "/expenses/new" && href !== "/dashboard" && pathname.startsWith(href));
+  // Exactly one row is lit, and it is the section that owns this page rather
+  // than every section whose route is a prefix of it. The two exceptions this
+  // used to carry are gone with the prefix test that needed them: /dashboard
+  // was excluded so it would not swallow everything under it, and
+  // "/expenses/new" was never a nav route at all, so that clause could not
+  // fire.
+  const activeSection = sectionHref(pathname);
+  const isActive = (href: string) => href === activeSection;
 
   const navLink = (item: NavItem) => {
     const Icon = item.icon;
@@ -423,7 +417,7 @@ export function AppShell({
         href={item.href}
         onClick={closeNav}
         // `px-[11px]`, not `px-3`: the nav's own `px-3` leaves a 40px row on the
-        // rail, and 11 + the 18px icon + 11 is exactly that — so the icon sits
+        // rail, and 11 + the 18px icon + 11 is exactly that, so the icon sits
         // on the rail's centre line and stays on it, to the pixel, as the panel
         // widens around it. Nothing about the row moves; only the label arrives.
         className={cn(
@@ -435,7 +429,7 @@ export function AppShell({
       >
         <Icon className="size-[18px] shrink-0" />
         {/* Margin rather than the row's `gap`, which would be spent whether or
-            not there is a label to separate — 12px of it, on a row with 0 to
+            not there is a label to separate: 12px of it, on a row with 0 to
             spare, pushing the icon off the centre line every time the panel
             closed. As a margin it simply overflows the rail with the label and
             is clipped along with it.
@@ -448,7 +442,7 @@ export function AppShell({
     );
   };
 
-  // Under /admin the sidebar belongs to settings — see SETTINGS_NAV.
+  // Under /admin the sidebar belongs to settings. See SETTINGS_NAV.
   const inSettings = pathname.startsWith(SETTINGS_ROOT);
 
   const groups = (inSettings ? SETTINGS_NAV : NAV_GROUPS)
@@ -458,7 +452,9 @@ export function AppShell({
     }))
     .filter((group) => group.items.length > 0);
 
-  const sectionKey = sectionLabel(pathname);
+  // The same answer the sidebar highlights with, spelled out. The top bar and
+  // the lit row cannot disagree if they are the one lookup.
+  const sectionKey = activeSection === null ? null : SECTION_LABELS[activeSection];
   const section = sectionKey ? t(sectionKey) : null;
 
   const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
@@ -467,7 +463,7 @@ export function AppShell({
   return (
     // From md up this is a fixed-height app shell: the frame never moves and the
     // main column is the only thing that scrolls. On a phone that costs more
-    // than it gives — a browser only retracts its address bar and toolbar in
+    // than it gives, because a browser only retracts its address bar and toolbar in
     // response to the *document* scrolling, so a nested scroller means they stay
     // put and eat ~130px of an already small screen for the whole session. Below
     // md the document scrolls normally instead. dvh, not vh: on iOS `100vh` is
@@ -477,8 +473,8 @@ export function AppShell({
     // is left to flow, or the printer gets one screenful and nothing after it.
     <div className="flex min-h-dvh md:h-screen md:overflow-hidden print:block print:h-auto print:overflow-visible">
       {/* The first thing the keyboard reaches, and invisible until it does.
-          Without it every page begins with a walk through the whole sidebar —
-          a dozen-odd links — before the content the reader came for. */}
+          Without it every page begins with a walk through the whole sidebar,
+          a dozen-odd links, before the content the reader came for. */}
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:border-brand-edge focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:brand-fill focus:text-on-brand"
@@ -507,7 +503,7 @@ export function AppShell({
           only part of this that costs the main column anything: 64px while the
           rail is collapsed, 256 while it is pinned. The panel inside is
           `absolute`, so widening it on hover overflows the column and passes
-          over the page instead of shoving it sideways — a page that reflowed
+          over the page instead of shoving it sideways. A page that reflowed
           every time the pointer crossed the nav would be unusable.
 
           Below md it is not here at all: the phone has a screen of its own
@@ -525,8 +521,8 @@ export function AppShell({
         <aside
           className={cn(
             "pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-64 flex-col bg-background",
-            // Everything that only exists at 256px — labels, the brand wordmark,
-            // the pin button — is laid out at full width and hangs off the right
+            // Everything that only exists at 256px (labels, the brand wordmark,
+            // the pin button) is laid out at full width and hangs off the right
             // of the rail. This is what cuts it off at the edge.
             "overflow-hidden border-r border-border",
             "transition-[width,transform,box-shadow] duration-200 ease-out",
@@ -537,7 +533,7 @@ export function AppShell({
                 "translate-x-0 md:w-64"
               : cn(
                   // Below md this is the drawer, parked off-screen until the
-                  // hamburger sets `pinned`. From md it never moves — it is
+                  // hamburger sets `pinned`. From md it never moves: it is
                   // always on screen as the rail, and opening is a width.
                   "-translate-x-full shadow-[var(--shadow-card)]",
                   "md:w-16 md:translate-x-0 md:shadow-none",
@@ -546,7 +542,7 @@ export function AppShell({
                   // reader through a menu they cannot read.
                   //
                   // `:focus-visible`, not `:focus-within`. Clicking a link
-                  // focuses it, and focus does not end when the pointer leaves —
+                  // focuses it, and focus does not end when the pointer leaves,
                   // so with `focus-within` the panel stayed open after every
                   // click on it, until something else was clicked. Which is the
                   // one interaction it gets most: pick a section, move away,
@@ -589,8 +585,8 @@ export function AppShell({
             )}
 
             {/* Turns a hover into a decision. Without it the wide layout is only
-                ever borrowed — every trip to the nav costs the page 192px of
-                cover — and on a screen with the room to spare there is no
+                ever borrowed, because every trip to the nav costs the page 192px
+                of cover, and on a screen with the room to spare there is no
                 reason to keep paying that. It only appears once the panel is
                 open, which is the one moment it has somewhere to be. */}
             <button
@@ -660,7 +656,7 @@ export function AppShell({
         </aside>
       </div>
 
-      {/* Main column — the only scroll container from md up; below that the
+      {/* Main column, the only scroll container from md up. Below that the
           document itself scrolls, so the browser chrome can get out of the way. */}
       <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto print:overflow-visible">
         {/* Mobile top bar: the only way to reach the nav below md. */}
@@ -697,7 +693,7 @@ export function AppShell({
             // inset spent 36px of a 375px screen before any content.
             "mx-auto w-full flex-1 pl-4 pt-6 md:pl-6 md:pt-8",
             // The folded receipt tab is `fixed`, so it reserves no space at all
-            // and sits on top of whatever reaches the edge it is on — which is
+            // and sits on top of whatever reaches the edge it is on, which is
             // a different edge at each width (receipt/receipt-panel.tsx). Below
             // md it is a strip across the bottom, so the page owes it height;
             // from md it is a tab on the right, so the page owes it width.
@@ -727,7 +723,7 @@ export function AppShell({
  * The treasury's own Fortnox login, as the button directly above the profile.
  *
  * It sits there rather than up among the nav links because it is not a section
- * of the app to be in — it is the state of an account, next to the account it
+ * of the app to be in. It is the state of an account, next to the account it
  * belongs to. On the rail it is a 36px square holding the mark, standing where
  * the avatar below it stands; as the panel opens the square grows into a
  * full-width button and its label arrives inside the border rather than beside
@@ -740,7 +736,7 @@ export function AppShell({
  *
  * It stays on screen signed in as well as signed out, and the dot says which.
  * The session is short-lived by design, so a button that only appeared once it
- * had lapsed would be one nobody could get ahead of — you would meet it for the
+ * had lapsed would be one nobody could get ahead of. You would meet it for the
  * first time on the export that failed. Signed in it is quiet and still
  * clickable, which is how you renew a session that is about to go.
  */
@@ -778,11 +774,11 @@ function FortnoxLogin({
       //
       // `mb-2` to match the gap above it, so the button sits between the
       // switches and the profile rather than stuck to the profile. Two bordered
-      // 36px squares touching read as one control split in half — which on the
+      // 36px squares touching read as one control split in half, which on the
       // rail, where both are squares and neither is labelled, is exactly the
       // wrong thing for a login to be mistaken for.
       //
-      // No `overflow-hidden`, deliberately — the dot hangs off the corner while
+      // No `overflow-hidden`, deliberately. The dot hangs off the corner while
       // the box is a square, and clipping the box would take it with it.
       className={cn(
         "relative mx-0.5 mb-2 flex h-9 items-center rounded-lg border border-border transition-[width,background-color] duration-200 ease-out hover:bg-surface",
@@ -790,7 +786,7 @@ function FortnoxLogin({
       )}
     >
       {/* A 36px slot, the avatar's size, so the mark lands on the same centre
-          line — and the label after it starts where the name below it does. It
+          line, and the label after it starts where the name below it does. It
           is a pixel wider each side than the box's inside, which nothing can
           show: what is drawn in it is a 20px logo in the middle. */}
       <span className="flex size-9 shrink-0 items-center justify-center">
@@ -806,7 +802,7 @@ function FortnoxLogin({
       </span>
       <span
         aria-hidden
-        // Positioned by its centre — the translate is half of it on each axis —
+        // Positioned by its centre, the translate being half of it on each axis,
         // so the corner badge and the seat inside the box are the same two
         // numbers moving, and `top`/`right` can simply be animated between
         // them. Ringed in the panel's background to keep it off the border it
@@ -814,7 +810,7 @@ function FortnoxLogin({
         //
         // Warning rather than the muted grey the same state wears on /profile:
         // there the dot reports, with a sentence beside it saying what it
-        // means, and here — clipped to a 64px rail most of the time — it is the
+        // means, and here, clipped to a 64px rail most of the time, it is the
         // whole message, and the message is that an export will fail until
         // somebody presses this.
         className={cn(
@@ -828,14 +824,14 @@ function FortnoxLogin({
 }
 
 // Bottom-of-sidebar profile: the two switches that are worth reaching without
-// leaving the page — theme and language — over a row that says whose session
+// leaving the page (theme and language) over a row that says whose session
 // this is and leads to /profile, where the rest of it lives (payout account,
 // roles, Fortnox login, sign-out).
 //
 // This was a popover opening upward out of the footer, carrying all of that in
 // miniature. Two things were wrong with it. It stood over the panel's foot and
 // could not be reached without the pointer leaving the panel, so the panel had
-// to be held open behind it — and a menu that outlives the hover that opened it
+// to be held open behind it, and a menu that outlives the hover that opened it
 // is a menu that snags, still standing over the page long after you have moved
 // on. And it was a second copy of /profile, which is a page that already exists
 // and is one click from here. What is left inline is only what a page load
@@ -876,7 +872,7 @@ function ProfileFooter({
       {/* Collapsed to nothing on the rail rather than merely faded: at 64px
           there is no room for a label beside a 36px control, and a switch you
           cannot see is still a switch you can hit. Tabbing to one from the
-          keyboard opens the panel around it — `switchReveal` answers to
+          keyboard opens the panel around it. `switchReveal` answers to
           `:focus-visible` the same way the labels do. */}
       <div className={cn("grid transition-[grid-template-rows] duration-200 ease-out", switchReveal)}>
         {/* The clip the collapsing row needs to close over. */}
@@ -910,7 +906,7 @@ function ProfileFooter({
 
       {/* On the rail this is the whole footer: a 36px avatar on the centre line,
           and the one thing on a collapsed nav that says whose session this is.
-          A link, not a menu — everything it used to open is on the page it
+          A link, not a menu. Everything it used to open is on the page it
           goes to. */}
       <Link
         href="/profile"

@@ -1,4 +1,4 @@
-// The voucher a day of takings would be posted as — and whether it may be.
+// The voucher a day of takings would be posted as, and whether it may be.
 //
 // Lifted out of review-client.tsx, where it sat at line 305 of sixteen hundred
 // inside the component that draws the screen. It is the piece of that file that
@@ -10,7 +10,7 @@
 //
 // Pure over plain data. Wording arrives already translated, because a module
 // that decides what balances has no business knowing what language anybody
-// reads — and because that is what lets the whole of it be tested without a
+// reads, and because that is what lets the whole of it be tested without a
 // React tree.
 import {
   filledVoucherRows,
@@ -58,8 +58,8 @@ const nameOf = (accounts: AccountRecord[], number: string) =>
  *
  * Either because this database has the verifikation, or because Fortnox holds
  * one for the same source, verksamhet and day. Both are shown rather than
- * hidden — a day missing from the queue cannot be told apart from a day the
- * fetch never covered — and both colour the row.
+ * hidden, since a day missing from the queue cannot be told apart from a day
+ * the fetch never covered, and both colour the row.
  */
 export const isDuplicate = (r: IncomeReportRow) => Boolean(r.duplicateOf || r.existingVoucher);
 
@@ -68,7 +68,7 @@ export const isDuplicate = (r: IncomeReportRow) => Boolean(r.duplicateOf || r.ex
  *
  * Stamped with when the report last changed, which makes a corrected day a
  * different address. A draft's PDF is rendered on the way past and the browser
- * is told it may keep it for five minutes — right for stepping back to a day
+ * is told it may keep it for five minutes: right for stepping back to a day
  * you just looked at, wrong the moment lines are moved on or off it, when the
  * cached copy is a picture of takings that have gone elsewhere.
  */
@@ -82,7 +82,7 @@ export const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSett
 /**
  * Which cost centre this day's rows start on.
  *
- * The report's own, if it has one — the import copies the committee's default
+ * The report's own, if it has one. The import copies the committee's default
  * onto it, and review may have changed it since. Failing that the default
  * itself, because a day fetched before the committee had one would otherwise
  * open with the field blank and refuse to book, with the answer sitting in the
@@ -103,7 +103,7 @@ export function costCentreFor(report: IncomeReportRow, settings: IncomeSettingsR
  * account, the day's cost centre on each.
  *
  * The same rows lib/income/voucher.ts builds on the server, which is what makes
- * the editor a starting point rather than a second opinion — book without
+ * the editor a starting point rather than a second opinion. Book without
  * editing and the two agree exactly. Zero-valued accounts are dropped for the
  * same reason they are there: a row for nothing is noise in the ledger.
  */
@@ -111,8 +111,8 @@ export function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow
   const costCenterCode = costCentreFor(report, settings);
 
   if (report.source === "ZETTLE_FEE") {
-    // A fee is a cost: the fee account is debited and the clearing account —
-    // the locked row — is credited.
+    // A fee is a cost: the fee account is debited and the clearing account,
+    // the locked row, is credited.
     return [
       makeVoucherRow({
         account: settings.zettleFeeAccount,
@@ -122,7 +122,7 @@ export function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow
     ];
   }
 
-  // One row per revenue account the day's products routed to, summed — the
+  // One row per revenue account the day's products routed to, summed. The
   // accounts are already on the lines, put there by the prefix routing at
   // import, so nothing here has to guess at one.
   const byAccount = new Map<string, number>();
@@ -137,7 +137,7 @@ export function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow
         account,
         costCenterCode,
         // A negative total is a net refund against that account, which is a
-        // debit — booked as the row the other way round rather than as a
+        // debit, booked as the row the other way round rather than as a
         // negative credit, which is what a ledger can actually represent.
         credit: total > 0 ? total.toFixed(2) : "",
         debit: total < 0 ? (-total).toFixed(2) : "",
@@ -159,7 +159,7 @@ export function voucherFor({
   label,
 }: {
   report: IncomeReportRow;
-  /** The rows as they currently stand — edited, or `defaultRows`. */
+  /** The rows as they currently stand, edited, or `defaultRows`. */
   rows: VoucherEditorRow[];
   settings: IncomeSettingsRow;
   accounts: AccountRecord[];
@@ -189,13 +189,13 @@ export function voucherFor({
       account: clearing,
       accountName: nameOf(accounts, clearing),
       // Deliberately none. A clearing account is a bank balance, not a
-      // dimension of anybody's budget — a cost centre here would make every
+      // dimension of anybody's budget. A cost centre here would make every
       // committee's outcome count the money twice.
       costCenterCode: null as string | null,
       debit: sekToOre(locked.debit),
       credit: sekToOre(locked.credit),
     },
-    // The editor's spare rows are not lines of the voucher — see
+    // The editor's spare rows are not lines of the voucher. See
     // filledVoucherRows. Sent as they are, every day would be blocked on
     // three rows with no account.
     ...filledVoucherRows(rows).map((r) => ({
@@ -215,7 +215,7 @@ export function voucherFor({
   const totalDebit = oreToSEK(balance.debit);
   const totalCredit = oreToSEK(balance.credit);
   // Two questions. `balanced` is whether the sides meet; `blocker` is whether
-  // it may be written at all, which is stricter — an unpicked account blocks a
+  // it may be written at all, which is stricter. An unpicked account blocks a
   // voucher that adds up perfectly well, and the chip should not call that a
   // difference. The same rule the route applies, on the same rows, in the same
   // unit, so the screen and the server cannot disagree.

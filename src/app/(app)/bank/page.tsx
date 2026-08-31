@@ -8,15 +8,15 @@ import BankClient, { type BankScope } from "./bank-client";
 
 // One feed, two readings of it.
 //
-// This page and /card-purchases were the same query — `getBankTransactionPage`
-// — drawn twice: the same four columns, the same three server-side tabs, one
+// This page and /card-purchases were the same query (`getBankTransactionPage`)
+// drawn twice: the same four columns, the same three server-side tabs, one
 // scoped to the section and one to the reader. What differed was the audience
 // and the verb, which is a switch rather than a second screen. So it is one
 // page with a Mina/Alla track, the way Utlägg and Intäkter already ask the same
 // question.
 //
-// The scoping was a hard fact when it lived in two routes — one asked for the
-// whole feed and one could not — and it is now a rule this function enforces.
+// The scoping was a hard fact when it lived in two routes: one asked for the
+// whole feed and one could not, and it is now a rule this function enforces.
 // Which is why it is settled here and nowhere else: `scope` arrives in the URL,
 // where anybody can type it, and a reader who may not see the section's feed is
 // answered with their own no matter what they asked for. The client is told
@@ -40,7 +40,7 @@ export default async function BankPage({
   const scope: BankScope = canSeeAll ? (asked ?? "all") : "mine";
 
   const query = parseListQuery(params, {
-    // Your own purchases open on the ones not yet accounted for — that is what
+    // Your own purchases open on the ones not yet accounted for. That is what
     // the page was for when it was Kortköp, and it is still the only actionable
     // thing in the list. The section's feed opens on all of it.
     defaultTab: scope === "mine" ? "UNMATCHED" : "ALL",

@@ -39,7 +39,7 @@ const expense = (over: Partial<Expense> = {}): Expense => ({
 // A viewer holding these roles, with the capabilities those roles have on the
 // day the database is created (lib/server/authority-defaults.ts). Which roles
 // carry which capability is editable now, so a case below saying "the ordförande
-// cannot export" is a statement about the section's starting policy — which is
+// cannot export" is a statement about the section's starting policy, which is
 // exactly what it always was, when that policy was a list in permissions.ts.
 const capsFor = (roles: Role[]): Capability[] => [
   ...new Set(
@@ -92,7 +92,7 @@ describe("editing", () => {
   it("but not to a resultatansvarig who may merely see it", () => {
     // Seeing an utlägg is not editing it. Offering "Redigera" here opened the
     // whole wizard on somebody else's claim, only for the PATCH to refuse the
-    // save — which is the same rule as `canEditExpense` on the server.
+    // save, which is the same rule as `canEditExpense` on the server.
     expect(expenseCapabilities(draft, viewer(["RESULTATANSVARIG"])).canEdit).toBe(false);
   });
 
@@ -156,7 +156,7 @@ describe("submitting a milersättning", () => {
   // offered "Skicka in" on a claim the transition route would refuse.
   //
   // Driven today, not on the shared fixture's March date: a milersättning is
-  // out-of-pocket, so it has the 60-day filing deadline — which is a blocker of
+  // out-of-pocket, so it has the 60-day filing deadline, which is a blocker of
   // its own and, rightly, reported ahead of anything else. These cases are
   // about the journey check, so the date is kept out of their way.
   const mileage = (over: Partial<Expense> = {}) =>
@@ -200,7 +200,7 @@ describe("submitting a milersättning", () => {
   });
 
   it("still has the filing deadline over it", () => {
-    // Out of the claimant's own pocket, so the same 60 days — and said ahead
+    // Out of the claimant's own pocket, so the same 60 days, and said ahead
     // of the journey check, since past the deadline there is nothing to fix.
     expect(expenseCapabilities(mileage({ purchaseDate: "2020-01-01" }), owner).submitBlocker).toBe(
       "tooLate",
@@ -219,7 +219,7 @@ describe("deleting", () => {
     expect(expenseCapabilities(approved, viewer(["ORDINARIE"], "member")).canDelete).toBe(false);
   });
 
-  it("remains an admin's at any point — it is the section's record", () => {
+  it("remains an admin's at any point, it is the section's record", () => {
     const exported = expense({ status: "EXPORTED" });
     expect(expenseCapabilities(exported, viewer(["SKATTMASTARE"])).canDelete).toBe(true);
   });
@@ -235,7 +235,7 @@ describe("the panel as a whole", () => {
   it("says so when the only thing on offer is a secondary action", () => {
     const draft = expense({ status: "DRAFT", grossAmount: 0, receiptId: undefined });
     const can = expenseCapabilities(draft, viewer(["ORDINARIE"], "member"));
-    // Nothing to submit yet — no receipt, no amount — but it is still theirs
+    // Nothing to submit yet (no receipt, no amount) but it is still theirs
     // to edit and to throw away.
     expect(can.hasPrimaryAction).toBe(false);
     expect(can.hasAnyAction).toBe(true);
@@ -266,7 +266,7 @@ describe("statuses are covered, not assumed", () => {
 describe("taking your own submission back", () => {
   // The submitter's counterpart to withdrawing an attest, and a different act:
   // that one takes back a signature, this takes back the claim. It exists for
-  // the correction no attester can make on somebody's behalf — an eget utlägg
+  // the correction no attester can make on somebody's behalf: an eget utlägg
   // that turns out to have gone on the section card.
   const waiting = (over: Partial<Expense> = {}) =>
     expense({ status: "PENDING_APPROVAL", submitterId: "member", ...over });
@@ -319,7 +319,7 @@ describe("taking your own submission back", () => {
   });
 
   it("counts as something the panel can offer", () => {
-    // A claim waiting for attest has no primary action for its own submitter —
+    // A claim waiting for attest has no primary action for its own submitter,
     // without this the panel would have said there was nothing to do at all.
     const can = expenseCapabilities(waiting(), viewer([], "member"));
     expect(can.hasAnyAction).toBe(true);

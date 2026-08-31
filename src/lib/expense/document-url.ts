@@ -1,19 +1,19 @@
 // Which documents an utlägg stands in the receipt panel, and in what order.
 //
-// Two of them, kept apart: the utläggsräkning — the cover page naming who
-// attested what — and the underlag behind it, with the panel's pager moving
+// Two of them, kept apart: the utläggsräkning (the cover page naming who
+// attested what) and the underlag behind it, with the panel's pager moving
 // between them. They are in the order they are stapled in; the panel opens on
 // the second. See `expenseDocuments` for why those are not the same decision.
 //
 // They used to arrive as one merged PDF, and merging is still what goes to
 // Fortnox (lib/server/pdf-merge.ts). But merging is a *printing* operation: a
 // photographed receipt has to be laid onto an A4 sheet to become a PDF page,
-// and that sheet is white — so on screen every photographed receipt came
+// and that sheet is white, so on screen every photographed receipt came
 // framed in paper, in a panel that is otherwise the reader's own theme, at
 // whatever size the fit-to-page arithmetic left it. Reading a receipt is not
 // printing it. The viewer is handed the two documents as they were stored.
 //
-// Client-safe on purpose — its server-side sibling (document.ts) is
+// Client-safe on purpose. Its server-side sibling (document.ts) is
 // `server-only`, and this is the half the panels need. One function rather
 // than the same conditions written out on the detail page and the booking
 // screen, because the two disagreeing would mean the same utlägg showing a
@@ -34,14 +34,14 @@ export interface ExpenseDocumentSubject {
   /** Absent when the utlägg has no underlag. The DTOs spell that `undefined`
    *  and the database `null`; neither caller should have to care which. */
   receiptId?: string | null;
-  /** How the underlag is stored — `image/jpeg`, `image/png` or
+  /** How the underlag is stored: `image/jpeg`, `image/png` or
    *  `application/pdf`. A photo when the DTO doesn't carry it, which is what
    *  nearly every receipt is. */
   receiptMimeType?: string | null;
 }
 
 /** One document in the panel: where it is and what it is. Structural on
- *  purpose, so this file — which knows nothing about the viewer — can be the
+ *  purpose, so this file (which knows nothing about the viewer) can be the
  *  one place that decides what the panel gets. */
 export interface PanelDocument {
   src: string;
@@ -54,7 +54,7 @@ export interface PanelDocument {
 
 /**
  * The documents to stand in the receipt panel: the utläggsräkning first, then
- * the underlag it fronts — and the panel opens on the underlag. A milersättning
+ * the underlag it fronts, and the panel opens on the underlag. A milersättning
  * is the one utlägg that returns a single document; see below.
  *
  * Order and landing page are two different questions, and this is the case
@@ -64,7 +64,7 @@ export interface PanelDocument {
  * pdf-merge.ts): the utläggsräkning is the front of the document, and a reader
  * paging through what the section will actually file should meet it the way
  * the section will. This used to be the other way round, with the underlag
- * first, precisely so that the panel would open on it — which conflated the two
+ * first, precisely so that the panel would open on it, which conflated the two
  * questions and put the pages in an order nothing else in the app uses.
  *
  * The landing page is the underlag all the same. That is the document nobody
@@ -74,7 +74,7 @@ export interface PanelDocument {
  *
  * Empty in one case, and deliberately. No receipt: the utlägg still has a
  * cover, but showing it alone would fill the panel with a document and take
- * away the one thing an empty panel exists to say — that a voucher is about to
+ * away the one thing an empty panel exists to say: that a voucher is about to
  * be booked with nothing behind it.
  *
  * A draft gets its underlag and no cover. A cover is a statement about what was
@@ -98,7 +98,7 @@ export function expenseDocuments(
   // A milersättning has no underlag of its own: there is nothing to photograph
   // about driving your own car, so the journey it rests on is a section of the
   // utläggsräkning rather than a document behind it. One document, and the only
-  // kind of utlägg whose cover is shown while it is still a draft — that page
+  // kind of utlägg whose cover is shown while it is still a draft. That page
   // is the only place the journey can be read.
   if (expense.paymentType === "MILEAGE") {
     return [{ src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" }];

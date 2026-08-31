@@ -15,7 +15,7 @@ export type NotifyTone = "error" | "success" | "info";
 /**
  * Where the message says to go, as somewhere the reader can actually go.
  *
- * A banner that names the next step and cannot take you to it is a dead end —
+ * A banner that names the next step and cannot take you to it is a dead end,
  * on a phone especially, where the alternative is dismissing it, finding the
  * menu and remembering what it said. See `API_ERROR_ACTIONS` in
  * lib/ui/api-error.ts for which failures carry one.
@@ -37,7 +37,7 @@ export interface Notification {
  * The second argument is the title, as it always was, or an options object when
  * there is an action as well. A union rather than a required object so that the
  * twenty-odd `notify.success(msg)` and `notify.success(msg, title)` call sites
- * stay as they read today — the shape only changes for callers that need more.
+ * stay as they read today. The shape only changes for callers that need more.
  */
 export type NotifyOptions = string | { title?: string; action?: NotifyAction };
 
@@ -124,7 +124,7 @@ export function useNotify(): NotifyApi {
 // Backgrounds are deliberately translucent: the banners float over the page and
 // blur what's behind them, which only reads as blur if some of it shows through.
 //
-// Written as color-mix rather than the `/85` opacity modifier on purpose — that
+// Written as color-mix rather than the `/85` opacity modifier on purpose. That
 // modifier resolves the theme colour at build time and bakes in the light-theme
 // hex, so the banners would keep their light background in dark mode.
 const TONE_STYLE: Record<NotifyTone, { wrap: string; icon: React.ReactNode }> = {
@@ -158,7 +158,7 @@ export function NotificationBanners() {
     // banners; each banner takes it back for its own close button.
     // Above the dialogs, not below them. A toast reports what just happened,
     // and what just happened is usually the thing somebody pressed in a dialog
-    // — at z-60 the answer to "save this product" appeared behind the form
+    // At z-60 the answer to "save this product" appeared behind the form
     // that asked. Modals sit at 200 and a combobox's menu at 210, so this
     // clears both.
     <div className="pointer-events-none fixed inset-x-0 top-[4.25rem] z-[220] flex justify-center px-4 md:top-6">
@@ -181,7 +181,7 @@ export function NotificationBanners() {
                 {/* A button rather than the whole banner as one link: the
                     banner already owns a close button, and nesting one control
                     inside another is neither valid nor operable by keyboard.
-                    Dismissed on the way out — arriving at the page the message
+                    Dismissed on the way out: arriving at the page the message
                     asked for, with the message still on top of it, reads as the
                     navigation having failed. */}
                 {n.action && (

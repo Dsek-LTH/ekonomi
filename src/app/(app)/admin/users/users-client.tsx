@@ -5,14 +5,14 @@
 // User.roles defaults to [ORDINARIE], so with a whole section in the table
 // every one of ~1000 members holds it and it says nothing about anyone. What an
 // admin actually manages is the couple of dozen people who hold something more.
-// So this lists the roles and who holds each — and a member without a role
+// So this lists the roles and who holds each, and a member without a role
 // simply never appears until you search for them.
 //
 // Read-only, since sign-in moved to Authentik: roles are derived from the
 // Authentik group list at each sign-in (lib/server/authentik-roles.ts), so a
 // role granted here would last until the holder next signed in and then quietly
 // revert. The place to change one is the mandate in Authentik. What this page is for now is answering "who holds
-// what, right now" — and showing when the answer is not what somebody expected,
+// what, right now", and showing when the answer is not what somebody expected,
 // which is the first thing you want to know when a mapping is wrong.
 //
 // Which is why the panel says why. "Who holds what" is only half of that
@@ -20,7 +20,7 @@
 // resultatansvarig", and a screen that can only answer the first half sends the
 // reader to Authentik with a name and no idea which group to look for. The
 // answer comes from /api/users/[id]/authority, which re-runs the sign-in
-// derivation over the group list stored on the row and reports its workings —
+// derivation over the group list stored on the row and reports its workings,
 // including the case that prompted all this: a role nothing grants any more.
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -42,7 +42,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
   const tCommon = useTranslations("common");
   const tRole = useTranslations("common.role");
 
-  // A member looked up by the top search — shown so their whole role set is
+  // A member looked up by the top search, shown so their whole role set is
   // visible in one place, including for someone who holds nothing more than
   // the baseline and therefore appears in no list below.
   const [inspecting, setInspecting] = useState<User | null>(null);
@@ -78,7 +78,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
               {/* Every assignable role, held or not, rather than only the held
                   ones: "does this person have attesträtt" is answered by the
                   absence as much as by the presence, and a row of four chips
-                  with one lit says it at a glance. Not `Chip` — that is a
+                  with one lit says it at a glance. Not `Chip`, that is a
                   toggle, and there is nothing here to toggle. */}
               <div className="mt-3 flex flex-wrap gap-2">
                 {ASSIGNABLE_ROLES.map((r) => (
@@ -130,7 +130,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
                     <li key={u.id}>
                       {/* A row is the way into the panel above. Somebody
                           reading this list found the name they did not expect
-                          here — the next thing they want is why, and making
+                          here. The next thing they want is why, and making
                           them retype the name into the search to get it would
                           be asking for something the screen already knows. */}
                       <button
@@ -175,7 +175,7 @@ function WhyPanel({ userId }: { userId: string }) {
   // Every setState happens in the async callback rather than in the effect body,
   // the same way the person search does it: a render per mount is not a render
   // per keystroke, but the rule is worth keeping in one shape. Which is also why
-  // the caller mounts this under a key — the state that would otherwise need
+  // the caller mounts this under a key. The state that would otherwise need
   // clearing here simply does not exist yet.
   useEffect(() => {
     const controller = new AbortController();
@@ -228,7 +228,7 @@ function WhyPanel({ userId }: { userId: string }) {
                 </span>
               ) : (
                 <span className="text-muted">
-                  {" — "}
+                  {" – "}
                   {t("via")} <GroupNames groups={r.groups} />
                 </span>
               )}
@@ -258,13 +258,13 @@ function WhyPanel({ userId }: { userId: string }) {
                   </span>
                 ) : (
                   <span className="text-muted">
-                    {" — "}
+                    {" – "}
                     {t("via")} <GroupNames groups={u.groups} />
                   </span>
                 )}
                 {/* Attest is matched on the name (lib/domain/permissions.ts), so
                     a name with no result unit behind it is authority over
-                    nothing — held, and silently inert. */}
+                    nothing, held, and silently inert. */}
                 {!u.exists && (
                   <span className="ml-2 align-middle">
                     <Tag tone="warning">{t("unitMissing")}</Tag>
@@ -296,8 +296,8 @@ function WhyPanel({ userId }: { userId: string }) {
                 key={g}
                 className={cn(
                   "rounded-md border border-border px-2 py-0.5 font-mono text-xs",
-                  // A group that grants nothing here is most of the list — the
-                  // section's Authentik tree is not about this app — so it is
+                  // A group that grants nothing here is most of the list. The
+                  // section's Authentik tree is not about this app, so it is
                   // dimmed rather than labelled. What the reader is looking for
                   // is the one that is not dim.
                   data.silentGroups.includes(g) ? "text-muted" : "text-foreground",

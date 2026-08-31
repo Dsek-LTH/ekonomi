@@ -48,7 +48,7 @@ export function SheetHeader({
   return (
     <>
       <CardHeader
-        title={t("tag.sheet.title")}
+        title={t("event.sheet.title")}
         action={
           canManage ? (
             <div className="flex items-center gap-2">
@@ -70,8 +70,8 @@ export function SheetHeader({
           <SearchInput
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder={t("tag.sheet.search")}
-            aria-label={t("tag.sheet.search")}
+            placeholder={t("event.sheet.search")}
+            aria-label={t("event.sheet.search")}
           />
         </div>
       </div>
@@ -88,7 +88,7 @@ export function SheetHeader({
           // corner — they are the sheet's one control on a phone, and the column
           // being typed in should be as wide a target as the two that are not.
           fill
-          aria-label={t("tag.sheet.column")}
+          aria-label={t("event.sheet.column")}
         />
       </div>
     </>
@@ -128,15 +128,15 @@ export function SheetSaveBar({
     <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-border bg-background px-inset py-3">
       <span className="text-sm text-muted">
         {changed.length === 0
-          ? t("tag.sheet.nothingToSave")
+          ? t("event.sheet.nothingToSave")
           : faults.size > 0
-            ? t("tag.sheet.unsavedWithFaults", { count: changed.length, faults: faults.size })
-            : t("tag.sheet.unsaved", { count: changed.length })}
+            ? t("event.sheet.unsavedWithFaults", { count: changed.length, faults: faults.size })
+            : t("event.sheet.unsaved", { count: changed.length })}
       </span>
       <div className="flex items-center gap-2">
         {changed.length > 0 && (
           <Button variant="secondary" onClick={onDiscard} disabled={pending !== null}>
-            {t("tag.sheet.discard")}
+            {t("event.sheet.discard")}
           </Button>
         )}
         <Button
@@ -147,7 +147,7 @@ export function SheetSaveBar({
           disabled={savable === 0}
           loading={pending === "save"}
         >
-          {t("tag.sheet.save")}
+          {t("event.sheet.save")}
         </Button>
       </div>
     </div>

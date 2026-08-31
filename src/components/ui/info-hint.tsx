@@ -11,13 +11,13 @@ import { cn } from "@/lib/ui/utils";
 //
 // Not a `title` attribute, which is what the rest of the app uses for a word or
 // two: the browser's own tooltip takes a second to appear, can't be styled, and
-// collapses whitespace, so anything with structure — a list of what a file has
-// to contain, say — arrives as one long line after a pause. That is fine for
+// collapses whitespace, so anything with structure (a list of what a file has
+// to contain, say) arrives as one long line after a pause. That is fine for
 // "Ta bort" and no use at all for an explanation someone is actually reading.
 //
 // Hover is not the only way in. It doesn't exist on a phone, and it isn't
 // available to anyone on a keyboard, so focus opens it too and a click toggles
-// it — three ways to the same panel rather than one that half the readers of
+// it: three ways to the same panel rather than one that half the readers of
 // this page don't have.
 export function InfoHint({
   label,
@@ -33,7 +33,7 @@ export function InfoHint({
   const id = useId();
   const wrap = useRef<HTMLSpanElement>(null);
 
-  // Escape closes, and so does a press anywhere else — a panel opened by a tap
+  // Escape closes, and so does a press anywhere else. A panel opened by a tap
   // has no pointer leaving it to close it again.
   //
   // Escape goes through the shared stack rather than a listener of this hint's
@@ -69,7 +69,7 @@ export function InfoHint({
           role="tooltip"
           // Right-aligned: this sits at the right-hand end of a card header, so
           // a panel growing rightwards would leave the card. Below rather than
-          // above for the same reason — the header is at the top of the page.
+          // above for the same reason: the header is at the top of the page.
           className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-background p-3 text-left text-xs leading-relaxed font-normal text-muted shadow-[var(--shadow-pop)]"
         >
           {children}

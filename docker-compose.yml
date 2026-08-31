@@ -6,7 +6,7 @@
 #   pnpm db:up    postgres + minio only, and you run the app with `pnpm dev`.
 #                 The everyday loop. Unchanged by the `app` profile below.
 #   pnpm app:up   the whole stack, app included, built from the Dockerfile and
-#                 run the way production runs it. Needs real values in .env —
+#                 run the way production runs it. Needs real values in .env,
 #                 see "Running the whole stack in Docker" in the README.
 services:
   postgres:
@@ -46,7 +46,7 @@ services:
       - utlagg-miniodata:/data
 
   # The intakt service: income reports from Zettle and Swish. Built from the
-  # sibling Go module, and a separate container for one blunt reason — it
+  # sibling Go module, and a separate container for one blunt reason: it
   # renders its PDFs with pdflatex, and a TeX installation has no business
   # inside the image that serves every page of the app.
   #
@@ -63,7 +63,7 @@ services:
     container_name: utlagg-intakt
     restart: unless-stopped
     # Named one by one rather than through env_file, so this container gets the
-    # three things it needs and none of the app's secrets — it has no business
+    # three things it needs and none of the app's secrets. It has no business
     # holding DATABASE_URL or the Fortnox credentials.
     #
     # These are interpolated from THIS directory's .env when the container is
@@ -77,7 +77,7 @@ services:
       # The app presents this as a bearer token. The default matches
       # .env.example so an empty .env still gives a working pair.
       INTAKT_TOKEN: ${INTAKT_TOKEN:-dev-only-insecure-intakt-token}
-      # Zettle is optional — without it the service still imports Swish
+      # Zettle is optional, without it the service still imports Swish
       # exports and renders, and reports its Zettle endpoints unavailable.
       # Note these live in the *root* .env, which is the one compose reads;
       # intakt/.env is for running the CLI by hand from that directory.
@@ -118,12 +118,12 @@ services:
     profiles: ["app"]
     restart: unless-stopped
     # Everything the app reads comes from .env, exactly as it does under
-    # `pnpm dev` — except the two addresses that are wrong inside the compose
+    # `pnpm dev`, except the two addresses that are wrong inside the compose
     # network, which are overridden below. NODE_ENV is production here, so
     # lib/server/env.ts holds this to production rules: every required variable
     # has to be set, and there are no development fallbacks left to fall back
-    # on. Whether a value is a *good* one is not checked and cannot be — see
-    # the note on `envProblems` — so .env.example is what says what each should
+    # on. Whether a value is a *good* one is not checked and cannot be. See
+    # the note on `envProblems`, so .env.example is what says what each should
     # be. A stack that exits immediately is that check talking; read it with
     # `docker compose --profile app logs app`.
     env_file:
@@ -131,7 +131,7 @@ services:
         required: false
     environment:
       # localhost inside a container is the container itself. These three are
-      # the only settings that differ between `pnpm dev` and the stack —
+      # the only settings that differ between `pnpm dev` and the stack,
       # everything else is whatever .env says, for both.
       DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
       S3_ENDPOINT: http://minio:9000

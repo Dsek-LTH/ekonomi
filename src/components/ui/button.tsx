@@ -5,9 +5,9 @@ import { Spinner } from "./spinner";
 type Variant = "primary" | "secondary" | "ghost" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
-// The section's pink, flat and unmodified, with a near-black label — the same
+// The section's pink, flat and unmodified, with a near-black label. The same
 // button in both themes, and the only thing on a screen allowed to wear it.
-// `.brand-fill` is the section's two colours meeting — pink running to violet.
+// `.brand-fill` is the section's two colours meeting: pink running to violet.
 // It marks the action register; purple on its own still means the authority
 // chain. See the note above `.brand-fill` in globals.css.
 //
@@ -28,13 +28,13 @@ const VARIANTS: Record<Variant, string> = {
   //
   // `accent` and not `brand`, for the reason the hairline above exists: the
   // brand pink is 2.5:1 on white and a border owes 3:1, so the fill's colour
-  // cannot draw its own boundary. Accent is the pink that can — it is the one
+  // cannot draw its own boundary. Accent is the pink that can. It is the one
   // this app already writes text and links in.
   accentOutline:
     "bg-background text-accent border border-accent hover:bg-accent-soft active:scale-[0.98]",
   danger:
     "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
-  // Destructive but not the primary path — sign out, delete an utlägg.
+  // Destructive but not the primary path: sign out, delete an utlägg.
   dangerOutline:
     "bg-background text-danger border border-border hover:bg-danger-soft hover:border-danger",
 };
@@ -55,7 +55,7 @@ const SIZES: Record<Size, string> = {
 // The dimming is applied per-render rather than living here, because a busy
 // button is disabled but must not fade: at 40% its spinner is a rumour. cn()
 // only concatenates, so an override class would be settled by Tailwind's
-// emission order instead of by intent — hence one or the other, never both.
+// emission order instead of by intent, hence one or the other, never both.
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all duration-150 ease-[var(--ease-out-quint)] disabled:pointer-events-none whitespace-nowrap";
 const DIMMED = "disabled:opacity-40";
@@ -70,7 +70,7 @@ type CommonProps = {
 // The spinner sits in the same grid cell as the label rather than beside it, so
 // a button that goes busy keeps the width it had. Inline would have been
 // simpler, but these buttons sit in toolbars and table rows where a 22px jog
-// pushes everything after them sideways — and the row you were about to click
+// pushes everything after them sideways, and the row you were about to click
 // moving out from under you is worse than losing the word for a second.
 //
 // The label stays in the layout (`invisible`, not `hidden`) and out of the

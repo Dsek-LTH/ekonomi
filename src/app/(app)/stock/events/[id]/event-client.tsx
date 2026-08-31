@@ -1,14 +1,14 @@
 "use client";
 
-// One occasion, as a sheet.
+// One event, as a sheet.
 //
-// Three columns — ut, in, spill — and a row per product. A cell holds what the
+// Three columns (ut, in, spill) and a row per product. A cell holds what the
 // night's column comes to: the out cell of a beer carried out twice says 168,
 // and typing 100 over it is how a mistake gets fixed. Leaving the cell writes
 // the difference to the log, which is still the only record there is.
 //
 // A grid of totals sitting on an append-only ledger, and it buys two things
-// worth the machinery. The arithmetic is visible where it is entered — `sold`
+// worth the machinery. The arithmetic is visible where it is entered: `sold`
 // is on the same row as the three figures it comes from, and moves as they are
 // typed. And a mistake is fixable in the place it was made, rather than leaving
 // somebody to construct a compensating entry by hand.
@@ -17,7 +17,7 @@
 // sheet's do, and for the same reason: a sheet with a save button is a sheet
 // that can be half filled in and abandoned, and this one is filled in standing
 // in a cellar on a phone that locks itself. What is on the screen is what is in
-// the log, always — so there is no draft to lose and nothing to remember to
+// the log, always, so there is no draft to lose and nothing to remember to
 // press. It also means the correction path and the entry path are one path,
 // which is the whole reason the cells hold totals.
 //
@@ -27,14 +27,14 @@
 // a column.
 //
 // Two people in a cellar have two screens, so a cell carries the total it was
-// decided against and the server refuses it if the log has moved — see
+// decided against and the server refuses it if the log has moved. See
 // lib/stock/cells.ts. Untouched cells are never sent and never copied into
 // state, so somebody else's work shows up here rather than being overwritten.
 //
 // On a phone the three columns become one at a time. Same sheet, same cells;
 // what changes is that a row is a product and a number rather than a product
-// and three. That matches the errand — you are carrying crates one direction at
-// a time — and it is the only arrangement that keeps a row on one line without
+// and three. That matches the errand, since you are carrying crates one
+// direction at a time, and it is the only arrangement that keeps a row on one line without
 // asking anybody to drag a grid sideways in a cellar.
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -73,8 +73,8 @@ import {
 import { LEVELS, type BottleStock, type OpenBottles } from "@/lib/stock/levels";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
 import { useGridFocus } from "@/lib/ui/use-grid-focus";
-import type { StockChangeDto, StockLevelDto, StockTagDetailDto } from "@/lib/data/stock";
-import type { TagTotals } from "@/lib/stock/tag";
+import type { StockChangeDto, StockLevelDto, StockEventDetailDto } from "@/lib/data/stock";
+import type { TagTotals } from "@/lib/stock/event";
 import { ChangeFeed } from "@/components/stock/change-feed";
 import type { WriteStockCells } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
@@ -85,13 +85,13 @@ const amount = (kind: string, n: number): string =>
     ? `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(n / 1000)} l`
     : String(n);
 
-export default function TagClient({
-  tag,
+export default function EventClient({
+  event,
   products,
   changes,
   canManage,
 }: {
-  tag: StockTagDetailDto;
+  event: StockEventDetailDto;
   products: StockLevelDto[];
   changes: StockChangeDto[];
   canManage: boolean;
@@ -101,16 +101,16 @@ export default function TagClient({
   const { pending, mutate } = useMutation();
   const confirm = useConfirm();
 
-  // Only the cells somebody is typing in. Everything else reads from the tag,
-  // so a cell nobody has touched shows what is booked — including what the
-  // other phone in the cellar booked — rather than a copy of it.
+  // Only the cells somebody is typing in. Everything else reads from the event,
+  // so a cell nobody has touched shows what is booked, including what the
+  // other phone in the cellar booked, rather than a copy of it.
   //
-  // Kept in localStorage, keyed by the occasion, until it is saved: a night is
+  // Kept in localStorage, keyed by the event, until it is saved: a night is
   // filled in over an evening on a phone that locks itself, and what has been
   // typed and not yet sent is the one thing on this screen that exists nowhere
-  // else. Per tag, so two occasions cannot read back each other's work.
+  // else. Per event, so two events cannot read back each other's work.
   const [typed, setTyped, clearDraft] = useLocalDraft<Record<string, string>>(
-    `stock:tag:${tag.id}:draft`,
+    `stock:event:${event.id}:draft`,
     {},
   );
   /**
@@ -125,7 +125,7 @@ export default function TagClient({
   const [shifted, setShifted] = useState<Record<string, { units: number; open: OpenBottles }>>({});
   const [added, setAdded] = useState<string[]>([]);
   const [column, setColumn] = useState<CellKind>("CHECKOUT");
-  const [occurredAt, setOccurredAt] = useState(tag.date);
+  const [occurredAt, setOccurredAt] = useState(event.date);
   /** A product a scan has just put on the sheet, waiting for the caret. */
   const [seeking, setSeeking] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -140,19 +140,19 @@ export default function TagClient({
   const { focusCell, register, handleKey } = useGridFocus();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const lineOf = useMemo(() => new Map(tag.lines.map((l) => [l.productId, l])), [tag.lines]);
+  const lineOf = useMemo(() => new Map(event.lines.map((l) => [l.productId, l])), [event.lines]);
 
   /** What every cell is booked at: the log, plus what this page has written. */
   const base = useMemo(() => {
     const map = new Map<string, number>();
-    for (const line of tag.lines) {
+    for (const line of event.lines) {
       for (const [suffix, value] of Object.entries(line.cells)) {
         map.set(`${line.productId}|${suffix}`, value);
       }
     }
     for (const [key, value] of Object.entries(booked)) map.set(key, value);
     return map;
-  }, [tag.lines, booked]);
+  }, [event.lines, booked]);
 
   /** What the cellar holds, less whatever this page has taken off it since. */
   function shelfFor(product: StockLevelDto): BottleStock {
@@ -165,11 +165,11 @@ export default function TagClient({
 
   // ── What is on the sheet ──
   //
-  // The products the night has already touched, in the order the tag lists
+  // The products the night has already touched, in the order the event lists
   // them, then whatever has been added since. Nothing is ever taken off by the
   // sheet: a product with movements booked on it is part of what happened.
   const rows: string[] = [
-    ...tag.lines.map((l) => l.productId),
+    ...event.lines.map((l) => l.productId),
     ...added.filter((id) => !lineOf.has(id) && byId.has(id)),
   ];
 
@@ -216,7 +216,7 @@ export default function TagClient({
   // ── Worked out once a render, not once a cell ──
   //
   // Both of these used to be recomputed inside `lockOn`, which every cell of
-  // the sheet asks — twice, once to draw itself and once to take its place in
+  // the sheet asks, twice, once to draw itself and once to take its place in
   // the keyboard's order. Forty products with a spirit's ladder each is well
   // over a thousand folds of the same handful of numbers per keystroke, and the
   // sheet felt it. They depend on the product and not on the cell, so they are
@@ -237,9 +237,9 @@ export default function TagClient({
     nights.get(product.id) ?? totalsFromCells(product, product.id, live);
 
   /**
-   * How many of these the occasion had to take, when it started.
+   * How many of these the event had to take, when it started.
    *
-   * Not what is on the shelf now — the sheet has been changing that. Two
+   * Not what is on the shelf now, because the sheet has been changing that. Two
    * bottles brought back at 60 % put a 60 % rung in the cellar, and offering
    * them straight back to the same night is both confusing and pointless: out
    * and back and out again comes to the same millilitres as out and never
@@ -252,7 +252,7 @@ export default function TagClient({
   /**
    * What a cell shows.
    *
-   * The working while the caret is in it, the answer the rest of the time —
+   * The working while the caret is in it, the answer the rest of the time:
    * `24*10+30` under the caret, `270` once you leave. Borrowed from the budget
    * sheet's formula cells (budget/[budgetId]/use-budget-cells.tsx), and for the
    * same reason: the sum is how somebody got there and the total is what they
@@ -275,8 +275,8 @@ export default function TagClient({
   // A lock and a fault answer different questions, and conflating them was a
   // bug worth naming. A lock says *no figure could go here*: this vodka had no
   // 60 % bottles when the night began, so no number in that box could ever be
-  // true. A fault says *that figure is too big* — three bottles home from a
-  // night that took two — which is a thing somebody typed and can retype.
+  // true. A fault says *that figure is too big*, three bottles home from a
+  // night that took two, which is a thing somebody typed and can retype.
   //
   // The In column used to lock the moment the night's returns caught up with
   // what went out. Which meant typing one too many closed the box you were
@@ -285,7 +285,7 @@ export default function TagClient({
   // the caret.
   //
   // Two things are never locked, whatever the arithmetic says. A cell with
-  // something already booked on it — those bottles went out at 60 % and that is
+  // something already booked on it. Those bottles went out at 60 % and that is
   // exactly why the rung reads empty, so the figure has to stay correctable.
   // And a cell somebody is working in, because a box that vanishes mid-keystroke
   // is never the right answer to anything.
@@ -318,7 +318,7 @@ export default function TagClient({
   /**
    * Why a cell cannot hold what somebody typed.
    *
-   * `cellFault` — the server's own rule, so a cell is never sent that would be
+   * `cellFault` is the server's own rule, so a cell is never sent that would be
    * refused, and the reason appears on the row before anybody leaves the box.
    *
    * Keyed by the cell rather than the product, which matters for getting out of
@@ -332,7 +332,7 @@ export default function TagClient({
     if (!product) continue;
     // `live`, not `base`: the night's arithmetic is about what the sheet says,
     // and most of a sheet is unsaved for most of an evening. Judged against the
-    // log alone, eight beers typed into Ut had not gone out yet — so a spill of
+    // log alone, eight beers typed into Ut had not gone out yet, so a spill of
     // one was refused as more than went out, and clearing a row column by
     // column faulted on whichever column was cleared first. The cellar half of
     // the rule still reads `base`, because the shelf has moved for those rows
@@ -362,15 +362,15 @@ export default function TagClient({
   /**
    * Write everything that has been typed, in one go.
    *
-   * The whole sheet as a single request — the route takes an array of cells and
-   * applies them in one transaction (see api/stock/tags/[id]/cells/route.ts), so
+   * The whole sheet as a single request. The route takes an array of cells and
+   * applies them in one transaction (see api/stock/events/[id]/cells/route.ts), so
    * a night either lands or it doesn't, rather than arriving as forty separate
    * decisions.
    *
    * Every cell carries the figure it was decided against. That was cheap when a
    * cell was sent the moment you left it; with a draft that may have been sitting
-   * on a phone since before the pub opened it is the whole safety of this screen
-   * — if the other phone in the cellar has moved a row since, the server refuses
+   * on a phone since before the pub opened it is the whole safety of this
+   * screen. If the other phone in the cellar has moved a row since, the server refuses
    * rather than letting one person's evening quietly replace the other's.
    *
    * Cells the rule already refuses are held back, not sent: the row says why,
@@ -395,16 +395,16 @@ export default function TagClient({
         qty: c.qty,
       })),
     };
-    const done = await mutate<{ written: number }>(`/api/stock/tags/${tag.id}/cells`, {
+    const done = await mutate<{ written: number }>(`/api/stock/events/${event.id}/cells`, {
       key: "save",
       method: "POST",
       body,
       refresh: false,
-      error: t("tag.sheet.failed"),
+      error: t("event.sheet.failed"),
     });
 
     if (!done) {
-      // Refused — most often a cell somebody else has moved. The draft is kept:
+      // Refused, most often by a cell somebody else has moved. The draft is kept:
       // it is somebody's evening, and the answer to "the figures moved under
       // you" is to show them the new ones and let them decide, not to throw
       // away what they typed. Re-reading is what makes the next attempt carry
@@ -431,19 +431,19 @@ export default function TagClient({
    */
   async function discard() {
     const ok = await confirm({
-      title: t("tag.sheet.discardTitle"),
-      message: t("tag.sheet.discardMessage", { count: changed.length }),
-      confirmLabel: t("tag.sheet.discard"),
+      title: t("event.sheet.discardTitle"),
+      message: t("event.sheet.discardMessage", { count: changed.length }),
+      confirmLabel: t("event.sheet.discard"),
       tone: "danger",
     });
     if (ok) clearDraft();
   }
 
   /**
-   * Take a product off the occasion: every cell of it back to nothing.
+   * Take a product off the event: every cell of it back to nothing.
    *
    * Typed into the draft rather than written, like everything else on this
-   * sheet now — a product with rows already booked keeps its line until the
+   * sheet now, so a product with rows already booked keeps its line until the
    * next save, showing the zeros that are about to be sent. A product that was
    * only ever added on this screen has nothing to zero and simply goes.
    */
@@ -455,7 +455,7 @@ export default function TagClient({
       for (const kind of CELL_KINDS) {
         for (const level of sheetLines(product)) {
           const key = cellKey({ productId, kind, level });
-          // "" reads as a zero and books no row at all — which is the same
+          // "" reads as a zero and books no row at all, which is the same
           // thing this used to send, said in the sheet's own language.
           if ((base.get(key) ?? 0) !== 0) next[key] = "";
           else delete next[key];
@@ -478,7 +478,7 @@ export default function TagClient({
    * as they read, typed and saved alike.
    *
    * Saved figures travel by being zeroed on the old product and written on the
-   * new one, which the sheet already knows how to say — both are ordinary cells
+   * new one, which the sheet already knows how to say. Both are ordinary cells
    * in the next save, and the route applies them in one transaction. So the log
    * ends up with the movement on the product it happened to, and StockChange
    * records that it moved.
@@ -510,8 +510,8 @@ export default function TagClient({
         // has to be told to go, nothing at all where there never was one.
         if ((base.get(fromKey) ?? 0) !== 0) next[fromKey] = "";
         else delete next[fromKey];
-        // The target is never already on the sheet — the picker only offers
-        // products that are not — so there is nothing here to overwrite.
+        // The target is never already on the sheet, because the picker only
+        // offers products that are not, so there is nothing here to overwrite.
         if (qty > 0) next[toKey] = String(qty);
       }
       return next;
@@ -528,13 +528,13 @@ export default function TagClient({
     setAdded((prev) => (prev.includes(productId) ? prev : [...prev, productId]));
     // Straight into the first box it can take, so picking a product and saying
     // how many of it is one movement rather than two. For a product new to the
-    // occasion that is Ut — In and Spill are locked until something has gone
+    // event that is Ut, because In and Spill are locked until something has gone
     // out, since nothing can come back from a night that took nothing.
     setSeeking(productId);
   }
 
   // Scanning a barcode onto the sheet, and inventing a product that isn't
-  // there yet — shared with the delivery sheet, which does the same errand.
+  // there yet. Shared with the delivery sheet, which does the same errand.
   //
   // A scan clears the search as well as adding the row: a sheet narrowed to
   // something else would hide the row the scan just asked for, and the caret
@@ -560,7 +560,7 @@ export default function TagClient({
   // through should not feel like a different tool depending on which one you
   // opened. Ruled by `divide-*` on the rows rather than borders on every cell, a
   // fixed layout so content can never widen a column, and a cell that is `p-0`
-  // around a bare full-height input — the box *is* the cell, which is what makes
+  // around a bare full-height input. The box *is* the cell, which is what makes
   // the focus ring land on the cell rather than inside it.
   const headerCell = "px-2 py-2.5 text-center font-medium";
   const cellInput =
@@ -569,35 +569,35 @@ export default function TagClient({
   /**
    * The rows a product takes up.
    *
-   * A can is one row. A spirit is its name and then its ladder — one row per
-   * rung — because bottles are not one quantity: five sealed and one at 40 %
+   * A can is one row. A spirit is its name and then its ladder, one row per
+   * rung, because bottles are not one quantity: five sealed and one at 40 %
    * are two different things, and a ladder of rows is how a sheet has always
-   * said that. What shares a row is the rung, not a pairing; `Hel · Ut 1` and
-   * `Hel · In 0` are independent facts that happen to both be about unopened
+   * said that. What shares a row is the rung, not a pairing; `Hel – Ut 1` and
+   * `Hel – In 0` are independent facts that happen to both be about unopened
    * bottles, since a bottle leaves sealed and comes home at whatever it comes
    * home at.
    *
    * All three columns are live on every row, spill included. Dropping a bottle
-   * is dropping a bottle, and the rung it came off is the whole of what it cost
-   * — everything left in it goes on the floor.
+   * is dropping a bottle, and the rung it came off is the whole of what it
+   * cost, because everything left in it goes on the floor.
    */
   const sheetLines = (product: StockLevelDto): number[] =>
     product.kind !== "VOLUME" ? [WHOLE] : [WHOLE, ...LEVELS];
 
   const rungName = (level: number): string =>
-    level === WHOLE ? t("tag.level.sealed") : t("tag.level.rung", { level });
+    level === WHOLE ? t("event.level.sealed") : t("event.level.rung", { level });
 
   // ── Walking the grid ──
   //
-  // The shape the keyboard moves over: a row per line of the sheet — a can, or
-  // one rung of a spirit's ladder — and a column per direction. Locked cells
+  // The shape the keyboard moves over: a row per line of the sheet (a can, or
+  // one rung of a spirit's ladder) and a column per direction. Locked cells
   // are holes in it rather than entries, and so are rows a search has hidden,
   // so nothing downstream has to remember to skip them.
   //
   // The moving itself is lib/ui/grid-nav.ts, which knows only the shape. It is
   // not the budget sheet's `use-cell-edit`: that answers select-versus-edit and
   // leaves movement to the browser's own focus order, which works there and
-  // does not here — a row of this table holds a product link and a remove
+  // does not here, because a row of this table holds a product link and a remove
   // button as well as its figures, and tabbing through those between every pair
   // of numbers is not how anybody fills in a sheet.
   const grid: (string | null)[][] = [];
@@ -617,8 +617,8 @@ export default function TagClient({
    * Put the caret in the first box a newly added product can take.
    *
    * Reached both ways in: picked from the row at the bottom, or scanned. Which
-   * box that is falls out of the grid rather than being chosen — for a product
-   * new to the occasion it is Ut, because In and Spill are locked until
+   * box that is falls out of the grid rather than being chosen. For a product
+   * new to the event it is Ut, because In and Spill are locked until
    * something has gone out; for one already on the sheet it is whichever column
    * the phone is showing.
    *
@@ -655,7 +655,7 @@ export default function TagClient({
   //
   // A function that returns an input, not a component. A component declared in
   // here would be a new type on every render, and React unmounts and remounts a
-  // subtree whose type changed — which took the focus out of the box on the
+  // subtree whose type changed, which took the focus out of the box on the
   // first keystroke, every time.
   function cellFor(product: StockLevelDto, kind: CellKind, level: number) {
     const lock = lockOn(product, kind, level);
@@ -663,10 +663,10 @@ export default function TagClient({
       return (
         <span
           className="flex h-10 items-center justify-center text-muted/40"
-          title={t(`tag.sheet.locked.${lock}`)}
+          title={t(`event.sheet.locked.${lock}`)}
         >
           <IconLock className="size-3.5" />
-          <span className="sr-only">{t(`tag.sheet.locked.${lock}`)}</span>
+          <span className="sr-only">{t(`event.sheet.locked.${lock}`)}</span>
         </span>
       );
     }
@@ -702,8 +702,8 @@ export default function TagClient({
         onChange={(e) => type(key, e.target.value)}
         onBlur={() => setFocusKey((k) => (k === key ? null : k))}
         onKeyDown={(e) => onCellKey(e, key)}
-        aria-label={`${product.name} · ${t(`kind.${kind}`)}${
-          product.kind === "VOLUME" ? ` · ${rungName(level)}` : ""
+        aria-label={`${product.name} – ${t(`kind.${kind}`)}${
+          product.kind === "VOLUME" ? ` – ${rungName(level)}` : ""
         }`}
       />
     );
@@ -711,9 +711,9 @@ export default function TagClient({
 
   return (
     <PageShell
-      title={tag.name}
-      subtitle={tag.date}
-      back={{ href: "/stock/tags", label: t("tag.title") }}
+      title={event.name}
+      subtitle={event.date}
+      back={{ href: "/stock/events", label: t("event.title") }}
       width="wide"
     >
       <Card>
@@ -733,16 +733,16 @@ export default function TagClient({
             voucher editor is. A body would inset it by `px-inset` and the
             outermost column rule would float in a gutter. */}
         {/* The spare rows *are* how a product gets onto the sheet, so an
-            occasion with nothing on it still needs the table. Showing a note
+            event with nothing on it still needs the table. Showing a note
             in its place left a new night with no way in at all. */}
         {rows.length === 0 && !canManage ? (
           <div className="px-inset py-6">
-            <EmptyNote>{t("tag.nothing")}</EmptyNote>
+            <EmptyNote>{t("event.nothing")}</EmptyNote>
           </div>
         ) : (
           /* Only ever sideways where there is something to scroll to. On a
-             phone the sheet is three columns — product, the one being typed,
-             and the total — and that fits: a grid you have to drag about in a
+             phone the sheet is three columns (product, the one being typed,
+             and the total) and that fits: a grid you have to drag about in a
              cellar is a grid nobody finishes. */
           <TableScroll minWidth="min-w-0 md:min-w-[36rem]">
             {/* table-fixed: the header percentages decide the columns, so a
@@ -750,7 +750,7 @@ export default function TagClient({
             <table className="w-full table-fixed border-collapse text-sm">
               <thead>
                 <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
-                  <th className={cn(headerCell, "w-[34%] text-left")}>{t("tag.col.product")}</th>
+                  <th className={cn(headerCell, "w-[34%] text-left")}>{t("event.col.product")}</th>
                   {CELL_KINDS.map((kind) => (
                     <th
                       key={kind}
@@ -759,7 +759,7 @@ export default function TagClient({
                       {t(`kind.${kind}`)}
                     </th>
                   ))}
-                  <th className={cn(headerCell, "w-[21%]")}>{t("tag.col.sold")}</th>
+                  <th className={cn(headerCell, "w-[21%]")}>{t("event.col.sold")}</th>
                 </tr>
               </thead>
 
@@ -795,9 +795,9 @@ export default function TagClient({
                                   size="sm"
                                   value=""
                                   onChange={(toId) => swap(productId, toId)}
-                                  // Never one already on the sheet — two rows
-                                  // for one product is what the unique index on
-                                  // a cell forbids — and never one counted
+                                  // Never one already on the sheet, since two
+                                  // rows for one product is what the unique index
+                                  // on a cell forbids, and never one counted
                                   // differently: a spirit's rungs have nowhere
                                   // to land on a can.
                                   options={products
@@ -805,14 +805,14 @@ export default function TagClient({
                                       (p) => !rows.includes(p.id) && p.kind === product.kind,
                                     )
                                     .map((p) => ({ value: p.id, label: p.name }))}
-                                  placeholder={t("tag.sheet.swapTo")}
-                                  searchPlaceholder={t("tag.sheet.addSearch")}
-                                  aria-label={t("tag.sheet.swap")}
+                                  placeholder={t("event.sheet.swapTo")}
+                                  searchPlaceholder={t("event.sheet.addSearch")}
+                                  aria-label={t("event.sheet.swap")}
                                   align="left"
                                 />
                               </div>
                               <IconButton
-                                label={t("tag.sheet.swapCancel")}
+                                label={t("event.sheet.swapCancel")}
                                 onClick={() => setSwapping(null)}
                               >
                                 <IconX className="size-4" />
@@ -843,13 +843,13 @@ export default function TagClient({
                           )}
                           {/* What can be done to the row itself, as opposed to
                               its figures. Two things, so a menu rather than two
-                              icons competing for the same corner — and icon
+                              icons competing for the same corner, and icon
                               only, because forty rows carrying a word each is a
                               column of repeated text where the products should
                               be. */}
                           {canManage && swapping !== productId && (
                             <Menu
-                              label={t("tag.sheet.rowActions")}
+                              label={t("event.sheet.rowActions")}
                               iconOnly
                               variant="ghost"
                               size="sm"
@@ -858,9 +858,9 @@ export default function TagClient({
                             >
                               <MenuItem onClick={() => setSwapping(productId)}>
                                 <IconSwap className="size-4 shrink-0 text-muted" />
-                                {t("tag.sheet.swap")}
+                                {t("event.sheet.swap")}
                               </MenuItem>
-                              {/* Taking a product off the occasion entirely. It
+                              {/* Taking a product off the event entirely. It
                                   removes its rows rather than zeroing them:
                                   picking the wrong beer is not a movement of
                                   nothing, it is no movement, and the log should
@@ -870,7 +870,7 @@ export default function TagClient({
                                 className="text-danger hover:bg-danger-soft"
                               >
                                 <IconTrash className="size-4 shrink-0" />
-                                {t("tag.sheet.remove")}
+                                {t("event.sheet.remove")}
                               </MenuItem>
                             </Menu>
                           )}
@@ -898,7 +898,7 @@ export default function TagClient({
                             <span className="flex items-center gap-1 text-xs text-muted">
                               <IconElbow className="size-3 shrink-0" />
                               {rungName(level)}
-                              <span className="text-muted/70">· {available(product, level)}</span>
+                              <span className="text-muted/70">– {available(product, level)}</span>
                             </span>
                           </td>
                           {CELL_KINDS.map((kind) => (
@@ -927,14 +927,14 @@ export default function TagClient({
                 <tbody>
                   <tr>
                     <td colSpan={CELL_KINDS.length + 2} className="px-inset py-4">
-                      <EmptyNote>{t("tag.sheet.noMatch", { text: search.trim() })}</EmptyNote>
+                      <EmptyNote>{t("event.sheet.noMatch", { text: search.trim() })}</EmptyNote>
                     </td>
                   </tr>
                 </tbody>
               )}
 
               {/* The next line, the way a sheet always has one. Typing a name
-                  into it puts that product on the occasion, and a name nothing
+                  into it puts that product on the event, and a name nothing
                   answers to offers to make it.
 
                   One, not three. Three came from the voucher editor, where you
@@ -949,7 +949,7 @@ export default function TagClient({
                       {/* The two ways of putting a product on the sheet, side
                           by side, because they are one errand. The scanner is
                           the quicker of them and does double duty: a code the
-                          occasion already has jumps to that product's row
+                          event already has jumps to that product's row
                           instead of adding a second one, which is the whole
                           reason it sits on the row that adds rather than off in
                           the header where it read as a separate feature. */}
@@ -962,17 +962,17 @@ export default function TagClient({
                               .filter((p) => !rows.includes(p.id))
                               .map((p) => ({ value: p.id, label: p.name }))}
                             onCreate={invent}
-                            createLabel={(text) => t("tag.sheet.newProduct", { name: text })}
-                            placeholder={t("tag.sheet.addProduct")}
-                            searchPlaceholder={t("tag.sheet.addSearch")}
-                            aria-label={t("tag.sheet.addProduct")}
+                            createLabel={(text) => t("event.sheet.newProduct", { name: text })}
+                            placeholder={t("event.sheet.addProduct")}
+                            searchPlaceholder={t("event.sheet.addSearch")}
+                            aria-label={t("event.sheet.addProduct")}
                             align="left"
                             buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
                           />
                         </div>
                         <IconButton
-                          label={t("tag.sheet.scan")}
-                          title={t("tag.sheet.scan")}
+                          label={t("event.sheet.scan")}
+                          title={t("event.sheet.scan")}
                           onClick={scan}
                         >
                           <IconScan className="size-4" />
@@ -1007,11 +1007,11 @@ export default function TagClient({
           one is read at a glance, the other only when something looks wrong. */}
       <Card>
         <CardHeader title={t("changes.title")} />
-        <ChangeFeed changes={changes} scope="tag" />
+        <ChangeFeed changes={changes} scope="event" />
       </Card>
 
-      <Link href={`/stock/log?tag=${tag.id}`} className="text-sm font-medium text-accent">
-        {t("tag.movements", { count: tag.entries })}
+      <Link href={`/stock/log?event=${event.id}`} className="text-sm font-medium text-accent">
+        {t("event.movements", { count: event.entries })}
       </Link>
 
       {overlay}

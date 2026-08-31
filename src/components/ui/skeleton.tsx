@@ -4,8 +4,8 @@ import { Card } from "./card";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 
 // Placeholders for a wait whose shape is already known. A skeleton is only
-// worth more than a spinner if it is honest about what is coming — same
-// widths, same paddings, same number of rows — otherwise the page reflows the
+// worth more than a spinner if it is honest about what is coming (same
+// widths, same paddings, same number of rows), otherwise the page reflows the
 // moment the data lands and the placeholder was a lie. So these mirror the real
 // components (Card, DataTable, PageShell) rather than approximating them, and
 // the composites below are the only ones a route should need.
@@ -87,7 +87,7 @@ export function SkeletonPage({
 const ROW_WIDTHS = ["w-2/5", "w-1/2", "w-1/3", "w-3/5", "w-5/12", "w-1/2"];
 
 // The inside of a DataTable: filter bar, header, rows, pagination footer. Goes
-// inside a <Card>, exactly as DataTable does — or use SkeletonTableCard, which
+// inside a <Card>, exactly as DataTable does, or use SkeletonTableCard, which
 // wraps it for you.
 //
 // Below md the real table is drawn as stacked cards, so this is too: the same
@@ -182,7 +182,7 @@ export function SkeletonTableCard(props: React.ComponentProps<typeof SkeletonTab
   );
 }
 
-// A Card with a header rule and some body content — the settings pages and the
+// A Card with a header rule and some body content. The settings pages and the
 // detail screens are stacks of these.
 export function SkeletonCard({
   header = true,
@@ -213,7 +213,7 @@ export function SkeletonCard({
 }
 
 // The bordered label/value list used by the profile and the wizard's review
-// step — DetailList's rule spacing, with the value side short.
+// step: DetailList's rule spacing, with the value side short.
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
     <div className="divide-y divide-border rounded-xl border border-border" aria-hidden>

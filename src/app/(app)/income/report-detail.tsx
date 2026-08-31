@@ -3,7 +3,7 @@
 // The three self-contained cards of the review screen's middle column.
 //
 // None of them knows anything about the queue beside it or the sales table
-// under it — each is one report and what may be done to it — so each takes what
+// under it. Each is one report and what may be done to it, so each takes what
 // it needs and nothing else. They were inline in review-client.tsx, where being
 // self-contained was true and impossible to see.
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import type { VoucherDraft } from "./voucher-draft";
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
- * That this day may already have been booked — here as well as in the list,
+ * That this day may already have been booked, here as well as in the list,
  * because this is where the decision to book it is actually made.
  *
  * Two separate facts and both are shown: this database holding the verifikation
@@ -61,7 +61,7 @@ export function AlreadyBookedNotice({
  * can be split in two.
  *
  * Neither the voucher nor the sold-lines table is shown for one, because both
- * are derived from lines it has none of — what it says instead is what to do
+ * are derived from lines it has none of. What it says instead is what to do
  * with it.
  */
 export function EmptyReportCard({
@@ -91,7 +91,7 @@ export function EmptyReportCard({
 /**
  * The voucher this day will be posted as, and the button that posts it.
  *
- * The header no longer repeats the verksamhet or the date — those are the two
+ * The header no longer repeats the verksamhet or the date. Those are the two
  * cards above it, the picker that sets the one and the locked field that states
  * the other.
  */
@@ -127,7 +127,7 @@ export function VoucherCard({
       />
 
       {/* The rows' own unknowns are named by the editor; this one is about the
-          locked row, and it is fixed somewhere else — so it says where. */}
+          locked row, and it is fixed somewhere else, so it says where. */}
       {!voucher.clearingKnown && (
         <div className="px-inset pb-4">
           <Notice>{t("book.unknownClearingAccount", { account: voucher.clearing })}</Notice>
@@ -137,7 +137,7 @@ export function VoucherCard({
       <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
         <BalanceChip balanced={voucher.balanced} difference={formatSEK(voucher.difference)} />
         <div className="flex items-center gap-2.5">
-          {/* Why the button is dead — an empty row leaves a balanced voucher
+          {/* Why the button is dead: an empty row leaves a balanced voucher
               that still cannot be booked, and without this nothing on the
               screen would admit why. */}
           <VoucherBlockerChip blocker={voucher.blocker} />

@@ -168,7 +168,7 @@
     "attest": {
       "waiting": "Awaiting approval",
       "attestedBy": "Approved by {name}{date}",
-      "waitingResultUnit": "Awaiting approval · {resultUnit}",
+      "waitingResultUnit": "Awaiting approval – {resultUnit}",
       "noResultUnit": "no result unit"
     },
     "submitBlocker": {
@@ -214,7 +214,7 @@
       "account": "Account",
       "debit": "Debit",
       "credit": "Credit",
-      "exportedToFortnox": "Exported to Fortnox · voucher",
+      "exportedToFortnox": "Exported to Fortnox – voucher",
       "history": "History",
       "receipt": "Receipt",
       "noReceipt": "No receipt uploaded.",
@@ -296,7 +296,7 @@
       },
       "recall": {
         "title": "Withdraw the expense?",
-        "message": "It goes back to a draft and leaves the attest queue. You can then change it — from an out-of-pocket purchase to the section card, say — and send it in again. It keeps its reference number.",
+        "message": "It goes back to a draft and leaves the attest queue. You can then change it (from an out-of-pocket purchase to the section card, say) and send it in again. It keeps its reference number.",
         "messageAttested": "It goes back to a draft and leaves the attest queue. {count, plural, =1 {One approval is} other {# approvals are}} removed, because they were given for the expense as it stood. You can then change it and send it in again; it keeps its reference number.",
         "confirm": "Withdraw"
       }
@@ -350,8 +350,7 @@
       "resultUnitConcerned": "the result unit concerned",
       "resubmit": "Submit again",
       "submit": "Submit for approval",
-      "negateAmount": "Toggle a negative amount (a return)",
-      "negateLabel": "Return"
+      "negateAmount": "Toggle a negative amount (a return)"
     },
     "field": {
       "title": "Description",
@@ -386,7 +385,7 @@
       "end": "At the end"
     },
     "total": "Compensation",
-    "sum": "{km} km · {rate} kr/km",
+    "sum": "{km} km – {rate} kr/km",
     "distance": "Distance",
     "km": "{km} km",
     "otherType": "Was it something else?",
@@ -539,7 +538,7 @@
       "noRecallAccess": "Only the person who submitted the expense can withdraw it.",
       "recallAfterApproved": "The expense is already attested and cannot be withdrawn. Ask one of the treasurers to reopen it.",
       "nothingToRecall": "The expense is not awaiting attest ({status}), so there is nothing to withdraw.",
-      "editWhilePendingAttest": "The expense is out for attest and cannot be changed. Withdraw it first — it becomes a draft again and you can send it in anew."
+      "editWhilePendingAttest": "The expense is out for attest and cannot be changed. Withdraw it first. It becomes a draft again and you can send it in anew."
     },
     "receipt": {
       "notFound": "The receipt was not found",
@@ -612,6 +611,10 @@
       "accountInHistory": "The entry appears in the budget's change history and cannot be deleted.",
       "sheetInHistory": "The cost center has entries that appear in the budget's change history and cannot be deleted.",
       "notLocked": "The budget is not locked. Change it directly instead.",
+      "importBadQuery": "The year or the name of the budget is missing or invalid",
+      "emptyFile": "The file is empty",
+      "fileTooLarge": "The file is too large",
+      "noRows": "No budget rows could be read from the file",
       "changeError": {
         "empty": "Add at least one entry.",
         "notNumbers": "Every amount has to be a number.",
@@ -739,9 +742,9 @@
       "purchaseArrivesSealed": "A purchase arrives sealed.",
       "purchaseNotPositive": "A purchase adds to the stock and cannot be negative.",
       "removalNotNegative": "Servings and waste take from the stock.",
-      "tagNotFound": "The occasion was not found.",
-      "tagOnNightOnly": "Purchases and stocktakes do not belong to an occasion.",
-      "tagRequired": "Takeouts, returns and spills have to belong to an occasion.",
+      "eventNotFound": "The occasion was not found.",
+      "eventOnNightOnly": "Purchases and stocktakes do not belong to an occasion.",
+      "eventRequired": "Takeouts, returns and spills have to belong to an occasion.",
       "volumeOnUnitProduct": "This product is counted in units and has no volume of its own.",
       "cellMoved": "Somebody else booked on this occasion in the meantime. The figures are being re-read. Check them and try again.",
       "spillMovesNoStock": "A spill moves no stock. The goods left the cellar when they were taken out.",
@@ -872,7 +875,7 @@
     "toExpense": "To the expense",
     "createTitle": "Book {id}",
     "createDescription": "Create the voucher. Enter the lines and get debit and credit to add up.",
-    "editTitle": "Amend voucher · {id}",
+    "editTitle": "Amend voucher – {id}",
     "editDescription": "Adjust the voucher lines before the expense is exported to Fortnox.",
     "paymentCard": "Guild card",
     "paymentPrivate": "Out of pocket",
@@ -1113,6 +1116,12 @@
       "newEmpty": "Empty budget {year}",
       "copyExisting": "Copy an existing one",
       "basedOnHint": "The copy stands on its own and does not remember where it came from. Comments are not copied.",
+      "importCsv": "Import from CSV…",
+      "importHint": "A past budget as one row per line: cost_center, account, description and either an amount or antal x á-pris. The year and the name are taken from the file name.",
+      "importFailed": "The budget could not be imported",
+      "imported": "Imported {sheets} cost centers, {accounts} accounts and {lines} rows.",
+      "importUnmatched": "{count} cost centers have no match and were imported unlinked ({codes}). An unlinked cost center is left out of the outcome comparison.",
+      "importProblems": "{count} rows could not be read and were skipped. First one on line {first}",
       "created": "Budget created.",
       "createFailed": "Could not create the budget",
       "invalidYear": "Enter a valid year.",
@@ -1121,13 +1130,15 @@
       "copied": "Budget copied.",
       "delete": "Delete",
       "deleteBudget": "Delete the budget",
-      "deleteTitle": "Delete {year} · {name}?",
+      "deleteTitle": "Delete {year} – {name}?",
       "deleteMessage": "The budget and all its rows are permanently deleted. Other budgets are unaffected.",
       "deleted": "Budget deleted.",
       "deleteFailed": "Could not delete the budget",
       "locked": "Locked",
       "colYear": "Year",
       "colBudget": "Budget",
+      "colAdopted": "Adopted",
+      "notAdopted": "–",
       "compareAria": "Compare {year} {name}",
       "budgets": "Budgets",
       "budgetCount": "{count, plural, one {# budget} other {# budgets}}",
@@ -1162,6 +1173,10 @@
       "nameRequired": "The budget needs a name.",
       "changeYear": "Change the year",
       "changeName": "Rename the budget",
+      "changeAdoptedAt": "Change the date it was adopted",
+      "adoptedOn": "Adopted",
+      "notAdopted": "Not adopted",
+      "invalidAdoptedAt": "The date has to be written as YYYY-MM-DD.",
       "namePlaceholder": "The budget's name",
       "createdBy": "Created by {name}",
       "actualsSynced": "Actuals {year} from Fortnox",
@@ -1272,7 +1287,7 @@
         "FORFLYTTNING": "The frame budget must stand still: the entries have to cancel out and sit within the same result unit."
       },
       "unchanged": "The budget is unchanged since it was locked.",
-      "summary": "{count, plural, one {# change in force} other {# changes in force}} · the frame budget {effect}",
+      "summary": "{count, plural, one {# change in force} other {# changes in force}} – the frame budget {effect}",
       "frameUnchanged": "is unchanged",
       "frameChangedBy": "has moved by {amount} kr",
       "new": "New change",
@@ -1364,11 +1379,11 @@
       "whyTitle": "Where the roles come from",
       "whyLoading": "Looking up where the roles come from…",
       "whyFailed": "Could not look up where the roles come from.",
-      "neverSeen": "We have no group list for this member — they have not signed in since we started keeping one. The roles below come from an earlier sign-in and cannot be traced until they sign in again.",
+      "neverSeen": "We have no group list for this member, because they have not signed in since we started keeping one. The roles below come from an earlier sign-in and cannot be traced until they sign in again.",
       "noGrantedRoles": "No roles beyond the baseline to trace.",
       "via": "from",
       "leftover": "No group grants this",
-      "leftoverExplained": "A role with no group behind it is left over from an earlier sign-in: the mandate is gone from Authentik, but the role stays on the row until the holder next signs in. It clears itself then — there is nothing to change in the mapping.",
+      "leftoverExplained": "A role with no group behind it is left over from an earlier sign-in: the mandate is gone from Authentik, but the role stays on the row until the holder next signs in. It clears itself then, and there is nothing to change in the mapping.",
       "resultUnitsTitle": "Answers for",
       "unitMissing": "No such result unit",
       "pending": "Their next sign-in adds: {items}. Their Authentik groups have changed since the row was written.",
@@ -1539,8 +1554,8 @@
       "voucherSeriesSaved": "Voucher series saved.",
       "saveFailed": "Could not save",
       "chart": "Chart of accounts",
-      "chartSubtitle": "{count} accounts · last synced {time}",
-      "chartSubtitleNever": "{count} accounts · never synced from Fortnox",
+      "chartSubtitle": "{count} accounts – last synced {time}",
+      "chartSubtitleNever": "{count} accounts – never synced from Fortnox",
       "syncChart": "Sync chart of accounts",
       "chartSyncFailed": "Could not sync the chart of accounts",
       "chartSynced": "Chart of accounts synced",
@@ -1808,7 +1823,7 @@
       "action": "New report",
       "actionFor": "New report for {date}",
       "title": "New report",
-      "subtitle": "{date} · {source}. An empty report to move sales onto.",
+      "subtitle": "{date} – {source}. An empty report to move sales onto.",
       "unit": "Committee",
       "unitHint": "Whose takings the report becomes.",
       "unitPlaceholder": "Pick a committee…",
@@ -1919,7 +1934,7 @@
       "rows": "{count, plural, =1 {1 movement} other {# movements}}"
     },
     "holding": {
-      "volume": "{sealed} sealed · {open} open",
+      "volume": "{sealed} sealed – {open} open",
       "unit": "{units} units"
     },
     "flag": {
@@ -2006,7 +2021,7 @@
         "open": "Open bottles",
         "value": "Value",
         "out": "Out",
-        "tag": "Occasion"
+        "event": "Occasion"
       },
       "searchPlaceholder": "Search the log…",
       "showRevisions": "Show the breakdown",
@@ -2138,10 +2153,10 @@
       "abv": "Strength",
       "unitCost": "Cost price incl. deposit",
       "totalVolume": "Total volume",
-      "occasions": "Out and in",
-      "occasionsHint": "What the product did at each occasion. If somebody changed a night's figures, it is behind the arrow.",
-      "searchOccasions": "Search occasions…",
-      "noOccasions": "The product has not been out to an occasion yet.",
+      "events": "Out and in",
+      "eventsHint": "What the product did at each occasion. If somebody changed a night's figures, it is behind the arrow.",
+      "searchEvents": "Search occasions…",
+      "noEvents": "The product has not been out to an occasion yet.",
       "cellar": "Deliveries, stocktakes and corrections",
       "cellarHint": "What has been done with the product in the cellar, most recently entered first.",
       "searchCellar": "Search cellar events…",
@@ -2150,10 +2165,10 @@
       "correctionOf": "Correction of {kind}",
       "countedTo": "counted {qty}"
     },
-    "tag": {
+    "event": {
       "title": "Occasions",
       "description": "Every night and event stock has been taken out for. What went out, less what came back and what was spilled, is what was used.",
-      "occasions": "Occasions",
+      "listTitle": "Occasions",
       "counts": "{count, plural, =1 {1 occasion} other {# occasions}}",
       "search": "Search occasions…",
       "empty": "No occasions yet. Create one before taking stock out.",
@@ -2205,7 +2220,7 @@
         "save": "Save",
         "discard": "Clear",
         "unsaved": "{count, plural, =1 {1 cell waiting to be saved} other {# cells waiting to be saved}}",
-        "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} · {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
+        "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} – {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
         "nothingToSave": "Nothing to save yet.",
         "discardTitle": "Clear what has been filled in?",
         "discardMessage": "{count, plural, =1 {1 changed cell} other {# changed cells}} will be removed. Nothing has been booked, so there is no getting it back.",
@@ -2223,7 +2238,7 @@
         "at": "When",
         "actor": "Who",
         "product": "Product",
-        "tag": "Occasion",
+        "event": "Occasion",
         "what": "What",
         "change": "Change"
       },

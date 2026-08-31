@@ -21,7 +21,7 @@ import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 
-// Generous limit on the *original* upload — images get downscaled on the server.
+// Generous limit on the *original* upload. Images get downscaled on the server.
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
 // The multipart envelope around a 25 MB file is a little larger than the file.
@@ -30,7 +30,7 @@ const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 // holds the limit.
 const MAX_BODY_BYTES = MAX_BYTES + 1024 * 1024;
 
-// POST /api/expenses/:id/receipts — multipart form-data, field "file".
+// POST /api/expenses/:id/receipts: multipart form-data, field "file".
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -61,7 +61,7 @@ export async function POST(
 
   // Before the body is touched. `req.formData()` reads the whole request into
   // memory, so checking `file.size` afterwards protected the bucket and not the
-  // server — a 2 GB POST was buffered in full and only then called too big.
+  // server. A 2 GB POST was buffered in full and only then called too big.
   // Content-Length is the sender's claim, which is enough here: an honest one
   // is refused for nothing, and a dishonest one still meets the real limit
   // below once the bytes are counted.
@@ -83,7 +83,7 @@ export async function POST(
     return fail(413, "receipt.sizeRange", { values: { max: MAX_BYTES } });
   }
 
-  // What the file *is*, from its own first bytes — `file.type` is the client's
+  // What the file *is*, from its own first bytes. `file.type` is the client's
   // claim about them and is never used for anything but the error message.
   // Checked against the head alone, before committing to buffering 25 MB.
   const head = new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer());
@@ -100,7 +100,7 @@ export async function POST(
   // as a button precisely when a receipt is already there. Everything reading an
   // utlägg takes the newest receipt and only that one (lib/data/expenses.ts), so
   // a previous receipt left in place is unreachable from every page in the app
-  // while its file sits in the bucket forever — and unreachable is worse than
+  // while its file sits in the bucket forever, and unreachable is worse than
   // orphaned, because the row keeps the sweeper from ever noticing it.
   //
   // Nothing attested is discarded this way: uploading at all requires the
@@ -110,13 +110,13 @@ export async function POST(
     select: { id: true, objectKey: true },
   });
 
-  // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled — but PNG when
+  // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled, but PNG when
   // the image is see-through); PDFs are stored as-is. Work out the object to
   // write plus the row's metadata, then persist atomically (object first, row
   // second).
   //
   // One object, singular. This was an array, and every use of it a `map` over
-  // exactly one element — the shape left behind when the 480px thumbnail was
+  // exactly one element, the shape left behind when the 480px thumbnail was
   // removed and the loops around it were not.
   let filename = file.name;
   let mimeType: string = fileType;
@@ -146,7 +146,7 @@ export async function POST(
     await putObject(objectKey, body, mimeType);
 
     // The replaced receipt's files go before its row, and before anything is
-    // committed — the same rule as an outright delete, applied at the only
+    // committed, the same rule as an outright delete, applied at the only
     // other point a receipt stops being current. Failing here changes nothing
     // at all: the new object is rolled back below and the old receipt is
     // still the utlägg's, so trying again once storage is back is safe.
@@ -197,7 +197,7 @@ export async function POST(
   }
 }
 
-// GET /api/expenses/:id/receipts — list a receipt's metadata (not the bytes).
+// GET /api/expenses/:id/receipts: list a receipt's metadata (not the bytes).
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },

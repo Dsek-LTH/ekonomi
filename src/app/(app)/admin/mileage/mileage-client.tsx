@@ -6,7 +6,7 @@
 // Skatteverket's and moves at a new year, and a deploy is the wrong way to find
 // that out. Safe to edit for the reason stated on the screen itself: a journey
 // stores the rate it was valued at, so nothing here re-values a claim already
-// filed — see the Milersättning block on Expense in the schema.
+// filed. See the Milersättning block on Expense in the schema.
 //
 // The rate is entered per *mil*, which is how it is quoted everywhere outside
 // this app, and stored per kilometre, which is how everything inside it
@@ -29,7 +29,7 @@ import { today } from "@/lib/domain/date";
 import type { MileageRateRow } from "@/lib/data/mileage";
 import type { MileageRateInput } from "@/lib/api/schemas/admin";
 
-// One formatter for both, built once rather than per row per render —
+// One formatter for both, built once rather than per row per render:
 // constructing an Intl formatter is the expensive half of using one.
 const kr = new Intl.NumberFormat("sv-SE", {
   minimumFractionDigits: 2,
@@ -51,7 +51,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   const [validFrom, setValidFrom] = useState("");
   // Optional, and worth having: the table is read a year later by somebody
   // asking why the figure changed, and "Skatteverkets schablon 2026" is the
-  // whole answer. The column and the message keys were always here — only the
+  // whole answer. The column and the message keys were always here. Only the
   // field to type it into was missing, so the note could be read and never set.
   const [note, setNote] = useState("");
 
@@ -63,7 +63,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   async function add() {
     const kr = parseSEK(krPerMil);
     if (!(kr > 0) || !validFrom) return;
-    // Kronor per mil in, öre per kilometre out — a mil is ten kilometres, and
+    // Kronor per mil in, öre per kilometre out. A mil is ten kilometres, and
     // the rounding is here so the stored integer is exact rather than a float
     // that happens to print well.
     const body: MileageRateInput = {
@@ -115,14 +115,14 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
 
       {adding && (
         // The form sits above the table rather than in a dialog: it is two
-        // fields, and a new rate is read straight after it is entered — the row
+        // fields, and a new rate is read straight after it is entered: the row
         // appearing at the top of the list below is the confirmation.
         <div className="grid gap-4 border-b border-border px-5 py-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-end">
           <Field label={t("validFrom")}>
             <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </Field>
           <Field label={t("rate")} hint={t("rateHint")}>
-            {/* A schablon is never negative, so no sign button — but the
+            {/* A schablon is never negative, so no sign button, but the
                 separator is the same problem it is everywhere: a phone offers
                 the one its own locale uses. */}
             <AmountInput value={krPerMil} onChange={setKrPerMil} />
@@ -162,8 +162,8 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
                   {t("col.validFrom")} {r.validFrom}
-                  {r.note ? ` · ${r.note}` : ""}
-                  {r.createdBy ? ` · ${t("col.createdBy")} ${r.createdBy}` : ""}
+                  {r.note ? ` – ${r.note}` : ""}
+                  {r.createdBy ? ` – ${t("col.createdBy")} ${r.createdBy}` : ""}
                 </p>
               </div>
               <IconButton tone="danger" label={t("remove")} onClick={() => remove(r)}>

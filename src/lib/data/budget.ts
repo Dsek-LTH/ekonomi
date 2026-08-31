@@ -4,8 +4,8 @@
 //
 // Two callers want exactly this: the budget page, which server-renders the
 // first copy, and GET /api/budgets/[id], which the page's client re-fetches
-// after each write. They must agree down to the shape — the client seeds its
-// state from one and replaces it with the other — so the loading lives here
+// after each write. They must agree down to the shape: the client seeds its
+// state from one and replaces it with the other, so the loading lives here
 // and neither owns it.
 import "server-only";
 
@@ -27,6 +27,8 @@ export interface BudgetSummary {
   id: string;
   year: number;
   name: string;
+  /** The day the meeting adopted it, YYYY-MM-DD, or null while it is a draft. */
+  adoptedAt: string | null;
   createdAt: string;
   lockedAt: string | null;
 }
@@ -36,28 +38,37 @@ export interface BudgetSummary {
  * not a group, so nothing here nests.
  *
  * Shared by the list page (which server-renders it) and GET /api/budgets (which
- * the compare view fetches for its picker) — the same reason
+ * the compare view fetches for its picker), the same reason
  * `getEvaluatedBudget` is shared, and the same rule: one loader, so the two can
  * never disagree about what a budget row is.
  */
 export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
   const budgets = await prisma.budget.findMany({
-    // Newest year first; within a year, in the order they were made — the
-    // ordinary budget before any drafted after it.
-    orderBy: [{ year: "desc" }, { createdAt: "asc" }],
-    select: { id: true, year: true, name: true, createdAt: true, lockedAt: true },
+    // Newest year first; within a year, in the order the section decided them,
+    // the ordinary budget before any revision adopted after it.
+    //
+    // `adoptedAt` leads because it is the section's own chronology, and
+    // `createdAt` only records when a row was typed: a budget imported from an
+    // old workbook was created today and adopted years ago. Nulls sort last
+    // under Postgres's default for ascending order, which is what we want. An
+    // unadopted draft belongs after everything that was actually decided.
+    orderBy: [{ year: "desc" }, { adoptedAt: "asc" }, { createdAt: "asc" }],
+    select: { id: true, year: true, name: true, adoptedAt: true, createdAt: true, lockedAt: true },
   });
   return budgets.map((b) => ({
     id: b.id,
     year: b.year,
     name: b.name,
+    // Date-only: the column is a DATE, and slicing the ISO string keeps it the
+    // day it was stored as rather than a timestamp the client would re-zone.
+    adoptedAt: b.adoptedAt ? b.adoptedAt.toISOString().slice(0, 10) : null,
     createdAt: b.createdAt.toISOString(),
     lockedAt: b.lockedAt?.toISOString() ?? null,
   }));
 }
 
 /**
- * The evaluated budget, exactly as the client receives it — dates as ISO
+ * The evaluated budget, exactly as the client receives it: dates as ISO
  * strings, everything plain JSON.
  *
  * The shape is described on the client side (app/(app)/budget/[budgetId]/
@@ -69,22 +80,22 @@ export type EvaluatedBudget = Record<string, unknown>;
 /** What a caller can leave out of the payload, and why it would want to. */
 export interface EvaluatedBudgetOptions {
   /**
-   * The year's outcome from the ledger. Costly — a group-by over every posting
-   * of the financial year, plus the chart and the cost-centre list to name them
-   * — and editing a budget cannot change any of it. The page asks for it; the
+   * The year's outcome from the ledger. Costly (a group-by over every posting
+   * of the financial year, plus the chart and the cost-centre list to name them)
+   * and editing a budget cannot change any of it. The page asks for it; the
    * re-fetch after a write does not, and the client keeps the copy it has.
    */
   actuals?: boolean;
   /**
    * The figures every formula resolves to. Left out, the payload is the budget's
    * rows and nothing derived from them, and the caller works the values out
-   * itself — which the budget page does anyway on every cell it commits, with
+   * itself, which the budget page does anyway on every cell it commits, with
    * this same `evaluate`. The page's first paint wants them; the re-fetch after
    * a write does not, and they are the larger half of that response.
    */
   evaluated?: boolean;
   /**
-   * Whether to hand back plain JSON — dates as strings — rather than the Prisma
+   * Whether to hand back plain JSON, dates as strings, rather than the Prisma
    * rows as they came. On for the page, which passes this straight into a client
    * component and must hand it the same shapes the fetch does. Off for the
    * route, where `NextResponse.json` does exactly this on the way out and doing
@@ -108,7 +119,7 @@ export async function getEvaluatedBudget(
       createdBy: { select: { name: true } },
       lockedBy: { select: { name: true } },
       variables: { orderBy: { sortOrder: "asc" } },
-      // The editorial history, oldest first — it reads as a chronicle, and the
+      // The editorial history, oldest first. It reads as a chronicle, and the
       // running numbers then come out in order. Revoked ones come along: they
       // are struck through, not hidden.
       changes: {
@@ -138,7 +149,7 @@ export async function getEvaluatedBudget(
   if (!budget) return null;
 
   // Which result unit a cost centre belongs to is derived from its code on every
-  // read (lib/server/result-units.ts), never stored — so re-assigning a prefix regroups
+  // read (lib/server/result-units.ts), never stored, so re-assigning a prefix regroups
   // every budget that mentions it, including ones drafted before the result unit
   // existed. Cost centres that aren't linked to one yet have no code and no
   // result unit; the client groups those on their own.
@@ -157,8 +168,8 @@ export async function getEvaluatedBudget(
   );
 
   // Redaktionella ändringar are added on top of the rows they adjust, so every
-  // figure downstream — account totals, `account(CC, ACCT)` references, the
-  // rambudget, the comparison — is what is actually in force. The sheet shows
+  // figure downstream (account totals, `account(CC, ACCT)` references, the
+  // rambudget, the comparison) is what is actually in force. The sheet shows
   // them as their own rows, which is where the history stays visible.
   const netByAccount = adjustmentsByAccount(budget.changes);
   const adjustments: AdjustmentInput[] = budget.costCenters.flatMap((cc) =>
@@ -193,6 +204,12 @@ export async function getEvaluatedBudget(
 
   const payload = {
     ...budget,
+    // Date-only, overriding what the DATE column would otherwise serialise to.
+    // JSON.stringify turns a Date into a full instant ("…T00:00:00.000Z"), and
+    // an instant read back in a browser west of UTC is the day before, which
+    // for the day a meeting sat is simply the wrong answer. So the day itself
+    // travels, and no zone gets a say in it.
+    adoptedAt: budget.adoptedAt ? budget.adoptedAt.toISOString().slice(0, 10) : null,
     costCenters: budget.costCenters.map((cc) => ({
       ...cc,
       costCenter: cc.costCenter
@@ -217,8 +234,8 @@ export async function getEvaluatedBudget(
   };
 
   // Through JSON on the way out, which is the point rather than an accident:
-  // the page hands the client the same thing the fetch does — dates as ISO
-  // strings, not Date objects — so seeding state from one and replacing it with
+  // the page hands the client the same thing the fetch does, dates as ISO
+  // strings, not Date objects, so seeding state from one and replacing it with
   // the other cannot produce two different shapes. The route turns this off,
   // because serialising the response is what it is about to do anyway.
   return (serialize ? JSON.parse(JSON.stringify(payload)) : payload) as EvaluatedBudget;
@@ -231,7 +248,7 @@ export async function getEvaluatedBudget(
 // It carries everything the ledger has, not only what this budget happens to
 // budget for: a cost centre or an account that was spent on without being
 // budgeted is precisely what the comparison is there to show. Figures are
-// oriented by account kind — income = credit−debit, cost = debit−credit — taking
+// oriented by account kind (income = credit−debit, cost = debit−credit), taking
 // the kind from the budget wherever it has an opinion, so an account
 // reclassified by hand keeps its sign.
 //
@@ -291,7 +308,7 @@ async function actualSheets(
       // budget side was kronor and the two had to meet somewhere; they meet in
       // öre now, so the conversion is gone rather than moved.
       total: net,
-      lines: [], // the ledger has no line items — only account totals
+      lines: [], // the ledger has no line items, only account totals
     });
   }
 

@@ -1,7 +1,7 @@
 // Writing an event sheet, a cell at a time.
 //
-// A cell is a row: one per occasion, product, direction and rung, which the
-// database enforces. So this does not append movements — it makes each row say
+// A cell is a row: one per event, product, direction and rung, which the
+// database enforces. So this does not append movements. It makes each row say
 // what the sheet says, creating it, changing it or removing it. Zero means
 // there should be no row, because a figure of nothing is not a movement of
 // nothing; it is the absence of one.
@@ -9,7 +9,7 @@
 // That is the whole reason a mistake no longer pollutes the log. Booking 200
 // bottles and meaning 20 used to leave both figures in the ledger forever, one
 // cancelling the other. Now the row says 20 and what happened to it is recorded
-// where it belongs: in StockChange, which is read as a feed on the occasion and
+// where it belongs: in StockChange, which is read as a feed on the event and
 // on the product.
 //
 // Three things this has to get right that a browser cannot be trusted with.
@@ -20,7 +20,7 @@
 //
 // And the log is read forward afterwards. A stocktake states what was on the
 // shelf and cost of goods rides on a moving average, so both depend on
-// everything before them — see lib/server/stock-replay.ts. Which is also why
+// everything before them, see lib/server/stock-replay.ts. Which is also why
 // nothing here is frozen behind a count: the count holds by being re-derived,
 // not by forbidding the rows in front of it to change.
 import { NextResponse } from "next/server";
@@ -52,8 +52,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
 
-  const tag = await prisma.stockTag.findUnique({ where: { id }, select: { id: true } });
-  if (!tag) return fail(404, "stock.tagNotFound");
+  const event = await prisma.stockEvent.findUnique({ where: { id }, select: { id: true } });
+  if (!event) return fail(404, "stock.eventNotFound");
 
   const productIds = [...new Set(body.cells.map((c) => c.productId))];
   const products = await prisma.stockProduct.findMany({
@@ -71,9 +71,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const byId = new Map(products.map((p) => [p.id, p]));
 
   const result = await bulkTransaction(async (tx) => {
-    // What the occasion says now, and what the cellar holds.
+    // What the event says now, and what the cellar holds.
     const existing = await tx.stockEntry.findMany({
-      where: { tagId: id, productId: { in: productIds } },
+      where: { eventId: id, productId: { in: productIds } },
       select: {
         id: true,
         productId: true,
@@ -105,12 +105,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
      * A request is one statement about a night, not a queue of them, and it has
      * to be judged as one. Cell by cell against the stored figures, "eight out
      * and one dropped" was refused: whichever of the two was checked first, the
-     * other had not happened yet — so the night had taken nothing out and a
+     * other had not happened yet, so the night had taken nothing out and a
      * spill of one was one too many. Which half of the same save you lost
      * depended on the order the browser happened to send them in.
      *
      * Against this map the answer is the same whatever that order is. The
-     * cellar checks still read `booked`, which is what the shelf reflects — see
+     * cellar checks still read `booked`, which is what the shelf reflects. See
      * SheetState in lib/stock/cells.ts.
      */
     const sheet = new Map(booked);
@@ -178,7 +178,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           data: {
             entryId: row.id,
             productId: cell.productId,
-            tagId: id,
+            eventId: id,
             action: "DELETE",
             kind: ref.kind,
             level: ref.level,
@@ -204,7 +204,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           data: {
             entryId: row.id,
             productId: cell.productId,
-            tagId: id,
+            eventId: id,
             action: "UPDATE",
             kind: ref.kind,
             level: ref.level,
@@ -225,7 +225,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             open40: columns.open[40] ?? 0,
             open20: columns.open[20] ?? 0,
             spilledQty: columns.spilledQty,
-            tagId: id,
+            eventId: id,
             occurredAt: new Date(body.occurredAt),
             actorId: g.actor.id,
             note: body.note ?? null,
@@ -236,7 +236,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           data: {
             entryId: made.id,
             productId: cell.productId,
-            tagId: id,
+            eventId: id,
             action: "CREATE",
             kind: ref.kind,
             level: ref.level,
@@ -251,7 +251,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // describing the same moment: the shelf is read once, before the loop,
       // so a `booked` that crept forward with each write would be measuring
       // new figures against an old shelf. The night's side of the rule is
-      // already whole — `sheet` holds every cell of this request from the
+      // already whole: `sheet` holds every cell of this request from the
       // start.
       touched.add(cell.productId);
       written++;
@@ -260,7 +260,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (conflicts.length > 0) return { conflicts } as const;
 
     // What a count has to say, and what everything cost, both follow from the
-    // rows before them — so the log is read forward rather than patched.
+    // rows before them, so the log is read forward rather than patched.
     for (const productId of touched) {
       await replayProduct(tx, productId, byId.get(productId)!.costPriceOre);
     }

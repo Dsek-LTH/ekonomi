@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { useProgressRouter } from "@/components/shell/route-progress";
+import { useReturnTo } from "@/components/shell/route-history";
 
 export type TransitionAction =
   | "submit"
@@ -21,7 +21,7 @@ export type TransitionAction =
 // the action buttons.
 export function useExpenseMutations(expenseId: string) {
   const t = useTranslations("expenses.mutations");
-  const router = useProgressRouter();
+  const returnTo = useReturnTo();
   const notify = useNotify();
   const confirm = useConfirm();
   const action = useMutation();
@@ -109,7 +109,9 @@ export function useExpenseMutations(expenseId: string) {
     });
     if (!data) return;
     setDeleted(true);
-    router.push("/expenses");
+    // Not a push: the utlägg this page describes is gone, and pushing left it
+    // sitting behind its own list on the Back button.
+    returnTo("/expenses");
   }
 
   return {

@@ -6,12 +6,12 @@
 //
 // The engine is swappable. `renderCover` takes this and returns PDF bytes; a
 // LaTeX implementation would be a second file with the same signature and
-// nothing else in the app would move — see cover/typst.ts.
+// nothing else in the app would move. See cover/typst.ts.
 //
 // And the interesting half is testable without one. Turning an utlägg into
 // these fields is where the decisions live (which name, which date, what a
 // missing approver reads as), and `buildCoverData` can be asserted on with no
-// binary installed anywhere — see lib/expense/document.ts.
+// binary installed anywhere. See lib/expense/document.ts.
 //
 // Everything here is pre-formatted, in Swedish, ready to be placed. The
 // typesetter is not given amounts in öre and a locale to sort out: it is given
@@ -21,7 +21,7 @@
 
 /** One cost-centre slice of the utlägg, with the attest that cleared it. */
 export interface ExpenseCoverAllocation {
-  /** "SEKT05 · Sexmästeriet" — code and name, as the ledger writes it. */
+  /** "SEKT05 – Sexmästeriet": code and name, as the ledger writes it. */
   costCenter: string;
   amount: string;
   /** The submitter's note, or null. Rendered as a dash. */
@@ -35,8 +35,8 @@ export interface ExpenseCoverAllocation {
 /**
  * The journey behind a milersättning, as the page states it.
  *
- * A mileage claim has no receipt to staple behind the cover — nobody
- * photographs driving their own car — so what would otherwise be a second
+ * A mileage claim has no receipt to staple behind the cover. Nobody
+ * photographs driving their own car, so what would otherwise be a second
  * document is a section of this one: the odometer at each end, the difference
  * between them, and what a kilometre was worth on the day. The readings are why
  * it is worth printing at all; a distance alone is a number somebody arrived
@@ -46,10 +46,10 @@ export interface ExpenseCoverAllocation {
  * follows on the next page.
  */
 export interface ExpenseCoverJourney {
-  /** "12 300,0 km" — the odometer when the journey began. */
+  /** "12 300,0 km": the odometer when the journey began. */
   odometerStart: string;
   odometerEnd: string;
-  /** "42,0 km" — the difference, which is the distance claimed. */
+  /** "42,0 km": the difference, which is the distance claimed. */
   distance: string;
   /** "2,50 kr/km", or a dash where the day had no rate. */
   rate: string;
@@ -64,10 +64,10 @@ export interface ExpenseCoverData {
   /**
    * What to call that date. "Kvittodatum" for an utlägg with a receipt behind
    * it, "Sista resdag" for a milersättning, which has no receipt and whose date
-   * is the day of its last journey — see lib/expense/document.ts.
+   * is the day of its last journey. See lib/expense/document.ts.
    */
   dateLabel: string;
-  /** "Privat utlägg" / "Sektionskort" — already worded. */
+  /** "Privat utlägg" / "Sektionskort", already worded. */
   paymentType: string;
   /** ISO date the cover was drawn. */
   created: string;
@@ -78,7 +78,7 @@ export interface ExpenseCoverData {
   };
   total: string;
   allocations: ExpenseCoverAllocation[];
-  /** The journey, for a milersättning. Null for anything else — see above. */
+  /** The journey, for a milersättning. Null for anything else. See above. */
   journey: ExpenseCoverJourney | null;
 }
 
@@ -86,7 +86,7 @@ export interface ExpenseCoverData {
  * A cover page, as PDF bytes.
  *
  * The one function an engine has to provide. Nothing in the signature says how
- * — a subprocess, a native module, an HTTP call to a sidecar all fit — which is
+ * A subprocess, a native module, an HTTP call to a sidecar all fit, which is
  * the point of it being this narrow.
  */
 export type CoverRenderer = (data: ExpenseCoverData) => Promise<Uint8Array>;

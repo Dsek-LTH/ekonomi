@@ -3,7 +3,7 @@
 // Pure and React-free: role capabilities (permissions.ts) and status rules
 // (status.ts) go in, a flat set of booleans comes out.
 //
-// It lives in lib/domain, and is called on the *server* — the detail page
+// It lives in lib/domain, and is called on the *server*. The detail page
 // derives it once and hands the answer down. That is not where it started: it
 // was a client module, deriving the same rules the API enforces, from a second
 // copy of them written by hand. Each of those copies was a place the two could
@@ -31,7 +31,7 @@ import type { Capability, Expense, Role } from "./types";
 
 export type ExpenseCapabilities = {
   canSubmit: boolean;
-  /** Why submitting isn't possible yet — shown only to someone who could
+  /** Why submitting isn't possible yet, shown only to someone who could
    *  submit, as a key under `expenses.submitBlocker`. */
   submitBlocker: SubmitBlocker | null;
   canApprove: boolean;
@@ -41,7 +41,7 @@ export type ExpenseCapabilities = {
    * The submitter may take the whole utlägg back out of the queue, to a draft.
    *
    * Their own act, not the attester's `canWithdrawAttest`: what comes back is
-   * the claim itself, so it can be corrected — a purchase filed as an eget
+   * the claim itself, so it can be corrected: a purchase filed as an eget
    * utlägg that turns out to have gone on the section card, most often, which
    * is a change no attester can make for them.
    */
@@ -50,7 +50,7 @@ export type ExpenseCapabilities = {
   canReturn: boolean;
   canBook: boolean;
   canExport: boolean;
-  /** May take an exported utlägg back to bokförd — our record only, the Fortnox
+  /** May take an exported utlägg back to bokförd, our record only, the Fortnox
    *  voucher stays where it is. */
   canUnexport: boolean;
   canEditVerification: boolean;
@@ -59,7 +59,7 @@ export type ExpenseCapabilities = {
   canDelete: boolean;
   /** Whether any call-to-action is offered, which demotes "Redigera" to secondary. */
   hasPrimaryAction: boolean;
-  /** Whether the panel offers anything at all — otherwise it says so. */
+  /** Whether the panel offers anything at all. Otherwise it says so. */
   hasAnyAction: boolean;
 };
 
@@ -82,7 +82,7 @@ export function expenseCapabilities(
     //
     // Read off the claim rather than re-derived from the rate table, which is
     // not on this side of the wire: `km` is null until the two readings make a
-    // journey, and `orePerKm` is null until one was valued — which is exactly
+    // journey, and `orePerKm` is null until one was valued, which is exactly
     // what claimBlocker refuses on. The wording is the form's business; all
     // that is needed here is whether something is wrong.
     mileageBlocker:
@@ -107,7 +107,7 @@ export function expenseCapabilities(
   const canReturn = !!expense.canReturn && expense.status === "APPROVED";
   const canBook = bookkeeper && expense.status === "APPROVED";
   // Exporting is a real Fortnox call made under the bookkeeper's own login, so
-  // it takes the narrower role set — the one that *has* such a login. The chair
+  // it takes the narrower role set, the one that *has* such a login. The chair
   // counts as bookkeeping in this app and has no Fortnox account, and was being
   // offered a button whose first step would have asked them to sign in to
   // something they cannot sign in to.
@@ -119,7 +119,7 @@ export function expenseCapabilities(
   // to change it: a resultatansvarig sees every utlägg touching their result
   // unit, and offering them "Redigera" opened the whole wizard on someone
   // else's claim only for PATCH /api/expenses/[id] to refuse the save. The
-  // server rule is `canEditExpense` (submitter or admin) — this is its half.
+  // server rule is `canEditExpense` (submitter or admin). This is its half.
   const canEdit = isEditable(expense.status) && mayAct;
   // Admin may delete any utlägg; a user may delete their own unless it's
   // attested or further.

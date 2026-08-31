@@ -16,14 +16,14 @@ import {
 } from "./list-query";
 import { isoDate } from "./shared";
 
-// Pass `cardHolderId` to get only the purchases on that member's own card —
+// Pass `cardHolderId` to get only the purchases on that member's own card.
 // the bank table is the largest in the app, so this filters in the DB rather
 // than shipping every row to the caller. It is also what keeps the whole
 // section's bank feed off a page that only needs one member's purchases: a page
 // ships what it asks for, so asking for everything publishes everything.
 //
-// `alsoIds` carries the rows a screen must show whoever is looking — the
-// transaction an utlägg is already matched to — past that filter. Same shape as
+// `alsoIds` carries the rows a screen must show whoever is looking (the
+// transaction an utlägg is already matched to) past that filter. Same shape as
 // the book page's `getActiveAccounts([...])`: narrow by rule, then add back
 // what the record already points at.
 export async function getBankTransactions(
@@ -54,7 +54,7 @@ export async function getBankTransactions(
  * whoever is looking, but only offers the picker to someone who may change it.
  *
  * Its own function rather than `getBankTransactions({ alsoIds })`, because that
- * call reads as "these as well as nothing" and means "the whole feed" — the
+ * call reads as "these as well as nothing" and means "the whole feed": the
  * filter there is the holder, and `alsoIds` only widens it. An empty list in,
  * an empty list out; there is no way to ask this one for everything.
  */
@@ -111,7 +111,7 @@ const BANK_ORDER: Record<string, (dir: SortDir) => Prisma.BankTransactionOrderBy
   card: (d) => [{ cardLast4: d }, { id: d }],
 };
 
-// transactionDate is a date, so same-day purchases tie — hence the tiebreaker.
+// transactionDate is a date, so same-day purchases tie, hence the tiebreaker.
 const BANK_DEFAULT_ORDER: Prisma.BankTransactionOrderByWithRelationInput[] = [
   { transactionDate: "desc" },
   { id: "desc" },
@@ -121,7 +121,7 @@ const BANK_DEFAULT_ORDER: Prisma.BankTransactionOrderByWithRelationInput[] = [
  * One page of the bank feed, and how many rows are behind it.
  *
  * `scope` is the same narrowing `getBankTransactions` takes and means the same
- * thing — a member's own card purchases, or the whole feed for bookkeeping.
+ * thing: a member's own card purchases, or the whole feed for bookkeeping.
  * Whether a row is accounted for is a tab rather than a search: it is the
  * question this screen exists to answer.
  */

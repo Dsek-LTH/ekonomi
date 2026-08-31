@@ -6,7 +6,7 @@ import type { CompareSheet } from "@/lib/budget/compare";
 
 export interface LineItem {
   id: string; description: string;
-  expression: string; // the Belopp cell — a literal number or "=…" formula
+  expression: string; // the Belopp cell, a literal number or "=…" formula
   sortOrder: number;
   values: Record<string, string>; // per-line values for the six general columns, keyed x1…x6
 }
@@ -20,7 +20,7 @@ export interface Account {
   lineItems: LineItem[]; comments: Comment[];
 }
 // One sheet in the budget. `costCenter` is null while the sheet isn't linked to
-// one — a fresh clone, or a budget drafted before the cost centre existed — and
+// one, a fresh clone, or a budget drafted before the cost centre existed, and
 // `label` is what it's called until it is. See BudgetCostCenter in
 // schema.prisma; `sheetKey`/`sheetName` in lib/budget resolve the two cases.
 export interface BudgetCC {
@@ -36,7 +36,7 @@ export interface Variable { id: string; name: string; expression: string; sortOr
 export interface ChangeEntry { id: string; accountId: string; amount: number }
 export interface BudgetChange {
   id: string;
-  seq: number; // running number within the budget — "avsteg #4"
+  seq: number; // running number within the budget, "avsteg #4"
   kind: ChangeKind;
   reason: string;
   createdAt: string;
@@ -56,17 +56,19 @@ export interface Evaluated {
 }
 export interface Budget {
   id: string; name: string; year: number;
+  /** The day the möte adopted it, YYYY-MM-DD, or null while it is a draft. */
+  adoptedAt: string | null;
   createdBy: { name: string };
   // Set together when the treasurer locks the budget; every edit is then
   // refused (comments excepted). See lib/budget/access.ts.
   lockedAt: string | null; lockedBy: { name: string } | null;
   variables: Variable[]; costCenters: BudgetCC[]; evaluated: Evaluated;
-  // The editorial history, oldest first. Already folded into `evaluated` — the
-  // figures here are the ones in force — and shown as its own rows in the sheet
+  // The editorial history, oldest first. Already folded into `evaluated`, the
+  // figures here are the ones in force, and shown as its own rows in the sheet
   // and in full under the changes view.
   changes: BudgetChange[];
   // The year's actual outcome from the Fortnox ledger, already shaped as a side
-  // of a comparison (lib/budget/compare.ts) — it holds what the ledger reports
+  // of a comparison (lib/budget/compare.ts). It holds what the ledger reports
   // on cost centres and accounts this budget never mentions, too.
   actuals?: CompareSheet[]; actualsSynced?: boolean; actualsYear?: number;
 }
@@ -78,7 +80,7 @@ export interface Budget {
  *
  * It lives on the page rather than in a sheet, because the whole point is to
  * cross from one cost centre to another and a sheet is unmounted the moment you
- * leave it. `label` is what to call it in the paste hint — "3 rader", "3011".
+ * leave it. `label` is what to call it in the paste hint, "3 rader", "3011".
  */
 export type BudgetClip =
   | { kind: "rows"; ids: string[]; label: string }
@@ -89,7 +91,7 @@ export type BudgetClip =
  *
  * `apply` is the difference between a fast write and a slow one. A create route
  * hands back the row it made, a delete says it deleted, a reorder was this
- * screen's own arrangement — so where the caller can say what changed, it says
+ * screen's own arrangement, so where the caller can say what changed, it says
  * so and the budget is patched in place. Where it can't, it leaves `apply` off
  * and the whole budget is read back, which is correct and costs a round trip.
  *

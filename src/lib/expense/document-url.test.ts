@@ -29,7 +29,7 @@ describe("expenseDocuments", () => {
   });
 
   it("names the underlag for a reader who cannot see it", () => {
-    expect(expenseDocuments(submitted, "Kvitto · Tejp")[1].filename).toBe("Kvitto · Tejp");
+    expect(expenseDocuments(submitted, "Kvitto – Tejp")[1].filename).toBe("Kvitto – Tejp");
   });
 
   it("leaves the panel to say there is no underlag", () => {

@@ -2,7 +2,7 @@
 
 // Reading the barcode off a tin, on whatever machine is to hand.
 //
-// The browser's own `BarcodeDetector` where there is one — Chrome on Android and
+// The browser's own `BarcodeDetector` where there is one. Chrome on Android and
 // on macOS both have it, and it costs nothing to ship. Everywhere else the same
 // interface is fetched as WASM the first time somebody opens the scanner.
 //
@@ -10,12 +10,12 @@
 // the cellar is an Android and the native API covers it. It does not cover
 // Firefox, Zen or Safari, where the camera panel simply never appeared and the
 // only way in was typing thirteen digits off the bottom of a tin. A guild does
-// not get to choose what its committee installed, so the polyfill is in — but
+// not get to choose what its committee installed, so the polyfill is in, but
 // lazily, behind a dynamic import that only a browser lacking the real thing
 // ever reaches. An Android phone downloads none of it.
 //
 // A third way in, for neither of those: the field takes a code typed by hand,
-// which is also exactly what a handheld reader does — it is a keyboard that
+// which is also exactly what a handheld reader does. It is a keyboard that
 // types digits and presses Enter.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -36,7 +36,7 @@ type DetectorCtor = new (opts?: { formats?: string[] }) => Detector;
  * Which camera to open.
  *
  * Two ways of naming one, because machines disagree about what a camera is. A
- * phone has a side — the world, or your face — and picks its own lens for it. A
+ * phone has a side (the world, or your face) and picks its own lens for it. A
  * laptop with a second webcam has no sides at all, only devices. Asking for the
  * wrong one of these is what made flipping take three presses; see `flip`.
  */
@@ -53,7 +53,7 @@ const FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e"];
  *
  * The native detector is preferred and costs nothing. The fallback is imported
  * only when it is needed, so the WASM never reaches a machine that already has
- * the real thing — and never reaches the initial page load at all.
+ * the real thing, and never reaches the initial page load at all.
  */
 async function detectorFor(formats: string[]): Promise<Detector> {
   const native = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
@@ -66,7 +66,7 @@ async function detectorFor(formats: string[]): Promise<Detector> {
  * Reading a barcode, however this machine can.
  *
  * Two ways in, because the fleet is not one machine. A phone in a cellar reads
- * the code off its camera; a laptop cannot — `BarcodeDetector` is not in Safari
+ * the code off its camera; a laptop cannot. `BarcodeDetector` is not in Safari
  * or Firefox, and the control used to vanish entirely rather than say so. And a
  * handheld reader on the bar is a keyboard: it types the digits and presses
  * Enter, which is what the field below is for.
@@ -92,7 +92,7 @@ export function BarcodeScanner({
    * A camera pointing at you has to be mirrored or aiming is guesswork: you
    * move the bottle left and the label goes right, because what you are shown
    * is what somebody opposite would see. A camera pointing away from you must
-   * not be — you are looking through it at the world, and a mirrored world is
+   * not be. You are looking through it at the world, and a mirrored world is
    * the same problem the other way round.
    *
    * Decided from what the browser actually gave us rather than what we asked
@@ -101,7 +101,7 @@ export function BarcodeScanner({
    * person, so anything that is not explicitly the far side gets mirrored.
    *
    * The picture only. `detect` is handed the video element and reads its real
-   * pixels, so the flip never reaches the decoder — which is just as well,
+   * pixels, so the flip never reaches the decoder, which is just as well,
    * because a mirrored barcode does not scan.
    */
   const [mirrored, setMirrored] = useState(false);
@@ -110,7 +110,7 @@ export function BarcodeScanner({
    *
    * `choice` starts as the far side, not exactly: the browser is asked to point
    * away and left to choose the lens, which is what puts a phone on its back
-   * camera without anyone naming a device — and, unlike an exact constraint,
+   * camera without anyone naming a device, and, unlike an exact constraint,
    * cannot fail on a laptop that has no sides to speak of.
    *
    * `active` is what the browser actually handed over, which is not the same
@@ -142,13 +142,13 @@ export function BarcodeScanner({
     };
 
     void (async () => {
-      // A camera is only offered on a secure origin — https, or localhost. Over
+      // A camera is only offered on a secure origin: https, or localhost. Over
       // plain http `navigator.mediaDevices` is not merely empty, it is
       // undefined, so the call below fails as a TypeError with nothing in it to
       // report and every cause came out as the same sentence: "check the
       // permission in the browser". Which is a dead end, because on an insecure
       // origin there is no permission to grant and no prompt will ever appear.
-      // Asked first so the message can name the one thing that would fix it —
+      // Asked first so the message can name the one thing that would fix it:
       // the dev server reached over a LAN address is exactly this case.
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         setError(t("scan.needsHttps"));
@@ -158,7 +158,7 @@ export function BarcodeScanner({
         stream = await navigator.mediaDevices.getUserMedia({
           // `exact` on anything a flip chose, or the browser is free to read
           // the request as a preference and hand back the camera already
-          // running — which from the outside is a button that does nothing. The
+          // running, which from the outside is a button that does nothing. The
           // opening request is the deliberate exception: it is a preference, so
           // that a machine with no far side still gets a picture.
           video:
@@ -183,7 +183,7 @@ export function BarcodeScanner({
         setMirrored(side !== "environment");
         active.current = { deviceId: settings?.deviceId, label: track?.label, side };
         setReady(true);
-        // Only now do the entries carry ids and labels — enumerateDevices
+        // Only now do the entries carry ids and labels. enumerateDevices
         // withholds both until a camera has been granted, so asking any earlier
         // would count devices it could not tell apart.
         void navigator.mediaDevices
@@ -257,12 +257,12 @@ export function BarcodeScanner({
   }, [choice]);
 
   /**
-   * The other camera — by side where there is one, by device where there is not.
+   * The other camera, by side where there is one, by device where there is not.
    *
    * Stepping through the device list was the obvious way to write this and the
    * wrong one. A phone does not enumerate two cameras: it enumerates the front
-   * one and every rear lens it has — wide, ultra-wide, telephoto, sometimes a
-   * depth sensor — so stepping walked between rear lenses that show the same
+   * one and every rear lens it has (wide, ultra-wide, telephoto, sometimes a
+   * depth sensor) so stepping walked between rear lenses that show the same
    * picture, and the front camera arrived on the third press. Asking for the
    * other *side* hands the choice of lens back to the phone, which is the one
    * party here that knows which of its rear cameras is the ordinary one.
@@ -330,7 +330,7 @@ export function BarcodeScanner({
             )}
             {/* Over the picture rather than under it: the frame is already as
                 tall as a phone can spare, and a row of controls beneath it
-                pushes the typed-code field off the screen — which is the way in
+                pushes the typed-code field off the screen, which is the way in
                 that always works and the last one to sacrifice. Disabled rather
                 than hidden while the next camera comes up, so the frame does
                 not jump and a second tap cannot race the first. */}
@@ -362,8 +362,8 @@ export function BarcodeScanner({
           <p className="text-xs text-muted">{t("scan.hint")}</p>
         )}
 
-        {/* Autofocused, so a handheld reader — which is a keyboard that types
-            digits and presses Enter — needs nobody to click anything first. */}
+        {/* Autofocused, so a handheld reader (which is a keyboard that types
+            digits and presses Enter) needs nobody to click anything first. */}
         <Field label={t("scan.code")} hint={t("scan.codeHint")}>
           <Input
             value={typedCode}

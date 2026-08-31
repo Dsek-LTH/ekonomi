@@ -61,8 +61,8 @@ export async function PATCH(
   }
 
   // Absent means "leave it": this patches an utlägg that already exists, so
-  // every field falls back to what is stored. The *shape* of each one — a whole
-  // date, an integer öre, one of the two payment types — is the schema's
+  // every field falls back to what is stored. The *shape* of each one (a whole
+  // date, an integer öre, one of the two payment types) is the schema's
   // business now and is not re-checked here.
   const title = body.title ?? expense.title;
   // The schema guarantees a title that was *sent* says something; it cannot
@@ -91,7 +91,7 @@ export async function PATCH(
 
   // The odometer at each end, and what the journey between them is worth.
   //
-  // Absent means "leave it", like every other field here — so a save that only
+  // Absent means "leave it", like every other field here, so a save that only
   // touches the distribution does not have to re-send the readings. The rate is
   // resolved against the date this edit *leaves behind*, not the one it sends:
   // correcting a journey's day to one under a different schablon has to move
@@ -100,7 +100,7 @@ export async function PATCH(
   //
   // Null on every other payment type, and *cleared* by an edit that moves off
   // MILEAGE. The three columns describe a journey, and an utlägg that is no
-  // longer a milersättning has none — they used to be spread in only when there
+  // longer a milersättning has none. They used to be spread in only when there
   // was something to value, which left the readings and the schablon sitting on
   // a receipt claim for the rest of its life, with the timeline going on to
   // record edits to them.
@@ -128,7 +128,7 @@ export async function PATCH(
       })
     : null;
 
-  // On a milersättning the amount is never the client's — it is the distance
+  // On a milersättning the amount is never the client's. It is the distance
   // between the two readings at the day's rate, and this is where that is
   // settled whatever the request said.
   const grossAmount = valued
@@ -141,7 +141,7 @@ export async function PATCH(
   //
   // A match says a particular row on the card is the money that left for this
   // purchase (see isMatchable). "Eget utlägg" says the member's own money left
-  // and the section owes them it back — so an utlägg holding both has the
+  // and the section owes them it back, so an utlägg holding both has the
   // section paying for one purchase twice, once on the card and once into a
   // member's account, with the card row marked accounted for either way.
   //
@@ -160,16 +160,16 @@ export async function PATCH(
   // is the same utlägg with the sign flipped, and its allocations follow it.
   // The transition route still requires the rows to sum to the gross.
 
-  // Allocations, in öre — like every other amount here and like the column they
+  // Allocations, in öre, like every other amount here and like the column they
   // are stored in. Shape guaranteed by AllocationInput.
   let newAllocs: { costCenterId: string; amount: number; comment: string | null }[] | null = null;
-  // The same rows keyed by cost-centre code, for the change comparison below —
+  // The same rows keyed by cost-centre code, for the change comparison below.
   // `newAllocs` holds ids, and rows without a cost centre are dropped, so it
   // can't be lined up with `body.allocations` by index.
   //
   // The comment is part of the key. It was left out, and since a comment-only
   // edit changes no other field, the write went through while the timeline
-  // recorded nothing at all — on the one screen whose purpose is to say what
+  // recorded nothing at all, on the one screen whose purpose is to say what
   // happened to an utlägg and who did it.
   let newAllocKeys: { cc: string; amt: number; comment: string | null }[] = [];
   if (body.allocations) {
@@ -237,7 +237,7 @@ export async function PATCH(
   //
   // Only when this edit is what sets it, though. A draft can sit untouched long
   // enough to cross the deadline on its own, and refusing every save from then
-  // on would strand it — its owner can no longer correct a mistyped date, move
+  // on would strand it. Its owner can no longer correct a mistyped date, move
   // it to the section card, or write down what the skattmästare said. Submitting
   // is where a late one is actually stopped, and the transition route says so
   // whatever it was saved as.
@@ -276,7 +276,7 @@ export async function PATCH(
           // All three together, on a milersättning and only there: the
           // readings, and the rate that valued the distance between them.
           // Written onto the claim rather than looked up when it is read, so
-          // the amount stays checkable after the schablon moves — and written
+          // the amount stays checkable after the schablon moves, and written
           // unconditionally so that moving off MILEAGE takes them back off,
           // rather than leaving a journey on a claim that no longer has one.
           odometerStart,
@@ -295,7 +295,7 @@ export async function PATCH(
       }
 
       // Only when they actually differ. Rewriting an identical distribution
-      // dropped and recreated every row for nothing — and left the write and
+      // dropped and recreated every row for nothing, and left the write and
       // the timeline disagreeing about whether anything had happened.
       if (newAllocs && allocsChanged) {
         await tx.expenseCostAllocation.deleteMany({ where: { expenseId: expense.id } });
@@ -327,7 +327,7 @@ export async function PATCH(
     });
   } catch (err) {
     // The reason goes to the log, not to the browser. A Prisma error message
-    // names columns, constraints and sometimes the values that violated them —
+    // names columns, constraints and sometimes the values that violated them,
     // none of which is the caller's to read, and none of which they could act
     // on. `error` carries a code the client translates (see lib/api/guard.ts);
     // this used to hand the raw message over as though it were one.
@@ -338,7 +338,7 @@ export async function PATCH(
   return NextResponse.json({ id, changed: changedFields.length }, { status: 200 });
 }
 
-// DELETE — admin deletes any; owner deletes own while not yet attested.
+// DELETE: admin deletes any; owner deletes own while not yet attested.
 export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -356,7 +356,7 @@ export async function DELETE(
   const denied = denyExpenseDelete(g.actor, expense);
   if (denied) return denied;
 
-  // Receipt files first, and the utlägg only if every one of them is gone —
+  // Receipt files first, and the utlägg only if every one of them is gone.
   // deleting an utlägg deletes its receipts by cascade, so the same rule
   // applies as in the single-receipt delete: no file may outlive its row.
   // Every key is attempted rather than stopping at the first failure, so a

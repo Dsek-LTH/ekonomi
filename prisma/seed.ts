@@ -1,11 +1,11 @@
-// Seeds the database from the static fixtures in prisma/seed-data.ts — once
-// the frontend mock dataset — so the real app starts with the same scenarios
+// Seeds the database from the static fixtures in prisma/seed-data.ts, once
+// the frontend mock dataset, so the real app starts with the same scenarios
 // the design was validated against.
 // Idempotent: wipes the domain tables and re-inserts on every run.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/generated/prisma/client";
 
-// Standalone run (pnpm db:seed) — load .env ourselves.
+// Standalone run (pnpm db:seed). Load .env ourselves.
 import { loadEnvFile } from "./load-env";
 import {
   DEFAULT_GROUP_RESULT_UNITS,
@@ -27,7 +27,7 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-// öre — store money as integer minor units.
+// öre, store money as integer minor units.
 const ore = (sek: number) => Math.round(sek * 100);
 
 const ascii = (name: string) =>
@@ -75,11 +75,11 @@ async function main() {
   await prisma.user.deleteMany();
 
   // Dropping every Receipt row leaves every receipt object in the bucket with
-  // nothing pointing at it, and the seed data brings no files of its own — so
+  // nothing pointing at it, and the seed data brings no files of its own, so
   // after this wipe the correct contents of `receipts/` is nothing at all.
   // Without this a dev bucket grows by a full set of orphans per reseed.
   // Storage being down is not a reason to fail a database seed, so this warns
-  // and carries on — `pnpm receipts:gc` collects whatever it left behind.
+  // and carries on. `pnpm receipts:gc` collects whatever it left behind.
   try {
     const stored = await listObjects("receipts/");
     if (stored.length > 0) {
@@ -88,7 +88,7 @@ async function main() {
       console.log(`Rensade ${stored.length - failures.length} kvittofiler ur ${bucket()}.`);
     }
   } catch (err) {
-    console.warn(`Kunde inte rensa kvittofiler ur ${bucket()} — kör pnpm receipts:gc senare.`, err);
+    console.warn(`Kunde inte rensa kvittofiler ur ${bucket()}, kör pnpm receipts:gc senare.`, err);
   }
 
   // ── Users ───────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ async function main() {
 
   // ── Cost centers (+ result units) ────────────────────────────────
   // ResultUnit membership is derived from code prefixes, so each seeded
-  // result unit gets its cost centre's full code as its prefix — matching that
+  // result unit gets its cost centre's full code as its prefix, matching that
   // one code and nothing else.
   const costCenterByCode = new Map<string, string>();
   const resultUnitByName = new Map<string, string>();
@@ -160,7 +160,7 @@ async function main() {
     }
   }
 
-  // Resultatansvar is held by result unit *name* on the user row — the shape
+  // Resultatansvar is held by result unit *name* on the user row, the shape
   // the Authentik mapping writes (lib/server/authentik-roles.ts). A dev sign-in
   // has no group list, so seeding the column is the only way the seeded
   // resultatansvariga answer for anything.
@@ -185,7 +185,7 @@ async function main() {
   // (lib/server/authority-defaults.ts).
   //
   // Rewritten from scratch rather than left alone, because a seed is supposed
-  // to produce one known database and these tables are editable — a dev who
+  // to produce one known database and these tables are editable. A dev who
   // spent yesterday testing the settings screen should not start today holding
   // whatever they left behind. The group → result unit rows have to be here in
   // any case: they are foreign keys into ResultUnit, and the wipe above took
@@ -199,7 +199,7 @@ async function main() {
 
   // Only the units this seed actually created. The defaults name the section's
   // real committees and the fixtures are a smaller, invented set, so most of
-  // them have nothing to point at — and a mapping row cannot name a unit that
+  // them have nothing to point at, and a mapping row cannot name a unit that
   // does not exist.
   const groupUnits = DEFAULT_GROUP_RESULT_UNITS.flatMap(({ group, unit }) => {
     const resultUnitId = resultUnitByName.get(unit);

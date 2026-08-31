@@ -44,7 +44,7 @@ const monthName = (locale: string, monthIndex: number) =>
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Every month the financial year spans, as YYYY-MM — a broken financial year
+// Every month the financial year spans, as YYYY-MM. A broken financial year
 // doesn't start in January, so this is derived from the year's own dates.
 function monthsOf(year: LedgerYear, locale: string): ComboOption[] {
   const out: ComboOption[] = [];
@@ -155,7 +155,7 @@ export default function LedgerClient({
     }
   }, [t, tAll, tCommon]);
 
-  // load() does set state before it awaits — but on this first call it sets
+  // load() does set state before it awaits, but on this first call it sets
   // `loading` to true and `error` to null, which is what they already are, so
   // React bails out and no extra render happens. The rule cannot see that the
   // values match, hence the exemption rather than a restructure.
@@ -186,7 +186,7 @@ export default function LedgerClient({
     const next = { ...query, ...patch };
     // A new year has its own months, so the period resets with it. The budget
     // does not: any budget may be compared against any year, and one that was
-    // picked by hand — with its year on the label — is a choice to keep rather
+    // picked by hand, with its year on the label, is a choice to keep rather
     // than to quietly undo. Leaving it null instead lets the server offer this
     // year's own, which is what someone who never touched the picker wants.
     if (patch.year !== undefined && patch.year !== query.year) {
@@ -216,7 +216,7 @@ export default function LedgerClient({
       if (query.from) params.set("from", query.from);
       if (query.to) params.set("to", query.to);
       // A failed drill-down used to leave the row open and permanently empty,
-      // which reads as "there is nothing behind this account" — the opposite of
+      // which reads as "there is nothing behind this account", the opposite of
       // what happened. Say so instead; the row stays open so the retry is one
       // more click on the same place.
       try {
@@ -245,21 +245,21 @@ export default function LedgerClient({
   // The column header stays short ("Budget"); everything that describes the
   // report as a whole names the budget, since which one was compared against is
   // the whole point of being able to choose. The year is part of the name here:
-  // the budget need not be this year's, and a report that says only "Budget ·
+  // the budget need not be this year's, and a report that says only "Budget –
   // Ursprunglig" over a 2023 budget is a report that misleads.
   const compared = data?.budgets?.find((b) => b.id === data.budget);
-  const budgetName = compared && `${compared.year} · ${compared.name}`;
+  const budgetName = compared && `${compared.year} – ${compared.name}`;
   const comparisonFull =
     data?.comparison === "BUDGET" && budgetName
-      ? `${t("budget")} · ${budgetName}`
+      ? `${t("budget")} – ${budgetName}`
       : comparisonLabel;
-  // Mid-sentence ("compared with …"), so the leading word is lowercased — but
-  // only that word: a budget is named "2026 REV", not "2026 rev".
+  // Mid-sentence ("compared with …"), so the leading word is lowercased.
+  // Only that word: a budget is named "2026 REV", not "2026 rev".
   const comparisonPhrase = `${comparisonLabel.toLowerCase()}${
-    budgetName ? ` · ${budgetName}` : ""
+    budgetName ? ` – ${budgetName}` : ""
   }`;
 
-  // Asked for a comparison the data can't supply — say so rather than silently
+  // Asked for a comparison the data can't supply. Say so rather than silently
   // dropping the column.
   const comparisonMissing =
     data != null && data.comparisonRequested !== "NONE" && data.comparison === "NONE";
@@ -285,7 +285,7 @@ export default function LedgerClient({
       ? t("allCostCenters")
       : query.costCenter === ""
         ? t("noCostCenter")
-        : `${query.costCenter} · ${costCenters.find((c) => c.code === query.costCenter)?.name ?? ""}`;
+        : `${query.costCenter} – ${costCenters.find((c) => c.code === query.costCenter)?.name ?? ""}`;
 
   const periodLabel =
     query.from && query.to
@@ -316,7 +316,7 @@ export default function LedgerClient({
     showComparison ? t("vs", { comparison: comparisonPhrase }) : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" – ");
 
   return (
     <PageShell
@@ -396,7 +396,7 @@ export default function LedgerClient({
           <div className="hidden print:block">
             <h2 className="text-lg font-semibold">
               {isBalance ? t("balanceReport") : t("resultReport")}
-              {fortnox.companyName ? ` · ${fortnox.companyName}` : ""}
+              {fortnox.companyName ? ` – ${fortnox.companyName}` : ""}
             </h2>
             <p className="mt-0.5 text-sm text-muted">
               {[
@@ -409,7 +409,7 @@ export default function LedgerClient({
                   : null,
               ]
                 .filter(Boolean)
-                .join(" · ")}
+                .join(" – ")}
             </p>
             <p className="mt-0.5 text-xs text-muted">
               {t("printedAt", { time: dateTime(new Date().toISOString()) })}

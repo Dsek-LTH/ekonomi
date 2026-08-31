@@ -39,7 +39,7 @@ export default function BankClient({
   viewerId,
 }: {
   page: RowPage<BankTransaction>;
-  /** Settled on the server — see page.tsx. Never decided here. */
+  /** Settled on the server, see page.tsx. Never decided here. */
   scope: BankScope;
   canPickScope: boolean;
   /** The reader's own cards, to decide whether the card column earns its width. */
@@ -77,11 +77,11 @@ export default function BankClient({
   }
 
   // Unaccounted first, because on either scope it is the only tab with anything
-  // to do in it. Which means neither scope may leave the default unstated —
+  // to do in it. Which means neither scope may leave the default unstated:
   // DataTable falls back to its first tab, and the server to no filter at all,
   // and the two would describe different lists. See parseListQuery.
   const tabs: TabFilter = [
-    // No predicates — the tab is a filter the server applies (see
+    // No predicates. The tab is a filter the server applies (see
     // getBankTransactionPage), so the rows arrive already narrowed to it.
     { value: "UNMATCHED", label: t("tab.unmatched") },
     { value: "MATCHED", label: t("tab.matched") },
@@ -109,7 +109,7 @@ export default function BankClient({
     const parts = counts
       .filter(([n], i) => i === 0 || n > 0)
       .map(([n, key]) => t(`summary.${key}`, { count: n }));
-    notify.success(parts.join(" · "), t("importDone"));
+    notify.success(parts.join(" – "), t("importDone"));
   }
 
   async function deleteTxn(id: string) {
@@ -130,13 +130,13 @@ export default function BankClient({
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
-    // Whose card it sat on, or — when they are all yours — which of your cards.
+    // Whose card it sat on, or (when they are all yours) which of your cards.
     // The second only earns its width once somebody holds more than one.
     scope === "all"
       ? bankHolderColumn(t("colHolder"))
       : bankCardColumn(t("colCard"), cards.length <= 1),
-    // Was a status pill saying "Matchad · DEK26-0039". It said the same thing
-    // this does, in more words and without going anywhere — and the tabs above
+    // Was a status pill saying "Matchad – DEK26-0039". It said the same thing
+    // this does, in more words and without going anywhere, and the tabs above
     // already sort matched from unmatched, which is the only part a pill was
     // adding. Same column as on Kortköp, so the two tables answer "which
     // utlägg" the same way.
@@ -150,7 +150,7 @@ export default function BankClient({
       // Two actions on one column, and which of them a row offers depends on
       // the row rather than on the page. "Redovisa" used to exist only on
       // Kortköp, which meant a treasurer looking at the section's feed found
-      // their own unaccounted purchase and a delete button — the one thing they
+      // their own unaccounted purchase and a delete button: the one thing they
       // could not do to it was the thing they wanted.
       cell: (tx) => (
         <span className="flex items-center justify-end gap-1">

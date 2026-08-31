@@ -1,14 +1,14 @@
-// What the budget is being held up against — the second figure beside every
+// What the budget is being held up against, the second figure beside every
 // amount, the difference from it, and the rows only the other side has.
 //
 // Nothing is compared until asked for: a budget is read on its own most of the
 // time, and two extra columns of someone else's numbers are noise until they are
 // the question. The target may be the year's actual outcome from Fortnox, or any
-// other budget of any year — holding 2026 against 2025's adopted budget is as
+// other budget of any year. Holding 2026 against 2025's adopted budget is as
 // ordinary a question as holding it against its own utfall.
 //
 // The join itself lives in lib/budget/compare.ts, and is built even when nothing
-// is being compared — one side, joined with nothing. That way every view reads
+// is being compared, one side, joined with nothing. That way every view reads
 // its rows from one place, instead of switching between "my rows" and "the
 // joined rows" depending on whether a comparison happens to be on.
 "use client";
@@ -23,12 +23,12 @@ export const ACTUALS = "__actuals__";
 
 interface BudgetSummary { id: string; year: number; name: string }
 
-// Flat, and every label leads with its year — the picker searches on the label,
+// Flat, and every label leads with its year, the picker searches on the label,
 // so typing "2025" narrows to that year without needing grouped sections.
 export interface CompareOption { value: string; label: string }
 
 export interface Comparison {
-  /** This budget, and — when one is picked — what it is being held against. */
+  /** This budget, and, when one is picked, what it is being held against. */
   joined: Joined;
   /** The compared side's column heading; null when nothing is compared. */
   otherLabel: string | null;
@@ -41,7 +41,7 @@ export function useComparison(budget: Budget) {
   // the columns don't flicker in half-loaded while a big budget arrives.
   const [other, setOther] = useState<{ id: string; snapshot: Snapshot } | null>(null);
 
-  // The picker's contents. Fetched once — a shallow list of every budget is
+  // The picker's contents. Fetched once. A shallow list of every budget is
   // small, and it is needed the moment the picker is opened.
   useEffect(() => {
     let live = true;
@@ -95,7 +95,7 @@ export function useComparison(budget: Budget) {
       const actuals: Snapshot = { id: ACTUALS, label, sheets: budget.actuals ?? [], vars: {} };
       return { joined: joinSnapshots([own, actuals]), otherLabel: label };
     }
-    // Still loading, or the budget went away — this budget on its own rather
+    // Still loading, or the budget went away. This budget on its own rather
     // than half a comparison.
     if (target && other && other.id === target) {
       return { joined: joinSnapshots([own, other.snapshot]), otherLabel: other.snapshot.label };

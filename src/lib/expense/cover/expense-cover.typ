@@ -1,14 +1,14 @@
 // The utläggsräkning cover page.
 //
 // Everything it says arrives through `sys.inputs`, handed over by
-// cover/typst.ts as one JSON string — so a render reads no file but this one,
+// cover/typst.ts as one JSON string, so a render reads no file but this one,
 // the mark it draws and the faces in fonts/, and writes nothing at all.
 //
 // It used to be styled after intakt's intäktsräkning, down to the Palatino.
 // That resemblance is dropped: the two are rendered by different programs, in
 // different languages, for different documents, and holding them alike only
 // meant this one inherited a serif and a five-column table that no longer fit
-// what it has to say. This is a modern form — one sans, one scale, one row per
+// what it has to say. This is a modern form: one sans, one scale, one row per
 // attest and every field in a column of its own.
 
 #let data = json(bytes(sys.inputs.at("data")))
@@ -26,7 +26,7 @@
 // Two inks, and which is which is the page's one typographic idea.
 //
 // The label is the bold one. On a document read by somebody checking a specific
-// thing — who attested SEKT05, what the STIL-ID was — the labels are the index,
+// thing (who attested SEKT05, what the STIL-ID was) the labels are the index,
 // and setting them bold is what lets an eye land on the right one without
 // reading the values on the way past.
 //
@@ -40,7 +40,7 @@
 #let rule-strong = 0.8pt + luma(45)
 #let rule-hair = 0.5pt + luma(170)
 
-// Inter, vendored in fonts/ and loaded by cover/typst.ts — Typst embeds no
+// Inter, vendored in fonts/ and loaded by cover/typst.ts. Typst embeds no
 // proportional sans of its own, so naming one without shipping it would come
 // out a serif in the container. The rest of the stack is for a machine that has
 // its own and nothing else; `libertinus serif` is Typst's own fallback and only
@@ -81,7 +81,7 @@
 // on a document that substantiates a voucher that is the wrong question.
 #let orDash(v) = if v == none or v == "" { text(fill: muted)[–] } else { v }
 
-// One column heading — the same pairing as `field`, laid sideways.
+// One column heading, the same pairing as `field`, laid sideways.
 #let th(label) = text(size: label-size, fill: ink, tracking: 0.6pt, weight: "bold")[
   #upper(label)
 ]
@@ -131,7 +131,7 @@
 //
 // Only on a milersättning, and there it stands in for the receipt: the pages
 // after this one are the underlag for every other kind of utlägg, and a mileage
-// claim has none — there is nothing to photograph about driving your own car.
+// claim has none. There is nothing to photograph about driving your own car.
 // So the evidence is set out here, on the page that is filed either way, rather
 // than in a second document repeating this one's reference and submitter.
 //
@@ -152,7 +152,7 @@
     // of what it needs, so it wrapped and took the whole header row to two
     // lines with it. `auto` lets each column ask for what it holds; the slack
     // collects in the one 1fr column, which puts it between the pair of
-    // readings and the figures worked out from them — the gap falls where the
+    // readings and the figures worked out from them. The gap falls where the
     // meaning changes.
     columns: (auto, auto, 1fr, auto),
     align: (right + top, right + top, right + top, right + top),
@@ -183,7 +183,7 @@
 // ── Attesteringar ─────────────────────────────────────────────────────
 //
 // The reason this page exists. One row per cost-centre slice, each with the
-// person who cleared it and when — which is what a bookkeeper opening the
+// person who cleared it and when, which is what a bookkeeper opening the
 // voucher in Fortnox is looking for and could not otherwise see.
 #v(8pt)
 #text(size: heading-size, weight: "bold")[Attesteringar]
@@ -241,7 +241,7 @@
 // ── Underlag ──────────────────────────────────────────────────────────
 //
 // Said out loud, because the pages after this one are not part of this
-// document in any way the reader can tell — they were stapled on afterwards
+// document in any way the reader can tell. They were stapled on afterwards
 // (lib/server/pdf-merge.ts) and could as easily not have been.
 //
 // Not on a milersättning, which is the one utlägg whose underlag is above: the

@@ -2,7 +2,7 @@
 //
 // Authentik is where the section's mandates already live: holding a post means
 // being in a group named after it, and the group goes away when the mandate
-// does. That makes it the right source for authority — nobody has to remember
+// does. That makes it the right source for authority, so nobody has to remember
 // to revoke anything here at a handover.
 //
 // The group names are the guild's position ids, the same strings their own web
@@ -11,11 +11,11 @@
 //
 // Two things come out of a group list, and they are different in kind:
 //
-//   • ROLES — what someone is. Stored on User.roles.
-//   • RESULT UNITS — whose money someone answers for. Stored on
+//   • ROLES: what someone is. Stored on User.roles.
+//   • RESULT UNITS: whose money someone answers for. Stored on
 //     User.resultUnits, as result unit *names*.
 //
-// Both are written at sign-in, and only at sign-in (src/auth.ts) — a session
+// Both are written at sign-in, and only at sign-in (src/auth.ts). A session
 // cookie cannot be rewritten from a Server Component, so there is no second
 // moment at which this could run by itself. That is what fixes the session at a
 // day. The one other moment is deliberate: an edit to the mapping recomputes
@@ -23,7 +23,7 @@
 // not wait a day for its subjects to sign in.
 //
 // The mapping itself used to be three tables in this file. It is rows now
-// (GroupRole, GroupResultUnit) because the section edits it — a committee is
+// (GroupRole, GroupResultUnit) because the section edits it. A committee is
 // renamed, a unit is handed to someone who is not its head. What is still code
 // is the vocabulary: the Role enum, and the rule below about which groups are
 // even ours to read.
@@ -37,7 +37,7 @@ import type { Role } from "@/lib/domain/types";
 /** Everything a group list confers. */
 export interface Grants {
   roles: Role[];
-  /** ResultUnit *names* — matched against ResultUnit.name. */
+  /** ResultUnit *names*, matched against ResultUnit.name. */
   resultUnits: string[];
 }
 
@@ -46,7 +46,7 @@ export interface Grants {
  * group(s) each one came out of.
  *
  * Groups are named rather than counted because the name is the actionable part
- * — it is what somebody types into Authentik, or looks up in Inställningar →
+ * It is what somebody types into Authentik, or looks up in Inställningar →
  * Roller, once they know which one to go and look at.
  */
 export interface GrantSources {
@@ -61,7 +61,7 @@ export interface GrantSources {
 }
 
 // Which names are the section's, and the form they are compared in, live in
-// lib/domain/group-name.ts — the settings screen that edits this mapping needs
+// lib/domain/group-name.ts. The settings screen that edits this mapping needs
 // the same rule, and it runs in the browser.
 
 
@@ -69,7 +69,7 @@ export interface GrantSources {
  * What each group confers, as one lookup.
  *
  * Held as a plain map rather than queried per group so the derivation below can
- * be a pure function of it — which is what lets the whole policy be tested
+ * be a pure function of it, which is what lets the whole policy be tested
  * without a database (authentik-roles.test.ts), and what lets a mapping edit
  * re-derive everybody from the transaction's own view of the tables rather than
  * from a request cache that is one write out of date.
@@ -103,7 +103,7 @@ export function buildMapping(
  *
  * Roles always include ORDINARIE: every signed-in member may submit their own
  * utlägg, and a role set that could come back empty would mean a person who is
- * authenticated and yet cannot use the app. It is a floor, not a mapping row —
+ * authenticated and yet cannot use the app. It is a floor, not a mapping row.
  * there is no row to take it away with, deliberately. It is the one entry with
  * no group behind it, which is how a reader tells it apart from the rest.
  *
@@ -111,14 +111,14 @@ export function buildMapping(
  * and the reach come from the same row, so neither can be granted without the
  * other, and no screen can produce a resultatansvarig who answers for nothing.
  *
- * Unknown groups are ignored rather than rejected — Authentik gains groups for
+ * Unknown groups are ignored rather than rejected. Authentik gains groups for
  * reasons that have nothing to do with this app, and none of them should be an
  * error here. They are still reported, in `silentGroups`: "he is in that group
  * and it means nothing here" is the answer to half the questions this function
  * gets asked.
  *
  * The workings are kept rather than thrown away because somebody eventually
- * asks why a person holds a role — and answering that from the outside means
+ * asks why a person holds a role, and answering that from the outside means
  * running the derivation again by hand, against a mapping that has since been
  * edited. `deriveGrants` below is a summary of this, so what the app grants and
  * what it says about the grant cannot drift apart.
@@ -128,7 +128,7 @@ export function explainGrants(
   groups: readonly string[] | undefined,
 ): GrantSources {
   // Maps rather than Sets: same insertion order, and the order is the reading
-  // order — ORDINARIE first, then whatever each group adds as it is read.
+  // order, ORDINARIE first, then whatever each group adds as it is read.
   const roles = new Map<Role, string[]>([["ORDINARIE", []]]);
   const units = new Map<string, string[]>();
   const seen: string[] = [];
@@ -215,7 +215,7 @@ export async function grantsFromGroups(groups: readonly string[] | undefined): P
 
 /**
  * The section groups worth keeping on a User row, out of everything Authentik
- * sent. Stored so the derivation can be run again without the person present —
+ * sent. Stored so the derivation can be run again without the person present.
  * see User.authentikGroups.
  *
  * Filtered rather than stored whole: the rest is somebody else's business, and a
@@ -230,7 +230,7 @@ export const sectionGroups = (groups: readonly string[] | undefined): string[] =
  *
  * The mapping is read at sign-in, so without this an edit would land on people
  * one at a time over the following day, in whatever order they happened to open
- * the app — the correction visible on the screen that made it and nowhere else.
+ * the app: the correction visible on the screen that made it and nowhere else.
  *
  * Runs against `User.authentikGroups`, which is why that column exists. Someone
  * who has not signed in since it was introduced has an empty list and is left
@@ -258,15 +258,15 @@ export async function reapplyGrants(
 
   // Grouped by the grant they land on, then written a bucket at a time.
   //
-  // A row-at-a-time loop is a round trip per member — and this runs inside an
+  // A row-at-a-time loop is a round trip per member, and this runs inside an
   // interactive transaction, against a 5s default timeout, for a section with
   // about a thousand of them. A mapping edit that touched a broad group did not
   // fit, so it rolled back and reported nothing but "save failed": correct, and
   // impossible to act on. It also held write locks on User for the whole span,
   // which every concurrent sign-in queues behind (`syncAuthentikUser`).
   //
-  // The section has far more members than it has distinct grant shapes — most
-  // people are ORDINARIE and nothing else — and it is the shapes that decide how
+  // The section has far more members than it has distinct grant shapes. Most
+  // people are ORDINARIE and nothing else, and it is the shapes that decide how
   // many statements this costs.
   const buckets = new Map<string, { ids: string[]; roles: Role[]; resultUnits: string[] }>();
   for (const user of users) {

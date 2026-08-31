@@ -1,14 +1,14 @@
 // Reading the stock: the products, the shelf, and the log.
 //
 // The shelf is not a column. It is `SUM()` over the log, because the log is the
-// record and anything kept beside it could disagree with it — see
+// record and anything kept beside it could disagree with it. See
 // lib/stock/onhand.ts. The grouped aggregate does the replay in Postgres so a
 // year of movements never crosses the wire to be added up in Node.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { impossible, onHand, type OnHand } from "@/lib/stock/onhand";
-import { tagTotals, type TagMovement } from "@/lib/stock/tag";
+import { tagTotals, type TagMovement } from "@/lib/stock/event";
 import { cellQty, cellTotals, type CellKind, type CellRow } from "@/lib/stock/cells";
 import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/types";
 
@@ -23,14 +23,14 @@ export interface StockProductDto {
   nominalMl?: number;
   costPriceOre?: number;
   ean?: string;
-  /** Systembolaget's article number — see lib/stock/systembolaget.ts. */
+  /** Systembolaget's article number. See lib/stock/systembolaget.ts. */
   systembolagetId?: string;
 }
 
 /** A product with what is on the shelf, which is the only way a screen wants it. */
 export interface StockLevelDto extends StockProductDto {
   onHand: OnHand;
-  /** Stock that cannot be — negative, or liquid with no bottle. Always a
+  /** Stock that cannot be: negative, or liquid with no bottle. Always a
    *  bookkeeping fault rather than a fact; the overview says so. */
   impossible: boolean;
 }
@@ -82,7 +82,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
  *
  * `asOf` cuts the sum off at the end of a day, which is what makes "what did we
  * hold in May" answerable at all: the same replay, stopped earlier. It reads
- * the log as it is now understood rather than as it read at the time — a
+ * the log as it is now understood rather than as it read at the time. A
  * delivery corrected last week changes what May turns out to have held, and
  * that is the point of correcting it. What the books *said* on a day is a
  * different question, and one nothing here claims to answer.
@@ -137,12 +137,12 @@ export interface StockLogPartDto {
  *
  * A night's worth of one product, or a single delivery or stocktake. Grouped
  * that way because the log is read at a glance and what a reader wants from it
- * is what the stock did — *Onsdagspub, Absolut Vodka, three bottles down* —
+ * is what the stock did (*Onsdagspub, Absolut Vodka, three bottles down*)
  * rather than the six rows a spirit's rungs and directions come to. What those
  * rows were is in `parts`, a chevron away.
  *
  * Who did it is deliberately not here. That question is answered by
- * `getStockChanges`, read as a feed on the occasion and on the product, because
+ * `getStockChanges`, read as a feed on the event and on the product, because
  * a line covering several movements has no single author and pretending
  * otherwise was how the two readings kept colliding.
  */
@@ -152,14 +152,14 @@ export interface StockLogRowDto {
   productName: string;
   productKind: StockKind;
   /** Set when the line is a night's worth of movements for one product. */
-  tagId?: string;
+  eventId?: string;
   tagName?: string;
   /** Set when the line is a single delivery, stocktake or correction. */
   kind?: StockEntryKind;
   /** Signed, in whole things: what the line did to the shelf. */
   units: number;
   open: { 80: number; 60: number; 40: number; 20: number };
-  /** How many things were dropped. Moves no stock — see the schema. */
+  /** How many things were dropped. Moves no stock. See the schema. */
   spilledQty: number;
   /** What it did to the value of the stock, in öre. */
   valueDeltaOre: number;
@@ -186,8 +186,8 @@ export interface StockLogRowDto {
 export interface StockLogFilter {
   productIds?: string[];
   kinds?: StockEntryKind[];
-  /** One occasion's rows, which is how a tag's page links into the log. */
-  tagId?: string;
+  /** One event's rows, which is how an event's page links into the log. */
+  eventId?: string;
   /** Inclusive, `YYYY-MM-DD`. */
   from?: string;
   to?: string;
@@ -198,7 +198,7 @@ export interface StockLogFilter {
  * The log, newest first.
  *
  * By `occurredAt` and then by `createdAt`: several movements share a date all
- * the time — a night's servings are all that Friday — and the order they were
+ * the time, a night's servings are all that Friday, and the order they were
  * written in is the only thing that distinguishes them. Without the second key
  * the list would reshuffle between two loads of the same page.
  */
@@ -210,7 +210,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       // An empty list is no filter at all, not a filter matching nothing.
       productId: filter.productIds?.length ? { in: filter.productIds } : undefined,
       kind: filter.kinds?.length ? { in: filter.kinds } : undefined,
-      tagId: filter.tagId,
+      eventId: filter.eventId,
       occurredAt: {
         gte: filter.from ? new Date(filter.from) : undefined,
         lte: filter.to ? new Date(filter.to) : undefined,
@@ -231,13 +231,13 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       valueDeltaOre: true,
       spilledQty: true,
       countedQty: true,
-      tagId: true,
+      eventId: true,
       occurredAt: true,
       createdAt: true,
       note: true,
       expenseId: true,
       product: { select: { name: true, kind: true } },
-      tag: { select: { name: true } },
+      event: { select: { name: true } },
       actor: { select: { name: true } },
       expense: { select: { reference: true } },
     },
@@ -295,7 +295,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       continue;
     }
 
-    if (!r.tagId) {
+    if (!r.eventId) {
       lines.push({
         ...base,
         id: r.id,
@@ -312,7 +312,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       continue;
     }
 
-    const key = `${r.tagId}|${r.productId}`;
+    const key = `${r.eventId}|${r.productId}`;
     let line = nights.get(key);
     if (!line) {
       // Rows arrive newest first, so the first one seen is the one whose date
@@ -320,8 +320,8 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       line = {
         ...base,
         id: key,
-        tagId: r.tagId,
-        tagName: r.tag?.name,
+        eventId: r.eventId,
+        tagName: r.event?.name,
         units: 0,
         open: { 80: 0, 60: 0, 40: 0, 20: 0 },
         spilledQty: 0,
@@ -360,7 +360,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       (a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.level - b.level,
     );
   }
-  // A count reads whole things first, then down the ladder — the order somebody
+  // A count reads whole things first, then down the ladder, the order somebody
   // walks a shelf in.
   for (const line of counts.values()) line.parts!.sort((a, b) => a.level - b.level);
   return lines;
@@ -372,7 +372,7 @@ export interface StockChangeDto {
   action: "CREATE" | "UPDATE" | "DELETE";
   productId: string;
   productName: string;
-  tagId?: string;
+  eventId?: string;
   tagName?: string;
   kind: StockEntryKind;
   level: number;
@@ -383,33 +383,33 @@ export interface StockChangeDto {
 }
 
 /**
- * Who did what, read either by occasion or by product.
+ * Who did what, read either by event or by product.
  *
  * The other half of the log, and deliberately a separate one. The ledger says
- * what the stock did; this says who made it say that — including the things
+ * what the stock did; this says who made it say that, including the things
  * that turned out not to have happened at all, which the ledger no longer
  * carries because they were mistakes rather than movements.
  *
  * Keyed both ways because the two questions are asked in different places. "What
- * happened at Onsdagspub" belongs on the occasion. "Why does Fireball say 20"
- * belongs on the product, and a delivery has no occasion to ask it from.
+ * happened at Onsdagspub" belongs on the event. "Why does Fireball say 20"
+ * belongs on the product, and a delivery has no event to ask it from.
  *
  * `onlyEdits` is what keeps the product page from saying everything twice. An
- * occasion has no other list of its movements, so it shows the whole feed; a
+ * event has no other list of its movements, so it shows the whole feed; a
  * product has one right beside this, and a creation row there is the movement
  * next to it restated. What is left is the corrections, which is the question
  * that list cannot answer.
  */
 export async function getStockChanges(
-  filter: { tagId?: string; productId?: string; take?: number; onlyEdits?: boolean } = {},
+  filter: { eventId?: string; productId?: string; take?: number; onlyEdits?: boolean } = {},
 ): Promise<StockChangeDto[]> {
-  if (!filter.tagId && !filter.productId) return [];
+  if (!filter.eventId && !filter.productId) return [];
   const rows = await prisma.stockChange.findMany({
     where: {
-      tagId: filter.tagId,
+      eventId: filter.eventId,
       productId: filter.productId,
       // A row being made is the movement itself, said twice. Where the reader
-      // already has a list of movements beside this one — the product page —
+      // already has a list of movements beside this one (the product page),
       // only what happened to them *afterwards* is new information.
       action: filter.onlyEdits ? { in: ["UPDATE", "DELETE"] } : undefined,
     },
@@ -419,14 +419,14 @@ export async function getStockChanges(
       id: true,
       action: true,
       productId: true,
-      tagId: true,
+      eventId: true,
       kind: true,
       level: true,
       fromQty: true,
       toQty: true,
       at: true,
       product: { select: { name: true } },
-      tag: { select: { name: true } },
+      event: { select: { name: true } },
       actor: { select: { name: true } },
     },
   });
@@ -435,8 +435,8 @@ export async function getStockChanges(
     action: r.action,
     productId: r.productId,
     productName: r.product.name,
-    tagId: opt(r.tagId),
-    tagName: opt(r.tag?.name ?? null),
+    eventId: opt(r.eventId),
+    tagName: opt(r.event?.name ?? null),
     kind: r.kind,
     level: r.level,
     fromQty: r.fromQty ?? undefined,
@@ -459,9 +459,9 @@ export async function getStockValueOre(): Promise<number> {
   return sum._sum.valueDeltaOre ?? 0;
 }
 
-// ── Tags ──────────────────────────────────────────────────────────
+// ── Events ──────────────────────────────────────────────────────────
 
-export interface StockTagDto {
+export interface StockEventDto {
   id: string;
   name: string;
   date: string;
@@ -481,7 +481,7 @@ export interface StockTagDto {
   unreturned: boolean;
 }
 
-/** What one product did on one tag. */
+/** What one product did on one event. */
 export interface TagLineDto {
   productId: string;
   productName: string;
@@ -494,18 +494,18 @@ export interface TagLineDto {
   /** What the sold quantity cost, in öre, at the average the log carries. */
   soldValueOre: number;
   /**
-   * What each of the product's cells reads, keyed `${kind}|${level}` — the
+   * What each of the product's cells reads, keyed `${kind}|${level}`, the
    * grid's own coordinates, see lib/stock/cells.ts. Only cells something has
    * been booked on appear; the sheet reads a missing one as nought.
    */
   cells: Record<string, number>;
 }
 
-export interface StockTagDetailDto extends StockTagDto {
+export interface StockEventDetailDto extends StockEventDto {
   lines: TagLineDto[];
 }
 
-/** The columns of the entry table this file needs to fold a tag. */
+/** The columns of the entry table this file needs to fold an event. */
 const TAG_ENTRY = {
   kind: true,
   units: true,
@@ -539,7 +539,7 @@ const asMovement = (r: TagRow): TagMovement => ({
 /**
  * What a bottle of each of these products costs, at the moving average.
  *
- * The whole log, not the tag's part of it: a night's cost of goods is not a
+ * The whole log, not the event's part of it: a night's cost of goods is not a
  * different question from what the shelf is worth. See lib/stock/value.ts for
  * why the unit cost is worked out rather than stored.
  */
@@ -569,46 +569,46 @@ const soldValue = (
 };
 
 /**
- * The occasions, most recent first.
+ * The events, most recent first.
  *
  * Recent first because the one being registered against is nearly always the
- * last one made — a pub is tagged the evening it runs, or the Monday after.
+ * last one made. A pub is entered the evening it runs, or the Monday after.
  *
- * Every tag's arithmetic is folded here rather than on the row that opens it,
+ * Every event's arithmetic is folded here rather than on the row that opens it,
  * so the list can say what a night sold and whether anything is still out. Two
- * queries for the whole page: the movements of every tag shown, and the unit
+ * queries for the whole page: the movements of every event shown, and the unit
  * cost of every product they touched.
  */
-export async function getStockTags(take = 50): Promise<StockTagDto[]> {
-  const tags = await prisma.stockTag.findMany({
+export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
+  const events = await prisma.stockEvent.findMany({
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take,
     select: { id: true, name: true, date: true },
   });
-  if (tags.length === 0) return [];
+  if (events.length === 0) return [];
 
   const entries = await prisma.stockEntry.findMany({
-    where: { tagId: { in: tags.map((t) => t.id) } },
+    where: { eventId: { in: events.map((t) => t.id) } },
     select: {
       ...TAG_ENTRY,
-      tagId: true,
+      eventId: true,
       product: { select: { id: true, name: true, kind: true, nominalMl: true } },
     },
   });
 
   const costs = await unitCosts([...new Set(entries.map((e) => e.product.id))]);
 
-  // tag → product → its movements.
+  // event → product → its movements.
   const byTag = new Map<string, Map<string, typeof entries>>();
   for (const e of entries) {
-    if (!e.tagId) continue;
-    const products = byTag.get(e.tagId) ?? new Map();
+    if (!e.eventId) continue;
+    const products = byTag.get(e.eventId) ?? new Map();
     products.set(e.product.id, [...(products.get(e.product.id) ?? []), e]);
-    byTag.set(e.tagId, products);
+    byTag.set(e.eventId, products);
   }
 
-  return tags.map((tag) => {
-    const products = byTag.get(tag.id) ?? new Map<string, typeof entries>();
+  return events.map((event) => {
+    const products = byTag.get(event.id) ?? new Map<string, typeof entries>();
     let soldValueOre = 0;
     let unreturned = false;
     let count = 0;
@@ -620,9 +620,9 @@ export async function getStockTags(take = 50): Promise<StockTagDto[]> {
       count += rows.length;
     }
     return {
-      id: tag.id,
-      name: tag.name,
-      date: day(tag.date),
+      id: event.id,
+      name: event.name,
+      date: day(event.date),
       entries: count,
       products: products.size,
       soldValueOre,
@@ -632,22 +632,22 @@ export async function getStockTags(take = 50): Promise<StockTagDto[]> {
 }
 
 /**
- * One tag, with what it moved per product and what each of its cells reads.
+ * One event, with what it moved per product and what each of its cells reads.
  *
  * The cells are the sheet's whole state. They are sums over the log rather than
- * anything stored — a cell is one column of the entry table scoped to a
- * product, a kind and a rung — so what the grid shows and what the ledger holds
+ * anything stored. A cell is one column of the entry table scoped to a
+ * product, a kind and a rung, so what the grid shows and what the ledger holds
  * cannot drift apart, and editing a cell is a difference written to the log.
  */
-export async function getStockTag(id: string): Promise<StockTagDetailDto | null> {
-  const tag = await prisma.stockTag.findUnique({
+export async function getStockEvent(id: string): Promise<StockEventDetailDto | null> {
+  const event = await prisma.stockEvent.findUnique({
     where: { id },
     select: { id: true, name: true, date: true },
   });
-  if (!tag) return null;
+  if (!event) return null;
 
   const entries = await prisma.stockEntry.findMany({
-    where: { tagId: id },
+    where: { eventId: id },
     select: {
       ...TAG_ENTRY,
       product: { select: { id: true, name: true, kind: true, unitMl: true, nominalMl: true } },
@@ -660,7 +660,7 @@ export async function getStockTag(id: string): Promise<StockTagDetailDto | null>
   }
   const costs = await unitCosts([...byProduct.keys()]);
 
-  // Every cell of the tag at once, then handed out per product below. The same
+  // Every cell of the event at once, then handed out per product below. The same
   // fold the sheet's confirm goes through, so the figure somebody types against
   // is the figure the server will check them against.
   const cells = cellTotals(
@@ -697,9 +697,9 @@ export async function getStockTag(id: string): Promise<StockTagDetailDto | null>
   lines.sort((a, b) => a.productName.localeCompare(b.productName, "sv"));
 
   return {
-    id: tag.id,
-    name: tag.name,
-    date: day(tag.date),
+    id: event.id,
+    name: event.name,
+    date: day(event.date),
     entries: entries.length,
     products: byProduct.size,
     soldValueOre: lines.reduce((sum, l) => sum + l.soldValueOre, 0),
@@ -713,8 +713,8 @@ export async function getStockTag(id: string): Promise<StockTagDetailDto | null>
 // A product has been through two entirely different sorts of thing, and the
 // page used to show them as one list because the database stores them in one
 // table. They are not one question. What a product did *at nights* is a
-// consumption story, naturally told per occasion and in the shape of the event
-// sheet. What happened to it *in the cellar* — bought, counted, corrected — is
+// consumption story, naturally told per event and in the shape of the event
+// sheet. What happened to it *in the cellar*, bought, counted, corrected, is
 // a chronological list of deliberate acts with nothing to do with each other.
 //
 // Splitting them this way also settles where a correction belongs, which no
@@ -722,9 +722,9 @@ export async function getStockTag(id: string): Promise<StockTagDetailDto | null>
 // figure hangs off that night, and a correction to a delivery sits beside the
 // delivery.
 
-/** What one product did on one occasion, with whatever was later changed about it. */
-export interface ProductOccasionDto {
-  tagId: string;
+/** What one product did on one event, with whatever was later changed about it. */
+export interface ProductEventDto {
+  eventId: string;
   tagName: string;
   date: string;
   /** In the product's own unit: millilitres for a spirit, a count otherwise. */
@@ -732,24 +732,24 @@ export interface ProductOccasionDto {
   back: number;
   spilled: number;
   sold: number;
-  /** Corrections made to this product's figures on this occasion, newest first. */
+  /** Corrections made to this product's figures on this event, newest first. */
   changes: StockChangeDto[];
 }
 
 /**
- * Every occasion this product has any record on, newest first.
+ * Every event this product has any record on, newest first.
  *
  * Records, not movements. A night whose figures were entered and then removed
- * has nothing left in the ledger — correctly, since nothing happened — but
+ * has nothing left in the ledger, correctly, since nothing happened, but
  * somebody did do that, and a row that vanished would take the only trace of it
  * with it. Such a night appears with nothing in its columns and the story
  * behind its chevron.
  */
-export async function getProductOccasions(productId: string): Promise<ProductOccasionDto[]> {
+export async function getProductEvents(productId: string): Promise<ProductEventDto[]> {
   const [entries, changes, product] = await Promise.all([
     prisma.stockEntry.findMany({
-      where: { productId, tagId: { not: null } },
-      select: { ...TAG_ENTRY, tagId: true, tag: { select: { name: true, date: true } } },
+      where: { productId, eventId: { not: null } },
+      select: { ...TAG_ENTRY, eventId: true, event: { select: { name: true, date: true } } },
     }),
     // Edits only. A row being created is the figure the row already shows, and
     // a chevron restating it is the duplication this split exists to end.
@@ -764,26 +764,26 @@ export async function getProductOccasions(productId: string): Promise<ProductOcc
   const named = new Map<string, { name: string; date: string }>();
   const rows = new Map<string, typeof entries>();
   for (const e of entries) {
-    if (!e.tagId || !e.tag) continue;
-    named.set(e.tagId, { name: e.tag.name, date: day(e.tag.date) });
-    rows.set(e.tagId, [...(rows.get(e.tagId) ?? []), e]);
+    if (!e.eventId || !e.event) continue;
+    named.set(e.eventId, { name: e.event.name, date: day(e.event.date) });
+    rows.set(e.eventId, [...(rows.get(e.eventId) ?? []), e]);
   }
 
   const onTag = new Map<string, StockChangeDto[]>();
   for (const c of changes) {
-    if (!c.tagId) continue;
-    onTag.set(c.tagId, [...(onTag.get(c.tagId) ?? []), c]);
-    if (!named.has(c.tagId) && c.tagName) named.set(c.tagId, { name: c.tagName, date: "" });
+    if (!c.eventId) continue;
+    onTag.set(c.eventId, [...(onTag.get(c.eventId) ?? []), c]);
+    if (!named.has(c.eventId) && c.tagName) named.set(c.eventId, { name: c.tagName, date: "" });
   }
 
-  const out = [...named.entries()].map(([tagId, tag]) => ({
-    tagId,
-    tagName: tag.name,
-    date: tag.date,
-    ...tagTotals(product, (rows.get(tagId) ?? []).map(asMovement)),
-    changes: onTag.get(tagId) ?? [],
+  const out = [...named.entries()].map(([eventId, event]) => ({
+    eventId,
+    tagName: event.name,
+    date: event.date,
+    ...tagTotals(product, (rows.get(eventId) ?? []).map(asMovement)),
+    changes: onTag.get(eventId) ?? [],
   }));
-  // Newest night first. A tag known only from a change has no date of its own
+  // Newest night first. An event known only from a change has no date of its own
   // here, and sorts last, which is where a night nothing is booked on belongs.
   out.sort((a, b) => b.date.localeCompare(a.date) || a.tagName.localeCompare(b.tagName, "sv"));
   return out;
@@ -792,7 +792,7 @@ export async function getProductOccasions(productId: string): Promise<ProductOcc
 /** One thing that happened to the product in the cellar. */
 export interface CellarRowDto {
   id: string;
-  /** When it was written down — the order these appeared in. */
+  /** When it was written down. The order these appeared in. */
   at: string;
   /** The day it happened. Absent on a correction, which happened when it happened. */
   occurredAt?: string;
@@ -823,7 +823,7 @@ export interface CellarRowDto {
 export async function getProductCellar(productId: string): Promise<CellarRowDto[]> {
   const [entries, changes] = await Promise.all([
     prisma.stockEntry.findMany({
-      where: { productId, tagId: null },
+      where: { productId, eventId: null },
       orderBy: { createdAt: "desc" },
       take: 60,
       select: {
@@ -850,7 +850,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
   const rows: CellarRowDto[] = [];
 
   // A stocktake states a figure per rung, so it is several rows saying one
-  // thing — gathered the way the log gathers them.
+  // thing, gathered the way the log gathers them.
   const counts = new Map<string, CellarRowDto>();
   for (const e of entries) {
     if (e.kind === "COUNT") {
@@ -895,7 +895,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
   }
 
   for (const c of changes) {
-    if (c.tagId) continue;
+    if (c.eventId) continue;
     rows.push({
       id: c.id,
       at: c.at,

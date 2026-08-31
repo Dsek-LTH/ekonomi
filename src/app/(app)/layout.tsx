@@ -31,7 +31,7 @@ export default async function AppLayout({
   const currentUser = await requireUser();
 
   // The treasury books under their own Fortnox login, and that login is
-  // short-lived by design (see FortnoxStatus) — so whether it still holds is
+  // short-lived by design (see FortnoxStatus), so whether it still holds is
   // something the frame carries for them, not something they go to /profile to
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
@@ -42,7 +42,7 @@ export default async function AppLayout({
     cookies(),
   ]);
   // Read here rather than in the client so the frame renders in its stored
-  // shape on the first paint instead of settling into it after hydration — a
+  // shape on the first paint instead of settling into it after hydration, a
   // receipt flashing open at the wrong width, or a pinned sidebar snapping from
   // 64px to 256 and shoving the page sideways as it goes.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
@@ -65,15 +65,15 @@ export default async function AppLayout({
           {/* Outside AppShell for the same reason as the banners: it is fixed
               to the top of the viewport, not to the page column. It reads the
               query string to know when a navigation has landed, hence the
-              boundary — nothing renders in the fallback, it is a 2px bar. */}
+              boundary, nothing renders in the fallback, it is a 2px bar. */}
           <Suspense fallback={null}>
             <RouteProgressBar />
-            {/* Beside the bar because it watches the same thing — the URL
-                changing — and reads the query string to do it. What it
+            {/* Beside the bar because it watches the same thing, the URL
+                changing, and reads the query string to do it. What it
                 remembers is what a back link returns you to. */}
             <RouteHistoryRecorder />
           </Suspense>
-          {/* A fixed overlay, deliberately outside AppShell — notifications
+          {/* A fixed overlay, deliberately outside AppShell. Notifications
               float over the page rather than pushing the content down. */}
           <NotificationBanners />
           <ReceiptPanelProvider
@@ -82,7 +82,7 @@ export default async function AppLayout({
           >
             {/* `fortnox` absent is "this reader has no Fortnox login of their
                 own", which is most of them, and the nav shows nothing at all.
-                Present with a null session is the treasury signed out — the
+                Present with a null session is the treasury signed out. The
                 one state the sidebar exists to catch. */}
             <AppShell
               defaultPinned={navPinned}

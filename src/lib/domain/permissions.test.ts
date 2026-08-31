@@ -18,7 +18,7 @@ import {
 } from "./permissions";
 
 // The authority these functions grant is the whole access-control story of the
-// app — every nav item, page and API route defers to them — so each case below
+// app: every nav item, page and API route defers to them, so each case below
 // is a policy decision written down, not a coverage exercise.
 //
 // Which roles hold which capability is a table now (Inställningar → Roller), so
@@ -61,7 +61,7 @@ describe("the defaults the section starts from", () => {
     expect(canAccessSettings(defaults("SKATTMASTARE"))).toBe(true);
   });
 
-  it("keeps the chair out of unexporting — that is treasury cleanup work", () => {
+  it("keeps the chair out of unexporting, that is treasury cleanup work", () => {
     expect(canUnexport(defaults("ORDFORANDE"))).toBe(false);
     expect(canUnexport(defaults("SKATTFORMAN"))).toBe(true);
   });
@@ -95,7 +95,7 @@ describe("the defaults the section starts from", () => {
 
   it("leaves the budget open to the whole section", () => {
     // `canAccessBudget` was `() => true`. Making it a row must not have quietly
-    // narrowed it — the budget is the section's, not the treasury's.
+    // narrowed it. The budget is the section's, not the treasury's.
     for (const role of ROLES) expect(canAccessBudget(defaults(role))).toBe(true);
   });
 
@@ -121,7 +121,7 @@ describe("the helpers themselves", () => {
   });
 
   it("grant nothing to somebody with no capabilities at all", () => {
-    // A role the grid says nothing about. Not an error — it is what "this role
+    // A role the grid says nothing about. Not an error. It is what "this role
     // exists but does nothing yet" looks like.
     const none: Capability[] = [];
     expect(isAdmin(none)).toBe(false);
@@ -197,7 +197,7 @@ describe("canAttestAllocation", () => {
     };
     expect(canAttestAllocation(head)).toBe(true);
     expect(canAttestAllocation({ ...head, allocationResultUnit: "Källarmästeriet" })).toBe(false);
-    // An unassigned cost centre belongs to no result unit, so no head owns it —
+    // An unassigned cost centre belongs to no result unit, so no head owns it,
     // it falls to an admin.
     expect(canAttestAllocation({ ...head, allocationResultUnit: null })).toBe(false);
   });
@@ -208,7 +208,7 @@ describe("canAttestAllocation", () => {
 
   it("takes authority from the role, not from a stale ownership row", () => {
     // Someone who answers for a result unit on their row but has lost the role
-    // gets nothing — the roles are what the check reads.
+    // gets nothing. The roles are what the check reads.
     expect(
       canAttestAllocation({
         ...base,

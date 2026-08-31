@@ -6,7 +6,7 @@ import {
   unaccounted,
   type TagMovement,
   type TagSubject,
-} from "./tag";
+} from "./event";
 
 const cans: TagSubject = { kind: "UNIT", unitMl: 330 };
 const vodka: TagSubject = { kind: "VOLUME", nominalMl: 700 };
@@ -79,7 +79,7 @@ describe("tagTotals", () => {
 
   it("adds up two takeouts of one night", () => {
     // The case a date cannot answer: a pub that ran past midnight, restocked
-    // at one in the morning. Both belong to the tag, so both count.
+    // at one in the morning. Both belong to the event, so both count.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -120 }),
       move({ kind: "CHECKOUT", units: -48 }),
@@ -137,7 +137,7 @@ describe("tagTotals", () => {
 
   it("leaves a delivery and a stocktake out of it", () => {
     // Neither belongs to a night, and neither may reach the arithmetic even if
-    // something ever tags one.
+    // something ever events one.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -120 }),
       move({ kind: "PURCHASE", units: 240 }),
@@ -146,7 +146,7 @@ describe("tagTotals", () => {
     expect(totals).toEqual({ out: 120, back: 0, spilled: 0, sold: 120 });
   });
 
-  it("has nothing to say about a tag nothing has been booked on", () => {
+  it("has nothing to say about an event nothing has been booked on", () => {
     expect(tagTotals(cans, [])).toEqual({ out: 0, back: 0, spilled: 0, sold: 0 });
   });
 

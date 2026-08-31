@@ -1,7 +1,7 @@
 // What is on the shelf, and what the year's report says was bought.
 //
 // Both are the same act: replaying the log. Nothing in this feature stores a
-// quantity that anybody edits — `StockEntry` is append-only and every quantity
+// quantity that anybody edits. `StockEntry` is append-only and every quantity
 // on it is a signed delta, so on hand is their sum and the two can never drift
 // apart. That is not tidiness, it is the point of a lagerbokföring: a stored
 // number that can be changed is a number nobody can defend under inspection.
@@ -35,7 +35,7 @@ export interface StockSubject {
 
 /** What is on the shelf, in every unit anybody asks for it in. */
 export interface OnHand {
-  /** Cans, or *sealed* bottles — the ones still worth their purchase price. */
+  /** Cans, or *sealed* bottles: the ones still worth their purchase price. */
   units: number;
   /** Open bottles, per level. Empty for a UNIT product. */
   open: OpenBottles;
@@ -45,8 +45,8 @@ export interface OnHand {
    * Liquid, in millilitres, sealed and open together.
    *
    * Null when nobody has said how much one holds. For a spirit the open part is
-   * an estimate stacked on estimates — four rungs of a ladder somebody eyeballs
-   * — so it is a figure for a screen and never for a valuation.
+   * an estimate stacked on estimates, four rungs of a ladder somebody eyeballs,
+   * so it is a figure for a screen and never for a valuation.
    */
   totalMl: number | null;
   /**
@@ -71,7 +71,7 @@ export function unitVolume(p: StockSubject): number | null {
  * Every kind of entry counts the same here, including CORRECTION and COUNT: a
  * correction is a real movement of the recorded stock, and a count's difference
  * is exactly what the shelf had that the log did not know about. Kinds are what
- * the *report* separates, not what the shelf does — see `purchasedMl`.
+ * the *report* separates, not what the shelf does. See `purchasedMl`.
  *
  * The order rows arrive in does not matter, and deliberately so. Addition
  * commutes, so a row entered late for an earlier date lands in the same total
@@ -109,8 +109,8 @@ export function onHand(product: StockSubject, log: readonly StockMovement[]): On
 /**
  * Whether a product's stock has gone somewhere it cannot be.
  *
- * Negative stock is always a bookkeeping fault rather than a fact — a delivery
- * nobody entered, a serving entered twice, a tare that is wrong — and the
+ * Negative stock is always a bookkeeping fault rather than a fact (a delivery
+ * nobody entered, a serving entered twice, a tare that is wrong) and the
  * overview says so rather than showing a minus sign and leaving it. Open
  * millilitres with no open bottle to hold them is the same class of fault, and
  * the one a mis-typed weighing produces.
@@ -127,7 +127,7 @@ export function impossible(product: StockSubject, state: OnHand): boolean {
  * Millilitres bought in, for the restaurangrapport's "inköpt volym".
  *
  * PURCHASE rows only. What was served is turnover on that form, not a volume,
- * and what was spilled or found in a count is neither — so this cannot be
+ * and what was spilled or found in a count is neither, so this cannot be
  * derived from the on-hand figure, which is why the kinds are kept apart in the
  * first place.
  *
@@ -140,7 +140,7 @@ export function purchasedMl(
 ): number | null {
   const per = unitVolume(product);
   if (per == null) return null;
-  // Sealed units only, and everything bought is sealed — a delivery of opened
+  // Sealed units only, and everything bought is sealed. A delivery of opened
   // bottles is not a thing. So the litres bought are the count times the size,
   // for a spirit exactly as for a can.
   return log
@@ -157,7 +157,7 @@ export function purchasedMl(
  */
 export const wholeLitres = (ml: number): number => Math.round(ml / 1000);
 
-/** Litres of pure alcohol — volume × strength. Null when the ABV is unknown. */
+/** Litres of pure alcohol: volume × strength. Null when the ABV is unknown. */
 export function pureAlcoholMl(product: StockSubject, ml: number): number | null {
   if (product.abv == null) return null;
   return Math.round((ml * product.abv) / 100);

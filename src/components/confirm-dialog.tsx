@@ -16,8 +16,8 @@ import { useEscape } from "@/lib/ui/escape";
 //   const ok = await confirm({ title, message, tone: "danger" });
 //   if (!ok) return;
 //
-// Some actions have to be explained to whoever they land on — sending an utlägg
-// back, reopening an attested one, undoing an export — and the comment they
+// Some actions have to be explained to whoever they land on (sending an utlägg
+// back, reopening an attested one, undoing an export) and the comment they
 // carry is the same "are you sure" question, asked in words. So it's collected
 // here rather than in a second dialog of its own:
 //
@@ -40,8 +40,8 @@ export interface ConfirmOptions {
   };
 }
 
-/** `false` when dismissed. Confirming answers with the comment — "" when none
- *  was asked for — so the truthiness test every caller already does still holds. */
+/** `false` when dismissed. Confirming answers with the comment ("" when none
+ *  was asked for) so the truthiness test every caller already does still holds. */
 export type ConfirmResult = false | { comment: string };
 
 type ConfirmFn = (opts: ConfirmOptions) => Promise<ConfirmResult>;
@@ -84,7 +84,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         return null;
       });
       // Back where they were. `isConnected` because the answer may have removed
-      // the very row whose button opened this — focusing a detached node puts
+      // the very row whose button opened this. Focusing a detached node puts
       // focus on <body>, which is where it would have gone anyway.
       const opener = openerRef.current;
       openerRef.current = null;
@@ -95,15 +95,15 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
   const missingComment = Boolean(pending?.comment?.required) && comment.trim() === "";
 
-  // Esc cancels, Enter confirms — except while a comment is being written,
+  // Esc cancels, Enter confirms, except while a comment is being written,
   // where Enter is a new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
   //
   // Tab is held inside the box. `aria-modal` tells a screen reader the rest of
   // the page is inert; it does not make it so for the keyboard, and without
   // this Tab walked straight out of the dialog and on through the page behind
-  // it — where every control was still operable while a modal claimed to be
+  // it, where every control was still operable while a modal claimed to be
   // blocking them.
-  // Escape declines, and declines only this — anything opened on top of it
+  // Escape declines, and declines only this. Anything opened on top of it
   // answers first. See lib/ui/escape.ts.
   useEscape(Boolean(pending), () => settle(false));
 
@@ -150,7 +150,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {pending && (
         // Clicking away cancels. That is a mouse affordance, and it has a
-        // keyboard equivalent already — Escape, handled above — so the rules
+        // keyboard equivalent already, Escape, handled above, so the rules
         // asking for a key handler here are asking for a second copy of one
         // that exists somewhere it works better.
         // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -208,7 +208,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 {pending.cancelLabel ?? t("cancel")}
               </Button>
               <Button
-                // Focus belongs in the comment box when there is one — the
+                // Focus belongs in the comment box when there is one. The
                 // confirm button is the last step there, not the first.
                 autoFocus={!pending.comment}
                 variant={pending.tone === "danger" ? "danger" : "primary"}

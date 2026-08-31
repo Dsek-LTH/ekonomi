@@ -1,7 +1,7 @@
 // Stapling an underlag onto a cover page.
 //
 // The cover and the receipt are stored apart and joined here, on the way out to
-// Fortnox — the one place that needs the two of them as a single file. Two
+// Fortnox, the one place that needs the two of them as a single file. Two
 // things fall out of that, and both are the reason it is done this way:
 //
 // The receipt's bytes are held once. A merged document archived beside the
@@ -9,14 +9,14 @@
 // 175KB of the 212KB.
 //
 // And the result stays reproducible without being archived. Both inputs are
-// immutable — a receipt upload replaces its predecessor's object and row in one
+// immutable. A receipt upload replaces its predecessor's object and row in one
 // transaction (api/expenses/[id]/receipts/route.ts), and a cover is written
-// once when the utlägg is booked — so exporting the same utlägg twice uploads
+// once when the utlägg is booked, so exporting the same utlägg twice uploads
 // the same document without one ever having been stored.
 //
 // Nobody reads the result on screen. Stapling a photographed receipt behind a
 // cover means laying it on an A4 sheet to make it a page, and that sheet is
-// white — right for a file being filed, wrong for a panel. The viewer is given
+// white, right for a file being filed, wrong for a panel. The viewer is given
 // the two documents as they are (lib/expense/document-url.ts).
 //
 // Deliberately not Typst's job, though it can include PDF pages. Receipts are
@@ -37,14 +37,14 @@ const IMAGE_MARGIN = 24;
 /**
  * Thrown when the underlag cannot be joined on. Its own type because the
  * callers do not treat it as a failure: an export whose receipt will not merge
- * still exports, with the receipt attached as it always was — see
+ * still exports, with the receipt attached as it always was. See
  * api/expenses/[id]/export/route.ts. Losing the cover page is a worse outcome
  * than it being a separate file, and both are far better than an utlägg that
  * cannot be booked because a supplier encrypted their PDF.
  */
 export class PdfMergeError extends Error {}
 
-/** What this can staple on. Exactly what a stored receipt can be — images are
+/** What this can staple on. Exactly what a stored receipt can be. Images are
  *  normalised to JPEG or PNG at upload (lib/server/images.ts). */
 export function isMergeableReceipt(mimeType: string): boolean {
   return (
@@ -82,13 +82,13 @@ export function fitCentred(
  * Either half may be absent, and neither is an error.
  *
  * A null receipt is an utlägg with no underlag, which is a bookkeeping
- * judgement made when it was booked — the cover alone is still the document
+ * judgement made when it was booked. The cover alone is still the document
  * that substantiates the voucher.
  *
  * A null cover is the typesetter having failed: the underlag comes back as a
  * PDF on its own, so the answer is `application/pdf` either way. No caller
- * asks for it today — the export refuses to file a voucher without its attest
- * trail (see its note), and the viewer is handed the two documents unmerged —
+ * asks for it today. The export refuses to file a voucher without its attest
+ * trail (see its note), and the viewer is handed the two documents unmerged,
  * but a merge that drops half its input on the floor is the wrong shape for
  * one that is reached for whenever these two have to become one file.
  *
@@ -113,7 +113,7 @@ export async function mergeCoverAndReceipt(
     out = cover ? await PDFDocument.load(cover) : await PDFDocument.create();
   } catch (e) {
     // The cover is ours and was made moments ago, so this is a bug rather than
-    // bad input — but it still must not throw something untyped at a caller
+    // bad input, but it still must not throw something untyped at a caller
     // that is catching for the receipt's sake.
     throw new PdfMergeError(`the cover page could not be reopened: ${message(e)}`);
   }

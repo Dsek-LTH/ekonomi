@@ -9,11 +9,11 @@
         "a": [
           {
             "t": "p",
-            "v": "Bookkeeping is required by law in Sweden. The Accounting Act applies to everyone running a business activity, and D-sektionen is one — so we have to comply with it."
+            "v": "Bookkeeping is required by law in Sweden. The Accounting Act applies to everyone running a business activity, and D-sektionen is one, so we have to comply with it."
           },
           {
             "t": "p",
-            "v": "The act contains the guidelines and requirements the Swedish Tax Agency places on us as an organisation. Breaking it can have serious consequences both for the guild and for the treasurer as a private person. The rules on this page are not here to make life difficult — they are here to keep us on the right side of the law."
+            "v": "The act contains the guidelines and requirements the Swedish Tax Agency places on us as an organisation. Breaking it can have serious consequences both for the guild and for the treasurer as a private person. The rules on this page are not here to make life difficult. They are here to keep us on the right side of the law."
           }
         ]
       },
@@ -43,7 +43,7 @@
         "a": [
           {
             "t": "p",
-            "v": "An expense claim covers a cost you pay on someone else's behalf — you spend your own money on something the guild is going to pay for, and you are reimbursed afterwards."
+            "v": "An expense claim covers a cost you pay on someone else's behalf. You spend your own money on something the guild is going to pay for, and you are reimbursed afterwards."
           }
         ]
       },
@@ -77,7 +77,7 @@
             "t": "ol",
             "v": [
               "Clear the purchase with your committee chair and get an approval.",
-              "Make sure you get a valid receipt at the register — not just an order confirmation or a card slip.",
+              "Make sure you get a valid receipt at the register, not just an order confirmation or a card slip.",
               "Report the purchase here on the site as soon as you get home."
             ]
           },
@@ -121,7 +121,7 @@
       },
       {
         "id": "declined",
-        "q": "My card was declined at the register — what do I do?",
+        "q": "My card was declined at the register, what do I do?",
         "a": [
           {
             "t": "p",
@@ -129,12 +129,12 @@
           },
           {
             "t": "link",
-            "v": "Treasurer (Ludwig) — 070-893 55 85",
+            "v": "Treasurer (Ludwig): 070-893 55 85",
             "href": "tel:+46708935585"
           },
           {
             "t": "link",
-            "v": "Vice treasurer (Edvin) — 079-349 06 22",
+            "v": "Vice treasurer (Edvin): 079-349 06 22",
             "href": "tel:+46793490622"
           }
         ]
@@ -145,7 +145,7 @@
         "a": [
           {
             "t": "p",
-            "v": "No. A guild card must never be lent to anyone else — it belongs to you and to your post."
+            "v": "No. A guild card must never be lent to anyone else. It belongs to you and to your post."
           }
         ]
       }
@@ -196,7 +196,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Every purchase must be reported — that is what entitles you to reimbursement for a private expense, and what keeps you from becoming personally liable for a guild card purchase. When you report, you fill in:"
+            "v": "Every purchase must be reported. That is what entitles you to reimbursement for a private expense, and what keeps you from becoming personally liable for a guild card purchase. When you report, you fill in:"
           },
           {
             "t": "ul",
@@ -221,7 +221,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Yes, if the receipts concern THE SAME EVENT — for instance two separate purchases on the same day for the same event. Press \"add receipt\" and report them together."
+            "v": "Yes, if the receipts concern THE SAME EVENT, for instance two separate purchases on the same day for the same event. Press \"add receipt\" and report them together."
           },
           {
             "t": "p",
@@ -231,7 +231,7 @@
       },
       {
         "id": "split",
-        "q": "The receipt has to hit several cost centres — how do I split it?",
+        "q": "The receipt has to hit several cost centres, how do I split it?",
         "a": [
           {
             "t": "p",
@@ -250,11 +250,11 @@
           {
             "t": "ul",
             "v": [
-              "Beer — lager, sour beer.",
-              "Wine — up to 22 ‰, port, sherry, vermouth.",
-              "Other fermented drinks — cider, fruit wines, mead.",
-              "Spirits — Halmstad Crush, vodka, liqueurs.",
-              "Alcohol-like preparations — alcoholic ice cream."
+              "Beer: lager, sour beer.",
+              "Wine: up to 22 ‰, port, sherry, vermouth.",
+              "Other fermented drinks: cider, fruit wines, mead.",
+              "Spirits: Halmstad Crush, vodka, liqueurs.",
+              "Alcohol-like preparations: alcoholic ice cream."
             ]
           },
           {
@@ -279,17 +279,17 @@
           {
             "t": "ul",
             "v": [
-              "Norrlands Guld (beer) — 2 × 13.90 kr + 2 × 1 kr deposit.",
-              "Pistonhead Haze Lager (beer) — 2 × 11.90 kr + 2 × 1 kr deposit.",
-              "Crazy Cat (wine) — 209 kr.",
-              "Explorer Vodka (spirits) — 189 kr + 1 kr deposit.",
-              "Halmstad Crush (spirits) — 16.90 kr + 1 kr deposit.",
-              "Briska Fläder (other fermented drink) — 16.90 kr + 1 kr deposit."
+              "Norrlands Guld (beer): 2 × 13.90 kr + 2 × 1 kr deposit.",
+              "Pistonhead Haze Lager (beer): 2 × 11.90 kr + 2 × 1 kr deposit.",
+              "Crazy Cat (wine): 209 kr.",
+              "Explorer Vodka (spirits): 189 kr + 1 kr deposit.",
+              "Halmstad Crush (spirits): 16.90 kr + 1 kr deposit.",
+              "Briska Fläder (other fermented drink): 16.90 kr + 1 kr deposit."
             ]
           },
           {
             "t": "p",
-            "v": "You then report four rows — one per category:"
+            "v": "You then report four rows, one per category:"
           },
           {
             "t": "table",
@@ -329,7 +329,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Under the financial policy, the treasurer has the right to hold you personally liable if a purchase — a private expense as well as a guild card purchase — is not reported within 60 days of the purchase being made."
+            "v": "Under the financial policy, the treasurer has the right to hold you personally liable if a purchase (a private expense as well as a guild card purchase) is not reported within 60 days of the purchase being made."
           },
           {
             "t": "note",
@@ -340,7 +340,7 @@
       },
       {
         "id": "returns",
-        "q": "I returned an item — does that have to be reported?",
+        "q": "I returned an item, does that have to be reported?",
         "a": [
           {
             "t": "p",
@@ -350,11 +350,11 @@
       },
       {
         "id": "foreign",
-        "q": "I'm buying from abroad — anything special to keep in mind?",
+        "q": "I'm buying from abroad, is there anything special to keep in mind?",
         "a": [
           {
             "t": "p",
-            "v": "Pay through Klarna if you can. Other countries are not bound by Swedish rules and are therefore not obliged to give you a receipt the way a Swedish seller is — but if the purchase goes through Klarna, Klarna always gives you a valid receipt."
+            "v": "Pay through Klarna if you can. Other countries are not bound by Swedish rules and are therefore not obliged to give you a receipt the way a Swedish seller is. But if the purchase goes through Klarna, Klarna always gives you a valid receipt."
           }
         ]
       }
@@ -418,7 +418,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Date, every item with its price, the VAT rates, the seller's company name, address and organisation number, and a receipt number — all present and all legible."
+            "v": "Date, every item with its price, the VAT rates, the seller's company name, address and organisation number, and a receipt number, all present and all legible."
           },
           {
             "t": "image",
@@ -454,7 +454,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Confirms that an order was placed — not that it was paid. It carries no verification number and rarely states VAT. Ask for a receipt once the goods ship."
+            "v": "Confirms that an order was placed, not that it was paid. It carries no verification number and rarely states VAT. Ask for a receipt once the goods ship."
           },
           {
             "t": "image",
@@ -484,7 +484,7 @@
         "a": [
           {
             "t": "p",
-            "v": "The tax rates have to be visible. Documentation showing only the total cannot be booked — the card terminal slip is the most common example."
+            "v": "The tax rates have to be visible. Documentation showing only the total cannot be booked. The card terminal slip is the most common example."
           },
           {
             "t": "image",

@@ -1,7 +1,7 @@
 // Pull the Fortnox ledger into the local mirror via SIE. Sync is done a whole
 // financial year at a time: fetch the year's SIE, parse it, and replace that
-// year's vouchers+rows in one transaction. That makes every sync idempotent —
-// closed years stay identical, the current year just gets re-pulled — and
+// year's vouchers+rows in one transaction. That makes every sync idempotent:
+// closed years stay identical, the current year just gets re-pulled, and
 // sidesteps per-voucher fetching (and the API rate limit) entirely.
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/server/db";
@@ -31,7 +31,7 @@ const UPSERT_CHUNK = 500;
  * The rows of `list`, one per key, keeping the last of any repeat.
  *
  * A loop of single-row upserts simply overwrote its own work if Fortnox listed
- * a code twice; one statement upserting the batch cannot — Postgres refuses an
+ * a code twice; one statement upserting the batch cannot. Postgres refuses an
  * ON CONFLICT DO UPDATE that would touch the same row a second time, and the
  * whole sync would fail on a duplicate somewhere upstream. Last one wins, which
  * is what the loop did.
@@ -43,7 +43,7 @@ function lastByKey<T>(list: readonly T[], key: (item: T) => string): T[] {
 /**
  * `($1,$2,$3),($4,$5,$6),…` for a multi-row VALUES, plus the flat parameter
  * list to go with it. `casts` types individual columns where Postgres cannot
- * infer it from context — an enum column, most of all.
+ * infer it from context, an enum column most of all.
  */
 function valuesClause(
   rows: readonly unknown[][],
@@ -82,11 +82,11 @@ export interface CostCenterSyncResult {
 }
 
 // Sync the app's CostCenter list from Fortnox: the cost centres that are active
-// in Fortnox become the selectable ones. Matching is by code — existing rows
+// in Fortnox become the selectable ones. Matching is by code, existing rows
 // keep their result unit + attestant.
 //
 // Cost centres Fortnox still lists but has archived (Active: false) are only
-// deactivated — Fortnox might unarchive them later. Ones Fortnox has dropped
+// deactivated, since Fortnox might unarchive them later. Ones Fortnox has dropped
 // from the list entirely (deleted there) are removed here too, but only if
 // nothing local points at them (an expense allocation, a verification line, or
 // a budget sheet); otherwise deleting the row would orphan or destroy that
@@ -98,7 +98,7 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
   const seenCodes = new Set(fortnoxCcs.map((c) => c.code));
 
   // One statement per chunk rather than one per cost centre. `id` is only ever
-  // written on insert — an existing row keeps the one every allocation,
+  // written on insert. An existing row keeps the one every allocation,
   // verification line and budget sheet already points at.
   //
   // Fortnox now has this code, so it owns the row from here on: a local cost
@@ -138,9 +138,9 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     where: { id: { in: unreferencedIds } },
   });
 
-  // Everything else that should no longer be selectable — archived-in-Fortnox
+  // Everything else that should no longer be selectable, archived-in-Fortnox
   // rows, plus deleted-from-Fortnox rows that are still referenced and so were
-  // kept above — is deactivated rather than deleted.
+  // kept above, is deactivated rather than deleted.
   const { count: deactivated } = await prisma.costCenter.updateMany({
     where: {
       active: true,
@@ -161,7 +161,7 @@ export interface AccountSyncResult {
   deactivated: number;
 }
 
-// Mirror the Fortnox chart of accounts. Accounts are upserted, never deleted —
+// Mirror the Fortnox chart of accounts. Accounts are upserted, never deleted:
 // a budget line or an exported verification may still reference one Fortnox has
 // retired, and losing its name would leave those rows unreadable. Retired
 // accounts are marked inactive instead, which hides them from pickers.
@@ -173,7 +173,7 @@ export async function syncAccounts(
   const now = new Date();
 
   // A BAS chart is a thousand accounts and change. One statement per chunk, not
-  // one round trip per account — the loop this replaced was the slowest part of
+  // one round trip per account. The loop this replaced was the slowest part of
   // a sync by a wide margin, and all it was doing was waiting.
   for (const chunk of chunks(lastByKey(accounts, (a) => a.number), UPSERT_CHUNK)) {
     const { sql, params } = valuesClause(
@@ -215,7 +215,7 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
   const voucherRecords: Prisma.LedgerVoucherCreateManyInput[] = [];
   const rowRecords: Prisma.LedgerRowCreateManyInput[] = [];
 
-  // #IB/#UB (and the optional per-cost-centre #OIB/#OUB) — one row per
+  // #IB/#UB (and the optional per-cost-centre #OIB/#OUB), one row per
   // account+cost-centre key named by either record. Result accounts (3xxx+)
   // generally have neither and are simply absent.
   const balanceRecords: Prisma.LedgerAccountBalanceCreateManyInput[] = [
@@ -248,7 +248,7 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
         id: randomUUID(),
         voucherId,
         // Copied down from the voucher so a report can be answered without
-        // joining back up to it — see LedgerRow in schema.prisma.
+        // joining back up to it. See LedgerRow in schema.prisma.
         financialYear: fyId,
         date,
         account: tr.account,
@@ -303,13 +303,13 @@ export interface LedgerSyncResult {
 // specific `year` (Fortnox FY id) to sync just that one.
 export async function syncLedger(opts: {
   scope: "current" | "all";
-  /** Fortnox's id for one financial year — not a calendar year. */
+  /** Fortnox's id for one financial year, not a calendar year. */
   financialYearId?: number;
 }): Promise<LedgerSyncResult> {
   const token = await getServiceToken();
   const years = await syncFinancialYears(token);
 
-  // Refresh the cost-centre list too — best effort, since it needs the
+  // Refresh the cost-centre list too, best effort, since it needs the
   // `costcenter` scope which an older connection may not have granted.
   let costCenters: CostCenterSyncResult | undefined;
   try {

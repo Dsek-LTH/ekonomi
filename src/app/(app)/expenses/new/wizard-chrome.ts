@@ -1,6 +1,6 @@
 // The page furniture both claim forms wear.
 //
-// There are two wizards — the ordinary utlägg and the milersättning — and they
+// There are two wizards (the ordinary utlägg and the milersättning) and they
 // are different forms on purpose: one has a receipt to upload and a card
 // purchase to match, the other has a journey and neither. What they are not
 // different about is what the page around them says, and that had been written
@@ -27,8 +27,8 @@ export interface WizardChrome {
 /**
  * Title, description and back-link for a claim form.
  *
- * A draft has no reference yet — it is numbered when it is submitted for attest
- * — so an edit of one cannot name it and says so instead. Back belongs to the
+ * A draft has no reference yet. It is numbered when it is submitted for attest,
+ * so an edit of one cannot name it and says so instead. Back belongs to the
  * expense being changed when there is one, and to the list when the claim does
  * not exist yet.
  */
@@ -40,9 +40,9 @@ export function wizardChrome({
 }: {
   existing: Expense | undefined;
   t: WizardTitles;
-  /** What to call a draft that has no reference — `expenses.wizard.draftLabel`. */
+  /** What to call a draft that has no reference (`expenses.wizard.draftLabel`). */
   draftLabel: string;
-  /** The name of the list this returns to — `nav.expenses`. */
+  /** The name of the list this returns to (`nav.expenses`). */
   listLabel: string;
 }): WizardChrome {
   if (!existing) {

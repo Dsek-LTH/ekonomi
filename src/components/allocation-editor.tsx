@@ -23,7 +23,7 @@ export function makeRow(code: string, amount = "", comment = ""): AllocationRow 
 
 interface Props {
   costCenters: CostCenter[];
-  grossAmount: number; // SEK — used only for the balance indicator
+  grossAmount: number; // SEK, used only for the balance indicator
   value: AllocationRow[];
   onChange: (rows: AllocationRow[]) => void;
 }
@@ -31,10 +31,10 @@ interface Props {
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
   // Only ever the row `add` just made. Rows restored from a draft, and the one
-  // a new utlägg opens with, are not focused — nothing was clicked to get them.
+  // a new utlägg opens with, are not focused, nothing was clicked to get them.
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const total = value.reduce((s, r) => s + parseSEK(r.amount), 0);
-  // A return is budgeted the same way, only negative — so the rows have to add
+  // A return is budgeted the same way, only negative, so the rows have to add
   // up to the gross whichever sign it has. Zero means nothing to distribute yet.
   const balanced = grossAmount !== 0 && Math.abs(total - grossAmount) < 0.005;
 
@@ -47,7 +47,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange(value.filter((r) => r.id !== id));
   }
 
-  // A new row starts unpicked, like the first one — the cost centre is always
+  // A new row starts unpicked, like the first one. The cost centre is always
   // chosen deliberately, never guessed at from what's left over. Which is why
   // the new row's cost centre is also where the focus goes: the button that
   // made the row sits below it, so without this you land past every field you
@@ -58,9 +58,9 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange([...value, row]);
   }
 
-  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}`, short: c.code }));
+  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}`, short: c.code }));
   // Only the width. The box, its border and its padding belong to the control
-  // now that the field is split — a class carrying its own border here would
+  // now that the field is split. A class carrying its own border here would
   // fight the one the sign turns red.
   //
   // Wider than the 7rem it was: the sign has a cell of its own in front of the
@@ -70,21 +70,21 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   const comment = cn(
     // Full width while stacked; the line's leftover once it shares one.
     "min-w-0 @md:flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm italic text-muted",
-    // The remaining focus: rules are about the text, not the ring — a hint set
+    // The remaining focus: rules are about the text, not the ring. A hint set
     // in grey italic becomes ordinary typing once you are in the field.
     "placeholder:text-muted/50 focus:not-italic focus:text-foreground",
   );
 
   return (
     // Container queries, not breakpoints: this editor's width is set by whatever
-    // it sits in — and beside a receipt panel you can drag, that width changes
+    // it sits in, and beside a receipt panel you can drag, that width changes
     // while the viewport doesn't move at all. `sm:` asked the wrong question and
     // kept five controls on one line in 300px, squeezing the comment to nothing.
     <div className="@container space-y-3">
       {value.map((row) => (
         // Three widths. Under 448px everything stacks; from there the cost
-        // centre takes a line and the rest share the next; past 672px — about
-        // what five controls need — it's one row.
+        // centre takes a line and the rest share the next; past 672px, about
+        // what five controls need, it's one row.
         <div key={row.id} className="flex flex-col gap-2 @2xl:flex-row @2xl:items-center">
           <Combobox
             className="@2xl:flex-1"
@@ -112,10 +112,11 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               {/* Bare, not the boxed AmountInput: the row draws its own frame
                   around the amount, the unit and the remove button. The props
                   carry the keypad, the guard and the separator all the same. */}
-              {/* No word here. The total above says "Retur", because that is
-                  what a negative total is; a row of the distribution is one
-                  line of a sum, and its sign only says whether it adds or
-                  subtracts. Five controls already share this row. */}
+              {/* No word here, and none on the total above either: the sign
+                  is the whole of what there is to say, and the figure beside
+                  it going red says it a second time. A row of the distribution
+                  is one line of a sum, and its sign only says whether it adds
+                  or subtracts. Five controls already share this row. */}
               <SignedAmountInput
                 size="sm"
                 value={row.amount}

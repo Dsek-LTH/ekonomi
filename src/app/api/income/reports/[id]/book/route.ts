@@ -1,7 +1,7 @@
 // Book a day's takings: store the intäktsräkning, then write the verifikation.
 //
 // Two ways in, and the difference is only where the rows come from. With no
-// lines in the body the app derives them from the day's account distributions —
+// lines in the body the app derives them from the day's account distributions,
 // what "book all" sends, and what nearly every day needs. With lines, they are
 // the ones the bookkeeper edited on the booking screen, held to the same rules
 // as an utlägg's voucher plus one of its own: the debit side has to come to the
@@ -70,8 +70,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const isFee = report.source === "ZETTLE_FEE";
 
   // Where this day's revenue is booked. The report's own cost centre is the
-  // decision — the import copies the committee's default onto it and review may
-  // have changed it since — but a day fetched before the committee had a
+  // decision. The import copies the committee's default onto it and review may
+  // have changed it since, but a day fetched before the committee had a
   // default carries none, and the answer is sitting in the settings. The
   // booking screen pre-fills from the same three, in this order, so a day
   // booked without anyone touching it gets exactly what it showed.
@@ -93,7 +93,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (edited.length > 0) {
     // Edited on the booking screen. Cost centres arrive as codes, the way the
     // utlägg voucher sends them, because a code is what the bookkeeper picked
-    // and what the ledger reads — so they are resolved to ids here, and an
+    // and what the ledger reads, so they are resolved to ids here, and an
     // unknown one is refused rather than booked as no cost centre at all.
     const codes = [...new Set(edited.map((l) => l.costCenterCode).filter(Boolean))] as string[];
     const centres = await prisma.costCenter.findMany({ where: { code: { in: codes } } });
@@ -156,7 +156,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // The same rule the expense booking screen is held to. Reaching this with an
-  // unbalanced voucher would mean a bug above, not bad input — but a voucher
+  // unbalanced voucher would mean a bug above, not bad input, but a voucher
   // that does not balance must not reach the database either way.
   const imbalance = voucherBlocker(lines);
   if (imbalance) return fail(422, `voucher.${imbalance}`);
@@ -195,7 +195,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Book ──
 
   // The unit's income text, or its plain name if its income settings have since
-  // been removed — a booked day must still say whose takings it was.
+  // been removed, a booked day must still say whose takings it was.
   const description = incomeVoucherDescription(
     report.source,
     report.resultUnit?.income?.description ?? report.resultUnit?.name ?? null,
@@ -204,7 +204,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // What the day ends up recorded as booking against.
   //
   // Written back rather than left as it was, for two reasons. A voucher edited
-  // on the way past — the ordinary way to correct a reopened day — used to
+  // on the way past, the ordinary way to correct a reopened day, used to
   // change the verifikation and nothing else, so the queue, the booked list and
   // the next reopen all went on showing the cost centre the day *had*, while
   // the ledger held the one it was actually booked with. And a day that fell
@@ -236,7 +236,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         },
       },
     });
-    // The document keys are already on the row — ensureIncomeDocument wrote
+    // The document keys are already on the row. ensureIncomeDocument wrote
     // them when it rendered, or found them there.
     await tx.incomeReport.update({
       where: { id: report.id },

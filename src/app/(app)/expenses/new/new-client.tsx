@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useProgressRouter } from "@/components/shell/route-progress";
+import { useReturnTo } from "@/components/shell/route-history";
 import { useTranslations } from "next-intl";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
@@ -27,7 +27,7 @@ import {
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
 import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
-// React node cannot go — see `matchLead` below.
+// React node cannot go. See `matchLead` below.
 import { formatSEK } from "@/lib/ui/format";
 import { parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
@@ -43,7 +43,7 @@ import type { AllocationRow } from "@/components/allocation-editor";
 // step only exists for card purchases; a reimbursement goes straight from
 // review to submit.
 
-// The wizard asks two "pick one of these" questions — the payment type and the
+// The wizard asks two "pick one of these" questions: the payment type and the
 // bank transaction to match. Both are a bordered card that fills with accent
 // once chosen.
 const optionCard = (selected: boolean) =>
@@ -69,14 +69,14 @@ export default function NewExpenseClient({
   payoutAccount: string;
   existing?: Expense;
 }) {
-  const router = useProgressRouter();
+  const returnTo = useReturnTo();
   const t = useTranslations("expenses.wizard");
   const tPayment = useTranslations("common.payment");
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const tList = useTranslations("expenses");
   const { date } = useFormat();
-  // The description opens focused — see the field on the first step.
+  // The description opens focused. See the field on the first step.
   const selectOnce = useSelectOnce();
   const searchParams = useSearchParams();
   const notify = useNotify();
@@ -100,13 +100,13 @@ export default function NewExpenseClient({
   // the card, the payment type is not a choice at all: that money has already
   // left the section's account. Offering "eget utlägg" beside a purchase the
   // section has already paid for is offering to pay for it a second time, into
-  // the member's own account — which is what this used to do, quietly, because
+  // the member's own account, which is what this used to do, quietly, because
   // the transaction stayed matched to the utlägg through the switch. Someone
   // who meant to claim their own money back wants a new utlägg, not this one.
   //
   // MILEAGE is never among them, and is not offered here at all. Which *form*
   // you need is a different question from how this purchase was paid, and it is
-  // answered before either form exists — on the "Nytt utlägg" menu, see
+  // answered before either form exists, on the "Nytt utlägg" menu. See
   // components/new-expense-menu.tsx. It was a third card in the group below for
   // a while: a door standing among two switches, at the bottom of a step, which
   // discarded everything typed above it when taken.
@@ -121,7 +121,7 @@ export default function NewExpenseClient({
     existing?.paymentType ?? (holdsCard ? "CARD" : "REIMBURSEMENT"),
   );
   // The step flow depends on payment type: a reimbursement skips "Matcha".
-  // Uploading isn't among them — the receipt panel beside the form is where a
+  // Uploading isn't among them. The receipt panel beside the form is where a
   // receipt goes and where it then stays, so it needs no step of its own.
   const stepKeys = paymentType === "CARD"
     ? (["review", "match", "submit"] as const)
@@ -144,7 +144,7 @@ export default function NewExpenseClient({
         }
       : { title: "", purchaseDate: "", gross: "" };
   });
-  // The cost centre starts unpicked — choosing one is the submitter's call, and
+  // The cost centre starts unpicked. Choosing one is the submitter's call, and
   // defaulting to whichever happens to sort first invites a wrong one going
   // through unnoticed. submitBlocker refuses to submit until each row has one.
   const [allocations, setAllocations] = useState<AllocationRow[]>(() =>
@@ -157,13 +157,13 @@ export default function NewExpenseClient({
   const [matchId, setMatchId] = useState<string | null>(
     existing?.matchedTransactionId ?? (presetTxn ? presetTxn.id : null),
   );
-  // One busy scope for the whole wizard: saving and submitting — and the
-  // receipt upload inside them — block the same footer.
+  // One busy scope for the whole wizard: saving and submitting, and the
+  // receipt upload inside them, block the same footer.
   const { pending, mutate } = useMutation();
   const saving = pending === "save";
   const saveLabel = editing ? t("save") : t("saveDraft");
-  // Which of the two exits is running. `saving` can't tell them apart — both
-  // write the same draft through the same key first — and a spinner on both
+  // Which of the two exits is running. `saving` can't tell them apart, since both
+  // write the same draft through the same key first, and a spinner on both
   // buttons at once would claim the app is doing twice the work it is. Cleared
   // only on failure: on success the page is leaving, and a button that goes
   // idle while you're still looking at the old screen reads as nothing having
@@ -171,7 +171,7 @@ export default function NewExpenseClient({
   const [exit, setExit] = useState<"draft" | "submit" | null>(null);
 
   // The utlägg's own id, once there is a row for it. Null all the way through a
-  // new utlägg until the moment it is saved — see `persist`. The id and not the
+  // new utlägg until the moment it is saved. See `persist`. The id and not the
   // reference: an utlägg has no reference until it is submitted (see
   // lib/domain/reference.ts), and every route this page calls is keyed on the id.
   const [draftId, setDraftId] = useState<string | null>(existing?.id ?? null);
@@ -189,11 +189,11 @@ export default function NewExpenseClient({
   // the page leaves nothing.
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   // A local URL to show it by, since there is no /api/receipts/:id to read it
-  // from yet. Revoked when it is replaced and when the page goes — otherwise
+  // from yet. Revoked when it is replaced and when the page goes, because otherwise
   // the browser holds the file for as long as the tab lives.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // One cleanup covers both ways a preview ends — a second file replacing the
-  // first, and the page going away — because either is this value changing.
+  // One cleanup covers both ways a preview ends, a second file replacing the
+  // first and the page going away, because either is this value changing.
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
@@ -207,7 +207,7 @@ export default function NewExpenseClient({
   }
 
   // Whether there is a receipt, which is the only form of the question this
-  // page ever asks — every gate here (continue, save, submit) wants "has the
+  // page ever asks. Every gate here (continue, save, submit) wants "has the
   // reader produced one", not "is one in the archive". Those were the same
   // thing while the upload happened on drop; they aren't now, and asking for
   // `receiptId` gets a "no" while the receipt is on screen.
@@ -232,7 +232,7 @@ export default function NewExpenseClient({
     setUploadedMime(receipt.mimeType ?? pendingFile.type);
     setUploadedName(receipt.filename ?? pendingFile.name);
     // It is in the archive now, so the panel reads it from there. Dropping the
-    // preview is what makes that happen — kept, it would go on pointing at a
+    // preview is what makes that happen. Kept, it would go on pointing at a
     // local copy that the effect above is about to revoke.
     setPendingFile(null);
     setPreviewUrl(null);
@@ -265,7 +265,7 @@ export default function NewExpenseClient({
       .slice(0, 5);
   }, [form.gross, bankTransactions, matchId]);
 
-  // A match only counts while it still cancels the amount out — editing the
+  // A match only counts while it still cancels the amount out. Editing the
   // amount afterwards silently invalidates it, and the server rejects it too.
   const matchedTxn = bankTransactions.find((t) => t.id === matchId);
   const matchDone = !!matchedTxn && cancelsOut(matchedTxn.amount, parseSEK(form.gross));
@@ -296,10 +296,10 @@ export default function NewExpenseClient({
 
   const grossSEK = parseSEK(form.gross);
   // Saving a draft is allowed with fields still empty, but not with a partial
-  // date — that would be stored as 1 January of the year typed so far — and not
+  // date, which would be stored as 1 January of the year typed so far, and not
   // with one that hasn't happened yet, which the server refuses anyway. And not
   // before the receipt: an utlägg is a claim about a purchase, and the receipt
-  // is what makes it one. It no longer has to be uploaded by then — a file
+  // is what makes it one. It no longer has to be uploaded by then: a file
   // waiting in the browser counts, and goes up as part of the save.
   const canPersist =
     form.title.trim() !== "" &&
@@ -328,7 +328,7 @@ export default function NewExpenseClient({
 
   // Everything this wizard writes, in the order it has to happen: the utlägg
   // itself, then its receipt, then the reviewed fields, then the bank match for
-  // a card purchase. Nothing before this — a wizard that was opened and left
+  // a card purchase. Nothing before this, since a wizard that was opened and left
   // alone has written nothing at all.
   //
   // Returns the utlägg's id rather than a bare success, because on a first save
@@ -345,7 +345,7 @@ export default function NewExpenseClient({
         title: "",
         // Only ever with the card purchase it belongs to. The type is locked
         // to CARD whenever there is a presetTxn, so this reads as belt and
-        // braces — it is the same rule the route refuses on (isMatchable),
+        // braces. It is the same rule the route refuses on (isMatchable),
         // written where the body is built rather than left implied by a
         // condition three hundred lines up.
         matchedTransactionId: isMatchable(paymentType) ? (presetTxn?.id ?? null) : null,
@@ -354,7 +354,7 @@ export default function NewExpenseClient({
         key: "save",
         body: create,
         error: t("createFailed"),
-        // Nothing on screen shows it yet — the steps after this one do.
+        // Nothing on screen shows it yet. The steps after this one do.
         refresh: false,
       });
       if (!created) return null;
@@ -363,8 +363,8 @@ export default function NewExpenseClient({
     }
     if (!(await writeReceipt(id))) return null;
     // Öre, both of them. The gross and the rows that have to sum to it cross
-    // the wire in the same unit as each other and as the columns they land in —
-    // the rows used to go as kronor, which made a figure a hundred times too
+    // the wire in the same unit as each other and as the columns they land in.
+    // The rows used to go as kronor, which made a figure a hundred times too
     // small look like a distribution that didn't balance. `PatchExpense` is
     // what now says so in a form the compiler reads.
     const patch: PatchExpense = {
@@ -396,8 +396,10 @@ export default function NewExpenseClient({
 
   // Both exits from the wizard save first, then land on the expense itself.
   function done(id: string) {
-    router.push(`/expenses/${id}`);
-    router.refresh();
+    // Replaces the wizard's history entry rather than pushing past it: the
+    // form has been submitted, and Back leading into a spent one is not a way
+    // back to anything. See useReturnTo.
+    returnTo(`/expenses/${id}`);
   }
 
   async function saveDraft() {
@@ -459,7 +461,7 @@ export default function NewExpenseClient({
         uploading={saving}
       />
 
-      {/* Step 1 — the details, beside the receipt */}
+      {/* Step 1: the details, beside the receipt */}
       {cur === "review" && (
         <Card>
           <CardBody className="space-y-5">
@@ -467,7 +469,7 @@ export default function NewExpenseClient({
                 step opens with the receipt beside it and one question to
                 answer, and reaching for the mouse to answer it is a step
                 nobody needs. Selected as well as focused, which only matters
-                when an existing utlägg is being edited — then the title is
+                when an existing utlägg is being edited, because then the title is
                 already there and typing should replace it. */}
             <Field label={t("description")}>
               <Input
@@ -479,7 +481,7 @@ export default function NewExpenseClient({
             </Field>
 
             {/* Two up at every width, not only from sm. A date and an amount
-                are short fields — ten characters and eight — and a column of
+                are short fields, ten characters and eight, and a column of
                 full-width boxes on a phone makes a four-field form look like a
                 long one and pushes the fördelning below the fold. `gap-3`
                 rather than `gap-5` while they are sharing 329px. */}
@@ -504,14 +506,13 @@ export default function NewExpenseClient({
                 />
               </Field>
               {/* The keypad, the guard and the separator all live in
-                  AmountInput now — including the sign button, which is the only
+                  AmountInput now, including the sign button, which is the only
                   way to reach a negative amount on a phone: no mobile numeric
                   keypad has a minus key. A return is the same utlägg with the
                   sign flipped, so it is a case this field has to allow. */}
               <Field label={t("amount")}>
                 <SignedAmountInput
                   value={form.gross}
-                  label={t("negateLabel")}
                   title={t("negateAmount")}
                   onChange={(gross) => {
                     setForm({ ...form, gross });
@@ -556,7 +557,7 @@ export default function NewExpenseClient({
               </div>
             </FieldGroup>
             {/* The receipt is a condition like any other, and the one that
-                isn't in this card — without saying so, Fortsätt is a dead
+                isn't in this card. Without saying so, Fortsätt is a dead
                 button with its reason off at the edge of the screen. */}
             {!hasReceipt && (
               <p className="text-xs text-warning">{t("receiptRequired")}</p>
@@ -569,7 +570,7 @@ export default function NewExpenseClient({
         </Card>
       )}
 
-      {/* Step 2 — match (card purchases only) */}
+      {/* Step 2: match (card purchases only) */}
       {cur === "match" && (
         <Card>
           <CardBody className="space-y-5">
@@ -618,7 +619,7 @@ export default function NewExpenseClient({
                             </div>
                             <p className="text-xs text-muted">
                               {date(txn.transactionDate)}
-                              {!selectable && ` · ${t("otherAmount")}`}
+                              {!selectable && ` – ${t("otherAmount")}`}
                             </p>
                           </div>
                           <Amount value={txn.amount} />
@@ -642,7 +643,7 @@ export default function NewExpenseClient({
         </Card>
       )}
 
-      {/* Final step — review & submit */}
+      {/* Final step: review and submit */}
       {cur === "submit" && (
         <Card>
           <CardBody className="space-y-5">
@@ -655,21 +656,21 @@ export default function NewExpenseClient({
                 <DetailRow
                   key={a.id}
                   label={i === 0 ? t("distribution") : ""}
-                  value={<>{a.costCenterCode} · <Amount value={parseSEK(a.amount)} signed /></>}
+                  value={<>{a.costCenterCode} – <Amount value={parseSEK(a.amount)} signed /></>}
                 />
               ))}
               <DetailRow label={t("paymentType")} value={tPayment(`${paymentType}.label`)} />
               {paymentType === "CARD" ? (
                 <DetailRow
                   label={t("match")}
-                  value={bankTransactions.find((tx) => tx.id === matchId)?.description ?? "—"}
+                  value={bankTransactions.find((tx) => tx.id === matchId)?.description ?? "–"}
                 />
               ) : (
                 <DetailRow
                   label={t("payoutTo")}
                   value={
                     payoutClearing && payoutAccount
-                      ? `${payoutClearing} · ${payoutAccount}`
+                      ? `${payoutClearing} – ${payoutAccount}`
                       : t("payoutMissing")
                   }
                 />
@@ -721,7 +722,7 @@ function StepFooter({ onBack, onSave, saveLabel, saveDisabled, saving, children 
   onSave: () => void;
   saveLabel: string;
   saveDisabled: boolean;
-  /** The draft save this footer owns is in flight — not the step's own action. */
+  /** The draft save this footer owns is in flight, not the step's own action. */
   saving: boolean;
   children?: React.ReactNode;
 }) {

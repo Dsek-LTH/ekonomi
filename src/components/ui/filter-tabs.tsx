@@ -2,24 +2,24 @@
 
 import { cn } from "@/lib/ui/utils";
 
-// "Which slice of this list?" — the underline register.
+// "Which slice of this list?" The underline register.
 //
 // One of three switchers, and the app tells them apart by *shape* rather than by
 // where they happen to sit, because a shape is read before a label is:
 //
-//   (( Mina | Alla ))    CollectionSwitch — which collection the page is a list
+//   (( Mina | Alla ))    CollectionSwitch: which collection the page is a list
 //                        of. An enclosed track, placed by PageShell.
 //
-//   ━━━━━━━━━            FilterTabs — which slice of that collection. Underlined,
+//   ━━━━━━━━━            FilterTabs: which slice of that collection. Underlined,
 //   Väntar 12  Alla      on the top edge of the card holding the rows.
 //
-//   ☰  ▦                 ViewToggle — how the same rows are drawn. Icons only.
+//   ☰  ▦                 ViewToggle: how the same rows are drawn. Icons only.
 //
-//   ( Zettle | Swish )   SegmentedControl — a value chosen in a form, always
+//   ( Zettle | Swish )   SegmentedControl: a value chosen in a form, always
 //                        inside a labelled Field.
 //
 // Underlines for this one because that is what tabs have always meant: sections
-// of the thing directly below them. The rows change, the collection does not —
+// of the thing directly below them. The rows change, the collection does not,
 // which is exactly the difference from the pills above, where the collection is
 // what changes and the page title changes with it.
 //
@@ -47,11 +47,11 @@ export function FilterTabs<T extends string>({
    * Whether the tabs divide the width up equally between them.
    *
    * Off by default. A filter bar's tabs are a list of slices and read as one
-   * phrase — "Väntar 12   Alla" — and stretching two of them across a desktop
+   * phrase, "Väntar 12   Alla", and stretching two of them across a desktop
    * card would put an inch of nothing between a label and the end of its own
    * underline.
    *
-   * On for a switcher that *is* the row it stands in: the occasion sheet's
+   * On for a switcher that *is* the row it stands in: the event sheet's
    * three columns on a phone. There the tabs are the only thing on the line
    * and an equal third each is what makes them read as one control being
    * turned rather than as three words in the corner.

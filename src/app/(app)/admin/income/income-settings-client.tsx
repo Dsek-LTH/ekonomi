@@ -3,11 +3,11 @@
 // Settings → Income. This screen is intakt's config.yaml: the table that
 // decides which verksamhet a sold product belongs to and which account its
 // money is credited to. It used to be a file on the treasurer's laptop, which
-// meant only whoever held it could change the routing — and that the app and
+// meant only whoever held it could change the routing, and that the app and
 // the service could disagree about it.
 //
 // The verksamheter themselves are resultatenheter, listed here whether or not
-// they take money in. There used to be a second list — IncomeCommittee — beside
+// they take money in. There used to be a second list, IncomeCommittee, beside
 // the one under Inställningar → Resultatenheter, with nothing checking that the
 // two agreed; Sexmästeriet was two rows in two tables that happened to share a
 // name. Adding a unit therefore happens over there, and giving one income
@@ -39,7 +39,7 @@ export function IncomeSettingsClient({
   const t = useTranslations("admin.income");
   const ccOptions = costCenters.map((c) => ({
     value: c.id,
-    label: `${c.code} — ${c.name}`,
+    label: `${c.code} – ${c.name}`,
     short: c.code,
   }));
   const { pending, mutate } = useMutation();
@@ -74,7 +74,7 @@ export function IncomeSettingsClient({
     await mutate("/api/income/settings", {
       key: "series",
       method: "PATCH",
-      // "" is how the body says "clear it" — see UpdateIncomeSettings. Cleared,
+      // "" is how the body says "clear it". See UpdateIncomeSettings. Cleared,
       // takings go to whatever series everything else does.
       body: { incomeVoucherSeries: settings.incomeVoucherSeries ?? "" },
       error: t("saveFailed"),
@@ -150,7 +150,7 @@ export function IncomeSettingsClient({
       <Card>
         <CardHeader title={t("export.title")} subtitle={t("export.description")} />
         <CardBody className="space-y-4">
-          {/* Left empty, takings go wherever everything else does — which is
+          {/* Left empty, takings go wherever everything else does, which is
               what they did before this setting existed, and what the hint says
               rather than leaving an empty box reading as "nowhere". */}
           <Field
@@ -181,8 +181,8 @@ export function IncomeSettingsClient({
         </CardBody>
       </Card>
 
-      {/* Everything about a particular verksamhet — its produktprefix, its
-          verifikationstext, its kostnadsställe — is edited where the verksamhet
+      {/* Everything about a particular verksamhet (its produktprefix, its
+          verifikationstext, its kostnadsställe) is edited where the verksamhet
           is: Inställningar → Resultatenheter. What is left here is what belongs
           to income as a whole and to no unit in particular. */}
       {!fallback && (

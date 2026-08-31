@@ -8,7 +8,7 @@ ARG TARGET_STAGE=runner
 # source: deps → builder → runner. A separate `migrator` stage contains only
 # Prisma and the migration files, without the Next build output.
 #
-# Local development does not need any of this — `pnpm dev` against
+# Local development does not need any of this. `pnpm dev` against
 # `pnpm db:up` is still the shorter path. This is for running the whole stack
 # (`pnpm app:up`) and for the image the k8s cluster runs.
 
@@ -30,7 +30,7 @@ WORKDIR /app
 # ── deps ──────────────────────────────────────────────────────────────
 # Only the manifests, so this layer is reused on every build that did not
 # change a dependency. pnpm-workspace.yaml carries the overrides and the
-# allowBuilds list (sharp, prisma) — without it the postinstall scripts those
+# allowBuilds list (sharp, prisma), without it the postinstall scripts those
 # packages need to unpack their binaries never run.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 # `prisma generate` first: src/lib/generated is gitignored, so the client the
 # app imports does not exist in a fresh checkout and the build would not
 # resolve it. `next build` runs with NODE_ENV=production but is exempt from the
-# environment check — see the NEXT_PHASE note in lib/server/env.ts. Nothing
+# environment check. See the NEXT_PHASE note in lib/server/env.ts. Nothing
 # here reaches a database or a bucket.
 FROM deps AS builder
 COPY . .
@@ -79,7 +79,7 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 # The standalone output, its static assets and public/ are the whole app.
-# It writes nothing to disk — receipts go to S3 — so its filesystem can stay
+# It writes nothing to disk. Receipts go to S3, so its filesystem can stay
 # read-only.  Use group 0 ownership rather than the image's `node` account:
 # OKD's restricted SCC runs containers with an arbitrary non-root UID, which
 # must still be able to read every runtime file.
@@ -89,14 +89,14 @@ COPY --from=builder --chown=1001:0 /app/public ./public
 
 # The utläggsräkning's template and the faces it is set in, read from disk at
 # render time rather than bundled. Next's standalone output traces imports, and
-# neither a .typ nor a .ttf is one — without this the cover renders in
+# neither a .typ nor a .ttf is one, without this the cover renders in
 # `pnpm dev` and finds nothing here. The path mirrors the source tree because
 # that is what cover/typst.ts resolves against process.cwd(), which is also the
 # compile root; the section's mark it draws is already in public/.
 #
 # The fonts are not optional dressing. Typst embeds no proportional sans at all,
 # so without them this page comes out in a serif here and in Inter everywhere
-# else — see the note in cover/typst.ts.
+# else. See the note in cover/typst.ts.
 #
 # There is no typesetter to install beside them: Typst comes in as an npm
 # dependency with a musl build for this image, so `pnpm install` is the whole
@@ -112,7 +112,7 @@ EXPOSE 3000
 
 # Any answer at all means the server is up: a signed-out request is a redirect,
 # not a 200, and this container has no session. A 5xx or a refused connection
-# is the failure worth reporting — including the deliberate exit(1) on a
+# is the failure worth reporting, including the deliberate exit(1) on a
 # misconfigured environment (lib/server/startup.ts).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"

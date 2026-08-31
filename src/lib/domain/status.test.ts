@@ -131,7 +131,7 @@ describe("submitBlocker", () => {
   });
 
   it("blocks an eget utlägg handed in after the deadline, on the day after", () => {
-    // 60 days is in time, 61 is not — the boundary the rule is written around.
+    // 60 days is in time, 61 is not: the boundary the rule is written around.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     const own = {
@@ -163,7 +163,7 @@ describe("submitBlocker", () => {
 
   it("holds the deadline over a milersättning too", () => {
     // The claimant's own petrol out of the claimant's own account, with
-    // nothing on any statement to say it happened — as uncheckable when stale
+    // nothing on any statement to say it happened, as uncheckable when stale
     // as a stale receipt, and refused on the same day.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
@@ -181,7 +181,7 @@ describe("submitBlocker", () => {
 
   it("holds no deadline over a sektionskort purchase", () => {
     // The money is already the section's and the transaction is already on the
-    // statement — a late one still has to be accounted for, not refused.
+    // statement. A late one still has to be accounted for, not refused.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     expect(submitBlocker({ ...ready, purchaseDate: "2025-01-01" })).toBeNull();
@@ -320,7 +320,7 @@ describe("status predicates", () => {
 
   it("offers every status in the filter list, with a label in both locales", () => {
     // STATUS_TONE is Record<ExpenseStatus, Tone>, so its keys are the full set
-    // by construction — the list the utlägg filter renders has to match it, or
+    // by construction. The list the utlägg filter renders has to match it, or
     // a status silently becomes unfilterable.
     expect([...EXPENSE_STATUSES].sort()).toEqual(Object.keys(STATUS_TONE).sort());
     for (const status of EXPENSE_STATUSES) {
@@ -343,7 +343,7 @@ describe("isRecallable", () => {
   });
 
   it("does not, once somebody has actually attested it", () => {
-    // Then it is bookkeeping's to reopen — they are the ones who would have to
+    // Then it is bookkeeping's to reopen. They are the ones who would have to
     // unwind a voucher. See `return_approved`.
     expect(isRecallable("APPROVED")).toBe(false);
     expect(isRecallable("BOOKED")).toBe(false);

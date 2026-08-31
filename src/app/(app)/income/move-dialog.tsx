@@ -4,14 +4,14 @@
 // they are going.
 //
 // The case it exists for: Sexmästeriet's beer rung up without its prefix routes
-// to the fallback — Skattmästeriet — while the beer that was rung up properly
+// to the fallback, Skattmästeriet, while the beer that was rung up properly
 // sits in Sexmästeriet's own report for the same day. Two reports, one day's
 // takings. This moves the strays across so there is one report to book, one
 // intäktsräkning and one verifikation.
 //
 // The account is the part that cannot be worked out for anyone. A line in the
 // fallback got there by having no prefix, and intakt strips the prefix off the
-// name of every line that does have one — so the row carries no trace of which
+// name of every line that does have one, so the row carries no trace of which
 // of the destination's accounts it belongs to. What this can do is put the
 // destination's own accounts at the top of the picker and set them all at once,
 // which turns thirty mis-sold beers into one choice rather than thirty.
@@ -36,7 +36,7 @@ export interface MoveRequest {
 /**
  * What the picker should start on for a destination.
  *
- * One account among its prefixes means there is no question to ask — that is
+ * One account among its prefixes means there is no question to ask. That is
  * where this unit's revenue goes. More than one, or none at all, and the line
  * keeps what it has: the fallback's account, which is visibly wrong and so
  * reads as "choose" rather than as an answer. Guessing between beer and food
@@ -51,7 +51,7 @@ export function suggestedAccount(target: IncomeMoveTarget | undefined, current: 
  * The accounts to offer for a line: the verksamhet's own first, named by the
  * prefixes that route to them, then the rest of the chart.
  *
- * Both places that let someone choose an account for a sale use this — the
+ * Both places that let someone choose an account for a sale use this: the
  * dialog below, and the account column of the review screen's own table. An
  * account is an account, so the whole chart is offered; a unit's own are put in
  * front because they are what the answer nearly always is.
@@ -63,7 +63,7 @@ export function accountOptions(
 ): ComboOption[] {
   const own = (unit?.accounts ?? []).map((a) => ({
     value: a.account,
-    label: `${a.account} · ${a.accountName || unknownName}${
+    label: `${a.account} – ${a.accountName || unknownName}${
       a.prefixes.length ? ` (${a.prefixes.join(", ")})` : ""
     }`,
     short: a.account,
@@ -73,7 +73,7 @@ export function accountOptions(
     ...own,
     ...accounts
       .filter((a) => !ownNumbers.has(a.number))
-      .map((a) => ({ value: a.number, label: `${a.number} · ${a.name}`, short: a.number })),
+      .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number })),
   ];
 }
 
@@ -111,7 +111,7 @@ export function MoveLinesDialog({
   // different verksamhet re-suggests rather than leaving the last one's answer
   // sitting in a field: the suggestion is "this unit's account", so it means
   // nothing once the unit has changed. Held as state keyed by the destination
-  // rather than reset in an effect — an effect would be a second render for
+  // rather than reset in an effect. An effect would be a second render for
   // something that can just be read.
   const [override, setOverride] = useState<{ unitId: string; byLine: Record<string, string> }>({
     unitId: "",
@@ -134,7 +134,7 @@ export function MoveLinesDialog({
 
   const total = lines.reduce((sum, l) => sum + l.total, 0);
   // Whether anything is still sitting on the account it had in the fallback.
-  // Not a blocker — a line may genuinely belong on it — but it is the mistake
+  // Not a blocker: a line may genuinely belong on it, but it is the mistake
   // this screen exists to prevent, so it is said out loud.
   const unchanged = lines.filter((l) => accountFor(l) === l.account).length;
 
@@ -194,7 +194,7 @@ export function MoveLinesDialog({
               {lines.map((line) => (
                 <tr key={line.id}>
                   <td className="px-3 py-2">
-                    {/* The whole name — "Macka Ost" — as the document writes it
+                    {/* The whole name, "Macka Ost", as the document writes it
                         and as the review table writes a row with no heading
                         above it. These lines have been lifted out of their day,
                         so there is nothing above them to lean on. */}

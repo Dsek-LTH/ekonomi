@@ -12,7 +12,7 @@ import {
   type CellRow,
   type SheetState,
 } from "./cells";
-import { tagTotals, type TagSubject } from "./tag";
+import { tagTotals, type TagSubject } from "./event";
 
 const cans: TagSubject = { kind: "UNIT", unitMl: 330 };
 const vodka: TagSubject = { kind: "VOLUME", nominalMl: 700 };
@@ -155,7 +155,7 @@ describe("totalsFromCells", () => {
 });
 
 /**
- * A sheet with nothing unsaved on it — what it reads and what the log holds are
+ * A sheet with nothing unsaved on it: what it reads and what the log holds are
  * the same map.
  *
  * Which is what every case below describes but one, and that one is the point:
@@ -228,7 +228,7 @@ describe("cellFault", () => {
 
 describe("cellFault, before anything is saved", () => {
   // Reported from the bar: eight beers out, nothing saved yet, and one of them
-  // dropped — refused, on the grounds that nothing had gone out. It had: it was
+  // dropped, refused, on the grounds that nothing had gone out. It had: it was
   // on the screen. The rule was reading the log where it should have been
   // reading the sheet.
   //
@@ -250,7 +250,7 @@ describe("cellFault, before anything is saved", () => {
   it("lets a row be cleared column by column", () => {
     // Taking a product off the sheet zeroes every one of its cells. Each zero
     // used to be judged with its neighbours still at their old figures, so
-    // clearing Ut while Spill still read 1 was "more than went out" — the Ut
+    // clearing Ut while Spill still read 1 was "more than went out". The Ut
     // cell was held back from the save and only the spill was cleared.
     const cleared = new Map<string, number>();
     const booked = cellTotals([
@@ -287,12 +287,12 @@ describe("cellKey", () => {
 describe("cellFault, against what the night found", () => {
   // The trap this closes: two bottles go out sealed and come home at 60 %, and
   // the 60 % rung then lights up offering the very bottles just carried in. The
-  // ladder used to mutate as the In column was filled, which is confusing — and
+  // ladder used to mutate as the In column was filled, which is confusing, and
   // pointless, because out-and-back-and-out again is the same 1 400 ml as out
   // and never returned.
   const cellsOf = (...rows: CellRow[]) => cellTotals(rows);
 
-  it("refuses taking out what this occasion has just brought back", () => {
+  it("refuses taking out what this event has just brought back", () => {
     const shelf = { sealed: 3, open: { 60: 2 } };
     const cells = cellsOf(
       stored({ units: -2 }),
@@ -349,7 +349,7 @@ describe("cellFault, against what the night found", () => {
 describe("cellFault, bringing back more than went out", () => {
   // Reported from the sheet: two bottles out, both home at 80 %, and one more
   // typed in at 60 %. Three bottles cannot come home from a night that took
-  // two, and the rule has to say so — as a fault somebody can retype, never by
+  // two, and the rule has to say so, as a fault somebody can retype, never by
   // closing the box they are typing in.
   const shelf = { sealed: 3, open: { 80: 2 } };
   const night = cellTotals([
@@ -363,7 +363,7 @@ describe("cellFault, bringing back more than went out", () => {
   });
 
   it("refuses a third bottle even where the millilitres would allow it", () => {
-    // 280 ml is unaccounted for, which is a 40 % bottle's worth — but both
+    // 280 ml is unaccounted for, which is a 40 % bottle's worth. But both
     // bottles are already home. The missing 280 ml was drunk; it is not a third
     // bottle waiting to be carried back.
     expect(cellFault(vodka, shelf, saved(night), back(40), 1)).toBe("moreBottlesThanWentOut");
@@ -395,7 +395,7 @@ describe("cellFault, bringing back more than went out", () => {
 
 describe("cellFault, counted in bottles", () => {
   // Reported from the sheet: two bottles out and three back. The millilitre
-  // check passes it — three at 20 % is 420 ml against the 1 400 that left — and
+  // check passes it (three at 20 % is 420 ml against the 1 400 that left) and
   // it is still impossible. Bottles are countable things and the count holds on
   // its own.
   const shelf = { sealed: 5, open: {} };
@@ -424,7 +424,7 @@ describe("cellFault, counted in bottles", () => {
   });
 
   it("still catches an overshoot in millilitres before counting vessels", () => {
-    // Two out, two home — but home fuller than they left, which is a different
+    // Two out, two home, but home fuller than they left, which is a different
     // impossibility and deserves its own sentence.
     const twoOutOpen = cellTotals([stored({ level: 20, open: { 20: -2 } })]);
     expect(cellFault(vodka, { sealed: 0, open: { 20: 2 } }, saved(twoOutOpen), back(80), 2)).toBe(

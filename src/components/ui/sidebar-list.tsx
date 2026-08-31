@@ -10,7 +10,7 @@ import { Modal, ModalHeader } from "./modal";
 
 /**
  * Where the panel stops being a full-width list and becomes a column beside the
- * detail — which is to say the breakpoint its screen stands the two side by
+ * detail, which is to say the breakpoint its screen stands the two side by
  * side at. Written out as literal classes rather than built from the key:
  * Tailwind reads these out of the source as text and never sees a template
  * string.
@@ -28,8 +28,8 @@ const PickedCtx = createContext<(() => void) | null>(null);
 // panel of selectable rows, sections and inline footers.
 //
 // Above the breakpoint it is that column, sticky beside the detail, and the two
-// are on screen together. Below it the screens used to stack — panel on top,
-// detail under — and that is where it went wrong: the budget's panel is 786px
+// are on screen together. Below it the screens used to stack (panel on top,
+// detail under) and that is where it went wrong: the budget's panel is 786px
 // of compare, search, list and add-row, so changing cost centre meant scrolling
 // back up past all of it and then down again. The income queue had already
 // noticed and capped its own list at `max-h-80`, which spends less of the screen
@@ -37,7 +37,7 @@ const PickedCtx = createContext<(() => void) | null>(null);
 //
 // So below the breakpoint the panel is a bar and a dialog: the bar says what is
 // selected and stays pinned while you work, and it opens the panel's own
-// contents unchanged. Nothing is dropped or reshaped — the grouped list keeps
+// contents unchanged. Nothing is dropped or reshaped. The grouped list keeps
 // its headings, its figures and its per-group actions, because it is the same
 // tree either way.
 //
@@ -54,7 +54,7 @@ export function SidebarPanel({
   children: React.ReactNode;
   className?: string;
   /**
-   * The panel element itself, for a screen that has to measure or move it —
+   * The panel element itself, for a screen that has to measure or move it,
    * the budget's list is sticky and walks its own offset as the page scrolls
    * (see lib/ui/use-sticky-follow.ts).
    */
@@ -62,7 +62,7 @@ export function SidebarPanel({
   /** The breakpoint this screen stands its detail beside the panel at. */
   at?: keyof typeof BANDS;
   /**
-   * What the collapsed bar says — normally the selected row's own line. Given
+   * What the collapsed bar says, normally the selected row's own line. Given
    * this, the panel collapses below the breakpoint; without it, it stacks.
    */
   bar?: React.ReactNode;
@@ -120,7 +120,7 @@ export function SidebarPanel({
     <aside ref={ref} className={cn("w-full shrink-0", band.column, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on
           a master-detail screen, and it used to be the same shape with no
-          elevation — which read as the list being a level behind. */}
+          elevation, which read as the list being a level behind. */}
       <Card className="overflow-hidden">{children}</Card>
     </aside>
   );
@@ -129,7 +129,7 @@ export function SidebarPanel({
 // One selectable row. Selection is the accent wash; everything else is left to
 // `children`, which is usually a title line plus a muted detail line.
 //
-// The rest of the button's props pass through, the same way Card's do — a row
+// The rest of the button's props pass through, the same way Card's do. A row
 // that is also a drop target (the income queue, which takes sold lines dragged
 // onto another verksamhet's day) needs its own handlers, and wrapping it in a
 // div to carry them would put the drop zone somewhere other than the thing that
@@ -170,7 +170,7 @@ export function SidebarItem({
 // A section heading between groups of items.
 //
 // `action` is for a control that belongs to the group rather than to any one row
-// in it — the income queue puts "new report for this day" beside the date, which
+// in it. The income queue puts "new report for this day" beside the date, which
 // is the only place where the day it would be for is already stated.
 export function SidebarGroupLabel({
   children,

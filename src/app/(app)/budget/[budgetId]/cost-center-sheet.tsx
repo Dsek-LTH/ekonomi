@@ -38,7 +38,7 @@ export function CostCenterSheet(props: {
   isAdmin: boolean; canComment: boolean; userId: string;
   renderCell: CellFn; renderFormula: FormulaFn; api: ApiFn; budgetId: string;
   accounts: AccountRecord[];
-  /** Editorial adjustments in force, by account id — see budget-helpers. */
+  /** Editorial adjustments in force, by account id. See budget-helpers. */
   adjustments: Map<string, AdjustmentRow[]>;
   /** What has been copied, from this sheet or from any other. */
   clip: BudgetClip | null;
@@ -66,11 +66,11 @@ export function CostCenterSheet(props: {
 
   const badLine = new Set(ev.badLineItems ?? []);
   // Accounts whose total is short a row that didn't resolve. The figure below
-  // is still the sum of the rows that did — a sheet you can't read is no help
-  // in finding the row to fix — so this is what says it is a partial one.
+  // is still the sum of the rows that did, because a sheet you can't read is no
+  // help in finding the row to fix, so this is what says it is a partial one.
   const badAccount = new Set(ev.badAccounts ?? []);
   // The left margin: the row's A1 number and the box that picks the row out for
-  // a copy, in one cell rather than a column each — a whole column of furniture
+  // a copy, in one cell rather than a column each. A whole column of furniture
   // for a 16px square is a column the figures don't get.
   //
   // The box is centred in the cell and the number is laid over its left edge,
@@ -79,7 +79,7 @@ export function CostCenterSheet(props: {
   // a row without a number keeps its box in the same place as the rest.
   // `table-fixed` sizes the column from the colgroup and never from what is in
   // it, so a 0px column whose cells still carry padding, a border and a tick box
-  // does not collapse — it overflows into the column beside it. On a phone the
+  // does not collapse. It overflows into the column beside it. On a phone the
   // cell is emptied rather than squeezed.
   const gut = (n: number | undefined, box?: React.ReactNode) =>
     narrow ? (
@@ -94,7 +94,7 @@ export function CostCenterSheet(props: {
     );
 
   // Row delete. Revealed on row hover (like the drag grip) so a long sheet isn't
-  // a column of bins — keyboard focus reveals it too, so it stays reachable
+  // a column of bins. Keyboard focus reveals it too, so it stays reachable
   // without a mouse.
   const del = (onClick: () => void, label: string) => (
     <IconButton tone="danger" reveal onClick={onClick} label={label}>
@@ -113,16 +113,16 @@ export function CostCenterSheet(props: {
     return sum + resultImpact(effectiveKind(a.accountCode, a.kindOverride), net);
   }, 0);
 
-  // Whatever is being compared against — the year's utfall or another budget
-  // (see use-comparison.tsx) — shown as two extra, non-grid columns after
+  // Whatever is being compared against, the year's utfall or another budget
+  // (see use-comparison.tsx), shown as two extra, non-grid columns after
   // Belopp, on the account totals and on each row.
   //
   // The other side is looked up through the join, so what only it has is here
   // too: an account it budgets for that this sheet doesn't (`ghostAccounts`),
   // and rows inside a shared account that this one lacks. Those render read-only
-  // and unbudgeted — the point of showing them is that the blank is the finding.
+  // and unbudgeted, because the point of showing them is that the blank is the finding.
   // Below md the sheet has 361px of screen and 506px of fixed columns, so
-  // something has to give. What gives is the chrome — see the widths below —
+  // something has to give. What gives is the chrome (see the widths below)
   // and the comparison, which adds another 200px and is the one thing here
   // somebody asked for rather than always needed.
   const narrow = usePhone();
@@ -149,11 +149,11 @@ export function CostCenterSheet(props: {
   // Fixed widths; Beskrivning is left elastic so it fills the row. The table is
   // w-full, so it always fits its container with no horizontal scrollbar.
   // The action column holds a trash icon on every row, plus the comment toggle
-  // (icon + count) on account rows — wide enough for both without wrapping.
+  // (icon + count) on account rows, wide enough for both without wrapping.
   //
   // Two sets of them, because the desktop set came to 506px of fixed columns
-  // and a phone has 361px of screen: Beskrivning — the column you actually read
-  // — was collapsing to nothing and the sheet was something you dragged
+  // and a phone has 361px of screen. Beskrivning, the column you actually read,
+  // was collapsing to nothing and the sheet was something you dragged
   // sideways. Every pixel reclaimed below is chrome rather than content:
   //
   //   gutter  58 → 0    a row number and a drag grip. Dragging a row on a touch
@@ -202,17 +202,17 @@ export function CostCenterSheet(props: {
 
   // Accounts come from the synced chart, so a budget can only refer to accounts
   // the ledger actually reports on. Ones already on this sheet are filtered out
-  // — `keep` is the row's own account, which has to stay in its own picker for
+  // and `keep` is the row's own account, which has to stay in its own picker for
   // the value to resolve to a label.
   const used = new Set(cc.accounts.map((a) => a.accountCode));
   const accountOptionsFor = (keep?: string) =>
     accounts
       .filter((a) => (a.number === keep ? true : a.active && !used.has(a.number)))
-      .map((a) => ({ value: a.number, label: `${a.number} · ${a.name}`, short: a.number }));
+      .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number }));
 
   async function createAccount(kind: AccountKind, code: string) {
     if (!code.trim()) return;
-    // The name is resolved server-side from the chart — which is the reason the
+    // The name is resolved server-side from the chart, which is the reason the
     // new account is taken from the response rather than assembled here: this
     // side knows the code that was asked for, and the server knows what it is
     // called. It comes back with its (empty) rows and comments on it.
@@ -245,11 +245,11 @@ export function CostCenterSheet(props: {
   });
 
   /**
-   * Reordering a line by hand — within its account, or onto another one.
+   * Reordering a line by hand, within its account or onto another one.
    *
    * The row is lifted out and follows the pointer; the rows it passes snap into
    * the gap it left, one at a time, as the pointer crosses each halfway mark.
-   * The same drag as the voucher table's (components/voucher-editor.tsx) — a
+   * The same drag as the voucher table's (components/voucher-editor.tsx). A
    * line drawn between two rows says where a row would land, which is not the
    * same as reading the sheet you are about to save.
    *
@@ -269,7 +269,7 @@ export function CostCenterSheet(props: {
     /** The account it was picked up from, and the one it is over now. */
     fromAccountId: string;
     accountId: string;
-    /** Every account's rows as placed — the ref leads what is drawn. */
+    /** Every account's rows as placed. The ref leads what is drawn. */
     ids: Record<string, string[]>;
     /** The same, as the drag found it: for Escape, and for "nothing moved". */
     before: Record<string, string[]>;
@@ -325,7 +325,7 @@ export function CostCenterSheet(props: {
     el.style.transform = `translateY(${y}px)`;
   }, []);
 
-  /** Put the dragged row in `accountId`, beside `overId` — or at its end. */
+  /** Put the dragged row in `accountId`, beside `overId`, or at its end. */
   const place = useCallback((d: LineDrag, accountId: string, overId: string | null, after: boolean) => {
     const ids: Record<string, string[]> = {};
     for (const [key, list] of Object.entries(d.ids)) ids[key] = list.filter((x) => x !== d.id);
@@ -340,7 +340,7 @@ export function CostCenterSheet(props: {
     setPlacement(ids);
   }, []);
 
-  // Ticking rows, and copying them onto another sheet — see ./use-sheet-clipboard.
+  // Ticking rows, and copying them onto another sheet. See ./use-sheet-clipboard.
   const { toggle, clearTicks, marked, sheetKeys, isTicked, copySelection } = useSheetClipboard({
     accounts: cc.accounts,
     linesOf,
@@ -370,7 +370,7 @@ export function CostCenterSheet(props: {
   };
 
   /** The tick box in the margin, on every row that can be copied. The app's own
-   *  square — the one the multi-select picker marks its options with. */
+   *  square, the one the multi-select picker marks its options with. */
   function tickBox(kind: "rows" | "accounts", id: string, label: string) {
     return (
       <Checkbox checked={isTicked(kind, id)} onChange={() => toggle(kind, id)} label={label} />
@@ -399,7 +399,7 @@ export function CostCenterSheet(props: {
   }
 
   // Put the row back under the pointer once the rows have been redrawn around
-  // it — before the frame is painted, so the two never disagree on screen.
+  // it, before the frame is painted, so the two never disagree on screen.
   useLayoutEffect(() => {
     if (draggingLineId) lift();
   }, [placement, draggingLineId, lift]);
@@ -430,18 +430,18 @@ export function CostCenterSheet(props: {
         const box = over.getBoundingClientRect();
         place(d, over.dataset.account, over.dataset.line, e.clientY > box.top + box.height / 2);
       } else if (end?.dataset.lineEnd) {
-        // The new-row line, under the last of an account's rows — and the only
+        // The new-row line, under the last of an account's rows, and the only
         // thing to aim at in an account that has none.
         place(d, end.dataset.lineEnd, null, false);
       }
       lift();
     };
-    // Saved once, when it is let go — not on every row it crossed on the way.
+    // Saved once, when it is let go, not on every row it crossed on the way.
     // One request even when the row changed account: the rows it left keep the
     // order they had, and the route moves it over (see the reorder endpoint).
     //
     // The arrangement was this screen's to begin with, so it is also what the
-    // budget is patched with — `withLineOrder` is the same rule the route
+    // budget is patched with. `withLineOrder` is the same rule the route
     // applies, over the same list. The placement stands until that lands, and
     // is then let go onto a budget that already says the same thing.
     const stop = () => {
@@ -481,15 +481,15 @@ export function CostCenterSheet(props: {
 
   // A whole account only the other side has: it is budgeted for (or was spent
   // on) over there and not at all here. Shown in full, read-only, so the gap is
-  // legible down to the row — this is the case a left join would have hidden.
+  // legible down to the row. This is the case a left join would have hidden.
 
-  // The "+ new account" row at the foot of a section. One picker over the chart —
-  // the name follows from the account, so there is nothing else to type.
+  // The "+ new account" row at the foot of a section. One picker over the chart,
+  // and the name follows from the account, so there is nothing else to type.
 
   // One section (income / costs) as its own rounded card. The whole card
-  // is a drop zone — dropping an account row here flips it to this kind.
+  // is a drop zone: dropping an account row here flips it to this kind.
 
-  // Written once and drawn twice — the strip on a phone and the tiles above md
+  // Written once and drawn twice. The strip on a phone and the tiles above md
   // must never be able to disagree about what the sheet comes to.
   const summary = [
     { label: t("totalIncome"), v: totals.income, a: compareTotals.income, incomeLike: true, signed: false, impact: undefined as number | undefined },
@@ -499,7 +499,7 @@ export function CostCenterSheet(props: {
 
   // Everything the rows below need, gathered once. The sheet is four nested
   // levels of table and every one of them asks the same questions, so they ask
-  // this rather than being handed forty-odd props each — see ./sheet-context.
+  // this rather than being handed forty-odd props each. See ./sheet-context.
   const sheet: SheetValue = {
     cc, ccCode, budgetId, columns, grid, ev, accounts, adjustments, compare, showCompare,
     isAdmin, canComment, userId,
@@ -518,21 +518,21 @@ export function CostCenterSheet(props: {
   return (
     <SheetProvider value={sheet}>
       <div ref={sheetRef} {...sheetProps}>
-        {/* summary — the same three figures in two shapes.
+        {/* summary: the same three figures in two shapes.
             Not a <Card>, on purpose and for the same reason the sheets below
             don't look like the rest of the app: no shadow, and the figures in the
             sheet's own flat notation rather than the app's Amount (see DESIGN.md
-            → Money). A tile carries three things a stat card doesn't — the
+            → Money). A tile carries three things a stat card doesn't: the
             compared side, the difference from it, and how far the editorial
             changes have moved the result. */}
 
         {/* On a phone: one strip, pinned under the app bar.
             StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
-            one column — so the three tiles stacked to 266–362px, and most of the
+            one column, so the three tiles stacked to 266–362px, and most of the
             first screenful of a budget was three numbers. Here they are 56px, and
             they stay on screen while you scroll the rows that decide them, which
             is when the result is actually worth looking at. What the tiles said
-            underneath — the compared side and what the changes have done — is one
+            underneath, the compared side and what the changes have done, is one
             tap down rather than always printed. */}
         <div className="sticky top-14 z-10 rounded-2xl border border-border bg-background shadow-[var(--shadow-card)] md:hidden">
           <button
@@ -562,7 +562,7 @@ export function CostCenterSheet(props: {
                 summary.map((s) => (
                   <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
                     <span className="truncate">
-                      {s.label} · {compare.label}
+                      {s.label} – {compare.label}
                     </span>
                     <span className="shrink-0 tabular-nums text-foreground">
                       {fmt(s.a)}
@@ -588,7 +588,7 @@ export function CostCenterSheet(props: {
               )}
               {/* The comparison's own columns add ~200px to a sheet that has
                   361px to spend, so on a phone they are asked for rather than
-                  assumed. Off, the sheet fits; on, it scrolls sideways — which is
+                  assumed. Off, the sheet fits; on, it scrolls sideways, which is
                   a fair price for a thing you turned on. */}
               {compare && (
                 <button

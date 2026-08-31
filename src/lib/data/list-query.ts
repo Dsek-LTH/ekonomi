@@ -1,10 +1,10 @@
-// What a list screen is currently showing — which page, which tab, what was
-// typed in the search box, how it is sorted — as one value, read from the URL.
+// What a list screen is currently showing (which page, which tab, what was
+// typed in the search box, how it is sorted) as one value, read from the URL.
 //
 // It lives in the URL rather than in React state because the query now runs on
 // the server: the page is a Server Component, so the only thing it can read a
 // filter from is its own address. That the address then describes the view is
-// the part worth having — a filtered list can be linked to, reloaded, and
+// the part worth having. A filtered list can be linked to, reloaded, and
 // walked back through with the browser's own Back button, none of which the
 // component state it replaces could do.
 //
@@ -27,13 +27,13 @@ export interface ListQuery {
   tab: string;
   /**
    * The dropdown filter's picked values, OR-ed. Empty is its resting state and
-   * narrows nothing — unlike `tab`, where one option is always in force.
+   * narrows nothing, unlike `tab`, where one option is always in force.
    */
   picks: string[];
   /**
    * The page's own segmented toggle, where it has one: whose utlägg the list is
    * showing ("MINE" / "ALL"). Not every list has one, and what the values mean
-   * is the page's business — this only carries it.
+   * is the page's business. This only carries it.
    */
   view: string;
   /** The search box. Matched by each list against its own text columns. */
@@ -55,7 +55,7 @@ const one = (v: string | string[] | undefined): string =>
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Is this a date a filter can be run on — a whole YYYY-MM-DD?
+ * Is this a date a filter can be run on: a whole YYYY-MM-DD?
  *
  * Exported because both ends of the round trip have to agree about it. This
  * file drops anything else on the way *in* (see `from`/`to` below); the
@@ -71,7 +71,7 @@ export const isWholeDate = (v: string) => ISO_DATE.test(v);
  * Every field falls back to its default rather than rejecting: a URL is
  * something people edit, bookmark and truncate, and a list asked for page
  * "banana" should show the first page, not an error. That also makes the
- * bare route — no query string at all — the ordinary first view.
+ * bare route (no query string at all) the ordinary first view.
  */
 export function parseListQuery(
   sp: SearchParams,
@@ -80,7 +80,7 @@ export function parseListQuery(
      * The tab in force when the URL names none.
      *
      * DataTable falls back to its *first* tab when `tab` matches no option, so
-     * a list whose first tab is a real filter ("Väntar") must say so here —
+     * a list whose first tab is a real filter ("Väntar") must say so here.
      * otherwise the address bar and the highlighted tab describe one view and
      * the query behind them another. Lists whose first tab is "Alla" have
      * nothing to declare: no tab and no filter are the same thing there.
@@ -138,7 +138,7 @@ export function listQueryToSearch(q: ListQuery): string {
 /** One page of rows, and how many there are in total behind it. */
 export interface RowPage<T> {
   rows: T[];
-  /** Matching rows in the database, not on this page — the pager needs both. */
+  /** Matching rows in the database, not on this page. The pager needs both. */
   total: number;
 }
 

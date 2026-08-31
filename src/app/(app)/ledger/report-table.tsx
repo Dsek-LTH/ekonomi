@@ -3,7 +3,7 @@
 // The report's grid: one cost-centre group per card, the voucher rows behind
 // any account one click away, and the bottom line under it all.
 //
-// Laid out on CSS grid rather than as tables, and — the part that matters — the
+// Laid out on CSS grid rather than as tables, and, the part that matters, the
 // group cards share ONE sideways scrollport instead of having one each. Column
 // widths were never the hard part; two scroll containers were. Identically
 // sized columns in two scrollports are aligned exactly until you scroll one of
@@ -15,7 +15,7 @@
 // cannot live inside the scrollport (`overflow-x: auto` computes `overflow-y`
 // to `auto` too, and a sticky child would then stick to a container that never
 // scrolls vertically instead of to the screen). It gets its own scrollport and
-// is the single element still kept in step — one write per scroll event.
+// is the single element still kept in step, one write per scroll event.
 import { Fragment, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -53,7 +53,7 @@ interface ColumnSpec {
   width: number | null; // rem; null = takes the remaining width
 }
 
-const ACCOUNT_MIN = 14; // rem — the floor the account column shrinks to
+const ACCOUNT_MIN = 14; // rem, the floor the account column shrinks to
 
 export function reportColumns(shape: Shape, showShare: boolean): ColumnSpec[] {
   const cols: ColumnSpec[] = [{ key: "account", label: "account", width: null }];
@@ -62,7 +62,7 @@ export function reportColumns(shape: Shape, showShare: boolean): ColumnSpec[] {
   if (shape.isBalance) cols.push({ key: "closing", label: "closing", width: 9 });
   if (showShare) cols.push({ key: "share", label: "share", width: 6 });
   if (shape.showComparison) {
-    // Already worded by the client — see `comparisonLabel` on Shape.
+    // Already worded by the client. See `comparisonLabel` on Shape.
     cols.push({ key: "comparison", label: shape.comparisonLabel, width: 9 });
     if (shape.diff) cols.push({ key: "diff", label: "diff", width: 9 });
   }
@@ -89,7 +89,7 @@ const ROW = "col-span-full grid grid-cols-subgrid items-center";
 const AMOUNT_CELL = "px-3 py-2 text-right tabular-nums whitespace-nowrap last:pr-inset";
 
 // The sideways scrollport. On paper nothing scrolls and nothing has a minimum
-// width — the page is as wide as it is.
+// width. The page is as wide as it is.
 export function ReportScroller({
   register,
   className,
@@ -165,8 +165,8 @@ function Diff({ value, against }: { value: number; against: number | null }) {
   );
 }
 
-// Every totalling row in the report — a section's sum, a cost centre's heading,
-// the bottom line — is the same row with a different label and weight. One
+// Every totalling row in the report (a section's sum, a cost centre's heading,
+// the bottom line) is the same row with a different label and weight. One
 // renderer, so they cannot end up disagreeing about which column a figure
 // belongs under.
 function SummaryRow({
@@ -182,7 +182,7 @@ function SummaryRow({
   shape: Shape;
   label: React.ReactNode;
   value: { total: number; opening: number | null; closing: number | null; comparison: number | null };
-  /** Colour the result figure green or red — only where the sign is the news. */
+  /** Colour the result figure green or red, only where the sign is the news. */
   tone?: boolean;
   className?: string;
   cellClassName?: string;
@@ -273,7 +273,7 @@ export function ReportGroupCard({
             label={
               <span className="block truncate font-semibold">
                 {group.costCenterCode
-                  ? `${group.costCenterCode} · ${group.costCenterName ?? ""}`
+                  ? `${group.costCenterCode} – ${group.costCenterName ?? ""}`
                   : t("noCostCenter")}
               </span>
             }
@@ -317,7 +317,7 @@ export function ReportGroupCard({
 }
 
 // The bottom line, on the same tracks as the cards above it, so each total sits
-// under the column it totals — the outcome under Belopp, the budget under
+// under the column it totals, the outcome under Belopp, the budget under
 // Budget. Pinned, so it has its own scrollport (see the note at the top).
 export function ReportTotalBar({
   report,
@@ -506,7 +506,7 @@ function VoucherRows({
             </td>
             <td className="py-1 pr-3">{r.text || r.description}</td>
             {showCostCenter && (
-              <td className="py-1 pr-3 whitespace-nowrap">{r.costCenter ?? "—"}</td>
+              <td className="py-1 pr-3 whitespace-nowrap">{r.costCenter ?? "–"}</td>
             )}
             <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">
               {r.debit ? formatSEK(r.debit) : ""}

@@ -14,13 +14,13 @@
 // It counts. Beside every group is how many people hold it, and beside every
 // role how many people are in it, so "give ORDINARIE bookkeeping access" reads
 // as the ~1000 people it actually is before it is saved rather than after. The
-// counts come from User.authentikGroups — the group list as it stood at each
-// person's last sign-in — which is also what lets a mapped group nobody holds
+// counts come from User.authentikGroups (the group list as it stood at each
+// person's last sign-in) which is also what lets a mapped group nobody holds
 // be shown as what it almost certainly is: a typo, which grants nothing and
 // says nothing while it does.
 //
-// And it confirms. Not everything — a tickbox that stopped to ask every time
-// would train the reader to click through it — but the two changes that are
+// And it confirms. Not everything. A tickbox that stopped to ask every time
+// would train the reader to click through it, but the two changes that are
 // hard to walk back: one that reaches a lot of people, and one that takes
 // something away from a role the reader holds themselves.
 import { useMemo, useState } from "react";
@@ -97,7 +97,7 @@ export function RolesClient({
     [resultUnits],
   );
 
-  // The grid as a set of "ROLE\0CAPABILITY" keys — one membership test per box,
+  // The grid as a set of "ROLE\0CAPABILITY" keys, one membership test per box,
   // rather than a scan of the pair list for each of the seven-by-twelve. NUL
   // rather than a space because no member of either enum can contain one,
   // whichever vocabulary grows.
@@ -146,7 +146,7 @@ export function RolesClient({
       return;
     }
     // Created empty and then edited in place, so a new row goes through exactly
-    // the same save as an old one — and so a group added by mistake grants
+    // the same save as an old one, and so a group added by mistake grants
     // nothing in the moment before it is removed again.
     const data = await mutate("/api/authority/groups", {
       key: "new-group",
@@ -271,7 +271,7 @@ export function RolesClient({
       <Card>
         <CardHeader title={t("groupsTitle")} subtitle={t("groupsSubtitle")} />
 
-        {/* Which slice of the list, on its own hairline under the header — the
+        {/* Which slice of the list, on its own hairline under the header. The
             underline register (components/ui/filter-tabs.tsx). It is the right
             shape for this: the rows change, the list does not. */}
         <div className="border-b border-border px-inset">
@@ -356,7 +356,7 @@ export function RolesClient({
       <Card>
         <CardHeader title={t("capabilitiesTitle")} subtitle={t("capabilitiesSubtitle")} />
         <CardBody>
-          {/* Wide by nature — seven roles by twelve privileges — so it scrolls
+          {/* Wide by nature (seven roles by twelve privileges) so it scrolls
               inside its own box rather than making the page scroll sideways. */}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[46rem] border-collapse text-sm">
@@ -389,7 +389,7 @@ export function RolesClient({
                         <Checkbox
                           checked={ticked.has(`${role}\u0000${capability}`)}
                           onChange={() => void toggleCapability(role, capability)}
-                          label={`${tCap(capability)} — ${tRole(role)}`}
+                          label={`${tCap(capability)} – ${tRole(role)}`}
                         />
                       </td>
                     ))}

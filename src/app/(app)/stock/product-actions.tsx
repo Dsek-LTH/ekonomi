@@ -3,7 +3,7 @@
 // The two movements that belong to a product rather than to a night.
 //
 // A delivery and a stocktake are both stock movements and both end up in the
-// same log as everything else — but they are not what this feature is used for.
+// same log as everything else, but they are not what this feature is used for.
 // They happen a few times a term, they are done sitting down with an invoice or
 // standing at a shelf with a clipboard, and they ask questions the in/out flow
 // never asks. Leaving them in that dialog made the common act pick its way past
@@ -38,7 +38,7 @@ const kr = (ore: number) =>
  * A delivery.
  *
  * Sealed units and a date, and that is the whole form. What it is worth is the
- * product's own price times the count — see lib/stock/value.ts — so the one
+ * product's own price times the count (see lib/stock/value.ts) so the one
  * thing this says out loud is what the shelf is about to be worth, or that it
  * will be worth nothing because nobody has priced the product.
  */
@@ -123,7 +123,7 @@ export function PurchaseDialog({
 /**
  * A stocktake.
  *
- * You say what is actually there — not how far it is from what the system
+ * You say what is actually there, not how far it is from what the system
  * thought, which is arithmetic nobody should be doing standing at a shelf. The
  * route subtracts what it expected and writes the difference, so the log records
  * the correction rather than the count.
@@ -214,8 +214,8 @@ export function StocktakeDialog({
           <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </Field>
 
-        {/* A count that agrees with the log is still worth recording — it is
-            evidence somebody looked — but it writes no movement, so say so
+        {/* A count that agrees with the log is still worth recording. It is
+            evidence somebody looked, but it writes no movement, so say so
             rather than let the button look broken. */}
         <Notice tone={anyDifference ? "warning" : "info"}>
           {anyDifference

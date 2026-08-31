@@ -29,7 +29,7 @@ import { cancelsOut } from "@/lib/domain/matching";
 import { isFutureDate } from "@/lib/domain/date";
 import type { ExpenseStatus } from "@/lib/generated/prisma/client";
 
-// Note: export (BOOKED → EXPORTED) is NOT here — it's a real Fortnox API call,
+// Note: export (BOOKED → EXPORTED) is NOT here. It's a real Fortnox API call,
 // handled by app/api/expenses/[id]/export/route.ts.
 type SimpleAction = "submit" | "request_changes";
 
@@ -37,7 +37,7 @@ type SimpleAction = "submit" | "request_changes";
 //
 // Every branch below reads the utlägg once, decides against what it read, and
 // then writes. Between those two moments somebody else can act on the same
-// utlägg — two attestants clicking at once, or one person's second tab — and
+// utlägg, whether two attestants clicking at once or one person's second tab, and
 // the write would land on a row that no longer looks like the one the decision
 // was made about. Nothing failed; the numbers simply stopped meaning what they
 // said. In the approve path it was worse than a lost update: the rows to sign
@@ -47,8 +47,8 @@ type SimpleAction = "submit" | "request_changes";
 // one.
 //
 // So no write here is addressed by id alone. Each one restates the condition it
-// was decided under — the status it expects, the approval slot it expects to be
-// empty — and `applied` insists that it actually matched something. A write
+// was decided under, the status it expects and the approval slot it expects to
+// be empty, and `applied` insists that it actually matched something. A write
 // that matched nothing means the world moved underneath us, which is a 409 and
 // a reload, not a silent success.
 class StaleWrite extends Error {
@@ -108,7 +108,7 @@ export async function POST(
     include: {
       allocations: { include: { costCenter: true } },
       matchedTransaction: { select: { amount: true } },
-      // Only whether one exists — submitting asks nothing else of it.
+      // Only whether one exists, since submitting asks nothing else of it.
       receipts: { select: { id: true }, take: 1 },
       submitter: {
         select: { roles: true, bankClearingNumber: true, bankAccountNumber: true },
@@ -118,7 +118,7 @@ export async function POST(
   if (!expense) return fail(404, "expense.notFound");
 
   // An utlägg outside the caller's scope is not found, the same as everywhere
-  // else — every branch below has its own authority check, but none of them
+  // else. Every branch below has its own authority check, but none of them
   // should be reached for an utlägg whose existence isn't the caller's business.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
@@ -163,7 +163,7 @@ export async function POST(
       prisma.$transaction(async (tx) => {
         // Stamp each of the actor's pending allocations as approved. Still
         // pending is part of the condition, not just part of how they were
-        // picked — without it this overwrote a signature somebody else had put
+        // picked. Without it this overwrote a signature somebody else had put
         // there in the meantime, and the timeline showed ours.
         applied(
           await tx.expenseCostAllocation.updateMany({
@@ -182,8 +182,8 @@ export async function POST(
           data: { expenseId: expense.id, type: "COST_CENTER_APPROVED", actorId },
         });
         if (remaining === 0) {
-          // The last signature. The utlägg has to still be waiting for one —
-          // if it was sent back for changes while we were signing, this is not
+          // The last signature. The utlägg has to still be waiting for one.
+          // If it was sent back for changes while we were signing, this is not
           // an utlägg to mark attested.
           applied(
             await tx.expense.updateMany({
@@ -204,7 +204,7 @@ export async function POST(
   // An approver (in practice a resultatansvarig) can regret: their own
   // allocation approvals are cleared, and if that was the last one holding the
   // expense at APPROVED it drops back to PENDING_APPROVAL. Only their own
-  // signatures are touched — other cost centres keep theirs.
+  // signatures are touched, and other cost centres keep theirs.
   if (action === "withdraw_attest") {
     if (!isAttestWithdrawable(expense.status)) {
       return expense.status === "BOOKED" || expense.status === "EXPORTED"
@@ -214,7 +214,7 @@ export async function POST(
           });
     }
 
-    // Rows this user signed and may still attest — losing the authority (e.g.
+    // Rows this user signed and may still attest. Losing the authority (e.g.
     // handing over the resultatenhet) also ends the right to undo the signature.
     const mine = expense.allocations.filter((a) => a.approvedById === actorId && mayAttest(a));
     if (mine.length === 0) {
@@ -260,7 +260,7 @@ export async function POST(
   // The submitter's counterpart to the attester's `withdraw_attest` above, and a
   // different act by a different person: that one takes back a signature, this
   // takes back the whole claim. It exists for the correction no attester can
-  // make on the submitter's behalf — a purchase filed as an eget utlägg that
+  // make on the submitter's behalf: a purchase filed as an eget utlägg that
   // turns out to have gone on the section card. Changing that means changing the
   // payment type, and a card purchase needs a bank row matched to it, which may
   // not have landed yet. So it comes back as a draft: theirs again, editable,
@@ -271,7 +271,7 @@ export async function POST(
     }
     if (!isRecallable(expense.status)) {
       // Once it is actually attested it is not the submitter's to pull back:
-      // somebody agreed to it, and undoing that is bookkeeping's call — see
+      // somebody agreed to it, and undoing that is bookkeeping's call. See
       // `return_approved` below.
       return isSigned(expense.status)
         ? fail(409, "expense.recallAfterApproved")
@@ -283,8 +283,8 @@ export async function POST(
     const recalled = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Every signature on it, not only the ones the actor could see or give.
-        // An attest is a statement about the claim as it stood — "this 420 kr
-        // of Sexmästeriets money was spent privately and should be paid back" —
+        // An attest is a statement about the claim as it stood ("this 420 kr
+        // of Sexmästeriets money was spent privately and should be paid back")
         // and this action exists precisely to change what it stood for. Carrying
         // them over would leave a row signed for a claim that no longer says
         // what was signed.
@@ -305,7 +305,7 @@ export async function POST(
         // was first sent (see `claimReference`, which only draws a number for an
         // utlägg that has none), so the same claim keeps the same number across
         // a correction rather than burning a second one out of the year's
-        // sequence — and the timeline underneath it stays one story.
+        // sequence, and the timeline underneath it stays one story.
         await tx.expenseEvent.create({
           data: {
             expenseId: expense.id,
@@ -365,7 +365,7 @@ export async function POST(
   // so the utlägg can be amended and exported again.
   //
   // This only unwinds OUR record. The voucher already exists in Fortnox and is
-  // NOT touched — deleting or reversing it there is a manual job, and skipping
+  // NOT touched. Deleting or reversing it there is a manual job, and skipping
   // it means the next export creates a second voucher for the same utlägg.
   // Hence the required reason and the narrow role gate.
   if (action === "unexport") {
@@ -391,7 +391,7 @@ export async function POST(
               status: "BOOKED",
               // The stored utläggsräkning goes with the export it was written
               // for. The whole reason to unexport is to amend the utlägg, and
-              // the cover names the attestations and amounts being amended — so
+              // the cover names the attestations and amounts being amended, so
               // keeping it would have the next export upload a page describing
               // the version before the correction. Cleared, the next export
               // draws a fresh one (lib/expense/document.ts).
@@ -424,7 +424,7 @@ export async function POST(
   }
 
   // ── Simple state-machine transitions ──────────────────────────────────────
-  // Whatever is left is one of the two simple transitions — the schema's enum
+  // Whatever is left is one of the two simple transitions. The schema's enum
   // is what says so, and the check that used to answer 400 for an unknown
   // action is gone with it.
   const rule = SIMPLE_TRANSITIONS[action as SimpleAction];
@@ -434,7 +434,7 @@ export async function POST(
     });
   }
   if (action === "submit") {
-    // Sending an utlägg for attest is the submitter's act — it is their claim,
+    // Sending an utlägg for attest is the submitter's act. It is their claim,
     // and it lands in someone else's queue signed with their name. An admin may
     // do it on their behalf; nobody else may, however complete the utlägg
     // happens to be. Mirrors `mayAct` in lib/domain/expense-capabilities.ts,
@@ -447,7 +447,7 @@ export async function POST(
       return fail(422, "expense.incomplete");
     }
     // A day that hasn't come yet is not a purchase. PATCH refuses to store one,
-    // so this catches the rows that predate that rule — sending one on for
+    // so this catches the rows that predate that rule. Sending one on for
     // attest is exactly where it would stop being the submitter's to fix.
     // Stored as @db.Date, i.e. midnight UTC, so the ISO day is the day meant.
     if (isFutureDate(expense.purchaseDate.toISOString().slice(0, 10))) {
@@ -468,13 +468,13 @@ export async function POST(
       });
     }
     // And the underlag it all rests on. The wizard won't let you past the
-    // details without one, but the wizard isn't the only way in here — this is
+    // details without one, but the wizard isn't the only way in here. This is
     // the rule, and that is a convenience on top of it.
     //
     // A milersättning has no underlag to upload: nobody photographs driving
     // their own car, and the journey it rests on is typeset onto the
     // utläggsräkning from the odometer readings. So what is required of it is
-    // that the two readings are there and describe a journey that can be priced — the same answer the form was showing while
+    // that the two readings are there and describe a journey that can be priced, the same answer the form was showing while
     // it was being filled in, asked again here where it is actually enforced.
     // See lib/mileage/claim.ts.
     if (expense.paymentType === "MILEAGE") {
@@ -505,7 +505,7 @@ export async function POST(
       return fail(422, "expense.matchStale");
     }
     // Out-of-pocket claims need the submitter's payout account to pay them
-    // back — a milersättning as much as a receipt they paid, since both are
+    // back, a milersättning as much as a receipt they paid, since both are
     // the section owing a member money rather than money it has already spent.
     if (
       isOutOfPocket(expense.paymentType) &&
@@ -542,7 +542,7 @@ export async function POST(
         }
         // The number, on the way in. Only on submit, and only once: an utlägg sent
         // back for changes and re-submitted keeps the number it was already known
-        // by — to everyone who has seen it, it is the same utlägg.
+        // by. To everyone who has seen it, it is the same utlägg.
         const reference =
           action === "submit" && expense.reference === null
             ? await claimReference(tx)

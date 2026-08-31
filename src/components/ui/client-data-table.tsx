@@ -4,7 +4,7 @@
 //
 // For the handful of screens where that is the right thing: the admin cost
 // centre list, the budget index, the dashboard's two panels. Each holds every
-// row it will ever show — a few dozen — so a round trip per keystroke would buy
+// row it will ever show (a few dozen), so a round trip per keystroke would buy
 // nothing, and the state can stay in the component instead of the URL.
 //
 // It does the filtering, the sorting and the cut, then hands DataTable the page
@@ -44,7 +44,7 @@ export type ClientSelectFilter<T> = {
 // One collator for every sort, rather than an implicit one per comparison.
 const collator = new Intl.Collator("sv");
 
-// Compose every active filter — column (text/date), tab and dropdown — into a
+// Compose every active filter (column (text/date), tab and dropdown) into a
 // single predicate. Text columns match if any one contains the query; each date
 // column must fall within the from/to range; the dropdown's picked options are
 // OR-ed; then the tab predicate. A row is kept only if it passes them all.
@@ -95,21 +95,21 @@ export function ClientDataTable<T>({
   empty,
 }: {
   columns: Column<T>[];
-  /** Every row the list will ever show — not a page. */
+  /** Every row the list will ever show, not a page. */
   rows: T[];
   controls: ClientControls;
   tabs?: ClientTabFilter<T>;
   filter?: ClientSelectFilter<T>;
-  /** What you can do to this list — see DataTable's own `action`. */
+  /** What you can do to this list, see DataTable's own `action`. */
   action?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
-  /** What sits under a row when opened — see DataTable's own `expansion`. */
+  /** What sits under a row when opened, see DataTable's own `expansion`. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
-  /** Passed straight to DataTable — a string, see its note there. */
+  /** Passed straight to DataTable, a string, see its note there. */
   empty?: string;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);

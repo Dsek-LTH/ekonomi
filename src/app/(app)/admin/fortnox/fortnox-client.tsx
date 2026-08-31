@@ -64,7 +64,7 @@ export function FortnoxClient({
   const savedSeries = fortnox.voucherSeries ?? "A";
   const accountOptions: ComboOption[] = accounts
     .filter((a) => a.active)
-    .map((a) => ({ value: a.number, label: `${a.number} · ${a.name}` }));
+    .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}` }));
 
   const q = accountQuery.trim().toLowerCase();
   const visibleAccounts = q

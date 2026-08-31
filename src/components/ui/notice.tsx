@@ -6,15 +6,15 @@ import { cn } from "@/lib/ui/utils";
 //
 // Not a notification. A notification is something that just happened and goes
 // away (components/shell/notifications.tsx); this is a condition that is true
-// until someone fixes it — an utlägg that cannot be submitted yet, an account
-// a voucher points at that is not in the chart — so it sits in the page, next
+// until someone fixes it (an utlägg that cannot be submitted yet, an account
+// a voucher points at that is not in the chart) so it sits in the page, next
 // to what it is about, for as long as it holds.
 //
 // It was drawn from scratch in four places before this, each a few pixels
 // apart, which is how a design language stops being one.
 export type NoticeTone = "warning" | "danger" | "info";
 
-// Flat tone, the way status is everywhere else — the gradient belongs to the
+// Flat tone, the way status is everywhere else. The gradient belongs to the
 // action register (see DESIGN.md), and a notice is not something you do.
 const TONE: Record<NoticeTone, { box: string; icon: string }> = {
   warning: { box: "border-warning/30 bg-warning-soft", icon: "text-warning" },
@@ -29,13 +29,13 @@ export function Notice({
 }: {
   tone?: NoticeTone;
   className?: string;
-  /** One line, or several — each its own <p>, stacked. */
+  /** One line, or several, each its own <p>, stacked. */
   children: React.ReactNode;
 }) {
   const { box, icon } = TONE[tone];
   return (
     // role="status": it is announced when it appears, without taking focus or
-    // interrupting — an alert would be too much for a condition that is simply
+    // interrupting. An alert would be too much for a condition that is simply
     // true about the page.
     <div
       role="status"

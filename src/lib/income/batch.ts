@@ -1,8 +1,8 @@
 // Storing what the intakt service returned.
 //
 // This is where pending.yaml used to be. The old flow wrote a manifest file
-// that the treasurer edited by hand — filling in cost centres, deleting lines
-// to skip — and then `upload` booked whatever was left. The same three steps
+// that the treasurer edited by hand, filling in cost centres, deleting lines
+// to skip, and then `upload` booked whatever was left. The same three steps
 // happen here, except the middle one is a screen and the state survives a
 // reload.
 import "server-only";
@@ -23,7 +23,7 @@ export interface CreateBatchResult {
    *
    * A fetch is a fresh start: what is waiting to be booked is exactly what came
    * back from it, and nothing else. Re-fetching after correcting a product
-   * prefix is the case that matters — the wrongly routed reports have to go,
+   * prefix is the case that matters. The wrongly routed reports have to go,
    * including days the corrected routing no longer produces at all, which any
    * day-by-day replacement would have left behind.
    *
@@ -33,13 +33,13 @@ export interface CreateBatchResult {
   superseded: number;
   /**
    * Days imported with a warning because this database has already booked them.
-   * Not an error — re-fetching a period that is partly done is ordinary — and
+   * Not an error. Re-fetching a period that is partly done is ordinary, and
    * worth saying out loud, because they are the rows that cannot be booked.
    */
   alreadyBooked: string[];
   /**
    * Days imported with a warning: Fortnox already holds a voucher for that
-   * verksamhet on that day — an export from an older install, or from the CLI
+   * verksamhet on that day, an export from an older install, or from the CLI
    * this replaced. They come in like any other and are flagged, because the
    * section may genuinely have two and that is the reviewer's call, not the
    * importer's.
@@ -76,14 +76,14 @@ function existingFortnoxVoucher(
  * What a fetch has to reckon with: what is already booked, and what it sweeps
  * aside.
  *
- * `booked` — days already booked or exported for this source, keyed by unit and
+ * `booked`: days already booked or exported for this source, keyed by unit and
  * day, mapped to the report that holds them. The fetch brings these days back
  * anyway and points each one at its predecessor: a day missing from the queue
  * cannot be told apart from a day the fetch never covered, and that ambiguity
- * is worse than a row you have to look at. Booking one is refused — by the
+ * is worse than a row you have to look at. Booking one is refused, by the
  * screen, and by a partial unique index over booked reports underneath it.
  *
- * `unbookedIds` — every report waiting to be booked, from any source and any
+ * `unbookedIds`: every report waiting to be booked, from any source and any
  * period. All of them go: the working set is the last fetch and nothing else.
  */
 async function existingReports(
@@ -121,16 +121,16 @@ export async function createSalesBatch(
   existing?: FortnoxIncomeVouchers,
 ): Promise<CreateBatchResult> {
   // Keyed by the income key, resolved to the RESULT UNIT the report belongs to
-  // — a report records whose takings these were, and that outlives any decision
+  // A report records whose takings these were, and that outlives any decision
   // to stop selling (see the schema note on IncomeReport.resultUnitId).
   const units = await prisma.resultUnitIncome.findMany({
     // The description is what the voucher is called, and therefore how a day
-    // is recognised in Fortnox — see incomeVoucherDescription.
+    // is recognised in Fortnox. See incomeVoucherDescription.
     select: { key: true, description: true, defaultCostCenterId: true, resultUnitId: true },
   });
   const idByKey = new Map(units.map((u) => [u.key, u.resultUnitId]));
   const descriptionByKey = new Map(units.map((u) => [u.key, u.description]));
-  // Pre-filled here, then editable in review — the field the manifest existed
+  // Pre-filled here, then editable in review. The field the manifest existed
   // to let someone type. A verksamhet with no default leaves it blank, and
   // booking falls back to it rather than refusing.
   const defaultCostCentreByKey = new Map(units.map((u) => [u.key, u.defaultCostCenterId]));
@@ -158,13 +158,13 @@ export async function createSalesBatch(
     );
 
   // Everything the fetch returned, without exception. What is already booked
-  // here, or already in Fortnox, is imported carrying a pointer to it — see
+  // here, or already in Fortnox, is imported carrying a pointer to it. See
   // `existingReports`.
   const fresh = resolved;
   const alreadyBooked = resolved.filter(bookedHere).map(({ report }) => report.key);
   const alreadyInFortnox = resolved.filter(inFortnox).map(({ report }) => report.key);
 
-  // Everything that was waiting before this fetch — see `superseded`.
+  // Everything that was waiting before this fetch. See `superseded`.
   const stale = already.unbookedIds;
 
   // One transaction: a half-written batch is worse than none, because the part
@@ -229,7 +229,7 @@ export async function createSalesBatch(
 }
 
 /**
- * The same for Zettle's fees, which are not attributable to a committee — one
+ * The same for Zettle's fees, which are not attributable to a committee. One
  * report per day, and the cost centre comes from BookkeepingSettings rather
  * than from a committee that does not exist.
  */
@@ -248,7 +248,7 @@ export async function createFeeBatch(
   const already = await existingReports(input.source);
 
   // Every day of fees carries the same text, so the date is what tells two
-  // apart — which is exactly what the key is.
+  // apart, which is exactly what the key is.
   const feeDescription = incomeVoucherDescription(input.source, null);
   const bookedHere = (date: Date) => already.booked.get(dayKey(null, date)) ?? null;
   const inFortnox = (date: Date) => existingFortnoxVoucher(existing, date, feeDescription);
@@ -272,7 +272,7 @@ export async function createFeeBatch(
       },
     });
 
-    // Replaced, not duplicated — see createSalesBatch.
+    // Replaced, not duplicated. See createSalesBatch.
     if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
 
     const reportIds: string[] = [];

@@ -1,6 +1,6 @@
 // Export a BOOKED expense's voucher to Fortnox: create the voucher, attach
 // the receipt, store the returned voucher number, and only then flip the expense
-// to EXPORTED. If the Fortnox call fails, nothing is mutated locally — the
+// to EXPORTED. If the Fortnox call fails, nothing is mutated locally. The
 // bookkeeper can retry. The [id] param is the expense id.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
@@ -77,7 +77,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // The receipt goes up FIRST. A voucher can't be deleted through the API, so
   // anything that fails after it exists leaves a mess someone has to clean up
-  // by hand in Fortnox — whereas a file sitting unused in the inbox is
+  // by hand in Fortnox, whereas a file sitting unused in the inbox is
   // harmless. Getting the fragile half out of the way first means a failed
   // upload costs nothing but a retry.
   //
@@ -86,7 +86,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   //
   // What goes up is the utläggsräkning: the cover page naming who attested each
   // cost-centre slice, with the receipt behind it. That is the whole point of
-  // the page — in Fortnox a voucher's attachment is the only place the approval
+  // the page. In Fortnox a voucher's attachment is the only place the approval
   // trail can be seen, and a bare receipt does not carry it. For a
   // milersättning it is that page and nothing else: the journey is printed on
   // it, and there is no receipt for driving your own car.
@@ -95,13 +95,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // they are joined on the way out rather than archived merged, so the
   // receipt's bytes are held once. See lib/server/pdf-merge.ts.
   //
-  // A cover that cannot be drawn stops the export, and deliberately — unlike
+  // A cover that cannot be drawn stops the export, and deliberately, unlike
   // the document route, which falls back to showing the underlag bare rather
   // than nothing. The asymmetry is the point: looking at an utlägg without its
   // cover costs the reader a page they can see elsewhere, while *filing* one
   // without it puts a voucher in Fortnox with no attest trail, which is the
   // exact condition this whole document exists to remove. A failure here is
-  // also actionable — somebody pressed a button and can press it again.
+  // also actionable. Somebody pressed a button and can press it again.
   const receipt = expense.receipts[0];
   let fileId: string | null = null;
   let coverWarning: string | null = null;
@@ -119,7 +119,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       step = "readReceipt";
       const cover = new Uint8Array((await getObjectBuffer(stored.key)).bytes);
       // What goes behind the cover: the receipt, where there is one. A
-      // milersättning has none and needs none — its journey is a section of the
+      // milersättning has none and needs none. Its journey is a section of the
       // cover, so the one file uploaded here is already the whole utläggsräkning
       // and its underlag together.
       const underlag = receipt
@@ -132,7 +132,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       // A receipt that will not merge must not stop the utlägg being booked:
       // the file came from a supplier and we do not get to choose its shape.
       // The cover goes up alone and the bookkeeper is told, which leaves the
-      // receipt to be attached by hand — the same shape as `attachWarning`
+      // receipt to be attached by hand, the same shape as `attachWarning`
       // below, and far better than an export that cannot run.
       let bytes: Uint8Array;
       try {
@@ -175,7 +175,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // Linking needs the voucher's series and number, so this is the one step that
-  // can only run after it exists — and therefore the only one still best
+  // can only run after it exists, and therefore the only one still best
   // effort. The file is already uploaded, so a failure here means attaching it
   // by hand in Fortnox, not redoing the export.
   if (fileId) {
@@ -224,7 +224,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     label,
     attachWarning,
     // The export worked and the cover is on the voucher, but its underlag is
-    // not — worded beside the success the same way `attachWarning` is, because
+    // not, worded beside the success the same way `attachWarning` is, because
     // the thing left to do by hand is the same kind of thing.
     coverWarning,
   });

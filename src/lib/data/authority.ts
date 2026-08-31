@@ -2,9 +2,9 @@
 //
 // Two questions, and the second is the one that makes the screen safe to use:
 //
-//   • what the mapping says — which Authentik group confers which role and
+//   • what the mapping says: which Authentik group confers which role and
 //     result unit, and what each role may do;
-//   • what the section actually holds — which groups real people are in, how
+//   • what the section actually holds: which groups real people are in, how
 //     many of them each mapping row reaches, and which groups people hold that
 //     the mapping says nothing about.
 //
@@ -28,7 +28,7 @@ export type GroupRow = {
   /**
    * How many people signed in since `authentikGroups` existed are in this
    * group. `0` on a mapped group is the failure this screen exists to make
-   * visible — a misspelled name grants nothing, silently, for as long as
+   * visible. A misspelled name grants nothing, silently, for as long as
    * nobody looks.
    */
   holders: number;
@@ -44,7 +44,7 @@ export type AuthorityData = {
   /** How many active members hold each role right now. */
   roleHolders: Record<string, number>;
   /**
-   * People whose group list we have never seen — they have not signed in since
+   * People whose group list we have never seen. They have not signed in since
    * the column was added.
    *
    * They are outside the *group* counts, which can only be counts of people we
@@ -70,8 +70,8 @@ export async function getAuthority(): Promise<AuthorityData> {
       // worse and still would not surface the groups nothing maps to.
       //
       // Every *active* member, not only the ones whose group list we have seen.
-      // It was the narrower set, which is right for the group counts — a group
-      // holder is by definition somebody we have a group list for — and wrong
+      // It was the narrower set, which is right for the group counts. A group
+      // holder is by definition somebody we have a group list for, and wrong
       // for the role counts, which come off a column every member has. A role
       // held by two hundred people who had not signed in lately read as nought,
       // so the grid below skipped its confirmation and handed them a capability
@@ -100,7 +100,7 @@ export async function getAuthority(): Promise<AuthorityData> {
 
   // Union of what the mapping names and what people hold. A group in both is
   // a working row; one only in the mapping is probably a typo; one only in the
-  // wild is a post nothing has been decided about yet — and all three belong on
+  // wild is a post nothing has been decided about yet, and all three belong on
   // the same list, because the reader's question is "what is there".
   const names = new Set<string>([
     ...groupRoles.map((r) => r.group),
@@ -133,7 +133,7 @@ export async function getAuthority(): Promise<AuthorityData> {
 // with nothing beside it saying where it came from. So when somebody turns out
 // to be resultatansvarig and nobody can think of a mandate that would do that,
 // the only way to find out used to be to open Authentik, read a group list, and
-// compare it by eye against the mapping — for a role that may well have been
+// compare it by eye against the mapping, for a role that may well have been
 // derived from a group list that has since changed.
 //
 // The evidence is already kept (`User.authentikGroups`), and the derivation is
@@ -141,14 +141,14 @@ export async function getAuthority(): Promise<AuthorityData> {
 // its workings shown and lays the result against what the row actually says.
 // Three answers come out of that, and they are different problems:
 //
-//   • a role with groups behind it — the ordinary case, and the group name is
+//   • a role with groups behind it: the ordinary case, and the group name is
 //     what somebody goes and looks at next;
-//   • a role with nothing behind it — held here, granted by nothing. Either the
+//   • a role with nothing behind it: held here, granted by nothing. Either the
 //     mandate ended in Authentik and its holder has not signed in since (their
 //     stored group list is as stale as the role), or it predates the mapping
 //     entirely. It is a leftover either way, and it will not clear itself until
 //     they sign in;
-//   • a role the mapping grants that the row does not have yet — the mirror
+//   • a role the mapping grants that the row does not have yet: the mirror
 //     image, landing at their next sign-in.
 
 export type RoleReason = {
@@ -167,7 +167,7 @@ export type UnitReason = {
   groups: string[];
   leftover: boolean;
   /** Whether a result unit by that name still exists. One that does not grants
-   *  nothing — attest is matched by name (lib/domain/permissions.ts). */
+   *  nothing. Attest is matched by name (lib/domain/permissions.ts). */
   exists: boolean;
 };
 
@@ -181,14 +181,14 @@ export type UserAuthority = {
   roles: RoleReason[];
   /** Every result unit on the row, likewise. */
   resultUnits: UnitReason[];
-  /** What the mapping would grant that the row does not carry — lands at their
+  /** What the mapping would grant that the row does not carry. Lands at their
    *  next sign-in. Non-empty means the row is behind the mapping, which after a
    *  mapping edit should not happen (`reapplyGrants` catches everyone up), so it
    *  is worth saying out loud when it does. */
   pendingRoles: Role[];
   pendingUnits: string[];
   /** No group list stored at all: they have not signed in since the column was
-   *  added, so nothing here can be explained — not even the roles they hold. */
+   *  added, so nothing here can be explained, not even the roles they hold. */
   neverSeen: boolean;
 };
 

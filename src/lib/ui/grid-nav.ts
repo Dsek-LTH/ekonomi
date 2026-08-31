@@ -2,7 +2,7 @@
 //
 // Pure geometry: a grid of cell names, and the four questions a key press asks
 // of it. What is next, what is previous, what is above, what is below. Nothing
-// here knows what a cell contains or how it is drawn — the caller passes a
+// here knows what a cell contains or how it is drawn. The caller passes a
 // predicate saying which cells can currently take the caret, and gets a name
 // back.
 //
@@ -10,7 +10,7 @@
 // a different question. That one is select-versus-edit: whether a keypress
 // belongs to the cell or to the text inside it, and it leaves movement entirely
 // to the browser's own focus order. This one is movement, for a grid where the
-// browser's order is not the one a person wants — a table row holds a link and
+// browser's order is not the one a person wants: a table row holds a link and
 // a remove button as well as its figures, and tabbing through those between
 // every pair of numbers is not how anybody fills in a sheet.
 //
@@ -41,7 +41,7 @@ export function findCell(grid: Grid, key: string): [number, number] | null {
  * The next cell reading the way the sheet is written: across, then down.
  *
  * What Tab does. Running off the end of a row continues on the next one, which
- * is what makes it a sequence rather than a direction — and running off the end
+ * is what makes it a sequence rather than a direction, and running off the end
  * of the grid returns nothing, so the caller can let the key fall through and
  * leave rather than trapping focus.
  */
@@ -102,7 +102,7 @@ export function stepCell(
  * The one thing that lets left and right move between cells at all: inside a
  * box those keys belong to the text, and a cell may hold a sum somebody is part
  * way through typing. At the edge of it there is nothing left to move over, so
- * the next press leaves. A selection is never at an edge — something is
+ * the next press leaves. A selection is never at an edge: something is
  * highlighted, and the arrow collapses it.
  */
 export function atTextEdge(
@@ -110,8 +110,8 @@ export function atTextEdge(
   dir: -1 | 1,
 ): boolean {
   const { selectionStart, selectionEnd, value } = el;
-  // A field that does not report a selection at all — a number input in some
-  // browsers — has no caret to preserve, so the arrow is free to move.
+  // A field that does not report a selection at all (a number input in some
+  // browsers) has no caret to preserve, so the arrow is free to move.
   if (selectionStart === null || selectionEnd === null) return true;
   if (selectionStart !== selectionEnd) return false;
   return dir < 0 ? selectionStart === 0 : selectionStart === value.length;

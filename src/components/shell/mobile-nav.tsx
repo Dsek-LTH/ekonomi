@@ -3,21 +3,21 @@
 // The navigation on a phone: a screen, not a narrow drawer.
 //
 // It used to be the same 256px panel the desktop rail opens into, slid over the
-// page. On a 390px phone that left a 134px stripe of dimmed page behind it —
+// page. On a 390px phone that left a 134px stripe of dimmed page behind it,
 // which is not context, because nothing in a 134px stripe can be read. So the
 // old drawer was paying for a scrim that showed nothing *and* cramping the menu
 // at the same time.
 //
 // Worse than the width, it was the rail's geometry wearing a different one. The
-// panel's rows are measured for a 64px rail — a 40px box with the icon on its
-// centre line and the label overflowing to be clipped — and none of that means
+// panel's rows are measured for a 64px rail (a 40px box with the icon on its
+// centre line and the label overflowing to be clipped) and none of that means
 // anything at full width. It came out at 40px rows, under the 44px a finger
 // wants, because they were never meant for a finger.
 //
 // So this is its own component rather than a breakpoint on that one. Inset
 // grouped lists, the way a phone's own settings are written: a caption, a card,
 // 48px rows of icon, label and chevron. What it costs is that the two navs
-// share a table and nothing else — which is the right split, because what they
+// share a table and nothing else, which is the right split, because what they
 // have in common is *which sections exist*, and everything else about them is
 // the difference between a pointer and a thumb.
 //
@@ -98,7 +98,7 @@ export function MobileNav({
         >
           {t(item.label)}
         </span>
-        {/* Where you are, said twice — in the accent and with a mark. The rail
+        {/* Where you are, said twice, in the accent and with a mark. The rail
             says it with a block of brand colour, which needs a whole row to
             itself to read as anything; in a list of cards the same fill would
             be a row that looks selected rather than a place you already are. */}
@@ -131,7 +131,7 @@ export function MobileNav({
           {inSettings ? t("settings") : "D-sektionen"}
         </p>
         {/* The only way out, now that there is no page showing beside the menu
-            to tap on. Escape closes it too, from a keyboard — see AppShell. */}
+            to tap on. Escape closes it too, from a keyboard. See AppShell. */}
         <button
           type="button"
           onClick={onClose}
@@ -152,7 +152,7 @@ export function MobileNav({
       >
         {inSettings ? (
           // Settings replace the app's nav rather than nesting inside it, so
-          // the way back is a row of its own at the top — the same place the
+          // the way back is a row of its own at the top, the same place the
           // rail keeps it.
           <Link href="/dashboard" onClick={onClose} className={cn(CARD, ROW, "active:bg-surface")}>
             <IconChevronLeft aria-hidden className="size-5 shrink-0 text-muted" />

@@ -37,11 +37,11 @@ export function ResultUnitsClient({
   unassigned: ResultUnitCostCenter[];
   /**
    * Result unit names the Authentik mapping grants that no result unit here is
-   * called. Each one is a group conferring nothing — see getUnmappedResultUnits.
+   * called. Each one is a group conferring nothing. See getUnmappedResultUnits.
    */
   /** For the income section's default-cost-centre picker. */
   costCenters: CostCenter[];
-  /** False when the app runs without the intakt service — see intaktConfigured. */
+  /** False when the app runs without the intakt service. See intaktConfigured. */
   incomeEnabled: boolean;
 }) {
   const t = useTranslations("admin.resultUnits");
@@ -71,7 +71,7 @@ export function ResultUnitsClient({
 
   const ccOptions = costCenters.map((c) => ({
     value: c.id,
-    label: `${c.code} — ${c.name}`,
+    label: `${c.code} – ${c.name}`,
     short: c.code,
   }));
 
@@ -123,7 +123,7 @@ export function ResultUnitsClient({
     });
     if (!confirmed) return;
     // The endpoint refuses while owners or unattested expenses hang on it, and
-    // says which — so no pre-check is needed here.
+    // says which, so no pre-check is needed here.
     const ok = await mutate(`/api/result-units/${c.id}`, {
       key: c.id,
       method: "DELETE",
@@ -178,7 +178,7 @@ export function ResultUnitsClient({
   async function enableIncome(c: ResultUnit) {
     await mutate("/api/income/units", {
       key: `income-new-${c.id}`,
-      // The verifikationstext starts as the unit's own name — it is what the
+      // The verifikationstext starts as the unit's own name. It is what the
       // voucher will say, and that is a better start than blank.
       body: { resultUnitId: c.id, description: c.resultUnit },
       error: t("saveFailed"),
@@ -248,7 +248,7 @@ export function ResultUnitsClient({
     };
   }
 
-  // A card of its own rather than a bordered box inside the result unit card —
+  // A card of its own rather than a bordered box inside the result unit card,
   // the rows run edge to edge, which is how every other list in the app reads.
   function costCentreCard(
     list: ResultUnitCostCenter[],
@@ -359,7 +359,7 @@ export function ResultUnitsClient({
                       {c.prefixes.length
                         ? c.prefixes.map((p) => p.value).join(", ")
                         : t("noPrefix")}
-                      {" · "}
+                      {" – "}
                       {t("costCenterCount", { count: c.costCenterCount })}
                     </span>
                   </SidebarItem>
@@ -369,7 +369,7 @@ export function ResultUnitsClient({
           )}
         </div>
 
-        {/* No-resultUnit entry — a selection, not a wall of tags. */}
+        {/* No-resultUnit entry, a selection, not a wall of tags. */}
         <SidebarItem
           active={showingUnassigned}
           className="border-t border-border"
@@ -442,7 +442,7 @@ export function ResultUnitsClient({
             <Card>
               <div className="flex items-start justify-between gap-4 border-b border-border px-inset py-4">
                 <div className="min-w-0 flex-1">
-                  {/* Editing starts on the pencil, never by clicking the title —
+                  {/* Editing starts on the pencil, never by clicking the title.
                       an input that merely looks like a heading gives no hint that
                       it can be changed, and invites accidental edits. */}
                   {nameDraft === null ? (
@@ -498,7 +498,7 @@ export function ResultUnitsClient({
               </div>
 
               <CardBody className="space-y-5">
-                {/* Cost-centre prefixes — which cost centres are the unit's. */}
+                {/* Cost-centre prefixes: which cost centres are the unit's. */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-muted">{t("prefixes")}</p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -578,7 +578,7 @@ export function ResultUnitsClient({
                       <p className="text-xs font-medium text-muted">{tIncome("section")}</p>
                       {selected.income ? (
                         <span className="flex items-center gap-2 text-xs text-muted">
-                          {/* Derived from the name and never edited — shown so
+                          {/* Derived from the name and never edited, shown so
                               it can be recognised in intakt's own output. */}
                           <span className="font-mono">{selected.income.key}</span>
                           <IconButton
@@ -611,7 +611,7 @@ export function ResultUnitsClient({
                             <Input
                               size="sm"
                               // Uncontrolled, because it commits on blur rather
-                              // than on every keystroke — so `defaultValue` is
+                              // than on every keystroke, so `defaultValue` is
                               // read once, when the input mounts. Selecting
                               // another verksamhet does not remount it: it is
                               // the same element in the same place, and React
@@ -655,7 +655,7 @@ export function ResultUnitsClient({
                                 <span className="text-muted">→ {p.account}</span>
                                 {/* An account the chart has never heard of is a
                                     voucher Fortnox will reject, but only at
-                                    export — so it is worth saying here. */}
+                                    export, so it is worth saying here. */}
                                 {!p.accountName && (
                                   <Tag tone="warning">{tIncome("unknownAccount")}</Tag>
                                 )}
@@ -740,7 +740,7 @@ export function ResultUnitsClient({
                   </div>
                 )}
 
-                {/* Resultatansvariga — read-only: both halves come from
+                {/* Resultatansvariga, read-only: both halves come from
                     Authentik. The groups are the mapping in
                     lib/server/authentik-roles.ts, the holders are whoever is in
                     them. Showing the groups and not just the names is what makes

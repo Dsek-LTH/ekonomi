@@ -3,14 +3,14 @@
 // financial year.
 //
 // Two groupings, per the report's own control:
-//   SUMMED    — BAS section → account. Cost centres are summed away.
-//   SPECIFIED — cost centre → BAS section → account.
+//   SUMMED:    BAS section → account. Cost centres are summed away.
+//   SPECIFIED: cost centre → BAS section → account.
 //
 // Amounts leave this module in SEK, already oriented for display (see lib/bas):
 // income and equity read positive, costs read negative.
 import { prisma } from "@/lib/server/db";
 // The wire shapes live in ./report-shape, which the ledger screen imports
-// too — they are the contract between this module and that one, and a
+// too. They are the contract between this module and that one, and a
 // contract written down twice is not one.
 export type {
   GroupMode,
@@ -64,7 +64,7 @@ async function movements(
 ): Promise<Map<string, Cell>> {
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "accountName", "costCenterCode", "costCenterName"],
-    // The row's own year and date, not the voucher's — same values, but this
+    // The row's own year and date, not the voucher's (same values, but this
     // way the sum is an indexed scan of one table rather than a join over the
     // whole ledger. See LedgerRow in schema.prisma.
     where: { financialYear, date: { gte: from, lte: to } },
@@ -164,7 +164,7 @@ export interface ReportOptions {
   costCenterCode?: string; // filter to a single cost centre
   group: GroupMode;
   // Raw öre net (debit − credit) per `${account}|${costCenterCode}` to show
-  // alongside the period — prior year or budget. See lib/ledger/comparison.
+  // alongside the period, prior year or budget. See lib/ledger/comparison.
   comparison?: Map<string, number> | null;
 }
 
@@ -227,7 +227,7 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
   if (opts.costCenterCode !== undefined) {
     list = list.filter((c) => c.costCenterCode === opts.costCenterCode);
   }
-  // Drop rows that carry nothing at all — an account touched only outside the
+  // Drop rows that carry nothing at all. An account touched only outside the
   // period would otherwise show up as a row of zeroes.
   list = list.filter(
     (c) => c.movement !== 0 || c.opening !== 0 || (c.comparison ?? 0) !== 0,

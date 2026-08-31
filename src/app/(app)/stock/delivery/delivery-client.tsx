@@ -6,28 +6,28 @@
 // an invoice beside it, twenty different products on it, and somebody standing
 // in the cellar with a phone. The per-product form (stock/product-actions.tsx)
 // answers "we bought some more Fireball" in four fields and a button, and it is
-// the wrong shape entirely for twenty of them — twenty products found in a
+// the wrong shape entirely for twenty of them: twenty products found in a
 // list, twenty dialogs opened, twenty dates typed.
 //
-// So it borrows the occasion sheet's shape (stock/tags/[id]/tag-client.tsx),
+// So it borrows the event sheet's shape (stock/events/[id]/event-client.tsx),
 // with two columns instead of three: the product, and how many of it came in.
-// Deliberately the same vocabulary — a row per product, a spare row at the foot
+// Deliberately the same vocabulary: a row per product, a spare row at the foot
 // that adds one, a scanner beside it, and cells that book themselves when you
 // leave them. The two are the same act in opposite directions and should not
 // feel like two different tools.
 //
 // Two columns is not a simplification of three; it is what a delivery is.
-// Everything bought arrives sealed — the route refuses a delivery that moved a
-// rung (see `entryFault`, "purchaseArrivesSealed") — so a spirit has no ladder
+// Everything bought arrives sealed, and the route refuses a delivery that moved
+// a rung (see `entryFault`, "purchaseArrivesSealed"), so a spirit has no ladder
 // here and a bottle of vodka is one row exactly like a can of beer.
 //
-// Nothing is confirmed, for the reason the occasion sheet gives: a sheet with a
+// Nothing is confirmed, for the reason the event sheet gives: a sheet with a
 // save button is a sheet that can be half filled in and abandoned, and this one
 // is filled in standing at a pallet. A cell commits when you leave it, and what
 // is on the screen is what is in the log.
 //
 // What makes that possible for deliveries specifically is that a delivery row
-// can be changed after the fact — see api/stock/entries/[id]/route.ts, which
+// can be changed after the fact. See api/stock/entries/[id]/route.ts, which
 // exists for exactly the "200 bottles meaning 20" case. So a cell's three
 // answers map onto three requests: a figure where there was none creates the
 // row, a different figure changes it, and an emptied cell removes it. The log
@@ -55,7 +55,7 @@ import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
 
-/** Öre, to the öre — this is read against an invoice. */
+/** Öre, to the öre, because this is read against an invoice. */
 const kr = (ore: number) =>
   `${new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     ore / 100,
@@ -64,14 +64,14 @@ const kr = (ore: number) =>
 /**
  * The sheet as it stands, unsent.
  *
- * One object rather than four pieces of state, because it is one thing —
- * what somebody has typed and not yet booked — and it is written to
+ * One object rather than four pieces of state, because it is one thing, what
+ * somebody has typed and not yet booked, and it is written to
  * localStorage as one thing (see lib/ui/use-local-draft.ts). A pallet is filled
  * in over ten minutes on a phone that locks itself; losing it to a sleeping
  * screen was the only way this sheet could waste somebody's afternoon.
  *
  * Products by id and quantities as text, not as numbers: the text is what was
- * typed — `24*10+30` — and resolving it on the way into storage would throw
+ * typed, `24*10+30`, and resolving it on the way into storage would throw
  * away the working somebody may want to correct.
  */
 type Draft = {
@@ -91,7 +91,7 @@ export default function DeliveryClient({
   today,
 }: {
   products: StockLevelDto[];
-  /** Today in Stockholm, decided by the server — see the page. */
+  /** Today in Stockholm, decided by the server. See the page. */
   today: string;
 }) {
   const t = useTranslations("stock");
@@ -120,16 +120,16 @@ export default function DeliveryClient({
   const [seeking, setSeeking] = useState<string | null>(null);
 
   /** Every cell's input, so the keyboard can move between them. */
-  // The caret's own layer — shared with the stocktake sheet.
+  // The caret's own layer, shared with the stocktake sheet.
   const { focusCell, register, handleKey } = useGridFocus();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   // ── What a cell says ──
   //
-  // The same three functions the occasion sheet has, and the same distinction:
+  // The same three functions the event sheet has, and the same distinction:
   // `number` is what would be written, `display` is what is on the screen. A
-  // cell shows its working while the caret is in it — `24*10+30` — and the
+  // cell shows its working while the caret is in it, `24*10+30`, and the
   // answer the rest of the time, which is the whole reason a delivery cell
   // takes a sum at all. Ten crates of twenty-four plus the thirty loose ones on
   // the pallet is arithmetic done standing up, and asking for 270 is how 260
@@ -162,7 +162,7 @@ export default function DeliveryClient({
   // Priced from the product rather than from anything typed here, because that
   // is what the route will value it at: a delivery is worth the purchase price
   // on the product times the count (lib/stock/value.ts). Which makes this the
-  // one figure worth putting on the screen — it is what the invoice should say,
+  // one figure worth putting on the screen. It is what the invoice should say,
   // and a delivery whose total is out by a hundred kronor is a count or a price
   // that is wrong, found while somebody is still standing next to the pallet.
   const totalOre = rows.reduce(
@@ -182,7 +182,7 @@ export default function DeliveryClient({
   /**
    * Write the whole sheet.
    *
-   * One row per product, each a PURCHASE of that many sealed units — the same
+   * One row per product, each a PURCHASE of that many sealed units, the same
    * movement the per-product form writes, and the same route. There is no bulk
    * endpoint to send them through, so they go one at a time; a pallet is twenty
    * or thirty of them, which is a second's work and not worth a new route that
@@ -194,7 +194,7 @@ export default function DeliveryClient({
    * replay against a shelf the other was still changing.
    *
    * What fails stays. A row the server refuses is left in the draft with its
-   * figure, and the ones that went through are taken out — so pressing Save
+   * figure, and the ones that went through are taken out, so pressing Save
    * again sends exactly what is still owed rather than a second copy of what is
    * already in the log.
    */
@@ -219,8 +219,8 @@ export default function DeliveryClient({
           error: t("delivery.failed"),
         });
         // `mutate` has already said what went wrong. Stopping rather than
-        // carrying on: whatever refused this row — a product that no longer
-        // exists, a shelf the figures cannot reach — is more likely to refuse
+        // carrying on, because whatever refused this row (a product that no
+        // longer exists, a shelf the figures cannot reach) is more likely to refuse
         // the next one too, and a screen that reports twenty failures in a row
         // has told somebody nothing they can act on.
         if (!made) break;
@@ -265,7 +265,7 @@ export default function DeliveryClient({
   /**
    * Take a product off the sheet.
    *
-   * Nothing has been written yet, so this is only forgetting what was typed —
+   * Nothing has been written yet, so this is only forgetting what was typed,
    * which is the whole difference a save button makes to this row: picking the
    * wrong beer used to mean a movement to undo, and now it means a line to
    * delete.
@@ -287,7 +287,7 @@ export default function DeliveryClient({
   }
 
   // Scanning a barcode onto the sheet, and inventing a product that isn't
-  // there yet — shared with the stocktake tag, which does the same errand.
+  // there yet. Shared with the stocktake event, which does the same errand.
   const { scan, invent, overlay } = useProductScan({
     unknownError: t("scan.unknown"),
     onScanned: (id) => add(id),
@@ -322,7 +322,7 @@ export default function DeliveryClient({
   //
   // A function that returns an input, not a component: a component declared in
   // here would be a new type on every render, and React unmounts a subtree whose
-  // type changed — which takes the focus out of the box on the first keystroke.
+  // type changed, which takes the focus out of the box on the first keystroke.
   function cellFor(product: StockLevelDto) {
     const id = product.id;
     const raw = typed[id];
@@ -351,7 +351,7 @@ export default function DeliveryClient({
         onChange={(e) => type(id, e.target.value)}
         onBlur={() => setFocusKey((k) => (k === id ? null : k))}
         onKeyDown={(e) => onCellKey(e, id)}
-        aria-label={`${product.name} · ${t("delivery.col.in")}`}
+        aria-label={`${product.name} – ${t("delivery.col.in")}`}
       />
     );
   }
@@ -405,7 +405,7 @@ export default function DeliveryClient({
         </div>
 
         {/* No CardBody: the sheet is ruled to the card's own edge, the way the
-            occasion sheet and the voucher editor are. */}
+            event sheet and the voucher editor are. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
@@ -444,7 +444,7 @@ export default function DeliveryClient({
                         </span>
                       </span>
                       {/* Always there on a phone, which has no hover to reveal
-                          it with — a control you can only get at with a pointer
+                          it with. A control you can only get at with a pointer
                           is a control that does not exist on the screen this
                           sheet is actually filled in on. From md it goes back
                           to appearing with the row. */}
@@ -465,7 +465,7 @@ export default function DeliveryClient({
           </tbody>
 
           {/* The next line, the way a sheet always has one. It is also the only
-              way onto an empty sheet, so it is never hidden — an empty state in
+              way onto an empty sheet, so it is never hidden. An empty state in
               its place would be a screen with no way in. */}
           <tbody className="border-t border-border">
             <tr className="divide-x divide-border">
@@ -506,7 +506,7 @@ export default function DeliveryClient({
         </table>
 
         {/* The sheet is nothing until this is pressed, so the button says how
-            much it is holding — a count is the one check that catches a row
+            much it is holding. A count is the one check that catches a row
             typed into the wrong line before it becomes a movement in the log.
             Sticky on a phone: a pallet runs past the bottom of the screen, and
             a save button you have to scroll to find is one people forget. */}

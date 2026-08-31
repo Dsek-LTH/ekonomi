@@ -20,7 +20,7 @@ import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState 
 //
 // It renders the page it is given and does not choose it. Filtering, sorting
 // and cutting happen in the database, and the address bar is where the choices
-// live (lib/data/list-query.ts) — so this takes `rows` already narrowed and
+// live (lib/data/list-query.ts), so this takes `rows` already narrowed and
 // `controls.total` for the pager to count against.
 //
 // A list that filters in the browser instead uses ClientDataTable, which wraps
@@ -28,7 +28,7 @@ import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState 
 // `server` boolean, and the boolean silently changed what half the props meant:
 // on a server-backed list the `predicate` on a tab was never called, the
 // `value` accessors were never compared, and nothing said so. Declaring one was
-// not an error, it was just ineffective — which is the kind of thing you find
+// not an error, it was just ineffective, which is the kind of thing you find
 // by noticing a filter does nothing, months later. Now the two engines are two
 // components, and the props each accepts are only the ones it acts on.
 //
@@ -37,7 +37,7 @@ import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState 
 // meant to skim is worse than not showing it. Each column says where it lands in
 // that card via `mobile` (see below); the filtering, sorting and pagination
 // above are shared, so both renderings always show the same rows. md is the
-// breakpoint the sidebar already switches at — one "this is a small screen" line
+// breakpoint the sidebar already switches at, one "this is a small screen" line
 // for the whole app rather than two.
 //
 // That only holds because the sidebar is the 64px rail from md and not the full
@@ -56,13 +56,13 @@ export type TabOption = { value: string; label: string };
 export type TabFilter = TabOption[];
 
 // A dropdown filter over one dimension of the rows, for a dimension with more
-// values than a segmented control can carry — status, of which there are seven.
+// values than a segmented control can carry, such as status, of which there are seven.
 // Several options can be on at once and a row is kept if it matches any of them,
 // so the options are OR-ed; none picked means the filter isn't narrowing
 // anything. That resting state is why this doesn't replace `tabs`, which always
 // has exactly one option in force and reads as a coarse cut of the whole list.
 export type SelectFilter = {
-  // The trigger's text while nothing is picked — it stands for every row, so
+  // The trigger's text while nothing is picked. It stands for every row, so
   // say so ("Alla statusar") rather than naming the column.
   label: string;
   options: { value: string; label: string }[];
@@ -86,8 +86,8 @@ export interface Column<T> {
   className?: string; // extra classes applied to both <th> and <td>
   hidden?: boolean; // drop the column entirely (e.g. role-dependent)
   // Where this column lands in the phone card. `className` is deliberately not
-  // applied there — it carries table geometry (`w-44`, `text-right`) that means
-  // nothing in a card — so the card styles each slot itself.
+  // applied there, because it carries table geometry (`w-44`, `text-right`) that
+  // means nothing in a card, so the card styles each slot itself.
   mobile?: MobileSlot;
 }
 
@@ -99,7 +99,7 @@ export interface Column<T> {
 //              on its own: "24 st", not "24".
 //   actions  – buttons at the right-hand end, unlabelled.
 //   hide     – left out of the row; the column is desktop-only. This is the one
-//              to reach for on a wide table — the muted line holds two or three
+//              to reach for on a wide table. The muted line holds two or three
 //              things before it starts truncating.
 // Unset means `meta`. If no column claims `title` the first one is used, so a
 // list that has not been annotated still reads as a card rather than a stack of
@@ -111,14 +111,14 @@ const alignCls = (a?: Column<unknown>["align"]) => a === "right" ? "text-right" 
 // Horizontal padding for every header and body cell.
 //
 // The outer columns take the card's inset so the table's left and right edges
-// line up with the toolbar above it and the card around it — they used to be
+// line up with the toolbar above it and the card around it. They used to be
 // 20px against the toolbar's 24px, which put the search field four pixels off
 // the first column for no reason anyone could see.
 //
 // Interior columns take a tighter gutter instead. Uniform 20px padding meant
 // 40px of air between one column's text and the next, which is what pushed the
 // trailing columns off the screen on a laptop. 12px a side keeps the table
-// aligned outside and dense inside — the same reason `md:` is where the table
+// aligned outside and dense inside, for the same reason `md:` is where the table
 // appears at all.
 const CELL_X = "px-3 first:pl-inset last:pr-inset";
 
@@ -174,13 +174,13 @@ export function DataTable<T>({
   /** Dropdown filter, OR-ed across the picked values. */
   filter?: SelectFilter;
   /**
-   * What you can do to this list — "Nytt utlägg", "Importera CSV". At the right
+   * What you can do to this list: "Nytt utlägg", "Importera CSV". At the right
    * end of the toolbar, and the only place in the app a list's own action is
    * put.
    *
    * Here rather than in the page header, where these used to live: a header
    * says what you are looking at, and a create button is not that. It also
-   * stopped being true that the header could hold them — one page's header
+   * stopped being true that the header could hold them. One page's header
    * action was a create button, another's was a combobox, a third's was a row
    * of buttons acting on a single object, and one slot holding all three is a
    * slot that means nothing. Next to the search box, it means "this list".
@@ -188,7 +188,7 @@ export function DataTable<T>({
   action?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
-  // Styles the whole row from its data — a retired row dimmed, say. Applies to
+  // Styles the whole row from its data, a retired row dimmed, say. Applies to
   // the phone card as well, so both renderings read the same.
   rowClassName?: (row: T) => string | undefined;
   /**
@@ -196,7 +196,7 @@ export function DataTable<T>({
    *
    * This used to be `onRowClick`, a handler on the `<tr>`, and every caller
    * passed the same thing: a `router.push` to a URL. A click handler on a table
-   * row is reachable with a mouse and with nothing else — no tab stop, no
+   * row is reachable with a mouse and with nothing else: no tab stop, no
    * Enter, no "open in a new tab", and a screen reader announcing the row said
    * nothing about it being openable at all. Every list in the app was mouse-only
    * because of it.
@@ -211,7 +211,7 @@ export function DataTable<T>({
    * What sits underneath a row when it is opened, or nothing for a row with
    * nothing behind it.
    *
-   * For a row that *stands for* several — a stock movement and the corrections
+   * For a row that *stands for* several, such as a stock movement and the corrections
    * that got it to its figure. The list stays one line per thing that happened,
    * and what is behind a line is a chevron away rather than another six lines
    * everybody has to read past. A row that returns nothing here gets no
@@ -223,7 +223,7 @@ export function DataTable<T>({
   /**
    * What to say when there is nothing to show. A string, not a node: the table
    * wraps it in an `EmptyNote` itself, and six callers each passed a second one
-   * in — `<p>` inside `<p>`, which the browser unpicks and hydration then finds
+   * in, so `<p>` inside `<p>`, which the browser unpicks and hydration then finds
    * a tree it did not build. The type is what stops the seventh.
    */
   empty?: string;
@@ -262,7 +262,7 @@ export function DataTable<T>({
   // So the narrowing folds into one button and the row it opens. The search
   // stays out, because it is the one that is used without being thought about;
   // everything else is set once and then read off the badge. The badge is the
-  // whole reason this is safe — a filter you cannot see is a filter you forget
+  // whole reason this is safe. A filter you cannot see is a filter you forget
   // is on, and a list quietly missing rows is worse than a tall toolbar.
   //
   // From sm nothing here applies: the controls sit in the row as they always
@@ -278,7 +278,7 @@ export function DataTable<T>({
 
   return (
     <>
-      {/* Which slice of the list, on its own hairline at the top of the card —
+      {/* Which slice of the list, on its own hairline at the top of the card,
           the underline register (components/ui/filter-tabs.tsx). Pills here
           used to read exactly like the "Mina / Alla" pills in the page header a
           few pixels above, and those two ask different questions: that one
@@ -297,7 +297,7 @@ export function DataTable<T>({
 
       {(hasText || hasDate || filter || action) && (
         <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
-          {/* `sm:contents` — below sm this is one row holding the trigger and
+          {/* `sm:contents`. Below sm this is one row holding the trigger and
               the search; from sm it dissolves and its children take their own
               places in the toolbar, in the order they are written. Which is how
               the wide layout stays exactly what it was while the narrow one is
@@ -320,8 +320,8 @@ export function DataTable<T>({
               />
             )}
 
-            {/* What the two of them become on a phone. Icon and count only —
-                the word would be the widest thing in a row whose whole point is
+            {/* What the two of them become on a phone. Icon and count only,
+                because the word would be the widest thing in a row whose whole point is
                 giving the width to the search box. */}
             {(filter || hasDate) && (
               <button
@@ -354,8 +354,8 @@ export function DataTable<T>({
           </div>
 
           {hasDate && (
-            // The two dates stay on one line together at every width — they
-            // read as a range — but share it rather than each claiming 10rem,
+            // The two dates stay on one line together at every width, since they
+            // read as a range, but share it rather than each claiming 10rem,
             // which is what used to push the bar past a phone's screen.
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
@@ -380,15 +380,15 @@ export function DataTable<T>({
             </div>
           )}
 
-          {/* Last, and pushed to the far end on a wide screen — the search box
+          {/* Last, and pushed to the far end on a wide screen. The search box
               is what takes the space between.
 
               On a phone it is a row of its own and it fills it. A button that
               adds to the list below is the page's primary action, and a primary
               action sitting a third of the way across an otherwise empty row
               reads as something that failed to lay out rather than something
-              somebody placed. `[&>*]:` reaches whatever the caller passed —
-              a Button, a link, a Menu's wrapper — because a toolbar cannot know
+              somebody placed. `[&>*]:` reaches whatever the caller passed (a
+              Button, a link, a Menu's wrapper) because a toolbar cannot know
               which of those it was given. */}
           {action && (
             <div className="flex items-center gap-2 [&>*]:flex-1 sm:ml-auto sm:[&>*]:flex-none">
@@ -442,8 +442,8 @@ export function DataTable<T>({
             )}
           </ModalBody>
           <ModalFooter>
-            {/* Nothing is pending — every control above has already applied
-                itself — so this is "put it all back", not "cancel". */}
+            {/* Nothing is pending, because every control above has already
+                applied itself, so this is "put it all back", not "cancel". */}
             <Button variant="ghost" onClick={clearFilters} disabled={activeFilters === 0}>
               {t("clearFilters")}
             </Button>
@@ -489,8 +489,8 @@ export function DataTable<T>({
           </div>
 
           {/* Six columns of Swedish resultUnit names add up to more than the card
-              is wide until about 1280px, so without this the trailing ones —
-              amount, actions — were unreachable rather than merely tight: past
+              is wide until about 1280px, so without this the trailing ones,
+              amount and actions, were unreachable rather than merely tight: past
               the card's edge with nothing to scroll. Side-scrolling a list you
               meant to skim is the poor relation of the card rendering above,
               which is why that exists; this is the floor under it, not the
@@ -536,7 +536,7 @@ export function DataTable<T>({
                         {/* The link goes in the title cell and nowhere else:
                             one control per row, on the thing that names it.
                             `before:` stretches its hit area over the whole row,
-                            so clicking anywhere still opens it — the mouse
+                            so clicking anywhere still opens it, which is the mouse
                             behaviour the old row handler had, now provided by
                             the same element the keyboard uses.
 
@@ -544,7 +544,7 @@ export function DataTable<T>({
                             that overlay: `relative z-10` on whatever wraps it.
                             Positioned things at the auto level paint in tree
                             order, so a control *after* this cell is already
-                            above it and one *before* it is not — which is why a
+                            above it and one *before* it is not, which is why a
                             checkbox in the first column silently stopped being
                             clickable while action buttons in the last never
                             did. See the compare column in
@@ -610,29 +610,29 @@ export function DataTable<T>({
 /**
  * One row on a phone: a list row, not a card.
  *
- * It was a card — headline and value on top, then every remaining column as a
+ * It was a card: headline and value on top, then every remaining column as a
  * labelled line under a rule. Two things were wrong with it, and the first was
  * the one people actually hit. The rule *inside* a card was the same hairline
  * as the `divide-y` *between* cards, and the gaps inside (12px) were within four
- * pixels of the gap between (16px) — so nothing on the screen said where one
+ * pixels of the gap between (16px), so nothing on the screen said where one
  * record stopped and the next began, and a list of four read as a list of ten.
  *
  * The second is that a column with no `mobile` set falls through to `meta`
  * (see `mobileSlots`), so a table that never thought about its phone layout put
  * *every* column on the card with its header restated beside it. The stock log
- * came to seven labelled lines per movement — a table transposed, which is the
+ * came to seven labelled lines per movement, a table transposed, which is the
  * one thing a narrow screen is worst at reading.
  *
  * So: a headline with its value, one muted line of everything else run together
  * under it, and a chevron. The labels go because they are the table's, not the
- * row's — a value that cannot be read without its header is a value whose cell
+ * row's. A value that cannot be read without its header is a value whose cell
  * should say more (`24 st`, not `24`). Where that leaves something out, it is
  * on the page the row opens, which is the reading a phone was going to need
  * anyway.
  *
  * The headers are not lost to a screen reader: each one is still announced
  * before its value, which costs a sighted reader nothing and is the whole
- * difference between "Starköl · 24 st" and a list of unattributed figures.
+ * difference between "Starköl – 24 st" and a list of unattributed figures.
  */
 function MobileRow<T>({
   row,
@@ -643,7 +643,7 @@ function MobileRow<T>({
   row: T;
   slots: MobileGroups<T>;
   className?: string;
-  /** Where the row goes when opened — see `rowHref`. */
+  /** Where the row goes when opened. See `rowHref`. */
   href?: string;
 }) {
   const cell = (c: Column<T>) => c.cell(row);
@@ -656,7 +656,7 @@ function MobileRow<T>({
     <div
       className={cn(
         // min-h rather than a height: a headline long enough to wrap should take
-        // the room, and 64px is what a row that does not wrap comes to — a
+        // the room, and 64px is what a row that does not wrap comes to: a
         // thumb's worth, and a rhythm the eye can count down the screen.
         "flex min-h-16 items-center gap-3 px-inset py-3",
         href && "relative cursor-pointer active:bg-surface/50",
@@ -684,7 +684,7 @@ function MobileRow<T>({
         </div>
 
         {meta.length > 0 && (
-          // A flex row, and a <div>, for one reason each — both learned the hard
+          // A flex row, and a <div>, for one reason each, both learned the hard
           // way from the same cell.
           //
           // A <div> because a column's `cell` may return whatever it likes, and
@@ -697,7 +697,7 @@ function MobileRow<T>({
           // A flex row because a block child inside ordinary inline flow starts
           // a line of its own, which would quietly turn this one-line summary
           // into two or three. As flex items they stay on the row whatever they
-          // are, and what does not fit is clipped — which is what the row opens
+          // are, and what does not fit is clipped, which is what the row opens
           // to show.
           // `gap-x-1` as well as the dots: a single cell may itself render two
           // blocks (a card holder's name over its last four digits), and as
@@ -707,7 +707,7 @@ function MobileRow<T>({
               <Fragment key={c.key}>
                 {i > 0 && (
                   <span aria-hidden className="mx-0.5 shrink-0 text-muted/50">
-                    ·
+                    –
                   </span>
                 )}
                 <span className="min-w-0 shrink-0 truncate last:shrink">
@@ -738,7 +738,7 @@ function MobileRow<T>({
 
       {/* The one thing the old card never said: that this opens something. Its
           cue was `hover:underline`, which a phone has no way to show. Dropped
-          where the row carries actions — two right-hand affordances on a 390px
+          where the row carries actions: two right-hand affordances on a 390px
           row is a row you have to aim at. */}
       {href && actions.length === 0 && (
         <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted/50" />
@@ -765,7 +765,7 @@ export function SortableHeader({
     <th
       // What the column is sorted by, in the one attribute assistive tech reads
       // for it. Without this a screen reader user could reorder a table and be
-      // told nothing about what had changed — or that it was sortable at all.
+      // told nothing about what had changed, or that it was sortable at all.
       aria-sort={active ? dir : "none"}
       className={cn("select-none whitespace-nowrap", className)}
     >
@@ -778,8 +778,8 @@ export function SortableHeader({
       >
         {children}
         {/* Decoration. It is the arrow for the *current* direction whether or
-            not this column is the sorted one — hidden with `text-transparent`
-            so the header keeps its width — which means it is a lie on every
+            not this column is the sorted one. It is hidden with `text-transparent`
+            so the header keeps its width, which means it is a lie on every
             other column and must not be read out. `aria-sort` above is what
             actually carries this to a reader. */}
         <span
@@ -793,7 +793,7 @@ export function SortableHeader({
   );
 }
 
-// Pagination footer — rendered by DataTable after the list.
+// Pagination footer, rendered by DataTable after the list.
 export function Pagination({
   page,
   onPageChange,

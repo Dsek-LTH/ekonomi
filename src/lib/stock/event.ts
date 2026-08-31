@@ -1,14 +1,14 @@
 // What a night sold, from what left and what came back.
 //
-// A tag groups the movements of one occasion, and once they are grouped the
+// An event groups the movements of one night, and once they are grouped the
 // arithmetic is the whole of it:
 //
 //   sold = taken out − brought back − spilled
 //
 // There is no closing and no "sold" anybody types. That is the point of the
-// tag: a pub running past midnight is two dates, a committee may take stock out
-// twice in an evening, and two events can share a night — so no date and no
-// "the last checkout" can say which rows belong together, but a tag can. Once
+// event: a pub running past midnight is two dates, a committee may take stock
+// out twice in an evening, and two events can share a night, so no date and no
+// "the last checkout" can say which rows belong together, but an event can. Once
 // they belong together the difference is not a guess.
 //
 // Everything here counts in the product's own unit: whole units for a can,
@@ -20,8 +20,8 @@
 // to be folded in by its magnitude, because a checkout was always stored
 // negative and a return always positive, so the sign carried no information the
 // kind did not already have. The event sheet changed that: its cells hold the
-// night's running total, and lowering one — a mistyped 1 200 that should have
-// been 120 — is written as a movement of the *same* kind pointing the other
+// night's running total, and lowering one (a mistyped 1 200 that should have
+// been 120) is written as a movement of the *same* kind pointing the other
 // way. Fold that by its magnitude and the correction would add to the very
 // figure it was meant to reduce. So each kind has a natural direction, and a
 // movement counts along it.
@@ -29,7 +29,7 @@
 import { LEVELS, isLevel, type OpenBottles } from "./levels";
 import type { StockEntryKind, StockKind } from "@/lib/domain/types";
 
-/** One entry of a tag, as this file needs it. */
+/** One entry of an event, as this file needs it. */
 export interface TagMovement {
   kind: StockEntryKind;
   /** Whole units: cans, or sealed bottles. Signed as the log stores it. */
@@ -45,7 +45,7 @@ export interface TagMovement {
 /** What the product is counted in, and how much a whole one holds. */
 export interface TagSubject {
   kind: StockKind;
-  /** Millilitres in one whole unit — a bottle or a can. */
+  /** Millilitres in one whole unit: a bottle or a can. */
   unitMl?: number | null;
   nominalMl?: number | null;
 }
@@ -56,7 +56,7 @@ export interface TagSubject {
  * A can is one. A sealed bottle is its whole volume and a rung is a fraction of
  * it. Everything in this file and in cells.ts converts through here, so the
  * figure the sheet shows while somebody types and the figure the server stores
- * round the same way — two roundings of the same quantity is how a total and
+ * round the same way. Two roundings of the same quantity is how a total and
  * its parts come to disagree by a millilitre.
  */
 export function levelVolume(product: TagSubject, level: number): number {
@@ -71,7 +71,7 @@ export function levelVolume(product: TagSubject, level: number): number {
  *
  * For a can that is the count. For a spirit it is millilitres, because a bottle
  * leaving full and returning at 40 % is one bottle either way and 420 ml of
- * difference — the only unit in which "out minus in" says anything true.
+ * difference, the only unit in which "out minus in" says anything true.
  *
  * The sign is the one the shelf sees: negative took stock away, positive
  * brought it back. What each *kind* does with that is `tagTotals`' business.
@@ -98,7 +98,7 @@ export function spillVolume(product: TagSubject, m: TagMovement): number {
   return count * levelVolume(product, m.level ?? 0);
 }
 
-/** What a tag comes to for one product. Every figure in the product's own unit. */
+/** What an event comes to for one product. Every figure in the product's own unit. */
 export interface TagTotals {
   out: number;
   back: number;
@@ -107,17 +107,17 @@ export interface TagTotals {
    * What is gone: taken out, less what came home and what was destroyed.
    *
    * Floored at nothing. A negative would mean more came back than ever left,
-   * which the sheet refuses — and if one ever appears in stored data it is a
+   * which the sheet refuses, and if one ever appears in stored data it is a
    * correction somebody made by hand, not a night that sold minus four cans.
    */
   sold: number;
 }
 
 /**
- * Fold a tag's movements for one product.
+ * Fold an event's movements for one product.
  *
  * Each kind counts along its own direction, so a checkout of −120 reads as 120
- * out and a checkout of +120 — the sheet unwinding one — reads as 120 less. The
+ * out and a checkout of +120 (the sheet unwinding one) reads as 120 less. The
  * three running figures are therefore signed sums rather than magnitudes, and
  * only `sold` is floored.
  */
@@ -143,8 +143,8 @@ export function tagTotals(
  *
  * The ceiling on a return and on a spill: you cannot bring home, or drop, more
  * than you took. While the night is running this is also what is still standing
- * on the bar — the same number the tag calls sold, which is exactly the
- * ambiguity a tag that is never closed accepts.
+ * on the bar, the same number the event calls sold, which is exactly the
+ * ambiguity an event that is never closed accepts.
  */
 export const unaccounted = (totals: TagTotals): number =>
   Math.max(0, totals.out - totals.back - totals.spilled);

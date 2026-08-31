@@ -11,7 +11,7 @@ import { VoucherLineInput } from "./expense";
  * A BAS account number as it is stored: digits, kept as a string.
  *
  * Up here rather than with the settings bodies below because both halves need
- * it — the routing table says where a product's money lands, and a line moved
+ * it: the routing table says where a product's money lands, and a line moved
  * between verksamheter says the same thing about one sale.
  */
 const AccountNumber = Trimmed.regex(/^\d{4,6}$/);
@@ -28,7 +28,7 @@ export const FetchIncome = z.object({
 export type FetchIncomeInput = z.infer<typeof FetchIncome>;
 
 /**
- * Make an empty report for a verksamhet's day, to move sales onto — see
+ * Make an empty report for a verksamhet's day, to move sales onto. See
  * lib/income/draft.ts.
  *
  * Three fields and no amounts, because there is nothing on it yet: what it holds
@@ -59,14 +59,14 @@ export type UpdateIncomeReportInput = z.infer<typeof UpdateIncomeReport>;
 /**
  * Book a day's takings, optionally with the voucher the bookkeeper edited.
  *
- * No lines means "book what the report says" — the rows the app derives from
+ * No lines means "book what the report says", the rows the app derives from
  * the day's account distributions, which is what the bulk "book all" sends and
  * what the great majority of days need.
  *
  * Neither the date nor the description is here, unlike the utlägg version of
  * this body. Both are the day's identity rather than anybody's choice: the date
  * is which day was sold, and the description is how this app recognises the day
- * in Fortnox (lib/income/duplicate.ts) — a hand-edited one would be a day the
+ * in Fortnox (lib/income/duplicate.ts). A hand-edited one would be a day the
  * duplicate check could no longer see.
  */
 export const BookIncomeReport = z.object({
@@ -75,14 +75,14 @@ export const BookIncomeReport = z.object({
 export type BookIncomeReportInput = z.infer<typeof BookIncomeReport>;
 
 /**
- * Move sold lines onto another verksamhet's report for the same day — a product
+ * Move sold lines onto another verksamhet's report for the same day: a product
  * rung up without its prefix, which the routing therefore sent to the fallback.
  * See lib/income/move.ts.
  *
  * The account is per line rather than per move because a day's mis-sales are
  * not all the same thing: beer and food belong to the same verksamhet and to
  * different revenue accounts. Left out, a line keeps the one the routing gave
- * it — which is the fallback's, and usually wrong, so the screen fills it in.
+ * it, which is the fallback's, and usually wrong, so the screen fills it in.
  */
 export const MoveIncomeLines = z.object({
   toResultUnitId: Id,
@@ -97,7 +97,7 @@ export type MoveIncomeLinesInput = z.infer<typeof MoveIncomeLines>;
  * Re-account sold lines where they are.
  *
  * The account and nothing else: what was sold, how many and for how much are
- * the till's word, and none of them is editable — see the note on
+ * the till's word, and none of them is editable. See the note on
  * UpdateIncomeReport. Where the money books is this app's own routing, and
  * routing is what a mistyped prefix gets wrong.
  */
@@ -120,7 +120,7 @@ export type UpdateIncomeLinesInput = z.infer<typeof UpdateIncomeLines>;
 const PrefixCode = Trimmed.min(1).max(16).transform((s) => s.toLowerCase());
 
 /**
- * Give a resultatenhet an income profile — the settings that let it take money
+ * Give a resultatenhet an income profile: the settings that let it take money
  * in. The unit itself is created under Inställningar → Resultatenheter: there
  * is one register of the section's verksamheter, and this is the half of a row
  * in it that income needs.
@@ -144,7 +144,7 @@ export type UpdateIncomeUnitInput = z.infer<typeof UpdateIncomeUnit>;
 
 export const CreateIncomePrefix = z.object({
   code: PrefixCode,
-  /** The income profile it routes to — ResultUnitIncome.id. */
+  /** The income profile it routes to, ResultUnitIncome.id. */
   incomeId: Id,
   account: AccountNumber,
   isFallback: z.boolean().optional(),
@@ -176,8 +176,8 @@ export const UpdateIncomeSettings = z.object({
   zettleFeeAccount: AccountNumber.optional(),
   zettleFeeCostCenterId: Clearable(Id).optional(),
   /**
-   * Which verifikationsserie takings are exported to. Cleared — the empty
-   * string — means the one the Fortnox connection uses, which is what income
+   * Which verifikationsserie takings are exported to. Cleared, the empty
+   * string, means the one the Fortnox connection uses, which is what income
    * did before this setting existed. Upper-cased like every other series in
    * the app, so "b" and "B" cannot become two.
    */

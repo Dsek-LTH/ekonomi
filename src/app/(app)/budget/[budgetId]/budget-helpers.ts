@@ -25,7 +25,7 @@ export const resultUnitOf = (cc: BudgetCC): string =>
   cc.costCenter ? cc.costCenter.resultUnit || OTHER : UNLINKED;
 
 // The same, for a sheet that came out of a comparison and so may belong to a
-// budget other than this one — or to no budget at all, when it is something the
+// budget other than this one, or to no budget at all, when it is something the
 // ledger reports on. A detached sheet is matched on its label, which is what
 // gives its key the "@"/"#" that marks it as linked to no cost centre (see
 // compareKey in lib/budget/compare.ts).
@@ -33,7 +33,7 @@ export const resultUnitOfSheet = (s: { key: string; resultUnit: string | null })
   /^[@#]/.test(s.key) ? UNLINKED : s.resultUnit || OTHER;
 
 // Belopp cells hold the equation itself (e.g. "=2*TROJA_POLICY"). We show the
-// equation with typographic operators — "2 × TROJA_POLICY" — and, on the Belopp
+// equation with typographic operators, "2 × TROJA_POLICY", and, on the Belopp
 // column, append its evaluated result. Entry is forgiving: people can type
 // "2x3x12" and it becomes a formula.
 
@@ -94,7 +94,7 @@ export function normalizeFormula(raw: string): string {
 }
 
 // `insideRect` used to live here. It moved to components/ui/drag.tsx when the
-// income review screen needed the same rule — it is about drag and drop rather
+// income review screen needed the same rule. It is about drag and drop rather
 // than about budgets, and two copies of it would be two things to get right.
 
 const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
@@ -106,7 +106,7 @@ const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
  * are the adjustment rows and the comparison figures, so that is what this
  * takes. A budget is read in kronor and to no decimals, which is what it shows.
  *
- * A number that is *not* money — a variable holding a headcount or a share —
+ * A number that is *not* money, a variable holding a headcount or a share,
  * goes through `fmtScalar` instead. That is the one distinction this file has
  * to keep, and the reason the two are named differently rather than one
  * function being used for both.
@@ -117,7 +117,7 @@ export const fmtSigned = (ore: number | undefined) =>
   ore === undefined || Number.isNaN(ore) ? "" : (ore > 0 ? "+" : "") + numFmt.format(ore / 100);
 
 /**
- * A dimensionless value, printed as it stands — a variable's headcount, a
+ * A dimensionless value, printed as it stands: a variable's headcount, a
  * multiplier, a ratio. No unit conversion, and decimals kept, because 0.67 is
  * the value and "1" would be a different one.
  */
@@ -126,7 +126,7 @@ export const fmtScalar = (n: number | undefined) =>
   n === undefined || Number.isNaN(n) ? "" : scalarFmt.format(n);
 
 // The budgeted income / cost split for one sheet. Only for this budget's own
-// figures — anything involving a comparison goes through `sheetTotals` in
+// figures. Anything involving a comparison goes through `sheetTotals` in
 // lib/budget/compare.ts, which counts the other side's rows as well.
 export function ccTotals(cc: BudgetCC, ev: Evaluated | undefined): Totals {
   let income = 0, cost = 0;
@@ -145,7 +145,7 @@ export interface AdjustmentRow {
 
 /**
  * The adjustment rows to show under each account, keyed by account id. Only
- * changes still in force — a revoked one is history, and belongs in the history
+ * changes still in force. A revoked one is history, and belongs in the history
  * view rather than in the figures.
  */
 export function adjustmentRows(changes: BudgetChange[]): Map<string, AdjustmentRow[]> {
@@ -163,7 +163,7 @@ export function adjustmentRows(changes: BudgetChange[]): Map<string, AdjustmentR
 
 /**
  * How much the changes in force have moved each sheet's result, keyed the way
- * the Rambudget knows a sheet (`compareKey`) rather than by id — that table's
+ * the Rambudget knows a sheet (`compareKey`) rather than by id. That table's
  * rows come out of the comparison join, so a row may belong to another budget
  * entirely, and those simply aren't in this map.
  *

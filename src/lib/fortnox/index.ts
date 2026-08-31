@@ -5,15 +5,15 @@
 // OAuth2. There are TWO kinds of authorisation, and which one a call uses is a
 // deliberate decision:
 //
-//   service — a Fortnox service account, authorised once by a Fortnox system
+//   service: a Fortnox service account, authorised once by a Fortnox system
 //             administrator, tied to no person. Backs everything that READS
 //             (ledger sync, accounts, cost centres) including the scheduled
 //             job, so it must outlive individual employees. FortnoxConnection.
-//   user    — a bookkeeper's own Fortnox login, short-lived. Backs everything
+//   user    a bookkeeper's own Fortnox login, short-lived. Backs everything
 //             that WRITES, so Fortnox stamps the voucher with their name rather
 //             than "utlagg". FortnoxUserSession.
 //
-// Fortnox scopes are not split into read/write — `bookkeeping` grants both — so
+// Fortnox scopes are not split into read/write. `bookkeeping` grants both, so
 // this separation is enforced here in code, not by Fortnox. Tighten the service
 // account's rights in Fortnox itself if you want it guaranteed.
 //
@@ -29,7 +29,7 @@ const API_BASE = "https://api.fortnox.se/3";
 
 export type FortnoxAuthMode = "service" | "user";
 
-// Scopes (exact Fortnox tokens). NB: "archive" is NOT a valid scope token —
+// Scopes (exact Fortnox tokens). NB: "archive" is NOT a valid scope token,
 // requesting it yields invalid_scope.
 //
 // The service account only ever reads, but `bookkeeping` is Fortnox's only
@@ -62,7 +62,7 @@ export class FortnoxError extends Error {
 
 // Thrown when an operation needs a personal Fortnox login and there isn't a
 // usable one. Callers should turn this into a prompt to log in, not an error
-// toast — nothing is wrong, the session just ran out. The message is a code
+// toast, because nothing is wrong, the session just ran out. The message is a code
 // under `errors.fortnox`, since it reaches a reader through fail().
 export class FortnoxAuthRequiredError extends Error {
   constructor(message = "fortnox.loginRequired") {
@@ -105,8 +105,8 @@ function getConfig(): FortnoxConfig {
 // company. `state` is an anti-CSRF nonce we verify on the callback.
 //
 // `account_type=service` is what makes the difference between the two modes. It
-// asks Fortnox to mint a service account — a synthetic Fortnox user named after
-// the integration — which is why service-created vouchers read "Skapad av
+// asks Fortnox to mint a service account, a synthetic Fortnox user named after
+// the integration, which is why service-created vouchers read "Skapad av
 // utlagg". Omitting it binds the token to the Fortnox user who authorises, and
 // their name lands on the voucher instead.
 //
@@ -223,7 +223,7 @@ export async function disconnect(): Promise<void> {
 // pair) if the current one is at/near expiry. Throws if there's no connection.
 //
 // Everything that reads from Fortnox goes through here, including the scheduled
-// sync. Never use it to write a voucher — see getUserToken.
+// sync. Never use it to write a voucher. See getUserToken.
 //
 // Note: refresh-token rotation means concurrent refreshes could race and
 // invalidate each other. A scheduled sync running alongside an interactive one
@@ -236,7 +236,7 @@ export async function getServiceToken(): Promise<string> {
   if (conn.expiresAt.getTime() - EXPIRY_SKEW_MS > Date.now()) {
     return decryptSecret(conn.accessToken);
   }
-  // Expired (or about to) — refresh and persist the rotated tokens.
+  // Expired (or about to). Refresh and persist the rotated tokens.
   const token = await refreshTokens(decryptSecret(conn.refreshToken));
   await prisma.fortnoxConnection.update({
     where: { id: conn.id },
@@ -257,7 +257,7 @@ function getUserSession(userId: string) {
 }
 
 // Start (or restart) a bookkeeper's personal Fortnox session. The few-hour cap
-// is set from now on every fresh login — logging in again extends it.
+// is set from now on every fresh login, and logging in again extends it.
 export async function saveUserSession(
   userId: string,
   token: TokenResponse,
@@ -302,7 +302,7 @@ export async function getUserToken(userId: string): Promise<string> {
     return decryptSecret(session.accessToken);
   }
 
-  // Inside the cap but the hour is up — refresh silently. A refusal from
+  // Inside the cap but the hour is up. Refresh silently. A refusal from
   // Fortnox (revoked access, rotated-away refresh token) is not recoverable,
   // so drop the session and make them log in.
   let token: TokenResponse;
@@ -320,7 +320,7 @@ export async function getUserToken(userId: string): Promise<string> {
       refreshToken: encryptSecret(token.refresh_token),
       tokenExpiresAt: new Date(Date.now() + token.expires_in * 1000),
       scopes: token.scope || session.scopes,
-      // sessionExpiresAt deliberately untouched — refreshing must not extend
+      // sessionExpiresAt deliberately untouched: refreshing must not extend
       // the cap, only a fresh login does.
     },
   });
@@ -392,7 +392,7 @@ export function financialYearsFor(
     .sort((a, b) => a.fromDate.localeCompare(b.fromDate));
 }
 
-/** A voucher as the list endpoint describes it — enough to recognise one. */
+/** A voucher as the list endpoint describes it, enough to recognise one. */
 export interface FortnoxVoucher {
   series: string;
   number: number;
@@ -406,7 +406,7 @@ export interface FortnoxVoucher {
 /**
  * Every voucher whose transaction date falls in a range.
  *
- * Read with the service token and used to recognise work Fortnox already has —
+ * Read with the service token and used to recognise work Fortnox already has:
  * a day's takings that were exported once and are about to be exported again
  * (see lib/income/duplicate.ts). Listing is the only way to ask: Fortnox can
  * fetch a voucher by series and number, but nothing looks one up by what it
@@ -414,7 +414,7 @@ export interface FortnoxVoucher {
  *
  * `financialyear` matters more than it looks. Without it Fortnox answers from
  * the *current* year only, so a range that reaches into last year would come
- * back empty — which, for a duplicate check, is the failure that quietly says
+ * back empty, which, for a duplicate check, is the failure that quietly says
  * "nothing there". Callers pass the year the range falls in; a range that
  * spans two is asked for twice.
  */
@@ -508,7 +508,7 @@ export interface FortnoxAccount {
 // and it carries the active flag.
 //
 // /3/accounts is paginated (500 per page by default), so this walks every page
-// — a full BAS chart runs well past one.
+// a full BAS chart runs well past one.
 export async function listAccounts(
   token: string,
   financialYearId: number,
@@ -547,7 +547,7 @@ export interface FortnoxCompany {
 }
 
 // Which Fortnox company a token actually belongs to. The name is cosmetic, but
-// the organisation number is what a personal login is checked against — a
+// the organisation number is what a personal login is checked against. A
 // bookkeeper with access to several Fortnox companies could otherwise authorise
 // the wrong one and post the section's vouchers into someone else's books.
 export async function getCompanyInfo(token: string): Promise<FortnoxCompany> {
@@ -579,7 +579,7 @@ export async function getMe(token: string): Promise<FortnoxMe> {
       email: data.MeInformation?.Email ?? null,
     };
   } catch {
-    return { name: null, email: null }; // display only — never block login on it
+    return { name: null, email: null }; // display only, never block login on it
   }
 }
 
@@ -594,7 +594,7 @@ export interface VoucherRowInput {
 export interface CreatedVoucher {
   series: string;
   number: number;
-  /** Fortnox's financial-year ID (a small integer, e.g. 10) — NOT a calendar
+  /** Fortnox's financial-year ID (a small integer, e.g. 10), NOT a calendar
    *  year, despite what Fortnox calls the field. Null if Fortnox didn't say:
    *  guessing a calendar year here would produce an ID that resolves to
    *  nothing. */
@@ -649,7 +649,7 @@ export async function uploadInboxFile(
   form.append("file", new Blob([new Uint8Array(bytes)], { type: contentType }), filename);
   // path=inbox_v targets the dedicated voucher inbox folder. Fortnox's own
   // voucher guide writes it "Inbox_v", but that capitalisation is rejected with
-  // 400 "Försöker att skapa en fil under ogiltig sökväg" — the lowercase form
+  // 400 "Försöker att skapa en fil under ogiltig sökväg". The lowercase form
   // is what their client libraries use.
   const res = await fetch(`${API_BASE}/inbox?path=inbox_v`, {
     method: "POST",
@@ -665,7 +665,7 @@ export async function uploadInboxFile(
 
 // Attach an uploaded file to a created voucher. Series + number only identify a
 // voucher within one financial year, so the year is passed as the
-// `financialyear` query parameter — note that this is Fortnox's financial-year
+// `financialyear` query parameter. Note that this is Fortnox's financial-year
 // ID (a small integer like 10), not a calendar year.
 export async function connectFileToVoucher(
   token: string,

@@ -85,7 +85,7 @@ describe("buildIncomeVoucherLines", () => {
 
   it("balances, by the same rule the expense booking screen is held to", () => {
     const lines = buildIncomeVoucherLines(input([dist("3011", 5000), dist("3000", 17500)]));
-    // Not a re-implementation of the check — the actual shared one.
+    // Not a re-implementation of the check. The actual shared one.
     expect(voucherBlocker(lines)).toBeNull();
   });
 
@@ -113,7 +113,7 @@ describe("buildIncomeVoucherLines", () => {
     expect(beer).toMatchObject({ debit: 2500, credit: 0 });
     expect(lines.every((l) => l.debit >= 0 && l.credit >= 0)).toBe(true);
 
-    // 17500 credited, 2500 debited — the bank gained 15000.
+    // 17500 credited, 2500 debited. The bank gained 15000.
     expect(lines.at(-1)).toMatchObject({ account: "1931", debit: 15000, credit: 0 });
     expect(voucherBlocker(lines)).toBeNull();
   });
@@ -166,7 +166,7 @@ describe("incomeVoucherDescription", () => {
 
   it("is the same text for every day of fees", () => {
     // Fees belong to no committee, so the date is the only thing telling two
-    // days of them apart — which the key below is what expresses.
+    // days of them apart, which the key below is what expresses.
     expect(incomeVoucherDescription("ZETTLE_FEE", null)).toBe("Zettleavgifter");
     expect(incomeVoucherDescription("ZETTLE_FEE", "Café")).toBe("Zettleavgifter");
   });
@@ -179,7 +179,7 @@ describe("incomeVoucherDescription", () => {
 describe("incomeVoucherKey", () => {
   it("recognises the same day written differently", () => {
     // What the duplicate check compares. A voucher already in Fortnox was
-    // written by whatever wrote it — an older install, the CLI this replaced —
+    // written by whatever wrote it (an older install, the CLI this replaced),
     // so the match cannot depend on spacing or case.
     expect(incomeVoucherKey("2026-01-02", "Swish - Café")).toBe(
       incomeVoucherKey("2026-01-02", "  swish -  café "),
@@ -189,7 +189,7 @@ describe("incomeVoucherKey", () => {
   it("matches a day booked under the old IR prefix against one without it", () => {
     // The fail-safe the prefix removal turns on. Fortnox holds vouchers written
     // both ways, and a report booked before the change still carries the old
-    // text locally — which is what the export re-checks with. Every pairing has
+    // text locally, which is what the export re-checks with. Every pairing has
     // to land on the same key or a day gets booked twice.
     const plain = incomeVoucherKey("2026-01-02", "Swish - Café");
     expect(incomeVoucherKey("2026-01-02", "IR Swish - Café")).toBe(plain);

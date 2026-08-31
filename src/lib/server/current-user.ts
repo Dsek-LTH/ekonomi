@@ -6,8 +6,8 @@
 // token is stamped at sign-in and never written again (see `session` in
 // auth.ts), so a role granted this morning would not reach the nav until the
 // holder next signed in, and one taken away would keep opening doors just as
-// long — which is also why a session lasts a day and not a month. So the roles
-// here are read fresh, the same way `gate()` reads them for an API route — one
+// long, which is also why a session lasts a day and not a month. So the roles
+// here are read fresh, the same way `gate()` reads them for an API route: one
 // indexed lookup, deduped per request, and the two halves of the app agree
 // about who you are.
 import { cache } from "react";
@@ -22,7 +22,7 @@ import type { Capability, Role, User } from "@/lib/domain/types";
  * Deduped per request, like `loadUser` below and for a sharper reason: a
  * navigation renders the shell and the page inside it concurrently, and both
  * begin with `requireUser()` (app/(app)/layout.tsx and every page under it). Two
- * calls is two decodes of the same cookie for the same answer — and while the
+ * calls is two decodes of the same cookie for the same answer, and while the
  * jwt callback still refreshed an OAuth token, it was two of those in flight at
  * once, racing for a refresh token that only one of them could spend.
  */
@@ -33,8 +33,8 @@ export const resolveUserId = cache(async (): Promise<string | null> => {
 
 /**
  * The user row behind a session, plus what those roles currently allow. Deduped
- * per request: a page that resolves the user and then gates on it — or a layout
- * that does it once for the chrome and again for the page inside it — should not
+ * per request: a page that resolves the user and then gates on it, or a layout
+ * that does it once for the chrome and again for the page inside it, should not
  * pay twice.
  *
  * Shared with `gate()` in lib/api/guard.ts so there is exactly one answer to
@@ -70,7 +70,7 @@ export const loadUser = cache(
 );
 
 // The full acting user mapped to the UI `User` shape, for Server Component
-// pages that render the current user. Null when unauthenticated — or when the
+// pages that render the current user. Null when unauthenticated, or when the
 // session outlived the account it names, which is not a permission problem and
 // is answered the same way.
 async function resolveSessionUser(): Promise<User | null> {
@@ -105,7 +105,7 @@ export async function requireUser(): Promise<User> {
 }
 
 /**
- * The acting user, provided they may reach this page — otherwise the dashboard,
+ * The acting user, provided they may reach this page. Otherwise the dashboard,
  * which every signed-in member can see.
  *
  * Takes a capability predicate from lib/domain/permissions.ts, so the call site

@@ -10,6 +10,7 @@
 // and Transdag is the one that matches the receipt a member hands in. Rows
 // without a Transdag (fees, interest) fall back to Bokfdag.
 import { createHash } from "node:crypto";
+import { amountToOre, splitCsvLine } from "@/lib/domain/csv";
 
 export interface ParsedTransaction {
   transactionDate: string; // YYYY-MM-DD, Transdag (Bokfdag if absent)
@@ -23,48 +24,6 @@ export interface ParseResult {
   transactions: ParsedTransaction[];
   cardLast4s: string[]; // distinct card numbers seen in the file
   skippedRows: number; // data rows that couldn't be parsed
-}
-
-// Split one CSV line into fields, honouring double-quoted fields (which may
-// contain commas). Quotes are only special at a field boundary.
-function splitCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        field += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      out.push(field);
-      field = "";
-    } else {
-      field += ch;
-    }
-  }
-  out.push(field);
-  return out;
-}
-
-// "-1 234,50" / "-1234.50" / "5901.00" → öre integer.
-function amountToOre(raw: string): number | null {
-  let s = raw.trim().replace(/\s/g, "");
-  // If it uses a comma decimal (and no dot), normalise to a dot.
-  if (s.includes(",") && !s.includes(".")) s = s.replace(",", ".");
-  const value = Number(s);
-  if (!Number.isFinite(value)) return null;
-  return Math.round(value * 100);
 }
 
 // Pull "K1234" off the end of the Referens, returning the 4 digits and the

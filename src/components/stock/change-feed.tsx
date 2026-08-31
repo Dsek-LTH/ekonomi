@@ -3,15 +3,15 @@
 // Who did what, in order.
 //
 // The other half of the stock record, and deliberately a separate half. The log
-// says what the stock did — one line per occasion and product, netted, because
+// says what the stock did — one line per event and product, netted, because
 // that is what somebody glancing at it wants. This says who made it say that,
 // including the things that turned out not to have happened at all: a beer
 // booked against the wrong product and taken off again leaves no movement, and
 // should not, but somebody may still need to know it was done.
 //
-// Read two ways from one table. On an occasion it is the night in order; on a
+// Read two ways from one table. On an event it is the night in order; on a
 // product it is that product's whole story, deliveries included — which is
-// where "why does Fireball say 20?" gets asked, and a delivery has no occasion
+// where "why does Fireball say 20?" gets asked, and a delivery has no event
 // to ask it from. The middle column is whichever of the two the page is not
 // already about, so a row never repeats its own heading back at you.
 //
@@ -40,7 +40,7 @@ export function ChangeFeed({
   empty,
 }: {
   changes: StockChangeDto[];
-  scope: "tag" | "product";
+  scope: "event" | "product";
   empty?: string;
 }) {
   const t = useTranslations("stock");
@@ -50,7 +50,7 @@ export function ChangeFeed({
   const named = (c: StockChangeDto) =>
     c.level === 0
       ? t(`kind.${c.kind}`)
-      : `${t(`kind.${c.kind}`)} · ${t("tag.level.rung", { level: c.level })}`;
+      : `${t(`kind.${c.kind}`)} – ${t("event.level.rung", { level: c.level })}`;
 
   const columns: Column<StockChangeDto>[] = [
     {
@@ -72,22 +72,22 @@ export function ChangeFeed({
       cell: (c) => c.actorName,
     },
     {
-      // On an occasion this names the product; on a product it names the
-      // occasion, or says the change was made in the cellar rather than at a
+      // On an event this names the product; on a product it names the
+      // event, or says the change was made in the cellar rather than at a
       // night. Either way it is the thing the page is not already about.
       key: "subject",
-      header: scope === "tag" ? t("changes.col.product") : t("changes.col.tag"),
-      value: (c) => (scope === "tag" ? c.productName : (c.tagName ?? "")),
+      header: scope === "event" ? t("changes.col.product") : t("changes.col.event"),
+      value: (c) => (scope === "event" ? c.productName : (c.tagName ?? "")),
       sortable: true,
       searchable: true,
       mobile: "title",
       cell: (c) =>
-        scope === "tag" ? (
+        scope === "event" ? (
           <Link href={`/stock/${c.productId}`} className="font-medium hover:underline">
             {c.productName}
           </Link>
-        ) : c.tagId ? (
-          <Link href={`/stock/tags/${c.tagId}`} className="font-medium hover:underline">
+        ) : c.eventId ? (
+          <Link href={`/stock/events/${c.eventId}`} className="font-medium hover:underline">
             {c.tagName}
           </Link>
         ) : (

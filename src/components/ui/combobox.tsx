@@ -15,12 +15,12 @@ export interface ComboOption {
   label: string;
   // Shown on the trigger instead of `label` when the field is too narrow for
   // the full text. Search still matches on `label`, so the long form stays
-  // findable — only the collapsed display is shortened.
+  // findable, and only the collapsed display is shortened.
   short?: string;
 }
 
 // Everything both variants take. `Combobox` and `MultiCombobox` differ only in
-// the shape of their value — one string or a set of them — so they share the
+// the shape of their value, one string or a set of them, so they share the
 // menu, the search, the keyboard handling and the positioning below.
 type SharedProps = {
   options: ComboOption[];
@@ -30,7 +30,7 @@ type SharedProps = {
   /**
    * What to do about a value that is not in the list yet.
    *
-   * The list is strict — only something in `options` can be committed — which
+   * The list is strict, so only something in `options` can be committed, which
    * is right for a cost centre and wrong for anything a person is allowed to
    * invent. Given this, the menu offers the text they typed as a thing to
    * create, and hands it back. What that means is the caller's business: a
@@ -51,7 +51,7 @@ type SharedProps = {
    * How tall it stands, from the same table every other control uses.
    *
    * "md" by default, because a combobox is a form control and the fields it
-   * sits beside are md — it used to be hardcoded to the compact size, which is
+   * sits beside are md. It used to be hardcoded to the compact size, which is
    * why it never quite lined up with a date input. Filter bars and table
    * toolbars pass "sm".
    */
@@ -59,8 +59,8 @@ type SharedProps = {
   buttonClassName?: string; // replaces the default field appearance when given
   chevronClassName?: string; // for triggers on a coloured background
   invalid?: boolean;
-  // Takes focus on mount. For fields a click has just brought into existence —
-  // a new allocation row's cost centre — where the alternative is tabbing back
+  // Takes focus on mount. For fields a click has just brought into existence,
+  // such as a new allocation row's cost centre, where the alternative is tabbing back
   // to the thing you asked for.
   autoFocus?: boolean;
   "aria-label"?: string;
@@ -92,7 +92,7 @@ export function Combobox({
 
 // The same field over a set of values: picking toggles an option and leaves the
 // menu open, so several can be chosen in one visit. Used for filters, where the
-// empty set means "don't narrow anything" rather than "nothing selected" — which
+// empty set means "don't narrow anything" rather than "nothing selected", which
 // is why clearing is always offered and the trigger falls back to `placeholder`.
 export function MultiCombobox({
   values,
@@ -156,7 +156,7 @@ function ComboboxBase({
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   // Ids so the search box can point at the option the arrow keys have landed on
-  // — the options aren't focused, so this is what announces them.
+  // The options aren't focused, so this is what announces them.
   const listId = useId();
   const optionId = (i: number) => `${listId}-opt-${i}`;
 
@@ -196,7 +196,7 @@ function ComboboxBase({
     if (!multiple) { close(); triggerRef.current?.focus(); }
   }
 
-  // Escape shuts the menu and hands the caret back to the trigger — and shuts
+  // Escape shuts the menu and hands the caret back to the trigger, and shuts
   // *only* the menu. It used to be handled on the search box, which worked, but
   // a dialog listening on the document heard the same key and closed itself
   // too. See lib/ui/escape.ts.
@@ -210,7 +210,7 @@ function ComboboxBase({
    * Where the menu goes: below by default, above only when below will not do.
    *
    * It used to flip up whenever the viewport had less than 300 px under the
-   * field — 300 being the menu's *tallest* it could ever be, with a full list
+   * field, 300 being the menu's *tallest* it could ever be, with a full list
    * scrolled. A five-item menu is a third of that, so a field with plenty of
    * room under it kept opening upwards for no reason anybody watching could see.
    *
@@ -258,8 +258,8 @@ function ComboboxBase({
     if (autoFocus) triggerRef.current?.focus();
   }, [autoFocus]);
 
-  // The options aren't focusable, so nothing scrolls the list on its own —
-  // whichever key moved the highlight (arrows or Tab), bring it into view.
+  // The options aren't focusable, so nothing scrolls the list on its own.
+  // Whichever key moved the highlight (arrows or Tab), bring it into view.
   useEffect(() => {
     if (!open) return;
     listRef.current
@@ -271,15 +271,15 @@ function ComboboxBase({
   // Both halves were written for a pointer and neither survived an iPhone.
   //
   // `mousedown` was the wrong event. iOS only synthesises mouse events for
-  // things it considers clickable — a link, a button, something with a click
-  // handler or `cursor: pointer` — so a tap on the ordinary page behind the
+  // things it considers clickable (a link, a button, something with a click
+  // handler or `cursor: pointer`) so a tap on the ordinary page behind the
   // menu fired nothing at all and the menu would not dismiss. `pointerdown` is
   // native there and fires for every target.
   //
   // And the menu used to *close* on scroll or resize, on the grounds that a
   // fixed menu whose field has moved is a menu in the wrong place. True, but on
   // iOS opening the menu focuses the search box, focusing the search box raises
-  // the keyboard, and the keyboard fires both a resize and a scroll — so the
+  // the keyboard, and the keyboard fires both a resize and a scroll, so the
   // menu shut itself the instant it opened, every time, which is the whole of
   // "the combobox doesn't work". Following the field is the better answer
   // anyway: the menu stays where it belongs instead of vanishing because
@@ -290,11 +290,11 @@ function ComboboxBase({
 
   useEffect(() => {
     if (!open) return;
-    // Not while scrolling the menu's own list — that moves nothing.
+    // Not while scrolling the menu's own list, which moves nothing.
     const follow = (e?: Event) => {
       if (e && panelRef.current?.contains(e.target as Node)) return;
       const el = triggerRef.current;
-      // The field has gone from the page under us — a row deleted while its
+      // The field has gone from the page under us, a row deleted while its
       // menu was open. There is nothing left to point at.
       if (!el || !el.isConnected) return close();
       setRect(el.getBoundingClientRect());
@@ -303,7 +303,7 @@ function ComboboxBase({
     window.addEventListener("scroll", follow, true);
     // The keyboard on iOS changes the visual viewport without necessarily
     // moving the layout one, and `menuStyle` measures itself against
-    // `window.innerHeight` — so the menu has to be told, or it keeps sizing
+    // `window.innerHeight`, so the menu has to be told, or it keeps sizing
     // itself to a screen half of which is now keyboard.
     window.visualViewport?.addEventListener("resize", follow);
     window.visualViewport?.addEventListener("scroll", follow);
@@ -321,7 +321,7 @@ function ComboboxBase({
     else if (e.key === "Enter") { e.preventDefault(); const o = filtered[active]; if (o) commit(o.value); }
     else if (e.key === "Tab") {
       // Tab walks the options like the arrows do, wrapping at both ends, rather
-      // than leaving the field — with the menu open the list is what you're
+      // than leaving the field. With the menu open the list is what you're
       // moving through. Enter picks the highlighted one; Escape gets you out.
       //
       // It moves the same highlight the arrows use. When the options were tab
@@ -336,7 +336,7 @@ function ComboboxBase({
 
   return (
     // min-w-0: the trigger's label is `truncate`, i.e. nowrap, so its
-    // min-content width is the whole string — and a flex item defaults to
+    // min-content width is the whole string, and a flex item defaults to
     // min-width:auto, which floors at exactly that. Without this the field
     // can't shrink below its own placeholder ("Välj kostnadsställe…") and
     // pushes whatever row it sits in past the edge instead of ellipsising.
@@ -384,7 +384,7 @@ function ComboboxBase({
         >
           {triggerLabel ?? placeholder ?? t("placeholder")}
         </span>
-        {/* Centred, the chevron leaves the flow entirely — as a flex sibling it
+        {/* Centred, the chevron leaves the flow entirely. As a flex sibling it
             would shift the label left by half its width and the value would sit
             off-centre in the box. */}
         <IconChevronDown
@@ -400,14 +400,14 @@ function ComboboxBase({
         <div
           ref={panelRef}
           // Marks the menu as this field's, for anything outside that has to
-          // tell "focus left the field" from "focus went into its menu" — the
+          // tell "focus left the field" from "focus went into its menu". The
           // menu is portalled to <body>, so containment can't answer that. The
           // voucher table's auto-balance reads it.
           data-combobox-panel=""
           style={menuStyle()}
           // Above everything, dialogs included. The menu is portalled to
           // <body>, so it shares a stacking context with the confirm dialog and
-          // the modals (both z-[200]) — at z-50 a field inside one of them
+          // the modals (both z-[200]). At z-50 a field inside one of them
           // opened its options *behind* the dialog they belong to. It cannot
           // wrongly cover something else, because a menu only stays open while
           // its own trigger is on top: an outside mousedown closes it, which is
@@ -483,7 +483,7 @@ function ComboboxBase({
                   data-index={i}
                   // Not a tab stop: focus stays in the search box and the arrow
                   // keys move the highlight. Left tabbable, every option was its
-                  // own stop, and Tab put a focus ring on the first one — a
+                  // own stop, and Tab put a focus ring on the first one, a
                   // second highlight competing with the arrow-key one.
                   tabIndex={-1}
                   role="option"
@@ -493,7 +493,7 @@ function ComboboxBase({
                   className={cn(
                     "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors",
                     // One indicator for "where the keyboard is", carrying the
-                    // focus ring — the options aren't focused themselves, so
+                    // focus ring. The options aren't focused themselves, so
                     // nothing else would draw one. Arrows, Tab and the mouse all
                     // move this same highlight; when the ring moved on its own
                     // it left a second, stale one behind at the top of the list.
@@ -502,7 +502,7 @@ function ComboboxBase({
                   )}
                 >
                   {/* Several options can be on at once, so each needs to show
-                      its own on/off state whether or not it is the picked one —
+                      its own on/off state whether or not it is the picked one,
                       a box that is either filled or empty. The single-select
                       below has only ever one, and marks it with a bare check.
                       The box is drawn by components/ui/checkbox, which is where

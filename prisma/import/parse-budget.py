@@ -5,15 +5,15 @@
 
 Each committee sheet (AKTU01, SEX02, …) becomes a cost center; its Konto rows
 become accounts and the indented rows beneath become line items. Two value
-columns are read per sheet: J — the budget being written, and the only one
-imported (see import-budget.ts) — and L, the one it was revised from, kept here
+columns are read per sheet: J, the budget being written, and the only one
+imported (see import-budget.ts), and L, the one it was revised from, kept here
 for reference. Both name themselves: Parametrar!I5 and I6 hold the two budgets'
 names ("2026 DELTA", "2026 VTM"), and every sheet's column heading points at
 them, so the JSON carries the names rather than this file guessing at them.
 
 Where a line uses the "antal × á-pris" form (cells F × H) the imported column
 keeps that structure, mapping well-known Parametrar references to named
-variables. Anything else — and the whole previous column — is stored as its
+variables. Anything else, and the whole previous column, is stored as its
 computed value, so the totals always match the spreadsheet exactly.
 """
 import json
@@ -30,7 +30,7 @@ OUT = os.path.join(HERE, "budget-2026.json")
 
 # Parametrar rows we expose as named variables, keyed by the label in column A.
 # Located by label and not by row number: each revision of the workbook inserts
-# rows into this sheet, and a row number that has drifted does not fail — it
+# rows into this sheet, and a row number that has drifted does not fail. It
 # names the wrong cell, and the budget imports plausible numbers under the wrong
 # variable. A label that no longer matches stops the parse instead (see
 # resolve_params).
@@ -57,14 +57,14 @@ PARAM_BY_ROW = {}
 
 # Rows the sheets reference that no label above claims. Their value still lands
 # in the budget (as a number rather than a live variable reference), so this is
-# a report, not an error — see the note printed by main().
+# a report, not an error. See the note printed by main().
 UNNAMED_PARAMS = []
 
 COL_F, COL_H, COL_J, COL_L = 6, 8, 10, 12
 SKIP_B = {"Summa", "Intäkter", "Kostnader", "Resultat", ""}
 
-# Sexmästeriet's sheets book alcohol under a *range* header — "3011-3014",
-# "4011-4014" — with one line per drink beneath it. BAS numbers those
+# Sexmästeriet's sheets book alcohol under a *range* header, "3011-3014",
+# "4011-4014", with one line per drink beneath it. BAS numbers those
 # individually and so does the ledger, so a range is split back into one account
 # per line, matched on the line's own description (which is the account's name
 # in the chart of accounts). Kept as a range, the code is not a number: the
@@ -81,7 +81,7 @@ DRINK_OFFSET = {
 }
 
 # Descriptions under a range header that no rule could place. Reported at the
-# end rather than guessed at — a drink on the wrong account is a silent error.
+# end rather than guessed at. A drink on the wrong account is a silent error.
 UNPLACED = []
 
 
@@ -132,7 +132,7 @@ def collect_unnamed_params():
     """Parametrar cells the sheets reference that aren't named variables.
 
     Informational: an unnamed reference is imported as the number it evaluates
-    to, which is correct but dead — changing the parameter won't reflow it.
+    to, which is correct but dead: changing the parameter won't reflow it.
     """
     ws = wbv["Parametrar"]
     seen = set()
@@ -159,7 +159,7 @@ def budget_names():
     current = str(ws.cell(5, 9).value or "").strip()
     previous = str(ws.cell(6, 9).value or "").strip()
     if not current:
-        raise SystemExit("Parametrar!I5 (Nuvarande budgetnamn) is empty — "
+        raise SystemExit("Parametrar!I5 (Nuvarande budgetnamn) is empty, "
                          "the imported budget would have no name.")
     return current, previous
 
@@ -248,7 +248,7 @@ def result_unit_map():
     """Build {sheetCode: resultUnitName} from the Rambudget overview.
 
     The overview groups the cost-centre sheets under a heading per
-    resultatenhet — Sexmästeriet, Källarmästeriet — so the heading a sheet sits
+    resultatenhet, Sexmästeriet or Källarmästeriet, so the heading a sheet sits
     under is the unit it belongs to."""
     ws = wb["Rambudget"]
     sheet_names = set(wb.sheetnames)
@@ -333,7 +333,7 @@ def parse_sheet(code):
         else:
             target = current
 
-        # line item. The amount is always column J (REV) / L (baseline) — these
+        # line item. The amount is always column J (REV) / L (baseline). These
         # are the sheet's source of truth (a row may override the formula with a
         # literal). The "antal × á-pris" form is kept for display only when the
         # row is a clean 2-factor F × H whose product matches J (no extra D
@@ -473,7 +473,7 @@ def main():
 
     n_acc = sum(len(c["accounts"]) for c in cost_centers)
     n_li = sum(len(a["lineItems"]) for c in cost_centers for a in c["accounts"])
-    print(f"Wrote {OUT}: \"{name}\" (revised from \"{previous_name}\") — "
+    print(f"Wrote {OUT}: \"{name}\" (revised from \"{previous_name}\"), "
           f"{len(cost_centers)} cost centers, {n_acc} accounts, {n_li} line items, "
           f"{len(data['variables'])} variables\n")
 

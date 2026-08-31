@@ -2,8 +2,8 @@
 
 // Ticking rows on a budget sheet, and copying them somewhere else.
 //
-// One concern with three faces — the ticks in the margin, ⌘C/⌘V, and the
-// clipboard the page holds between sheets — and it was a hundred and forty
+// One concern with three faces (the ticks in the margin, ⌘C/⌘V, and the
+// clipboard the page holds between sheets) and it was a hundred and forty
 // lines in the middle of the component that draws the sheet itself. Nothing
 // else in that component reads any of it, which is the definition of a seam.
 //
@@ -31,7 +31,7 @@ export function useSheetClipboard({
 }: {
   /** This sheet's accounts, in the order it draws them. */
   accounts: Account[];
-  /** A account's rows as the sheet currently shows them — a drag may reorder. */
+  /** A account's rows as the sheet currently shows them. A drag may reorder. */
   linesOf: (account: Account) => LineItem[];
   clip: BudgetClip | null;
   onCopy: (clip: BudgetClip | null) => void;
@@ -39,7 +39,7 @@ export function useSheetClipboard({
   canPaste: boolean;
   /**
    * Send the paste. Given the clipboard and the account the caret is in, or
-   * null when it is in none — rows have to land in an account, and which one is
+   * null when it is in none, rows have to land in an account, and which one is
    * not for a clipboard to guess.
    */
   onPaste: (clip: BudgetClip, accountId: string | null) => void;
@@ -47,7 +47,7 @@ export function useSheetClipboard({
   t: (key: string, values?: Record<string, number>) => string;
 }) {
   /**
-   * What is ticked. Kept across sheets deliberately — copying a block from one
+   * What is ticked. Kept across sheets deliberately. Copying a block from one
    * cost centre onto another is the entire point, and this component goes with
    * the sheet.
    */
@@ -147,7 +147,7 @@ export function useSheetClipboard({
   }
 
   /**
-   * The sheet's own keys, taken before the cell layer sees them — that one
+   * The sheet's own keys, taken before the cell layer sees them, that one
    * swallows anything it doesn't recognise while a cell is merely selected.
    *
    * Nothing is taken while a cell is being edited: ⌘C there is copying text out
@@ -177,7 +177,7 @@ export function useSheetClipboard({
     clearTicks,
     marked,
     sheetKeys,
-    /** Put the ticked things on the clipboard — the toolbar's button. */
+    /** Put the ticked things on the clipboard. The toolbar's button. */
     copySelection,
     /** Whether this id is ticked, for the box in the margin. */
     isTicked: (kind: "rows" | "accounts", id: string) => ticked[kind].has(id),

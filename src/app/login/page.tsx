@@ -61,7 +61,7 @@ export default function LoginPage() {
                   }
                   className="flex h-11 w-full items-center rounded-lg border border-border bg-background px-3 text-sm transition-colors hover:bg-surface sm:h-9"
                 >
-                  {u.name} · {tDev(u.role)}
+                  {u.name} – {tDev(u.role)}
                 </button>
               ))}
             </div>

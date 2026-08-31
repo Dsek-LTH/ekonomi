@@ -6,7 +6,7 @@ import { cn } from "@/lib/ui/utils";
 // three content widths, and uniform vertical rhythm between major blocks.
 // Every page composes the same way: <PageShell title=… width=…>…</PageShell>.
 //
-// The header is identity and nothing else — title, description, and which
+// The header is identity and nothing else: title, description, and which
 // collection of things this is (`collections`, beside the title). What you can
 // *do* is not here: it belongs to the thing you would do it to, so a list's
 // create button rides its own toolbar (DataTable's `action`) and an object's
@@ -18,7 +18,7 @@ import { cn } from "@/lib/ui/utils";
 export type PageWidth = "form" | "content" | "wide";
 
 // Exported so a route's loading skeleton renders at the same width as the page
-// it stands in for — otherwise the content jumps sideways when the data lands.
+// it stands in for, otherwise the content jumps sideways when the data lands.
 export const PAGE_WIDTH: Record<PageWidth, string> = {
   form: "mx-auto max-w-2xl",
   content: "mx-auto max-w-6xl",
@@ -26,12 +26,12 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
 };
 
 // Where a nested page sits under its parent. A named route rather than "back":
-// it says where it goes, and it goes there however you arrived — from the list,
+// it says where it goes, and it goes there however you arrived: from the list,
 // from a link someone sent you, or on a reload, where there is no history to go
 // back through.
 //
 // When the page you came from *is* this route, it returns you to the screen you
-// left rather than to the route's bare form — the query a list keeps its state
+// left rather than to the route's bare form. The query a list keeps its state
 // in is the difference between "Alla" and "Mina". See components/back-link.tsx.
 export interface BackTo {
   href: string;
@@ -55,14 +55,14 @@ export function PageShell({
   title: React.ReactNode;
   /**
    * A second identifying line between the title and the description, in the
-   * title's weight but smaller — for a page whose subject is named twice, like
+   * title's weight but smaller, for a page whose subject is named twice, like
    * a budget's year and which budget for that year it is. The description
    * below stays what it always is: the notes about that subject.
    */
   subtitle?: React.ReactNode;
   description?: React.ReactNode;
   /**
-   * Which collection this page is a list of — "Mina / Alla", "Att bokföra /
+   * Which collection this page is a list of: "Mina / Alla", "Att bokföra /
    * Bokförda". See components/ui/collection-switch.tsx.
    *
    * A prop of the shell rather than something a page renders, because the
@@ -73,7 +73,7 @@ export function PageShell({
    *
    * The only thing beside the title, and deliberately. There is no `action`
    * slot: a header says what you are looking at, and what you can do to it
-   * belongs to the thing itself — a list's create button on its own toolbar
+   * belongs to the thing itself. A list's create button on its own toolbar
    * (DataTable's `action`), an object's actions in the header of the card that
    * describes it. The slot that used to be here held all three of those at
    * once, which is why every page put a different kind of thing in it.
@@ -81,7 +81,7 @@ export function PageShell({
   collections?: Collections;
   /**
    * The parent this page sits under, shown as a "← <label>" link above the
-   * title. Only for nested pages — the ones reachable from the sidebar are
+   * title. Only for nested pages. The ones reachable from the sidebar are
    * their own starting point, and the sidebar is the way back out of them.
    */
   back?: BackTo;
@@ -97,12 +97,12 @@ export function PageShell({
       <div className="mb-10">
         {/* Above the title, where the page it returns to reads as the thing
             this one sits under. It returns you to the list as you left it when
-            that is where you came from — see components/back-link.tsx. */}
+            that is where you came from. See components/back-link.tsx. */}
         {back && <BackLink href={back.href} label={back.label} />}
         {/* The switch rides the title's line: it names the same thing the title
             does, only more precisely, and the two read as one heading. `gap-4`
             and `flex-wrap` so a long title drops it to the next line rather
-            than squeezing it — `items-start` keeps it level with the title
+            than squeezing it. `items-start` keeps it level with the title
             itself and not with the description below. */}
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">

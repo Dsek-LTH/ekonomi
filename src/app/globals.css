@@ -28,7 +28,7 @@
     --color-accent-soft: #fdf1f5;
 
 
-    /* Purple — secondary meaning only */
+    /* Purple, secondary meaning only */
     --color-purple: #8b5fc7;
     --color-purple-hover: #7950b4;
     --color-purple-soft: #f6f2fc;
@@ -54,7 +54,7 @@
 
     /* The light that sweeps a skeleton block. Brighter than the surface it
        runs across, which on a light ground means white and on a dark one a
-       thin white wash — the same gesture, not the same colour. */
+       thin white wash. The same gesture, not the same colour. */
     --skeleton-sheen: rgb(255 255 255 / 0.75);
 
     --spacing-inset: 1rem;
@@ -67,8 +67,8 @@
 
     /* For something raised inside a track rather than above the page: the
         selected pill of a switcher, sitting in a 4px gutter. The other two lean
-        downwards, which is right for a card on a page — light comes from above
-        — but in a gutter that thin the lean lands *in* the gap below the pill
+        downwards, which is right for a card on a page, since light comes from
+        above, but in a gutter that thin the lean lands *in* the gap below the pill
         and darkens it, and the pill then reads as sitting low in a track it is
         in fact dead centre of. So this one has no vertical offset at all: it
         seats the pill without telling you which way is up. */
@@ -91,7 +91,7 @@
   /* The page ground sits one step BELOW the cards, not at the bottom of the
      scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
      read as a hole the app was floating over rather than the paper it is
-     printed on. Five units under the card background — the same gap the light
+     printed on. Five units under the card background, the same gap the light
      theme puts between #fafafa and #ffffff, so the two themes separate a card
      from its ground by the same amount. */
   --color-canvas: #17171a;
@@ -116,7 +116,7 @@
   --color-accent-soft: #382b31;
 
 
-  /* Purple — secondary meaning only */
+  /* Purple, secondary meaning only */
   --color-purple: #a98bd8;
   --color-purple-hover: #b79be2;
   --color-purple-soft: #302b38;
@@ -173,8 +173,8 @@
 
 /* ── Spacing rhythm ─────────────────────────────────────────────
    Four steps, with real gaps between them. The app had eleven gap
-   values and twenty padding values in use — every half-step Tailwind
-   offers — which is why nothing read as a boundary: with every
+   values and twenty padding values in use, every half-step Tailwind
+   offers, which is why nothing read as a boundary: with every
    interval available, no interval means anything.
 
      tight      gap-2   / 8px    inside a control; icon to label
@@ -196,14 +196,14 @@
 }
 
 /* A block standing in for content that hasn't arrived. The surface fill is what
-   draws the shape; the sweep is what says it is coming rather than empty — an
+   draws the shape; the sweep is what says it is coming rather than empty. An
    un-animated grey block reads as a broken image, which is the opposite of the
    message. Slow and low-contrast on purpose: this runs behind a whole page of
    siblings at once, and anything faster turns a loading table into a strobe.
 
    One sweep, not one per block: `background-attachment: fixed` would sync them
    to the viewport, but that breaks inside the app's scroll containers, so each
-   block runs its own — at 1.6s the phase difference reads as texture. */
+   block runs its own, and at 1.6s the phase difference reads as texture. */
 .skeleton {
   background-color: var(--color-surface);
   background-image: linear-gradient(
@@ -239,7 +239,7 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Headings tighten as they grow — at 24px and up the default tracking reads
+/* Headings tighten as they grow. At 24px and up the default tracking reads
    loose, and the app's page titles are the only large type it has. */
 h1,
 h2 {
@@ -260,7 +260,7 @@ table,
 }
 
 /* Tailwind's preflight resets buttons to the default arrow cursor. Anything
-   clickable should say so — done here rather than per-component so the many
+   clickable should say so. Done here rather than per-component so the many
    bare <button>s (table row actions, popover triggers, close buttons) are
    covered too. Disabled controls keep the arrow. */
 button:not(:disabled),
@@ -271,14 +271,14 @@ summary {
 
 /* ── Type size on the phone ──────────────────────────────────────
    Safari on iPhone zooms the page in whenever it focuses a control whose text
-   is under 16px — and it does not zoom back out afterwards. The page is left
+   is under 16px, and it does not zoom back out afterwards. The page is left
    magnified, the layout has moved, and the next tap is aimed at where things
    used to be. Our controls are 14px (`text-sm` on CONTROL in ui/field.tsx), so
    every field, search box and combobox did this.
 
    Fixed by giving the text the 16px Safari is asking for, rather than by
    pinning the viewport with `maximum-scale=1`. That stops the zoom too, and it
-   also stops somebody zooming in to read a receipt number — which is not ours
+   also stops somebody zooming in to read a receipt number, which is not ours
    to take away to save ourselves a stylesheet rule.
 
    Only below sm, where the controls already stand taller for a finger (see
@@ -286,7 +286,7 @@ summary {
    the app is drawn at, exactly as the heights do.
 
    OUTSIDE Tailwind's layers, like the focus ring below, so it beats the
-   `text-sm` and `text-xs` on the elements themselves — but wrapped in :where()
+   `text-sm` and `text-xs` on the elements themselves, but wrapped in :where()
    so it carries no specificity at all, and any rule that genuinely wants a
    different size still wins. Checkboxes, radios and the rest have no text to
    zoom to and are sized in pixels, so they stay out of it. */
@@ -302,7 +302,7 @@ summary {
 
 /* ── Focus ───────────────────────────────────────────────────────
    ONE focus ring for the whole app: 1.5px of the ring colour, sitting just off
-   the element rather than on its edge — on a filled control an on-the-edge ring
+   the element rather than on its edge. On a filled control an on-the-edge ring
    reads as part of the fill. A focused input, button, link and combobox all
    look the same, and nothing else marks focus: no border colour change, no soft
    halo. Fields used to add both on top of this and the same field then read as
@@ -311,18 +311,18 @@ summary {
 
    These rules are deliberately OUTSIDE Tailwind's layers, so they beat every
    utility: `focus:outline-none`, `focus:ring-2`, `focus:border-accent` and
-   friends have NO effect on a focused element and must not be added — a
+   friends have NO effect on a focused element and must not be added. A
    component that wants a different treatment opts out through one of the two
    classes below (or the sheet rules further down), not by stacking utilities.
 
-   :focus-visible, not :focus — a mouse click puts the caret in the field, which
+   :focus-visible, not :focus. A mouse click puts the caret in the field, which
    is signal enough; the ring is for finding the keyboard. */
 *:focus-visible {
   outline: 1px solid var(--color-ring);
   outline-offset: 1px;
 }
 
-/* Pull that ring inside the element — for inputs that fill their whole cell
+/* Pull that ring inside the element, for inputs that fill their whole cell
    edge to edge, where there is no room outside to draw it in. Same colour and
    thickness, just inward. The offset is the negative of the width, so the ring
    covers exactly the outermost 1.5px of the box on all four sides (the same
@@ -348,7 +348,7 @@ summary {
   scrollbar-color: var(--color-scrollbar) transparent;
 }
 
-/* A box that draws its own — see components/ui/overlay-scroll.tsx, which floats
+/* A box that draws its own. See components/ui/overlay-scroll.tsx, which floats
    a thumb over the content so a narrow panel does not lose 11px of every row to
    a gutter. Both properties are needed: the standard one for Firefox and recent
    Chrome, the pseudo-element for the WebKit that predates it. */
@@ -375,7 +375,7 @@ summary {
   /* One exception, and it is the whole reason the rule above can be this blunt:
      a spinner that doesn't turn is not a quieter spinner, it is a ring with no
      meaning, and the app would be telling someone nothing is happening while a
-     request is in flight. So it keeps turning — slower, and it is a 14–28px
+     request is in flight. So it keeps turning, slower, and it is a 14–28px
      mark, not travel across the screen.
 
      The skeleton sweep gets no such exemption: a static block still says
@@ -386,7 +386,7 @@ summary {
   }
 }
 
-/* The receipt panel's fold-away — see components/receipt/receipt-panel.tsx.
+/* The receipt panel's fold-away. See components/receipt/receipt-panel.tsx.
    A panel that simply stops being there leaves the reader with no idea where it
    went, and what it went to is a strip on the edge of the screen. So the panel
    slides off toward that edge and the tab is what it leaves behind, arriving
@@ -395,7 +395,7 @@ summary {
    Only on a fold the reader asked for: the tab wears no motion at all on an
    ordinary page load, when there is no question of where anything went. The
    `translate` property and not `transform`, because that is the one Tailwind's
-   `-translate-y-1/2` writes — animating the other would centre the tab twice.
+   `-translate-y-1/2` writes. Animating the other would centre the tab twice.
 
    `prefers-reduced-motion` is answered by the blunt rule above: both are cut to
    nothing, and both end on the tab's resting state, so it simply arrives. */
@@ -411,7 +411,7 @@ summary {
 }
 
 /* From md the tab is on the right edge rather than the bottom one, so it comes
-   in from the side — and carries a -50% of its own height in the very property
+   in from the side, and carries a -50% of its own height in the very property
    the animation writes, which the resting state needs back on every frame.
    Redefining the keyframes inside the media query rather than branching the
    class keeps one name in the component; the last matching definition wins.
@@ -435,7 +435,7 @@ summary {
    of the move in both directions: folding away it slides to the edge, and
    coming back it is mounted *at* the edge and let go on the next frame, so the
    same transition carries it home. See `unfold` in receipt-panel.tsx for why
-   the way back needs that extra frame — a transition has nothing to move from
+   the way back needs that extra frame. A transition has nothing to move from
    unless the browser has painted the starting value first.
 
    `translate` alone, deliberately. The resize drag writes `--receipt-w`
@@ -443,7 +443,7 @@ summary {
    lag the pointer by the whole of this duration.
 
    `prefers-reduced-motion` is answered by the blunt rule above: cut to nothing,
-   ending on the resting state, so the panel simply arrives — which is what it
+   ending on the resting state, so the panel simply arrives, which is what it
    did before any of this existed. */
 .receipt-panel {
   transition: translate var(--receipt-fold-ms) var(--ease-out-quint);
@@ -454,7 +454,7 @@ summary {
    The panel is the whole screen on a phone and it carries a rasterised PDF
    page. Without the hint the browser has no reason to give that its own layer
    until the move has already started, so the first frames re-rasterise the
-   canvas — which is the judder, and it is worst on exactly the hardware where
+   canvas, which is the judder, and it is worst on exactly the hardware where
    the panel is largest relative to the screen. A standing promise costs memory,
    so the class carrying it is only on for the length of the move. */
 .receipt-panel-moving {
@@ -505,8 +505,8 @@ summary {
 .budget-grid :is(th, td, tr, tbody) {
   border-color: var(--grid-line);
 }
-/* Rambudget: the table scrolls inside its own card while the header block —
-   the column names plus the grand total — stays pinned at the top of it, so a
+/* Rambudget: the table scrolls inside its own card while the header block,
+   the column names plus the grand total, stays pinned at the top of it, so a
    fifty-row overview never loses which column is which or what it all adds up
    to. The card is the scrollport (see rambudget.tsx).
 
@@ -545,7 +545,7 @@ summary {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
-/* A single selection box on the focused cell — sits on the gridline and encloses
+/* A single selection box on the focused cell. It sits on the gridline and encloses
    the whole cell (drag grip included). The input's own ring is removed so this is
    the only border. Graphite, not brand: moving around a sheet is the quiet
    state, and the section's pink is saved for the cell actually being edited
@@ -555,7 +555,7 @@ summary {
    An inward outline, not an inset shadow: cells carry a border on the right and
    top only, and an inset shadow is clipped to the PADDING box, so it stacks on
    top of those two borders (border + ring) while the left and bottom get the ring
-   alone — the box reads visibly thicker on two sides. An outline is measured from
+   alone, so the box reads visibly thicker on two sides. An outline is measured from
    the border box, so `outline-offset: -Npx` with an Npx width covers the outermost
    Npx of the cell evenly on all four sides, border included.
 
@@ -570,7 +570,7 @@ summary {
 }
 /* The cell box is the only selection indicator anywhere in the sheet, so nothing
    inside a cell draws one of its own: not the inputs, not the account picker,
-   not a row's ✕, not a tick box — two lines around one thing reads as two
+   not a row's ✕, not a tick box, because two lines around one thing reads as two
    things. Outside a cell (the comment box below, the buttons above the sheet)
    the app's ordinary ring is untouched. */
 .budget-grid :is(td, th) :is(input, button):focus,
@@ -580,7 +580,7 @@ summary {
 .budget-grid :is(td, th) input:focus-visible + [data-check] {
   outline: none;
 }
-/* …except a field that merely happens to sit in the sheet — the comment box on
+/* …except a field that merely happens to sit in the sheet. The comment box on
    an expanded row is a form field, not a cell. It takes the app's ordinary
    focus ring back, and its row draws no cell box around it. */
 .budget-grid td.sheet-field:focus-within {
@@ -596,7 +596,7 @@ summary {
 .budget-grid input[data-cell] {
   caret-color: transparent;
 }
-/* A selected cell also hides its text selection — the box is the selection.
+/* A selected cell also hides its text selection, because the box is the selection.
    (Type-to-edit selects the cell's text so the keystroke overwrites it; that
    highlight would otherwise flash up before edit mode paints.) */
 .budget-grid input[data-cell]::selection {
@@ -604,7 +604,7 @@ summary {
 }
 /* Edit mode: the graphite box turns the section's pink with a soft halo, the
    blinking caret returns and the text selection is visible again. The colour
-   change is what separates the two states — pink in a sheet means "you are
+   change is what separates the two states: pink in a sheet means "you are
    typing here". */
 .is-editing input[data-cell]:focus {
   caret-color: auto;
@@ -635,7 +635,7 @@ summary {
 
   /* Dark mode is a screen preference. On paper it costs a full-bleed
      black page and unreadable greys, so the light tokens are restored
-     for the print run — every component reads these, so this is all
+     for the print run. Every component reads these, so this is all
      it takes. */
   html.dark {
     color-scheme: light;

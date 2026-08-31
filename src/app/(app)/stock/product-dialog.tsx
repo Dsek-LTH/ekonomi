@@ -25,7 +25,7 @@ import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
 
-/** The order the pickers list them in — the report's own order. */
+/** The order the pickers list them in, the report's own order. */
 export const CATEGORIES: DrinkCategory[] = [
   "SPRITDRYCK",
   "VIN",
@@ -121,13 +121,13 @@ export function ProductDialog({
    * is litres and pure alcohol, and a product missing either quietly leaves
    * itself out of the return. A cost, because the shelf's value is the sum of
    * what things cost and one unpriced product makes the total a guess. And for
-   * a spirit the bottle size is what its rungs are fractions of — without it
+   * a spirit the bottle size is what its rungs are fractions of. Without it
    * every level is worth nothing and a night's arithmetic comes to zero.
    *
    * The same rule the route refuses on, so the button is never live for
    * something the server would reject.
    */
-  // Optional, so an empty box is fine — but something typed that is not an
+  // Optional, so an empty box is fine, but something typed that is not an
   // article number is a mistake worth stopping, not worth silently storing as
   // nothing.
   const sbFault =
@@ -154,14 +154,14 @@ export function ProductDialog({
       kind: d.kind,
       category: d.category,
       // The button is dead until `fault` is null, and `fault` is exactly the
-      // check that these are all there — so the fallbacks below are for the
+      // check that these are all there, so the fallbacks below are for the
       // compiler rather than for anything that can happen.
       abv: num(d.abv) ?? 0,
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
       costPriceOre: Math.round((num(d.costPrice) ?? 0) * 100),
       ean: d.ean.trim(),
-      // Whatever was pasted, reduced to the article number — the route takes
+      // Whatever was pasted, reduced to the article number. The route takes
       // only digits. Null rather than undefined so clearing the field clears
       // the column; undefined in a PATCH means "leave it alone".
       systembolagetId: parseSystembolagetId(d.systembolagetId),
@@ -193,7 +193,7 @@ export function ProductDialog({
 
         {/* FieldGroup, not Field: the box holds a button as well as the input,
             and a <label> forwards a click anywhere in its area to the first
-            labelable element inside it — which on a phone is the difference
+            labelable element inside it, which on a phone is the difference
             between tapping the scanner and opening the keyboard. */}
         <FieldGroup label={t("products.field.ean")} hint={t("products.field.eanHint")}>
           <SuffixedInput
@@ -205,7 +205,7 @@ export function ProductDialog({
             aria-label={t("products.field.ean")}
             // The box gives up its right padding so the button can sit near the
             // edge, and the button gives up its vertical margin so it does not
-            // set the box's height — 32px of tappable button inside a field
+            // set the box's height, 32px of tappable button inside a field
             // that still measures the same as the ones above and below it.
             className="pr-1"
             suffix={
@@ -242,7 +242,7 @@ export function ProductDialog({
 
         {/* FieldGroup, not Field: a combobox's trigger is a <button>, and a
             <label> forwards a click anywhere in its box to the first labelable
-            element inside it — so wrapping one in Field means clicking the
+            element inside it, so wrapping one in Field means clicking the
             empty space beside it pops the menu open. Field's own note says so.
           */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -257,7 +257,7 @@ export function ProductDialog({
           <FieldGroup label={t("products.field.category")}>
             {/* Eight drink types with names like "Alkoholdrycksliknande
                 preparat": long enough that a native select is a scroll, and
-                exactly what a searchable field is for — type "sta" for
+                exactly what a searchable field is for, type "sta" for
                 starköl. */}
             <Combobox
               value={d.category}
@@ -272,7 +272,7 @@ export function ProductDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("products.field.abv")}>
             {/* The unit inside the box rather than in the label, because it is
-                the one field where the wrong reading — 0,4 for 40 % — is a
+                the one field where the wrong reading (0,4 for 40 %) is a
                 plausible number that nothing downstream would question. */}
             <SuffixedInput
               value={d.abv}
@@ -296,7 +296,7 @@ export function ProductDialog({
         {isVolume ? (
           <>
             {/* The whole a level is a fraction of. Nothing is weighed any more
-                — a bottle is judged by eye at 80, 60, 40 or 20 per cent — so
+                A bottle is judged by eye at 80, 60, 40 or 20 per cent, so
                 this is all a spirit needs. */}
             <Field label={t("products.field.nominalMl")}>
               <Input

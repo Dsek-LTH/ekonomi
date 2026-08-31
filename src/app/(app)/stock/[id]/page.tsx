@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requirePage } from "@/lib/server/current-user";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
-import { getProductCellar, getProductOccasions, getStockLevels } from "@/lib/data/stock";
+import { getProductCellar, getProductEvents, getStockLevels } from "@/lib/data/stock";
 import StockProductClient from "./product-client";
 
 export default async function StockProductPage({
@@ -18,9 +18,9 @@ export default async function StockProductPage({
   // Two histories, because the product has been through two different sorts of
   // thing: nights it went out to, and what was done to it in the cellar. See
   // the data layer for why that is the split rather than movements-versus-edits.
-  const [levels, occasions, cellar] = await Promise.all([
+  const [levels, events, cellar] = await Promise.all([
     getStockLevels(),
-    getProductOccasions(id),
+    getProductEvents(id),
     getProductCellar(id),
   ]);
 
@@ -30,7 +30,7 @@ export default async function StockProductPage({
   return (
     <StockProductClient
       product={product}
-      occasions={occasions}
+      events={events}
       cellar={cellar}
       canManage={canManageStock(user.capabilities)}
     />

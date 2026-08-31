@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
 
-/** POST /api/cards — register a section card. */
+/** POST /api/cards: register a section card. */
 export const CreateCard = z.object({
   // The last four digits off the card, which is all the bank export gives us.
   last4: Trimmed.regex(/^\d{4}$/),
@@ -12,13 +12,13 @@ export const CreateCard = z.object({
 });
 export type CreateCard = z.infer<typeof CreateCard>;
 
-/** PATCH /api/cards/[id] — assign or unassign the holder. */
+/** PATCH /api/cards/[id]: assign or unassign the holder. */
 export const PatchCard = z.object({
   holderId: Clearable(Id),
 });
 export type PatchCard = z.infer<typeof PatchCard>;
 
-/** POST /api/cost-centers — a LOCAL cost centre, for a dimension Fortnox has none for. */
+/** POST /api/cost-centers: a LOCAL cost centre, for a dimension Fortnox has none for. */
 export const CreateCostCenter = z.object({
   code: UpperCode.pipe(NonEmpty),
   name: NonEmpty,
@@ -51,7 +51,7 @@ export const AddPrefix = z.object({
 export type AddPrefix = z.infer<typeof AddPrefix>;
 
 /**
- * PATCH /api/profile — the member's own payout details.
+ * PATCH /api/profile: the member's own payout details.
  *
  * Both are clearable: somebody who has left the section's payroll should be
  * able to take their account number back out.
@@ -63,7 +63,7 @@ export const PatchProfile = z.object({
 export type PatchProfile = z.infer<typeof PatchProfile>;
 
 /**
- * PATCH /api/fortnox/settings — the voucher series exports land in, and the two
+ * PATCH /api/fortnox/settings: the voucher series exports land in, and the two
  * accounts the payment row of every verification is posted against.
  *
  * The accounts are checked against the synced chart by the route; all this says
@@ -77,14 +77,14 @@ export const FortnoxSettings = z.object({
 export type FortnoxSettings = z.infer<typeof FortnoxSettings>;
 
 /**
- * POST /api/fortnox/sync — pull the ledger.
+ * POST /api/fortnox/sync: pull the ledger.
  *
- * `financialYearId` is Fortnox's own id for a financial year — a small integer
+ * `financialYearId` is Fortnox's own id for a financial year, a small integer
  * like 9, not a calendar year. It was called `year` and validated as one, which
  * meant every per-year sync button on the settings screen was refused: the
  * button sends the id it has (FortnoxFinancialYear.id, which is Fortnox's), and
  * 9 is not between 1900 and 2200. The name is the fix as much as the bounds
- * are — `syncLedger` and the CLI's `--year` flag have always meant the id.
+ * are. `syncLedger` and the CLI's `--year` flag have always meant the id.
  */
 export const FortnoxSync = z.object({
   scope: z.enum(["current", "all"]).default("current"),
@@ -93,14 +93,14 @@ export const FortnoxSync = z.object({
 export type FortnoxSync = z.infer<typeof FortnoxSync>;
 
 /**
- * POST /api/mileage/rates and PATCH /api/mileage/rates/[id] — what a kilometre
+ * POST /api/mileage/rates and PATCH /api/mileage/rates/[id]: what a kilometre
  * is worth, from a given day.
  *
  * `orePerKm` rather than kronor per mil, which is how the figure is quoted and
  * how the form asks for it: the conversion is the screen's, so the stored unit
  * is the one every calculation uses and nothing downstream has to remember a
  * factor of ten. Bounded because a slipped decimal here is a slipped decimal on
- * every claim filed after it — 100 kr/km is not a schablon anyone has set.
+ * every claim filed after it. 100 kr/km is not a schablon anyone has set.
  */
 export const MileageRateInput = z.object({
   orePerKm: z.int().positive().max(10000),
@@ -142,14 +142,14 @@ const CapabilityName = z.enum([
 ]);
 
 /**
- * PUT /api/authority/groups — what one Authentik group confers.
+ * PUT /api/authority/groups: what one Authentik group confers.
  *
  * The whole grant for one group, not a delta: the screen edits a row as a unit,
  * and sending the finished state means two people saving at once cannot
  * interleave into a grant neither of them chose.
  *
  * Lower-cased here because that is the one form everything downstream compares
- * (`normaliseGroup` in lib/server/authentik-roles.ts) — a row stored with a
+ * (`normaliseGroup` in lib/server/authentik-roles.ts). A row stored with a
  * capital would simply never match anybody.
  */
 export const PutGroupGrant = z.object({
@@ -164,7 +164,7 @@ export const DeleteGroupGrant = z.object({ group: NonEmpty.toLowerCase() });
 export type DeleteGroupGrant = z.infer<typeof DeleteGroupGrant>;
 
 /**
- * PUT /api/authority/capabilities — everything one role may do.
+ * PUT /api/authority/capabilities: everything one role may do.
  *
  * Again the finished state for one role rather than a tick or an untick. The
  * grid is small enough to send whole, and a lockout check is only meaningful

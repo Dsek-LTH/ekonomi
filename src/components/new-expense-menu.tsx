@@ -2,9 +2,9 @@
 
 // "Nytt utlägg", which is really two verbs.
 //
-// A purchase and a milersättning are described by different forms — one has a
+// A purchase and a milersättning are described by different forms: one has a
 // receipt, an amount and possibly a card purchase to match; the other has a
-// date and two odometer readings — so which one you need is a question that has
+// date and two odometer readings, so which one you need is a question that has
 // to be answered before either form can be drawn.
 //
 // It used to be answered *inside* the purchase form, as a third card in its
@@ -14,8 +14,8 @@
 // discarded, and it made a three-item grid out of a two-column one.
 //
 // Here instead, where nothing has been typed yet and nothing can be lost. This
-// is the case components/ui/menu.tsx was written for — one button that is two
-// or three variants of the same verb — and putting it in one component rather
+// is the case components/ui/menu.tsx was written for: one button that is two
+// or three variants of the same verb, and putting it in one component rather
 // than at each of the five call sites is what keeps them saying the same thing.
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { useTranslations } from "next-intl";
@@ -23,7 +23,7 @@ import { Menu, MenuItem } from "@/components/ui/menu";
 import { IconPlus } from "@/components/ui/icons";
 
 /** One line of the menu: what it is, and who it is for. The second line is not
- *  decoration — "vanligt utlägg" and "milersättning" are section vocabulary,
+ *  decoration. "vanligt utlägg" and "milersättning" are section vocabulary,
  *  and somebody filing their first one is choosing on the description. */
 function Choice({ label, hint }: { label: string; hint: string }) {
   return (
@@ -42,13 +42,13 @@ export function NewExpenseMenu({
 }: {
   /**
    * The trigger's own words, where the screen has better ones than "Nytt
-   * utlägg" — the dashboard's first-run card says "Skapa ditt första utlägg",
+   * utlägg", the dashboard's first-run card says "Skapa ditt första utlägg",
    * and a newcomer being walked through the four steps should not be met with
    * the toolbar's wording at the end of them. The menu inside is the same
    * either way.
    */
   label?: string;
-  /** Matches the button this replaces at each call site — the list's toolbar
+  /** Matches the button this replaces at each call site. The list's toolbar
    *  wants the outlined register, an empty state wants the filled one. */
   variant?: React.ComponentProps<typeof Menu>["variant"];
   size?: React.ComponentProps<typeof Menu>["size"];

@@ -4,8 +4,8 @@ import type { Locale } from "@/i18n/request";
 // main message catalogue, and is loaded here by the route that shows it. Every
 // key in messages/<locale>.json is serialised into NextIntlClientProvider on
 // every page in the app, and 20-odd multi-paragraph answers is not something
-// the expense list should be paying for. The page's chrome — its title, the
-// search field, the empty state — is normal UI text and stays in the catalogue
+// the expense list should be paying for. The page's chrome (its title, the
+// search field, the empty state) is normal UI text and stays in the catalogue
 // under `faq`.
 //
 // An answer is a list of blocks rather than one string, because the source
@@ -16,18 +16,18 @@ import type { Locale } from "@/i18n/request";
 export type FaqBlock =
   | { t: "p"; v: string }
   | { t: "ul"; v: string[] }
-  /** Numbered, for answers that are a sequence — "what do I do before I buy". */
+  /** Numbered, for answers that are a sequence ("what do I do before I buy"). */
   | { t: "ol"; v: string[] }
   /** The one thing in the answer you get in trouble for missing. */
   | { t: "note"; tone: "warn" | "danger"; v: string }
   | { t: "table"; head: string[]; rows: string[][] }
   /** An inline link; `href` may be external or a `tel:`. */
   | { t: "link"; v: string; href: string }
-  /** The answer's "…and here is where you do it" — an in-app route, as a button. */
+  /** The answer's "…and here is where you do it": an in-app route, as a button. */
   | { t: "action"; v: string; href: string }
   /**
    * A receipt to look at rather than a rule to read. Half of what makes a
-   * receipt invalid is visual — a cropped edge, a missing footer — and no
+   * receipt invalid is visual (a cropped edge, a missing footer) and no
    * wording of the requirement teaches that as fast as one photo of it going
    * wrong. The content carries a basename; `src` and `expected` are filled in
    * by the page once it has looked for the file (see page.tsx).
@@ -81,7 +81,7 @@ function blockText(block: FaqBlock): string[] {
 /**
  * One lowercased haystack per question. Searching the answers too, not just the
  * questions: someone types "pant" or "60 dagar", which is language from the
- * answer — the question is where they'd have had to guess our wording.
+ * answer. The question is where they'd have had to guess our wording.
  */
 export function searchText(item: FaqItem): string {
   return [item.q, ...item.a.flatMap(blockText)].join(" ").toLowerCase();

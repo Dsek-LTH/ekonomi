@@ -1,6 +1,6 @@
 // Reading the income routing table for the settings screen.
 //
-// The same rows lib/income/config.ts serialises for the intakt service — this
+// The same rows lib/income/config.ts serialises for the intakt service. This
 // is the other half, the one a person edits.
 import "server-only";
 
@@ -10,7 +10,7 @@ import { prisma } from "@/lib/server/db";
 export interface IncomePrefixRow {
   id: string;
   code: string;
-  /** The income profile it routes to — ResultUnitIncome.id. */
+  /** The income profile it routes to, ResultUnitIncome.id. */
   incomeId: string;
   account: string;
   /** The account's name from the chart, or "" when it is not in it. */
@@ -22,23 +22,23 @@ export interface IncomePrefixRow {
  * A resultatenhet as the income settings screen shows it: the unit, and its
  * income profile when it has one.
  *
- * Every unit is listed, with or without income — that is the point of there
+ * Every unit is listed, with or without income. That is the point of there
  * being one register. A unit with `income: null` is one that takes no money in,
  * and the screen offers to give it settings rather than hiding it.
  */
 export interface IncomeUnitRow {
-  /** ResultUnit.id — the unit itself, which exists either way. */
+  /** ResultUnit.id, the unit itself, which exists either way. */
   resultUnitId: string;
   name: string;
   /** How many cost centres it owns through its prefixes, for context. */
   costCentreCount: number;
   income: IncomeProfileRow | null;
-  /** Whether anything has been booked under it — a unit in use is retired, not deleted. */
+  /** Whether anything has been booked under it: a unit in use is retired, not deleted. */
   inUse: boolean;
 }
 
 export interface IncomeProfileRow {
-  /** ResultUnitIncome.id — what the profile routes hang off. */
+  /** ResultUnitIncome.id, what the profile routes hang off. */
   id: string;
   key: string;
   /** Null means the unit's own name is what the documents say. */
@@ -61,12 +61,12 @@ export interface IncomeSettingsRow {
   swishClearingAccount: string;
   zettleFeeAccount: string;
   zettleFeeCostCenterId: string | null;
-  /** The same cost centre as a code — what the booking screen's picker works in. */
+  /** The same cost centre as a code, what the booking screen's picker works in. */
   zettleFeeCostCenterCode: string | null;
   /** The verifikationsserie takings export to; null means the connection's. */
   incomeVoucherSeries: string | null;
   /**
-   * What that null falls back to — the series everything else is exported to.
+   * What that null falls back to: the series everything else is exported to.
    *
    * Carried so the settings screen can say what "unset" actually means rather
    * than leaving an empty box that reads as "nowhere". Null when Fortnox has
@@ -84,7 +84,7 @@ export interface IncomeConfigView {
 }
 
 /**
- * Where income lands, on its own — the four settings the booking screen needs
+ * Where income lands, on its own: the four settings the booking screen needs
  * to build a voucher, without the whole routing table behind them.
  *
  * The defaults are the ones the booking route falls back to, spelled once here
@@ -111,7 +111,7 @@ export async function getIncomeSettings(): Promise<IncomeSettingsRow> {
 
 export async function getIncomeConfig(): Promise<IncomeConfigView> {
   const [units, accounts, settings, connection, fallbacks, used] = await Promise.all([
-    // Every result unit, income or not — one register, so the screen shows the
+    // Every result unit, income or not, one register, so the screen shows the
     // whole of it and says which rows have income settings.
     prisma.resultUnit.findMany({
       orderBy: { name: "asc" },
@@ -130,12 +130,12 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
       where: { id: "singleton" },
       include: { zettleFeeCostCenter: { select: { code: true } } },
     }),
-    // Only for what the income series falls back to when it is unset — see
+    // Only for what the income series falls back to when it is unset. See
     // IncomeSettingsRow.connectionVoucherSeries.
     prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
     prisma.swishAmountFallback.findMany({ orderBy: { amount: "asc" } }),
     // Which units have reports against them. One grouped query rather than a
-    // count per unit — the screen only needs "any".
+    // count per unit. The screen only needs "any".
     prisma.incomeReport.groupBy({ by: ["resultUnitId"], _count: { _all: true } }),
   ]);
 

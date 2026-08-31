@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -12,21 +12,22 @@ import { useTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useNotify } from "@/components/shell/notifications";
 import { PageShell } from "@/components/page-shell";
-import { IconCompare, IconCopy, IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconCompare, IconCopy, IconPlus, IconTrash, IconUpload } from "@/components/ui/icons";
 import { isAdmin } from "@/lib/domain/permissions";
 import { cn } from "@/lib/ui/utils";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import type { BudgetSummary } from "@/lib/data/budget";
 
 // A budget is a year and a name, and nothing above it. Several may share a year
-// — the adopted one and whatever was drafted beside it — and they are siblings,
+// The adopted one and whatever was drafted beside it, and they are siblings,
 // not versions of each other: no budget knows that another exists. So the list
 // is flat, and every row stands on its own.
 //
 // The rows arrive from the page's Server Component, like every other list in the
 // app. This used to fetch them itself, which meant it also owned the loading
-// state, rendered its own route skeleton, reloaded by hand after every write —
+// state, rendered its own route skeleton, reloaded by hand after every write,
 // and showed the "no budgets yet" empty state when the request had actually
 // failed. `useMutation`'s refresh does all of that now, and a failure is the
 // route's error boundary rather than a silent empty list.
@@ -38,18 +39,20 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
   const admin = isAdmin(user.capabilities);
 
   const { pending, mutate } = useMutation();
+  const notify = useNotify();
+  const fileRef = useRef<HTMLInputElement>(null);
   const controls = useTableControls({ sortKey: "year", sortDir: "desc" });
 
   // Which budgets the compare view opens with. Comparing is a question about two
   // or more budgets, so it is chosen here rather than assumed from the list's
-  // order — any of them against any other, across years.
+  // order, any of them against any other, across years.
   const [picked, setPicked] = useState<string[]>([]);
 
   const thisYear = new Date().getFullYear();
 
   // Creating asks nothing. Every budget starts as a year and a name that are
   // both a pencil away on its own page, so a form here would only be collecting
-  // what the next screen already lets you change — and the empty one has to be
+  // what the next screen already lets you change, and the empty one has to be
   // named something before you know what it is anyway.
   //
   // `key` names the control that asked, so only that one spins: the header menu
@@ -67,10 +70,56 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
 
   // Duplicating makes a plain copy: the source's year, a derived name, and no
   // tie back to what it was copied from. It keeps the year rather than guessing
-  // at next year's — if the copy is meant for another year, that is one edit on
+  // at next year's. If the copy is meant for another year, that is one edit on
   // the page it just opened.
   const copyBudget = (b: BudgetSummary, key?: string) =>
     create({ year: b.year, name: t("copyOf", { name: b.name }), copyFromId: b.id }, t("copied"), key);
+
+  // Importing a past budget from the interchange CSV (lib/domain/budget-csv.ts).
+  //
+  // Asks nothing, like every other way of starting a budget here: the year is
+  // taken from the file name when it states one, the name is the file's own,
+  // and both are a pencil away on the page this opens. Guessing wrong costs one
+  // edit; a dialog would cost one every time.
+  async function importCsv(file: File) {
+    const base = file.name.replace(/\.[^.]+$/, "");
+    const year = Number(base.match(/(20\d{2})/)?.[1] ?? thisYear);
+    const data = await mutate<{
+      budgetId: string;
+      sheets: number;
+      accounts: number;
+      lines: number;
+      unmatchedCostCenters: string[];
+      problems: { line: number; message: string }[];
+    }>(`/api/budgets/import?year=${year}&name=${encodeURIComponent(base)}`, {
+      key: "import",
+      body: file,
+      contentType: "text/csv",
+      error: t("importFailed"),
+    });
+    if (fileRef.current) fileRef.current.value = "";
+    if (!data) return;
+
+    notify.success(t("imported", { sheets: data.sheets, accounts: data.accounts, lines: data.lines }));
+    // Two things the import cannot decide for the reader, and both change what
+    // the budget is worth: a sheet with no cost centre is left out of the Utfall
+    // comparison entirely (lib/ledger/comparison.ts), and a dropped row is a
+    // figure that is simply not in the budget. Neither is an error, so neither
+    // stops the import, but neither may pass silently either.
+    if (data.unmatchedCostCenters.length > 0) {
+      notify.info(t("importUnmatched", {
+        count: data.unmatchedCostCenters.length,
+        codes: data.unmatchedCostCenters.join(", "),
+      }));
+    }
+    if (data.problems.length > 0) {
+      notify.info(t("importProblems", {
+        count: data.problems.length,
+        first: `${data.problems[0].line}: ${data.problems[0].message}`,
+      }));
+    }
+    router.push(`/budget/${data.budgetId}`);
+  }
 
   async function deleteBudget(b: BudgetSummary) {
     const ok = await confirm({
@@ -91,7 +140,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
 
   const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
 
-  // The compare button carries no text, so this is its whole accessible name —
+  // The compare button carries no text, so this is its whole accessible name,
   // and the count is the part that changes as boxes are ticked.
   const compareLabel = picked.length >= 2 ? t("compareCount", { count: picked.length }) : t("compare");
 
@@ -106,7 +155,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       cell: (b) => (
         // `z-10` because the row is a link: DataTable stretches the title
         // cell's `before:` over the whole row, and this cell comes *earlier* in
-        // the row than that link — so with both at the auto stacking level the
+        // the row than that link, so with both at the auto stacking level the
         // overlay won on tree order, and ticking a budget opened it instead.
         // (The action buttons on other lists sit in the last column, after the
         // link, which is why this only ever bit here.)
@@ -133,6 +182,22 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       searchable: true,
       className: "w-24 whitespace-nowrap",
       cell: (b) => <span className="text-sm font-medium tabular-nums">{b.year}</span>,
+    },
+    {
+      // Sortable and searchable on the date itself: "2026-04" narrows to that
+      // month's meetings, which is how anyone looking for a particular budget
+      // actually remembers it. A draft sorts by the empty string and so lands
+      // together with the others that were never adopted.
+      key: "adoptedAt",
+      header: t("colAdopted"),
+      value: (b) => b.adoptedAt ?? "",
+      sortable: true,
+      searchable: true,
+      className: "w-32 whitespace-nowrap",
+      cell: (b) =>
+        b.adoptedAt
+          ? <span className="text-sm tabular-nums text-muted">{b.adoptedAt}</span>
+          : <span className="text-sm text-muted/60">{t("notAdopted")}</span>,
     },
     {
       key: "name",
@@ -189,6 +254,16 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       title={t("title")}
       description={t("description")}
     >
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) importCsv(f);
+        }}
+      />
       <Card>
         <CardHeader
           title={t("budgets")}
@@ -242,6 +317,12 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
                     <MenuNote>{t("basedOnHint")}</MenuNote>
                   </>
                 )}
+                <MenuSeparator />
+                <MenuItem onClick={() => fileRef.current?.click()}>
+                  <IconUpload className="size-4" />
+                  {t("importCsv")}
+                </MenuItem>
+                <MenuNote>{t("importHint")}</MenuNote>
               </Menu>
             ) : undefined
           }

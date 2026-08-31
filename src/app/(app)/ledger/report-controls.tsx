@@ -8,8 +8,8 @@
 // the panel reads downwards as a list of decisions rather than sideways as a
 // wall of pickers.
 //
-// ReportBar is what you do *with* the result once it's on screen — find a row,
-// change which columns show — so it lives with the table, stays pinned to the
+// ReportBar is what you do *with* the result once it's on screen: find a row,
+// change which columns show, so it lives with the table, stays pinned to the
 // top while you scroll, and takes over showing what the report is of once the
 // panel above has scrolled out of sight.
 import { useTranslations } from "next-intl";
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
+import { budgetLabel } from "@/lib/budget/compare";
 import { SearchInput } from "@/components/ui/search-input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { ReportKind } from "@/lib/ledger/bas";
@@ -35,7 +36,7 @@ const CC_ALL = "__ALL__";
 const CC_NONE = "__NONE__";
 
 // One decision, labelled. The label is what makes a control readable on its
-// own — five bare pickers in a row all look like the same filter.
+// own. Five bare pickers in a row all look like the same filter.
 // A <span>, not a <label>: every control below is a button or a listbox that
 // carries its own aria-label, and a <label> with nothing to point at is an
 // empty promise to a screen reader.
@@ -63,7 +64,7 @@ function Field({
 // aligned. Every control in the panel is therefore field-height.
 const PILLS = "[&>button]:h-11 sm:[&>button]:h-9";
 
-// One row of the panel. Hairline above, none on the first — the rows are the
+// One row of the panel. Hairline above, none on the first. The rows are the
 // structure, so they get the rule rather than the whole panel getting padding.
 function Row({ children }: { children: React.ReactNode }) {
   return (
@@ -97,7 +98,7 @@ export function ReportParameters({
   const ccOptions: ComboOption[] = [
     { value: CC_ALL, label: t("allCostCenters") },
     { value: CC_NONE, label: t("noCostCenter") },
-    ...costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}` })),
+    ...costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}` })),
   ];
 
   return (
@@ -202,23 +203,26 @@ export function ReportParameters({
 
         {/* Which budget you mean is part of choosing "budget", so it sits in
             the same row. Every budget is offered, not only the ones for the year
-            being reported on — holding this year's outcome against what was
+            being reported on. Holding this year's outcome against what was
             budgeted two years ago is a fair question to ask.
 
             Hidden only when there is nothing to choose: one budget, and it is
             already the one being compared against. A lone budget belonging to
-            some other year is not that case — it is the one you would have to
+            some other year is not that case. It is the one you would have to
             reach for by hand. */}
         {query.compare === "BUDGET"
           && (budgets.length > 1 || (budgets.length === 1 && query.budget !== budgets[0].id)) && (
           <Field label={t("budget")} className="w-full sm:w-64">
             <Combobox
             size="sm"
-              // Year first, then the budget's own name. The year is what tells
-              // two years' "Ursprunglig" apart, and it is what makes picking one
-              // from another year a deliberate act rather than a slip; typing
-              // "2024" narrows to that year, since the search reads the label.
-              options={budgets.map((b) => ({ value: b.id, label: `${b.year} · ${b.name}` }))}
+              // Date (or year) first, then the budget's own name, budgetLabel,
+              // the same one the compare pickers use, because three screens
+              // spelling a budget three ways is three things to keep in step.
+              // Leading with the date is what tells two years' "Ursprunglig"
+              // apart and what makes picking one from another year a deliberate
+              // act rather than a slip; typing "2024" narrows to that year,
+              // since the search reads the label.
+              options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
               value={query.budget ?? ""}
               onChange={(v) => onQuery({ budget: v })}
               placeholder={t("budgetPlaceholder")}
@@ -245,15 +249,15 @@ export function ReportBar({
 }: {
   view: ViewOptions;
   onView: (patch: Partial<ViewOptions>) => void;
-  /** Whether a comparison column is on show — the diff toggle needs one. */
+  /** Whether a comparison column is on show. The diff toggle needs one. */
   showComparison: boolean;
-  /** What the report is of — shown here once the panel is off screen. */
+  /** What the report is of, shown here once the panel is off screen. */
   summary: string;
   showSummary: boolean;
   onEditParameters: () => void;
   count: React.ReactNode;
   /**
-   * What you can do with the report — export it, print it.
+   * What you can do with the report: export it, print it.
    *
    * Here rather than in the page header, which says what you are looking at and
    * not what you can do to it (components/page-shell.tsx). It also means the
@@ -301,7 +305,7 @@ export function ReportBar({
           </Chip>
         )}
 
-        {/* Only once the panel has scrolled away — while it's on screen it
+        {/* Only once the panel has scrolled away. While it's on screen it
             already says all this, in full. Truncates rather than wraps: the
             bar's height is what the table headers stick beneath, so it has to
             stay one line however long the summary gets. */}

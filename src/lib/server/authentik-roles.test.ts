@@ -15,9 +15,9 @@ import {
 // deployment grants is not something a unit test can know. Two things still are,
 // and they are the two worth holding:
 //
-//   • the derivation — how a group list becomes roles and result units, which is
+//   • the derivation: how a group list becomes roles and result units, which is
 //     code and is what every sign-in runs;
-//   • the defaults — the state the section starts from, which is where every
+//   • the defaults: the state the section starts from, which is where every
 //     policy decision this file used to record still lives.
 //
 // So each case below is one of those, and the second kind reads exactly as it
@@ -41,7 +41,7 @@ describe("deriveGrants", () => {
 
   it("ignores a retired mandate", () => {
     // Upstream prefixes historic positions `old.`, which puts them outside the
-    // section test — a mandate that ended is not a mandate.
+    // section test. A mandate that ended is not a mandate.
     expect(roles(["old.dsek.infu.mastare"])).toEqual(["ORDINARIE"]);
   });
 
@@ -104,8 +104,8 @@ describe("deriveGrants", () => {
 
 // The half of the derivation that exists to be read by a person: which group
 // made somebody what they are. Its answers have to agree with `deriveGrants`
-// exactly — an explanation that disagrees with the grant it explains is worse
-// than none — which is why the two share a walk, and why the first case here
+// exactly. An explanation that disagrees with the grant it explains is worse
+// than none, which is why the two share a walk, and why the first case here
 // holds them against each other rather than against a literal.
 describe("explainGrants", () => {
   const why = (groups: string[] | undefined) => explainGrants(DEFAULTS, groups);
@@ -244,7 +244,7 @@ describe("sectionGroups", () => {
 // ── reapplyGrants ───────────────────────────────────────────────────
 //
 // The `tx` it takes is structurally typed, so the whole thing runs against a
-// fake here — which is the point: what is worth holding about this function is
+// fake here, which is the point: what is worth holding about this function is
 // not that Prisma works, it is *how many statements it takes to do its job* and
 // that it still only touches people who actually moved.
 //

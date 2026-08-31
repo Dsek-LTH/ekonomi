@@ -14,14 +14,14 @@ const CONTROL =
 // a filter bar or a table row. Sizes live here so those don't get re-typed.
 //
 // Exported because the combobox is one of these controls and used to carry its
-// own copy of the compact one — so a combobox beside a date input was six
+// own copy of the compact one, so a combobox beside a date input was six
 // pixels shorter than it and a different corner radius, in every form in the
 // app. Sharing the strings is what makes "the same size" true rather than
 // approximately true.
 export type ControlSize = "sm" | "md";
 type Size = ControlSize;
 // "sm" is two heights, not one. 36px is a density for a pointer, and it is what
-// every filter bar in the app was built at — on a phone that is a control you
+// every filter bar in the app was built at. On a phone that is a control you
 // aim at rather than one you hit, eight pixels under what both Apple and
 // Google ask for. So below sm it stands at 44 and from sm up it goes back to
 // the density a mouse earns.
@@ -31,7 +31,7 @@ type Size = ControlSize;
 // would be the row that no longer lines up.
 export const CONTROL_SIZES: Record<ControlSize, string> = {
   sm: "h-11 rounded-lg px-2.5 sm:h-9",
-  // No height of its own: md is sized by its padding, which puts it at 42px —
+  // No height of its own: md is sized by its padding, which puts it at 42px,
   // near enough to the 44 a finger wants that forcing it would only make every
   // form on a phone taller. The textarea shares this string and has no business
   // being 44px tall either.
@@ -52,7 +52,7 @@ function fieldContent(
         {label}
       </span>
       {children}
-      {/* What's wrong with what's typed replaces the standing hint — two lines
+      {/* What's wrong with what's typed replaces the standing hint. Two lines
           of small text under one control read as one sentence and neither
           lands. Same warning colour as the submit blocker on the last step. */}
       {error ? (
@@ -84,7 +84,7 @@ export function Field({
 // A label for a composite: a picker, a row of choice buttons, a whole sub-editor.
 //
 // Deliberately not a <label>. A <label> forwards a click anywhere in its box to
-// the first labelable element inside it — and <button> is labelable — so
+// the first labelable element inside it, and <button> is labelable, so
 // wrapping a Combobox (whose trigger is a button) meant clicking the empty space
 // beside or below it popped the menu open. Here the label only labels.
 export function FieldGroup({
@@ -110,8 +110,8 @@ export function Input({
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   size?: Size;
   // React 19 passes `ref` as an ordinary prop, so this needs declaring and
-  // nothing else. A screen that moves focus for you — the stock register hands
-  // it back and forth between a product and a count for a whole pallet — has to
+  // nothing else. A screen that moves focus for you (the stock register hands
+  // it back and forth between a product and a count for a whole pallet) has to
   // be able to reach the element.
   ref?: React.Ref<HTMLInputElement>;
 }) {
@@ -123,7 +123,7 @@ export function Input({
  * unit, or a button that fills the field in for you.
  *
  * Extracted from the strength field, which drew the box, the bare input and the
- * "%" by hand — and then the barcode field wanted the same shape for its
+ * "%" by hand, and then the barcode field wanted the same shape for its
  * scanner, which had been sitting *beside* the input as a separate control. Two
  * boxes in a row read as two things to fill in; one box with a button in the
  * corner reads as one field with a shortcut, which is what it is.
@@ -132,7 +132,7 @@ export function Input({
  * draws it on the box and suppresses the input's own (see globals.css), so
  * focusing the text does not outline half a field.
  *
- * `className` dresses the box, because the box is what the control looks like —
+ * `className` dresses the box, because the box is what the control looks like.
  * a suffix that is a button wants `pr-1` there so it can sit near the edge.
  * `inputClassName` is for the text itself (`tabular-nums`, an alignment).
  *
@@ -162,7 +162,7 @@ export function SuffixedInput({
         {...props}
         className={cn(
           // CONTROL's own placeholder rule is on the box, where `::placeholder`
-          // matches nothing — so it is restated on the element that has one.
+          // matches nothing, so it is restated on the element that has one.
           "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted/60",
           inputClassName,
         )}

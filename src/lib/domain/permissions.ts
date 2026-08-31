@@ -1,4 +1,4 @@
-// Central authority layer. Every gate in the app — nav, pages, API routes —
+// Central authority layer. Every gate in the app (nav, pages, API routes)
 // should call these helpers rather than testing roles or capabilities inline,
 // so the policy lives in one place.
 //
@@ -10,7 +10,7 @@
 //
 // Now the same question is one capability, and which roles hold it is a table
 // the treasurer edits (Inställningar → Roller, RoleCapability). So a helper is
-// a lookup, and this file's job is no longer to decide who may do what — it is
+// a lookup, and this file's job is no longer to decide who may do what. It is
 // to name the things that can be done, exactly once each, so that a call site
 // and a tickbox are talking about the same thing.
 //
@@ -25,7 +25,7 @@ const has = (caps: readonly Capability[], cap: Capability) => caps.includes(cap)
 //
 // One line each, and deliberately still one *name* each. `canUnexport` and
 // `canLogInToFortnox` happen to be granted to the same roles today and are two
-// questions all the same — the first of them to be given to somebody new should
+// questions all the same. The first of them to be given to somebody new should
 // not have to be untangled from the other at that point.
 
 /** Full authority over other people's utlägg. Woven into the attest rule. */
@@ -40,23 +40,23 @@ export const canBookkeep = canAccessBookkeeping;
 /** May send a wrongly-approved expense back for changes. */
 export const canReturnApproved = canAccessBookkeeping;
 
-/** Books in Fortnox under their own login — drives the Fortnox status on
+/** Books in Fortnox under their own login. Drives the Fortnox status on
  *  /profile. */
 export const canLogInToFortnox = (caps: readonly Capability[]) => has(caps, "FORTNOX_LOGIN");
 
 /** May mark an exported utlägg as no longer exported. Undoing an export only
- *  unwinds OUR record — the voucher stays in Fortnox — so it belongs to the
+ *  unwinds OUR record. The voucher stays in Fortnox, so it belongs to the
  *  people who can go clean that up. */
 export const canUnexport = (caps: readonly Capability[]) => has(caps, "EXPORT_UNDO");
 
-/** May reach Inställningar — and therefore edit authority itself, which is why
+/** May reach Inställningar, and therefore edit authority itself, which is why
  *  lib/server/capabilities.ts refuses to let the last holder go. */
 export const canAccessSettings = (caps: readonly Capability[]) => has(caps, "SETTINGS");
 
 // ── Alkohollager ──────────────────────────────────────────────────
 //
 // Keeping the lagerbokföring is not bookkeeping, and the people who do it are
-// not the people who book vouchers — so these are their own capabilities rather
+// not the people who book vouchers, so these are their own capabilities rather
 // than a corner of BOOKKEEPING.
 
 /** Read the stock overview and the log. */
@@ -68,8 +68,8 @@ export const canManageStock = (caps: readonly Capability[]) => has(caps, "STOCK_
 
 // ── Budget ────────────────────────────────────────────────────────
 
-/** May see the budget pages. Granted to every role by default — the budget is
- *  the section's, not the treasury's — but it is a row now, so it can be
+/** May see the budget pages. Granted to every role by default. The budget is
+ *  the section's, not the treasury's, but it is a row now, so it can be
  *  narrowed without a deploy. */
 export const canAccessBudget = (caps: readonly Capability[]) => has(caps, "BUDGET_VIEW");
 
@@ -80,15 +80,15 @@ export const canCommentBudget = (caps: readonly Capability[]) => has(caps, "BUDG
  *  thing than editing them. */
 export const canLockBudget = (caps: readonly Capability[]) => has(caps, "BUDGET_LOCK");
 
-/** May record a redaktionell ändring — ett budgetavsteg eller en
- *  budgetförflyttning — on a locked budget. Whoever seals the adopted figures
+/** May record a redaktionell ändring: ett budgetavsteg eller en
+ *  budgetförflyttning, on a locked budget. Whoever seals the adopted figures
  *  is who may depart from them, which is why this is its own capability and not
  *  a corner of BUDGET_LOCK. */
 export const canChangeLockedBudget = (caps: readonly Capability[]) =>
   has(caps, "BUDGET_CHANGE_LOCKED");
 
 /** May see the attest queue. Whether any single utlägg in it can actually be
- *  attested is `canAttestAllocation`'s answer, per row — this only decides
+ *  attested is `canAttestAllocation`'s answer, per row. This only decides
  *  whether the view exists. */
 export const hasAttestRole = (caps: readonly Capability[]) => has(caps, "ATTEST_VIEW");
 
@@ -121,7 +121,7 @@ const isOrdinarie = (submitterRoles: readonly Role[]) =>
 
 // Whether `actor` may attest (and thereby also reject / request changes on) one
 // allocation of an expense. All inputs are explicit so this stays a pure
-// function — callers gather ownerships / submitter roles from the DB.
+// function. Callers gather ownerships / submitter roles from the DB.
 export function canAttestAllocation(args: {
   actorCapabilities: readonly Capability[];
   actorRoles: readonly Role[];
@@ -156,7 +156,7 @@ export function canAttestAllocation(args: {
 
 // ── Vocabulary ────────────────────────────────────────────────────
 // Every role, in the order they're listed in the UI. The display names are
-// translations — `common.role.<ROLE>` in messages/*.json.
+// translations: `common.role.<ROLE>` in messages/*.json.
 export const ROLES: readonly Role[] = [
   "SKATTMASTARE",
   "ORDFORANDE",
@@ -168,17 +168,17 @@ export const ROLES: readonly Role[] = [
 ];
 
 // ORDINARIE is the baseline every member holds (User.roles defaults to it), so
-// it says nothing about a person. These are the roles worth managing — the
+// it says nothing about a person. These are the roles worth managing. The
 // settings view lists holders per role rather than listing every member.
 export const ASSIGNABLE_ROLES: readonly Role[] = ROLES.filter((r) => r !== "ORDINARIE");
 
 // Every capability, in the order the grid in Inställningar → Roller draws them:
 // the ones that open a whole section of the app first, the finer grants after.
-// Names are translations — `common.capability.<CAP>` in messages/*.json.
+// Names are translations: `common.capability.<CAP>` in messages/*.json.
 //
 // Written as a keyed object rather than a list so the compiler requires all of
 // them. A capability added to the union and forgotten here would be one the grid
-// never draws — a permission nobody could ever grant, and nothing would say so.
+// never draws, a permission nobody could ever grant, and nothing would say so.
 const CAPABILITY_ORDER = {
   ADMIN: 0,
   SETTINGS: 1,

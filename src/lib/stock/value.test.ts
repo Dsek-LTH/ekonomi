@@ -23,7 +23,7 @@ describe("costOfRemoval", () => {
       qty -= 329;
       valueOre -= cost;
     }
-    // Still the same unit cost twelve withdrawals later — no drift.
+    // Still the same unit cost twelve withdrawals later. No drift.
     expect(unitCostOre({ qty, valueOre })).toBeCloseTo(35.5714, 3);
 
     const last = costOfRemoval({ qty, valueOre }, qty);
@@ -32,7 +32,7 @@ describe("costOfRemoval", () => {
   });
 
   it("takes the whole value when more is removed than is held", () => {
-    // Which is a mistake somewhere else — but it must not leave a residue of
+    // Which is a mistake somewhere else, but it must not leave a residue of
     // öre behind a quantity of nothing.
     expect(costOfRemoval(held, 99_999)).toBe(149_400);
   });
@@ -51,7 +51,7 @@ describe("costOfRemoval", () => {
 
   it("blends a second delivery into what is left, not into what was bought", () => {
     // Half the first delivery is gone, then three bottles at 269 kr arrive. The
-    // new average is weighted by the 2 100 ml still on the shelf — weighting it
+    // new average is weighted by the 2 100 ml still on the shelf. Weighting it
     // by the original 4 200 would price the stock at a quantity that has not
     // existed for weeks.
     const cost = costOfRemoval(held, 2100);
@@ -93,8 +93,8 @@ describe("purchaseValueOre", () => {
   });
 
   it("values a delivery of an unpriced product at nothing rather than guessing", () => {
-    // A gap that shows up as a gap — a shelf worth nothing when it plainly is
-    // not — instead of a total quietly built on an invented price.
+    // A gap that shows up as a gap (a shelf worth nothing when it plainly is
+    // not) instead of a total quietly built on an invented price.
     expect(purchaseValueOre(6, null)).toBe(0);
   });
 
@@ -172,7 +172,7 @@ describe("revalue", () => {
 
   it("blends two deliveries at different prices", () => {
     // Ten at 10 kr and ten at 20 kr is twenty bottles worth 300 kr, so one
-    // leaving costs 15 kr — the moving average, not either price.
+    // leaving costs 15 kr, the moving average, not either price.
     const out = revalue(
       [row("a", "PURCHASE", 10), row("b", "PURCHASE", 10), row("c", "CHECKOUT", -1)],
       1000,

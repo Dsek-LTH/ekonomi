@@ -6,7 +6,7 @@
 // what was on hand; Lagerprodukter listed the same products, searchable, and
 // carried the actions. Two answers to "what have we got" is a pair that drifts,
 // and the moment a product got a page of its own the split had nothing left to
-// justify it — so they are one list now, and what you do to a product you do on
+// justify it, so they are one list now, and what you do to a product you do on
 // the product.
 //
 // A list, not a dashboard: search, the drink type as a filter, and a row that
@@ -46,7 +46,7 @@ export default function StockClient({
   levels: StockLevelDto[];
   /** The day the figures are as of, when it is not today. */
   asOf?: string;
-  /** Today, in Stockholm, decided by the server — see the page. */
+  /** Today, in Stockholm, decided by the server. See the page. */
   today: string;
   canManage: boolean;
 }) {
@@ -56,11 +56,11 @@ export default function StockClient({
   const [adding, setAdding] = useState(false);
 
   /**
-   * The date lives in the URL, not in state — see the page.
+   * The date lives in the URL, not in state. See the page.
    *
    * Today carries no parameter. The field always shows a day, because a date
    * box reading nothing invites the question "as of when, then?", but asking
-   * for today is asking for the ordinary page — so the address stays clean, the
+   * for today is asking for the ordinary page, so the address stays clean, the
    * query stays unfiltered, and the notice about looking at the past does not
    * fire for the present.
    */
@@ -94,7 +94,7 @@ export default function StockClient({
       ),
     },
     {
-      // What one of them holds — a bottle's nominal size or a can's, whichever
+      // What one of them holds: a bottle's nominal size or a can's, whichever
       // the product is counted in. Not the same question as the litres column
       // further right: that one is the shelf, this one is the thing on it, and
       // it is the column somebody scanning the list for "the 33 or the 50"
@@ -109,7 +109,7 @@ export default function StockClient({
       mobile: "meta",
       cell: (p) => {
         const ml = unitVolume(p);
-        return ml == null ? <span className="text-muted">—</span> : t("ml", { ml });
+        return ml == null ? <span className="text-muted">–</span> : t("ml", { ml });
       },
     },
     {
@@ -146,7 +146,7 @@ export default function StockClient({
       mobile: "hide",
       cell: (p) =>
         p.onHand.totalMl == null ? (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ) : (
           t("litres", { litres: litres(p.onHand.totalMl) })
         ),
@@ -162,7 +162,7 @@ export default function StockClient({
       // somebody opened this for.
       mobile: "trailing",
       cell: (p) =>
-        p.onHand.valueOre > 0 ? kr(p.onHand.valueOre) : <span className="text-muted">—</span>,
+        p.onHand.valueOre > 0 ? kr(p.onHand.valueOre) : <span className="text-muted">–</span>,
     },
     {
       key: "flags",
@@ -186,12 +186,12 @@ export default function StockClient({
           subtitle={t("counts.products", { count: levels.length })}
           action={
             // The figure the page exists to produce, given its own corner
-            // rather than a clause at the end of a subtitle — and the date it
+            // rather than a clause at the end of a subtitle, and the date it
             // is true on standing next to it, because a stock value with no day
             // attached is only meaningful while you are looking at it.
             // A caption over a body of the same height in both, so the two
             // labels sit on one line and the figure sits level with the field
-            // beside it. The height is the sm control's, from CONTROL_SIZES —
+            // beside it. The height is the sm control's, from CONTROL_SIZES,
             // 44px on a phone and 36 from sm up, stated in both bands here so
             // the pair cannot drift apart.
             <div className="flex items-start gap-4">

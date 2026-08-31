@@ -53,7 +53,7 @@ const ENTRY = {
   occurredAt: true,
   createdAt: true,
   note: true,
-  tagId: true,
+  eventId: true,
 } as const;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -68,7 +68,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!entry) return fail(404, "stock.entryNotFound");
   // A night's figures are the sheet's business, and it has its own rules about
   // what may go in a cell.
-  if (entry.tagId) return fail(422, "stock.onTheSheet");
+  if (entry.eventId) return fail(422, "stock.onTheSheet");
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },
@@ -156,7 +156,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const entry = await prisma.stockEntry.findUnique({ where: { id }, select: ENTRY });
   if (!entry) return fail(404, "stock.entryNotFound");
-  if (entry.tagId) return fail(422, "stock.onTheSheet");
+  if (entry.eventId) return fail(422, "stock.onTheSheet");
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },

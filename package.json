@@ -23,6 +23,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "receipts:gc": "tsx prisma/gc-receipts.ts",
     "db:parse-budget": "python3 prisma/import/parse-budget.py",
+    "budget:to-csv": "python3 prisma/import/xlsx-to-budget-csv.py",
     "db:import-budget": "tsx prisma/import/import-budget.ts",
     "db:import-income-config": "tsx prisma/import/import-income-config.ts",
     "fortnox:sync": "tsx prisma/sync-fortnox.ts",

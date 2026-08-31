@@ -1,5 +1,5 @@
-// Imports intakt's routing table — which product prefix belongs to which
-// committee and books to which account — out of its config.yaml and into the
+// Imports intakt's routing table: which product prefix belongs to which
+// committee and books to which account, out of its config.yaml and into the
 // database.
 //
 // This is a migration, not a sync. Until now the table lived in a YAML file on
@@ -13,7 +13,7 @@
 //
 // Re-runnable: committees and prefixes are upserted by their natural keys, so
 // running it twice changes nothing and running it after editing the YAML brings
-// the changes across. It does not delete — a committee removed from the file is
+// the changes across. It does not delete. A committee removed from the file is
 // left alone rather than taking its reports with it.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { readFileSync } from "node:fs";
@@ -29,7 +29,7 @@ const prisma = new PrismaClient({
 });
 
 // The shape intakt's config.Config serialises to. Only the parts that move into
-// the database are described — out_path, attestation and the fortnox block stay
+// the database are described. out_path, attestation and the fortnox block stay
 // behind with the CLI, since the app has its own answers for all three.
 interface YamlPrefix {
   name: string; // committee key
@@ -47,7 +47,7 @@ interface IntaktConfig {
 }
 
 // Which prefix catches products matching nothing. intakt hard-coded this to
-// "sk" — see the `fallback` in report/purchases.go — so that is what the import
+// "sk". See the `fallback` in report/purchases.go. So that is what the import
 // carries across, and it becomes an editable flag rather than a constant.
 const FALLBACK_PREFIX = "sk";
 
@@ -84,8 +84,8 @@ async function main() {
 
   // Cost centres are matched by code against what the app already has, which is
   // mirrored from Fortnox. A committee naming one that does not exist is not
-  // fatal — it imports without a default, and the treasurer picks one per
-  // report — but it is worth saying, since silently dropping it would look like
+  // fatal, it imports without a default, and the treasurer picks one per
+  // report, but it is worth saying, since silently dropping it would look like
   // the setting had been imported.
   const codes = [...new Set(Object.values(committees).map((c) => c.default_cost_center).filter((c) => typeof c === "string"))];
   const found = await prisma.costCenter.findMany({
@@ -96,8 +96,8 @@ async function main() {
   const unresolved = (codes as string[]).filter((code) => !costCentreIdByCode.has(code));
 
   // Committees whose profile here is filed under a different key than the YAML
-  // uses. Not an error — the app is the source of the routing table intakt is
-  // handed — but the treasurer should see that the two spellings met.
+  // uses. Not an error. The app is the source of the routing table intakt is
+  // handed, but the treasurer should see that the two spellings met.
   const renamed: { yaml: string; here: string; name: string }[] = [];
 
   console.log(`Importing from ${path}`);
@@ -125,7 +125,7 @@ async function main() {
 
     // Matched by unit, not by key. A unit given income settings in the app has
     // a key derived from its name (incomeKeyFromName), which is not the short
-    // key the YAML uses — upserting on the key would try to create a second
+    // key the YAML uses. Upserting on the key would try to create a second
     // profile for a unit that already has one, and resultUnitId is unique. The
     // existing key wins: it is what the app has already handed intakt, and the
     // app serialises the routing table out of here (lib/income/config.ts), so
@@ -168,7 +168,7 @@ async function main() {
 
   for (const [code, prefix] of Object.entries(prefixes)) {
     const incomeId = incomeIdByKey.get(prefix.name);
-    if (!incomeId) fail(`Verksamhet "${prefix.name}" was not imported — this should not happen.`);
+    if (!incomeId) fail(`Verksamhet "${prefix.name}" was not imported, this should not happen.`);
 
     const normalised = code.trim().toLowerCase();
     await prisma.incomeProductPrefix.upsert({
@@ -219,7 +219,7 @@ async function main() {
   if (renamed.length > 0) {
     console.log(
       `\n  These verksamheter already had income settings, under a different key than the YAML's.` +
-        `\n  The existing key was kept — it is the one intakt has been given:`,
+        `\n  The existing key was kept, it is the one intakt has been given:`,
     );
     for (const r of renamed) console.log(`    ${r.name.padEnd(24)} ${r.yaml} → kept "${r.here}"`);
   }

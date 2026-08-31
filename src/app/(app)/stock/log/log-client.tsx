@@ -4,15 +4,15 @@
 //
 // This is the screen an inspection is shown and the screen anybody opens when a
 // figure looks wrong, so it says more than a list normally would. Both dates
-// are on the row — the day it happened and the day it was written down —
+// are on the row: the day it happened and the day it was written down,
 // because the gap between them is exactly what gets asked about, and a row that
 // showed only one could not answer it.
 //
 // Read-only, and that is a decision rather than an omission. Registering used
 // to happen here, in a panel above the rows, from a sheet that carried its own
-// copy of which occasion and which direction it was for. All of that now lives
-// on the occasion itself (/stock/tags/[id]), where the three directions are
-// three columns of one grid and the occasion is the page rather than a picker —
+// copy of which event and which direction it was for. All of that now lives
+// on the event itself (/stock/events/[id]), where the three directions are
+// three columns of one grid and the event is the page rather than a picker,
 // and a delivery or a stocktake belongs to a product rather than to a night, so
 // those live on the product. Two ways to write the same movement is a pair that
 // drifts.
@@ -83,7 +83,7 @@ export default function StockLogClient({
   filter: {
     productIds: string[];
     kinds: StockEntryKind[];
-    tagId?: string;
+    eventId?: string;
     from?: string;
     to?: string;
   };
@@ -92,7 +92,7 @@ export default function StockLogClient({
   const router = useRouter();
   const params = useSearchParams();
   const controls = useTableControls();
-  // Opens every night's breakdown at once — an inspection, or somebody
+  // Opens every night's breakdown at once: an inspection, or somebody
   // reconciling a night by hand. The chevrons answer "what is this line made
   // of"; this answers it for all of them without asking row by row.
   const [showRevisions, setShowRevisions] = useState(false);
@@ -113,9 +113,9 @@ export default function StockLogClient({
   const setMany = (key: string, values: string[]) => setParam(key, values.join(","));
 
   // On a phone a movement is "what, when, how much" and a chevron; the rung
-  // breakdown, the occasion, who booked it and the note are all `hide`. They
-  // are not less true there — the log is the screen an inspection is answered
-  // from — but seven labelled lines per row is the table transposed, which is
+  // breakdown, the event, who booked it and the note are all `hide`. They
+  // are not less true there. The log is the screen an inspection is answered
+  // from, but seven labelled lines per row is the table transposed, which is
   // the one shape a narrow screen reads worst. They are a tap away, under the
   // chevron or on the product.
   const columns: Column<StockLogRowDto>[] = [
@@ -160,7 +160,7 @@ export default function StockLogClient({
       searchable: true,
       mobile: "meta",
       // A night's line covers up to three directions at once, so it is named
-      // by the occasion instead. What it is made of is under the chevron.
+      // by the event instead. What it is made of is under the chevron.
       cell: (r) =>
         r.kind ? (
           t(`kind.${r.kind}`)
@@ -175,13 +175,13 @@ export default function StockLogClient({
       className: "tabular-nums",
       mobile: "meta",
       // A spill's count lives in its own column, because it must not move the
-      // shelf — but it is still a quantity that went somewhere, and a breakage
+      // shelf, but it is still a quantity that went somewhere, and a breakage
       // that showed a dash in every column was a row this screen could not
       // explain to an inspection.
       cell: (r) => {
         const n = r.kind === "WASTE" ? -r.spilledQty : r.units;
         return n === 0 ? (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ) : (
           <span className={toneFor(n)}>{signed(n)}</span>
         );
@@ -195,7 +195,7 @@ export default function StockLogClient({
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       mobile: "hide",
-      cell: (r) => levelSummary(r.open) || <span className="text-muted">—</span>,
+      cell: (r) => levelSummary(r.open) || <span className="text-muted">–</span>,
     },
     {
       key: "value",
@@ -205,25 +205,25 @@ export default function StockLogClient({
       mobile: "trailing",
       cell: (r) =>
         r.valueDeltaOre === 0 ? (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ) : (
           <span className={toneFor(r.valueDeltaOre)}>{kr(r.valueDeltaOre)}</span>
         ),
     },
     {
-      key: "tag",
-      header: t("log.col.tag"),
+      key: "event",
+      header: t("log.col.event"),
       value: (r) => r.tagName ?? "",
       sortable: true,
       searchable: true,
       mobile: "hide",
       cell: (r) =>
-        r.tagId ? (
-          <Link href={`/stock/tags/${r.tagId}`} className="hover:underline">
+        r.eventId ? (
+          <Link href={`/stock/events/${r.eventId}`} className="hover:underline">
             {r.tagName}
           </Link>
         ) : (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ),
     },
     {
@@ -282,7 +282,7 @@ export default function StockLogClient({
               </span>
               {/* Several at a time. Narrowing a log is usually a matter of
                   picking the two beers that matter, or everything except
-                  stocktakes — which a one-at-a-time picker turns into as many
+                  stocktakes, which a one-at-a-time picker turns into as many
                   passes as there are things you care about. */}
               <div className="min-w-[12rem]">
                 <MultiCombobox
@@ -357,7 +357,7 @@ function DateFilter({
   onCommit: (value: string) => void;
 }) {
   const [typed, setTyped] = useState(value);
-  // A date arriving from the URL — the back button, a shared link — wins over
+  // A date arriving from the URL (the back button, a shared link) wins over
   // what is half-typed here, which is nothing anybody would miss. During the
   // render rather than in an effect, so the field is never once painted with
   // the previous filter's date.
@@ -388,12 +388,12 @@ function DateFilter({
 /**
  * What a night's line is made of.
  *
- * The line above says what the product did across the whole occasion, which is
- * what somebody glancing at the log wants. This is the movements behind it —
- * out, back, spilled, and for a spirit which rung each was — because that is
+ * The line above says what the product did across the whole event, which is
+ * what somebody glancing at the log wants. This is the movements behind it,
+ * out, back, spilled, and for a spirit which rung each was, because that is
  * what somebody who stopped to look is asking.
  *
- * Who did any of it is not here on purpose. That is the occasion's own feed,
+ * Who did any of it is not here on purpose. That is the event's own feed,
  * where a night reads in order rather than a product at a time.
  */
 function Parts({ row }: { row: StockLogRowDto }) {
@@ -411,8 +411,8 @@ function Parts({ row }: { row: StockLogRowDto }) {
           <span className="w-20 shrink-0 text-muted">
             {row.productKind === "VOLUME"
               ? part.level === 0
-                ? t("tag.level.sealed")
-                : t("tag.level.rung", { level: part.level })
+                ? t("event.level.sealed")
+                : t("event.level.rung", { level: part.level })
               : ""}
           </span>
           <span className="tabular-nums">{part.qty}</span>

@@ -2,8 +2,8 @@
 
 // A field you type money into.
 //
-// Every amount field in the app repeated the same three lines — `inputMode`,
-// the `isAmountInput` guard, and a raw string of kronor — and every one of them
+// Every amount field in the app repeated the same three lines (`inputMode`,
+// the `isAmountInput` guard, and a raw string of kronor) and every one of them
 // had the same two holes on a phone, which is where most utlägg are actually
 // filed:
 //
@@ -13,15 +13,15 @@
 //     then sat there reading "12.50" in a form where everything else is written
 //     with a comma. It is taken as typed and shown back as a comma on blur.
 //
-//   • the minus. No mobile numeric keypad has one — not iOS's, not Android's,
-//     at any `inputMode` — so a negative amount could not be entered on a phone
+//   • the minus. No mobile numeric keypad has one, not iOS's, not Android's,
+//     at any `inputMode`, so a negative amount could not be entered on a phone
 //     at all. A return is an ordinary thing here (the same utlägg with the sign
 //     flipped, which the edit route and the allocations both handle), so where
 //     one is meaningful the sign gets a button rather than being unreachable.
 //
 // Not `type="number"`: it drops a lone leading "-" from `.value`, refuses
 // "1 234,50", and hands back a locale-dependent empty string for anything it
-// dislikes — so a half-typed amount vanishes as you type it.
+// dislikes, so a half-typed amount vanishes as you type it.
 import { commaForm, isAmountInput } from "@/lib/domain/money";
 import { Input, type ControlSize } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
@@ -29,8 +29,8 @@ import { cn } from "@/lib/ui/utils";
 /**
  * The props any amount field needs, for an input that draws itself.
  *
- * For the ones inside a table — the voucher's debit and credit columns, an
- * allocation row — which carry their own classes and cannot be a boxed control.
+ * For the ones inside a table (the voucher's debit and credit columns, an
+ * allocation row) which carry their own classes and cannot be a boxed control.
  * Spread it over a bare `<input>` and the guard, the keypad and the separator
  * all come with it.
  */
@@ -65,7 +65,7 @@ export function amountFieldProps({
  *
  * The border, the rounding and the height belong to the box; the padding
  * belongs to the parts inside it. So the sizes are split here rather than taken
- * whole — a control that put `px` on the wrapper would inset its own segments.
+ * whole. A control that put `px` on the wrapper would inset its own segments.
  */
 const SPLIT_SIZES: Record<ControlSize, { box: string; cell: string }> = {
   sm: { box: "h-11 rounded-lg sm:h-9", cell: "px-2.5" },
@@ -76,20 +76,20 @@ const SPLIT_SIZES: Record<ControlSize, { box: string; cell: string }> = {
  * An amount whose sign is a part of the field rather than a character in it.
  *
  * The sign was a minus typed into the box, and on a phone that is not something
- * anybody can do — no mobile numeric keypad has the key. So it stops being text
+ * anybody can do. No mobile numeric keypad has the key. So it stops being text
  * at all: the field is split, the left cell holds the sign and cannot be typed
  * in, and the digits beside it are only ever a magnitude. Pressing the cell is
  * the only way the sign changes, which also means the guard on the text no
  * longer has to allow a character the keypad cannot produce.
  *
- * The value handed up is still the ordinary signed string — "-1234,50" — since
+ * The value handed up is still the ordinary signed string, "-1234,50", since
  * that is what `parseSEK` reads and what every caller stores. The split is what
  * the reader sees, not what the form holds.
  *
  * `label` is the word beside the glyph, and it is the difference between the
  * two places this is used. The utlägg's own total says "Retur", because that is
  * what a negative total *is* and the field has room to say it. A row of the
- * distribution underneath says nothing — it is one line of a sum, its sign
+ * distribution underneath says nothing. It is one line of a sum, its sign
  * decides whether it adds or subtracts, and five controls already share that
  * row. Same control, and the word only where it is the whole meaning.
  */
@@ -140,7 +140,7 @@ export function SignedAmountInput({
     >
       {/* No `aria-label`: with a word on it the button says what it is, and a
           label reading "Växla till negativt belopp" over a face reading "Retur"
-          is the mismatch WCAG 2.5.3 is about — someone driving this by voice
+          is the mismatch WCAG 2.5.3 is about. Someone driving this by voice
           says what they can see. Without a word there is nothing to read, so
           the title carries the name instead. `aria-pressed` has the state
           either way. */}
@@ -185,8 +185,8 @@ export function SignedAmountInput({
  * The plain amount field, for the amounts that cannot be negative.
  *
  * A voucher line is a positive figure on one side or the other, and a schablon
- * is not a debt. Where a return is a real case — an utlägg's total and the rows
- * it is split across — the caller reaches for SignedAmountInput instead.
+ * is not a debt. Where a return is a real case, an utlägg's total and the rows
+ * it is split across, the caller reaches for SignedAmountInput instead.
  */
 export function AmountInput({
   value,

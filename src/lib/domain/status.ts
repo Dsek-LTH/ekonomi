@@ -3,8 +3,8 @@ import type { ExpenseStatus, PaymentType } from "@/lib/domain/types";
 
 // How long a member has to hand in an utlägg they paid out of their own pocket,
 // counted from the day of the purchase and inclusive: a receipt 60 days old is
-// still in time, 61 days is not. Later than that the section won't reimburse it
-// — the money left someone's own account, and a claim that old can no longer be
+// still in time, 61 days is not. Later than that the section won't reimburse
+// it. The money left someone's own account, and a claim that old can no longer be
 // checked against the period it belongs to.
 //
 // Only "eget utlägg". A sektionskort purchase is already the section's own money
@@ -12,7 +12,7 @@ import type { ExpenseStatus, PaymentType } from "@/lib/domain/types";
 // anyone accounts for it or not, so a late one still has to be accounted for.
 //
 // Milersättning counts as one. The claimant's own petrol, out of the claimant's
-// own account, and there is nothing on any statement to say it happened — so a
+// own account, and there is nothing on any statement to say it happened, so a
 // stale one is exactly as uncheckable as a stale receipt. For a claim of
 // several journeys the day counted from is the latest of them; see
 // lib/mileage/claim.ts.
@@ -40,19 +40,19 @@ export function isLateReimbursement(
 type SubmitCandidate = {
   title: string;
   purchaseDate: string;
-  grossAmount: number; // SEK — negative for a return
+  grossAmount: number; // SEK, negative for a return
   paymentType: PaymentType;
   matchedTransactionId?: string;
   submitterHasPayout: boolean;
   /**
-   * Whether there is a receipt — the underlag the whole utlägg rests on, see
+   * Whether there is a receipt, the underlag the whole utlägg rests on. See
    * below. Not its id: the wizard holds the picked file in the browser until
    * the utlägg is saved, so for most of the time this question is asked there
    * is a receipt and nothing has an id for it yet.
    */
   hasReceipt: boolean;
   /**
-   * For a milersättning, why its journey cannot be sent yet — the answer
+   * For a milersättning, why its journey cannot be sent yet. The answer
    * `claimBlocker` gave (lib/mileage/claim.ts), or null when the two odometer
    * readings are in order. Undefined for every other payment type, which has
    * no journey.
@@ -83,12 +83,12 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
   // First, ahead of everything the submitter could still fix: past the filing
   // deadline there is nothing to fix, and sending them off to fill in a payout
   // account or upload a receipt for a claim that can't be taken is worse than
-  // useless. Safe this early — it wants a whole date and checks for one itself.
+  // useless. Safe this early, since it wants a whole date and checks for one itself.
   if (isLateReimbursement(e.purchaseDate, e.paymentType)) return "tooLate";
   if (e.paymentType === "CARD" && !e.matchedTransactionId) return "match";
   if (isOutOfPocket(e.paymentType) && !e.submitterHasPayout) return "payout";
-  // A milersättning has no receipt to ask for — the journey it rests on is
-  // typeset onto its utläggsräkning from the odometer readings — so what stands
+  // A milersättning has no receipt to ask for, because the journey it rests on
+  // is typeset onto its utläggsräkning from the odometer readings, so what stands
   // where the receipt check stands is whether those readings describe a journey
   // that can be priced. Named apart from "incomplete" for
   // the same reason "receipt" is: what to go and fix is a different field from
@@ -97,13 +97,13 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
     if (e.mileageBlocker) return "mileage";
   } else if (!e.hasReceipt) {
     // An utlägg is a claim on the section's money, and the receipt is the only
-    // evidence it happened — bokföringslagen wants that underlag kept, and an
+    // evidence it happened. Bokföringslagen wants that underlag kept, and an
     // attester has nothing to attest without it. Named separately from the
     // rest of the missing details because it's the one that can't be typed in.
     return "receipt";
   }
   // A return is a negative amount, so the amount is only missing when it's zero
-  // (or not a number at all) — `!` covers both.
+  // (or not a number at all), and `!` covers both.
   // A half-typed date ("2026", "2026-07") counts as missing, not as a date:
   // it isn't the day anything was bought.
   if (!e.title.trim() || !isCompleteDate(e.purchaseDate) || !e.grossAmount) return "incomplete";
@@ -119,7 +119,7 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
 }
 
 // What to tell the submitter for each blocker lives in messages, under
-// `expenses.submitBlocker.<blocker>` — `domain/` stays language-neutral.
+// `expenses.submitBlocker.<blocker>`, because `domain/` stays language-neutral.
 
 // Single source of truth for how each status looks and reads.
 // StatusPill and every other surface pull labels/colours from here so
@@ -130,14 +130,14 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
  *
  * Not while it is out for attest. A claim in somebody's queue is a claim they
  * are being asked to put their name to, and it has to hold still while they
- * read it — an amount or a cost centre that can change under an attester means
+ * read it. An amount or a cost centre that can change under an attester means
  * a signature that says something other than what was signed. PENDING_APPROVAL
  * was on this list, so it could.
  *
  * The way back is `recall`: the submitter takes the whole claim out of the
  * queue, it becomes a draft again, and it is theirs to change. That is one act
  * somebody performs on purpose rather than an edit nobody is told about, and it
- * clears the signatures already given — which is exactly the honesty an edit in
+ * clears the signatures already given, which is exactly the honesty an edit in
  * place was quietly skipping.
  *
  * The same set as SUBMITTABLE_STATUSES today, and they are still two lists:
@@ -146,7 +146,7 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
  * answer both at once by accident.
  *
  * Used by the detail page, the edit page, the receipt upload and the PATCH
- * route — one rule, so closing it closes all four.
+ * route. One rule, so closing it closes all four.
  */
 export const EDITABLE_STATUSES: ExpenseStatus[] = [
   "DRAFT",
@@ -167,13 +167,13 @@ export const SUBMITTABLE_STATUSES: ExpenseStatus[] = [
 
 export const isSubmittable = (status: string): boolean => SUBMITTABLE_STATUSES.includes(status as ExpenseStatus);
 
-// "Attested or further" — once here, only an admin may delete the utlägg.
+// "Attested or further": once here, only an admin may delete the utlägg.
 export const SIGNED_STATUSES: ExpenseStatus[] = ["APPROVED", "BOOKED", "EXPORTED"];
 
 export const isSigned = (status: string): boolean => SIGNED_STATUSES.includes(status as ExpenseStatus);
 
-// An attester may pull their own attest back until the utlägg is bokfört —
-// after that the voucher exists and only bookkeeping can unwind it.
+// An attester may pull their own attest back until the utlägg is bokfört.
+// After that the voucher exists and only bookkeeping can unwind it.
 // Withdrawing from APPROVED drops the utlägg back to PENDING_APPROVAL.
 const ATTEST_WITHDRAWABLE_STATUSES: ExpenseStatus[] = ["PENDING_APPROVAL", "APPROVED"];
 
@@ -185,7 +185,7 @@ export const isAttestWithdrawable = (status: string): boolean =>
  *
  * Only while it is waiting. A claim that is fully attested has been agreed to
  * by somebody, and pulling it back is a bookkeeping decision rather than the
- * submitter's — that is `return_approved`, and it belongs to the people who
+ * submitter's. That is `return_approved`, and it belongs to the people who
  * would have to unwind the voucher. CHANGES_REQUESTED is already back in the
  * submitter's hands and has nothing to withdraw from.
  *
@@ -200,7 +200,7 @@ export const isPendingApproval = (status: string): boolean => status as ExpenseS
 
 // An utlägg that has left the submitter's hands: waiting for attest, or
 // attested and beyond. This is exactly the union the two tabs on the attest
-// page show, and so exactly what its "Alla" view means — the whole section's
+// page show, and so exactly what its "Alla" view means: the whole section's
 // attest queue, rather than everything that happens to exist. A DRAFT nobody
 // has sent yet is not part of anyone's queue.
 export const isInAttestChain = (status: string): boolean =>
@@ -222,13 +222,13 @@ export const EXPENSE_STATUSES: readonly ExpenseStatus[] = [
 
 type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "danger";
 
-// How each status reads visually. The label itself is a translation —
-// `common.status.<STATUS>` in messages/*.json — so this stays language-neutral.
+// How each status reads visually. The label itself is a translation,
+// `common.status.<STATUS>` in messages/*.json, so this stays language-neutral.
 //
 // Six statuses, six meanings, one colour each:
 //   neutral  nobody is waiting on anything yet
 //   warning  waiting on YOU, the submitter
-//   purple   waiting on the authority chain — an attestant has it
+//   purple   waiting on the authority chain: an attestant has it
 //   danger   it came back; something is wrong
 //   success  settled
 //   accent   the treasury has taken it over
@@ -247,7 +247,7 @@ export const STATUS_TONE: Record<ExpenseStatus, Tone> = {
 };
 
 // Every tone here resolves to a real token. BOOKED used to be a "pink" tone
-// pointing at `bg-pink-soft text-pink`, which was never defined anywhere — the
+// pointing at `bg-pink-soft text-pink`, which was never defined anywhere, so the
 // pill rendered with no fill and inherited text.
 export const TONE_CLASSES: Record<Tone, string> = {
   neutral: "bg-surface text-muted",
@@ -263,5 +263,5 @@ export const TONE_CLASSES: Record<Tone, string> = {
 //
 // Milersättning last, and offered to everyone: it is the least common of the
 // three, and the only one that takes you to a different form rather than
-// changing the shape of this one — see the wizard's first step.
+// changing the shape of this one. See the wizard's first step.
 export const PAYMENT_TYPES: readonly PaymentType[] = ["CARD", "REIMBURSEMENT", "MILEAGE"];

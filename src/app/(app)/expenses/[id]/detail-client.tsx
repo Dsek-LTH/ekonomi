@@ -70,7 +70,7 @@ function ExpenseDetail({
   fortnox,
 }: {
   expense: Expense;
-  /** Decided on the server — see expenseCapabilities. */
+  /** Decided on the server. See expenseCapabilities. */
   can: ExpenseCapabilities;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
@@ -79,14 +79,14 @@ function ExpenseDetail({
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
-  const documents = expenseDocuments(expense, `${tReceipt("alt")} · ${expense.title}`);
+  const documents = expenseDocuments(expense, `${tReceipt("alt")} – ${expense.title}`);
 
   return (
     <PageShell
       width="content"
       title={expense.title}
       // Before it is submitted there is no reference to show, and the status
-      // pill below already says so — the name alone, not a gap where a number
+      // pill below already says so, the name alone, not a gap where a number
       // would be.
       subtitle={
         expense.reference
@@ -96,19 +96,19 @@ function ExpenseDetail({
       description={<StatusPill status={expense.status} />}
       back={{ href: "/expenses", label: tNav("expenses") }}
     >
-      {/* The receipt is the app's panel now, not a card in this page — the page
+      {/* The receipt is the app's panel now, not a card in this page. The page
           declares it and the shell stands it beside all of this, full height.
 
-          Two documents, not one: the utläggsräkning — the cover page naming
-          who attested what — and the underlag behind it, with the panel's pager
+          Two documents, not one: the utläggsräkning (the cover page naming
+          who attested what) and the underlag behind it, with the panel's pager
           between them. They are in the order they are stapled in for Fortnox,
           which is what makes paging through them a reading of the thing the
           section will actually file; a document you cannot see until it is in
           somebody else's system is one nobody checks.
 
           It opens on the second of them all the same. The receipt is what
-          somebody comes to this page to look at — the cover is generated from
-          data already on screen beside it — so the panel lands there and the
+          somebody comes to this page to look at. The cover is generated from
+          data already on screen beside it, so the panel lands there and the
           cover is a page back.
 
           A draft has no cover worth drawing and shows its receipt alone.
@@ -122,7 +122,7 @@ function ExpenseDetail({
       <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
       {/* min-w-0: without it a grid item's own min-width is auto, so one long
-          unbroken string — a cost-centre name, a receipt filename — widens the
+          unbroken string (a cost-centre name, a receipt filename) widens the
           column past the screen instead of being truncated inside its card. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
         <div className="min-w-0 space-y-6">
@@ -153,7 +153,7 @@ function ExpenseDetail({
             <BankTransactionCard
               expense={expense}
               bankTransactions={bankTransactions}
-              // Whose card the purchase was on, which is the submitter's —
+              // Whose card the purchase was on, which is the submitter's,
               // matching someone else's utlägg means offering their
               // transactions, and the route refuses any other.
               cardHolderId={expense.submitterId}
@@ -178,7 +178,7 @@ function ExpenseDetail({
   );
 }
 
-// Shows the matched transaction, or — for someone who may still match — a
+// Shows the matched transaction, or, for someone who may still match, a
 // picker over their own unmatched purchases of the same amount.
 function BankTransactionCard({
   expense,
@@ -252,7 +252,7 @@ function TransactionPicker({
   disabled,
 }: {
   transactions: BankTransaction[];
-  /** The expense's amount — only a row that cancels it out can be picked. */
+  /** The expense's amount. Only a row that cancels it out can be picked. */
   grossAmount: number;
   onSelect: (id: string) => void;
   disabled: boolean;
@@ -262,7 +262,7 @@ function TransactionPicker({
   const { date } = useFormat();
   const [query, setQuery] = useState("");
   // Which row was clicked. `disabled` says a match is being written but not
-  // which one, and the answer is the only thing worth showing here — the list
+  // which one, and the answer is the only thing worth showing here. The list
   // stays on screen throughout, so without it the click looks ignored.
   const [picked, setPicked] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
@@ -311,8 +311,8 @@ function TransactionPicker({
                 <p className="truncate text-sm font-medium">{txn.description}</p>
                 <p className="text-xs text-muted">
                   {date(txn.transactionDate)}
-                  {txn.cardHolderName && <> · {txn.cardHolderName}</>}
-                  {!selectable && ` · ${t("otherAmount")}`}
+                  {txn.cardHolderName && <> – {txn.cardHolderName}</>}
+                  {!selectable && ` – ${t("otherAmount")}`}
                 </p>
               </div>
               <span className="shrink-0"><Amount value={txn.amount} /></span>

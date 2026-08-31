@@ -3,27 +3,27 @@
 // One product: what there is of it, and what has happened to it.
 //
 // The page a name in the list opens, and where everything you do *to* a product
-// lives — a delivery, a stocktake, a correction to its details. The nightly in
+// lives: a delivery, a stocktake, a correction to its details. The nightly in
 // and out is not here: that is done from the log, against whichever products a
 // night happens to touch, and coming to a product page per bottle would be the
 // slower way round.
 //
 // Two halves, in the order somebody wants them. What is on the shelf, spelled
-// out bottle by bottle rather than as a total — "3 sealed, 1 at 60 %" is the
+// out bottle by bottle rather than as a total. "3 sealed, 1 at 60 %" is the
 // sentence you came for. Then the last movements, because the next question
 // after a surprising number is always how it got there.
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useReturnTo } from "@/components/shell/route-history";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PurchaseDialog, StocktakeDialog } from "../product-actions";
 import { ProductDialog } from "../product-dialog";
-import type { CellarRowDto, ProductOccasionDto, StockLevelDto } from "@/lib/data/stock";
+import type { CellarRowDto, ProductEventDto, StockLevelDto } from "@/lib/data/stock";
 import { ChangeFeed } from "@/components/stock/change-feed";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -58,12 +58,12 @@ function levelSummary(open: Record<number, number>): string {
 
 export default function StockProductClient({
   product,
-  occasions,
+  events,
   cellar,
   canManage,
 }: {
   product: StockLevelDto;
-  occasions: ProductOccasionDto[];
+  events: ProductEventDto[];
   cellar: CellarRowDto[];
   canManage: boolean;
 }) {
@@ -73,14 +73,14 @@ export default function StockProductClient({
   const [counting, setCounting] = useState(false);
   const [fixing, setFixing] = useState<CellarRowDto | null>(null);
   const confirm = useConfirm();
-  const router = useRouter();
+  const returnTo = useReturnTo();
   const { mutate } = useMutation();
 
   /**
    * Undo a product, for the case it exists to cover: one typed wrong a minute
    * ago and never booked on.
    *
-   * A product with movements is refused by the route rather than hidden — the
+   * A product with movements is refused by the route rather than hidden. The
    * log points at it, and a log whose products can vanish stops being readable
    * the first time somebody tidies up.
    */
@@ -97,7 +97,8 @@ export default function StockProductClient({
       error: t("products.removeFailed"),
       success: t("products.removed"),
     });
-    if (gone !== null) router.push("/stock");
+    // Not a push. The product is gone, and Back must not lead to its page.
+    if (gone !== null) returnTo("/stock");
   }
 
   const isVolume = product.kind === "VOLUME";
@@ -118,7 +119,7 @@ export default function StockProductClient({
         {/* What the product *is*, kept apart from what there is of it. The card
             below answers "how much have we got"; this one answers the questions
             that come up when somebody is holding the tin and not sure it is the
-            right one — is this the 33 cl or the 50, is this the one we pay
+            right one: is this the 33 cl or the 50, is this the one we pay
             twelve kronor for. Every field the product carries is here, so the
             page is the whole answer and not a summary of one. */}
         <Card>
@@ -164,7 +165,7 @@ export default function StockProductClient({
               value={
                 product.systembolagetId ? (
                   // Linked because the number is only useful as a way back to
-                  // the page it came from — a price, a new vintage, the article
+                  // the page it came from: a price, a new vintage, the article
                   // being delisted. Through their search rather than a stored
                   // address: the canonical URL carries a slug that changes when
                   // a product is renamed, and the number does not.
@@ -177,7 +178,7 @@ export default function StockProductClient({
                     {product.systembolagetId}
                   </a>
                 ) : (
-                  <span className="text-muted">—</span>
+                  <span className="text-muted">–</span>
                 )
               }
             />
@@ -185,7 +186,7 @@ export default function StockProductClient({
               label={t("product.size")}
               value={
                 size == null ? (
-                  <span className="text-muted">—</span>
+                  <span className="text-muted">–</span>
                 ) : (
                   t("ml", { ml: size })
                 )
@@ -195,7 +196,7 @@ export default function StockProductClient({
               label={t("product.abv")}
               value={
                 product.abv == null ? (
-                  <span className="text-muted">—</span>
+                  <span className="text-muted">–</span>
                 ) : (
                   `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(product.abv)} %`
                 )
@@ -231,7 +232,7 @@ export default function StockProductClient({
             }
           />
           {/* Across rather than down. What is in stock is a handful of small
-              numbers that are read together — five rungs and a value — and a
+              numbers that are read together, five rungs and a value, and a
               stacked list made each one a line to scroll past instead of a
               figure to take in at a glance. Auto-fitting columns, so a can's
               two cells and a spirit's six lay themselves out without the page
@@ -251,18 +252,18 @@ export default function StockProductClient({
                 />
               ))}
             {/* Sealed and open together, which is an estimate stacked on
-                estimates for a spirit — see openMl — and exactly the figure the
+                estimates for a spirit (see openMl) and exactly the figure the
                 restaurangrapport asks for. */}
             <Detail
               label={t("product.totalVolume")}
               value={
-                onHand.totalMl == null ? "—" : t("litres", { litres: litres(onHand.totalMl) })
+                onHand.totalMl == null ? "–" : t("litres", { litres: litres(onHand.totalMl) })
               }
               dim={onHand.totalMl == null}
             />
             <Detail
               label={t("product.value")}
-              value={onHand.valueOre > 0 ? kr(onHand.valueOre) : "—"}
+              value={onHand.valueOre > 0 ? kr(onHand.valueOre) : "–"}
             />
           </CardBody>
         </Card>
@@ -277,13 +278,13 @@ export default function StockProductClient({
             changed about a night hangs off that night's own row. */}
         <Card>
           <CardHeader
-            title={t("product.occasions")}
-            subtitle={t("product.occasionsHint")}
+            title={t("product.events")}
+            subtitle={t("product.eventsHint")}
           />
-          <OccasionTable rows={occasions} kind={product.kind} />
+          <EventTable rows={events} kind={product.kind} />
         </Card>
 
-        {/* And what has been done to it in the cellar — which is a different
+        {/* And what has been done to it in the cellar, which is a different
             sort of event, and a list rather than a per-night fold. Corrections
             live here rather than in a card of their own: putting a delivery
             right is the same kind of deliberate act as making one. */}
@@ -317,7 +318,7 @@ export default function StockProductClient({
  * A fact about the product: the word for it, and the thing itself.
  *
  * The same shape as the utlägg's detail card, which is the other place in the
- * app that lists what a thing is — and the same shape for the stock figures as
+ * app that lists what a thing is, and the same shape for the stock figures as
  * for the reference data, because they are read the same way. They were two
  * components for a while, with the figures set large and uppercase; six of them
  * in a row read as a dashboard shouting at somebody who had come to check a
@@ -330,7 +331,7 @@ function Detail({
 }: {
   label: string;
   value: React.ReactNode;
-  /** Nothing on this rung. Kept visible — an empty rung is information — but
+  /** Nothing on this rung. Kept visible, since an empty rung is information, but
    *  quiet, so the eye goes to the ones holding something. */
   dim?: boolean;
 }) {
@@ -350,15 +351,15 @@ function Detail({
 }
 
 /**
- * What the product did at each occasion it went out to.
+ * What the product did at each event it went out to.
  *
  * A row per night rather than per movement, in the shape of the event sheet: out,
  * back, spilled, and what that came to. The chevron appears only on a night
- * somebody has since changed, and says who changed what — a correction to a
+ * somebody has since changed, and says who changed what. A correction to a
  * night's figure belongs to that night, not to a list of every correction ever
  * made to the product.
  */
-function OccasionTable({ rows, kind }: { rows: ProductOccasionDto[]; kind: string }) {
+function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
   const t = useTranslations("stock");
   const controls = useTableControls();
   const amount = (n: number) =>
@@ -366,44 +367,44 @@ function OccasionTable({ rows, kind }: { rows: ProductOccasionDto[]; kind: strin
       ? `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(n / 1000)} l`
       : String(n);
 
-  const figure = (key: string, pick: (r: ProductOccasionDto) => number, strong = false) => ({
+  const figure = (key: string, pick: (r: ProductEventDto) => number, strong = false) => ({
     key,
-    header: t(`tag.col.${key}`),
+    header: t(`event.col.${key}`),
     align: "right" as const,
     className: "tabular-nums",
     value: pick,
     sortable: true,
     mobile: "meta" as const,
-    cell: (r: ProductOccasionDto) =>
+    cell: (r: ProductEventDto) =>
       pick(r) === 0 ? (
-        <span className="text-muted">—</span>
+        <span className="text-muted">–</span>
       ) : (
         <span className={strong ? "font-medium" : undefined}>{amount(pick(r))}</span>
       ),
   });
 
-  const columns: Column<ProductOccasionDto>[] = [
+  const columns: Column<ProductEventDto>[] = [
     {
-      key: "tag",
-      header: t("tag.col.name"),
+      key: "event",
+      header: t("event.col.name"),
       value: (r) => r.tagName,
       sortable: true,
       searchable: true,
       mobile: "title",
       cell: (r) => (
-        <Link href={`/stock/tags/${r.tagId}`} className="font-medium hover:underline">
+        <Link href={`/stock/events/${r.eventId}`} className="font-medium hover:underline">
           {r.tagName}
         </Link>
       ),
     },
     {
       key: "date",
-      header: t("tag.col.date"),
+      header: t("event.col.date"),
       className: "tabular-nums whitespace-nowrap",
       value: (r) => r.date,
       sortable: true,
       mobile: "meta",
-      cell: (r) => r.date || <span className="text-muted">—</span>,
+      cell: (r) => r.date || <span className="text-muted">–</span>,
     },
     figure("out", (r) => r.out),
     figure("back", (r) => r.back),
@@ -416,10 +417,10 @@ function OccasionTable({ rows, kind }: { rows: ProductOccasionDto[]; kind: strin
       columns={columns}
       rows={rows}
       controls={controls}
-      rowKey={(r) => r.tagId}
-      searchPlaceholder={t("product.searchOccasions")}
-      expansion={(r) => (r.changes.length ? <ChangeFeed changes={r.changes} scope="tag" /> : null)}
-      empty={t("product.noOccasions")}
+      rowKey={(r) => r.eventId}
+      searchPlaceholder={t("product.searchEvents")}
+      expansion={(r) => (r.changes.length ? <ChangeFeed changes={r.changes} scope="event" /> : null)}
+      empty={t("product.noEvents")}
     />
   );
 }
@@ -428,7 +429,7 @@ function OccasionTable({ rows, kind }: { rows: ProductOccasionDto[]; kind: strin
  * Deliveries, stocktakes and the corrections made to them.
  *
  * The cellar's own history, in the order things were written down rather than
- * the order they are about — which is the order somebody reconstructing a
+ * the order they are about, which is the order somebody reconstructing a
  * figure is following. A correction sits here beside the delivery it puts
  * right, because making a delivery and fixing one are the same sort of act.
  */
@@ -487,7 +488,7 @@ function CellarTable({
         ) : r.units ? (
           signed(r.units)
         ) : (
-          levelSummary(r.open ?? {}) || <span className="text-muted">—</span>
+          levelSummary(r.open ?? {}) || <span className="text-muted">–</span>
         ),
     },
     {
@@ -499,7 +500,7 @@ function CellarTable({
       sortable: true,
       mobile: "trailing",
       cell: (r) =>
-        r.valueDeltaOre ? kr(r.valueDeltaOre) : <span className="text-muted">—</span>,
+        r.valueDeltaOre ? kr(r.valueDeltaOre) : <span className="text-muted">–</span>,
     },
     {
       key: "actor",

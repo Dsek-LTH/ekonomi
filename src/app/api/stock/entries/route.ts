@@ -12,7 +12,7 @@ import { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { entryFault, type ProposedEntry } from "@/lib/stock/entry";
 import { LEVELS, pickFault, type OpenBottles } from "@/lib/stock/levels";
-import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock/tag";
+import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock/event";
 import { onHand } from "@/lib/stock/onhand";
 import { costBasis, valueDelta } from "@/lib/stock/value";
 import { replayProduct } from "@/lib/server/stock-replay";
@@ -155,34 +155,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: made[0] }, { status: 201 });
   }
 
-  // ── The occasion ──
+  // ── The event ──
   //
   // The three kinds that make up a night must name one. A movement of stock to
   // or from a bar that belongs to no night is a row nothing can ever reconcile:
   // a pub running past midnight is two dates and a committee may take stock out
-  // twice in an evening, so nothing but an explicit tag says which rows go
+  // twice in an evening, so nothing but an explicit event says which rows go
   // together.
-  const TAGGED: StockEntryKind[] = ["CHECKOUT", "RETURN", "WASTE"];
-  if (TAGGED.includes(body.kind)) {
-    if (!body.tagId) return fail(422, "stock.tagRequired");
-    const tag = await prisma.stockTag.findUnique({
-      where: { id: body.tagId },
+  const NEEDS_EVENT: StockEntryKind[] = ["CHECKOUT", "RETURN", "WASTE"];
+  if (NEEDS_EVENT.includes(body.kind)) {
+    if (!body.eventId) return fail(422, "stock.eventRequired");
+    const event = await prisma.stockEvent.findUnique({
+      where: { id: body.eventId },
       select: { id: true },
     });
-    if (!tag) return fail(422, "stock.tagNotFound");
-  } else if (body.tagId) {
+    if (!event) return fail(422, "stock.eventNotFound");
+  } else if (body.eventId) {
     // A delivery and a stocktake are about the cellar rather than a night, and
-    // letting one carry a tag would put stock into a night's arithmetic that
+    // letting one carry an event would put stock into a night's arithmetic that
     // never went to it.
-    return fail(422, "stock.tagOnNightOnly");
+    return fail(422, "stock.eventOnNightOnly");
   }
 
-  // What this tag has already moved of this product, which is the ceiling on
+  // What this event has already moved of this product, which is the ceiling on
   // anything coming back or being written off against it.
   let stillOut = 0;
-  if (body.tagId) {
+  if (body.eventId) {
     const booked = await prisma.stockEntry.findMany({
-      where: { tagId: body.tagId, productId: product.id },
+      where: { eventId: body.eventId, productId: product.id },
       select: {
         kind: true,
         units: true,
@@ -295,7 +295,7 @@ export async function POST(req: Request) {
 
   // Recorded as something somebody did, not only as something that happened.
   // The product's own feed is where "why does Fireball say 20?" gets answered,
-  // and a delivery has no occasion to ask it from.
+  // and a delivery has no event to ask it from.
   const entry = await prisma.stockEntry.create({
     data: {
       productId: product.id,
@@ -308,7 +308,7 @@ export async function POST(req: Request) {
       valueDeltaOre,
       spilledQty,
       level,
-      tagId: body.tagId ?? null,
+      eventId: body.eventId ?? null,
       occurredAt: new Date(body.occurredAt),
       actorId: g.actor.id,
       lotId: body.lotId ?? null,
@@ -323,7 +323,7 @@ export async function POST(req: Request) {
     data: {
       entryId: entry.id,
       productId: product.id,
-      tagId: body.tagId ?? null,
+      eventId: body.eventId ?? null,
       action: "CREATE",
       kind: body.kind,
       level,

@@ -7,8 +7,8 @@
 // Extracted when the second income dialog wanted the same four things the first
 // one had written out by hand. Not folded into `useConfirm`
 // (components/confirm-dialog.tsx): that asks a question and answers yes or no,
-// while these collect something — a destination and an account per line, a
-// verksamhet and a day — and the difference is the whole body of the dialog.
+// while these collect something (a destination and an account per line, a
+// verksamhet and a day) and the difference is the whole body of the dialog.
 //
 // Deliberately not a focus trap, which the confirm dialog does have. That one
 // is summoned mid-action from anywhere in the app and answered with a keypress;
@@ -25,7 +25,7 @@ export function Modal({
   /** What a screen reader announces on arrival. */
   label,
   onClose,
-  /** The card's width, above all — the rest of its shape is set here. */
+  /** The card's width, above all. The rest of its shape is set here. */
   className,
   children,
 }: {
@@ -34,7 +34,7 @@ export function Modal({
   className?: string;
   children: React.ReactNode;
 }) {
-  // Only when this dialog is the topmost thing open — a menu or a scanner on
+  // Only when this dialog is the topmost thing open. A menu or a scanner on
   // top of it answers Escape first, and one press should close one thing. See
   // lib/ui/escape.ts.
   useEscape(true, onClose);
@@ -50,7 +50,7 @@ export function Modal({
   }, []);
 
   // Every dialog in the app is opened by a click, so there is never one in the
-  // first render to mismatch — but the guard is what says that out loud rather
+  // first render to mismatch, but the guard is what says that out loud rather
   // than leaving the file to throw on a server that has no document.
   if (typeof document === "undefined") return null;
 
@@ -58,12 +58,12 @@ export function Modal({
     // Portalled to <body> rather than left where it was written. A dialog is
     // the topmost thing on the screen, and `position: fixed` only means "the
     // viewport" while nothing above it in the tree has a transform, a filter or
-    // a `contain` — any one of which silently turns the scrim into a box the
+    // a `contain`, any one of which silently turns the scrim into a box the
     // size of whatever page element grew it, which is how a centred dialog ends
     // up hanging off one edge. Out here it has no ancestors to be caught by.
     //
     // Clicking away closes. That is a mouse affordance with a keyboard
-    // equivalent already — Escape, above — so the rules asking for a key
+    // equivalent already (Escape, above) so the rules asking for a key
     // handler here are asking for a second copy of one that exists somewhere it
     // works better.
     //
@@ -84,7 +84,7 @@ export function Modal({
           // wrong, and a `max-w-` from the call site is centred inside them by
           // the auto margins (an over-constrained absolute box splits the slack
           // evenly). 12px of it, so the card reads as a card standing on the
-          // page rather than as the screen having changed — a rounded corner
+          // page rather than as the screen having changed. A rounded corner
           // needs somewhere to be round against.
           //
           // The bottom offset is that same 12px or the home indicator's strip,

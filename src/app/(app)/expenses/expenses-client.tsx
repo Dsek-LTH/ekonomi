@@ -40,10 +40,10 @@ export function ExpensesClient({
   const tStatus = useTranslations("common.status");
   const { date } = useFormat();
   // The list's state lives in the URL, because the query behind it runs on the
-  // server — see useUrlTableControls. `page.rows` is already the page.
+  // server. See useUrlTableControls. `page.rows` is already the page.
   const controls = useUrlTableControls(page.total);
 
-  // `t` is stable per locale, so these are built once rather than per render —
+  // `t` is stable per locale, so these are built once rather than per render,
   // a fresh `columns` array would also defeat DataTable's memo.
   const SCOPE_OPTS: CollectionOption[] = useMemo(() => [
     { value: "MINE", label: t("scope.mine") },
@@ -51,7 +51,7 @@ export function ExpensesClient({
   ], [t]);
 
   // Replaces the old Pågående/Klara/Alla tabs. Those were one coarse cut of a
-  // list whose whole point is where in the chain an utlägg has got to — "klara"
+  // list whose whole point is where in the chain an utlägg has got to. "klara"
   // covered attesterat, bokfört and exporterat alike, and there was no way to
   // ask for one of them. Every status is offered here instead, several at a
   // time; picking none is the old "Alla".
@@ -67,7 +67,7 @@ export function ExpensesClient({
   // different things and read differently. With the filtering done in the
   // database the row count alone can no longer tell them apart, so the question
   // is asked of the controls: an empty list nobody has narrowed is the first.
-  // `view` is deliberately not in this — showing your own and having none is
+  // `view` is deliberately not in this. Showing your own and having none is
   // still an empty list, not a fruitless search.
   const narrowed = Boolean(
     controls.query || controls.picks.length || controls.dateFrom || controls.dateTo,
@@ -83,14 +83,14 @@ export function ExpensesClient({
     {
       key: "attest",
       header: t("col.attest"),
-      // Off the phone row. It is a line per allocation — a tick, a name and a
-      // cost centre each — which is a column of its own on a table and cannot
+      // Off the phone row. It is a line per allocation (a tick, a name and a
+      // cost centre each) which is a column of its own on a table and cannot
       // be a clause in a one-line summary. The same thing, laid out for a
       // narrow screen, is on the utlägg's own page under Fördelning.
       mobile: "hide",
       cell: (e) =>
         e.allocations.length === 0 ? (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ) : (
           <div className="space-y-0.5">
             {e.allocations.map((a) => {
@@ -102,7 +102,7 @@ export function ExpensesClient({
                   title={
                     attested
                       ? t("attest.attestedBy", {
-                          name: a.approvedByName ?? "—",
+                          name: a.approvedByName ?? "–",
                           date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
                         })
                       : t("attest.waitingResultUnit", {
@@ -140,7 +140,7 @@ export function ExpensesClient({
       title={t("title")}
       // No description. The header wraps on a narrow screen, and a paragraph
       // between the title and the Mina/Alla track pushed the track onto a line
-      // of its own well below the heading it belongs to — the two are meant to
+      // of its own well below the heading it belongs to. The two are meant to
       // read as one, and on the list you land on most often the sentence was
       // costing more than it said.
 
@@ -175,7 +175,7 @@ export function ExpensesClient({
             action={
               // Outlined rather than filled: it shares this bar with the search
               // box and the status filter, and the page's subject is the list
-              // below them — see `accentOutline` in components/ui/button.tsx.
+              // below them. See `accentOutline` in components/ui/button.tsx.
               // The empty state's copy of this button keeps the fill, because
               // there it is the only thing on the screen to do.
               <NewExpenseMenu variant="accentOutline" />

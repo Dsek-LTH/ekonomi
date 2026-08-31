@@ -2,8 +2,8 @@
 
 // Everything a budget sheet's rows need to draw themselves.
 //
-// The sheet is one screen made of four nested things — a section card holds
-// account blocks, an account block holds line rows, a line row holds cells —
+// The sheet is one screen made of four nested things: a section card holds
+// account blocks, an account block holds line rows, a line row holds cells,
 // and every level of it needs the same handful of answers: which columns there
 // are, what a formula evaluates to, whether this reader may write, what a cell
 // looks like, what is ticked, what is being dragged.
@@ -11,7 +11,7 @@
 // Passed down as props that came to forty-two on the account block alone, which
 // is why they were not props: the blocks were closures inside the component,
 // and the coupling was real but invisible. A context makes the same coupling
-// explicit and stops it being paid for at every level in between — the section
+// explicit and stops it being paid for at every level in between. The section
 // card no longer takes eleven arguments it only forwards.
 //
 // What is *not* in here: anything about one account or one row. Those are the
@@ -54,7 +54,7 @@ export interface SheetValue {
   /** Editorial adjustments in force, by account id. */
   adjustments: Map<string, AdjustmentRow[]>;
   compare: SheetCompare | null;
-  /** Whether the comparison columns are actually drawn — narrow screens hide them. */
+  /** Whether the comparison columns are actually drawn (narrow screens hide them). */
   showCompare: boolean;
 
   // ── Who is reading ───────────────────────────────────────────────
@@ -104,7 +104,7 @@ export interface SheetValue {
   badAccount: Set<string>;
   badLine: Set<string>;
   liUrl: (id: string) => string;
-  /** The chart, minus the codes this sheet already has — `keep` stays offered. */
+  /** The chart, minus the codes this sheet already has (`keep` stays offered). */
   accountOptionsFor: (keep?: string) => { value: string; label: string }[];
 
   // ── Dropping an account into the other section ───────────────────

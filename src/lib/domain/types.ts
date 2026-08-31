@@ -49,8 +49,8 @@ export type DrinkCategory =
   | "OL"
   | "ALKOHOLDRYCKSLIKNANDE";
 
-// Why stock moved. The report keeps these apart — bought is a volume, served is
-// turnover, spilled is neither — so the log does too.
+// Why stock moved. The report keeps these apart: bought is a volume, served is
+// turnover, spilled is neither, so the log does too.
 //
 // CHECKOUT and RETURN are the pair a pub night makes: bottles leave the store
 // and come back, and the return is the one moment anybody looks at a bottle and
@@ -68,7 +68,7 @@ export type StockEntryKind =
 export type IncomeSource = "ZETTLE" | "ZETTLE_FEE" | "SWISH";
 
 // A report's life: fetched, then booked, and finally pushed to Fortnox. A day
-// you decide not to book has no state of its own — it stays a draft until the
+// you decide not to book has no state of its own. It stays a draft until the
 // next fetch clears the working set (see createSalesBatch).
 export type IncomeReportStatus = "DRAFT" | "BOOKED" | "EXPORTED";
 
@@ -87,13 +87,13 @@ export interface User {
   email: string;
   roles: Role[];
   /**
-   * What those roles are currently allowed to do — resolved per request from
+   * What those roles are currently allowed to do, resolved per request from
    * the RoleCapability table (lib/server/capabilities.ts), never stored on the
    * row and never carried in the session.
    *
    * This is what every gate reads. `roles` is still here because a few rules
-   * genuinely turn on which role you hold rather than on what it may do — the
-   * attest rule's vice-skattmästare and resultatansvarig clauses — and because
+   * genuinely turn on which role you hold rather than on what it may do (the
+   * attest rule's vice-skattmästare and resultatansvarig clauses) and because
    * the settings screens list people by role.
    */
   capabilities: Capability[];
@@ -101,7 +101,7 @@ export interface User {
 }
 
 // The signed-in user, plus what isn't stored on the User record itself. Only
-// ever describes the acting user — everyone else is a plain `User`, where card
+// ever describes the acting user. Everyone else is a plain `User`, where card
 // holdership is neither known nor relevant (the admin page reads it off
 // `Card.holderId` instead).
 export interface CurrentUser extends User {
@@ -127,7 +127,7 @@ export interface ResultUnitCostCenter {
   active: boolean;
 }
 
-// A result unit (the grouping label on cost centres) and its resultatansvariga —
+// A result unit (the grouping label on cost centres) and its resultatansvariga,
 // the users who may attest/handle its expenses.
 export interface ResultUnit {
   id: string;
@@ -143,8 +143,8 @@ export interface ResultUnit {
   costCenters: ResultUnitCostCenter[];
   costCenterCount: number; // active ones only
   /**
-   * The income half, for a unit that takes money in. Null for one that does not
-   * — and null throughout when the income module is switched off, so nothing on
+   * The income half, for a unit that takes money in. Null for one that does
+   * not, and null throughout when the income module is switched off, so nothing on
    * the result-unit screen depends on income existing.
    */
   income: ResultUnitIncome | null;
@@ -173,7 +173,7 @@ export interface CostAllocation {
   costCenterId: string;
   costCenterCode: string;
   costCenterName: string;
-  resultUnit?: string; // resultatenhet the cost centre belongs to — drives attest authority
+  resultUnit?: string; // resultatenhet the cost centre belongs to, drives attest authority
   amount: number; // SEK
   comment?: string;
   approvedById?: string;
@@ -185,7 +185,7 @@ export interface CostAllocation {
 export interface RevisionEntry {
   id: string;
   actor: string;
-  action: string; // ExpenseEventType — named by `expenses.event.<TYPE>`
+  action: string; // ExpenseEventType, named by `expenses.event.<TYPE>`
   comment?: string;
   date: string; // ISO
 }
@@ -218,7 +218,7 @@ export interface AccountRecord {
   lastSyncAt?: string; // ISO
 }
 
-// The accounts the booking view pre-fills — configurable, previously the
+// The accounts the booking view pre-fills, configurable, previously the
 // ACCOUNT.* constants in lib/accounts.ts.
 export interface BookkeepingSettings {
   bankAccount: string;
@@ -231,13 +231,13 @@ export interface FortnoxStatus {
   connected: boolean; // the org's service connection is stored (reads + sync)
   companyName?: string;
   voucherSeries?: string;
-  expiresAt?: string; // ISO — access-token expiry
+  expiresAt?: string; // ISO, access-token expiry
 
   // The viewer's own Fortnox login, used when they book (writes). Separate from
   // the service connection above and short-lived by design.
   session?: {
     fortnoxUserName?: string;
-    expiresAt: string; // ISO — when they must log in to Fortnox again
+    expiresAt: string; // ISO, when they must log in to Fortnox again
   };
 }
 
@@ -246,12 +246,12 @@ export interface FortnoxStatus {
  *
  * The odometer at each end and what the distance between them came to. The
  * distance is carried rather than left to be subtracted again on every screen
- * that shows it — one rule, in lib/mileage/claim.ts, and everything downstream
+ * that shows it. One rule, in lib/mileage/claim.ts, and everything downstream
  * reads its answer.
  */
 export interface MileageJourney {
   /** The odometer when the journey began and when it ended, in kilometres.
-   *  Null for a reading not given yet — a draft may hold one and not the
+   *  Null for a reading not given yet. A draft may hold one and not the
    *  other, and 0 is a real reading. */
   odometerStart: number | null;
   odometerEnd: number | null;
@@ -264,19 +264,19 @@ export interface MileageJourney {
 }
 
 export interface Expense {
-  id: string; // the row's own id — what pages and API routes are keyed on
+  id: string; // the row's own id, what pages and API routes are keyed on
   // The human reference, e.g. "DEK26-0042". Absent until the utlägg is submitted
   // for attest; see lib/domain/reference.ts.
   reference?: string;
   title: string;
   submitterId: string;
   submitterName: string;
-  submitterStudentId: string; // the StiL id — what a voucher text identifies them by
+  submitterStudentId: string; // the StiL id, what a voucher text identifies them by
   allocations: CostAllocation[];
   paymentType: PaymentType;
   status: ExpenseStatus;
   purchaseDate: string; // ISO
-  grossAmount: number; // SEK — the database stores öre; see lib/domain/money.ts
+  grossAmount: number; // SEK, the database stores öre, see lib/domain/money.ts
   currency: string;
   matchedTransactionId?: string;
   receiptId?: string; // newest uploaded receipt, if any
@@ -299,7 +299,7 @@ export interface Expense {
 
 export interface BankTransaction {
   id: string;
-  transactionDate: string; // ISO — the day of the purchase (Transdag)
+  transactionDate: string; // ISO, the day of the purchase (Transdag)
   description: string;
   amount: number; // negative = money out
   matchedExpenseId?: string; // the utlägg's id, for linking to it
@@ -316,5 +316,5 @@ export interface Card {
   holderId?: string;
   holderName?: string;
   active: boolean;
-  txCount: number; // linked bank transactions — surfaced before deletion
+  txCount: number; // linked bank transactions, surfaced before deletion
 }

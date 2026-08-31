@@ -7,22 +7,22 @@ import { cn } from "@/lib/ui/utils";
 
 // The pill has to be in place in the frame the track first paints, or the
 // active option sits bare for a frame after every hydration. That means
-// measuring before paint — but on the server `useLayoutEffect` is a no-op React
+// measuring before paint, but on the server `useLayoutEffect` is a no-op React
 // warns about, and this component renders there too.
 const useMeasureEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-// "Which collection am I looking at?" — the track register, and the app's
+// "Which collection am I looking at?" The track register, and the app's
 // answer to that question everywhere it is asked.
 //
 // See components/ui/segmented-control.tsx for the grammar the switchers share.
 // This is the coarsest of them: it changes *what* the page is a list of, and
-// the page's own title stays put while it does — the track is what says which
+// the page's own title stays put while it does. The track is what says which
 // one you are on, so a heading that said it again would be saying it twice.
 //
 // Two ways of switching, one appearance. "Mina | Alla" is a query parameter on
 // one page; "Att bokföra | Bokförda" is two pages. That difference matters to
 // the router and to nobody else, so the caller declares `onChange` or `href`
-// and gets the same control either way — which is the whole point, because the
+// and gets the same control either way, which is the whole point, because the
 // two used to look like different kinds of thing.
 //
 // Never rendered directly by a page: it is `PageShell`'s `collections` prop, so
@@ -30,7 +30,7 @@ const useMeasureEffect = typeof window === "undefined" ? useEffect : useLayoutEf
 export interface CollectionOption {
   value: string;
   label: string;
-  /** Shown muted after the label — "Att bokföra 12". */
+  /** Shown muted after the label, e.g. "Att bokföra 12". */
   count?: number;
 }
 
@@ -42,7 +42,7 @@ export type Collections = {
   options: CollectionOption[];
 } & (
   // One or the other, never both and never a mixture. Declared at the group
-  // rather than per option so a set cannot be half links and half buttons —
+  // rather than per option so a set cannot be half links and half buttons,
   // that would be two controls wearing one appearance, which is the thing this
   // component exists to stop.
   | { href: (value: string) => string; onChange?: never }
@@ -50,14 +50,14 @@ export type Collections = {
 );
 
 // `relative`, because the pill is laid over the track rather than drawn on the
-// option — see the measurement below.
+// option. See the measurement below.
 const TRACK = "relative inline-flex rounded-full border border-border bg-surface p-1";
 
 // What the pill looks like, in the one place both the moving copy and the
 // static fallback read it from.
 //
 // --shadow-pill, not --shadow-card: the pill is the height of the track's
-// content box, so it is centred by construction — but a shadow that leans
+// content box, so it is centred by construction. But a shadow that leans
 // downwards puts more darkness in the 4px below it than above, and the eye
 // reads that as the pill sitting low. See globals.css.
 const PILL = "rounded-full bg-background shadow-[var(--shadow-pill)]";
@@ -66,7 +66,7 @@ const Count = ({ count }: { count?: number }) =>
   count ? <span className="ml-1.5 tabular-nums text-muted">{count}</span> : null;
 
 /**
- * Where the active option is, in the track's own coordinates — and whether the
+ * Where the active option is, in the track's own coordinates, and whether the
  * pill should travel to get there.
  *
  * `animate` is derived from whether there was a previous placement, so the
@@ -88,7 +88,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
 
   const activeIndex = options.findIndex((o) => o.value === value);
   // The labels and counts are what decide the pill's width, so they are what a
-  // re-measure watches — not `options`, which is a fresh array every render and
+  // re-measure watches, not `options`, which is a fresh array every render and
   // would re-run this effect on all of them.
   const shape = options.map((o) => `${o.value}:${o.label}:${o.count ?? ""}`).join("|");
 
@@ -100,7 +100,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     }
     // offsetLeft/offsetTop are measured from the offsetParent's padding edge,
     // and `left: 0` on an absolutely positioned child resolves to that same
-    // edge — so the two agree without anyone having to subtract the track's
+    // edge, so the two agree without anyone having to subtract the track's
     // own border.
     const measure = () =>
       setPlacement((prev) => ({
@@ -132,7 +132,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
             // Until the pill has been measured there is nothing laid over the
             // track, and this is the same shape drawn the old way. It is what
             // the server renders and what the first client render matches, so
-            // the switch to the real pill one commit later changes no pixels —
+            // the switch to the real pill one commit later changes no pixels,
             // without it the active option would arrive from the server with no
             // background at all and gain one on hydration.
             !placement && PILL,
@@ -160,7 +160,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
         // width, so a pill that only slid would snap to its new width at one
         // end of the journey.
         //
-        // Reduced motion needs nothing here — globals.css cuts every duration
+        // Reduced motion needs nothing here. globals.css cuts every duration
         // in the app to 0.01ms, so the pill arrives instead of travelling.
         placement?.animate && "transition-[transform,width] duration-200 ease-out",
       )}
@@ -172,7 +172,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
   };
 
   // Links when the collections are pages. A <nav> with real hrefs, so they can
-  // be opened in a new tab, prefetched and restored on a reload — none of which
+  // be opened in a new tab, prefetched and restored on a reload, none of which
   // a button pretending to navigate can do.
   if (href) {
     return (

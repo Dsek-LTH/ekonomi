@@ -1,7 +1,7 @@
 // The wire format of the intakt service.
 //
-// These are hand-written counterparts to Go structs in another repository —
-// report.Report and config.Config — so nothing but care keeps them in step.
+// These are hand-written counterparts to Go structs in another repository:
+// report.Report and config.Config, so nothing but care keeps them in step.
 // Two things make that survivable. The service rejects unknown fields, so a
 // name misspelled here fails loudly on the first request rather than silently
 // dropping a value; and the shapes are pinned by a test (client.test.ts)
@@ -28,7 +28,7 @@ export interface IncomeProduct {
 
 /**
  * A report's totals per account. These become the credit rows of the
- * verifikation, which is why they must sum to the report total — see
+ * verifikation, which is why they must sum to the report total. See
  * lib/income/voucher.ts, which checks exactly that before booking.
  */
 export interface IncomeAccountDistribution {
@@ -70,7 +70,7 @@ export interface IncomeFeeReportDto {
 //
 // snake_case, because these mirror the YAML keys intakt's Config carries on
 // both its yaml and json tags. It is the only place in this app that spells
-// fields that way, and it is not a style slip — it is the other side's format.
+// fields that way, and it is not a style slip. It is the other side's format.
 
 export interface IntaktAttestation {
   name: string;
@@ -80,7 +80,7 @@ export interface IntaktAttestation {
 export interface IntaktPrefix {
   /** The committee key this prefix routes to. */
   name: string;
-  /** BAS revenue account, as a number — the Go field is an int. */
+  /** BAS revenue account, as a number (the Go field is an int). */
   account: number;
 }
 
@@ -95,7 +95,7 @@ export interface IntaktConfig {
   account_descriptions: Record<string, string>;
   prefix_mappings: Record<string, IntaktPrefix>;
   committees: Record<string, IntaktCommittee>;
-  /** Keyed by amount in öre, as a string — JSON has no integer keys. */
+  /** Keyed by amount in öre, as a string (JSON has no integer keys). */
   swish_amount_fallbacks: Record<string, string>;
 }
 

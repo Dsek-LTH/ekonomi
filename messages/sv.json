@@ -168,7 +168,7 @@
     "attest": {
       "waiting": "Väntar på attest",
       "attestedBy": "Attesterad av {name}{date}",
-      "waitingResultUnit": "Väntar på attest · {resultUnit}",
+      "waitingResultUnit": "Väntar på attest – {resultUnit}",
       "noResultUnit": "utan resultatenhet"
     },
     "submitBlocker": {
@@ -214,7 +214,7 @@
       "account": "Konto",
       "debit": "Debet",
       "credit": "Kredit",
-      "exportedToFortnox": "Exporterad till Fortnox · verifikat",
+      "exportedToFortnox": "Exporterad till Fortnox – verifikat",
       "history": "Historik",
       "receipt": "Kvitto",
       "noReceipt": "Inget kvitto uppladdat.",
@@ -296,7 +296,7 @@
       },
       "recall": {
         "title": "Dra tillbaka utlägget?",
-        "message": "Utlägget går tillbaka till utkast och försvinner ur attestkön. Du kan sedan ändra det — till exempel från eget utlägg till sektionskort — och skicka in det igen. Referensnumret behålls.",
+        "message": "Utlägget går tillbaka till utkast och försvinner ur attestkön. Du kan sedan ändra det (till exempel från eget utlägg till sektionskort) och skicka in det igen. Referensnumret behålls.",
         "messageAttested": "Utlägget går tillbaka till utkast och försvinner ur attestkön. {count, plural, =1 {En attest} other {# attester}} tas bort, eftersom de gäller utlägget så som det såg ut. Du kan sedan ändra det och skicka in det igen; referensnumret behålls.",
         "confirm": "Dra tillbaka"
       }
@@ -350,8 +350,7 @@
       "resultUnitConcerned": "berörd resultatenhet",
       "resubmit": "Skicka in igen",
       "submit": "Skicka in för attest",
-      "negateAmount": "Växla till negativt belopp (retur)",
-      "negateLabel": "Retur"
+      "negateAmount": "Växla till negativt belopp (retur)"
     },
     "field": {
       "title": "Beskrivning",
@@ -386,7 +385,7 @@
       "end": "Vid slut"
     },
     "total": "Ersättning",
-    "sum": "{km} km · {rate} kr/km",
+    "sum": "{km} km – {rate} kr/km",
     "distance": "Sträcka",
     "km": "{km} km",
     "otherType": "Gällde det något annat?",
@@ -539,7 +538,7 @@
       "noRecallAccess": "Bara den som skickade in utlägget kan dra tillbaka det.",
       "recallAfterApproved": "Utlägget är redan attesterat och kan inte dras tillbaka. Be en av skattmästarna att öppna det igen.",
       "nothingToRecall": "Utlägget ligger inte för attest ({status}), så det finns inget att dra tillbaka.",
-      "editWhilePendingAttest": "Utlägget ligger för attest och kan inte ändras. Dra tillbaka det först — då blir det ett utkast igen och du kan skicka in det på nytt."
+      "editWhilePendingAttest": "Utlägget ligger för attest och kan inte ändras. Dra tillbaka det först, så blir det ett utkast igen och du kan skicka in det på nytt."
     },
     "receipt": {
       "notFound": "Kvittot hittades inte",
@@ -612,6 +611,10 @@
       "accountInHistory": "Kontoposten finns i budgetens ändringshistorik och kan inte tas bort.",
       "sheetInHistory": "Kostnadsstället har kontoposter som finns i budgetens ändringshistorik och kan inte tas bort.",
       "notLocked": "Budgeten är inte låst. Ändra den direkt i stället.",
+      "importBadQuery": "Budgetens år eller namn saknas eller är ogiltigt",
+      "emptyFile": "Filen är tom",
+      "fileTooLarge": "Filen är för stor",
+      "noRows": "Inga budgetrader kunde läsas från filen",
       "changeError": {
         "empty": "Lägg till minst en kontopost.",
         "notNumbers": "Alla belopp måste vara tal.",
@@ -739,9 +742,9 @@
       "purchaseArrivesSealed": "Ett inköp kommer oöppnat.",
       "purchaseNotPositive": "Ett inköp lägger till i lagret och kan inte vara negativt.",
       "removalNotNegative": "Utskänkning och svinn tar från lagret.",
-      "tagNotFound": "Tillfället hittades inte.",
-      "tagOnNightOnly": "Inköp och inventering hör inte till ett tillfälle.",
-      "tagRequired": "Uttag, återlämning och spill måste höra till ett tillfälle.",
+      "eventNotFound": "Tillfället hittades inte.",
+      "eventOnNightOnly": "Inköp och inventering hör inte till ett tillfälle.",
+      "eventRequired": "Uttag, återlämning och spill måste höra till ett tillfälle.",
       "volumeOnUnitProduct": "Produkten räknas i styck och har ingen egen volym.",
       "cellMoved": "Någon annan har bokfört på tillfället under tiden. Siffrorna läses om. Kontrollera dem och försök igen.",
       "spillMovesNoStock": "Ett spill flyttar inget lager. Varan lämnade lagret när den togs ut.",
@@ -872,7 +875,7 @@
     "toExpense": "Till utlägget",
     "createTitle": "Bokför {id}",
     "createDescription": "Skapa verifikationen. Kontera raderna och få debet och kredit att gå ihop.",
-    "editTitle": "Ändra verifikation · {id}",
+    "editTitle": "Ändra verifikation – {id}",
     "editDescription": "Justera konteringsraderna innan utlägget exporteras till Fortnox.",
     "paymentCard": "Sektionskort",
     "paymentPrivate": "Privat utlägg",
@@ -1113,6 +1116,12 @@
       "newEmpty": "Tom budget {year}",
       "copyExisting": "Kopiera en befintlig",
       "basedOnHint": "Kopian står för sig själv och minns inte var den kom ifrån. Kommentarer följer inte med.",
+      "importCsv": "Importera från CSV…",
+      "importHint": "En tidigare budget som en rad per post: cost_center, account, description och antingen belopp eller antal x á-pris. År och namn tas från filnamnet.",
+      "importFailed": "Budgeten kunde inte importeras",
+      "imported": "Importerade {sheets} kostnadsställen, {accounts} konton och {lines} rader.",
+      "importUnmatched": "{count} kostnadsställen saknar motsvarighet och importerades frikopplade ({codes}). Ett frikopplat kostnadsställe kommer inte med i utfallsjämförelsen.",
+      "importProblems": "{count} rader kunde inte läsas och hoppades över. Den första på rad {first}",
       "created": "Budget skapad.",
       "createFailed": "Kunde inte skapa budgeten",
       "invalidYear": "Ange ett giltigt år.",
@@ -1121,13 +1130,15 @@
       "copied": "Budget kopierad.",
       "delete": "Ta bort",
       "deleteBudget": "Ta bort budgeten",
-      "deleteTitle": "Ta bort {year} · {name}?",
+      "deleteTitle": "Ta bort {year} – {name}?",
       "deleteMessage": "Budgeten och alla dess rader tas bort permanent. Andra budgetar påverkas inte.",
       "deleted": "Budget borttagen.",
       "deleteFailed": "Kunde inte ta bort budgeten",
       "locked": "Låst",
       "colYear": "År",
       "colBudget": "Budget",
+      "colAdopted": "Antagen",
+      "notAdopted": "–",
       "compareAria": "Jämför {year} {name}",
       "budgets": "Budgetar",
       "budgetCount": "{count, plural, one {# budget} other {# budgetar}}",
@@ -1162,6 +1173,10 @@
       "nameRequired": "Budgeten behöver ett namn.",
       "changeYear": "Byt år",
       "changeName": "Byt namn på budgeten",
+      "changeAdoptedAt": "Byt datum för antagande",
+      "adoptedOn": "Antagen",
+      "notAdopted": "Inte antagen",
+      "invalidAdoptedAt": "Datumet måste skrivas som ÅÅÅÅ-MM-DD.",
       "namePlaceholder": "Budgetens namn",
       "createdBy": "Skapad av {name}",
       "actualsSynced": "Utfall {year} från Fortnox",
@@ -1272,7 +1287,7 @@
         "FORFLYTTNING": "Rambudgeten ska stå still: posterna måste ta ut varandra och ligga inom samma resultatenhet."
       },
       "unchanged": "Budgeten är oförändrad sedan den låstes.",
-      "summary": "{count, plural, one {# ändring gäller} other {# ändringar gäller}} · rambudgeten {effect}",
+      "summary": "{count, plural, one {# ändring gäller} other {# ändringar gäller}} – rambudgeten {effect}",
       "frameUnchanged": "är oförändrad",
       "frameChangedBy": "har ändrats med {amount} kr",
       "new": "Ny ändring",
@@ -1364,11 +1379,11 @@
       "whyTitle": "Varifrån rollerna kommer",
       "whyLoading": "Hämtar rollernas ursprung…",
       "whyFailed": "Kunde inte hämta varifrån rollerna kommer.",
-      "neverSeen": "Vi har ingen grupplista för den här personen — hen har inte loggat in sedan vi började spara den. Rollerna nedan kommer från en tidigare inloggning och går inte att härleda förrän hen loggar in igen.",
+      "neverSeen": "Vi har ingen grupplista för den här personen, eftersom hen inte har loggat in sedan vi började spara den. Rollerna nedan kommer från en tidigare inloggning och går inte att härleda förrän hen loggar in igen.",
       "noGrantedRoles": "Inga roller utöver grundnivån att härleda.",
       "via": "från",
       "leftover": "Ingen grupp ger den här",
-      "leftoverExplained": "En roll utan grupp bakom sig ligger kvar från en tidigare inloggning: mandatet finns inte längre i Authentik, men rollen står kvar på raden tills personen loggar in nästa gång. Den försvinner då av sig själv — kopplingen behöver inte ändras här.",
+      "leftoverExplained": "En roll utan grupp bakom sig ligger kvar från en tidigare inloggning: mandatet finns inte längre i Authentik, men rollen står kvar på raden tills personen loggar in nästa gång. Den försvinner då av sig själv, och kopplingen behöver inte ändras här.",
       "resultUnitsTitle": "Resultatansvar för",
       "unitMissing": "Resultatenheten finns inte",
       "pending": "Vid nästa inloggning tillkommer: {items}. Personens grupper i Authentik har ändrats sedan raden skrevs.",
@@ -1539,8 +1554,8 @@
       "voucherSeriesSaved": "Verifikationsserie sparad.",
       "saveFailed": "Kunde inte spara",
       "chart": "Kontoplan",
-      "chartSubtitle": "{count} konton · senast synkad {time}",
-      "chartSubtitleNever": "{count} konton · aldrig synkad från Fortnox",
+      "chartSubtitle": "{count} konton – senast synkad {time}",
+      "chartSubtitleNever": "{count} konton – aldrig synkad från Fortnox",
       "syncChart": "Synka kontoplan",
       "chartSyncFailed": "Kunde inte synka kontoplanen",
       "chartSynced": "Kontoplan synkad",
@@ -1808,7 +1823,7 @@
       "action": "Ny rapport",
       "actionFor": "Ny rapport för {date}",
       "title": "Ny rapport",
-      "subtitle": "{date} · {source}. En tom rapport att flytta försäljning till.",
+      "subtitle": "{date} – {source}. En tom rapport att flytta försäljning till.",
       "unit": "Verksamhet",
       "unitHint": "Vems intäkter rapporten blir.",
       "unitPlaceholder": "Välj verksamhet…",
@@ -1919,7 +1934,7 @@
       "rows": "{count, plural, =1 {1 rörelse} other {# rörelser}}"
     },
     "holding": {
-      "volume": "{sealed} oöppnade · {open} öppnade",
+      "volume": "{sealed} oöppnade – {open} öppnade",
       "unit": "{units} st"
     },
     "flag": {
@@ -2006,7 +2021,7 @@
         "open": "Öppnade",
         "value": "Värde",
         "out": "Ute",
-        "tag": "Tillfälle"
+        "event": "Tillfälle"
       },
       "searchPlaceholder": "Sök i loggen…",
       "showRevisions": "Visa uppdelning",
@@ -2138,10 +2153,10 @@
       "abv": "Alkoholhalt",
       "unitCost": "Inköpspris inkl. pant",
       "totalVolume": "Total volym",
-      "occasions": "Ut och in",
-      "occasionsHint": "Vad produkten gjort på varje tillfälle. Har någon ändrat en kvälls siffror står det bakom pilen.",
-      "searchOccasions": "Sök tillfälle…",
-      "noOccasions": "Produkten har inte varit ute på något tillfälle ännu.",
+      "events": "Ut och in",
+      "eventsHint": "Vad produkten gjort på varje tillfälle. Har någon ändrat en kvälls siffror står det bakom pilen.",
+      "searchEvents": "Sök tillfälle…",
+      "noEvents": "Produkten har inte varit ute på något tillfälle ännu.",
       "cellar": "Inköp, inventering och rättelser",
       "cellarHint": "Vad som gjorts med produkten i lagret, senast infört först.",
       "searchCellar": "Sök i lagerhändelserna…",
@@ -2150,10 +2165,10 @@
       "correctionOf": "Rättelse av {kind}",
       "countedTo": "räknat {qty}"
     },
-    "tag": {
+    "event": {
       "title": "Tillfällen",
       "description": "Varje kväll och evenemang som varor tagits ut till. Skillnaden mellan ut, in och spill är vad som gick åt.",
-      "occasions": "Tillfällen",
+      "listTitle": "Tillfällen",
       "counts": "{count, plural, =1 {1 tillfälle} other {# tillfällen}}",
       "search": "Sök tillfälle…",
       "empty": "Inga tillfällen ännu. Skapa ett innan du tar ut varor.",
@@ -2205,7 +2220,7 @@
         "save": "Spara",
         "discard": "Rensa",
         "unsaved": "{count, plural, =1 {1 ruta väntar på att sparas} other {# rutor väntar på att sparas}}",
-        "unsavedWithFaults": "{count, plural, =1 {1 ruta väntar} other {# rutor väntar}} · {faults, plural, =1 {1 går inte att bokföra} other {# går inte att bokföra}}",
+        "unsavedWithFaults": "{count, plural, =1 {1 ruta väntar} other {# rutor väntar}} – {faults, plural, =1 {1 går inte att bokföra} other {# går inte att bokföra}}",
         "nothingToSave": "Inget att spara ännu.",
         "discardTitle": "Rensa det ifyllda?",
         "discardMessage": "{count, plural, =1 {1 ändrad ruta} other {# ändrade rutor}} tas bort. Inget är bokfört, så det går inte att få tillbaka.",
@@ -2223,7 +2238,7 @@
         "at": "När",
         "actor": "Vem",
         "product": "Produkt",
-        "tag": "Tillfälle",
+        "event": "Tillfälle",
         "what": "Vad",
         "change": "Ändring"
       },

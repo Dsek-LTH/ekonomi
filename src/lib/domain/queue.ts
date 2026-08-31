@@ -2,7 +2,7 @@ import { canAccessBookkeeping, hasAttestRole } from "./permissions";
 import type { Capability, Expense, Role } from "./types";
 
 // Exactly what deciding a queue needs: who is asking, and what they may do.
-// Narrower than `User` on purpose — a pure function that takes the whole record
+// Narrower than `User` on purpose. A pure function that takes the whole record
 // invites callers to pass a whole record, and then the next reader cannot tell
 // which fields matter. Both `User` and `CurrentUser` satisfy it structurally.
 type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
@@ -17,7 +17,7 @@ type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 // section still gets one list.
 //
 // Language-neutral, like ExpenseEvent: the action is an enum and the UI renders
-// the Swedish. `domain/` stays pure — no database, no formatting, no clock.
+// the Swedish. `domain/` stays pure: no database, no formatting, no clock.
 
 export type QueueAction =
   | "FIX" // came back to you with changes requested
@@ -37,7 +37,7 @@ export interface QueueItem {
 // The submitter's own blockers come first: an utlägg that came back, or never
 // left, is money the section owes someone that nothing else in the system is
 // going to move. Attest is next, because a resultatansvarig is the only person
-// who can clear it and they come in specifically to do so. Bookkeeping last —
+// who can clear it and they come in specifically to do so. Bookkeeping last,
 // it is real work, but it happens in planned sittings rather than in response
 // to a notification, and skattmästeriet has its own screens for it.
 const URGENCY: Record<QueueAction, number> = {
@@ -64,13 +64,13 @@ export function queueActionFor(
     if (expense.status === "CHANGES_REQUESTED") return "FIX";
     if (expense.status === "DRAFT") return "SUBMIT";
     // A card purchase cannot be sent for attest until it is matched against the
-    // bank row — the same gate `submitBlocker` enforces on the detail page.
+    // bank row, the same gate `submitBlocker` enforces on the detail page.
     if (expense.status === "PENDING_MATCH") return "MATCH";
   }
 
   // Someone else's, and you hold the ownership over one of its kostnadsställen.
   // `canAttest` is computed per allocation against the viewer, so this never
-  // has to re-derive authority — it only has to check it has not been used yet.
+  // has to re-derive authority. It only has to check it has not been used yet.
   if (
     expense.status === "PENDING_APPROVAL" &&
     hasAttestRole(user.capabilities) &&

@@ -100,7 +100,7 @@ export function ExpenseActions({
 
   // Ordered by which one the utlägg is waiting for: the first available becomes
   // the button, the rest go in the menu. Editing is last because it's always
-  // possible on an open utlägg — it's the fallback when nothing else is.
+  // possible on an open utlägg. It's the fallback when nothing else is.
   const actions: Action[] = ([
     can.canBook && {
       key: "book",
@@ -178,10 +178,10 @@ export function ExpenseActions({
   if (!primary) return null;
 
   // Only buttons here. What's stopping an action lives in ExpenseActionNotice,
-  // below the header — see there for why.
+  // below the header. See there for why.
   return (
     // On a phone this row is the whole width of the card header, and the two
-    // buttons used to share it as equals — a filled "Skicka in" and a filled
+    // buttons used to share it as equals, a filled "Skicka in" and a filled
     // "Mer", wrapped onto their own line and taking 250 of 361px between them.
     // Two primaries is one too many: what the page is waiting for should have
     // the width, and everything else should have as little of it as it can
@@ -223,7 +223,7 @@ export function ExpenseActions({
               // Fragment, not a div: role="menu" expects its menuitems as
               // children, and a wrapper element between them breaks that.
               <Fragment key={a.key}>
-                {/* A rule above the destructive action — but only when there is
+                {/* A rule above the destructive action, but only when there is
                     something above it to divide. Alone in the menu, delete was
                     opening with a horizontal line ruled across nothing. */}
                 {a.danger && i > 0 && <MenuSeparator />}
@@ -252,7 +252,7 @@ export function ExpenseActions({
 // It began as small print under the buttons, which was the wrong place twice
 // over: it was a whole sentence set right-aligned at max-w-xs, wrapping under
 // whichever button happened to be primary and stretching a header that aligns
-// on its baseline — and when a blocker exists the submit button isn't rendered
+// on its baseline, and when a blocker exists the submit button isn't rendered
 // at all, so it was explaining the absence of a button that wasn't there.
 // It isn't button chrome. It's the state of the utlägg, so it reads as a line
 // about the page, at the top of the page.
@@ -263,14 +263,14 @@ export function ExpenseActionNotice({
 }: {
   can: ExpenseCapabilities;
   fortnox: FortnoxStatus;
-  /** Only so the filing-deadline sentence can name what it is about — a
+  /** Only so the filing-deadline sentence can name what it is about, a
    *  milersättning has no receipt to call old. See SubmitBlockerNote. */
   paymentType?: PaymentType;
 }) {
   const t = useTranslations("expenses.detail");
 
   // The export button is rendered but dead without Fortnox, and its own
-  // tooltip can't say so — Button sets `disabled:pointer-events-none`. Which
+  // tooltip can't say so. Button sets `disabled:pointer-events-none`. Which
   // half is missing decides where you have to go: the section's connection is
   // set up once under Bokföring, your own login is yours to renew.
   const fortnoxNote =

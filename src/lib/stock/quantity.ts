@@ -3,7 +3,7 @@
 // Registering a delivery is arithmetic done standing up: ten crates of
 // twenty-four, plus the thirty loose ones on the pallet. Making somebody work
 // that out in their head and type 270 is how 260 ends up in the log, so the
-// field takes the sum itself — `24*10+30` — and adds it up.
+// field takes the sum itself (`24*10+30`) and adds it up.
 //
 // Parsed rather than evaluated. `eval` and `new Function` would do this in a
 // line and would also run whatever else was typed into a field that is
@@ -31,7 +31,7 @@ export const isQuantityInput = (text: string): boolean => ALLOWED.test(text);
  * Whether this is a sum rather than a figure typed straight in.
  *
  * Only for showing. A cell holding `24*10+30` reads as `270` when nobody is in
- * it, which is what you want to see — and also hides the fact that there is
+ * it, which is what you want to see, and also hides the fact that there is
  * working behind it, so the cell says so with a tint instead.
  */
 export const isExpression = (text: string): boolean => /[+\-*/()]/.test(text.trim());
@@ -40,8 +40,8 @@ export const isExpression = (text: string): boolean => /[+\-*/()]/.test(text.tri
  * Add up a typed sum.
  *
  * A recursive descent over `+ - * / ( )` and numbers, which is the whole
- * grammar. Anything it cannot read — a stray bracket, an operator with nothing
- * after it, a decimal point on its own — comes back as null rather than as a
+ * grammar. Anything it cannot read (a stray bracket, an operator with nothing
+ * after it, a decimal point on its own) comes back as null rather than as a
  * number that happens to fall out of a half-parse.
  */
 export function evaluate(text: string): number | null {
@@ -117,7 +117,7 @@ export function evaluate(text: string): number | null {
 /**
  * What a typed count means, given how many there are to take.
  *
- * Rounded to a whole thing — half a can is not a quantity — and held between
+ * Rounded to a whole thing (half a can is not a quantity) and held between
  * nothing and `max`. Both bounds are facts rather than opinions: you cannot
  * take a negative number of bottles off a shelf, and you cannot take more than
  * are on it. `capped` says the ceiling did something, so a screen can mention

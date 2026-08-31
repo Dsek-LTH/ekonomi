@@ -1,18 +1,18 @@
 // Imports the real budget from prisma/import/budget-2026.json (produced by
-// parse-budget.py) as two standalone budgets for the year — the workbook's two
+// parse-budget.py) as two standalone budgets for the year: the workbook's two
 // value columns, both named by the workbook itself (Parametrar!I5 and I6):
 //
-//   "2026 DELTA" — the left-hand column, the revision being written
-//   "2026 VTM"   — the column it was revised from
+//   "2026 DELTA": the left-hand column, the revision being written
+//   "2026 VTM"   the column it was revised from
 //
 // Both are imported only because both reconcile against the totals the sheets
 // themselves report; parse-budget.py refuses to leave that unsaid. An earlier
 // workbook's previous column did not add up, and importing it would have put a
-// budget in the app that disagreed with the budget that was voted through — so
+// budget in the app that disagreed with the budget that was voted through, so
 // if that check ever fails again, drop the column rather than importing it.
 //
 // Re-runnable: drops and recreates every budget of the year. Pass a name to
-// override the imported column's name — `tsx prisma/import/import-budget.ts VTM`.
+// override the imported column's name: `tsx prisma/import/import-budget.ts VTM`.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/lib/generated/prisma/client";
 import { readFileSync } from "node:fs";
@@ -52,13 +52,13 @@ async function main() {
   const admin =
     (await prisma.user.findFirst({ where: { roles: { hasSome: ["SKATTMASTARE", "ORDFORANDE"] } } })) ??
     (await prisma.user.findFirst());
-  if (!admin) throw new Error("No user to own the budget — seed the database first.");
+  if (!admin) throw new Error("No user to own the budget, seed the database first.");
 
   // 1. Upsert a cost center per result unit sheet.
   const ccByCode = new Map<string, string>(); // code → CostCenter.id
   for (const cc of data.costCenters) {
     // ResultUnit membership is derived from code prefixes (see lib/result units),
-    // so nothing about it is written here — the sheet's result unit column is
+    // so nothing about it is written here. The sheet's result unit column is
     // informational only.
     const row = await prisma.costCenter.upsert({
       where: { code: cc.code },
@@ -123,7 +123,7 @@ async function main() {
   }
 
   // Budgets stand alone, so "replace the year's budget" means every budget of
-  // that year — there is no container row to hold them together any more.
+  // that year, there is no container row to hold them together any more.
   const name = process.argv[2]?.trim() || data.name;
   await prisma.budget.deleteMany({ where: { year: data.year } });
   // The previous column first, so the newer revision sorts after it.

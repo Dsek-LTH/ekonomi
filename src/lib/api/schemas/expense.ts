@@ -7,7 +7,7 @@ import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 
 const PaymentType = z.enum(["CARD", "REIMBURSEMENT", "MILEAGE"]);
 
-/** POST /api/expenses — opens a draft for the wizard to attach a receipt to. */
+/** POST /api/expenses: opens a draft for the wizard to attach a receipt to. */
 export const CreateExpense = z.object({
   // Anything other than REIMBURSEMENT used to fall through to CARD, including a
   // typo. It is one of the three or it is a bad request.
@@ -28,12 +28,12 @@ export type AllocationInput = z.infer<typeof AllocationInput>;
 /**
  * An odometer reading, in kilometres.
  *
- * One decimal, matching the column — a trip meter has one and plenty of
+ * One decimal, matching the column. A trip meter has one and plenty of
  * dashboards show it. Not negative, and bounded well past what any car reaches,
  * because a slipped digit here is a slipped digit in an amount.
  *
  * Zero is a real reading: a trip meter that was just zeroed, and a car straight
- * off the lot. So the two are `Clearable` rather than falsy-checked anywhere —
+ * off the lot. So the two are `Clearable` rather than falsy-checked anywhere,
  * "not given yet" is null, and a draft is allowed to have one.
  */
 const Odometer = z.number().min(0).max(9_999_999).multipleOf(0.1);
@@ -43,7 +43,7 @@ const Odometer = z.number().min(0).max(9_999_999).multipleOf(0.1);
  *
  * Every field is optional because this patches: absent means "leave it", and
  * the route fills from the stored row. `purchaseDate` and `grossAmount` are
- * additionally clearable, since a draft is allowed to not have them yet — which
+ * additionally clearable, since a draft is allowed to not have them yet, which
  * is why they are `Clearable` rather than merely optional, and why the two are
  * different things here.
  */
@@ -60,7 +60,7 @@ export const PatchExpense = z.object({
    * out from the difference and the rate in force on the day of the journey
    * (lib/mileage/claim.ts). Sending either would be sending the one figure on
    * the whole form that decides how much money leaves the section, which is not
-   * a client's to decide — so a request that carries these has its
+   * a client's to decide, so a request that carries these has its
    * `grossAmount` written from them whatever else it said.
    *
    * Clearable, because a draft may hold one reading and not the other, and
@@ -81,7 +81,7 @@ export type PatchExpense = z.infer<typeof PatchExpense>;
 export const TransitionExpense = z.object({
   action: z.enum([
     "submit",
-    // The submitter taking their own claim back out of the queue — apart from
+    // The submitter taking their own claim back out of the queue, apart from
     // "withdraw_attest", which is an attester taking back a signature.
     "recall",
     "request_changes",
@@ -94,7 +94,7 @@ export const TransitionExpense = z.object({
 });
 export type TransitionExpense = z.infer<typeof TransitionExpense>;
 
-/** POST /api/expenses/[id]/match — `null` unmatches. */
+/** POST /api/expenses/[id]/match: `null` unmatches. */
 export const MatchExpense = z.object({
   transactionId: Clearable(Id),
 });
@@ -107,7 +107,7 @@ export const VoucherLineInput = z.object({
   // Clearable like the cost centre beside it, and for the same reason: a row
   // with nothing written on it sends null, and "no description" is not a
   // malformed request. It was `Trimmed.optional()`, which accepts a string or
-  // the key being absent but not the null a cleared field actually sends — so
+  // the key being absent but not the null a cleared field actually sends, so
   // booking an utlägg whose second row had no text was refused outright, with
   // `lines.1.description` as the only clue. Both ends already agreed on the
   // meaning: the route stores `description || null`, and the column is

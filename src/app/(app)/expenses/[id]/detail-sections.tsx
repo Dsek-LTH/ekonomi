@@ -32,14 +32,14 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
       {/* The utlägg's own actions ride this header: it is the card that *is* the
           utlägg, and what you can do to a thing belongs to the thing rather
           than to the page around it. They were in the page header until that
-          became identity only — see components/page-shell.tsx. */}
+          became identity only. See components/page-shell.tsx. */}
       <CardHeader title={t("details")} action={action} />
       {/* Explicit minmax(0,…) single column below sm: the implicit `auto` track
           would floor at its widest item's max-content width, and the allocation
           rows below hold names long enough to take the whole card past the edge
           of a phone. */}
       <CardBody className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-4 sm:grid-cols-2">
-        {/* A milersättning has no purchase date — what it has is the day it
+        {/* A milersättning has no purchase date. What it has is the day it
             was driven, which is what the field holds and what the filing
             deadline runs from. Calling it "Kvittodatum" here would name a
             document the claim does not have, the same way it would on the
@@ -56,8 +56,8 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
             {expense.allocations.map((a) => (
               <div key={a.id} className="rounded-lg bg-surface px-3 py-2 text-sm">
                 {/* Two lines on a phone, one from sm.
-                    All three of these — the cost centre, the amount, the
-                    approver — are things you read, and on 329px of card they
+                    All three of these (the cost centre, the amount, the
+                    approver) are things you read, and on 329px of card they
                     were three truncating boxes fighting for it: the name came
                     out at about 110px, which for a Swedish compound is the
                     first syllable and an ellipsis. Given a line of its own it
@@ -101,7 +101,7 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
  * The journey on the detail page.
  *
  * The same reading the panel beside it is showing on the typeset
- * utläggsräkning, said again in the page's own language — because the panel can be folded away, and
+ * utläggsräkning, said again in the page's own language, because the panel can be folded away, and
  * an attester deciding whether to approve should not have to open a PDF to see
  * what they are approving.
  *
@@ -113,7 +113,7 @@ function JourneyDetail({ journey }: { journey: NonNullable<Expense["mileage"]> }
   const t = useTranslations("mileage");
   const nf = (min: number, max: number) =>
     new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
-  const reading = (km: number | null) => (km == null ? "—" : nf(1, 1).format(km));
+  const reading = (km: number | null) => (km == null ? "–" : nf(1, 1).format(km));
 
   return (
     <div className="min-w-0 sm:col-span-2">
@@ -127,7 +127,7 @@ function JourneyDetail({ journey }: { journey: NonNullable<Expense["mileage"]> }
         </span>
         <span className="flex items-center gap-3 tabular-nums">
           <span className="font-medium">
-            {journey.km == null ? "—" : t("km", { km: nf(0, 1).format(journey.km) })}
+            {journey.km == null ? "–" : t("km", { km: nf(0, 1).format(journey.km) })}
           </span>
           {journey.orePerKm != null && (
             <span className="text-xs text-muted">
@@ -155,7 +155,7 @@ export function VerificationCard({
     <Card>
       <CardHeader
         title={t("verification")}
-        subtitle={`${date(verification.date)} · ${verification.description}`}
+        subtitle={`${date(verification.date)} – ${verification.description}`}
         action={
           canEdit ? (
             <ButtonLink href={`/expenses/${expenseId}/book`} variant="secondary" size="sm">
@@ -169,7 +169,7 @@ export function VerificationCard({
           phone meant dragging a voucher about to read it. What gives is a column
           that was never carrying its width: a line of a double entry is a debit
           *or* a credit, never both, so on a narrow screen the two become one
-          amount with the side written above it. Nothing is dropped — the same
+          amount with the side written above it. Nothing is dropped. The same
           figure, and the word that says which column it would have been in.
 
           Hidden with `hidden`/`sm:table-cell` on both the header and the body,
@@ -198,7 +198,7 @@ export function VerificationCard({
                 <td className="break-words py-2 pl-inset pr-3">
                   <span className="font-medium tabular-nums">{l.account}</span>{" "}
                   <span className="text-muted">{l.accountName}</span>
-                  {l.costCenterCode && <span className="text-muted"> · {l.costCenterCode}</span>}
+                  {l.costCenterCode && <span className="text-muted"> – {l.costCenterCode}</span>}
                   {l.description && (
                     <span className="block text-xs text-muted">{l.description}</span>
                   )}
@@ -239,7 +239,7 @@ export function TimelineCard({ revisions }: { revisions: Expense["revisions"] })
   const tField = useTranslations("expenses.field");
   const { dateTime } = useFormat();
 
-  // Two event types carry data rather than prose in `comment` — the fields an
+  // Two event types carry data rather than prose in `comment`. The fields an
   // edit touched, and the voucher an export produced. Everything else wrote a
   // comment someone typed, which is shown as it was written.
   function comment(r: Expense["revisions"][number]): string | undefined {

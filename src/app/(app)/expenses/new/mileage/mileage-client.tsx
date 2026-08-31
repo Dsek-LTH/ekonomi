@@ -4,7 +4,7 @@
 //
 // Its own screen rather than a third branch of the ordinary wizard, because
 // what is being described is different in kind. There is no receipt to upload,
-// no amount to type — the money is the distance at the schablon — and nothing
+// no amount to type. The money is the distance at the schablon, and nothing
 // to match against the card, since the money left the claimant's own account.
 // What comes out the far end is an ordinary utlägg all the same: paymentType
 // MILEAGE, allocations over cost centres, the same attest, booking and export.
@@ -13,7 +13,7 @@
 // underlag.
 //
 // One journey per claim. Somebody who drove three times fills this in three
-// times, and gets three claims — each attested on its own and on its own cost
+// times, and gets three claims, each attested on its own and on its own cost
 // centre, which is what a sheet of journeys sharing one amount could not do.
 //
 // What is asked for is the odometer at each end, not a distance. The difference
@@ -25,6 +25,7 @@
 // match step exists for card purchases and there is no such thing here.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useReturnTo } from "@/components/shell/route-history";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
@@ -60,7 +61,7 @@ import { useSelectOnce } from "@/lib/ui/use-select-once";
  * fields are: "12 300," is something somebody is in the middle of typing, and a
  * number input would either refuse it or silently make it 12300.
  *
- * Null rather than 0 for "nothing typed yet" — 0 is a real reading (a trip
+ * Null rather than 0 for "nothing typed yet". 0 is a real reading (a trip
  * meter just zeroed, a car straight off the lot), so the two must not collapse
  * into the same value.
  */
@@ -72,7 +73,7 @@ const readOdometer = (text: string): number | null => {
 };
 
 /** Whether a string is on its way to being a reading: digits, one separator,
- *  one decimal. Anything else is not taken, so the field keeps what it had —
+ *  one decimal. Anything else is not taken, so the field keeps what it had,
  *  the same rule `isAmountInput` holds for money. */
 const isOdometerInput = (text: string): boolean => /^\d{0,7}([.,]\d?)?$/.test(text);
 
@@ -101,6 +102,7 @@ export default function MileageClient({
   existing?: Expense;
 }) {
   const router = useProgressRouter();
+  const returnTo = useReturnTo();
   const t = useTranslations("mileage");
   const tWizard = useTranslations("expenses.wizard");
   const tNav = useTranslations("nav");
@@ -133,7 +135,7 @@ export default function MileageClient({
   const saving = pending === "save";
   const [exit, setExit] = useState<"draft" | "submit" | null>(null);
 
-  // Active ones, plus any this claim already uses — so an allocation on a
+  // Active ones, plus any this claim already uses, so an allocation on a
   // since-retired cost centre stays selectable while it is being edited.
   const usedCodes = new Set(existing?.allocations.map((a) => a.costCenterCode) ?? []);
   const selectableCostCenters = costCenters.filter((c) => c.active || usedCodes.has(c.code));
@@ -157,7 +159,7 @@ export default function MileageClient({
   const dateIncomplete = journeyDate !== "" && !isCompleteDate(journeyDate);
   const dateInFuture = isFutureDate(journeyDate);
   // Past the filing deadline, which a milersättning has exactly as an eget
-  // utlägg does — it is the claimant's own petrol out of the claimant's own
+  // utlägg does. It is the claimant's own petrol out of the claimant's own
   // account, and a stale one is as uncheckable as a stale receipt. Said here,
   // under the field, rather than left for the review step: this is the one
   // blocker nobody can fix by filling something else in, so finding it after
@@ -191,8 +193,8 @@ export default function MileageClient({
     !dateTooLate &&
     allocations.length > 0 &&
     allocations.every((a) => a.costCenterCode);
-  // A draft may be saved with the readings still missing — that is what a draft
-  // is for — but not with nothing to call it, not with a half-typed date (which
+  // A draft may be saved with the readings still missing, since that is what a
+  // draft is for, but not with nothing to call it, not with a half-typed date (which
   // would be stored as 1 January of the year typed so far), and not with a day
   // that has not come, which the server refuses anyway.
   // …and not past the deadline: PATCH refuses to store one (the same rule, on
@@ -200,7 +202,7 @@ export default function MileageClient({
   // the sentence under the field that already says what is wrong.
   const canPersist =
     title.trim() !== "" && !dateIncomplete && !dateInFuture && !dateTooLate && !saving;
-  // An attested claim can still be corrected but not re-sent from this form —
+  // An attested claim can still be corrected but not re-sent from this form.
   // the same rule the ordinary wizard holds to.
   const submittable = !existing || isSubmittable(existing.status);
 
@@ -254,8 +256,9 @@ export default function MileageClient({
   }
 
   function done(id: string) {
-    router.push(`/expenses/${id}`);
-    router.refresh();
+    // Replaces the wizard's entry rather than pushing past it. See the
+    // claim wizard's `done`, which this mirrors.
+    returnTo(`/expenses/${id}`);
   }
 
   async function saveDraft() {
@@ -305,7 +308,7 @@ export default function MileageClient({
           onChange(e.target.value);
         }}
         // Shown back with the comma a Swedish reader writes, whichever
-        // separator the phone's keypad happened to offer — the same rule the
+        // separator the phone's keypad happened to offer, the same rule the
         // amount fields hold to. On blur, not per keystroke: "12 300," is an
         // ordinary thing to be half-way through typing.
         onBlur={() => {
@@ -333,7 +336,7 @@ export default function MileageClient({
       <Stepper steps={[t("step.journey"), tWizard("step.submit")]} current={step} />
 
       {/* The panel shows the utläggsräkning itself, once there is a draft to
-          draw one from — the same one document that goes to Fortnox, with the
+          draw one from, the same one document that goes to Fortnox, with the
           journey printed on it. Before the first save there is nothing at an
           address yet, so the panel says what will appear there rather than
           standing empty. It never takes an upload: on this form there is
@@ -347,7 +350,7 @@ export default function MileageClient({
         emptyDescription={t("documentPending")}
       />
 
-      {/* Step 1 — the journey */}
+      {/* Step 1: the journey */}
       {step === 0 && (
         <Card>
           <CardBody className="space-y-5">
@@ -379,7 +382,7 @@ export default function MileageClient({
             </Field>
 
             {/* The two readings, side by side because they are one measurement
-                taken twice — and in the order they happen, so filling them in
+                taken twice, and in the order they happen, so filling them in
                 reads like the journey did. */}
             <FieldGroup label={t("odometer.label")} hint={t("odometer.hint")}>
               <div className="grid grid-cols-2 gap-3 sm:gap-5">
@@ -398,7 +401,7 @@ export default function MileageClient({
                   ? t("total")
                   : t("sum", {
                       km: km(valued.km),
-                      rate: valued.orePerKm == null ? "—" : money(valued.orePerKm / 100),
+                      rate: valued.orePerKm == null ? "–" : money(valued.orePerKm / 100),
                     })}
               </span>
               <span className="text-lg font-semibold tabular-nums">{money(grossSEK)} kr</span>
@@ -414,8 +417,8 @@ export default function MileageClient({
             </FieldGroup>
 
             {/* The payment type, said rather than asked. It is the one thing
-                this form does not offer a choice about — the choice was made
-                by opening it — but leaving it out entirely would make the two
+                this form does not offer a choice about. The choice was made
+                by opening it, but leaving it out entirely would make the two
                 forms look like different features rather than one question
                 answered three ways. The other two are a link back. */}
             <FieldGroup label={tWizard("paymentType")}>
@@ -432,7 +435,7 @@ export default function MileageClient({
                   card: the choice between the two forms is made before either
                   is drawn (components/new-expense-menu.tsx), and re-offering it
                   here as a control would put a door back among the switches.
-                  Nothing is lost on the way — this form has been open for as
+                  Nothing is lost on the way. This form has been open for as
                   long as it took to notice. */}
               {!editing && (
                 <p className="mt-2 text-xs text-muted">
@@ -471,7 +474,7 @@ export default function MileageClient({
         </Card>
       )}
 
-      {/* Step 2 — review & send */}
+      {/* Step 2: review and send */}
       {step === 1 && (
         <Card>
           <CardBody className="space-y-5">
@@ -480,18 +483,18 @@ export default function MileageClient({
               <DetailRow label={t("description")} value={title} />
               <DetailRow
                 label={t("journeyDate")}
-                value={journeyDate ? date(journeyDate) : "—"}
+                value={journeyDate ? date(journeyDate) : "–"}
               />
               {/* The readings as well as the distance: the review step is the
                   last look before this becomes somebody else's to check, and
                   what they will be checking is these two numbers. */}
               <DetailRow
                 label={t("odometer.label")}
-                value={`${startText || "—"} → ${endText || "—"}`}
+                value={`${startText || "–"} → ${endText || "–"}`}
               />
               <DetailRow
                 label={t("distance")}
-                value={valued.km == null ? "—" : t("km", { km: km(valued.km) })}
+                value={valued.km == null ? "–" : t("km", { km: km(valued.km) })}
               />
               <DetailRow label={tWizard("amount")} value={<Amount value={grossSEK} />} />
               {allocations.map((a, i) => (
@@ -500,7 +503,7 @@ export default function MileageClient({
                   label={i === 0 ? tWizard("distribution") : ""}
                   value={
                     <>
-                      {a.costCenterCode} · <Amount value={parseSEK(a.amount)} signed />
+                      {a.costCenterCode} – <Amount value={parseSEK(a.amount)} signed />
                     </>
                   }
                 />
@@ -510,7 +513,7 @@ export default function MileageClient({
                 label={tWizard("payoutTo")}
                 value={
                   payoutClearing && payoutAccount
-                    ? `${payoutClearing} · ${payoutAccount}`
+                    ? `${payoutClearing} – ${payoutAccount}`
                     : tWizard("payoutMissing")
                 }
               />

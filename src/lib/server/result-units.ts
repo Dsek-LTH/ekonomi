@@ -3,8 +3,8 @@
 //
 // Prefixes are kept non-overlapping (no prefix may be an extension of another),
 // so at most one can match a given code and there is never a tie to break. That
-// invariant is enforced on write by `prefixConflict` — the database cannot
-// express it — and everything downstream may therefore assume it holds.
+// invariant is enforced on write by `prefixConflict` (the database cannot
+// express it) and everything downstream may therefore assume it holds.
 import { cache } from "react";
 import { prisma } from "@/lib/server/db";
 
@@ -45,7 +45,7 @@ export function resultUnitForCode(
   return prefixes.find((p) => c.startsWith(p.value)) ?? null;
 }
 
-// ResultUnit NAME for a code — the shape the UI and the attest check use, since
+// ResultUnit NAME for a code, the shape the UI and the attest check use, since
 // result unit names are unique and already the key permissions compare on.
 export function resultUnitNameForCode(code: string, prefixes: PrefixRow[]): string | null {
   return resultUnitForCode(code, prefixes)?.resultUnitName ?? null;
@@ -87,7 +87,7 @@ export async function prefixConflict(
   return null;
 }
 
-/** The conflict as an error code plus its values — see lib/api/guard.ts. */
+/** The conflict as an error code plus its values. See lib/api/guard.ts. */
 export function prefixConflictError(c: PrefixConflict): {
   code: string;
   values: Record<string, string>;
@@ -106,7 +106,7 @@ export function costCentreWhereForPrefixes(prefixes: string[]) {
 
 // ── The result units a person answers for ─────────────────────────
 
-// Cached on the user id — a primitive, so it dedupes across every caller in a
+// Cached on the user id, a primitive, so it dedupes across every caller in a
 // request rather than only within one. Expense scoping, attest annotation and
 // the transition route all ask this same question.
 //
@@ -116,7 +116,7 @@ export function costCentreWhereForPrefixes(prefixes: string[]) {
 // Inställningar takes effect on the next request, where a copy on the user row
 // would go stale until everyone signed in again.
 //
-// A name with no ResultUnit row behind it contributes nothing — the mapping is
+// A name with no ResultUnit row behind it contributes nothing. The mapping is
 // written by hand and can name a unit that does not exist. That is reported in
 // Inställningar → Resultatenheter rather than being left to surface as an
 // attest queue that is silently empty.
@@ -136,7 +136,7 @@ const ownershipsOf = cache(async (userId: string) => {
 const NO_RESULT_UNITS = { names: [] as string[], prefixes: [] as string[] };
 
 /**
- * The result units `actor` answers for — empty for anyone not holding
+ * The result units `actor` answers for: empty for anyone not holding
  * RESULTATANSVARIG. The role and the units come from the same line of the same
  * mapping, so this check is belt-and-braces rather than a second rule; it holds
  * even for a row left behind by an older mapping.

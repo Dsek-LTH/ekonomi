@@ -1,8 +1,8 @@
 // Transactions whose *outcome* is what gets checked.
 //
 // A read-modify-write that validates an invariant inside the transaction is
-// only sound under SERIALIZABLE. At READ COMMITTED — Postgres's default, and
-// what `prisma.$transaction()` uses when nothing tells it otherwise — two
+// only sound under SERIALIZABLE. At READ COMMITTED, Postgres's default and
+// what `prisma.$transaction()` uses when nothing tells it otherwise, two
 // concurrent writers each see a world in which the other's change has not
 // happened, both pass their check, and both commit into a state neither of them
 // ever evaluated.
@@ -15,14 +15,14 @@
 // door is locked from the inside.
 //
 // The timeout is raised for the same callers, which re-derive grants for
-// everyone a mapping change touches (`reapplyGrants`) — work that does not fit
+// everyone a mapping change touches (`reapplyGrants`), work that does not fit
 // in Prisma's 5s default once the section is a real size.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 
 /**
- * The client handed to a transaction callback — the full one minus the methods
+ * The client handed to a transaction callback: the full one minus the methods
  * that cannot be nested. Derived from `$transaction` itself rather than named
  * from the generated client, so this module stays as free of it as the rest of
  * lib/server is (see the duck-typed `tx` parameters in authentik-roles.ts and
@@ -46,7 +46,7 @@ const isRetryable = (err: unknown): boolean => {
  * produce.
  *
  * Retrying is safe here because every caller writes *finished state* rather than
- * a delta — a whole role's capabilities, a whole group's grant, one rename — so
+ * a delta: a whole role's capabilities, a whole group's grant, one rename, so
  * replaying one is the same as running it once. A caller that accumulated
  * instead would need its own answer, and should not use this.
  */
@@ -74,7 +74,7 @@ export async function serializable<T>(fn: (tx: TxClient) => Promise<T>): Promise
  * save had not worked.
  *
  * Ordinary isolation: unlike `serializable` above, these callers are not
- * checking an invariant against their own outcome — they are moving a lot of
+ * checking an invariant against their own outcome. They are moving a lot of
  * rows, and paying for serialization would buy nothing.
  */
 export function bulkTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {

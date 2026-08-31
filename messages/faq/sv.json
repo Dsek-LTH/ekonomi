@@ -9,7 +9,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Bokföring är ett lagkrav i Sverige. Bokföringslagen gäller alla som driver näringsverksamhet, och D-sektionen är en näringsverksamhet — därför måste vi förhålla oss till den."
+            "v": "Bokföring är ett lagkrav i Sverige. Bokföringslagen gäller alla som driver näringsverksamhet, och D-sektionen är en näringsverksamhet, därför måste vi förhålla oss till den."
           },
           {
             "t": "p",
@@ -43,7 +43,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Ett utlägg är en utgift som du betalar för någon annans räkning — du lägger ut egna pengar för något som sektionen ska stå för, och ersätts i efterhand."
+            "v": "Ett utlägg är en utgift som du betalar för någon annans räkning. Du lägger ut egna pengar för något som sektionen ska stå för, och ersätts i efterhand."
           }
         ]
       },
@@ -77,7 +77,7 @@
             "t": "ol",
             "v": [
               "Stäm av köpet med din utskottsordförande och få ett godkännande.",
-              "Se till att du får ett giltigt kvitto i kassan — inte bara en orderbekräftelse eller ett kortkvitto.",
+              "Se till att du får ett giltigt kvitto i kassan, inte bara en orderbekräftelse eller ett kortkvitto.",
               "Redovisa köpet här på sidan så fort du är hemma."
             ]
           },
@@ -121,7 +121,7 @@
       },
       {
         "id": "declined",
-        "q": "Betalningen nekas i kassan — vad gör jag?",
+        "q": "Betalningen nekas i kassan, vad gör jag?",
         "a": [
           {
             "t": "p",
@@ -129,12 +129,12 @@
           },
           {
             "t": "link",
-            "v": "Skattmästaren (Ludwig) — 070-893 55 85",
+            "v": "Skattmästaren (Ludwig): 070-893 55 85",
             "href": "tel:+46708935585"
           },
           {
             "t": "link",
-            "v": "Vice skattmästare (Edvin) — 079-349 06 22",
+            "v": "Vice skattmästare (Edvin): 079-349 06 22",
             "href": "tel:+46793490622"
           }
         ]
@@ -145,7 +145,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan — det är knutet till dig och till din post."
+            "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan. Det är knutet till dig och till din post."
           }
         ]
       }
@@ -196,7 +196,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Alla köp måste redovisas — det är kravet för att du ska få ersättning för ett privat utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort. När du redovisar fyller du i:"
+            "v": "Alla köp måste redovisas. Det är kravet för att du ska få ersättning för ett privat utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort. När du redovisar fyller du i:"
           },
           {
             "t": "ul",
@@ -221,7 +221,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Ja, om kvittona avser SAMMA HÄNDELSE — till exempel två olika köp samma dag inför samma event. Tryck på \"lägg till kvitto\" och redovisa dem tillsammans."
+            "v": "Ja, om kvittona avser SAMMA HÄNDELSE, till exempel två olika köp samma dag inför samma event. Tryck på \"lägg till kvitto\" och redovisa dem tillsammans."
           },
           {
             "t": "p",
@@ -231,7 +231,7 @@
       },
       {
         "id": "split",
-        "q": "Kvittot ska belasta flera kostnadsställen — hur gör jag?",
+        "q": "Kvittot ska belasta flera kostnadsställen, hur gör jag?",
         "a": [
           {
             "t": "p",
@@ -250,11 +250,11 @@
           {
             "t": "ul",
             "v": [
-              "Öl — bärs, suröl.",
-              "Vin — högst 22 ‰, portvin, sherry, vermouth.",
-              "Annan jäst dryck — cider, fruktviner, mjöd.",
-              "Spritdryck — Halmstad Crush, vodka, likörer.",
-              "Alkoholdrycksliknande preparat — alkoglass."
+              "Öl: bärs, suröl.",
+              "Vin: högst 22 ‰, portvin, sherry, vermouth.",
+              "Annan jäst dryck: cider, fruktviner, mjöd.",
+              "Spritdryck: Halmstad Crush, vodka, likörer.",
+              "Alkoholdrycksliknande preparat: alkoglass."
             ]
           },
           {
@@ -264,7 +264,7 @@
           {
             "t": "note",
             "tone": "warn",
-            "v": "Är du osäker på vilken kategori en dryck tillhör — fråga alltid din utskottsordförande. Den vanligaste missen är att spritdrycker kategoriseras som annan jäst dryck: Halmstad Crush är en spritdryck, inte cider."
+            "v": "Är du osäker på vilken kategori en dryck tillhör, fråga alltid din utskottsordförande. Den vanligaste missen är att spritdrycker kategoriseras som annan jäst dryck: Halmstad Crush är en spritdryck, inte cider."
           }
         ]
       },
@@ -279,17 +279,17 @@
           {
             "t": "ul",
             "v": [
-              "Norrlands Guld (öl) — 2 × 13,90 kr + 2 × 1 kr pant.",
-              "Pistonhead Haze Lager (öl) — 2 × 11,90 kr + 2 × 1 kr pant.",
-              "Crazy Cat (vin) — 209 kr.",
-              "Explorer Vodka (spritdryck) — 189 kr + 1 kr pant.",
-              "Halmstad Crush (spritdryck) — 16,90 kr + 1 kr pant.",
-              "Briska Fläder (annan jäst dryck) — 16,90 kr + 1 kr pant."
+              "Norrlands Guld (öl): 2 × 13,90 kr + 2 × 1 kr pant.",
+              "Pistonhead Haze Lager (öl): 2 × 11,90 kr + 2 × 1 kr pant.",
+              "Crazy Cat (vin): 209 kr.",
+              "Explorer Vodka (spritdryck): 189 kr + 1 kr pant.",
+              "Halmstad Crush (spritdryck): 16,90 kr + 1 kr pant.",
+              "Briska Fläder (annan jäst dryck): 16,90 kr + 1 kr pant."
             ]
           },
           {
             "t": "p",
-            "v": "Då redovisar du fyra rader — en per kategori:"
+            "v": "Då redovisar du fyra rader, en per kategori:"
           },
           {
             "t": "table",
@@ -329,7 +329,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp — privat utlägg såväl som köp med sektionskort — inte redovisas inom 60 dagar från att köpet genomfördes."
+            "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp (privat utlägg såväl som köp med sektionskort) inte redovisas inom 60 dagar från att köpet genomfördes."
           },
           {
             "t": "note",
@@ -340,7 +340,7 @@
       },
       {
         "id": "returns",
-        "q": "Jag har returnerat en vara — måste det redovisas?",
+        "q": "Jag har returnerat en vara, måste det redovisas?",
         "a": [
           {
             "t": "p",
@@ -350,11 +350,11 @@
       },
       {
         "id": "foreign",
-        "q": "Jag ska handla från utlandet — något särskilt att tänka på?",
+        "q": "Jag ska handla från utlandet, något särskilt att tänka på?",
         "a": [
           {
             "t": "p",
-            "v": "Gör köpet via Klarna om du kan. Andra länder behöver inte följa svenska regelverk och är därför inte skyldiga att lämna kvitto på samma sätt som en svensk säljare — men går köpet via Klarna får du alltid ett giltigt kvitto."
+            "v": "Gör köpet via Klarna om du kan. Andra länder behöver inte följa svenska regelverk och är därför inte skyldiga att lämna kvitto på samma sätt som en svensk säljare. Men går köpet via Klarna får du alltid ett giltigt kvitto."
           }
         ]
       }
@@ -418,7 +418,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Datum, varje vara med pris, momssatserna, säljarens bolagsnamn, adress och organisationsnummer samt kvittonummer — allt finns med och går att läsa."
+            "v": "Datum, varje vara med pris, momssatserna, säljarens bolagsnamn, adress och organisationsnummer samt kvittonummer, allt finns med och går att läsa."
           },
           {
             "t": "image",
@@ -454,7 +454,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Bekräftar att en beställning är lagd — inte att den är betald. Saknar verifikationsnummer och redovisar sällan moms. Begär ett kvitto när varan skickats."
+            "v": "Bekräftar att en beställning är lagd, inte att den är betald. Saknar verifikationsnummer och redovisar sällan moms. Begär ett kvitto när varan skickats."
           },
           {
             "t": "image",
@@ -484,7 +484,7 @@
         "a": [
           {
             "t": "p",
-            "v": "Skattesatserna måste framgå. Ett underlag som bara visar totalbeloppet går inte att bokföra — kortterminalens köpbevis är det vanligaste exemplet."
+            "v": "Skattesatserna måste framgå. Ett underlag som bara visar totalbeloppet går inte att bokföra. Kortterminalens köpbevis är det vanligaste exemplet."
           },
           {
             "t": "image",

@@ -4,7 +4,7 @@
 // adds another, and the comments underneath.
 //
 // The largest of the sheet's pieces and the one that reads the most of it,
-// which is why the sheet arrives as a context rather than as arguments — this
+// which is why the sheet arrives as a context rather than as arguments. This
 // took forty-two of them as a closure, and the section card above it was
 // carrying eleven of those purely to hand them down. See ./sheet-context.
 import { effectiveKind, type AccountKind } from "@/lib/budget";
@@ -43,7 +43,7 @@ function lineCell(
   if (k === "konto") return (
     // The account-number column, on a row that has no number of its own. What
     // it holds instead is the elbow: down out of the account above, right into
-    // this row — the same mark the income screen puts on a product's variant,
+    // this row, the same mark the income screen puts on a product's variant,
     // and the same reading. The grip keeps the left of the cell; `ml-auto`
     // holds the elbow against the row it points at, whether or not the grip
     // is there to be seen.
@@ -130,7 +130,7 @@ export function AccountBlock({ account }: { account: Account }) {
   const ghostLines = (cmp?.lines ?? []).filter((l) => !keys.includes(l.key));
 
   // Editorial changes in force on this account. They are already inside
-  // `total` — the evaluator adds them (lib/budget/eval.ts) — so the rows below
+  // `total`, the evaluator adds them (lib/budget/eval.ts), so the rows below
   // are what makes the figure explicable rather than merely different from
   // what was adopted.
   const adjRows = adjustments.get(account.id) ?? [];
@@ -159,7 +159,7 @@ export function AccountBlock({ account }: { account: Account }) {
               onChange={(v) => {
                 if (v === account.accountCode) return;
                 // The code pulls the name with it, resolved from the chart, so
-                // both are taken off the answer — and only those two, since
+                // both are taken off the answer, and only those two, since
                 // the account's rows are not in it.
                 api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v }, (b, data) =>
                   withAccount(b, account.id, (a) => ({
@@ -222,7 +222,7 @@ export function AccountBlock({ account }: { account: Account }) {
             // border-collapse table, which this is.
             //
             // `pointer-events-none` is what lets the drag see the sheet
-            // underneath it — the row is directly under the pointer the whole
+            // underneath it. The row is directly under the pointer the whole
             // way, and it cannot be the answer to what it is over.
             draggingLineId === li.id &&
               "pointer-events-none relative z-10 bg-background outline outline-1 outline-border",
@@ -248,7 +248,7 @@ export function AccountBlock({ account }: { account: Account }) {
       ))}
 
       {/* Editorial changes, one row each, under the adopted rows they change.
-          Never editable — a change is amended by recording another one, not
+          Never editable. A change is amended by recording another one, not
           by rewriting it (see the changes view). */}
       {adjRows.map((row) => (
         <tr key={row.change.id} className="border-t border-border/40 bg-warning-soft/40">
@@ -288,7 +288,7 @@ export function AccountBlock({ account }: { account: Account }) {
           {gut(undefined)}
           {columns.map((col) => (
             <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-              {col.key === "beskrivning" && <span className="pl-3">{l.description || "—"}</span>}
+              {col.key === "beskrivning" && <span className="pl-3">{l.description || "–"}</span>}
             </td>
           ))}
           <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />
@@ -298,7 +298,7 @@ export function AccountBlock({ account }: { account: Account }) {
 
       {isAdmin && (
         // Also where a dragged row lands when it is carried this far down an
-        // account — including an account with no rows of its own, which has
+        // account, including an account with no rows of its own, which has
         // nothing else to aim at.
         <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
         <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
@@ -320,7 +320,7 @@ export function AccountBlock({ account }: { account: Account }) {
         {gut(undefined)}
         <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t("sum")}
-          {/* What the account said before the changes — the number that was
+          {/* What the account said before the changes, the number that was
               voted through, kept beside the one in force so neither has to be
               worked out from the other. */}
           {adjTotal !== 0 && total !== undefined && (
@@ -362,7 +362,7 @@ export function AccountBlock({ account }: { account: Account }) {
 
       {open && (
         <tr className="bg-surface/20">
-          {/* sheet-field: what's in here is a form field, not a sheet cell —
+          {/* sheet-field: what's in here is a form field, not a sheet cell.
               it keeps the app's focus ring and this row draws no cell box. */}
           <td colSpan={totalCols} className="sheet-field px-4 py-3">
             <div className="space-y-2">
@@ -426,7 +426,7 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
         </td>
         <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
           {account.name}
-          <span className="ml-2 text-xs font-normal">· {tRam("notInThisBudget")}</span>
+          <span className="ml-2 text-xs font-normal">– {tRam("notInThisBudget")}</span>
         </td>
         <CompareCells other={account.totals[1]} own={undefined} incomeLike={incomeLike} strong />
         <td />
@@ -436,7 +436,7 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
           {gut(undefined)}
           {columns.map((col) => (
             <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-              {col.key === "beskrivning" && <span className="pl-3">{l.description || "—"}</span>}
+              {col.key === "beskrivning" && <span className="pl-3">{l.description || "–"}</span>}
             </td>
           ))}
           <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />

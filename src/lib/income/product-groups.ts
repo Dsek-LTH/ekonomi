@@ -1,20 +1,20 @@
 // How a day's sold products are laid out: grouped by product, variants indented
 // under the name they belong to.
 //
-// A till rings up "Macka" three times with a different variant each — ost,
-// skinka, hummus — and read as three unrelated rows that is a list where the
+// A till rings up "Macka" three times with a different variant each (ost,
+// skinka, hummus) and read as three unrelated rows that is a list where the
 // same word appears three times and the thing that differs is at the end of it.
 // Grouped, the name is said once and what actually differs lines up under it.
 //
 // This is a port, not an invention. The intäktsräkning has laid its products out
 // this way all along (intakt/report/pdf.go, `productRowsToTex`) and the review
-// screen showed a flat list beside it — the same day, in two shapes, side by
+// screen showed a flat list beside it. The same day, in two shapes, side by
 // side on one screen, because the PDF is in the document panel while you work.
 // So the rules here are that file's rules, down to the sort:
 //
 //   • group by the product's trimmed name, groups in name order;
 //   • inside a group, by variant (case-insensitively), then account, then unit
-//     price — so the same day always reads the same way;
+//     price, so the same day always reads the same way;
 //   • a group where *anything* carries a variant gets a heading of its own and
 //     its rows indented under it; one where nothing does is just its rows.
 //
@@ -30,7 +30,7 @@ export interface GroupableLine {
 /**
  * A row to draw: either a group's heading, or one sold line.
  *
- * The heading carries no figures — quantities and amounts belong to the lines,
+ * The heading carries no figures. Quantities and amounts belong to the lines,
  * and a group total would be a number the document does not have.
  */
 export type ProductRow<T> =
@@ -46,7 +46,7 @@ export type ProductRow<T> =
     };
 
 /**
- * What one line is called on its own — "Läsk Stor".
+ * What one line is called on its own: "Läsk Stor".
  *
  * The document's `displayName`. Used where a line has to be identifiable
  * without the heading above it to lean on: a row outside any group, and the
@@ -94,8 +94,8 @@ export function productRows<T extends GroupableLine>(lines: readonly T[]): Produ
       const variant = (line.variant ?? "").trim();
       rows.push({
         kind: "line",
-        // The lines carry no id here — this stays usable for anything shaped
-        // like a sold line — so position within the group is the key. Stable,
+        // The lines carry no id here. This stays usable for anything shaped
+        // like a sold line, so position within the group is the key. Stable,
         // because the order above is a pure function of the lines.
         key: `${name}:${i}`,
         line,

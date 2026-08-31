@@ -74,7 +74,7 @@ export function ProfileClient({
             <DetailRow label={tProfile("email")} value={email} />
             <DetailRow
               label={tProfile("roles")}
-              value={roles.length ? roles.map((r) => tRole(r)).join(" · ") : tRole("ORDINARIE")}
+              value={roles.length ? roles.map((r) => tRole(r)).join(" – ") : tRole("ORDINARIE")}
             />
           </DetailList>
 

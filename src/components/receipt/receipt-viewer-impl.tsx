@@ -14,13 +14,13 @@ import { cn } from "@/lib/ui/utils";
 
 // pdf.js parses in a Web Worker, so it needs a URL to load that worker from.
 // Resolving it through the bundler (rather than copying the file into /public)
-// means the worker is always the one from the installed pdfjs-dist — no copy
+// means the worker is always the one from the installed pdfjs-dist, with no copy
 // step to run, and no way for it to drift from the version react-pdf expects.
 //
 // That is also why package.json depends on pdfjs-dist at the exact version
 // react-pdf pins: this import reaches past react-pdf into its own dependency,
 // which a flat node_modules happens to allow and pnpm's does not. Declaring it
-// is what makes the import legitimate — and keeping it exact is what keeps the
+// is what makes the import legitimate, and keeping it exact is what keeps the
 // worker and the library the same build.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -28,8 +28,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 // Two-finger trackpad scrolling should pan the receipt; a mouse wheel should
-// zoom. The platform gives us nothing to tell them apart — both arrive as a
-// `wheel` event with ctrlKey false (only a pinch sets ctrlKey) — so we have to
+// zoom. The platform gives us nothing to tell them apart, since both arrive as
+// a `wheel` event with ctrlKey false (only a pinch sets ctrlKey), so we have to
 // judge by the shape of the deltas.
 const GESTURE_GAP_MS = 200;
 const WHEEL_MIN_DELTA = 40;
@@ -39,7 +39,7 @@ const WHEEL_MIN_DELTA = 40;
 // sixty on the way, short enough that letting go feels like it took.
 const RESIZE_SETTLE_MS = 180;
 
-// The same, for the zoom — see `pixelRatio` below. Longer, because a wheel zoom
+// The same, for the zoom. See `pixelRatio` below. Longer, because a wheel zoom
 // is a continuous gesture and re-rasterising an A4 page mid-scroll is the one
 // thing that would make zooming feel worse than the blur it is fixing.
 const ZOOM_SETTLE_MS = 300;
@@ -55,7 +55,7 @@ const ZOOM_SETTLE_MS = 300;
  * Generous enough to be worth having: uploads are capped at 2400px on the long
  * side (lib/server/images.ts), so a photographed receipt is shown at every
  * pixel it has well before this bites, and a vector PDF gets ~340 DPI on A4.
- * Past it you are zooming into a bitmap and it blurs — which is what every PDF
+ * Past it you are zooming into a bitmap and it blurs, which is what every PDF
  * viewer does eventually.
  */
 const MAX_CANVAS_WIDTH = 3200;
@@ -73,10 +73,10 @@ function looksLikeTrackpad(e: WheelEvent): boolean {
   return !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < WHEEL_MIN_DELTA;
 }
 
-/** One thing to look at. A PDF is shown whole — every page, stacked — and an
+/** One thing to look at. A PDF is shown whole (every page, stacked) and an
  *  image is shown as it was stored. */
 export interface ViewerDocument {
-  /** Where the file is — an archive URL, or a local one for a file not yet
+  /** Where the file is: an archive URL, or a local one for a file not yet
    *  uploaded. The viewer only ever reads it. */
   src: string;
   mimeType: string;
@@ -99,7 +99,7 @@ export interface ViewerDocument {
 
 export interface ReceiptViewerProps {
   /**
-   * What there is to read, in reading order — the utläggsräkning and the
+   * What there is to read, in reading order: the utläggsräkning and the
    * underlag behind it, say. One at a time on screen, with the pager in the
    * toolbar moving between them.
    *
@@ -135,14 +135,14 @@ export default function ReceiptViewerImpl({
   const isPdf = doc?.mimeType === "application/pdf";
 
   const [numPages, setNumPages] = useState(0);
-  // The receipt failed to load, and which retry we're on — an outage of the
+  // The receipt failed to load, and which retry we're on. An outage of the
   // archive, not of anything else on the page. The counter rides in the URL so
   // a retry misses the browser's own cache of the failed response; without that
   // it re-fails without having asked anyone anything.
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   // The cache-busting query only makes sense for a URL that was fetched. A
-  // blob: URL is the browser's own copy — it cannot fail this way, and a query
+  // blob: URL is the browser's own copy. It cannot fail this way, and a query
   // string appended to one addresses nothing.
   const fetched = !src.startsWith("blob:");
   const fileSrc = attempt && fetched ? `${src}?retry=${attempt}` : src;
@@ -153,7 +153,7 @@ export default function ReceiptViewerImpl({
 
   // A different document is a different everything: its own page count, and
   // none of the previous one's failure. Keyed on the address rather than the
-  // index, so a receipt replaced in place resets too — and not on `fileSrc`,
+  // index, so a receipt replaced in place resets too, and not on `fileSrc`,
   // which is what a retry changes and must not clear the attempt it just made.
   //
   // During the render rather than in an effect, so the document is never once
@@ -182,11 +182,11 @@ export default function ReceiptViewerImpl({
   const containerRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  // What the page is currently magnified by. Settled, not live — see the
+  // What the page is currently magnified by. Settled, not live. See the
   // handler on TransformWrapper.
   const [zoom, setZoom] = useState(1);
   const zoomSettle = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // What `zoom` currently is, readable from inside the transform handler — which
+  // What `zoom` currently is, readable from inside the transform handler, which
   // runs on every frame of every gesture and must not be re-created for each new
   // value of it.
   const settledZoom = useRef(1);
@@ -206,8 +206,8 @@ export default function ReceiptViewerImpl({
   // This used to be `active:cursor-grabbing` on the library's own wrapper, and
   // it came off in the reader's hand: `:active` is set on the element the
   // button went down on, and react-pdf replaces that element. Switching
-  // documents resets the page count, which re-rasterises the stack — new
-  // canvases, the old ones removed — and a page rasterising under a held
+  // documents resets the page count, which re-rasterises the stack (new
+  // canvases, the old ones removed) and a page rasterising under a held
   // pointer takes the mousedown target with it. The browser drops `:active`
   // with the node, the wrapper stops matching, and the hand becomes an arrow
   // mid-drag with the pan still running underneath it.
@@ -217,8 +217,8 @@ export default function ReceiptViewerImpl({
   // scroll too and would flicker the cursor on every wheel gesture.
   const [dragging, setDragging] = useState(false);
   // Only for a pointer that has a cursor to change. On a touchscreen this state
-  // dressed nothing and cost a full re-render of the viewer — the Document and
-  // every Page in it — at the exact moment a finger landed to start a drag,
+  // dressed nothing and cost a full re-render of the viewer, the Document and
+  // every Page in it, at the exact moment a finger landed to start a drag,
   // which is the moment a drag can least afford one.
   const startDrag = (e: React.PointerEvent) => {
     if (e.pointerType !== "touch") setDragging(true);
@@ -227,7 +227,7 @@ export default function ReceiptViewerImpl({
     if (!dragging) return;
     const stop = () => setDragging(false);
     // On the window, and for `pointercancel` as well: a drag that ends off the
-    // panel — or that the browser takes over — must not leave a closed hand
+    // panel, or that the browser takes over, must not leave a closed hand
     // over a receipt nobody is holding.
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
@@ -238,7 +238,7 @@ export default function ReceiptViewerImpl({
   }, [dragging]);
 
   // Set on the container rather than on the page, so it survives the subtree
-  // being replaced, and inherited by everything inside it — the toolbar's
+  // being replaced, and inherited by everything inside it. The toolbar's
   // buttons state their own `pointer` in globals.css and are unaffected.
   const cursor = dragging ? "cursor-grabbing" : "cursor-grab";
 
@@ -246,7 +246,7 @@ export default function ReceiptViewerImpl({
   // ResizeObserver fires once on observe, so it supplies the initial width too.
   //
   // Settled width, not live width: a PDF page is re-rasterised at every value
-  // this takes, so dragging the panel's edge — or resizing the window — meant a
+  // this takes, so dragging the panel's edge, or resizing the window, meant a
   // full pdf.js render per frame, and the drag crawled. The first measurement
   // still lands immediately (nothing is on screen yet to keep steady); after
   // that the width only moves once the dragging has stopped.
@@ -274,9 +274,9 @@ export default function ReceiptViewerImpl({
 
   // Tell the pan/zoom library that the document got taller.
   //
-  // It works out how far you may pan once — at mount, and again whenever
+  // It works out how far you may pan once, at mount and again whenever
   // TransformWrapper re-renders (its `update` recalculates the bounds from the
-  // content element's offsetHeight) — and it caches the answer. Nothing else
+  // content element's offsetHeight), and it caches the answer. Nothing else
   // recomputes it: a wheel-pan reads the cached bounds and clamps to them.
   //
   // At mount there is no document yet, so the cached answer is "the content
@@ -288,7 +288,7 @@ export default function ReceiptViewerImpl({
   //
   // So: watch the stack, and when its height changes put one render through
   // this component. That re-renders TransformWrapper, which is all it takes.
-  // The height itself is never read — holding it in state is the message.
+  // The height itself is never read. Holding it in state is the message.
   const [, setStackHeight] = useState(0);
   useEffect(() => {
     const el = stackRef.current;
@@ -342,7 +342,7 @@ export default function ReceiptViewerImpl({
 
   // F toggles fullscreen. Scoped to the pointer being over the receipt (or to
   // already being fullscreen), so the key stays free everywhere else on a page
-  // that also holds a form — and never fires while something is being typed
+  // that also holds a form, and never fires while something is being typed
   // into, where "f" is just an f.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -380,7 +380,7 @@ export default function ReceiptViewerImpl({
   //
   // The floor of 2 is for the non-retina monitors a lot of this is read on. A
   // page rasterised 1:1 is legible and no better than legible, and a receipt is
-  // a thing people lean in at — doubling it costs one re-render of a document
+  // a thing people lean in at, and doubling it costs one re-render of a document
   // that is already on screen.
   //
   // react-pdf defaults this to window.devicePixelRatio and multiplies the
@@ -393,7 +393,7 @@ export default function ReceiptViewerImpl({
     // stops getting more legible.
     //
     // A monitor reporting 1 is below that and gets raised to it. A phone reports
-    // 2 or 3 and is already at or past it — and there the extra density is not
+    // 2 or 3 and is already at or past it, and there the extra density is not
     // free, because a phone is compositing the same A4 sheet with a fraction of
     // the memory bandwidth. At 3 a page is a canvas half again as wide and more
     // than twice the pixels, for detail on a 6-inch screen nobody can resolve.
@@ -403,7 +403,7 @@ export default function ReceiptViewerImpl({
     // what it is really rationing is area: n pages each capped at
     // MAX/√n come to the same total pixels as one page capped at MAX,
     // whatever n is. Floored at the display's own resolution, so sharing only
-    // ever costs magnification — never the sharpness of a page sitting still.
+    // ever costs magnification, never the sharpness of a page sitting still.
     const share = Math.max(
       base,
       MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, numPages)),
@@ -411,15 +411,15 @@ export default function ReceiptViewerImpl({
     return Math.max(1, Math.min(base * zoom, share));
   }, [isPdf, pdfWidth, zoom, numPages, coarse]);
 
-  // Nothing to show. The panel decides what an empty list means — a dropzone,
-  // a notice that there is no underlag — and only reaches for the viewer when
+  // Nothing to show. The panel decides what an empty list means, a dropzone or
+  // a notice that there is no underlag, and only reaches for the viewer when
   // there is something in it; this is here so the hooks above can be
   // unconditional.
   if (!doc) return null;
 
   const content = (
     // wheelDisabled only suppresses zoom for ctrlKey-less events, and the
-    // library routes exactly those to trackPadPanning instead — so this single
+    // library routes exactly those to trackPadPanning instead, so this single
     // flag swaps scroll-to-pan and scroll-to-zoom. A pinch zooms either way.
     <TransformWrapper
       minScale={0.5}
@@ -430,7 +430,7 @@ export default function ReceiptViewerImpl({
       // The pan, on the compositor instead of the main thread.
       //
       // The library writes a plain 2D `translate(x,y) scale(s)` to the content
-      // element on every frame — deliberately, its comment says, because a 3D
+      // element on every frame, deliberately, its comment says, because a 3D
       // transform blurs SVG on Safari. A 2D transform is not a reason for the
       // browser to give the element a layer of its own, so each frame repainted
       // everything inside it: on a phone, a stack of A4 canvases at 3× density,
@@ -438,7 +438,7 @@ export default function ReceiptViewerImpl({
       //
       // `translate3d` promotes it, and from then on a pan is the compositor
       // moving one texture. The blur the library is guarding against is about
-      // vector content magnified by the transform; there is none here — pages
+      // vector content magnified by the transform, and there is none here: pages
       // are canvases, and the zoom re-rasterises them at the new scale anyway
       // (see `pixelRatio`), which is a sharper answer than the 2D transform's.
       customTransform={(x, y, scale) =>
@@ -449,7 +449,7 @@ export default function ReceiptViewerImpl({
       // would cost far more than the sharpness it buys.
       //
       // A pan does not change `scale`, and those frames are the overwhelming
-      // majority — so they leave without touching the timer at all. Rescheduling
+      // majority, so they leave without touching the timer at all. Rescheduling
       // it per frame was work for nothing (React dropped the equal value at the
       // end of it), done in the middle of the gesture it was slowing down.
       onTransform={(_ref, state) => {
@@ -470,7 +470,7 @@ export default function ReceiptViewerImpl({
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
-              {/* The pager steps between documents, not between pages — the
+              {/* The pager steps between documents, not between pages. The
                   pages of one document are all there to scroll through. So on
                   an utlägg this is "cover ⇄ underlag", which is the only jump
                   left worth a button. The transform resets with it: arriving
@@ -516,7 +516,7 @@ export default function ReceiptViewerImpl({
               <span className="mx-0.5 h-5 w-px bg-border" />
               {/* The one control worth naming out loud. Fullscreen is how a
                   receipt is actually read, and as an unlabelled 28px icon in a
-                  corner nobody found it — so inline it carries its word, and
+                  corner nobody found it, so inline it carries its word, and
                   both states name the key in the tooltip. */}
               <ToolBtn
                 label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
@@ -544,8 +544,8 @@ export default function ReceiptViewerImpl({
               //
               // The library derives how far you may pan from this element's
               // offsetHeight. Fixed at 100% it was exactly the panel, so a
-              // receipt taller than the panel hung out of it — half above the
-              // top — and panning stopped at a box that didn't contain what you
+              // receipt taller than the panel hung out of it, half above the
+              // top, and panning stopped at a box that didn't contain what you
               // were looking at, leaving the top of a zoomed page unreachable.
               // Growing past 100% instead, the element is always as tall as the
               // receipt in it, and centring only does anything when there's
@@ -563,7 +563,7 @@ export default function ReceiptViewerImpl({
                 willChange: "transform",
               }}
             >
-              {/* One measured box around whatever is being shown — a stack of
+              {/* One measured box around whatever is being shown: a stack of
                   pages, an image, a failure. It is what the observer above
                   watches, and the library's own content element is its parent,
                   so the two grow together. */}
@@ -577,7 +577,7 @@ export default function ReceiptViewerImpl({
                     error={<LoadFailed onRetry={retry} pdfHref={src} />}
                     // Every page at once, stacked, rather than one with buttons
                     // either side. A receipt that runs to three pages is one
-                    // document and reads as one — you scroll it. The stack is a
+                    // document and reads as one, so you scroll it. The stack is a
                     // single child so the library's own flex row still centres
                     // it, and the content element grows to fit (see contentStyle
                     // above), which is what makes the pan reach the bottom of it.
@@ -646,8 +646,8 @@ export default function ReceiptViewerImpl({
       onPointerDown={startDrag}
       // touch-none says the gestures in here are the viewer's, all of them.
       // Without it the browser opens every touch by holding the first moves back
-      // to see whether they were meant for a scroll it might have to run itself
-      // — which is the drag starting late, every time. There is nothing to
+      // to see whether they were meant for a scroll it might have to run itself,
+      // which is the drag starting late, every time. There is nothing to
       // scroll (this element is overflow-hidden), so it was only ever a wait.
       className={cn(
         "relative touch-none overflow-hidden bg-surface/40",
@@ -670,7 +670,7 @@ function ToolBtn({
 }: {
   children: React.ReactNode;
   label: string;
-  /** Tooltip, when it should say more than the accessible name — the keyboard
+  /** Tooltip, when it should say more than the accessible name, such as the keyboard
    *  shortcut. Defaults to `label`. */
   title?: string;
   onClick: () => void;
@@ -711,7 +711,7 @@ function PdfLoading() {
 }
 
 // Storage is the one dependency that can be down while everything else works,
-// so this says which part is broken — the archive, not the utlägg — rather than
+// so this says which part is broken (the archive, not the utlägg) rather than
 // leaving a broken-image glyph to imply the receipt was never there.
 function LoadFailed({
   onRetry,

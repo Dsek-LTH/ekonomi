@@ -5,7 +5,7 @@
 // refuse a row that should not exist, and those two are one rule. Two would be
 // a button that is live for a movement the server then rejects.
 //
-// Pure over plain data. Nothing here reads the database — whether the product
+// Pure over plain data. Nothing here reads the database: whether the product
 // exists is the route's question, whether the *movement* makes sense is this
 // one's.
 
@@ -35,7 +35,7 @@ export type EntryFault =
  * `volumeMl` is already resolved: when the movement came from a weighing, the
  * caller has converted the grams through the product's calibration before
  * asking. So a body that states *both* readings and a volume never reaches
- * here — that is a malformed request rather than an impossible movement, and
+ * here: that is a malformed request rather than an impossible movement, and
  * the schema refuses it (lib/api/schemas/stock.ts).
  */
 export interface ProposedEntry {
@@ -44,7 +44,7 @@ export interface ProposedEntry {
   units: number;
   /** What it does to the open bottles at each level. */
   open?: OpenBottles;
-  /** On a spill: how many things it destroyed. Its own figure — see below. */
+  /** On a spill: how many things it destroyed. Its own figure, see below. */
   spilledQty?: number;
   correctsId?: string | null;
 }
@@ -56,8 +56,8 @@ export interface ProposedEntry {
  * the row says which, and a checkout entered as +3 would read as stock
  * appearing to everyone who came after.
  *
- * COUNT and CORRECTION are deliberately absent: a count can go either way —
- * that is the whole point of counting — and so can a correction. WASTE is
+ * COUNT and CORRECTION are deliberately absent: a count can go either way,
+ * that is the whole point of counting, and so can a correction. WASTE is
  * absent because it moves no stock at all, so it has no sign to get right.
  */
 const ADDS: readonly StockEntryKind[] = ["PURCHASE", "RETURN"];
@@ -74,7 +74,7 @@ export function entryFault(
   //
   // What was dropped left the cellar when it was checked out; taking it off the
   // shelf again would remove it twice and the crate would come up short at the
-  // next stocktake. So its quantity is in a column of its own — and every rule
+  // next stocktake. So its quantity is in a column of its own, and every rule
   // below asks about the shelf columns, which is why a spill has to be answered
   // here rather than falling through them. It used to fall through, and every
   // spill came back as "nothing moved": the row was, correctly, moving no

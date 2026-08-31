@@ -1,7 +1,7 @@
 // Open bottles, and the four levels the bar judges them at.
 //
 // Nothing is measured. Somebody picks a bottle up, looks at it, and calls it
-// four fifths, three fifths, two fifths, one fifth — and that estimate is the
+// four fifths, three fifths, two fifths, one fifth, and that estimate is the
 // only fact there is about how much is in it. Carrying millilitres would be
 // stating a precision nobody has; carrying a level says exactly what was known.
 //
@@ -12,7 +12,7 @@
 // one out is picking one that is already there, which is why nothing here can
 // re-estimate a bottle at the moment it leaves.
 //
-// And a return says only what came back. Not what it *was* — that is not a fact
+// And a return says only what came back. Not what it *was*. That is not a fact
 // about the shelf, the checkout already recorded it by taking the bottle off,
 // and asking for it again is asking two questions that can contradict each
 // other. What a return is checked against is the count that is out.
@@ -21,7 +21,7 @@
 // open one of the same product is sitting in it, or the shelf fills with
 // quarter-full bottles nobody will ever choose over a fresh one.
 
-/** The rungs, highest first — which is also the order they are used up in. */
+/** The rungs, highest first, which is also the order they are used up in. */
 export const LEVELS = [80, 60, 40, 20] as const;
 export type Level = (typeof LEVELS)[number];
 
@@ -46,7 +46,7 @@ export const openCount = (open: OpenBottles): number =>
  * What the open bottles hold, in millilitres.
  *
  * An estimate built out of estimates, and only ever used for the litres on a
- * screen — never for what the stock is worth, which counts sealed bottles
+ * screen, never for what the stock is worth, which counts sealed bottles
  * alone. A bottle called "40 %" is somewhere near 40 % and the total inherits
  * every one of those roundings.
  */
@@ -71,7 +71,7 @@ export const pickedCount = (pick: Pick): number => pick.sealed + openCount(pick.
  * Whether this is a set of bottles the store can actually give up.
  *
  * The interesting rule is the last one. Sealed bottles are refused while any
- * open bottle of the product remains behind — *behind*, not merely in stock, so
+ * open bottle of the product remains behind, *behind*, not merely in stock, so
  * taking the last two open ones along with a sealed one is fine and taking a
  * sealed one while a 20 % bottle stays on the shelf is not. That is the point:
  * the dregs leave with you, or the fresh bottle stays.
@@ -91,8 +91,8 @@ export function pickFault(stock: BottleStock, pick: Pick): PickFault | null {
  * The bottles the store would give up on its own, fullest first.
  *
  * What the form fills in when somebody says "four bottles" rather than picking
- * them one by one. It empties the ladder from the top — an 80 % bottle before a
- * 20 % one, so the oldest opening is finished first — and only reaches for a
+ * them one by one. It empties the ladder from the top: an 80 % bottle before a
+ * 20 % one, so the oldest opening is finished first, and only reaches for a
  * sealed bottle once every open one is coming too, which is the same rule
  * `pickFault` enforces, applied rather than checked.
  */
@@ -132,11 +132,11 @@ export type ReturnFault = "moreThanWentOut" | "nothingReturned";
 /**
  * Whether these bottles can be the ones that were out.
  *
- * `unaccounted` is what the tag says is still unaccounted for — see
- * lib/stock/tag.ts. It used to be a running count on the product, which could
+ * `unaccounted` is what the event says is still unaccounted for. See
+ * lib/stock/event.ts. It used to be a running count on the product, which could
  * only ever be closed as a lump: a pub that ran past midnight, or a committee
  * that took stock out twice in an evening, had no way to say which return
- * belonged to which night. The tag says it, so the ceiling is the tag's.
+ * belonged to which night. The event says it, so the ceiling is the event's.
  */
 export function returnFault(unaccounted: number, home: Homecoming): ReturnFault | null {
   const n = homecomingCount(home);

@@ -1,8 +1,8 @@
 // The typesetter, and the only file in the app that knows there is one.
 //
 // Lifted out of expense/cover/typst.ts, which is only one of the documents the
-// app draws. Everything in here was already general — one compiler for the
-// process, the vendored faces, data handed over through `sys.inputs` — and the
+// app draws. Everything in here was already general (one compiler for the
+// process, the vendored faces, data handed over through `sys.inputs`) and the
 // only thing that was ever about the cover was which template to run. So that
 // is the argument now, and every template shares a warm compiler rather than
 // each paying for its own.
@@ -19,7 +19,7 @@ import { NodeCompiler } from "@myriaddreamin/typst-ts-node-compiler";
  * The workspace a template may read from.
  *
  * The app directory, because the templates draw the section's mark out of
- * `public/` — the one place that file lives, and a copy beside each template
+ * `public/`, the one place that file lives, and a copy beside each template
  * would be two more things to keep in step. Present in the standalone image;
  * see the Dockerfile.
  */
@@ -28,11 +28,11 @@ const WORKSPACE = process.cwd();
 /**
  * Inter, vendored under the cover template's directory.
  *
- * Not a preference — a requirement. Typst embeds exactly four faces, and the
+ * Not a preference, a requirement. Typst embeds exactly four faces, and the
  * only proportional ones among them are serifs (Libertinus Serif and New
  * Computer Modern; the third is DejaVu Sans *Mono*). So a document set in a
  * sans either ships the file or silently comes out in a serif on any machine
- * that does not happen to have one — which is every container we run.
+ * that does not happen to have one, which is every container we run.
  *
  * Four static weights rather than the variable font, because Typst instantiates
  * a variable font at its default axis and would render every weight the same.
@@ -50,7 +50,7 @@ export class TypstError extends Error {}
 /**
  * One compiler for the process, built on first use.
  *
- * Creating it costs about half a second — it is reading font collections — and
+ * Creating it costs about half a second (it is reading font collections) and
  * a render against a warm one costs under a millisecond. Per call that would be
  * half a second every time, which is the difference between a panel that opens
  * and one that hesitates.
@@ -63,7 +63,7 @@ const compilerFor = () =>
   (compiler ??= NodeCompiler.create({
     workspace: WORKSPACE,
     // The vendored faces are *added* to whatever the machine has, so a
-    // developer's system fonts are still found — the templates name Inter
+    // developer's system fonts are still found. The templates name Inter
     // first, and this is what guarantees that name resolves everywhere.
     fontArgs: [{ fontPaths: [FONT_DIR] }],
   }));

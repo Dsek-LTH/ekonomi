@@ -15,7 +15,7 @@ const withExpense = {
   include: { expense: { select: { id: true, submitterId: true, status: true } } },
 } as const;
 
-// GET /api/receipts/:id — streams the receipt image/PDF back inline.
+// GET /api/receipts/:id: streams the receipt image/PDF back inline.
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
@@ -48,7 +48,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
   const headers = new Headers({
     "Content-Type": obj.contentType,
-    // Receipts can contain personal/financial data — never cache shared.
+    // Receipts can contain personal/financial data. Never cache shared.
     "Cache-Control": "private, max-age=0, no-store",
     "Content-Disposition": `inline; filename="${encodeURIComponent(receipt.filename)}"`,
   });
@@ -58,7 +58,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return new Response(obj.body, { headers });
 }
 
-// DELETE /api/receipts/:id — remove the object from MinIO, then the row.
+// DELETE /api/receipts/:id: remove the object from MinIO, then the row.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
@@ -70,13 +70,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const hidden = await denyExpenseView(g.actor, receipt.expense);
   if (hidden) return fail(404, "receipt.notFound");
   // Once the utlägg is signed its receipt is part of what was attested, so
-  // removing it is an admin's job — the same rule as deleting the utlägg.
+  // removing it is an admin's job, the same rule as deleting the utlägg.
   const denied = denyExpenseDelete(g.actor, receipt.expense);
   if (denied) return denied;
 
   // Bytes first, and the row only if they are actually gone. A receipt file
-  // that outlives its row is invisible — nothing in the app lists it and nobody
-  // would think to look — so a failure here has to stop the delete rather than
+  // that outlives its row is invisible: nothing in the app lists it and nobody
+  // would think to look, so a failure here has to stop the delete rather than
   // be tidied up afterwards. Failing this way is recoverable: the receipt is
   // still there, the user is told, and trying again once storage is back
   // finishes the job (deleting an already-gone object counts as success).

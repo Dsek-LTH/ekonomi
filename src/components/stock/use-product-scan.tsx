@@ -2,13 +2,13 @@
 
 // Scanning a product onto a sheet, and inventing one that isn't there yet.
 //
-// The same errand on both sheets that have it — the stocktake tag and the
-// delivery — and it was written out twice, down to the state names and the
+// The same errand on both sheets that have it (the stocktake event and the
+// delivery), and it was written out twice, down to the state names and the
 // comment on the dialog. What it is: a barcode goes to the server, a product
 // comes back and lands on the sheet, and a code the cellar has never seen opens
 // the product form with the barcode already in it rather than sending somebody
-// to another page. That last part is the point of the whole flow — a scan that
-// dead-ends is how a trolley ends up half unlogged — and it is exactly the part
+// to another page. That last part is the point of the whole flow: a scan that
+// dead-ends is how a trolley ends up half unlogged, and it is exactly the part
 // that would drift if the two copies were maintained apart.
 //
 // The overlay comes back as a node rather than being left to each caller, so
@@ -26,7 +26,7 @@ export function useProductScan({
   onScanned,
   onCreated = onScanned,
 }: {
-  /** Shown when the barcode matches nothing — the caller's own wording. */
+  /** Shown when the barcode matches nothing (the caller's own wording). */
   unknownError: string;
   /** A product the scan found, for the sheet to take up. */
   onScanned: (id: string) => void;
@@ -46,7 +46,7 @@ export function useProductScan({
    * A barcode, turned into a row you can type into.
    *
    * Scan, type how many, scan the next: that is the whole errand, which is why
-   * the caller is handed the product rather than merely told the scan worked —
+   * the caller is handed the product rather than merely told the scan worked:
    * it is what puts the caret in the box instead of leaving somebody hunting
    * for the row their scan just made.
    */

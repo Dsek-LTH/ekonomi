@@ -1,7 +1,7 @@
 // The intakt service: income reports from Zettle and Swish, and the PDFs that
 // substantiate them.
 //
-// intakt is a separate container for one blunt reason — it renders its reports
+// intakt is a separate container for one blunt reason: it renders its reports
 // with pdflatex, and a TeX installation has no business in the image that
 // serves every page of this app. It holds no state and no configuration: the
 // routing table lives here (see ./config.ts) and is sent with every request, so
@@ -9,7 +9,7 @@
 //
 // It also never talks to Fortnox. Booking is this app's job, because a voucher
 // has to be written with the bookkeeper's own Fortnox login so Fortnox
-// attributes it to them by name — and only the thing that knows who is signed
+// attributes it to them by name, and only the thing that knows who is signed
 // in can do that. See lib/fortnox/index.ts.
 //
 // Fetching and rendering are deliberately separate calls. Between them the
@@ -41,7 +41,7 @@ export class IntaktError extends Error {
 
 /**
  * Thrown when the service is not configured at all. Callers should turn this
- * into "income import is switched off" rather than an error — running without
+ * into "income import is switched off" rather than an error. Running without
  * intakt is a supported way to run, the same way running without Fortnox is.
  */
 export class IntaktNotConfiguredError extends Error {
@@ -71,8 +71,8 @@ const RENDER_TIMEOUT_MS = 120_000;
 
 /**
  * What the service said went wrong. Its errors are `{ "error": "..." }`, and
- * the ones worth passing on are about the *caller's* input — a malformed CSV,
- * a range that runs backwards — so they are surfaced rather than swallowed.
+ * the ones worth passing on are about the *caller's* input (a malformed CSV,
+ * a range that runs backwards) so they are surfaced rather than swallowed.
  */
 async function errorFrom(res: Response): Promise<IntaktError> {
   let detail = "";
@@ -100,7 +100,7 @@ async function postJSON<T>(path: string, body: unknown, timeoutMs: number): Prom
       cache: "no-store",
     });
   } catch (e) {
-    // A refused connection or a timeout — the service is down or wedged, which
+    // A refused connection or a timeout. The service is down or wedged, which
     // is not the same as it rejecting the request.
     throw new IntaktError(e instanceof Error ? e.message : String(e));
   }
@@ -149,7 +149,7 @@ export async function fetchFeeReports(
  *
  * The CSV is passed through as bytes and never decoded here: the export is
  * ISO-8859-1, and the service is the thing that knows that. Reading it as UTF-8
- * anywhere on the way would mangle every å, ä and ö in a product name — which
+ * anywhere on the way would mangle every å, ä and ö in a product name, which
  * would show up as a committee that routes to the fallback rather than as an
  * error.
  */
@@ -191,7 +191,7 @@ export async function fetchSwishReports(
  * Render one report to a PDF.
  *
  * The report is sent rather than referenced, because by now it is not the one
- * that was fetched — the cost centre may have been corrected, and the service
+ * that was fetched. The cost centre may have been corrected, and the service
  * keeps no copy to render from.
  */
 export async function renderReport(
@@ -213,7 +213,7 @@ export async function renderFeeReport(
 /**
  * The report without its `key`.
  *
- * The key is ours — how a report is filed here — not part of what the service
+ * The key is ours, how a report is filed here, not part of what the service
  * defined. It rejects unknown fields, so sending it back would be a 400 rather
  * than something quietly ignored.
  */

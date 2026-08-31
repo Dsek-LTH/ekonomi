@@ -3,7 +3,7 @@
 // These three lists were the whole of lib/server/authentik-roles.ts and the
 // role sets in lib/domain/permissions.ts, until authority became rows. They are
 // kept because "the state the section started from" is worth being able to name
-// after a screen has been editing it for a year — a seeded dev database gets
+// after a screen has been editing it for a year. A seeded dev database gets
 // them, and so does anyone who asks a settings screen to put a table back.
 //
 // They are not the source of truth for a running deployment. The database is.
@@ -29,7 +29,7 @@ export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
   // Alkohollagret. Deliberately a handful of named posts rather than the whole
   // `dsek.sex.*` tree: keeping the lagerbokföring is a job a few people do, and
   // the tree would hand it to every functionary in the committee. `dsek.sex.olfm`
-  // and `dsek.sex.vinfm` — ölförman and vinförman — are absent on purpose.
+  // and `dsek.sex.vinfm` (ölförman and vinförman) are absent on purpose.
   { group: "dsek.sex.mastare", role: "STOCKARE" },
   { group: "dsek.sex.vice_mastare", role: "STOCKARE" },
   { group: "dsek.sex.hov.mstr", role: "STOCKARE" },
@@ -42,13 +42,13 @@ export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
 /**
  * Authentik group → result unit, by name.
  *
- * By name because a default cannot know an id — the rows are resolved against
+ * By name because a default cannot know an id. The rows are resolved against
  * whatever ResultUnit table exists when these are applied, and a name with no
  * unit behind it is simply skipped. The stored mapping is a foreign key.
  *
  * The signers are the guild's own (Dsek-LTH/web expenses/config.ts). Where their
- * committee head is not a `.mastare` — the three `.ordf` heads, Overphös,
- * Övermarskalken — the group is written out; there is no shape to pattern-match,
+ * committee head is not a `.mastare` (the three `.ordf` heads, Overphös,
+ * Övermarskalken) the group is written out; there is no shape to pattern-match,
  * and pattern-matching post names is how the two wrong guesses this list used to
  * contain got in.
  */
@@ -73,7 +73,7 @@ export const DEFAULT_GROUP_RESULT_UNITS: readonly { group: string; unit: string 
  * Role → capability.
  *
  * BUDGET_VIEW is on every role because `canAccessBudget` used to be `() => true`
- * — the budget is the section's, not the treasury's. Written out rather than
+ * The budget is the section's, not the treasury's. Written out rather than
  * left implicit so that taking it away from a role is a decision somebody makes
  * on the screen, not a default nobody chose.
  */
@@ -86,7 +86,7 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "VICE_SKATTMASTARE", capability: "BOOKKEEPING" },
   { role: "SKATTFORMAN", capability: "BOOKKEEPING" },
 
-  // The treasury proper — the people who actually work inside Fortnox. Narrower
+  // The treasury proper, the people who actually work inside Fortnox. Narrower
   // than bookkeeping on purpose: the chair has bookkeeping access in this app
   // but no Fortnox login and no business unwinding an export.
   { role: "SKATTMASTARE", capability: "FORTNOX_LOGIN" },
@@ -119,7 +119,7 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "ORDFORANDE", capability: "BUDGET_COMMENT" },
   { role: "RESULTATANSVARIG", capability: "BUDGET_COMMENT" },
 
-  // Sealing the adopted figures is the treasurer's call alone — the chair edits
+  // Sealing the adopted figures is the treasurer's call alone. The chair edits
   // budgets like any other admin but does not get to freeze them, or to move
   // money after the budget is voted through.
   { role: "SKATTMASTARE", capability: "BUDGET_LOCK" },

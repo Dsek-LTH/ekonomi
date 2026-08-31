@@ -2,7 +2,7 @@
 // result unit with subtotals and a grand total. Rows link into their sheet.
 //
 // The rows come from the comparison join (lib/budget/compare.ts), which is what
-// puts a cost centre the other side budgets for — or spent on — in this table
+// puts a cost centre the other side budgets for, or spent on, in this table
 // even though this budget has no sheet for it. Such a row has nothing of its own
 // to show and nowhere to click through to, and says so. When nothing is being
 // compared the join holds one side, and the table is exactly this budget.
@@ -34,7 +34,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
   ccIdOf: (key: string) => string | undefined;
   /** What editorial changes have done to that sheet's result. */
   impactOf: (key: string) => number | undefined;
-  /** Whether the budget has any at all — no column until it does. */
+  /** Whether the budget has any at all. No column until it does. */
   showImpact: boolean;
   onPick: (id: string) => void;
 }) {
@@ -54,12 +54,12 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
   return (
     // The card is its own scrollport from lg up: the table scrolls inside it
     // while the header block stays put at the top, so the page itself barely
-    // moves. Below lg it keeps its natural height and flows with the page —
+    // moves. Below lg it keeps its natural height and flows with the page,
     // a nested vertical scroller on a phone is more trouble than it is worth.
     <div className="rambudget budget-grid overflow-x-auto rounded-2xl border border-border bg-background lg:max-h-[70vh] lg:overflow-y-auto">
       <table className="w-full border-collapse text-sm">
         {/* Column names and the grand total both sit here; the whole block pins
-            as one from lg up — see `.rambudget thead` in globals.css. */}
+            as one from lg up. See `.rambudget thead` in globals.css. */}
         <thead>
           <tr className="border-b border-border text-[11px] text-muted">
             <th className="px-3 py-2 text-left font-medium">{tAlloc("costCenter")}</th>
@@ -68,7 +68,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
             <th className={cn("font-medium", numCls)}>{t("result")}</th>
             {/* What the adopted budget said, beside what it says now. A transfer
                 nets to nothing across its resultUnit, so this column is mostly
-                deviations — which is the point of it. */}
+                deviations, which is the point of it. */}
             {showImpact && <th title={t("changesHint")} className={cn("font-medium", numCls)}>{t("changes")}</th>}
             {showImpact && <th className={cn("font-medium", numCls)}>{t("original")}</th>}
             {showCompare && <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>{comparison.otherLabel}</th>}
@@ -103,9 +103,9 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
                       {/^[@#]/.test(row.sheet.key)
                         ? row.sheet.name
                         : <><span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}{row.sheet.name}</>}
-                      {/* Only the other side has this one — there is no sheet
+                      {/* Only the other side has this one. There is no sheet
                           here to open, and nothing budgeted to put beside it. */}
-                      {!id && <span className="ml-2 text-xs">· {t("notInThisBudget")}</span>}
+                      {!id && <span className="ml-2 text-xs">– {t("notInThisBudget")}</span>}
                     </td>
                     <Amounts own={row.own} other={row.other} impact={row.impact} showCompare={showCompare} showImpact={showImpact} soft />
                   </tr>
@@ -119,7 +119,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
   );
 }
 
-// The numeric tail of a row — the same four/six cells whether it's one cost
+// The numeric tail of a row, the same four/six cells whether it's one cost
 // centre, a result unit subtotal or the grand total. `soft` picks the lighter
 // divider used on the cost-centre rows. `data-rule="l"` marks the cells that
 // carry a left divider; it only does anything in <thead>, where the pinned

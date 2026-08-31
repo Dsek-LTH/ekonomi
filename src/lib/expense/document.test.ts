@@ -5,7 +5,7 @@ import { buildCoverData, coverFilename } from "./document";
 // The wording decisions, asserted without a typesetter anywhere in sight. That
 // is the whole reason `buildCoverData` takes a plain object and returns one:
 // swapping Typst for LaTeX changes how this data is placed and none of what it
-// says, so these tests survive the swap — see cover/types.ts.
+// says, so these tests survive the swap. See cover/types.ts.
 
 const TODAY = new Date("2026-08-14T09:30:00Z");
 
@@ -51,7 +51,7 @@ describe("buildCoverData", () => {
 
   it("names the date for what it is on each kind of utlägg", () => {
     // A milersättning has no receipt, so "Kvittodatum" over the day of its
-    // last journey would name a document that does not exist — on a page that
+    // last journey would name a document that does not exist, on a page that
     // is filed as evidence.
     expect(buildCoverData(base, TODAY).dateLabel).toBe("Kvittodatum");
     expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe(
@@ -65,20 +65,20 @@ describe("buildCoverData", () => {
       TODAY,
     );
     // A non-breaking space is what sv-SE groups with, and the document wants
-    // exactly that — "1 069,00 kr" must never break across a line.
+    // exactly that: "1 069,00 kr" must never break across a line.
     expect(d.total.replace(/ /g, " ")).toBe("1 069,00 kr");
     expect(d.allocations[0].amount.replace(/ /g, " ")).toBe("1 069,00 kr");
   });
 
   it("names each cost centre by code and name", () => {
     expect(buildCoverData(base, TODAY).allocations[0].costCenter).toBe(
-      "SEKT05 · Sexmästeriet",
+      "SEKT05 – Sexmästeriet",
     );
   });
 
   it("totals the allocations rather than the recorded gross", () => {
     // The page is a statement about what was attested, and attestation is per
-    // allocation — so a grossAmount that disagrees does not get to decide.
+    // allocation, so a grossAmount that disagrees does not get to decide.
     const d = buildCoverData(
       {
         ...base,
@@ -95,7 +95,7 @@ describe("buildCoverData", () => {
 
   it("leaves an unattested slice null rather than inventing a placeholder", () => {
     // How a missing approver reads is the template's decision, made once for
-    // every field that can be absent — not smuggled in here as a dash.
+    // every field that can be absent, not smuggled in here as a dash.
     const d = buildCoverData(
       {
         ...base,
@@ -117,7 +117,7 @@ describe("buildCoverData", () => {
       },
       TODAY,
     );
-    expect(d.reference).toBe("—");
+    expect(d.reference).toBe("–");
     expect(d.purchaseDate).toBeNull();
     expect(d.submitter.studentId).toBeNull();
   });
@@ -174,12 +174,12 @@ describe("buildCoverData, the journey", () => {
 
   it("says a dash for a reading nobody has given yet", () => {
     const j = buildCoverData(mileage({ odometerEnd: null }), TODAY).journey!;
-    expect(j.odometerEnd).toBe("—");
-    expect(j.distance).toBe("—");
+    expect(j.odometerEnd).toBe("–");
+    expect(j.distance).toBe("–");
   });
 
   it("says a dash for a journey no rate covered", () => {
-    expect(buildCoverData(mileage({ mileageOrePerKm: null }), TODAY).journey!.rate).toBe("—");
+    expect(buildCoverData(mileage({ mileageOrePerKm: null }), TODAY).journey!.rate).toBe("–");
   });
 });
 
