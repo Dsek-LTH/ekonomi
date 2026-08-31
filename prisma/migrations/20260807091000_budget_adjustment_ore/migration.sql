@@ -2,7 +2,7 @@
 --
 -- This column was the last place in the database holding money as a floating
 -- point number, against the rule stated at the top of schema.prisma. It is a
--- *decided* amount — a treasurer's budgetavsteg or budgetförflyttning — and a
+-- *decided* amount (a treasurer's budgetavsteg or budgetförflyttning) and a
 -- förflyttning is required to net to exactly zero, which is not a question a
 -- float can answer: the check in lib/budget/changes.ts carried a half-öre
 -- epsilon precisely because two amounts that ought to cancel could miss.

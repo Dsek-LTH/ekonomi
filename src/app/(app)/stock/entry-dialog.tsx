@@ -4,13 +4,13 @@
 //
 // The case it exists for: somebody books 200 bottles of Fireball meaning 20.
 // The old answer was a second row of −180, which left the log saying the guild
-// once bought two hundred bottles it never bought — and made fixing a typo an
+// once bought two hundred bottles it never bought, and made fixing a typo an
 // arithmetic problem, at the moment somebody has just demonstrated they are not
 // doing arithmetic well.
 //
 // So it asks the only question worth asking: what should it have been? Zero, or
 // the remove button, takes the row away entirely, because picking the wrong
-// product is not a movement of nothing — it is no movement.
+// product is not a movement of nothing. It is no movement.
 //
 // Who changed it, and from what, goes to the product's own feed. That is what
 // keeps an editable ledger checkable, and it is the reason none of this has to
@@ -84,7 +84,7 @@ export function EntryDialog({
       </div>
       <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-inset py-3">
         {/* Removing it outright, for the row that should never have existed.
-            Not a destructive act on the record — the product's feed keeps what
+            Not a destructive act on the record: the product's feed keeps what
             it said and who took it off. */}
         <Button variant="ghost" onClick={() => void save(0)} disabled={pending !== null}>
           {t("entry.remove")}

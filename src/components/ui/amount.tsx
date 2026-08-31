@@ -3,7 +3,7 @@ import { cn } from "@/lib/ui/utils";
 // Money, set the way a finance product sets money.
 //
 // A belopp is three things of different importance welded into one string:
-// the kronor, the öre, and the currency. Rendered flat — "1 247,50 kr" — they
+// the kronor, the öre, and the currency. Rendered flat ("1 247,50 kr") they
 // all shout equally and a column of them is a wall. Rendered in weight order,
 // the kronor carry the row and the öre sit where they belong: present, exact,
 // and quiet.
@@ -12,7 +12,7 @@ import { cn } from "@/lib/ui/utils";
 // visually. `lib/domain/money.ts` converts; this decides how the two halves of
 // the figure read once they get here.
 
-// Split once, at module scope — this runs per table cell.
+// Split once, at module scope, this runs per table cell.
 const PARTS = new Intl.NumberFormat("sv-SE", {
   style: "currency",
   currency: "SEK",
@@ -24,7 +24,7 @@ const SIZES = {
   // In a table row: the kronor sit at the row's own size, öre a step down.
   sm: { major: "text-sm", minor: "text-[11px]" },
   md: { major: "text-base", minor: "text-xs" },
-  // The figure a page is about — a stat card, a verifikation total.
+  // The figure a page is about: a stat card, a verifikation total.
   lg: { major: "text-2xl tracking-[-0.022em]", minor: "text-sm" },
   xl: { major: "text-[32px] leading-none tracking-[-0.026em]", minor: "text-base" },
 } as const;
@@ -32,7 +32,7 @@ const SIZES = {
 export function Amount({
   value,
   size = "sm",
-  /** Colour a negative figure — a return, or an overspent budget line. */
+  /** Colour a negative figure: a return, or an overspent budget line. */
   signed = false,
   className,
 }: {

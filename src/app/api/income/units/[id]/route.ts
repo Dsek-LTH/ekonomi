@@ -29,7 +29,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         where: { id },
         data: {
           // Cleared back to null means "use the unit's own name", which is the
-          // ordinary case — so an empty string is a removal, not a blank name.
+          // ordinary case, so an empty string is a removal, not a blank name.
           ...(properName !== undefined && { properName: properName || null }),
           ...(description !== undefined && { description }),
           ...(defaultCostCenterId !== undefined && { defaultCostCenterId }),
@@ -50,7 +50,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  * The same shape as retiring a cost centre, and for the same reason: reports
  * already booked name the unit, and its settings are what say how they were
  * routed. Retiring keeps the books readable and takes the unit out of the
- * routing table sent to intakt — which is all anybody actually wanted.
+ * routing table sent to intakt, which is all anybody actually wanted.
  *
  * The result unit itself is never touched. Deciding that a verksamhet no longer
  * sells anything is not deciding that it has stopped existing; it still owns its

@@ -217,6 +217,16 @@ export const IconLink = (p: P) => (
   </Svg>
 );
 
+// A link that leaves the app. The arrow out of the box, which is the one mark
+// people already read as "this opens somewhere else".
+export const IconExternal = (p: P) => (
+  <Svg {...p}>
+    <path d="M14 5h5v5" />
+    <path d="M19 5l-7 7" />
+    <path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+  </Svg>
+);
+
 export const IconChevronRight = (p: P) => (
   <Svg {...p}>
     <path d="m9 6 6 6-6 6" />

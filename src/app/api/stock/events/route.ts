@@ -1,7 +1,7 @@
 // The events stock is taken out for.
 //
 // Created here rather than typed on a movement, so that "Onsdagspub" and
-// "onsdagspub " cannot be two nights — an event is picked from a list, and the
+// "onsdagspub " cannot be two nights. An event is picked from a list, and the
 // list is what makes its arithmetic add up.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";

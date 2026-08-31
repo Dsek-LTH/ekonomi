@@ -4,7 +4,7 @@
 --
 -- Dropping the column loses the pointer to any thumbnails an instance has
 -- already stored, so those objects become unreferenced. That is deliberate and
--- already handled — `pnpm receipts:gc` reconciles the bucket against the
+-- already handled: `pnpm receipts:gc` reconciles the bucket against the
 -- database and reports exactly this, and `pnpm receipts:gc --delete` removes
 -- it. Run it once after deploying to reclaim the space; nothing breaks if you
 -- don't, the objects simply sit there.

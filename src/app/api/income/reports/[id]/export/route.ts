@@ -1,7 +1,7 @@
 // Push a booked income voucher to Fortnox: create the verifikation, attach the
 // intäktsräkning, record the number, and only then flip the report to EXPORTED.
 //
-// Deliberately the same shape as api/expenses/[id]/export — including the order
+// Deliberately the same shape as api/expenses/[id]/export, including the order
 // the two Fortnox calls happen in and the reason for it. A voucher cannot be
 // deleted through the API, so anything that fails after one exists leaves a
 // mess to be cleaned up by hand in Fortnox; a file sitting unused in the inbox
@@ -55,7 +55,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
 
-  // Which verifikationsserie takings are filed under — its own setting, falling
+  // Which verifikationsserie takings are filed under: its own setting, falling
   // back to the connection's. The duplicate check below reads the same one
   // through the same function, which is the point of there being one.
   const settings = await prisma.bookkeepingSettings.findUnique({
@@ -66,7 +66,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   // The last gate before anything is written over there. Import already refuses
   // to bring in a day Fortnox has a voucher for, but that check ran against the
-  // range as it was then — this one runs against the day as it is now, with
+  // range as it was then. This one runs against the day as it is now, with
   // whatever has been exported since, including by someone else in the last
   // minute. Before the file upload deliberately: a refusal here leaves nothing
   // behind at all.
@@ -81,7 +81,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     account: Number(l.account),
     debit: ore(l.debit),
     credit: ore(l.credit),
-    // Only a cost centre Fortnox itself knows about — a local one is an
+    // Only a cost centre Fortnox itself knows about. A local one is an
     // app-side dimension it has never heard of, and sending its code would have
     // the whole voucher rejected.
     costCenter: l.costCenter?.source === "FORTNOX" ? l.costCenter.code : undefined,

@@ -22,7 +22,7 @@ export function SearchInput({
         type="search"
         // Measured from the shared table rather than from a copy of it: this
         // sits in the same toolbar as a combobox and a date input, and it used
-        // to carry its own `h-9` — which is exactly how a row ends up a few
+        // to carry its own `h-9`, which is exactly how a row ends up a few
         // pixels out of true the day that table changes. `pl-8` for the glyph
         // and `pr-2.5` land after the table's `px-2.5` in Tailwind's own order,
         // so they win without `cn` having to merge anything.

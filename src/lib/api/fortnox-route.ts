@@ -1,5 +1,5 @@
 // The shell the Fortnox sync endpoints share: authority, then a live service
-// connection, then a token — and one place that turns a thrown FortnoxError
+// connection, then a token, and one place that turns a thrown FortnoxError
 // into a response instead of a 500.
 //
 // Kept apart from lib/fortnox/ on purpose: that module talks to Fortnox and
@@ -31,7 +31,7 @@ export type ServiceGate =
  *     try { … g.token … } catch (e) { return fortnoxFailure(e); }
  *
  * Routes whose work fetches its own token (syncLedger does) want `gate` plus
- * `denyNoFortnox` instead — there is no token for them to be handed.
+ * `denyNoFortnox` instead. There is no token for them to be handed.
  */
 export async function gateFortnoxService(
   can: (caps: readonly Capability[]) => boolean,

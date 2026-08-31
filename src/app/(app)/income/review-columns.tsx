@@ -7,9 +7,9 @@
 // and it is the same kind of thing components/columns/expense-columns.ts
 // already keeps in a file of its own.
 //
-// The three things a column cannot work out for itself — what a day is called
+// The three things a column cannot work out for itself (what a day is called
 // in the reader's language, where its cost centre comes from, and what pressing
-// a button does — arrive as arguments, so nothing here reaches back into the
+// a button does) arrive as arguments, so nothing here reaches back into the
 // screen.
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";

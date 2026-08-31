@@ -1,7 +1,7 @@
 "use client";
 
 // The last resort: the root layout itself threw, so there is no locale, no
-// messages, no theme class and no shell — Next replaces the whole document with
+// messages, no theme class and no shell. Next replaces the whole document with
 // this, which is why it has to render its own <html> and <body>.
 //
 // It is the one file in the app allowed to hardcode its wording and its
@@ -10,7 +10,7 @@
 // and globals.css may not have loaded. Swedish and English together rather than
 // a guess at which one the reader wants, because there is nothing left to ask.
 //
-// In practice this should almost never be reached — a misconfigured server is
+// In practice this should almost never be reached. A misconfigured server is
 // refused at boot by instrumentation.ts rather than allowed to serve broken
 // pages. If it does appear, that is the fact worth reporting.
 
@@ -42,7 +42,7 @@ export default function GlobalError({
             Något gick fel
           </h1>
           <p style={{ margin: "0.5rem 0 0", color: "#6b6470", fontSize: "0.9375rem" }}>
-            Appen kunde inte starta. Försök igen — står det kvar, hör av dig till
+            Appen kunde inte starta. Försök igen, står det kvar, hör av dig till
             skattmästeriet.
           </p>
           <p style={{ margin: "1.25rem 0 0", color: "#6b6470", fontSize: "0.875rem" }}>

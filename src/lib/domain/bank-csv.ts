@@ -5,7 +5,7 @@
 // The card used is the trailing "K####" inside the Referens field (not always
 // present). Amounts are SEK with a sign; negative = outgoing.
 //
-// A row is dated by Transdag — the day the purchase happened — not Bokfdag, the
+// A row is dated by Transdag (the day the purchase happened) not Bokfdag, the
 // day the bank settled it. The two differ by a day or three on card purchases,
 // and Transdag is the one that matches the receipt a member hands in. Rows
 // without a Transdag (fees, interest) fall back to Bokfdag.

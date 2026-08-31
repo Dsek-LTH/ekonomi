@@ -17,8 +17,8 @@ import { IconChevronLeft } from "@/components/ui/icons";
  * from Bokföring and coming back put you somewhere you had never been.
  *
  * So the destination is the nearest place behind you that the declared parent
- * stands for — the list you actually came from, with the query it had, at
- * whatever depth it sits — and the declared parent itself when there is no
+ * stands for: the list you actually came from, with the query it had, at
+ * whatever depth it sits, and the declared parent itself when there is no
  * such place: a link someone sent you, or a reload of a trip that started
  * before this tab did. See lib/ui/history-stack for the rule, and
  * components/shell/route-history for where the stack comes from.
@@ -27,7 +27,7 @@ import { IconChevronLeft } from "@/components/ui/icons";
  * rather than pushing the URL forward. That is what restores the scroll
  * position and the router's cached render of the page; pushing would land you
  * at the top of a freshly fetched list, which is where you were only in the
- * sense that the address matched — and would leave the page you just left
+ * sense that the address matched, and would leave the page you just left
  * sitting in front of you on the Back button.
  */
 export function BackLink({ href, label }: { href: string; label: string }) {

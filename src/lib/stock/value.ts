@@ -107,6 +107,22 @@ export function purchaseValueOre(
  *                     what went out unopened or a count finding one the log had
  *                     lost, and pricing them at nothing would let a night out
  *                     quietly write the stock down.
+ *
+ * That third case has an empty shelf under it, and the average of an empty
+ * shelf is not a number. It used to answer zero there, which was the same
+ * write-down it exists to prevent, only worse, because the two ways of reaching
+ * it are the two that matter most:
+ *
+ *   the opening stocktake   a cellar counted onto the shelf for the first time
+ *                             has no delivery behind it, so every bottle in the
+ *                             building was booked in at nothing.
+ *   a night that took it all  everything out to a pub leaves the shelf at zero,
+ *                             and what came home unopened arrived worth nothing.
+ *
+ * So an arrival onto an empty shelf is priced from the product's own cost, the
+ * same figure a delivery of it would carry. It is what the bottle cost, which
+ * is the only defensible answer, and where nobody has priced the product it is
+ * still nothing, which is the gap showing as a gap.
  */
 export function valueDelta(
   held: Valued,
@@ -116,7 +132,11 @@ export function valueDelta(
 
   const qty = costBasis({ units: change.units });
   if (qty < 0) return -costOfRemoval(held, -qty);
-  if (qty > 0) return held.qty > 0 ? Math.round((held.valueOre * qty) / held.qty) : 0;
+  if (qty > 0) {
+    return held.qty > 0
+      ? Math.round((held.valueOre * qty) / held.qty)
+      : purchaseValueOre(qty, change.costPriceOre);
+  }
   return 0;
 }
 

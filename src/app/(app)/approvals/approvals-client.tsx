@@ -45,7 +45,7 @@ export function ApprovalsClient({
     { value: "MINE", label: t("scope.mine") },
     { value: "ALL", label: t("scope.all") },
   ], [t]);
-  // Mine is authority — the allocations this viewer may sign. Alla is the queue
+  // Mine is authority: the allocations this viewer may sign. Alla is the queue
   // itself, everything that has been sent and not yet left the chain, whoever it
   // is waiting on. They are different questions, not a narrow and a wide cut of
   // one, and now each is asked of the database directly (ExpenseListScope
@@ -67,7 +67,7 @@ export function ApprovalsClient({
 
   return (
     <PageShell
-      // Fixed, whichever scope is showing — see the note on the same field in
+      // Fixed, whichever scope is showing, see the note on the same field in
       // expenses-client.tsx. What "mine" and "alla" mean here is not a wide and
       // a narrow cut of one list but two different questions, so the track is
       // the one place that says which was asked.

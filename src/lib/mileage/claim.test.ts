@@ -59,7 +59,7 @@ describe("valueJourney", () => {
     const v = valueJourney(journey({ odometerEnd: null }), rates);
     expect(v.km).toBeNull();
     expect(v.ore).toBeNull();
-    // The rate is still known — the date alone decides it, and showing it is
+    // The rate is still known. The date alone decides it, and showing it is
     // how the form says what a kilometre will be worth before the readings are
     // in.
     expect(v.orePerKm).toBe(250);

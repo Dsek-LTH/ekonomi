@@ -9,7 +9,7 @@ describe("isCompleteDate", () => {
 
   it("rejects a date still being typed", () => {
     // What the masked field leaves behind on the way to a full date. `new Date`
-    // reads both — as 1 January and 1 July — which is the whole reason for this.
+    // reads both, as 1 January and 1 July, which is the whole reason for this.
     expect(isCompleteDate("")).toBe(false);
     expect(isCompleteDate("2026")).toBe(false);
     expect(isCompleteDate("2026-0")).toBe(false);
@@ -53,7 +53,7 @@ describe("isFutureDate", () => {
   });
 
   it("counts the day in Stockholm, not the host's UTC day", () => {
-    // 01:30 on 3 August in Stockholm (summer time, UTC+2) — a purchase made an
+    // 01:30 on 3 August in Stockholm (summer time, UTC+2), a purchase made an
     // hour ago. A server reading its own UTC clock still says 2 August here.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-02T23:30:00Z"));

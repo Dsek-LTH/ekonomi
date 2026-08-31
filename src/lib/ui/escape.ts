@@ -9,7 +9,7 @@
 //
 // So the layers form a stack and one listener serves it. Whatever opened last
 // is on top, and only it is asked. It is the same rule a person already has in
-// their head — Escape undoes the most recent thing — and it cannot be got wrong
+// their head (Escape undoes the most recent thing) and it cannot be got wrong
 // by the order listeners happened to be registered in, which is what the old
 // arrangement depended on and had backwards: a dialog mounts before the menu
 // inside it, so the dialog always heard the key first.
@@ -25,7 +25,7 @@ function onKey(e: KeyboardEvent) {
   if (e.key !== "Escape") return;
   const top = stack[stack.length - 1];
   if (!top) return;
-  // Nothing below gets a look in — including a React handler further down the
+  // Nothing below gets a look in, including a React handler further down the
   // tree that would have closed a second layer on the same press.
   e.stopPropagation();
   e.preventDefault();

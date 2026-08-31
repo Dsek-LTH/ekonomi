@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { amount, message } = parsed.data;
 
-  // One guess per amount — two would be ambiguous, which is why the amount is
+  // One guess per amount, two would be ambiguous, which is why the amount is
   // the primary key. Re-posting an existing one replaces the message, which is
   // what "edit" does from the screen.
   await prisma.swishAmountFallback.upsert({

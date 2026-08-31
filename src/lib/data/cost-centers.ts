@@ -18,7 +18,7 @@ const toCostCenter = (c: CostCenterRow, prefixes: PrefixRow[]): CostCenter => ({
   id: c.id,
   code: c.code,
   name: c.name,
-  // Derived from the code, never stored — see lib/server/result-units.ts.
+  // Derived from the code, never stored, see lib/server/result-units.ts.
   resultUnit: resultUnitNameForCode(c.code, prefixes) ?? undefined,
   active: c.active,
   source: c.source,
@@ -34,14 +34,14 @@ async function loadCostCenters(where: Prisma.CostCenterWhereInput): Promise<Cost
   return ccs.map((c) => toCostCenter(c, prefixes));
 }
 
-/** Every cost centre, retired ones included — for the settings list. */
+/** Every cost centre, retired ones included, for the settings list. */
 export function getCostCenters(): Promise<CostCenter[]> {
   return loadCostCenters({});
 }
 
 // Cost centres a picker should offer: the active ones. `keep` forces specific
 // codes in even when retired, so a voucher or allocation that already points at
-// one still renders and re-saves instead of failing validation — retiring a
+// one still renders and re-saves instead of failing validation. Retiring a
 // cost centre must not strand the utlägg already booked against it.
 export function getActiveCostCenters(keep: readonly string[] = []): Promise<CostCenter[]> {
   const codes = [...new Set(keep.filter(Boolean))];

@@ -1,4 +1,4 @@
-// Edit or remove one mileage rate. Admin only — see the POST route beside this.
+// Edit or remove one mileage rate. Admin only, see the POST route beside this.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";

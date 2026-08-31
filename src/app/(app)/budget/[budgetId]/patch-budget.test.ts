@@ -13,7 +13,7 @@ import type { Account, Budget, LineItem } from "./budget-types";
 // and read the whole budget back to find out. The one worth holding to its
 // route is `withLineOrder`: the reorder endpoint moves a row between accounts
 // as well as within one, and if the two disagree the sheet shows an arrangement
-// the database doesn't have — until the next reload silently corrects it, which
+// the database doesn't have, until the next reload silently corrects it, which
 // is the worst way to find out.
 
 const line = (id: string): LineItem => ({
@@ -35,7 +35,7 @@ const account = (id: string, lineIds: string[]): Account => ({
 });
 
 /** A budget of one sheet, holding the accounts given. Only the parts these
- *  functions touch are filled in — the rest is not theirs to know about. */
+ *  functions touch are filled in, the rest is not theirs to know about. */
 const budgetOf = (...accounts: Account[]): Budget =>
   ({ costCenters: [{ id: "sheet", accounts }] }) as unknown as Budget;
 

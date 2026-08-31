@@ -1,5 +1,5 @@
 // Revoking a redaktionell ändring. DELETE, because "ta bort ändringen" is what
-// it is from where the skattmästare stands — but nothing is deleted: the change
+// it is from where the skattmästare stands, but nothing is deleted: the change
 // stops counting towards the figures and stays in the history, struck through,
 // with who revoked it and when. See BudgetChange in schema.prisma for why.
 import { NextResponse } from "next/server";
@@ -21,7 +21,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return fail(409, "budget.changeRevoked");
   }
 
-  // Set together, so "revoked" is never half-true — as with the lock itself.
+  // Set together, so "revoked" is never half-true, as with the lock itself.
   const updated = await prisma.budgetChange.update({
     where: { id },
     data: { revokedAt: new Date(), revokedById: gate.actorId },

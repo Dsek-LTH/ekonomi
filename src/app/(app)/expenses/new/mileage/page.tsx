@@ -8,8 +8,8 @@ import MileageClient from "./mileage-client";
  * A milersättning's own form.
  *
  * Deliberately not the ordinary wizard with a third branch in it. What is being
- * described is a set of journeys rather than a purchase — no receipt, no amount
- * to type, no card to match against — and the two forms share so little at the
+ * described is a set of journeys rather than a purchase (no receipt, no amount
+ * to type, no card to match against) and the two forms share so little at the
  * top that folding them together would mean a wizard whose first step is mostly
  * conditionals. What they *do* share is everything after: the same utlägg row,
  * the same attest, the same booking and the same export.
@@ -25,7 +25,7 @@ export default async function NewMileagePage() {
     getPayoutAccount(user.id),
     // Every rate, not just the current one: each journey is valued at the rate
     // in force on its own day, so the form needs the same table the server
-    // does — that is what lets the total on screen be the total that is stored.
+    // does. That is what lets the total on screen be the total that is stored.
     getMileageRates(),
   ]);
 

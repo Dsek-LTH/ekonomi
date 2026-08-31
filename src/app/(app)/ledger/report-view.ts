@@ -22,7 +22,7 @@ const countAccounts = (r: LedgerReport) =>
 
 // An account with nothing worth a line. The server already drops the entirely
 // empty ones (no movement, no opening, no comparison); this is what the "hide
-// zero rows" toggle means on top of that — on a result report an account that
+// zero rows" toggle means on top of that: on a result report an account that
 // didn't move in the period (a budgeted line still at zero, say), and on a
 // balance report only one that has no balance on either side of it either,
 // since a standing balance with no movement is exactly what that report is for.
@@ -109,12 +109,12 @@ export const totalValue = (
 ) => (isBalance ? x.closing ?? 0 : x.total);
 
 // A row's share of its section, as a fraction. Null when the section nets to
-// zero — a share of an empty total is a division no one can act on.
+// zero. A share of an empty total is a division no one can act on.
 export function share(part: number, whole: number): number | null {
   return whole === 0 ? null : part / whole;
 }
 
-// Surplus or deficit. Only for figures that are a *result* — the bottom line
+// Surplus or deficit. Only for figures that are a *result*: the bottom line
 // and a cost centre's own total, which are the only places in this report where
 // the sign says good or bad news. Account and section amounts are deliberately
 // left alone: every cost section is credit-oriented (see lib/ledger/bas.ts), so its
@@ -139,7 +139,7 @@ const cell = (v: string | number | null | undefined): string => {
   return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-/** A translator scoped to the `ledger` namespace — see LedgerClient. */
+/** A translator scoped to the `ledger` namespace, see LedgerClient. */
 type Labels = (key: string) => string;
 
 export function reportToCsv(

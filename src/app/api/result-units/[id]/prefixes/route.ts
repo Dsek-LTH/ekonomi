@@ -1,5 +1,5 @@
 // Add a cost-centre code prefix to a result unit (admin only).
-// Body: { value: string } — e.g. "SKT", which claims SKT01, SKT02, …
+// Body: { value: string }, e.g. "SKT", which claims SKT01, SKT02, …
 //
 // Prefixes must stay non-overlapping across all result units, so a code can only
 // ever match one. The check lives here because the database cannot express

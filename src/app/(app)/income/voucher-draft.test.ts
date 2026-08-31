@@ -181,7 +181,7 @@ describe("voucherFor", () => {
 
   it("ignores the editor's spare empty rows", () => {
     // Sent as they are, every day would be blocked on three rows with no
-    // account. A row counts as spare only when every field of it is empty —
+    // account. A row counts as spare only when every field of it is empty:
     // a leftover cost centre is enough to make it a row somebody meant.
     const rows = defaultRows(report(), settings);
     const v = draft(report(), [...rows, makeVoucherRow({})]);

@@ -4,7 +4,7 @@ import { getFortnoxStatus } from "@/lib/data/fortnox";
 import LedgerClient from "./ledger-client";
 
 export default async function LedgerPage() {
-  // Any signed-in member — the utfall is the section's own accounting and the
+  // Any signed-in member: the utfall is the section's own accounting and the
   // budget beside it is open to everyone, so this matches. Stated rather than
   // inherited from the layout: "any member" is a policy, and the routes behind
   // this page (/api/ledger/*) say the same thing on their first line.

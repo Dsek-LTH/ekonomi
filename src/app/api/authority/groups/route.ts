@@ -1,6 +1,6 @@
 // What an Authentik group confers here (admin only).
 //
-// One group's whole grant per request — the roles it gives and the result units
+// One group's whole grant per request: the roles it gives and the result units
 // it makes someone answer for. Writing the finished state rather than a delta is
 // what lets the transaction below check an outcome instead of predicting one.
 //
@@ -10,7 +10,7 @@
 //   2. everyone whose stored group list touches the new mapping is re-derived,
 //      so the change lands now rather than over the next day as people happen to
 //      sign in (lib/server/authentik-roles.ts);
-//   3. the result is checked for the one state this app must never reach —
+//   3. the result is checked for the one state this app must never reach:
 //      nobody able to open Inställningar. If it would, the whole thing rolls
 //      back and the caller is told which change did it.
 //
@@ -54,7 +54,7 @@ export async function PUT(req: Request) {
   }
 
   try {
-    // Serializable, not merely transactional — see the note on `serializable`.
+    // Serializable, not merely transactional, see the note on `serializable`.
     // Step 3 below checks an outcome, and at READ COMMITTED a concurrent write
     // to a *different* group's rows is invisible to it: two saves that each
     // leave somebody able to reach Inställningar can commit into a state where

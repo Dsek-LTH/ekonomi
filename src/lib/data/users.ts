@@ -14,7 +14,7 @@ import type { Capability, Role, User } from "@/lib/domain/types";
 //
 // The whole list at once rather than a mapper per row: the capability matrix is
 // one query, request-cached, and resolving it here means a screen listing the
-// section can say what each person may actually do — the question the roles
+// section can say what each person may actually do, the question the roles
 // beside their name are only half an answer to.
 async function toUsers(
   rows: { id: string; name: string; email: string; roles: Role[] }[],
@@ -36,7 +36,7 @@ async function toUsers(
 
 // The four columns `toUsers` actually maps. Named once: a User row also carries
 // the member's bank details, and a loader that selects the whole row hands them
-// to every caller — today they are dropped in the mapper, but the next field
+// to every caller. Today they are dropped in the mapper, but the next field
 // added to the shape would ship them without anyone deciding to.
 const userSelect = { id: true, name: true, email: true, roles: true } as const;
 
@@ -61,7 +61,7 @@ export async function getRoleHolders(): Promise<User[]> {
 }
 
 // Name/email search for the person pickers. Capped, since the point is to find
-// one member — not to page through the section.
+// one member, not to page through the section.
 export async function searchUsers(query: string, take = 20): Promise<User[]> {
   const q = query.trim();
   if (!q) return [];

@@ -1,5 +1,5 @@
 // Import a Swish export as a batch of draft reports. The browser POSTs the raw
-// CSV, with the range as query parameters — the same shape as the bank import
+// CSV, with the range as query parameters, the same shape as the bank import
 // (api/bank/import), which is the other place a file is handed straight to a
 // parser.
 //
@@ -71,8 +71,8 @@ export async function POST(req: Request) {
     if (e instanceof IntaktNotConfiguredError) return fail(503, "income.serviceUnavailable");
     if (e instanceof IntaktError) {
       console.error(`[intakt] importing swish ${from}..${to} failed`, e);
-      // A 400 from the service is about this file — a header it did not
-      // recognise, a row it could not read — so its message is the useful part
+      // A 400 from the service is about this file (a header it did not
+      // recognise, a row it could not read) so its message is the useful part
       // and is passed through rather than replaced.
       if (e.status === 400) return fail(422, "income.csvRejected", { values: { detail: e.message } });
       return fail(502, "income.fetchFailed", { values: { detail: e.message } });

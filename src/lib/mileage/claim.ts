@@ -3,7 +3,7 @@
 // One journey per claim, described by the odometer at each end: what the car
 // said when it was got into, and what it said when it was got out of. The
 // distance is the difference and the money is the distance at the rate in force
-// on the day — neither is ever typed, which is the point. A distance is a number
+// on the day. Neither is ever typed, which is the point. A distance is a number
 // somebody arrived at; two readings are a statement about what a dashboard
 // showed, and an attester can ask to see it.
 //
@@ -24,7 +24,7 @@ export interface JourneyInput {
   /**
    * The odometer when the journey started and when it ended, in kilometres.
    *
-   * Null for a reading not yet given — a draft is allowed to be half-filled,
+   * Null for a reading not yet given: a draft is allowed to be half-filled,
    * and 0 is a real reading (a brand-new car, and a trip meter that was just
    * zeroed) rather than a way of saying "blank".
    */
@@ -47,7 +47,7 @@ export interface ValuedJourney {
  *
  * A journey goes forward. Equal readings are somebody who has not driven yet,
  * and a smaller end reading is a mistyped digit or the two fields the wrong way
- * round — neither is a distance, and neither should quietly become one by
+ * round. Neither is a distance, and neither should quietly become one by
  * taking an absolute value.
  *
  * Rounded to the tenth the readings are kept at, so 12345.6 − 12300.1 is 45.5
@@ -77,7 +77,7 @@ export function valueJourney(
  * Why a milersättning cannot be sent yet, or null when it can.
  *
  * The mileage half of `submitBlocker` (lib/domain/status.ts), kept here because
- * it is about the journey rather than about the utlägg around it — and because
+ * it is about the journey rather than about the utlägg around it, and because
  * the form needs the same answer while it is being typed, before anything has
  * been saved. Each value names a message under `mileage.blocker.<it>`.
  *

@@ -9,6 +9,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useTranslations } from "next-intl";
 import { Spinner } from "@/components/ui/spinner";
+import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { useMediaQuery } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
 
@@ -330,6 +331,11 @@ export default function ReceiptViewerImpl({
     el.addEventListener("wheel", onWheel, { capture: true, passive: false });
     return () => el.removeEventListener("wheel", onWheel, true);
   }, [trackpadMode, fullscreen]);
+
+  // Tab is held inside the overlay while it is up. Fullscreen covers the page
+  // it was opened from, and tabbing out of the last control landed on buttons
+  // nobody could see. See lib/ui/focus-trap.ts.
+  useFocusTrap(fullscreen, containerRef);
 
   // Esc exits fullscreen.
   useEffect(() => {

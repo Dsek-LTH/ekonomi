@@ -15,10 +15,10 @@ export default async function BookkeepingPage({
 
   const [page, fortnox] = await Promise.all([
     // Bookkeeping picks up where approval ends, so that is what the page asks
-    // for — rather than everything, cut down to it once it has arrived.
+    // for, rather than everything, cut down to it once it has arrived.
     getExpensePage(user, { kind: "signed" }, query),
     // With the viewer, so the export button knows whether they have a Fortnox
-    // login of their own — the export writes under it, not the service account.
+    // login of their own. The export writes under it, not the service account.
     getFortnoxStatus(user.id),
   ]);
   return <BookkeepingClient page={page} fortnox={fortnox} />;

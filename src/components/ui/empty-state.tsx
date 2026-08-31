@@ -21,7 +21,7 @@ export function EmptyState({
 }
 
 // "Nothing here" inside a card or list, where the full EmptyState would be too
-// loud — one centred line where the rows would have been.
+// loud. One centred line where the rows would have been.
 //
 // The spacing is a named variant rather than something a caller layers on with
 // `className`: cn() only concatenates, and Tailwind emits its utilities in scale

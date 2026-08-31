@@ -28,7 +28,7 @@ describe("wizardChrome", () => {
 
   it("has another word for a draft, which has no reference yet", () => {
     // A claim is numbered when it is submitted for attest, not when it is
-    // started — so an edit of a draft cannot name it and must not try.
+    // started, so an edit of a draft cannot name it and must not try.
     const c = wizardChrome({
       existing: claim({ reference: undefined }),
       t,

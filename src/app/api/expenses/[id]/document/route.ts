@@ -1,4 +1,4 @@
-// Serve the utläggsräkning — the cover page naming who attested what.
+// Serve the utläggsräkning, the cover page naming who attested what.
 //
 // The cover *alone*. The underlag is a document of its own and the panel pages
 // to it (lib/expense/document-url.ts); stapling the two together is something
@@ -47,7 +47,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!expense) return fail(404, "expense.notFound");
 
-  // A cover is exactly as private as the utlägg it describes — it is that
+  // A cover is exactly as private as the utlägg it describes. It is that
   // utlägg, restated. Same gate the receipts are behind.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return fail(404, "expense.notFound");
@@ -87,7 +87,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     headers: {
       "Content-Type": "application/pdf",
       // A stored cover is fixed, but an unbooked one is drawn per request from
-      // attestations that are still moving — so this is held briefly and never
+      // attestations that are still moving, so this is held briefly and never
       // written to disk.
       "Cache-Control": "private, max-age=60",
       "Content-Disposition": `inline; filename="${encodeURIComponent(filename)}"`,

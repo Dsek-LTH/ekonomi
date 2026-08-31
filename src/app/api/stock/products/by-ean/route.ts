@@ -1,7 +1,7 @@
 // Find a product by the barcode on it.
 //
 // The cellar's entry point: scan a tin, get the product, register the movement
-// without typing a name. A miss is a 404 rather than an empty list — "no
+// without typing a name. A miss is a 404 rather than an empty list: "no
 // product has this barcode" is the answer, and it is what the screen offers to
 // fix by creating one.
 import { NextResponse } from "next/server";

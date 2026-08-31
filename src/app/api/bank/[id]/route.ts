@@ -3,7 +3,7 @@ import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { expenseLabel } from "@/lib/domain/reference";
 
-// DELETE /api/bank/:id — bookkeeper/admin only. Refuses if the transaction is
+// DELETE /api/bank/:id: bookkeeper/admin only. Refuses if the transaction is
 // matched to an expense (caller must unmatch first).
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;

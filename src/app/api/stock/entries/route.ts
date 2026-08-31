@@ -94,8 +94,8 @@ export async function POST(req: Request) {
   //
   // A level is never re-estimated on the way out: the body picks bottles that
   // are already on a rung, and the shelf has to actually have them. `pickFault`
-  // is where the bar's rule lives — the open ones leave before a sealed one
-  // does — and it is the same function the form asks before offering the
+  // is where the bar's rule lives: the open ones leave before a sealed one
+  // does, and it is the same function the form asks before offering the
   // button.
   let units = body.units ?? 0;
   const open: OpenBottles = {};
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
   // What it states is what is on the shelf, so that is what is stored: a row
   // per rung holding the counted figure. The difference from what the books
   // expected is left to the replay, which works it out again every time
-  // anything before the count changes — which is what makes a count a baseline
+  // anything before the count changes, which is what makes a count a baseline
   // rather than an adjustment that quietly expires. See lib/stock/replay.ts.
   if (body.counted) {
     if (body.kind !== "COUNT") return fail(422, "stock.countedOnStocktakeOnly");
@@ -259,7 +259,7 @@ export async function POST(req: Request) {
   // ── What it does to the value ──
   //
   // A purchase brings what was paid. Anything leaving costs the moving average
-  // at this moment — computed here and never recomputed, because the average
+  // at this moment, computed here and never recomputed, because the average
   // moves with the next delivery and a figure worked out later would not be
   // what this movement was worth. See lib/stock/value.ts.
   const valueDeltaOre = valueDelta(

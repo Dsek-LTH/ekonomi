@@ -8,8 +8,8 @@ import "server-only";
 // looking, "the barcode belongs to Norrlands Guld, which is retired" tells them
 // what to do about it.
 //
-// Kept out of the routes because both of them need it — a product can collide
-// on the way in and on the way to being edited — and a rule written twice is a
+// Kept out of the routes because both of them need it: a product can collide
+// on the way in and on the way to being edited, and a rule written twice is a
 // rule that will be right once.
 
 import { prisma } from "./db";

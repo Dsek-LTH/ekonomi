@@ -9,8 +9,8 @@ import { parseBody } from "@/lib/api/parse";
 import { CreateSheet } from "@/lib/api/schemas/budget";
 
 // POST /api/budgets/[id]/cost-centers
-//   { costCenterId } — add a cost centre to the budget
-//   { cloneFromId }  — duplicate a sheet already in it, detached from any cost
+//   { costCenterId }: add a cost centre to the budget
+//   { cloneFromId }:  duplicate a sheet already in it, detached from any cost
 //                      centre (see cloneCostCenter)
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: budgetId } = await ctx.params;

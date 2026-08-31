@@ -8,7 +8,7 @@ import { parseBody } from "@/lib/api/parse";
 import { PasteIntoSheet } from "@/lib/api/schemas/budget";
 import { rebindCopiedRefs } from "@/lib/budget/paste";
 
-// POST /api/budgets/[id]/cost-centers/[ccid]/paste — copied rows, or copied
+// POST /api/budgets/[id]/cost-centers/[ccid]/paste: copied rows, or copied
 // accounts, into this sheet (admin, unlocked).
 //
 // The copy is named by ids, so this reads the originals and brings everything
@@ -17,7 +17,7 @@ import { rebindCopiedRefs } from "@/lib/budget/paste";
 //
 // One request and one transaction, because of the references. A row's equation
 // can point at another row by its id, and pasting a block of rows that point at
-// each other has to end with the copies pointing at the copies — which is only
+// each other has to end with the copies pointing at the copies, which is only
 // answerable once the copies have ids. So: insert, then rewrite what was
 // copied, in the same breath (see lib/budget/paste.ts).
 //
@@ -147,7 +147,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
 
     // Now that the copies have ids: a copy whose equation pointed at another
     // row of the same copy is pointed at that row's copy instead. Anything it
-    // pointed at from outside — another sheet, an account total, a variable —
+    // pointed at from outside (another sheet, an account total, a variable)
     // is left exactly where it was aimed.
     for (const to of copied.values()) {
       const row = await tx.budgetLineItem.findUnique({

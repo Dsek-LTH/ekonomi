@@ -2,8 +2,8 @@
 --
 -- Two of the old values are renames rather than removals, so they are mapped by
 -- hand: Prisma's generated cast goes through text and would fail on every row
--- carrying one. FOLKOL folds into OL for the same reason it is gone — beer is
--- beer here — and the two that have no home (LATTDRYCK, OVRIGT) are asserted
+-- carrying one. FOLKOL folds into OL for the same reason it is gone: beer is
+-- beer here, and the two that have no home (LATTDRYCK, OVRIGT) are asserted
 -- empty rather than silently rewritten into a drink they are not.
 DO $$ DECLARE n int; BEGIN
   SELECT count(*) INTO n FROM "StockProduct" WHERE category IN ('LATTDRYCK', 'OVRIGT');

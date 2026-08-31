@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/ui/utils";
 
-// "How are these drawn?" — the icon register. See segmented-control.tsx for
+// "How are these drawn?" The icon register. See segmented-control.tsx for
 // the grammar the four switchers share.
 //
 // Icons and no words, deliberately. A view switch is the only one of them
@@ -50,14 +50,14 @@ export function ViewToggle<T extends string>({
             role="tab"
             aria-selected={active}
             // The name a screen reader reads, and the one the pointer gets on
-            // hover — without it this is two unlabelled buttons.
+            // hover, without it this is two unlabelled buttons.
             aria-label={opt.label}
             title={opt.label}
             onClick={() => onChange(opt.value)}
             className={cn(
               "flex size-7 items-center justify-center rounded-md transition-colors",
               active
-                // The selected pill in a track — same reasoning, and the same
+                // The selected pill in a track, same reasoning, and the same
                 // token, as CollectionSwitch. The gutter here is 2px, so a
                 // shadow that leans down has even less room to do it in.
                 ? "bg-background text-foreground shadow-[var(--shadow-pill)]"

@@ -1,6 +1,6 @@
 // The theme, as a cookie rather than localStorage.
 //
-// This used to live in localStorage, which the server cannot see — so the first
+// This used to live in localStorage, which the server cannot see, so the first
 // paint was always the light default and a blocking inline <script> in
 // app/layout.tsx had to reach into `document.documentElement` before the parser
 // got to <body> to correct it. That script was the whole cost of storing the
@@ -10,7 +10,7 @@
 // itself and there is nothing to correct: no inline script, no flash, and no
 // window where the DOM and React disagree about the class. It is what the
 // language, the nav pin and the receipt width already do here, and for the same
-// reason — see the cookie reads in app/(app)/layout.tsx.
+// reason, see the cookie reads in app/(app)/layout.tsx.
 //
 // No directive: this is imported from both a client component (the toggle that
 // writes it) and server components (the layouts that read it), so it must stay
@@ -19,7 +19,7 @@ export const THEME_COOKIE = "theme";
 
 export type Theme = "light" | "dark";
 
-/** Light unless it says otherwise — there is no third state deferring to the OS. */
+/** Light unless it says otherwise. There is no third state deferring to the OS. */
 export const DEFAULT_THEME: Theme = "light";
 
 /**

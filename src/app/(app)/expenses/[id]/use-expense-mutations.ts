@@ -60,7 +60,7 @@ export function useExpenseMutations(expenseId: string) {
    * part it also throws those signatures away, and somebody about to correct a
    * payment type should know they are asking a colleague to sign again.
    *
-   * `attested` is how many rows are signed — the caller counts them, since it
+   * `attested` is how many rows are signed. The caller counts them, since it
    * is the one holding the utlägg.
    */
   async function recall(attested: number) {
@@ -73,12 +73,12 @@ export function useExpenseMutations(expenseId: string) {
   }
 
   // Export to Fortnox is a real API call (its own route), not a status flip, and
-  // it can half-succeed — the voucher lands but the receipt doesn't attach.
+  // it can half-succeed: the voucher lands but the receipt doesn't attach.
   async function exportToFortnox() {
     const data = await action.mutate(url("/export"), { error: t("export.failed") });
     if (!data) return;
     const done = t("export.done", { label: String(data.label) });
-    // The warning describes itself — pass it through rather than wrapping it in
+    // The warning describes itself, pass it through rather than wrapping it in
     // a summary that leaves the bookkeeper with nothing to act on.
     if (data.attachWarning) {
       notify.info(`${done}. ${t("export.attachWarning", { detail: String(data.attachWarning) })}`);

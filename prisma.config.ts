@@ -1,5 +1,5 @@
 // Prisma 7 configuration. The datasource URL and seed command moved here
-// out of schema.prisma. Env is loaded explicitly — the config file does not
+// out of schema.prisma. Env is loaded explicitly, the config file does not
 // read .env automatically.
 import { defineConfig } from "prisma/config";
 import { loadEnvFile } from "./prisma/load-env";

@@ -4,7 +4,7 @@
 //
 // The shortcut for the ordinary case: a couple of mis-rung products, and the
 // day they belong to is already on screen in the queue beside them. The drop
-// moves them there and then, on the account the destination suggests — which
+// moves them there and then, on the account the destination suggests, which
 // for a verksamhet with several is the one they already had, so the account is
 // put right afterwards in the table, where it is now editable. The
 // checkbox-and-dialog path is still there, and is still the way to decide
@@ -42,7 +42,7 @@ export function useLineDrag({
 }) {
   // A drag in flight: which day the lines are being taken from, and which ones.
   // Held here rather than read out of the drag event, because the queue has to
-  // know it during `dragover` — the one moment the DataTransfer will not let
+  // know it during `dragover`, the one moment the DataTransfer will not let
   // anything read its payload.
   const [dragging, setDragging] = useState<{ reportId: string; lineIds: string[] } | null>(null);
   // The queue row the pointer is currently over, for the drop highlight.
@@ -113,7 +113,7 @@ export function useLineDrag({
     dropProps,
     /** A drag has begun, on these lines of this day. */
     startDrag: (reportId: string, lineIds: string[]) => setDragging({ reportId, lineIds }),
-    /** It ended, however it ended — dropped, cancelled, or let go over nothing. */
+    /** It ended, however it ended: dropped, cancelled, or let go over nothing. */
     endDrag: () => {
       setDragging(null);
       setDropOn(null);

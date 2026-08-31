@@ -7,7 +7,7 @@
 // them.
 //
 // Spread the returned props onto the element wrapping the sheet's table(s). Only
-// the [data-cell] inputs — those rendered with `gated: true` — have the two
+// the [data-cell] inputs (those rendered with `gated: true`) have the two
 // modes; anything else (add-row inputs, comment boxes) is left alone.
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/ui/utils";
@@ -44,7 +44,7 @@ export function useCellEdit(className?: string): CellEditProps {
       // Leaving the cell drops back to selected; the input's own blur commits.
       if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); input.blur(); setEditing(false); }
       else if (e.key === "Tab" || e.key === "Escape") setEditing(false); // Tab moves natively; Escape reverts
-      // Everything else — arrows, Home/End, text — belongs to the input.
+      // Everything else (arrows, Home/End, text) belongs to the input.
       return;
     }
 

@@ -1,7 +1,7 @@
 -- A stocktake states what is there, rather than by how much the books were out.
 --
--- It was stored only as the difference — counted minus whatever the books said
--- at that moment — which meant it stopped being true the instant anything
+-- It was stored only as the difference (counted minus whatever the books said
+-- at that moment) which meant it stopped being true the instant anything
 -- before it was corrected. Books say 100, you count 90, the row holds −10; fix
 -- an earlier delivery down by 80 and the shelf reads 10 for a product somebody
 -- physically counted at 90. Keeping the counted figure lets the difference be
@@ -10,7 +10,7 @@
 ALTER TABLE "StockEntry" ADD COLUMN "countedQty" INTEGER;
 
 -- Existing counts, given back what they were counting: whatever the shelf came
--- to once they had been applied. Only the ones that moved whole things — a
+-- to once they had been applied. Only the ones that moved whole things (a
 -- count that adjusted several rungs at once belongs to no single rung, so it
 -- keeps the difference it was written with and is left alone.
 UPDATE "StockEntry" c

@@ -1,4 +1,4 @@
-// POST /api/budgets/import — a past budget, from the interchange CSV.
+// POST /api/budgets/import: a past budget, from the interchange CSV.
 //
 // The browser POSTs the raw file; the year and the name ride along as query
 // parameters (see ImportBudgetQuery). Admin only, like every other way of
@@ -7,8 +7,8 @@
 // What comes back is as interesting as what goes in: `problems` names the rows
 // that could not be read, and `unmatchedCostCenters` the sheets that landed
 // detached. Both are reported rather than thrown, because an old budget that is
-// 95% readable is worth having, and because the alternative — a silent partial
-// import — is the failure that would matter.
+// 95% readable is worth having, and because the alternative, a silent partial
+// import, is the failure that would matter.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { isAdmin } from "@/lib/domain/permissions";
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
   if (sheets.length === 0) return fail(422, "budget.noRows", { extra: { problems } });
 
   // Sheets are linked to cost centres by code. A code with no cost centre is
-  // NOT created here — a cost centre invented as a side effect of a file upload
-  // would show up in every allocation dropdown in the app — so the sheet is
+  // NOT created here: a cost centre invented as a side effect of a file upload
+  // would show up in every allocation dropdown in the app, so the sheet is
   // imported detached, carrying its name as a label, and the code is reported.
   // Note a detached sheet is left out of the Utfall comparison
   // (lib/ledger/comparison.ts), which is usually the reason a past budget was
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         data: {
           budgetId: created.id,
           costCenterId,
-          // Only a detached sheet needs a label — a linked one is named by the
+          // Only a detached sheet needs a label. A linked one is named by the
           // cost centre, and a second name here would be a second opinion.
           label: costCenterId ? null : sheet.costCenterName,
           sortOrder: si,

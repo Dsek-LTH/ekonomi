@@ -333,13 +333,24 @@ summary {
 
 /* A field assembled from a wrapper and a bare input (a fixed prefix beside an
    editable rest, say): the ring belongs around the whole thing, so the wrapper
-   draws it and the input inside is stopped from drawing a second one. */
-.focus-ring-within:has(:focus-visible) {
+   draws it and the input inside is stopped from drawing a second one.
+
+   The text only. A box like this can also hold a button (the scanner in the
+   barcode field, the sign toggle on an amount) and that is a separate stop on
+   the way through the form. Ringing the box for it drew exactly what the box
+   already looked like with the text focused, so tabbing onto the button
+   appeared to do nothing at all and the button read as unreachable. It gets a
+   ring of its own instead, pulled inside its edge so it is not clipped by a box
+   with `overflow-hidden` and does not sit on top of the box's border. */
+.focus-ring-within:has(:is(input, textarea):focus-visible) {
   outline: 1px solid var(--color-ring);
   outline-offset: 1px;
 }
-.focus-ring-within :focus-visible {
+.focus-ring-within :is(input, textarea):focus-visible {
   outline: none;
+}
+.focus-ring-within :is(button, a, [tabindex]):focus-visible {
+  outline-offset: -1.5px;
 }
 
 /* Subtle, unobtrusive scrollbars */

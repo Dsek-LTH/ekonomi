@@ -1,7 +1,7 @@
 import { Skeleton, SkeletonCard, SkeletonDetailList, SkeletonPage } from "@/components/ui/skeleton";
 
-// The header here names the expense three times over — title, then id and
-// submitter, then the status pill — and the action slot holds the whole attest
+// The header here names the expense three times over (title, then id and
+// submitter, then the status pill) and the action slot holds the whole attest
 // row, so it is the widest header in the app.
 export default function Loading() {
   return (

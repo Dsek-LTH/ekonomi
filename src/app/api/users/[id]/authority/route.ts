@@ -1,7 +1,7 @@
 // Why one member holds the roles they hold (admin only).
 //
 // The counterpart to the role chips in Inställningar → Användare: those say
-// what somebody has, and this says what it rests on — which Authentik group
+// what somebody has, and this says what it rests on: which Authentik group
 // conferred each role, and which roles nothing confers any more.
 //
 // Fetched per person rather than shipped with the list because it is a question

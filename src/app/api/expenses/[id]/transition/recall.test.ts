@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Tested at the route rather than only through `canRecall`, because the two
 // things that make it safe are here and nowhere else: who is allowed to do it,
 // and that every signature already given is cleared on the way out. An attest
-// is a statement about the claim as it stood — "this 420 kr was spent
-// privately" — and this action exists to change what it stood for. A signature
+// is a statement about the claim as it stood: "this 420 kr was spent
+// privately", and this action exists to change what it stood for. A signature
 // that survived would be a name against a claim that no longer says what was
 // signed.
 //
 // Mocked at the lowest layer: the session and the database. Everything above
-// them is the real thing — the real gate, the real schema, the real status
+// them is the real thing: the real gate, the real schema, the real status
 // rules, the real response.
 
 const h = vi.hoisted(() => ({
@@ -97,7 +97,7 @@ beforeEach(() => {
   h.event.mockResolvedValue({});
 });
 
-describe("POST /api/expenses/[id]/transition — recall", () => {
+describe("POST /api/expenses/[id]/transition: recall", () => {
   it("puts a waiting utlägg back in the submitter's hands as a draft", async () => {
     const res = await recall();
     expect(res.status).toBe(200);

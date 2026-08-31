@@ -52,7 +52,7 @@ describe("evaluate", () => {
 
   it("closes a gap in a number rather than reading two", () => {
     // Space is stripped before anything is read, which is what lets "24 * 3"
-    // work at all — and it means a stray space inside a number closes up. That
+    // work at all, and it means a stray space inside a number closes up. That
     // is the right way round: somebody typing "2 40" meant 240, and the
     // alternative is refusing "24 * 3".
     expect(evaluate("4 4")).toBe(44);
@@ -99,7 +99,7 @@ describe("quantity", () => {
   });
 
   it("holds at what there is, and says it did", () => {
-    // Twenty-two are out, so twenty-two is the most that can come home — and
+    // Twenty-two are out, so twenty-two is the most that can come home, and
     // the screen gets to mention it rather than the number quietly changing.
     expect(quantity("30", 22)).toEqual({ value: 22, ok: true, capped: true });
     expect(quantity("22", 22)).toEqual({ value: 22, ok: true, capped: false });

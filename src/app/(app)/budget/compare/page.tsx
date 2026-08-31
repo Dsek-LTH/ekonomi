@@ -1,6 +1,6 @@
 // Budgets side by side: any number of them, one column each.
 //
-// Every row is a full outer join (lib/budget/compare.ts) — a cost centre, an
+// Every row is a full outer join (lib/budget/compare.ts): a cost centre, an
 // account or a row that only some of the budgets have is still a row here, blank
 // in the columns that don't have it. That blank is usually the finding, so it is
 // never a reason to drop the row.
@@ -14,7 +14,7 @@
 // is an input to the page, so adding or removing a column is a navigation, and
 // the loading below simply runs again. It used to fetch each budget from the
 // browser, which meant a budget that failed to load was indistinguishable from
-// one that had been deleted — both quietly vanished from the comparison.
+// one that had been deleted, both quietly vanished from the comparison.
 
 import { requireUser } from "@/lib/server/current-user";
 import { getBudgetSummaries, getEvaluatedBudget } from "@/lib/data/budget";
@@ -46,13 +46,13 @@ export default async function BudgetComparePage({
   const [loaded, all] = await Promise.all([
     // No outcome and no serialising pass: this page reads each budget through
     // `snapshotOf`, which takes its sheets and its evaluated figures and never
-    // the ledger — and a snapshot is what crosses to the client, not the budget.
+    // the ledger, and a snapshot is what crosses to the client, not the budget.
     Promise.all(ids.map((id) => getEvaluatedBudget(id, { actuals: false, serialize: false }))),
     getBudgetSummaries(),
   ]);
 
   // In the order the URL names them. A budget deleted since the link was made
-  // simply drops out — the comparison is still readable without it, and there is
+  // simply drops out. The comparison is still readable without it, and there is
   // nothing to say about a budget that no longer exists.
   const snapshots: Snapshot[] = loaded
     .filter((b): b is NonNullable<typeof b> => b !== null)

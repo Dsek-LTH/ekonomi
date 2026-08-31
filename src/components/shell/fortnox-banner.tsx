@@ -2,8 +2,8 @@ import { FortnoxMark } from "./fortnox-mark";
 import { cn } from "@/lib/ui/utils";
 
 // The state of a Fortnox link, as a row: the brand mark, what the link is, and
-// a dot for whether it holds. Shared by the two places a link is shown — your
-// personal login on /profile and the guild's connection in settings — so the
+// a dot for whether it holds. Shared by the two places a link is shown (your
+// personal login on /profile and the guild's connection in settings) so the
 // same state never gets two different shapes.
 export function FortnoxBanner({
   title,

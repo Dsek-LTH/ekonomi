@@ -4,13 +4,13 @@ import { ReorderLineItems } from "@/lib/api/schemas/budget";
 import { allowBudgetWrite } from "@/lib/budget/access";
 import { fail } from "@/lib/api/guard";
 
-// POST /api/budget-accounts/[id]/line-items/reorder — this account's rows, in
+// POST /api/budget-accounts/[id]/line-items/reorder: this account's rows, in
 // this order (admin).
 //
 // An id that belongs to another account of the same budget is moved onto this
 // one, because that is what dragging a row from one account to another in a
 // sheet is: a row lands in a place, and the place is an account and a position
-// in it at once. Whichever account a row leaves keeps the order it had — the
+// in it at once. Whichever account a row leaves keeps the order it had. The
 // rows still in it are untouched, and a gap in their numbering means nothing.
 //
 // Anything outside the budget is dropped rather than refused: `allowBudgetWrite`

@@ -13,7 +13,7 @@
 # hostname is random per run and the tunnel dies with this script.
 #
 # What goes over it is real: receipts, members' names, bank rows. It is a
-# public URL for as long as it is up — unguessable, but public. Stop it when
+# public URL for as long as it is up: unguessable, but public. Stop it when
 # you are done.
 set -euo pipefail
 

@@ -10,15 +10,18 @@
 // while these collect something (a destination and an account per line, a
 // verksamhet and a day) and the difference is the whole body of the dialog.
 //
-// Deliberately not a focus trap, which the confirm dialog does have. That one
-// is summoned mid-action from anywhere in the app and answered with a keypress;
-// these are opened from a button, filled in, and submitted, and the trapping
-// belongs with the rest of that behaviour if it is ever wanted here too.
-import { useEffect } from "react";
+// Tab is held inside the card as well. A dialog that says it is modal and then
+// lets the keyboard walk out of its last button and on into the page behind is
+// modal for the mouse only, and the way out of that page is to Tab all the way
+// round it. See lib/ui/focus-trap.ts, which stacks the same way Escape does, so
+// a scanner opened from inside a form holds the keys while it is up and hands
+// them back to the form on the way out.
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { Card } from "./card";
 import { useEscape } from "@/lib/ui/escape";
+import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
 
 export function Modal({
@@ -38,6 +41,9 @@ export function Modal({
   // top of it answers Escape first, and one press should close one thing. See
   // lib/ui/escape.ts.
   useEscape(true, onClose);
+
+  const boxRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, boxRef);
 
   useEffect(() => {
     // Below md the document is what scrolls, so the page would drift behind the
@@ -73,6 +79,7 @@ export function Modal({
       onClick={onClose}
     >
       <Card
+        ref={boxRef}
         role="dialog"
         aria-modal="true"
         aria-label={label}

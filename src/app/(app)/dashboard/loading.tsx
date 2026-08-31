@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonPage, SkeletonTable } from "@/components/ui/skeleton";
 
-// Two lists: what needs you, then your own. No description under the greeting —
+// Two lists: what needs you, then your own. No description under the greeting,
 // see dashboard-client.
 export default function Loading() {
   return (

@@ -1,4 +1,4 @@
-// CLI ledger sync — for the initial full backfill and for scheduled (cron) runs.
+// CLI ledger sync: for the initial full backfill and for scheduled (cron) runs.
 //   pnpm fortnox:sync          → sync the current financial year
 //   pnpm fortnox:sync --all    → sync every financial year (full backfill)
 //   pnpm fortnox:sync --year 9 → sync one Fortnox financial-year id

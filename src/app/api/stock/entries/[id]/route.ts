@@ -7,12 +7,12 @@
 // shown they are not doing arithmetic well.
 //
 // So the row is changed. What it said before, and who changed it, goes to
-// StockChange — which is what keeps an editable ledger checkable, and is read
+// StockChange, which is what keeps an editable ledger checkable, and is read
 // as a feed on the product's own page.
 //
 // A count is no obstacle to any of this, which is worth saying because it once
 // was. A stocktake states what was on the shelf on a day, so once its own
-// difference is worked out again — see lib/server/stock-replay.ts — correcting
+// difference is worked out again (see lib/server/stock-replay.ts) correcting
 // a delivery from before it cannot move anything after it. Everything before a
 // count genuinely stops mattering, which is what an inventering has always
 // meant.

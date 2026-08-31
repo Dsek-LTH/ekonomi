@@ -9,7 +9,7 @@
 //  - the re-read after any other write, which now asks the server for the
 //    budget's rows and not for their values. Sending them meant evaluating the
 //    whole budget again on the server and putting every line's figure, every
-//    account total and every cell into the response — and then the very next
+//    account total and every cell into the response, and then the very next
 //    cell edit recomputed the lot here anyway.
 import { EXTRA_COLUMN_KEYS } from "@/lib/budget/grid";
 import { sheetKey } from "@/lib/budget";
@@ -31,7 +31,7 @@ export function recomputeBudget(rev: Budget): Budget {
     ),
   );
   // Editorial changes are part of every account total the server sends, so they
-  // have to be part of the one computed here too — otherwise editing any cell
+  // have to be part of the one computed here too, otherwise editing any cell
   // would silently drop them until the next reload. (Cells are only editable
   // while the budget is unlocked, and changes are only made while it is locked;
   // but an unlocked budget still carries the ones made earlier.)

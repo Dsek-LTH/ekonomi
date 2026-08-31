@@ -793,6 +793,7 @@
     "profile": "Min profil",
     "brandTagline": "Ekonomi",
     "backToApp": "Tillbaka till appen",
+    "toDsek": "Till dsek.se",
     "openMenu": "Öppna menyn",
     "closeMenu": "Stäng meny",
     "doneMenu": "Klar",
@@ -1946,10 +1947,10 @@
       "action": "Lägg upp produkter"
     },
     "category": {
-      "SPRITDRYCK": "Spritdryck",
-      "VIN": "Vin",
-      "OVRIG_JASTDRYCK": "Övrig jästdryck",
       "OL": "Öl",
+      "OVRIG_JASTDRYCK": "Övrig jästdryck",
+      "VIN": "Vin",
+      "SPRITDRYCK": "Spritdryck",
       "ALKOHOLDRYCKSLIKNANDE": "Alkoholdrycksliknande preparat"
     },
     "kind": {
@@ -1962,7 +1963,7 @@
     },
     "kindName": {
       "UNIT": "Styckvara",
-      "VOLUME": "Flaska som vägs"
+      "VOLUME": "Spritflaska"
     },
     "field": {
       "date": "Datum",
@@ -2053,7 +2054,16 @@
         "cost": "Inköpspris inkl. pant (kr)",
         "systembolagetId": "Systembolagets artikelnummer",
         "systembolagetIdHint": "Siffrorna sist i produktens adress på systembolaget.se. Klistra in hela länken om du vill. Numret plockas ut.",
-        "systembolagetIdInvalid": "Hittar inget artikelnummer. Klistra in produktens länk från systembolaget.se, eller skriv bara siffrorna."
+        "systembolagetIdInvalid": "Hittar inget artikelnummer. Klistra in produktens länk från systembolaget.se, eller skriv bara siffrorna.",
+        "tags": "Taggar",
+        "tagsHint": "Fria etiketter att hitta produkten på: whisky, cognac, vodka. Frivilligt.",
+        "tagAdd": "Lägg till tagg…",
+        "tagSearch": "Sök eller skriv en ny…",
+        "tagCreate": "Skapa taggen ”{tag}”",
+        "tagRemove": "Ta bort taggen {tag}",
+        "tagsNone": "Inga taggar ännu",
+        "tagsFull": "Högst {max} taggar",
+        "tagTooLong": "Taggen är för lång, högst {max} tecken"
       },
       "col": {
         "name": "Produkt",
@@ -2063,7 +2073,8 @@
         "abv": "Alkoholhalt",
         "onHand": "I lager",
         "litres": "Liter",
-        "value": "Värde"
+        "value": "Värde",
+        "tags": "Taggar"
       },
       "search": "Sök produkt…",
       "noSize": "volym saknas",
@@ -2138,6 +2149,7 @@
       "noteHint": "Skriv gärna varför det skiljer, om ni vet."
     },
     "filterCategory": "Dryckesslag",
+    "filterTag": "Taggar",
     "product": {
       "inStock": "I lager",
       "sealed": "Oöppnade flaskor",

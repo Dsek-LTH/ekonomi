@@ -8,7 +8,7 @@ import { prisma } from "@/lib/server/db";
 
 // Discriminated on `ok`, so a caller that returns early on failure has a code
 // and a name in hand afterwards without asserting they are there. On failure,
-// `error` is a message code under `errors.budgetAccount` — see lib/api/guard.
+// `error` is a message code under `errors.budgetAccount`, see lib/api/guard.
 export type AccountCheck =
   | { ok: true; code: string; name: string }
   | { ok: false; error: string; values?: Record<string, string | number> };
@@ -19,7 +19,7 @@ export async function resolveBudgetAccount(rawCode: string): Promise<AccountChec
 
   const account = await prisma.account.findUnique({ where: { number: code } });
   if (!account) {
-    // An empty chart means nobody has synced yet — say that rather than
+    // An empty chart means nobody has synced yet, say that rather than
     // blaming the account number.
     const charted = await prisma.account.count();
     return charted

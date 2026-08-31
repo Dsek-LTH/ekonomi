@@ -1,4 +1,4 @@
-# Kept out of the build context. Short list, and every line earns its place —
+# Kept out of the build context. Short list, and every line earns its place:
 # without this file `COPY . .` in the builder stage pulls the whole working
 # directory in, and two of these end up inside the shipped image: Next copies
 # .env into .next/standalone, so `docker run <image> cat .env` prints the
@@ -15,7 +15,7 @@ node_modules
 src/lib/generated
 *.tsbuildinfo
 
-# Section financial data — real account numbers and member-identifying rows.
+# Section financial data: real account numbers and member-identifying rows.
 # No more welcome in an image than in git history.
 *.csv
 *.xlsx

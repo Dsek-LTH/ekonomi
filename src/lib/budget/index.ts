@@ -1,4 +1,4 @@
-// Shared budget domain helpers (pure — safe in both server and client).
+// Shared budget domain helpers (pure, safe in both server and client).
 
 export type AccountKind = "INCOME" | "COST";
 
@@ -15,8 +15,8 @@ export function effectiveKind(
   return override ?? inferKind(accountCode);
 }
 
-// What identifies one sheet in a budget: the cost-centre code, or — for a
-// sheet not linked to a cost centre — its own id behind a "#".
+// What identifies one sheet in a budget: the cost-centre code, or, for a
+// sheet not linked to a cost centre, its own id behind a "#".
 //
 // Every per-account figure in a budget is keyed `<sheet>:<accountCode>`, so
 // the key has to be unique per sheet or two detached sheets would pool their

@@ -1,8 +1,8 @@
 -- Milersättning: driving the section's errand in one's own car.
 --
 -- A third payment type rather than a feature beside the utlägg. After
--- submission a mileage claim is a reimbursement in every respect — a debt to
--- the member, matched against the payout, booked against the same account —
+-- submission a mileage claim is a reimbursement in every respect: a debt to
+-- the member, matched against the payout, booked against the same account,
 -- so it rides the pipeline that already exists. What is its own is the way it
 -- is entered (journeys, not an amount) and its underlag (a körjournal the app
 -- typesets, not a receipt somebody photographs).
@@ -15,7 +15,7 @@ ALTER TYPE "PaymentType" ADD VALUE 'MILEAGE';
 -- One journey. Kilometres because that is what a trip meter reads; one decimal
 -- because a short errand is 4,2 km. `orePerKm` is copied onto the row from the
 -- rate in force on `date`, so a filed claim never re-values when Skatteverket
--- moves the schablon — and one claim may span the new year, each trip worth
+-- moves the schablon, and one claim may span the new year, each trip worth
 -- what it was worth on its own day.
 CREATE TABLE "MileageTrip" (
     "id" TEXT NOT NULL,

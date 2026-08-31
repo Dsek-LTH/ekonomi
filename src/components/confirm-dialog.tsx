@@ -8,6 +8,7 @@ import { Field, Textarea } from "@/components/ui/field";
 import { IconAlert } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
+import { useFocusTrap } from "@/lib/ui/focus-trap";
 
 // One reusable confirmation dialog for every destructive / irreversible action,
 // replacing window.confirm() and ad-hoc inline confirm UI. Use via useConfirm():
@@ -98,37 +99,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   // Esc cancels, Enter confirms, except while a comment is being written,
   // where Enter is a new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
   //
-  // Tab is held inside the box. `aria-modal` tells a screen reader the rest of
-  // the page is inert; it does not make it so for the keyboard, and without
-  // this Tab walked straight out of the dialog and on through the page behind
-  // it, where every control was still operable while a modal claimed to be
-  // blocking them.
   // Escape declines, and declines only this. Anything opened on top of it
   // answers first. See lib/ui/escape.ts.
   useEscape(Boolean(pending), () => settle(false));
 
+  // Tab is held inside the box, by the same stack, so a confirmation asked from
+  // inside a dialog takes the keys off it rather than the two of them each
+  // pulling focus back into their own box. See lib/ui/focus-trap.ts.
+  useFocusTrap(Boolean(pending), boxRef);
+
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
-        const focusable = boxRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
-        );
-        if (!focusable?.length) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        const active = document.activeElement;
-        // Wrap at whichever end you have reached, and catch the case where
-        // focus is somewhere outside the box entirely.
-        if (e.shiftKey && (active === first || !boxRef.current?.contains(active))) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && active === last) {
-          e.preventDefault();
-          first.focus();
-        }
-        return;
-      }
       if (e.key !== "Enter") return;
       if (pending.comment && !(e.metaKey || e.ctrlKey)) return;
       if (missingComment) return;

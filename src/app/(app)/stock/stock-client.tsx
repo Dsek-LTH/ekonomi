@@ -27,6 +27,8 @@ import { Notice } from "@/components/ui/notice";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
 import { unitVolume } from "@/lib/stock/onhand";
+import { hasTag, tagsInUse } from "@/lib/stock/tags";
+import { TagChips } from "@/components/stock/tag-chips";
 import { CATEGORIES, ProductDialog } from "./product-dialog";
 
 const kr = (ore: number) =>
@@ -72,14 +74,43 @@ export default function StockClient({
   const totalValueOre = levels.reduce((sum, l) => sum + l.onHand.valueOre, 0);
   const needsAttention = levels.filter((l) => l.impossible).length;
 
-  const filter: ClientSelectFilter<StockLevelDto> = {
-    label: t("filterCategory"),
-    options: CATEGORIES.map((c) => ({
-      value: c,
-      label: t(`category.${c}`),
-      predicate: (p: StockLevelDto) => p.category === c,
-    })),
-  };
+  // Every tag anything on the shelf carries. The picker in the product dialog
+  // offers them, and the filter below narrows by them.
+  const tags = tagsInUse(levels);
+
+  /**
+   * Two dimensions, narrowed at once: what kind of drink, and what the cellar
+   * has labelled it. Picking within one is an "or" (Öl or Vin), picking across
+   * them is an "and" (a spirit that is also a whisky).
+   *
+   * The values are prefixed because the two filters share one list of picks,
+   * in the state and in the address, and a tag someone types called "OL" would
+   * otherwise be the same string as the drink type.
+   */
+  const filters: ClientSelectFilter<StockLevelDto>[] = [
+    {
+      label: t("filterCategory"),
+      options: CATEGORIES.map((c) => ({
+        value: `cat:${c}`,
+        label: t(`category.${c}`),
+        predicate: (p: StockLevelDto) => p.category === c,
+      })),
+    },
+    // Nothing to offer until something is tagged, and an empty dropdown is a
+    // control that reads as broken.
+    ...(tags.length > 0
+      ? [
+          {
+            label: t("filterTag"),
+            options: tags.map((tag) => ({
+              value: `tag:${tag}`,
+              label: tag,
+              predicate: (p: StockLevelDto) => hasTag(p.tags, tag),
+            })),
+          },
+        ]
+      : []),
+  ];
 
   const columns: Column<StockLevelDto>[] = [
     {
@@ -122,6 +153,18 @@ export default function StockClient({
       searchable: true,
       mobile: "meta",
       cell: (p) => t(`category.${p.category}`),
+    },
+    {
+      key: "tags",
+      header: t("products.col.tags"),
+      // Searchable, so the box at the top of the list finds a whisky by the
+      // word on it and not only by the name of the bottle. Not sortable: a list
+      // of labels has no order anybody would be looking for.
+      value: (p) => p.tags.join(" "),
+      searchable: true,
+      mobile: "meta",
+      cell: (p) =>
+        p.tags.length === 0 ? <span className="text-muted">–</span> : <TagChips tags={p.tags} />,
     },
     {
       key: "onHand",
@@ -226,7 +269,7 @@ export default function StockClient({
           columns={columns}
           rows={levels}
           controls={controls}
-          filter={filter}
+          filter={filters}
           rowKey={(p) => p.id}
           // The row opens the product. Everything you can do to one lives
           // there, so this list carries no buttons of its own beyond adding.
@@ -278,7 +321,9 @@ export default function StockClient({
         <p className="text-sm text-warning">{t("attention", { count: needsAttention })}</p>
       )}
 
-      {adding && <ProductDialog product={null} onClose={() => setAdding(false)} />}
+      {adding && (
+        <ProductDialog product={null} knownTags={tags} onClose={() => setAdding(false)} />
+      )}
     </PageShell>
   );
 }

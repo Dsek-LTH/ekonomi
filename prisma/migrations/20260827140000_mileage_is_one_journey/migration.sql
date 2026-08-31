@@ -4,7 +4,7 @@
 -- change of mind. A claim held a sheet of journeys, each with a route typed as
 -- "from" and "to" and a distance somebody worked out; it now holds one journey,
 -- described by what the car's odometer said when it was got into and when it
--- was got out of. Somebody who drove three times files three claims — each one
+-- was got out of. Somebody who drove three times files three claims: each one
 -- attested on its own, on its own cost centre, paid as its own claim.
 --
 -- The readings are the point. A distance is a number somebody arrived at; two
@@ -14,7 +14,7 @@ ALTER TABLE "Expense" ADD COLUMN "odometerStart" DECIMAL(9,1);
 ALTER TABLE "Expense" ADD COLUMN "odometerEnd" DECIMAL(9,1);
 ALTER TABLE "Expense" ADD COLUMN "mileageOrePerKm" INTEGER;
 
--- Carry what the old claims were worth, not what their odometers said — which
+-- Carry what the old claims were worth, not what their odometers said, which
 -- nobody recorded, because the old form never asked. The distance and the rate
 -- survive exactly; the readings are written as 0 → distance, which is visibly
 -- synthetic rather than a plausible-looking invention. A claim that had already

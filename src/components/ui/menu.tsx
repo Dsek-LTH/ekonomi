@@ -209,6 +209,11 @@ export function Menu({
           ref={panelRef}
           role="menu"
           aria-label={label}
+          // A layer of its own, over whatever it was opened from. A dialog
+          // underneath holds Tab inside itself and has to leave this alone.
+          // See lib/ui/focus-trap.ts.
+          data-popup-layer=""
+
           style={panelStyle()}
           className="z-[210] max-h-[min(70vh,26rem)] w-max min-w-56 max-w-[min(22rem,80vw)] overflow-y-auto rounded-xl border border-border bg-background p-1 shadow-[var(--shadow-pop)]"
         >

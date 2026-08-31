@@ -49,6 +49,7 @@ import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
+import { tagsInUse } from "@/lib/stock/tags";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
 import { useGridFocus } from "@/lib/ui/use-grid-focus";
 import type { StockLevelDto } from "@/lib/data/stock";
@@ -290,6 +291,7 @@ export default function DeliveryClient({
   // there yet. Shared with the stocktake event, which does the same errand.
   const { scan, invent, overlay } = useProductScan({
     unknownError: t("scan.unknown"),
+    knownTags: tagsInUse(products),
     onScanned: (id) => add(id),
   });
 

@@ -2,7 +2,7 @@
 
 // Client-only wrapper around the receipt viewer. pdf.js (used inside) touches
 // browser globals at import time, so the implementation must never be evaluated
-// during SSR — `ssr: false` guarantees that and keeps pdfjs out of the server
+// during SSR. `ssr: false` guarantees that and keeps pdfjs out of the server
 // bundle. Consumers import { ReceiptViewer } from here as usual.
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";

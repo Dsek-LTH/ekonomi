@@ -1,6 +1,6 @@
 "use client";
 
-// "A pointer went down somewhere that isn't me" — the other half of dismissing
+// "A pointer went down somewhere that isn't me": the other half of dismissing
 // a layer, beside Escape in lib/ui/escape.ts.
 //
 // This was written out four times: the menu, the combobox, the person search
@@ -11,7 +11,7 @@
 //
 // `pointerdown` rather than `mousedown`, and this is the whole reason the
 // comment kept being copied: iOS only synthesises mouse events for targets it
-// considers clickable — a link, a button, something carrying a click handler or
+// considers clickable: a link, a button, something carrying a click handler or
 // `cursor: pointer`. A tap on the ordinary page behind an open menu fires no
 // mouse event at all there, so the menu would not dismiss. `pointerdown` is
 // native on iOS and fires for every target.
@@ -31,7 +31,7 @@ type Box = RefObject<HTMLElement | null>;
  * either is a press on the layer. A ref that is currently null counts as not
  * containing anything, which is what makes a not-yet-rendered panel harmless.
  *
- * `close` may be a different function on every render — what the effect holds
+ * `close` may be a different function on every render. What the effect holds
  * is a ref to the latest one, so an inline arrow does not resubscribe the
  * listener on each keystroke. Same arrangement as `useEscape`, and for the same
  * reason.
@@ -44,7 +44,7 @@ export function useDismissOnOutside(
   // Both are kept in refs and synced after each render rather than depended on:
   // `close` is usually an inline arrow, and `refs` is often an array literal, so
   // either in a dependency array would tear the listener down and put it back on
-  // every keystroke. Written in an effect, not during render — a ref is not a
+  // every keystroke. Written in an effect, not during render: a ref is not a
   // render value, and the listener reads them at event time, long after.
   const latest = useRef(close);
   const boxes = useRef<readonly Box[]>([]);

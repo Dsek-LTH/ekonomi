@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PurchaseDialog, StocktakeDialog } from "../product-actions";
 import { ProductDialog } from "../product-dialog";
+import { TagChips } from "@/components/stock/tag-chips";
 import type { CellarRowDto, ProductEventDto, StockLevelDto } from "@/lib/data/stock";
 import { ChangeFeed } from "@/components/stock/change-feed";
 import { ClientDataTable } from "@/components/ui/client-data-table";
@@ -60,11 +61,14 @@ export default function StockProductClient({
   product,
   events,
   cellar,
+  knownTags,
   canManage,
 }: {
   product: StockLevelDto;
   events: ProductEventDto[];
   cellar: CellarRowDto[];
+  /** What the rest of the shelf is tagged with, for the edit dialog's picker. */
+  knownTags: string[];
   canManage: boolean;
 }) {
   const t = useTranslations("stock");
@@ -149,6 +153,16 @@ export default function StockProductClient({
             <Detail
               label={t("products.field.kind")}
               value={t(`kindName.${product.kind}`)}
+            />
+            <Detail
+              label={t("products.field.tags")}
+              value={
+                product.tags.length === 0 ? (
+                  <span className="text-muted">–</span>
+                ) : (
+                  <TagChips tags={product.tags} className="mt-0.5" />
+                )
+              }
             />
             <Detail
               label={t("product.ean")}
@@ -305,7 +319,13 @@ export default function StockProductClient({
         </Card>
       </div>
 
-      {editing && <ProductDialog product={product} onClose={() => setEditing(false)} />}
+      {editing && (
+        <ProductDialog
+          product={product}
+          knownTags={knownTags}
+          onClose={() => setEditing(false)}
+        />
+      )}
       {buying && <PurchaseDialog product={product} onClose={() => setBuying(false)} />}
       {counting && <StocktakeDialog product={product} onClose={() => setCounting(false)} />}
       {fixing && <EntryDialog row={fixing} onClose={() => setFixing(null)} />}

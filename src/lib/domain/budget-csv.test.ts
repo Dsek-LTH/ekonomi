@@ -13,7 +13,7 @@ describe("normalizeAccountCode", () => {
   });
 
   it("rejects a code that is not a bare number", () => {
-    // A range header — the Utfall report resolves accounts with Number(code),
+    // A range header: the Utfall report resolves accounts with Number(code),
     // so a range would be dropped from the comparison without a word.
     expect(normalizeAccountCode("3011-3014")).toBeNull();
     expect(normalizeAccountCode("")).toBeNull();
@@ -57,7 +57,7 @@ describe("parseBudgetCsv", () => {
   it("does not round a factor to öre", () => {
     // Sexmästeriet budgets an alcohol cost as a markup ratio times a base.
     // Rounding the ratio to two decimals moves the sheet by hundreds of kronor,
-    // so a factor keeps every digit the file gave it — unlike an amount, which
+    // so a factor keeps every digit the file gave it, unlike an amount, which
     // is money and is held to öre.
     const { sheets } = parseBudgetCsv(
       file("SEX02,Sittningar,4011,Alkoholkostnader,Öl,0.442143666,109538.80,"),

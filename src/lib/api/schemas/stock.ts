@@ -4,6 +4,7 @@
 // accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
 import { Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
+import { MAX_TAG, MAX_TAGS, cleanTags } from "@/lib/stock/tags";
 
 export const StockKind = z.enum(["UNIT", "VOLUME"]);
 
@@ -51,9 +52,28 @@ const SystembolagetId = Trimmed.regex(/^\d{3,10}$/, {
 });
 
 /**
+ * The free labels a product carries: "whisky", "cognac", "vodka".
+ *
+ * Optional, unlike everything else on a product, because a tag is a convenience
+ * for finding things and not a fact the report or the shelf depends on.
+ *
+ * Cleaned rather than merely checked: the same list arrives from a form where a
+ * tag can be typed, so trimming, dropping the blanks and keeping one of a tag
+ * spelled two ways happens once, here, and the route stores what comes out. The
+ * two caps are on the shape of the thing, not on the language: see
+ * lib/stock/tags.ts.
+ */
+const Tags = z
+  .array(Trimmed.min(1).max(MAX_TAG, { error: `a tag is at most ${MAX_TAG} characters` }))
+  .max(MAX_TAGS, { error: `a product carries at most ${MAX_TAGS} tags` })
+  .transform(cleanTags);
+
+/**
  * A product, and everything it needs before it can be one.
  *
- * Nothing here is optional, and each part earns it. The barcode is how stock
+ * Nothing here is optional but the tags, and each part earns it. The tags are
+ * the exception because they are a way of finding a product rather than part of
+ * what it is. The barcode is how stock
  * gets registered at all. The strength and the size are what the
  * restaurangrapport is made of (litres and pure alcohol) so a product missing
  * either quietly leaves itself out of the return. The cost is what the shelf's
@@ -74,6 +94,11 @@ export const CreateStockProduct = z.object({
   nominalMl: z.int().positive().nullish(),
   costPriceOre: Ore.min(0),
   systembolagetId: SystembolagetId.nullish(),
+  // No default: absent has to keep meaning "not touching these" once this
+  // schema is made partial for the PATCH below, and a default would make an
+  // untouched field arrive as an empty list, i.e. as an instruction to clear
+  // them. The POST fills the gap in with an empty list itself.
+  tags: Tags.optional(),
 });
 export type CreateStockProduct = z.infer<typeof CreateStockProduct>;
 

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Renaming a result unit, and the thing about it that is easy to get wrong
-// twice: resultatansvar is held by *name* — User.resultUnits is a String[], not
-// a foreign key — so a rename that touches only this row leaves every
+// twice: resultatansvar is held by *name*. User.resultUnits is a String[], not
+// a foreign key, so a rename that touches only this row leaves every
 // resultatansvarig answering for a string that no longer resolves. Their attest
 // queue empties, nothing is logged, and nothing anywhere says why.
 //
@@ -77,7 +77,7 @@ describe("PATCH /api/result-units/[id]", () => {
     });
 
     // The array rewrite is the whole point of the handler. Asserted through the
-    // tagged template's own arguments — the values arrive as bound parameters,
+    // tagged template's own arguments: the values arrive as bound parameters,
     // never interpolated into the statement.
     expect(h.executeRaw).toHaveBeenCalledTimes(1);
     const [strings, ...values] = h.executeRaw.mock.calls[0];

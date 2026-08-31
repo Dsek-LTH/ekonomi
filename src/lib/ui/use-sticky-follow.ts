@@ -3,7 +3,7 @@
 // A sticky panel that follows the scroll in both directions.
 //
 // `position: sticky` alone only holds a panel that fits the screen. One that is
-// longer — the budget's cost-centre list, which is every sheet in the budget —
+// longer (the budget's cost-centre list, which is every sheet in the budget)
 // pins its top and leaves its own bottom permanently out of reach: the page
 // scrolls, the panel does not, and the rows below the fold can never be read.
 //
@@ -18,7 +18,7 @@
 // must not cost.
 import { useEffect, useRef } from "react";
 
-/** The box the element actually scrolls inside — the shell's, not the window's. */
+/** The box the element actually scrolls inside: the shell's, not the window's. */
 function scrollPort(el: HTMLElement): HTMLElement | null {
   for (let p = el.parentElement; p; p = p.parentElement) {
     if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p;
@@ -28,7 +28,7 @@ function scrollPort(el: HTMLElement): HTMLElement | null {
 
 /**
  * @param gap Pixels held clear of the scrollport, above and below.
- * @returns A ref for the sticky element itself — the one carrying `sticky`.
+ * @returns A ref for the sticky element itself: the one carrying `sticky`.
  */
 export function useStickyFollow<T extends HTMLElement>(gap = 32) {
   const ref = useRef<T>(null);
@@ -60,7 +60,7 @@ export function useStickyFollow<T extends HTMLElement>(gap = 32) {
     };
 
     target.addEventListener("scroll", follow, { passive: true });
-    // A shorter panel — the list filtered down by a search — may leave the
+    // A shorter panel (the list filtered down by a search) may leave the
     // offset further up than it now has any use for; the next scroll settles
     // it, and this is what stops a resize alone from stranding it there.
     window.addEventListener("resize", follow);

@@ -2,11 +2,11 @@ import { cn } from "@/lib/ui/utils";
 
 // The app's one raised surface: `rounded-2xl`, a hairline, and an elevation
 // that carries both an offset and a blur (see DESIGN.md). Anything that wants
-// to look like a card should be one rather than restate those four classes —
+// to look like a card should be one rather than restate those four classes,
 // that is how surfaces end up a shadow apart from each other.
 //
 // The rest of the div's props pass through, so a surface that is also something
-// — a dialog with `role="alertdialog"`, a list panel — doesn't need a wrapper
+// (a dialog with `role="alertdialog"`, a list panel) doesn't need a wrapper
 // element just to carry its attributes.
 export function Card({
   className,
@@ -42,7 +42,7 @@ export function CardHeader({
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-inset py-4">
       {/* `min-w-0` alone was not enough, which is the trap: it lets the box
           shrink, and then the text inside it refuses to. A booking description,
-          a cost-centre name, a receipt filename — in Swedish these are single
+          a cost-centre name, a receipt filename, in Swedish these are single
           unbroken compounds with nothing to wrap at, so they ran straight past
           the card's edge and took the page's width with them. The verification
           card was where it showed, but the bug was here and every card had it.

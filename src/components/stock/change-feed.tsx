@@ -3,14 +3,14 @@
 // Who did what, in order.
 //
 // The other half of the stock record, and deliberately a separate half. The log
-// says what the stock did — one line per event and product, netted, because
+// says what the stock did: one line per event and product, netted, because
 // that is what somebody glancing at it wants. This says who made it say that,
 // including the things that turned out not to have happened at all: a beer
 // booked against the wrong product and taken off again leaves no movement, and
 // should not, but somebody may still need to know it was done.
 //
 // Read two ways from one table. On an event it is the night in order; on a
-// product it is that product's whole story, deliveries included — which is
+// product it is that product's whole story, deliveries included, which is
 // where "why does Fireball say 20?" gets asked, and a delivery has no event
 // to ask it from. The middle column is whichever of the two the page is not
 // already about, so a row never repeats its own heading back at you.
@@ -36,7 +36,7 @@ export function ChangeFeed({
   changes,
   /** Which side the reader is on, so the row does not repeat what the page says. */
   scope,
-  /** What an empty feed should say — which differs by what it was asked for. */
+  /** What an empty feed should say, which differs by what it was asked for. */
   empty,
 }: {
   changes: StockChangeDto[];
@@ -111,7 +111,7 @@ export function ChangeFeed({
       className: "tabular-nums whitespace-nowrap",
       mobile: "trailing",
       // Always both sides of it. A cell that was never set started at nought
-      // and one that was removed ended there — the row going away is how the
+      // and one that was removed ended there. The row going away is how the
       // ledger stores "no movement", not something the reader has to be told in
       // different words. So 0 → 1 and 1 → 0, and every change reads the same.
       cell: (c) => {

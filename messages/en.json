@@ -793,6 +793,7 @@
     "profile": "My profile",
     "brandTagline": "Finance",
     "backToApp": "Back to the app",
+    "toDsek": "To dsek.se",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "doneMenu": "Done",
@@ -1946,10 +1947,10 @@
       "action": "Add products"
     },
     "category": {
-      "SPRITDRYCK": "Spirits",
-      "VIN": "Wine",
-      "OVRIG_JASTDRYCK": "Other fermented drinks",
       "OL": "Beer",
+      "OVRIG_JASTDRYCK": "Other fermented drinks",
+      "VIN": "Wine",
+      "SPRITDRYCK": "Spirits",
       "ALKOHOLDRYCKSLIKNANDE": "Alcohol-like preparations"
     },
     "kind": {
@@ -1962,7 +1963,7 @@
     },
     "kindName": {
       "UNIT": "Counted in units",
-      "VOLUME": "Bottle, weighed"
+      "VOLUME": "Spirit bottle"
     },
     "field": {
       "date": "Date",
@@ -2053,7 +2054,16 @@
         "cost": "Cost price incl. deposit (kr)",
         "systembolagetId": "Systembolaget article number",
         "systembolagetIdHint": "The digits at the end of the product's address on systembolaget.se. Paste the whole link if you like. The number gets picked out of it.",
-        "systembolagetIdInvalid": "No article number in there. Paste the product's link from systembolaget.se, or type just the digits."
+        "systembolagetIdInvalid": "No article number in there. Paste the product's link from systembolaget.se, or type just the digits.",
+        "tags": "Tags",
+        "tagsHint": "Free labels to find the product by: whisky, cognac, vodka. Optional.",
+        "tagAdd": "Add a tag…",
+        "tagSearch": "Search, or type a new one…",
+        "tagCreate": "Create the tag “{tag}”",
+        "tagRemove": "Remove the tag {tag}",
+        "tagsNone": "No tags yet",
+        "tagsFull": "At most {max} tags",
+        "tagTooLong": "That tag is too long, at most {max} characters"
       },
       "col": {
         "name": "Product",
@@ -2063,7 +2073,8 @@
         "abv": "ABV",
         "onHand": "In stock",
         "litres": "Litres",
-        "value": "Value"
+        "value": "Value",
+        "tags": "Tags"
       },
       "search": "Search products…",
       "noSize": "no size set",
@@ -2138,6 +2149,7 @@
       "noteHint": "Say why it differs, if you know."
     },
     "filterCategory": "Drink type",
+    "filterTag": "Tags",
     "product": {
       "inStock": "In stock",
       "sealed": "Sealed bottles",

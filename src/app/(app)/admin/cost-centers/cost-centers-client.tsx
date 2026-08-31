@@ -20,15 +20,15 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
 import type { CostCenter } from "@/lib/domain/types";
 
-// Retired cost centres stay in the list — seeing that SEX02 exists but is
-// inactive is what explains why it isn't in the picker — but the default filter
+// Retired cost centres stay in the list. Seeing that SEX02 exists but is
+// inactive is what explains why it isn't in the picker, but the default filter
 // is the active ones, since that is the list anyone is normally looking for.
 export function CostCentersClient({
   costCenters,
   connected,
 }: {
   costCenters: CostCenter[];
-  connected: boolean; // Fortnox service connection — without it there is nothing to sync from
+  connected: boolean; // Fortnox service connection, without it there is nothing to sync from
 }) {
   const t = useTranslations("admin.costCenters");
   const tCommon = useTranslations("common");
@@ -227,7 +227,7 @@ export function CostCentersClient({
       align: "right",
       mobile: "actions",
       className: "w-56",
-      // Only the local ones are ours to change — a Fortnox row edited here would
+      // Only the local ones are ours to change. A Fortnox row edited here would
       // just come back as it was on the next sync.
       cell: (c) =>
         c.source === "LOCAL" && (

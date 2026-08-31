@@ -23,8 +23,8 @@ export default async function BudgetPage({
 
   return (
     <BudgetClient
-      // The client keeps editing the budget in its own state — a cell edit
-      // re-evaluates the whole sheet in the browser — so this is the first
+      // The client keeps editing the budget in its own state (a cell edit
+      // re-evaluates the whole sheet in the browser) so this is the first
       // copy, not the live one. It re-fetches the same payload from
       // GET /api/budgets/[id] after each write.
       initialBudget={budget as unknown as Budget}

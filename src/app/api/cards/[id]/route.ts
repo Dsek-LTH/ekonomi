@@ -1,4 +1,4 @@
-// Assign / unassign a section card's holder. Admin only — the card→member
+// Assign / unassign a section card's holder. Admin only. The card→member
 // registry is the source of truth for whose card purchases show up where.
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -8,7 +8,7 @@ import { PatchCard } from "@/lib/api/schemas/admin";
 
 const admin = () => gate(canAccessSettings, "auth.adminOnly");
 
-// PATCH /api/cards/:id — body: { holderId: string | null }
+// PATCH /api/cards/:id: body: { holderId: string | null }
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await admin();
@@ -31,7 +31,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return new Response(null, { status: 204 });
 }
 
-// DELETE /api/cards/:id — remove a card from the registry. Linked bank
+// DELETE /api/cards/:id: remove a card from the registry. Linked bank
 // transactions keep their raw card number (cardLast4) but lose the card link
 // (onDelete: SetNull). Admin only.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {

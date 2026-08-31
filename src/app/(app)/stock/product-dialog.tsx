@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { TagChips } from "@/components/stock/tag-chips";
 import { AmountInput } from "@/components/ui/amount-input";
 import { Field, FieldGroup, Input, SuffixedInput } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
@@ -21,16 +22,18 @@ import { useMutation } from "@/components/shell/use-mutation";
 import type { StockProductDto } from "@/lib/data/stock";
 import type { CreateStockProduct } from "@/lib/api/schemas/stock";
 import { parseSystembolagetId } from "@/lib/stock/systembolaget";
+import { MAX_TAG, MAX_TAGS, cleanTags, hasTag } from "@/lib/stock/tags";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
 
-/** The order the pickers list them in, the report's own order. */
+/** The order the pickers list them in: what the cellar carries most of first,
+ *  the rarities last. */
 export const CATEGORIES: DrinkCategory[] = [
-  "SPRITDRYCK",
-  "VIN",
-  "OVRIG_JASTDRYCK",
   "OL",
+  "OVRIG_JASTDRYCK",
+  "VIN",
+  "SPRITDRYCK",
   "ALKOHOLDRYCKSLIKNANDE",
 ];
 
@@ -44,6 +47,7 @@ type Draft = {
   costPrice: string;
   ean: string;
   systembolagetId: string;
+  tags: string[];
 };
 
 const emptyDraft = (): Draft => ({
@@ -56,6 +60,7 @@ const emptyDraft = (): Draft => ({
   costPrice: "",
   ean: "",
   systembolagetId: "",
+  tags: [],
 });
 
 const draftOf = (p: StockProductDto): Draft => ({
@@ -68,6 +73,7 @@ const draftOf = (p: StockProductDto): Draft => ({
   costPrice: p.costPriceOre != null ? (p.costPriceOre / 100).toString() : "",
   ean: p.ean ?? "",
   systembolagetId: p.systembolagetId ?? "",
+  tags: p.tags,
 });
 
 /** Empty means "not stated", which is a different thing from zero. */
@@ -87,6 +93,7 @@ export function ProductDialog({
   product,
   name,
   ean,
+  knownTags = [],
   onClose,
   onCreated,
 }: {
@@ -96,6 +103,16 @@ export function ProductDialog({
   /** A barcode to start from, for one invented by scanning something the
    *  cellar has never seen. */
   ean?: string;
+  /**
+   * The tags other products already carry, offered in the picker.
+   *
+   * Handed in rather than fetched: every screen that opens this dialog is
+   * already holding the products, so the vocabulary is there for the taking and
+   * a request of its own would only ask the server what the page knows. A
+   * caller with no products passes none, and then the only tags on offer are
+   * the ones typed here.
+   */
+  knownTags?: string[];
   onClose: () => void;
   /** Told the id of a product this dialog has just made, for a caller that
    *  asked for one and wants to carry on with it. */
@@ -110,6 +127,27 @@ export function ProductDialog({
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((p) => ({ ...p, [k]: v }));
 
   const isVolume = d.kind === "VOLUME";
+
+  /**
+   * The tags on offer: what the rest of the shelf says, less what this product
+   * already carries.
+   *
+   * Off the list rather than crossed out on it, because the ones it carries are
+   * the chips sitting directly above the picker. What is left is what there is
+   * to add.
+   */
+  const tagOptions = cleanTags(knownTags).filter((tag) => !hasTag(d.tags, tag));
+  const tagsFull = d.tags.length >= MAX_TAGS;
+  // The route refuses one longer than this, so the offer to make it says so
+  // instead of being a row that quietly does nothing when pressed.
+  const tooLong = (text: string) => text.trim().length > MAX_TAG;
+
+  /** Picked from the list or typed into it; both arrive here. A tag the product
+   *  already carries, however it is spelled, is not a second tag. */
+  const addTag = (text: string) => {
+    if (tagsFull || tooLong(text) || hasTag(d.tags, text)) return;
+    set("tags", cleanTags([...d.tags, text]));
+  };
 
   /**
    * What is still missing before this is a product.
@@ -165,6 +203,10 @@ export function ProductDialog({
       // only digits. Null rather than undefined so clearing the field clears
       // the column; undefined in a PATCH means "leave it alone".
       systembolagetId: parseSystembolagetId(d.systembolagetId),
+      // Always sent, empty list included: on a PATCH that is what takes the
+      // last tag off a product, and leaving the field out would mean "no
+      // change" instead.
+      tags: d.tags,
     };
     const saved = await mutate<{ id: string }>(
       product ? `/api/stock/products/${product.id}` : "/api/stock/products",
@@ -316,6 +358,45 @@ export function ProductDialog({
             />
           </Field>
         )}
+
+        {/* Last, and the only optional thing on the form: everything above is
+            what a product has to be before it can exist, and a tag is how
+            somebody finds it afterwards. FieldGroup, not Field: what it labels
+            is a row of chips and a picker, not one control. */}
+        <FieldGroup label={t("products.field.tags")} hint={t("products.field.tagsHint")}>
+          <div className="space-y-2">
+            <TagChips
+              tags={d.tags}
+              onRemove={(tag) => set("tags", d.tags.filter((x) => x !== tag))}
+              removeLabel={(tag) => t("products.field.tagRemove", { tag })}
+            />
+            {/* A picker that also invents: the list is every tag the cellar
+                already uses, so "whisky" is picked rather than typed a second
+                time and spelled differently, and something genuinely new is
+                offered as itself. Resets to empty after each pick, since what
+                it holds is not a value but the next thing to add. */}
+            <Combobox
+              value=""
+              onChange={addTag}
+              options={tagOptions.map((tag) => ({ value: tag, label: tag }))}
+              onCreate={addTag}
+              createLabel={(text) =>
+                tooLong(text)
+                  ? t("products.field.tagTooLong", { max: MAX_TAG })
+                  : t("products.field.tagCreate", { tag: text })
+              }
+              placeholder={
+                tagsFull
+                  ? t("products.field.tagsFull", { max: MAX_TAGS })
+                  : t("products.field.tagAdd")
+              }
+              searchPlaceholder={t("products.field.tagSearch")}
+              emptyText={t("products.field.tagsNone")}
+              disabled={tagsFull}
+              aria-label={t("products.field.tags")}
+            />
+          </div>
+        </FieldGroup>
       </div>
 
       <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">

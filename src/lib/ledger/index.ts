@@ -9,7 +9,7 @@ export interface LedgerYear {
   id: number; // Fortnox financial-year id
   year: number; // calendar year (from FromDate)
   lastSyncAt: string | null; // ISO
-  // The year's own span, so the report can offer exactly its months — a broken
+  // The year's own span, so the report can offer exactly its months. A broken
   // financial year doesn't start in January.
   fromDate: string; // YYYY-MM-DD
   toDate: string; // YYYY-MM-DD
@@ -49,7 +49,7 @@ export interface LedgerRowView {
   credit: number; // SEK
 }
 
-// Individual voucher rows behind a (year, cost centre, account) cell — the
+// Individual voucher rows behind a (year, cost centre, account) cell: the
 // drill-down for the report. `costCenterCode` distinguishes three cases:
 // a code scopes to that cost centre, null scopes to the "no cost centre"
 // bucket, and undefined spans every cost centre (the summed grouping).
@@ -66,12 +66,12 @@ export async function getLedgerRows(
       ...(costCenterCode === undefined ? {} : { costCenterCode }),
       ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
     },
-    // The voucher is still joined — this is the drill-down, and its series,
+    // The voucher is still joined. This is the drill-down, and its series,
     // number and description are the whole point of it. What moved off the
     // relation is the *filtering*, which is what had to read every row.
     include: { voucher: true },
     // On the row's own date, so the sort is served by the same index as the
-    // filter. It ties for rows of one voucher, hence the tiebreaker — without
+    // filter. It ties for rows of one voucher, hence the tiebreaker. Without
     // one, tied rows come back in whatever order the plan produces.
     orderBy: [{ date: "asc" }, { id: "asc" }],
     take: 500,

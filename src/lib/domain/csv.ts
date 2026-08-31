@@ -3,7 +3,7 @@
 // forgiving about the three things such files vary in and strict about
 // nothing else: the delimiter, the decimal separator, and the encoding.
 //
-// Pure by construction (see domain/boundary.test.ts) — bytes and strings in,
+// Pure by construction (see domain/boundary.test.ts): bytes and strings in,
 // strings and numbers out, no database and no filesystem.
 
 /**
@@ -42,8 +42,8 @@ export function splitCsvLine(line: string, delimiter: string = ","): string[] {
 }
 
 // The delimiters worth guessing between. Semicolon is what Excel writes when
-// the machine's locale is Swedish — the comma is spoken for as the decimal
-// separator there — and tab is what the clipboard carries, so a file that came
+// the machine's locale is Swedish (the comma is spoken for as the decimal
+// separator there) and tab is what the clipboard carries, so a file that came
 // out of a spreadsheet is as likely to be either of those as comma-separated.
 const CANDIDATE_DELIMITERS = [",", ";", "\t"];
 
@@ -82,7 +82,7 @@ export function amountToOre(raw: string): number | null {
   if (s.includes(",") && !s.includes(".")) s = s.replace(",", ".");
   // Note an empty string is 0 here, not null, because that is what the bank
   // importer has always done with an empty Belopp. A caller that needs to tell
-  // "absent" from "zero" — the budget importer does — must check for blank
+  // "absent" from "zero" (the budget importer does) must check for blank
   // before asking this.
   const value = Number(s);
   if (!Number.isFinite(value)) return null;
@@ -94,8 +94,8 @@ export function amountToOre(raw: string): number | null {
  *
  * Excel writes one of three things depending on which "CSV" menu entry was
  * used and which machine it ran on: UTF-8 with a BOM, UTF-8 without, or
- * Windows-1252. Guessing wrong does not fail — it silently mangles every å ä ö
- * in the file — so the BOM is honoured where present and UTF-8 is otherwise
+ * Windows-1252. Guessing wrong does not fail. It silently mangles every å ä ö
+ * in the file, so the BOM is honoured where present and UTF-8 is otherwise
  * tried first, falling back to Windows-1252 when the result contains the
  * replacement character that marks an invalid UTF-8 sequence.
  */
@@ -104,7 +104,7 @@ export function decodeCsvBytes(buf: Buffer): string {
     return buf.subarray(3).toString("utf8");
   }
   const utf8 = buf.toString("utf8");
-  // latin1 maps every byte to a code point, so it never fails — it is the
+  // latin1 maps every byte to a code point, so it never fails. It is the
   // fallback precisely because it cannot be the thing that errors.
   return utf8.includes("�") ? buf.toString("latin1") : utf8;
 }

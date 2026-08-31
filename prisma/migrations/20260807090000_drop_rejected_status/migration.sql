@@ -1,7 +1,7 @@
 -- Drop the REJECTED status, which said the same thing as CHANGES_REQUESTED.
 --
--- It was unreachable from the app — nothing has written it since the attest
--- flow was built — but it stayed in the enum for historical rows, and the cost
+-- It was unreachable from the app: nothing has written it since the attest
+-- flow was built, but it stayed in the enum for historical rows, and the cost
 -- of that was paid by every query written since: the status tabs had to map
 -- CHANGES_REQUESTED onto two values, the dashboard's "waiting on you" filter
 -- had to list both, and the read mapper had to translate one into the other on
@@ -14,7 +14,7 @@
 -- because ALTER TYPE ... ADD/RENAME and the table rewrite cannot share one.
 --
 -- One-way. Anything that was REJECTED is CHANGES_REQUESTED afterwards, and the
--- distinction is not recoverable — which is the point, since to every reader
+-- distinction is not recoverable, which is the point, since to every reader
 -- the two were the same state under two names.
 
 -- Rows first: nothing can be left holding a value the new type has no room for.

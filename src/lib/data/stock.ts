@@ -25,6 +25,10 @@ export interface StockProductDto {
   ean?: string;
   /** Systembolaget's article number. See lib/stock/systembolaget.ts. */
   systembolagetId?: string;
+  /** Free labels, cleaned and sorted. Always a list, empty when the product
+   *  carries none: an absent array would be a second way of saying that, and
+   *  every reader would have to know both. See lib/stock/tags.ts. */
+  tags: string[];
 }
 
 /** A product with what is on the shelf, which is the only way a screen wants it. */
@@ -57,6 +61,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
       costPriceOre: true,
       ean: true,
       systembolagetId: true,
+      tags: true,
     },
   });
   return rows.map((p) => ({
@@ -70,6 +75,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
     costPriceOre: opt(p.costPriceOre),
     ean: opt(p.ean),
     systembolagetId: opt(p.systembolagetId),
+    tags: p.tags,
   }));
 }
 

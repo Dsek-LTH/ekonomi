@@ -8,7 +8,7 @@ export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
 
 export interface SeedExpense {
   // The human reference. Null for an utlägg that hasn't been submitted for
-  // attest yet — that is when the number is handed out, so a draft has none.
+  // attest yet. That is when the number is handed out, so a draft has none.
   reference: string | null;
   title: string;
   submitterName: string;
@@ -24,7 +24,7 @@ export interface SeedExpense {
 
 // The four people the dev sign-in offers, one per role. `studentId` is what
 // the app keys a user on (Authentik's `preferred_username`), so these are
-// fixed rather than generated — app/login/page.tsx names them, and a reseed
+// fixed rather than generated. app/login/page.tsx names them, and a reseed
 // must not move them. Everyone else referenced in the fixtures gets a derived
 // one; see `studentIdFor` in seed.ts.
 // `capabilities` is not among them: it is resolved from the RoleCapability
@@ -240,7 +240,7 @@ export const CARDS: SeedCard[] = [
   },
   {
     last4: "9001",
-    holderName: null, // unassigned — appears in admin to be assigned
+    holderName: null, // unassigned, appears in admin to be assigned
     transactionIds: [],
   },
 ];

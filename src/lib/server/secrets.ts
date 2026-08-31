@@ -3,12 +3,12 @@
 // silently decrypting to garbage.
 //
 // The key comes from FORTNOX_TOKEN_KEY when set, otherwise it is derived from
-// AUTH_SECRET — which means rotating AUTH_SECRET makes every stored token
+// AUTH_SECRET, which means rotating AUTH_SECRET makes every stored token
 // undecryptable and forces a reconnect. That is an acceptable failure mode
 // (reconnecting is a two-click flow) and it keeps local dev zero-config.
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
 
-const PREFIX = "v1"; // ciphertext marker — anything else is not ours to read
+const PREFIX = "v1"; // ciphertext marker, anything else is not ours to read
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12; // GCM standard nonce length
 const SALT = "utlagg.fortnox.tokens.v1";
@@ -44,7 +44,7 @@ export function encryptSecret(plaintext: string): string {
  *
  * Anything not in the `v1:iv:tag:ciphertext` shape was not written by this
  * module, and there is nothing sensible to do with it. This used to hand such a
- * value back unchanged, for tokens stored before encryption existed — which
+ * value back unchanged, for tokens stored before encryption existed, which
  * also meant a truncated or corrupted row was passed on as though it were a
  * valid credential, and the failure surfaced much later as an opaque 401 from
  * the far end. Refusing here says what is actually wrong; for a Fortnox token

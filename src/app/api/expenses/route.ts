@@ -7,7 +7,7 @@ import { parseBody } from "@/lib/api/parse";
 import { CreateExpense } from "@/lib/api/schemas/expense";
 import { isMatchable } from "@/lib/domain/matching";
 
-// POST /api/expenses — body: { paymentType?, title?, matchedTransactionId? }
+// POST /api/expenses: body: { paymentType?, title?, matchedTransactionId? }
 export async function POST(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // Before anything about the transaction itself: an eget utlägg carrying a
     // match is the section paying for the purchase twice (see isMatchable).
     // The deep-link opens the wizard on "Sektionskort" and no longer lets it
-    // be changed, so nothing we ship sends this — which is exactly why it is
+    // be changed, so nothing we ship sends this, which is exactly why it is
     // refused here rather than assumed. Same answer the match step gives.
     if (!isMatchable(paymentType)) return fail(422, "expense.matchCardOnly");
     const txn = await prisma.bankTransaction.findUnique({
@@ -46,8 +46,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // No reference yet. A draft is not a claim on the section — it is someone
-  // part-way through the wizard — and numbering it here means every abandoned
+  // No reference yet. A draft is not a claim on the section. It is someone
+  // part-way through the wizard, and numbering it here means every abandoned
   // upload takes a number out of the year's sequence for good. The number is
   // handed out when the utlägg is submitted for attest; see the `submit` branch
   // in expenses/[id]/transition/route.ts. Until then the row is known by its id,

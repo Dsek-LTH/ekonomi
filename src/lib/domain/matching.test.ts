@@ -14,7 +14,7 @@ describe("cancelsOut", () => {
 
   it("refuses a row of the right size in the wrong direction", () => {
     // Two outgoing amounts do not settle each other, however equal they look in
-    // a list — and a refund can only settle a return.
+    // a list, and a refund can only settle a return.
     expect(cancelsOut(-250, -250)).toBe(false);
     expect(cancelsOut(250, 250)).toBe(false);
   });
@@ -48,7 +48,7 @@ describe("cancelsOut", () => {
 });
 
 // Who is allowed to hold a match at all. The section's card is the only payer
-// a bank row can settle for — an eget utlägg matched to one would have the
+// a bank row can settle for. An eget utlägg matched to one would have the
 // section paying for the purchase twice.
 describe("isMatchable", () => {
   it("lets a card purchase account for the row on the card", () => {
@@ -58,7 +58,7 @@ describe("isMatchable", () => {
   it("refuses an eget utlägg", () => {
     // The bug this exists to stop: "Redovisa" on a card purchase opened the
     // wizard with the transaction already matched, and switching the payment
-    // type to "eget utlägg" kept the match — so the member was reimbursed for
+    // type to "eget utlägg" kept the match, so the member was reimbursed for
     // money that had already left the section's card, and the purchase counted
     // as accounted for on the way out.
     expect(isMatchable("REIMBURSEMENT")).toBe(false);

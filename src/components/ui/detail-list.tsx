@@ -1,4 +1,4 @@
-// A bordered label/value list — the read-only summary used by the profile and
+// A bordered label/value list, the read-only summary used by the profile and
 // by the wizard's final review step.
 export function DetailList({ children }: { children: React.ReactNode }) {
   return (

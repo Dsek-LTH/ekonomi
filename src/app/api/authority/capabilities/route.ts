@@ -6,7 +6,7 @@
 //
 // Nothing is re-derived here. Capabilities are resolved per request from this
 // table (lib/server/capabilities.ts) rather than stored on anybody's row, so the
-// next request after this one is already decided by the new grid — there is no
+// next request after this one is already decided by the new grid. There is no
 // thousand-row rewrite to do, which is exactly why they are not stored.
 import { serializable } from "@/lib/server/tx";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -29,7 +29,7 @@ export async function PUT(req: Request) {
   try {
     // Serializable, not merely transactional. The lockout check below is a
     // read-modify-write, and at READ COMMITTED two concurrent unticks of
-    // SETTINGS — one per role, which is two clicks on the grid — each observe
+    // SETTINGS (one per role, which is two clicks on the grid) each observe
     // the other's role still holding it. Both pass. Both commit. Nobody can open
     // the door again, and the check that exists to prevent exactly that saw
     // nothing wrong either time.
@@ -43,7 +43,7 @@ export async function PUT(req: Request) {
 
       // Not "did you just untick SETTINGS": whether anybody is left who can
       // open the door. Taking it from a role nobody holds is fine, and taking
-      // it from the last role that anybody holds is not — and only counting
+      // it from the last role that anybody holds is not, and only counting
       // people can tell those apart.
       if (!(await someoneCanReachSettings(tx))) throw new Lockout();
     });

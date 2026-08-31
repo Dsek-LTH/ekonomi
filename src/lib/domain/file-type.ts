@@ -3,7 +3,7 @@
 // A multipart upload carries a Content-Type, and it is worth exactly nothing:
 // it is a field the client fills in, not a fact about the bytes. Accepting a
 // receipt on that basis means anything at all can be stored under a type we
-// later hand back to a browser — so the type the app records is the one read
+// later hand back to a browser, so the type the app records is the one read
 // out of the file itself, and a file whose bytes say nothing recognisable is
 // not a receipt.
 //

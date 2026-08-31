@@ -25,6 +25,7 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconExternal,
   IconGear,
   IconGrid,
   IconHelp,
@@ -47,6 +48,10 @@ import type { Theme } from "@/lib/ui/theme";
 
 import { owningRoute } from "@/lib/ui/routes";
 import { cn } from "@/lib/ui/utils";
+
+/** The section's own site, which the mark in the corner goes back to. Not a
+ *  route of this app: this app is one thing the section runs. */
+const DSEK_URL = "https://dsek.se";
 
 // Nav visibility is a capability predicate over the current user: their roles
 // for most items, plus non-role capabilities like card holdership.
@@ -572,16 +577,47 @@ export function AppShell({
                 </span>
               </Link>
             ) : (
-              <>
+              /* The brand is the way back to the section's own site. It is
+                 the oldest convention there is (the mark in the corner goes
+                 home) and here home is not this app: this app is one thing the
+                 section runs, and dsek.se is the section. A new tab, because
+                 leaving takes somebody out of a form they may be halfway
+                 through, and `rel` because a tab we opened must not be handed
+                 a way to steer the one it came from. */
+              <a
+                href={DSEK_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                title={t("toDsek")}
+                className="group/brand flex min-w-0 flex-1 items-center rounded-xl transition-colors hover:text-foreground"
+              >
                 <span className="flex size-10 shrink-0 items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-8" />
+                  <img src="/symbol_rosa.svg" alt="" className="h-8" />
                 </span>
                 <div className={cn("ms-1 min-w-0 flex-1 leading-tight transition-opacity", labelFade)}>
-                  <p className="truncate text-sm font-semibold">D-sektionen</p>
+                  {/* Underlined on hover, because nothing else here says the
+                      mark is a link. The logo alone is a convention people
+                      follow without being told, and only after they have tried
+                      it once. */}
+                  <p className="truncate text-sm font-semibold group-hover/brand:underline">
+                    D-sektionen
+                    {/* The mark that says this one leaves the app. On the
+                        collapsed rail there is no room for it and no label for
+                        it to belong to, so it arrives with the width, like
+                        every other label here. */}
+                    <IconExternal
+                      aria-hidden
+                      className="ms-1 inline size-3 align-baseline text-muted transition-opacity group-hover/brand:text-foreground"
+                    />
+                  </p>
                   <p className="truncate text-xs text-muted">{t("brandTagline")}</p>
                 </div>
-              </>
+                {/* The name of the destination, for a reader who cannot see
+                    the mark or the logo. The visible text says "D-sektionen",
+                    which is where it goes but not that it goes anywhere. */}
+                <span className="sr-only">{t("toDsek")}</span>
+              </a>
             )}
 
             {/* Turns a hover into a decision. Without it the wide layout is only

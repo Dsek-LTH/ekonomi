@@ -1,7 +1,7 @@
 import type { NavIntent } from "./nav-intent";
 import { routePath, samePath } from "./routes";
 
-// The trip you are on, as a stack with a finger on it — the thing the App
+// The trip you are on, as a stack with a finger on it: the thing the App
 // Router will not tell you and a back link cannot be honest without.
 //
 // What stood here before was two slots: the page before this one, and the last
@@ -9,8 +9,8 @@ import { routePath, samePath } from "./routes";
 // link two deep gave up on history and pushed the route forward instead,
 // landing you at the top of a freshly fetched list and leaving the page you
 // came from sitting in front of you on the Back button. They also could not
-// tell a push from a replace, so narrowing a list — which this app does with
-// `replace`, see lib/data/use-list-query — moved the "previous page" to a URL
+// tell a push from a replace, so narrowing a list (which this app does with
+// `replace`, see lib/data/use-list-query) moved the "previous page" to a URL
 // that was never a history entry at all.
 //
 // An index into a list of URLs says both things at once: which entry you are
@@ -51,8 +51,8 @@ const RETURN_SCAN_LIMIT = 3;
 /**
  * The stack after a navigation to `url` of the given kind.
  *
- * Returns the stack it was given, unchanged and identical, when nothing moved
- * — the caller uses that to skip a notification, and `useSyncExternalStore`
+ * Returns the stack it was given, unchanged and identical, when nothing moved.
+ * The caller uses that to skip a notification, and `useSyncExternalStore`
  * requires the identity to be stable when the value is.
  */
 export function applyNav(stack: NavStack, url: string, intent: NavIntent): NavStack {
@@ -71,7 +71,7 @@ export function applyNav(stack: NavStack, url: string, intent: NavIntent): NavSt
 
   if (intent === "pop") {
     const found = nearestIndex(stack, url);
-    // Somewhere we never recorded — a Back press out of a trip that began
+    // Somewhere we never recorded: a Back press out of a trip that began
     // before this tab loaded us, most likely. The entries we hold no longer
     // describe the browser's history, and deltas measured against them would
     // send the next Back press somewhere arbitrary. Start again from here,
@@ -91,7 +91,7 @@ export function applyNav(stack: NavStack, url: string, intent: NavIntent): NavSt
 
 /**
  * Where a popped-to URL sits in the stack, searching outwards from where we
- * think we are and preferring backwards — Back is pressed more than Forward,
+ * think we are and preferring backwards. Back is pressed more than Forward,
  * and a URL can legitimately appear in the stack twice.
  */
 function nearestIndex(stack: NavStack, url: string): number {
@@ -118,16 +118,16 @@ export interface BackTarget {
 /**
  * Where a "← <parent>" link should actually go, given where you have been.
  *
- * The nearest entry behind you that either *is* the declared parent, or — when
- * the declared parent is a section of the app — is any section. A nested page
+ * The nearest entry behind you that either *is* the declared parent, or, when
+ * the declared parent is a section of the app, is any section. A nested page
  * has more than one parent in practice: an utlägg is opened from Utlägg, from
  * Attest, from Bokföring and from Översikt, and the page can only name one of
  * them. The stack knows which one you used.
  *
  * Nearest-first, so the section you came through beats the one you passed
  * through before it, and "the list I just left" beats a stale memory of some
- * other list. Null when there is nothing behind you that qualifies — a link
- * someone sent you, a reload beyond what we could restore — and the page's own
+ * other list. Null when there is nothing behind you that qualifies (a link
+ * someone sent you, a reload beyond what we could restore) and the page's own
  * declared parent is then the right answer, pushed rather than popped.
  *
  * `sectionLabel` is injected rather than imported so this file stays free of
@@ -140,7 +140,7 @@ export function backTarget(
 ): BackTarget | null {
   // Only when the declared parent is a list to begin with. The booking
   // screen's parent is one utlägg, and "a section you came through" is not a
-  // substitute for it — you would be sent past the thing you were working on.
+  // substitute for it. You would be sent past the thing you were working on.
   const parentIsSection = sectionLabel(routePath(href)) !== null;
   const stop = Math.max(0, stack.index - BACK_SCAN_LIMIT);
 
@@ -160,7 +160,7 @@ export function backTarget(
  * enough behind that returning is what popping means. Null when it is not, and
  * the caller replaces the entry it is standing on instead.
  *
- * Narrower than a back link on purpose — see RETURN_SCAN_LIMIT.
+ * Narrower than a back link on purpose, see RETURN_SCAN_LIMIT.
  */
 export function returnTarget(stack: NavStack, href: string): { url: string; delta: number } | null {
   const stop = Math.max(0, stack.index - RETURN_SCAN_LIMIT);

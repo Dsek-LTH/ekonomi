@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // The visual direction, recorded where the built output can be audited against
-// it. Survives the production build on purpose — grep the emitted HTML for
+// it. Survives the production build on purpose. Grep the emitted HTML for
 // "seed aab31d9b" to confirm the contract is still shipping.
 const DIRECTION_CONTRACT = `<!--
 THESIS: A section's money app that looks like it belongs to the section. It refuses

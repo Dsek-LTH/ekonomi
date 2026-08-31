@@ -22,7 +22,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (body.quantity !== undefined) data.quantity = body.quantity;
   if (body.unitPrice !== undefined) data.unitPrice = body.unitPrice;
 
-  // columnValues: { [columnId]: string } — merged into the line's `values` JSON
+  // columnValues: { [columnId]: string }: merged into the line's `values` JSON
   // (empty string clears that column's cell).
   if (body.columnValues) {
     const cur = await prisma.budgetLineItem.findUnique({ where: { id }, select: { values: true } });

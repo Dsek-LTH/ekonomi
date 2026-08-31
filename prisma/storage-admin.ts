@@ -1,7 +1,7 @@
 // Bucket access for standalone scripts (seed, gc-receipts).
 //
 // The app's own client lives in lib/server/storage.ts, but that module is
-// `server-only` and reads config through lib/server/env.ts, which is too —
+// `server-only` and reads config through lib/server/env.ts, which is too.
 // neither can be imported from a tsx script. So the client is built again here.
 // The settings it is built from are not copied any more, only the way of
 // reading them: they come from lib/s3-config.ts, which both sides share.
@@ -16,7 +16,7 @@ const env = (name: S3Var) => process.env[name] || S3_DEFAULTS[name];
 export const bucket = () => env("S3_BUCKET");
 
 // Built on first use, not at import. A script calls `process.loadEnvFile()` in
-// its module body, but static imports are hoisted and run first — a client
+// its module body, but static imports are hoisted and run first. A client
 // constructed at import time would read the environment before the .env was in
 // it, and quietly use the dev fallbacks against a production bucket name.
 let client: S3Client | undefined;

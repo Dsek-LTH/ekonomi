@@ -26,7 +26,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) return fail(404, "expense.notFound");
 
-  // Out of scope is not found, as everywhere else — a 403 here would confirm
+  // Out of scope is not found, as everywhere else. A 403 here would confirm
   // that this utlägg exists, which is the one thing the view rule is meant to
   // withhold.
   const hidden = await denyExpenseView(g.actor, expense);
@@ -43,8 +43,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // A transaction id, or null to unmatch. The schema insists it is one of the
-  // two, so the third case this used to carry — a body that named neither, and
-  // its own 422 — cannot arrive.
+  // two, so the third case this used to carry (a body that named neither, and
+  // its own 422) cannot arrive.
   const transactionId = body.transactionId;
 
   if (transactionId !== null) {

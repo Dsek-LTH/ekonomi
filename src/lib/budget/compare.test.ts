@@ -83,7 +83,7 @@ describe("joinSnapshots", () => {
     expect(joined.sheets[1].accounts[0].totals).toEqual([undefined, 50]);
   });
 
-  it("records which sides have a sheet at all — a sheet may exist and total zero", () => {
+  it("records which sides have a sheet at all, a sheet may exist and total zero", () => {
     const joined = joinSnapshots([
       side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 0)] }]),
       side("b", []),
@@ -194,7 +194,7 @@ describe("budgetLabel", () => {
 
   it("names the financial year, not the year it was adopted in", () => {
     // A year's ordinary budget is passed before that year begins, so the two
-    // are routinely different years — and the financial year is the one that
+    // are routinely different years, and the financial year is the one that
     // decides which ledger the budget is measured against.
     const budget = { year: 2026, name: "Ursprunglig", adoptedAt: "2025-11-14" };
     expect(budgetLabel(budget)).toBe("2026 – Ursprunglig");

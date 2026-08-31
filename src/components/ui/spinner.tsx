@@ -2,7 +2,7 @@ import { cn } from "@/lib/ui/utils";
 
 // The app's one indeterminate mark, for waits whose shape isn't known: a button
 // mid-request, a small inline fetch, a PDF being rendered. Where the shape *is*
-// known — a table, a card, a page — use a Skeleton instead, so the wait looks
+// known (a table, a card, a page) use a Skeleton instead, so the wait looks
 // like the thing that's coming.
 //
 // Drawn in `currentColor`, so it takes the label colour of whatever it sits in
@@ -25,7 +25,7 @@ export function Spinner({
     <span
       // The reduced-motion block in globals.css stops everything that moves;
       // this attribute is what exempts it. A spinner that doesn't spin isn't a
-      // spinner, it's a ring — so it keeps turning, just slower.
+      // spinner, it's a ring, so it keeps turning, just slower.
       data-spinner=""
       aria-hidden
       className={cn(

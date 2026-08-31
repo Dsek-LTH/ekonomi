@@ -8,7 +8,7 @@
 -- that, which is why this one is written out by hand.
 --
 -- Postgres keeps the *old* names for indexes and constraints when their table
--- or column is renamed, so each has to be renamed in turn — otherwise the
+-- or column is renamed, so each has to be renamed in turn, otherwise the
 -- database is correct but Prisma's next diff sees names it did not expect and
 -- proposes to fix them.
 ALTER TABLE "StockTag" RENAME TO "StockEvent";

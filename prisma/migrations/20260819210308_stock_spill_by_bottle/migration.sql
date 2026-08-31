@@ -1,7 +1,7 @@
 -- Spill counted in things rather than millilitres.
 --
 -- `spilledQty` used to hold the product's own unit: cans for a can, millilitres
--- for a spirit. That meant nobody could record "we dropped one" — they had to
+-- for a spirit. That meant nobody could record "we dropped one", they had to
 -- work out what was in the bottle first, and the stored figure could not be
 -- read back as the thing that happened. It now holds a count, and the rung the
 -- bottles came off sits beside it: a dropped bottle loses everything left in

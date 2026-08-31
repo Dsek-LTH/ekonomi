@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // A route handler is an ordinary async function over a Request, so it can be
-// tested like one. What stands in the way is not the handler — it is the two
+// tested like one. What stands in the way is not the handler. It is the two
 // things underneath it that need a world: the session and the database. Both
 // are replaced here at their lowest point, so everything above them is the real
 // code: the real `gate`, the real zod schema, the real `fail`, and the real
 // wiring between them.
 //
 // Worth doing here above anywhere else. This handler is the only way into the
-// table every authority gate in the app reads, and the invariant it enforces —
-// that somebody is always left who can open Inställningar — has no repair path
+// table every authority gate in the app reads, and the invariant it enforces,
+// that somebody is always left who can open Inställningar, has no repair path
 // short of hand-written SQL against production.
 
 const h = vi.hoisted(() => ({
@@ -79,7 +79,7 @@ describe("PUT /api/authority/capabilities", () => {
 
   it("writes no rows for a role stripped of everything, and still succeeds", async () => {
     // A role that may do nothing is a real state, and an empty grid row is what
-    // it looks like — as long as somebody else can still open the door.
+    // it looks like, as long as somebody else can still open the door.
     const res = await put({ role: "STOCKARE", capabilities: [] });
     expect(res.status).toBe(204);
     expect(h.tx.roleCapability.deleteMany).toHaveBeenCalled();

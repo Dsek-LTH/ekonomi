@@ -4,12 +4,12 @@
 //
 // A night is a thing now rather than a label on a movement: you make one, open
 // it, and register against it. So it needs a place to be listed, and the list's
-// job is to get somebody into the right one — the pub they ran last night is
+// job is to get somebody into the right one: the pub they ran last night is
 // almost always the top row.
 //
 // What it says about a night is its arithmetic, because there is nothing else
 // to say. There is no status: an event is never closed and never finished,
-// and "still out" is not a state it is in but a fact about its figures — what
+// and "still out" is not a state it is in but a fact about its figures: what
 // went out that has not come home yet, which is also what its sold figure is
 // currently counting. The row says so plainly rather than dressing it as a
 // workflow step.
@@ -68,7 +68,7 @@ export default function EventsClient({
       mobile: "meta",
       cell: (e) =>
         e.products === 0 ? (
-          <span className="text-muted">—</span>
+          <span className="text-muted">–</span>
         ) : (
           t("counts.products", { count: e.products })
         ),
@@ -94,7 +94,7 @@ export default function EventsClient({
       sortable: true,
       mobile: "trailing",
       cell: (e) =>
-        e.soldValueOre > 0 ? kr(e.soldValueOre) : <span className="text-muted">—</span>,
+        e.soldValueOre > 0 ? kr(e.soldValueOre) : <span className="text-muted">–</span>,
     },
   ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-// My profile — everything about this session in one place, and where the
+// My profile: everything about this session in one place, and where the
 // sidebar's footer leads. The sidebar keeps only theme and language, being the
 // two switches not worth a page load; the rest lives here.
 import { useState } from "react";
@@ -99,7 +99,7 @@ export function ProfileClient({
         </CardBody>
       </Card>
 
-      {/* Only rendered for the treasury — everyone else has no Fortnox login to
+      {/* Only rendered for the treasury. Everyone else has no Fortnox login to
           have an opinion about. */}
       {fortnox && (
         <Card>

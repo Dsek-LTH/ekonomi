@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requirePage } from "@/lib/server/current-user";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getProductCellar, getProductEvents, getStockLevels } from "@/lib/data/stock";
+import { tagsInUse } from "@/lib/stock/tags";
 import StockProductClient from "./product-client";
 
 export default async function StockProductPage({
@@ -32,6 +33,10 @@ export default async function StockProductPage({
       product={product}
       events={events}
       cellar={cellar}
+      // What the rest of the shelf calls things, for the edit dialog's tag
+      // picker. Off the levels this page already has rather than a query of
+      // its own.
+      knownTags={tagsInUse(levels)}
       canManage={canManageStock(user.capabilities)}
     />
   );

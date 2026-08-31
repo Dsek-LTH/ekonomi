@@ -1,6 +1,6 @@
 -- Containment indexes on the User array columns.
 --
--- `roles`, `resultUnits` and `authentikGroups` are never read by equality —
+-- `roles`, `resultUnits` and `authentikGroups` are never read by equality,
 -- they are asked "does this array contain / overlap these values", which
 -- Postgres answers with `@>` and `&&`. A btree cannot serve either operator, so
 -- until now every one of those questions was a sequential scan of the whole

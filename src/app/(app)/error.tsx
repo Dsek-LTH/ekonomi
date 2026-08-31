@@ -3,7 +3,7 @@
 // What a signed-in member sees when a page throws.
 //
 // Every route in the app has a `loading.tsx` that mirrors the shape of what is
-// arriving; this is the other half of that promise, and it was missing — a
+// arriving; this is the other half of that promise, and it was missing. A
 // throw in a Server Component fell through to Next's stock error page, with no
 // sidebar, no language and no way back. Sitting inside `(app)` means the shell
 // stays up: the nav is still there, so the failure is one page rather than the
@@ -11,7 +11,7 @@
 //
 // Deliberately says nothing about what went wrong. `error.message` from a
 // Server Component is redacted in production anyway, and the parts that aren't
-// (a Prisma message, a stack) are not this reader's business — the digest is
+// (a Prisma message, a stack) are not this reader's business. The digest is
 // what ties a report to the server log.
 
 import { useEffect } from "react";

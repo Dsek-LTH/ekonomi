@@ -13,7 +13,7 @@ const SOMEONE_ELSE = "u_other";
 // A viewer holding these roles, with the capabilities those roles have on the
 // day the database is created (lib/server/authority-defaults.ts). Which roles
 // carry which capability is editable now, so a case below saying "the ordförande
-// cannot export" is a statement about the section's starting policy — which is
+// cannot export" is a statement about the section's starting policy, which is
 // exactly what it always was, when that policy was a list in permissions.ts.
 const capsFor = (roles: Role[]): Capability[] => [
   ...new Set(

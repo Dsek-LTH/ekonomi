@@ -2,12 +2,12 @@
 //
 // The service is stateless: it computed these reports and forgot them, so
 // anything it has to render must be handed back to it. What comes back is not
-// quite what it sent — the cost centre may have been corrected in review — which
+// quite what it sent (the cost centre may have been corrected in review) which
 // is exactly why fetching and rendering are separate calls.
 //
 // The account distributions are recomputed here rather than stored. They are a
 // pure function of the lines (sum by account), so keeping a second copy would
-// only create something that could disagree with them — and it is the
+// only create something that could disagree with them, and it is the
 // distributions that become the voucher's credit rows, so a disagreement would
 // be a voucher that did not match its own evidence.
 import type { IncomeAccountDistribution, IncomeFeeReportDto, IncomeReportDto } from "./types";
@@ -38,7 +38,7 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
  * Sum the lines by account, in account order.
  *
  * Ordered so that the same day always produces the same voucher rows and the
- * same PDF — a Map preserves insertion order, which is line order, and line
+ * same PDF. A Map preserves insertion order, which is line order, and line
  * order is whatever the till happened to ring up.
  */
 export function distributionsFor(lines: readonly StoredLine[]): IncomeAccountDistribution[] {

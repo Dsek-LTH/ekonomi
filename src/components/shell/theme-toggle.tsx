@@ -7,7 +7,7 @@ import { themeCookie, type Theme } from "@/lib/ui/theme";
 
 export function ThemeToggle({ initial }: { initial: Theme }) {
   const t = useTranslations("common.themeMode");
-  // Handed in by the server, which read the cookie — so the button draws the
+  // Handed in by the server, which read the cookie, so the button draws the
   // right icon on the first paint instead of settling into it afterwards. That
   // is what a preference the request carries buys: there is no moment where the
   // page knows the theme and this button doesn't. See lib/ui/theme.ts.

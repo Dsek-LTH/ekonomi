@@ -11,7 +11,7 @@ export const LOCALE_COOKIE = "NEXT_LOCALE";
 const isLocale = (v: string | undefined): v is Locale =>
   !!v && (LOCALES as readonly string[]).includes(v);
 
-// Resolve the active locale for a request. The cookie is canonical at runtime —
+// Resolve the active locale for a request. The cookie is canonical at runtime,
 // the language switcher writes it. Without a cookie we fall back to the
 // browser's Accept-Language, then to the default.
 async function resolveLocale(): Promise<Locale> {

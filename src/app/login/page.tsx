@@ -24,7 +24,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm text-center">
         {/* The mark stands on its own. It used to sit inside a 56px rounded
             tile with a card shadow and a white text colour, none of which had
-            anything to render — an 80px symbol overflowing an empty box. */}
+            anything to render: an 80px symbol overflowing an empty box. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/symbol_rosa.svg"

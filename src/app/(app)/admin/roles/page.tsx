@@ -16,8 +16,8 @@ export default async function AdminRolesPage() {
         {...authority}
         // Which roles the reader themselves holds. The screen uses it for one
         // thing: warning before they save a change that takes something away
-        // from a role of their own. Editing your own authority is allowed —
-        // somebody has to be able to — but it should not be possible to do by
+        // from a role of their own. Editing your own authority is allowed,
+        // somebody has to be able to, but it should not be possible to do by
         // accident while tidying a grid.
         viewerRoles={user.roles}
       />

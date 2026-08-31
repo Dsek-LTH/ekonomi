@@ -121,7 +121,7 @@ describe("backTarget", () => {
 
   it("does not offer a section to a page whose parent is not one", () => {
     // The booking screen's parent is one utlägg. A section is not a substitute
-    // for it — you would be sent past the thing you were working on.
+    // for it. You would be sent past the thing you were working on.
     const stack = walk("/bookkeeping", "/expenses/1", "/expenses/1/book");
     expect(backTarget(stack, "/expenses/1", sectionLabel)).toEqual({
       url: "/expenses/1",

@@ -8,8 +8,8 @@
 // It is asked in three different shapes, which is how it came to be written
 // three times. A list needs it as a query filter, the detail loader needs it
 // folded into a lookup, and an API route needs it as a yes/no about an expense
-// it has already fetched. So the rule is resolved once into an `ExpenseScope` —
-// a plain description of what this viewer may reach — and each shape is derived
+// it has already fetched. So the rule is resolved once into an `ExpenseScope`:
+// a plain description of what this viewer may reach, and each shape is derived
 // from that value rather than restating the policy.
 import "server-only";
 
@@ -24,7 +24,7 @@ export type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
 /**
  * What one viewer may reach. Either everything, or their own plus whatever the
- * result units they answer for cover — as cost-centre code prefixes, since
+ * result units they answer for cover, as cost-centre code prefixes, since
  * result unit membership is derived from the code rather than stored.
  */
 export type ExpenseScope =
@@ -61,7 +61,7 @@ export function expenseScopeWhere(scope: ExpenseScope): Prisma.ExpenseWhereInput
  * Whether one already-fetched expense falls inside the scope.
  *
  * For a route that holds the expense but not its allocations. Only a result unit
- * head asking about someone else's utlägg costs a query — for everyone else the
+ * head asking about someone else's utlägg costs a query. For everyone else the
  * scope alone settles it.
  */
 export async function scopeIncludes(

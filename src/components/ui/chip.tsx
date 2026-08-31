@@ -15,7 +15,7 @@ export function Chip({
   disabled?: boolean;
   /**
    * This chip's own toggle is in flight. Every chip in a group shares one busy
-   * scope, so pass it only for the one that was clicked — a whole row of
+   * scope, so pass it only for the one that was clicked. A whole row of
    * spinners says the app is granting five roles, not one.
    */
   loading?: boolean;

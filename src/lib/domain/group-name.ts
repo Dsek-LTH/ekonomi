@@ -7,7 +7,7 @@
 // sending a row the API would only refuse.
 
 // Any group under `dsek.` at all means a functionary of the section. Groups
-// outside it — `authentik Admins`, the alumni association's `dchip.*` tree —
+// outside it (`authentik Admins`, the alumni association's `dchip.*` tree)
 // are not ours to read. Retired positions are prefixed `old.` upstream and so
 // fall outside too, which is what we want: a mandate that ended is not a
 // mandate.

@@ -11,7 +11,7 @@
 -- left alone rather than mangled into something that looks official, and
 -- lib/domain/reference.ts treats anything unparseable as "no reference", so a
 -- survivor cannot poison the counter either. The counter is matched as one or
--- more digits, not exactly four — it stops being padded once it passes 9999.
+-- more digits, not exactly four. It stops being padded once it passes 9999.
 UPDATE "Expense"
 SET "reference" =
       'DEK' || substring("reference" FROM 3 FOR 2) || '-' || substring("reference" FROM 6)

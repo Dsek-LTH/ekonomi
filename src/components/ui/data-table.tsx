@@ -68,6 +68,57 @@ export type SelectFilter = {
   options: { value: string; label: string }[];
 };
 
+/**
+ * More than one of them, where a list is narrowed along two dimensions at once
+ * (the stock is: what kind of drink, and what the shelf has labelled it).
+ *
+ * They share one `picks` list, so every option value has to be unique across
+ * the filters given here, which is the caller's business to arrange and is why
+ * the stock list prefixes its own ("cat:OL", "tag:whisky"). Within a filter the
+ * picked options are OR-ed, as one filter always was; across filters they are
+ * AND-ed, because two dimensions asked about at once is a narrowing and not a
+ * widening.
+ */
+export type SelectFilters = SelectFilter | SelectFilter[];
+
+/** Either spelling, as a list. */
+export const asFilters = (filter: SelectFilters | undefined): SelectFilter[] =>
+  filter ? (Array.isArray(filter) ? filter : [filter]) : [];
+
+/**
+ * One dropdown, over the part of `picks` that belongs to it.
+ *
+ * The picks are one flat list, in the state and in the URL, because that is
+ * what a filter's values were when there was only ever one of them and it is
+ * still what reads best in an address. So each dropdown shows the picks that
+ * are its own options and, on a change, replaces exactly those and leaves every
+ * other filter's alone.
+ */
+function FilterPicker({
+  filter,
+  controls,
+  size,
+  className,
+}: {
+  filter: SelectFilter;
+  controls: TableControlState;
+  size?: "sm" | "md";
+  className?: string;
+}) {
+  const own = new Set(filter.options.map((o) => o.value));
+  return (
+    <MultiCombobox
+      size={size}
+      className={className}
+      options={filter.options}
+      values={controls.picks.filter((v) => own.has(v))}
+      onChange={(next) => controls.setPicks([...controls.picks.filter((v) => !own.has(v)), ...next])}
+      placeholder={filter.label}
+      aria-label={filter.label}
+    />
+  );
+}
+
 export interface Column<T> {
   key: string;
   header: React.ReactNode;
@@ -171,8 +222,9 @@ export function DataTable<T>({
   controls: ServerControls;
   /** Segmented filter. Which rows each value selects is the query's business. */
   tabs?: TabFilter;
-  /** Dropdown filter, OR-ed across the picked values. */
-  filter?: SelectFilter;
+  /** Dropdown filter, OR-ed across the picked values. Several of them narrow
+   *  along several dimensions at once; see SelectFilters. */
+  filter?: SelectFilters;
   /**
    * What you can do to this list: "Nytt utlägg", "Importera CSV". At the right
    * end of the toolbar, and the only place in the app a list's own action is
@@ -268,6 +320,7 @@ export function DataTable<T>({
   // From sm nothing here applies: the controls sit in the row as they always
   // did, and the trigger is not rendered.
   const [filtering, setFiltering] = useState(false);
+  const filters = asFilters(filter);
   const activeFilters =
     controls.picks.length + (controls.dateFrom ? 1 : 0) + (controls.dateTo ? 1 : 0);
   const clearFilters = () => {
@@ -295,7 +348,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      {(hasText || hasDate || filter || action) && (
+      {(hasText || hasDate || filters.length > 0 || action) && (
         <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
           {/* `sm:contents`. Below sm this is one row holding the trigger and
               the search; from sm it dissolves and its children take their own
@@ -306,24 +359,22 @@ export function DataTable<T>({
             {/* Ahead of the search box: it names which kinds of row you're
                 looking at, which is the coarser question, and it keeps a fixed
                 width while the search takes whatever is left. */}
-            {filter && (
-              <MultiCombobox
+            {filters.map((f) => (
+              <FilterPicker
+                key={f.label}
+                filter={f}
+                controls={controls}
                 // The toolbar is the compact register: sm, like the date
                 // inputs beside it.
                 size="sm"
                 className="hidden sm:block sm:w-52 sm:shrink-0"
-                options={filter.options}
-                values={controls.picks}
-                onChange={controls.setPicks}
-                placeholder={filter.label}
-                aria-label={filter.label}
               />
-            )}
+            ))}
 
             {/* What the two of them become on a phone. Icon and count only,
                 because the word would be the widest thing in a row whose whole point is
                 giving the width to the search box. */}
-            {(filter || hasDate) && (
+            {(filters.length > 0 || hasDate) && (
               <button
                 type="button"
                 onClick={() => setFiltering(true)}
@@ -406,17 +457,11 @@ export function DataTable<T>({
         <Modal label={t("filters")} onClose={() => setFiltering(false)} className="max-w-md">
           <ModalHeader title={t("filters")} />
           <ModalBody>
-            {filter && (
-              <FieldGroup label={filter.label}>
-                <MultiCombobox
-                  options={filter.options}
-                  values={controls.picks}
-                  onChange={controls.setPicks}
-                  placeholder={filter.label}
-                  aria-label={filter.label}
-                />
+            {filters.map((f) => (
+              <FieldGroup key={f.label} label={f.label}>
+                <FilterPicker filter={f} controls={controls} />
               </FieldGroup>
-            )}
+            ))}
             {hasDate && (
               <FieldGroup label={t("dateRange")}>
                 <div className="flex items-center gap-2">

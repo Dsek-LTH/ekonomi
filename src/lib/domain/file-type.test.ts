@@ -32,7 +32,7 @@ describe("sniffReceiptType", () => {
     expect(sniffReceiptType(head("<html><script>"))).toBeNull();
     expect(sniffReceiptType(head("<?xml version=", "'1.0'?><svg"))).toBeNull();
     expect(sniffReceiptType(head("#!/bin/sh\n"))).toBeNull();
-    expect(sniffReceiptType(head([0x4d, 0x5a]))).toBeNull(); // MZ — a Windows executable
+    expect(sniffReceiptType(head([0x4d, 0x5a]))).toBeNull(); // MZ, a Windows executable
     expect(sniffReceiptType(head([0x50, 0x4b, 0x03, 0x04]))).toBeNull(); // a zip
   });
 
@@ -46,7 +46,7 @@ describe("sniffReceiptType", () => {
     expect(sniffReceiptType(head("RIFF", [0x24, 0, 0, 0], "WAVE"))).toBeNull();
   });
 
-  // Same container as HEIC, different brand — an MP4 is not a receipt.
+  // Same container as HEIC, different brand, an MP4 is not a receipt.
   it("refuses an ISO base-media file that isn't a still image", () => {
     expect(sniffReceiptType(head([0, 0, 0, 0x18], "ftyp", "mp42"))).toBeNull();
     expect(sniffReceiptType(head([0, 0, 0, 0x18], "ftyp", "isom"))).toBeNull();

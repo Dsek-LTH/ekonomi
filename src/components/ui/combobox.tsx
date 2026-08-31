@@ -404,6 +404,10 @@ function ComboboxBase({
           // menu is portalled to <body>, so containment can't answer that. The
           // voucher table's auto-balance reads it.
           data-combobox-panel=""
+          // A layer of its own, over whatever it was opened from. A dialog
+          // underneath holds Tab inside itself and has to leave this alone.
+          // See lib/ui/focus-trap.ts.
+          data-popup-layer=""
           style={menuStyle()}
           // Above everything, dialogs included. The menu is portalled to
           // <body>, so it shares a stacking context with the confirm dialog and

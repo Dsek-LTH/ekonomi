@@ -6,7 +6,7 @@
  * you to the second when that is where you came from. See
  * components/back-link.tsx.
  *
- * Paths only — both sides are app-relative, and a link that pointed off-site
+ * Paths only. Both sides are app-relative, and a link that pointed off-site
  * would not be a back link.
  */
 export function samePath(a: string, b: string): boolean {
@@ -35,7 +35,7 @@ export function routePath(url: string): string {
  * The `${route}/` boundary makes it a route boundary rather than a string one:
  * without it a future /stockholm would belong to Lager.
  *
- * Null for a path no route owns — /profile, an utlägg's own page. Those are
+ * Null for a path no route owns (/profile, an utlägg's own page). Those are
  * pages under a section rather than sections, and they carry their own heading
  * and back link.
  */

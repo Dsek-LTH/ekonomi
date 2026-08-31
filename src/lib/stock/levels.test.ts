@@ -50,7 +50,7 @@ describe("pickFault", () => {
   });
 
   it("lets a sealed bottle go once every open one is going too", () => {
-    // Taking the last of the open ones *with* you is the whole point — it is
+    // Taking the last of the open ones *with* you is the whole point. It is
     // not "wait until the shelf is clear", it is "take them along".
     expect(pickFault(shelf, { sealed: 2, open: { 80: 1, 40: 2 } })).toBeNull();
   });
@@ -134,7 +134,7 @@ describe("returnFault", () => {
   });
 
   it("counts an emptied bottle as come home", () => {
-    // It closes the bottle that was out even though it puts nothing back — a
+    // It closes the bottle that was out even though it puts nothing back. A
     // bottle finished at the pub is accounted for, not still outstanding.
     expect(homecomingCount(home({ emptied: 2 }))).toBe(2);
     expect(returnFault(2, home({ emptied: 2 }))).toBeNull();

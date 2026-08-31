@@ -9,7 +9,7 @@ import { ProfileClient } from "./profile-client";
 export default async function ProfilePage() {
   const user = await requireUser();
 
-  // The only place the treasury's own Fortnox login is read for display — the
+  // The only place the treasury's own Fortnox login is read for display. The
   // sidebar no longer carries a copy of it.
   const showsFortnox = canLogInToFortnox(user.capabilities);
   const [payout, fortnoxSession, cookieStore] = await Promise.all([

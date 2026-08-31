@@ -46,7 +46,7 @@ describe("sekToOre", () => {
     // 1.005 * 100 is 100.49999999999999, so Math.round gives 100 rather than
     // the 101 decimal arithmetic would. Pinned rather than fixed: an amount in
     // SEK has at most two decimals, so a half-öre never arrives from the UI or
-    // from the bank — and "round half up on a value that isn't really a half"
+    // from the bank, and "round half up on a value that isn't really a half"
     // would cost a decimal library for a case that cannot occur.
     expect(sekToOre(1.005)).toBe(100);
   });
@@ -102,7 +102,7 @@ describe("isAmountInput", () => {
   });
 
   // The point of the rule: a third decimal is not a finer amount, it is one
-  // sekToOre rounds away — 12,505 would be stored as 12,51 without a word.
+  // sekToOre rounds away. 12,505 would be stored as 12,51 without a word.
   it("stops at two decimals", () => {
     expect(isAmountInput("12,505")).toBe(false);
     expect(isAmountInput("12.5678")).toBe(false);

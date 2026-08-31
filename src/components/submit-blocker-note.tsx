@@ -7,7 +7,7 @@ import type { PaymentType } from "@/lib/domain/types";
 import { cn } from "@/lib/ui/utils";
 
 // Why the utlägg can't be sent for attest yet, said in one place because both
-// surfaces that say it — the wizard's last step and the detail page's notice —
+// surfaces that say it (the wizard's last step and the detail page's notice)
 // have to say the same thing.
 //
 // The submit button is not rendered while a blocker stands (see `submitBlocker`
@@ -41,8 +41,8 @@ export function SubmitBlockerNote({
   className,
 }: {
   blocker: SubmitBlocker;
-  /** What kind of utlägg this is about. Only MILEAGE changes anything — see
-   *  MILEAGE_WORDING — so it is optional, and every other caller can leave it
+  /** What kind of utlägg this is about. Only MILEAGE changes anything, see
+   *  MILEAGE_WORDING, so it is optional, and every other caller can leave it
    *  off. */
   paymentType?: PaymentType;
   className?: string;

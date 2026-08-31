@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 // lib/ is split by what the code touches: domain/ is pure rules, server/ talks
 // to the database, the filesystem, the session. That split is only worth having
-// while it holds, and it holds by convention — nothing in the type system stops
+// while it holds, and it holds by convention. Nothing in the type system stops
 // someone importing Prisma into a domain module and quietly making the whole
 // layer untestable. So it is checked here instead.
 const here = dirname(fileURLToPath(import.meta.url));
@@ -57,7 +57,7 @@ describe.each(["domain", "ui"])("lib/%s stays pure", (folder) => {
 // they are not simply added to the list above.
 //
 // What it costs is that nothing stops a pure module quietly acquiring a Prisma
-// import from the impure one next to it — and a module that does is one nobody
+// import from the impure one next to it, and a module that does is one nobody
 // can unit-test again. So the named ones below are pinned: the list is the
 // promise, and adding to it is how a new pure module gets the same protection.
 const PINNED_PURE: Record<string, string[]> = {

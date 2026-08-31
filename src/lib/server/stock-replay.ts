@@ -4,8 +4,8 @@ import "server-only";
 //
 // Every write path calls this after it has changed something: the sheet, a
 // delivery being corrected, a stocktake being recorded. Two things in the log
-// depend on everything before them — what a count's difference has to be, and
-// what a withdrawal cost at the moving average — so both are worked out again
+// depend on everything before them: what a count's difference has to be, and
+// what a withdrawal cost at the moving average, so both are worked out again
 // rather than patched. The rule itself is pure and tested; this is only the
 // part that talks to the database.
 //

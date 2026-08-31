@@ -14,7 +14,7 @@ export default async function ExpenseDetailPage({
   const user = await requireUser();
 
   // Two waves, because the second depends on the first. The bank rows this page
-  // may show are the *submitter's* card purchases — whoever made the purchase,
+  // may show are the *submitter's* card purchases, whoever made the purchase,
   // not whoever is looking at it. That is the rule the match route enforces
   // (bank.txnNotExpenseCard), and loading the viewer's instead offered a
   // bookkeeper their own transactions on somebody else's utlägg: a list where
@@ -54,8 +54,8 @@ export default async function ExpenseDetailPage({
       ? // Candidates for the picker: the submitter's own unmatched purchases,
         // plus whatever this utlägg already points at.
         await getBankTransactions({ cardHolderId: expense.submitterId, alsoIds: matched })
-      : // Everyone else who may see this page — a resultatansvarig, a
-        // bookkeeper on a signed utlägg — gets the one row it is matched to and
+      : // Everyone else who may see this page (a resultatansvarig, a
+        // bookkeeper on a signed utlägg) gets the one row it is matched to and
         // no browsing. They have no picker to fill, and a page ships what it
         // asks for.
         await getBankTransactionsByIds(matched);

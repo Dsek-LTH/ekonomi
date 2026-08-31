@@ -2,7 +2,7 @@
 //
 // Two ways to answer, and which one applies says what the report is. A booked
 // report has its document in storage and it is streamed from there, browser ←
-// Next ← MinIO, the same proxy model receipts use — those bytes are evidence
+// Next ← MinIO, the same proxy model receipts use. Those bytes are evidence
 // and must never be re-made. A draft has none: it is rendered here, on the way
 // past, and thrown away. Reviewing a term of takings therefore stores nothing,
 // which is the point (see lib/income/document.ts).
@@ -36,7 +36,7 @@ function documentFailure(failure: DocumentFailure) {
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  // The whole section's takings, day by day — bookkeeping's business, and the
+  // The whole section's takings, day by day: bookkeeping's business, and the
   // same gate the pages that link here are behind.
   const g = await gate(canAccessBookkeeping, "auth.denied");
   if (!g.ok) return g.res;
@@ -50,7 +50,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Booked: the stored bytes, and only those ──
 
   if (report.documentKey) {
-    // Two very different failures, told apart deliberately — the same
+    // Two very different failures, told apart deliberately: the same
     // distinction the receipt route makes. Storage being unreachable is an
     // outage; an object storage says is not there is a verifikat that has gone
     // missing, and someone has to know.

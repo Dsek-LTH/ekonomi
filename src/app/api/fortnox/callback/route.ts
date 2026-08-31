@@ -1,6 +1,6 @@
 // Fortnox OAuth2 redirect target, shared by both flows. Verifies the state
-// nonce, exchanges the authorization code, and then — depending on the mode
-// stashed in the state cookie — either replaces the org's service connection or
+// nonce, exchanges the authorization code, and then, depending on the mode
+// stashed in the state cookie, either replaces the org's service connection or
 // starts a personal bookkeeping session for the caller.
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     }
 
     // Personal login. Refuse it unless it lands in the same Fortnox company as
-    // the service connection — otherwise a bookkeeper with access to several
+    // the service connection. Otherwise a bookkeeper with access to several
     // companies could quietly post the section's vouchers into the wrong books.
     const conn = await getConnection();
     if (!conn) {

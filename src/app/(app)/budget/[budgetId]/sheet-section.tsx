@@ -1,6 +1,6 @@
 "use client";
 
-// One half of a budget sheet — Intäkter or Kostnader — as a rounded card.
+// One half of a budget sheet, Intäkter or Kostnader, as a rounded card.
 //
 // It draws the table's head and foot and delegates every row inside it. As a
 // closure it captured twenty-one things for forty-seven lines, most of them
@@ -54,7 +54,7 @@ export function SectionCard({
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold">
           {label}
-          {active && <span className="ml-2 text-xs font-normal text-muted">— {t("dropHere")}</span>}
+          {active && <span className="ml-2 text-xs font-normal text-muted">– {t("dropHere")}</span>}
         </h3>
         <span className="text-sm tabular-nums text-muted">{fmt(total)}</span>
       </div>

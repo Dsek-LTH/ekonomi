@@ -71,7 +71,7 @@ describe("buildGrid", () => {
   });
 });
 
-describe("toStored — what was typed → what is kept", () => {
+describe("toStored: what was typed → what is kept", () => {
   it("leaves a literal alone", () => {
     expect(toStored("1200", "SEX02", grid)).toBe("1200");
     expect(toStored("", "SEX02", grid)).toBe("");
@@ -116,7 +116,7 @@ describe("toStored — what was typed → what is kept", () => {
   });
 });
 
-describe("toDisplay — what is kept → what is shown while editing", () => {
+describe("toDisplay: what is kept → what is shown while editing", () => {
   it("leaves a literal alone", () => {
     expect(toDisplay("1200", "SEX02", grid)).toBe("1200");
   });

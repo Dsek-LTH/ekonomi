@@ -1,4 +1,4 @@
-// Where `notFound()` lands inside the app — a budget id that no longer exists,
+// Where `notFound()` lands inside the app: a budget id that no longer exists,
 // a mistyped path under /expenses.
 //
 // Inside `(app)` so it keeps the sidebar: not finding one thing is not a reason

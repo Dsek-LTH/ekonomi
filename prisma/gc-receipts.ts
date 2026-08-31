@@ -18,7 +18,7 @@ import { PrismaClient } from "../src/lib/generated/prisma/client";
 import { bucket, deleteKeys, listObjects } from "./storage-admin";
 import { expenseLabel } from "../src/lib/domain/reference";
 
-// Standalone run — load .env ourselves, as seed.ts does.
+// Standalone run: load .env ourselves, as seed.ts does.
 import { loadEnvFile } from "./load-env";
 
 loadEnvFile();
@@ -34,8 +34,8 @@ const GRACE_MS = 60 * 60 * 1000; // 1 hour
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-// Receipts an utlägg has stopped using. One utlägg has one receipt — the newest
-// — so anything behind it is a receipt that was replaced before the upload
+// Receipts an utlägg has stopped using. One utlägg has one receipt, the newest,
+// so anything behind it is a receipt that was replaced before the upload
 // route learned to clear up after itself, and no page in the app can reach it.
 // These have rows, so the orphan pass below cannot see them; they need finding
 // by shape instead. New ones cannot appear, but the old ones are still here.
@@ -88,7 +88,7 @@ async function main() {
   }
 
   if (recent > 0) {
-    console.log(`\n${recent} orefererade objekt yngre än 1 h — hoppas över (pågående uppladdning?).`);
+    console.log(`\n${recent} orefererade objekt yngre än 1 h, hoppas över (pågående uppladdning?).`);
   }
 
   const sizeOf = (key: string) => objects.find((o) => o.key === key)?.size ?? 0;

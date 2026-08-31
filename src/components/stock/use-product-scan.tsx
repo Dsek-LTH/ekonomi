@@ -23,11 +23,16 @@ type Naming = { name?: string; ean?: string } | null;
 
 export function useProductScan({
   unknownError,
+  knownTags,
   onScanned,
   onCreated = onScanned,
 }: {
   /** Shown when the barcode matches nothing (the caller's own wording). */
   unknownError: string;
+  /** The tags the shelf already uses, offered by the product form when a
+   *  product is invented here. The sheet is holding the products, so it is the
+   *  one that knows them. */
+  knownTags?: string[];
   /** A product the scan found, for the sheet to take up. */
   onScanned: (id: string) => void;
   /**
@@ -86,6 +91,7 @@ export function useProductScan({
             product={null}
             name={naming.name}
             ean={naming.ean}
+            knownTags={knownTags}
             onClose={() => setNaming(null)}
             onCreated={(id) => onCreated(id)}
           />

@@ -25,6 +25,7 @@
 // in and a way out to animate; `inert` is what stops a closed menu from holding
 // tab stops and swallowing taps. (`prefers-reduced-motion` is answered globally
 // in globals.css, so the transition needs no guard of its own.)
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -36,6 +37,7 @@ import { IconFortnox } from "./fortnox-mark";
 import { IconCheck, IconChevronLeft, IconChevronRight } from "../ui/icons";
 import type { NavGroup, NavItem } from "./app-shell";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
+import { useFocusTrap } from "@/lib/ui/focus-trap";
 import type { Theme } from "@/lib/ui/theme";
 import { cn } from "@/lib/ui/utils";
 
@@ -76,6 +78,12 @@ export function MobileNav({
   const tc = useTranslations("common");
   const pathname = usePathname();
 
+  // The open menu covers the page, so Tab stays in it. `inert` already keeps a
+  // closed one out of the way; this is the other half, the page behind an open
+  // one. See lib/ui/focus-trap.ts.
+  const boxRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(open, boxRef);
+
   const navRow = (item: NavItem) => {
     const Icon = item.icon;
     const active = isActive(item.href);
@@ -110,6 +118,7 @@ export function MobileNav({
 
   return (
     <div
+      ref={boxRef}
       // Not `hidden`/`block` on the open state: a menu that is display:none has
       // nothing to slide. It is off the bottom of the screen instead, and inert
       // while it is there so nothing in it can be tabbed to or tapped through.

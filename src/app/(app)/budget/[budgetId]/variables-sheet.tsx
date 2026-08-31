@@ -3,7 +3,7 @@
 // a cost-centre sheet (Enter edits; Tab moves natively).
 //
 // Variables are a flat namespace, matched across budgets on the name alone, so
-// when a comparison is on this shows the other side's value beside each — and,
+// when a comparison is on this shows the other side's value beside each, and,
 // below, the ones only the other side defines. A budget whose MEDLEMMAR the
 // section has grown out of is worth seeing.
 import { useTranslations } from "next-intl";
@@ -11,8 +11,8 @@ import { cn } from "@/lib/ui/utils";
 import { IconButton } from "@/components/ui/icon-button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconTrash } from "@/components/ui/icons";
-// Variables are not money — MEDLEMMAR is a headcount, a policy figure may be a
-// share — so they are printed as the numbers they are rather than converted
+// Variables are not money: MEDLEMMAR is a headcount, a policy figure may be a
+// share, so they are printed as the numbers they are rather than converted
 // from öre. See `fmtScalar` in budget-helpers.
 import { fmtScalar } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";

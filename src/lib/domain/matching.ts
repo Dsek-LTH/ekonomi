@@ -18,14 +18,14 @@ export function cancelsOut(bankAmount: number, grossAmount: number): boolean {
  *
  * A match is a statement: *this* row on the section's card is the money that
  * left for *this* purchase, so the purchase is accounted for and the row is
- * not outstanding. An eget utlägg says the opposite — the member's own money
+ * not outstanding. An eget utlägg says the opposite: the member's own money
  * left, and the section owes them it back.
  *
  * Both at once is the section paying for one purchase twice: once when the
  * card was swiped, and again into the member's account. So the match belongs
  * to the card purchase and to nothing else, and the two ways an utlägg can
- * acquire one — created with it (the "Redovisa" deep-link from a card
- * purchase) and given one afterwards (the match step) — both ask this first.
+ * acquire one, created with it (the "Redovisa" deep-link from a card
+ * purchase) and given one afterwards (the match step), both ask this first.
  * Changing the payment type away from the card withdraws the claim and the
  * match with it; see the PATCH route.
  */

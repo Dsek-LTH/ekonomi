@@ -59,7 +59,7 @@ export async function GET(req: Request) {
   const ccParam = url.searchParams.get("costCenter");
   const costCenterCode = ccParam === null ? undefined : ccParam;
 
-  // Budget comparison only makes sense for the result report — balance-sheet
+  // Budget comparison only makes sense for the result report. Balance-sheet
   // accounts aren’t budgeted. The caller may name which budget to compare
   // against, and it need not be one of this year’s (see budgetOptions); the
   // whole list travels back either way, since that is what the report page
@@ -94,7 +94,7 @@ export async function GET(req: Request) {
     year: selected,
     period: { from: from.toISOString().slice(0, 7), to: to.toISOString().slice(0, 7) },
     report,
-    // What was actually applied — asking for a comparison that has no data
+    // What was actually applied: asking for a comparison that has no data
     // (an unsynced prior year, a year with no budget) reports back as NONE.
     comparison: comparisonApplied,
     comparisonRequested: compare,

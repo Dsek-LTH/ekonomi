@@ -12,7 +12,7 @@ import { cn } from "@/lib/ui/utils";
 /**
  * The other budget's figure and the difference from ours, as two cells.
  *
- * `incomeLike` decides which way a difference is good — see diffClass. The
+ * `incomeLike` decides which way a difference is good, see diffClass. The
  * pair is drawn together because a number with nothing to compare it to is not
  * a comparison, and the two cells share the border that separates them from
  * this sheet's own columns.

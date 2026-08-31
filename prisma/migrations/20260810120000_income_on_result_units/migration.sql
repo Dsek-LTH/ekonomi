@@ -1,15 +1,15 @@
 -- Verksamheten blir en: IncomeCommittee blir resultatenhetens intäktsprofil.
 --
--- The section's verksamheter were listed twice — once as ResultUnit (who
+-- The section's verksamheter were listed twice: once as ResultUnit (who
 -- attests, which cost centres are theirs) and once as IncomeCommittee (what the
--- intäktsräkning says, which products route where) — on two settings screens,
+-- intäktsräkning says, which products route where) on two settings screens,
 -- with nothing checking that the two agreed. Sexmästeriet was two rows in two
 -- tables that happened to share a name.
 --
 -- So the committee becomes the income *half* of a result unit: same table,
 -- renamed and given a resultUnitId. Every committee keeps its id, its key and
 -- its rows, which is what keeps the 130 reports and 18 prefixes pointing at the
--- right things — and keeps intakt's contract untouched, since the key it groups
+-- right things, and keeps intakt's contract untouched, since the key it groups
 -- reports by is carried over unchanged.
 --
 -- Committees whose name matches an existing result unit are joined to it. The
@@ -99,7 +99,7 @@ ALTER TABLE "IncomeReport"
 CREATE INDEX "IncomeReport_source_resultUnitId_date_idx"
   ON "IncomeReport" ("source", "resultUnitId", "date");
 
--- The same takings must not be booked twice — unchanged in meaning, rebuilt on
+-- The same takings must not be booked twice: unchanged in meaning, rebuilt on
 -- the new column. Partial, because re-importing a range is normal and must stay
 -- possible; the uniqueness applies only once a report has actually been booked.
 CREATE UNIQUE INDEX "IncomeReport_booked_once"

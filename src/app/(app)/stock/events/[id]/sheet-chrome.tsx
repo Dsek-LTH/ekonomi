@@ -17,7 +17,7 @@ import type { CellKind } from "@/lib/stock/cells";
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
- * The night's date, the search, and — on a phone — which column is showing.
+ * The night's date, the search, and, on a phone, which column is showing.
  *
  * Narrowing the sheet matters more than it sounds: a night can run to thirty
  * products, and scrolling past twenty-nine of them to find the one on the
@@ -85,7 +85,7 @@ export function SheetHeader({
           value={column}
           onChange={onColumn}
           // A third of the row each. These three are not a filter sitting in a
-          // corner — they are the sheet's one control on a phone, and the column
+          // corner. They are the sheet's one control on a phone, and the column
           // being typed in should be as wide a target as the two that are not.
           fill
           aria-label={t("event.sheet.column")}
@@ -100,7 +100,7 @@ export function SheetHeader({
  *
  * Nothing on the sheet is in the log until this is pressed, and the count is
  * the check that matters: a night is forty cells, and a figure typed into the
- * column beside the one you meant is invisible on the way past — but "38 rutor
+ * column beside the one you meant is invisible on the way past, but "38 rutor
  * väntar" when you expected 37 is not.
  *
  * Sticky, because a sheet with thirty products runs well past the bottom of a

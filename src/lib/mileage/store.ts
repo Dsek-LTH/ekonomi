@@ -34,8 +34,8 @@ export async function getMileageRates(): Promise<MileageRateLike[]> {
  *
  * Returns the rate as well as the amount, because both go onto the utlägg: the
  * amount is what is claimed, and the rate is what makes that amount checkable a
- * year later when the schablon has moved. A journey that cannot be valued — a
- * day no rate covers, readings that do not go forward — comes back with nulls,
+ * year later when the schablon has moved. A journey that cannot be valued (a
+ * day no rate covers, readings that do not go forward) comes back with nulls,
  * and `claimBlocker` is what refuses to send it.
  */
 export async function valueForStorage(

@@ -3,7 +3,7 @@
 // The product is editable and the log is not, which is the right way round: a
 // name corrected or a tare re-measured should apply everywhere the product
 // appears, while what happened on a Friday in March is settled. Re-measuring a
-// tare is in fact the reason the readings are stored — see the entries route.
+// tare is in fact the reason the readings are stored, see the entries route.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
@@ -60,6 +60,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           ean: body.ean,
           costPriceOre: body.costPriceOre,
           systembolagetId: body.systembolagetId,
+          // `undefined` leaves the list as it is; an empty list is a real edit,
+          // the one that takes the last tag off a product.
+          tags: body.tags,
         },
         select: { id: true },
       }),
@@ -75,13 +78,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  *
  * A product with movements is never deleted: every row of the log points at it,
  * and a log whose products can vanish is a log that stops being readable the
- * first time somebody tidies up. It used to be retired instead — kept out of
- * the pickers, kept on the historical rows — which was a second kind of product
+ * first time somebody tidies up. It used to be retired instead: kept out of
+ * the pickers, kept on the historical rows, which was a second kind of product
  * that every picker, scan and check had to know about.
  *
  * So the protection stays and the hidden state does not: a product that has
  * been used is refused, in words, and stays exactly what it was. What is left
- * to delete is the case this is actually for — a product typed wrong a minute
+ * to delete is the case this is actually for: a product typed wrong a minute
  * ago and never booked on.
  */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {

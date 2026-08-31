@@ -35,7 +35,7 @@ export function EventDialog({ onClose }: { onClose: () => void }) {
     });
     if (!made) return;
     onClose();
-    // Straight into it. Making an event is never the errand — the errand is
+    // Straight into it. Making an event is never the errand. The errand is
     // the crates by the door.
     router.push(`/stock/events/${made.id}`);
   }

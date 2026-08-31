@@ -115,7 +115,7 @@ describe("tagTotals", () => {
   it("lets a checkout be taken back", () => {
     // Somebody typed 1 200 into the out cell and meant 120. The correction is a
     // checkout pointing the other way, and the column has to fall by it rather
-    // than climb — which is the whole reason this folds by direction.
+    // than climb, which is the whole reason this folds by direction.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -1200 }),
       move({ kind: "CHECKOUT", units: 1080 }),

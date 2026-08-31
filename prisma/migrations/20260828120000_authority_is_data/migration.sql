@@ -80,7 +80,7 @@ INSERT INTO "GroupRole" ("group", "role") VALUES
 
 -- ── Seed: group → result unit (was RESULT_UNITS) ──────────────────
 -- Joined on name, which is how the old mapping was written. A name with no row
--- behind it granted nothing before and inserts nothing now — the difference is
+-- behind it granted nothing before and inserts nothing now. The difference is
 -- that from here on it cannot be written at all, because the column is a key.
 INSERT INTO "GroupResultUnit" ("group", "resultUnitId")
 SELECT m."group", r."id"
@@ -115,7 +115,7 @@ INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('VICE_SKATTMASTARE', 'BOOKKEEPING'),
   ('SKATTFORMAN',       'BOOKKEEPING');
 
--- TREASURY_ROLES — Fortnox login, and unwinding an export
+-- TREASURY_ROLES: Fortnox login, and unwinding an export
 INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('SKATTMASTARE',      'FORTNOX_LOGIN'),
   ('VICE_SKATTMASTARE', 'FORTNOX_LOGIN'),
@@ -124,7 +124,7 @@ INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('VICE_SKATTMASTARE', 'EXPORT_UNDO'),
   ('SKATTFORMAN',       'EXPORT_UNDO');
 
--- canAccessSettings — the treasurer alone, chair deliberately excluded
+-- canAccessSettings: the treasurer alone, chair deliberately excluded
 INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('SKATTMASTARE', 'SETTINGS');
 
@@ -145,13 +145,13 @@ SELECT r, 'BUDGET_VIEW'::"Capability" FROM unnest(ARRAY[
   'RESULTATANSVARIG', 'STOCKARE', 'ORDINARIE'
 ]::"Role"[]) AS r;
 
--- canCommentBudget — admins plus the resultatansvariga
+-- canCommentBudget: admins plus the resultatansvariga
 INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('SKATTMASTARE',     'BUDGET_COMMENT'),
   ('ORDFORANDE',       'BUDGET_COMMENT'),
   ('RESULTATANSVARIG', 'BUDGET_COMMENT');
 
--- canLockBudget / canChangeLockedBudget — the treasurer alone
+-- canLockBudget / canChangeLockedBudget: the treasurer alone
 INSERT INTO "RoleCapability" ("role", "capability") VALUES
   ('SKATTMASTARE', 'BUDGET_LOCK'),
   ('SKATTMASTARE', 'BUDGET_CHANGE_LOCKED');

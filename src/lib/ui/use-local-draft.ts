@@ -3,7 +3,7 @@
 // A draft that survives the browser being closed.
 //
 // For a sheet that is filled in over minutes rather than seconds, in a cellar,
-// on a phone that locks itself — the stock sheets. What is typed is kept in
+// on a phone that locks itself: the stock sheets. What is typed is kept in
 // localStorage under a key of the caller's choosing and read back on the next
 // visit, so the answer to "the screen went to sleep halfway through the pallet"
 // is that nothing happened.
@@ -25,12 +25,12 @@ export function useLocalDraft<T>(
   empty: T,
 ): [T, React.Dispatch<React.SetStateAction<T>>, () => void] {
   const [value, setValue] = useState<T>(empty);
-  // Nothing is written back until the stored draft has had its chance to load —
+  // Nothing is written back until the stored draft has had its chance to load.
   // otherwise the first render's empty value overwrites it before it arrives.
   const loaded = useRef(false);
 
   // Reading an external store on mount is what an effect is for, and the state
-  // it sets is the whole point of the hook — there is no render-time way to do
+  // it sets is the whole point of the hook. There is no render-time way to do
   // this that does not read localStorage during the server render too. Disabled
   // for the same reason the stock sheet disables it for its focus effect.
   /* eslint-disable react-hooks/set-state-in-effect */

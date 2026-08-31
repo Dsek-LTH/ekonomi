@@ -5,10 +5,10 @@ import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchSheet } from "@/lib/api/schemas/budget";
 
-// PATCH /api/budget-sheets/[id] — which cost centre this sheet is, and
+// PATCH /api/budget-sheets/[id]: which cost centre this sheet is, and
 // what it is called while it isn't one.
 //   { costCenterId: string } link it (the cost centre must be free in this
-//                            budget — one cannot be budgeted twice)
+//                            budget, one cannot be budgeted twice)
 //   { costCenterId: null }   detach it, keeping the figures
 //   { label: string }        rename a detached sheet
 //
@@ -51,7 +51,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json(updated);
 }
 
-// DELETE /api/budget-sheets/[id] — drop a cost centre from the budget.
+// DELETE /api/budget-sheets/[id]: drop a cost centre from the budget.
 // Its accounts and rows go with it (cascade); other budgets are untouched.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;

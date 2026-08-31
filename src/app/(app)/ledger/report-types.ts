@@ -26,7 +26,7 @@ export interface LedgerYear {
 
 export interface BudgetOption {
   id: string;
-  year: number; // its own — not necessarily the year being reported on
+  year: number; // its own, not necessarily the year being reported on
   name: string;
   locked: boolean; // sealed, so almost always the adopted one
 }
@@ -66,7 +66,7 @@ export interface QueryState {
   costCenter: string | null;
   group: GroupMode;
   compare: ComparisonMode;
-  // Which budget to compare against — any of them, of any year. Null lets the
+  // Which budget to compare against, any of them, of any year. Null lets the
   // server pick this year's; only meaningful when compare is BUDGET.
   budget: string | null;
 }

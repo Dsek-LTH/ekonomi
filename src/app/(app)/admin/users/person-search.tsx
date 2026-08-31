@@ -2,7 +2,7 @@
 
 // A person picker that queries the server as you type. The section has on the
 // order of a thousand members, so the candidate list is never shipped to the
-// browser — only what a query actually matches.
+// browser, only what a query actually matches.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
@@ -38,7 +38,7 @@ export function PersonSearch({
   // arrive out of order and overwrite a newer query.
   useEffect(() => {
     const q = query.trim();
-    if (!q) return; // `shown` derives to [] — nothing to clear
+    if (!q) return; // `shown` derives to [], nothing to clear
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -49,7 +49,7 @@ export function PersonSearch({
         const json = await res.json();
         if (res.ok) setResults(json.users ?? []);
       } catch {
-        // Aborted or offline — leave the previous results in place.
+        // Aborted or offline. Leave the previous results in place.
       } finally {
         setLoading(false);
       }

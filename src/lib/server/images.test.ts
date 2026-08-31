@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { normaliseImage, normalisedName } from "./images";
 
-// Bytes in, bytes out — no storage and no database, so this belongs with the
+// Bytes in, bytes out, no storage and no database, so this belongs with the
 // rest of the unit tests despite living under server/.
 
 const W = 60;
@@ -41,7 +41,7 @@ describe("normaliseImage", () => {
 
   // An alpha channel is not transparency. Screenshots are PNGs with a fully
   // opaque alpha channel, and storing those as PNG would cost several times the
-  // JPEG for nothing — which is why the check reads pixels, not metadata.
+  // JPEG for nothing, which is why the check reads pixels, not metadata.
   it("still stores an opaque image as JPEG, alpha channel or not", async () => {
     const out = await normaliseImage(await png(255));
 

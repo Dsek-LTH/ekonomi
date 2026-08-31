@@ -1,5 +1,5 @@
 // Create a result unit (admin only). Which cost centres belong to it is decided
-// by its prefixes — see app/api/result-units/[id]/prefixes.
+// by its prefixes, see app/api/result-units/[id]/prefixes.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";

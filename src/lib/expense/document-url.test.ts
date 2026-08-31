@@ -19,7 +19,7 @@ describe("expenseDocuments", () => {
   it("opens on the underlag all the same", () => {
     // Order and landing page are two different questions. The cover leads the
     // document; the receipt is what somebody came to look at, so it is marked
-    // rather than moved — and exactly one of them is.
+    // rather than moved, and exactly one of them is.
     const docs = expenseDocuments(submitted);
     expect(docs.map((d) => Boolean(d.defaultOpen))).toEqual([false, true]);
   });
@@ -41,7 +41,7 @@ describe("expenseDocuments", () => {
 
   it("shows a draft its receipt and no cover", () => {
     // A draft has nothing attested and no reference yet, so its cover would be
-    // a page of dashes — and drawing one costs a run of the typesetter every
+    // a page of dashes, and drawing one costs a run of the typesetter every
     // time somebody opens their own half-finished utlägg.
     //
     // Unmarked: with one document there is nothing to choose between, and the

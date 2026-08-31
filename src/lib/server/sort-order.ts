@@ -4,8 +4,8 @@
 // its members with a `sortOrder`, and adding one means "one past the last".
 // Read as `MAX(sortOrder) + 1` and then written, that is a read-modify-write
 // across two statements: two people adding a row to the same account at the
-// same moment both read the same maximum and both write it. Nothing fails —
-// Postgres is happy, both rows exist — but they now tie, and a tie in an ORDER
+// same moment both read the same maximum and both write it. Nothing fails.
+// Postgres is happy, both rows exist, but they now tie, and a tie in an ORDER
 // BY is resolved however the planner feels like today. That is the same
 // instability the list queries carry explicit tiebreakers for; here it can be
 // prevented outright rather than sorted out afterwards.
@@ -23,7 +23,7 @@ import { prisma } from "@/lib/server/db";
 type Tx = Prisma.TransactionClient;
 
 // The parent tables an ordered list hangs off. A whitelist, because a table
-// name is an identifier and cannot be a bound parameter — only these constants
+// name is an identifier and cannot be a bound parameter. Only these constants
 // ever reach the SQL, and the id beside them is bound normally.
 const PARENT_TABLE = {
   budget: '"Budget"',
@@ -51,7 +51,7 @@ export async function lockForAppend(
  * Run `body` in a transaction with `parent` locked, so the
  * `MAX(sortOrder) + 1` inside it is still the answer when the insert lands.
  *
- * The body does the reading and the writing itself — it is two ordinary Prisma
+ * The body does the reading and the writing itself. It is two ordinary Prisma
  * calls on `tx` and reads better left where it is than folded into an argument.
  */
 export function appendInOrder<T>(

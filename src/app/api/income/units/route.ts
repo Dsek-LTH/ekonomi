@@ -1,11 +1,11 @@
-// Give a resultatenhet an income profile — the settings that let it take money
+// Give a resultatenhet an income profile: the settings that let it take money
 // in: the key intakt groups its reports by, the text its verifikationer carry,
 // and the cost centre they are booked against.
 //
 // The unit itself is not created here. There is one register of the section's
 // verksamheter (ResultUnit, under Inställningar → Resultatenheter) and this
 // adds the income half of a row already in it, rather than a second list beside
-// it — which is what IncomeCommittee was.
+// it, which is what IncomeCommittee was.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     include: { income: { select: { id: true } } },
   });
   if (!unit) return fail(404, "income.unitNotFound");
-  // One profile per unit — the whole point of the merge is that a verksamhet is
+  // One profile per unit: the whole point of the merge is that a verksamhet is
   // one thing, so it cannot have two sets of income settings.
   if (unit.income) return fail(409, "income.unitHasIncome", { values: { name: unit.name } });
 

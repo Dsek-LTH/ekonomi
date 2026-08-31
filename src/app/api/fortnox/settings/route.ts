@@ -20,7 +20,7 @@ export async function PATCH(req: Request) {
 
   // The schema says these are non-empty strings; that each names an account in
   // the synced chart is what the lookup below establishes, and is the check
-  // worth having — a voucher posted to a number Fortnox has never heard of is
+  // worth having. A voucher posted to a number Fortnox has never heard of is
   // the failure this prevents.
   for (const field of ["bankAccount", "memberDebtAccount"] as const) {
     const value = body[field];
@@ -38,7 +38,7 @@ export async function PATCH(req: Request) {
     });
   }
 
-  // The voucher series lives on the connection — only settable while connected.
+  // The voucher series lives on the connection, only settable while connected.
   if (body.voucherSeries !== undefined) {
     const conn = await prisma.fortnoxConnection.findFirst();
     if (!conn) {

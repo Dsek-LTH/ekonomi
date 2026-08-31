@@ -3,13 +3,13 @@
 
     python3 prisma/import/xlsx-to-budget-csv.py [workbook.xlsx] [-c J|L] [-o out.csv]
 
-This script knows one workbook shape — the VTM/DELTA family, where each
+This script knows one workbook shape: the VTM/DELTA family, where each
 committee sheet (AKTU01, SEX02, …) is a cost centre, column A carries Konto
 numbers, column B the names and descriptions, and the amounts sit in column J
 (the revision being written) or L (the one it was revised from).
 
 It is deliberately NOT the importer. Older budgets are laid out differently and
-each will need its own conversion — or a CSV assembled by hand in Excel, which
+each will need its own conversion, or a CSV assembled by hand in Excel, which
 for a one-off is the faster route. What survives from year to year is the CSV,
 which is why the app reads that and not a workbook: see lib/domain/budget-csv.ts.
 
@@ -17,7 +17,7 @@ Two things are dropped on purpose:
 
   * Variables. The CSV has no Parametrar column, so a line referencing
     Prisbasbelopp becomes the number it evaluated to. For a past budget that is
-    what you want — last year's budget should not reflow when this year's
+    what you want. Last year's budget should not reflow when this year's
     prisbasbelopp is set.
   * The "previous column" pairing. One run emits one budget; run it twice with
     -c J and -c L to get both, and import them under their own names.
@@ -45,7 +45,7 @@ SKIP_B = {"Summa", "Intäkter", "Kostnader", "Resultat", ""}
 # Sheets that are not cost centres.
 NON_SHEETS = {"Rambudget", "Parametrar"}
 
-# Sexmästeriet books alcohol under a range header — "3011-3014" — with one line
+# Sexmästeriet books alcohol under a range header ("3011-3014") with one line
 # per drink beneath it. BAS numbers those individually and so does the ledger,
 # so the range is split back into one account per line, matched on the line's
 # own description. Kept as a range the code is not a number, and the Utfall
@@ -133,7 +133,7 @@ def parse_sheet(wb, wbv, code, amount_col, unplaced):
         else:
             acode = current["code"]
 
-        # The amount column is the sheet's source of truth — a row may override
+        # The amount column is the sheet's source of truth: a row may override
         # its own formula with a literal. The antal x á-pris pair is carried
         # over only when it is a clean two-factor F x H whose product matches
         # that column (no extra D factor, no manual override), so the breakdown
@@ -208,7 +208,7 @@ def main():
         cc_name, rows = parse_sheet(wb, wbv, code, amount_col, unplaced)
         if not rows:
             continue
-        # Income minus cost, in the sheet's own terms — BAS 3xxx is income, and
+        # Income minus cost, in the sheet's own terms: BAS 3xxx is income, and
         # that is the same rule the app infers a kind with (lib/budget/index.ts).
         totals[code] = sum(
             r["_value"] * (1 if r["account"].startswith("3") else -1) for r in rows
@@ -225,7 +225,7 @@ def main():
     fields = ["cost_center", "cc_name", "account", "account_name",
               "description", "quantity", "unit_price", "amount"]
     # UTF-8 with a BOM, because that is what Excel needs to open a CSV as UTF-8
-    # without mangling å ä ö — and the importer strips it (lib/domain/csv.ts).
+    # without mangling å ä ö, and the importer strips it (lib/domain/csv.ts).
     with open(args.out, "w", newline="", encoding="utf-8-sig") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         w.writeheader()
@@ -249,7 +249,7 @@ def main():
             bad.append(f"    {code:8} lines sum to {got:>14,.2f}, Rambudget says {want:>14,.2f}"
                        f"  (off by {got - want:,.2f})")
     if bad:
-        print(f"\n{len(bad)} sheet(s) do NOT reconcile — do not import before "
+        print(f"\n{len(bad)} sheet(s) do NOT reconcile, do not import before "
               f"explaining these:", file=sys.stderr)
         print("\n".join(bad), file=sys.stderr)
     else:

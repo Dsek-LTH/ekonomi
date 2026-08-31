@@ -49,7 +49,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // same broken state, only harder to find afterwards.
   const resultUnit = await serializable(async (tx) => {
     const updated = await tx.resultUnit.update({ where: { id }, data: { name } });
-    // Every holder, including the ones `reapplyGrants` cannot reach — somebody
+    // Every holder, including the ones `reapplyGrants` cannot reach: somebody
     // who has not signed in since authentikGroups existed holds the name and no
     // derivable grant, and is exactly who a rename would otherwise strand.
     //
@@ -90,7 +90,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   // with a plural or two rather than a template that has to compose itself.
   //
   // Resultatansvar is held by name, not by a foreign key, so deleting the unit
-  // would not cascade — it would leave those users answering for a name that
+  // would not cascade. It would leave those users answering for a name that
   // no longer resolves. Still a refusal, and now also a nudge to fix the
   // mapping in lib/server/authentik-roles.ts first.
   const owners = await prisma.user.count({

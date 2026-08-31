@@ -60,6 +60,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
+import { tagsInUse } from "@/lib/stock/tags";
 import { SheetHeader, SheetSaveBar } from "./sheet-chrome";
 import {
   CELL_KINDS,
@@ -542,6 +543,7 @@ export default function EventClient({
   // because nobody typed a search to get there.
   const { scan, invent, overlay } = useProductScan({
     unknownError: t("scan.unknown"),
+    knownTags: tagsInUse(products),
     onScanned: (id) => {
       setSearch("");
       add(id);

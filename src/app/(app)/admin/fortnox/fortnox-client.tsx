@@ -111,7 +111,7 @@ export function FortnoxClient({
     );
   }
 
-  // One financial year per click. "current" is the year we're in — also the only
+  // One financial year per click. "current" is the year we're in, also the only
   // thing to press before any year has been fetched, since the per-year buttons
   // below are built from the years a sync has already found. A full backfill is
   // a long job and stays with the CLI (pnpm fortnox:sync --all) rather than a
@@ -165,7 +165,7 @@ export function FortnoxClient({
                 ? t("notConfigured")
                 : connected
                   ? t("connected", {
-                      company: fortnox.companyName ? ` — ${fortnox.companyName}` : "",
+                      company: fortnox.companyName ? ` – ${fortnox.companyName}` : "",
                     })
                   : t("notConnected")
             }

@@ -9,7 +9,7 @@ import {
   PdfMergeError,
 } from "./pdf-merge";
 
-/** A stand-in for whatever typeset the cover — the merge does not care. */
+/** A stand-in for whatever typeset the cover, the merge does not care. */
 async function pdfOf(pages: number): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   for (let i = 0; i < pages; i++) doc.addPage([595.28, 841.89]);
@@ -101,7 +101,7 @@ describe("mergeCoverAndReceipt", () => {
   });
 
   it("wraps unreadable receipt bytes as a merge error, not a raw throw", async () => {
-    // This is the case the export's fallback exists for — a supplier's PDF that
+    // This is the case the export's fallback exists for: a supplier's PDF that
     // will not open must not take an otherwise valid export down with it, and
     // the caller can only catch it if it has a type.
     await expect(

@@ -18,14 +18,14 @@ declare module "next-auth" {
   // argument of the jwt callback carries on a sign-in.
   interface User {
     studentId?: string;
-    /** Authentik group list. Read once, to derive roles — never stored here. */
+    /** Authentik group list. Read once, to derive roles, never stored here. */
     groups?: string[];
   }
 }
 
 // The JWT's own extra claims are *not* declared here. `next-auth/jwt` only
 // re-exports the interface from `@auth/core/jwt`, so an augmentation of it
-// declares a second, unrelated JWT rather than merging with the real one — the
+// declares a second, unrelated JWT rather than merging with the real one. The
 // fields silently stay `unknown`, which is how this was found. `@auth/core` is
 // not a direct dependency and cannot be augmented either, so the token's shape
 // is a local type in auth.ts (`AppToken`), which is the only file that reads it.

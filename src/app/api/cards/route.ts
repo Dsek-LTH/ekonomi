@@ -8,7 +8,7 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateCard } from "@/lib/api/schemas/admin";
 
-// POST /api/cards — body: { last4: string, holderId?: string | null }
+// POST /api/cards: body: { last4: string, holderId?: string | null }
 export async function POST(req: Request) {
   const g = await gate(canAccessSettings, "auth.adminOnly");
   if (!g.ok) return g.res;
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const existing = await prisma.card.findUnique({ where: { last4 } });
   if (existing) return fail(409, "card.exists", { values: { last4 } });
 
-  // Optional holder — must be an existing user if provided.
+  // Optional holder, must be an existing user if provided.
   let holderId: string | null = null;
   if (parsed.data.holderId) {
     const user = await prisma.user.findUnique({ where: { id: parsed.data.holderId } });

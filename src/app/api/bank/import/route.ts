@@ -1,6 +1,6 @@
 // Import a bank "Transaktionsrapport" CSV. The browser POSTs the raw file; we
 // decode it (Windows-1252), parse rows, auto-create unassigned Card rows for
-// any new card numbers, then insert the transactions — skipping ones already
+// any new card numbers, then insert the transactions, skipping ones already
 // imported (importHash @unique). Bookkeeper/admin only.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";

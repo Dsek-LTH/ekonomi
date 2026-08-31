@@ -1528,6 +1528,20 @@ model StockProduct {
   /// this times a count. See lib/stock/value.ts.
   costPriceOre Int?
 
+  /// Free labels the cellar sorts by: "whisky", "cognac", "vodka".
+  ///
+  /// Optional, and a tag exists by being carried. There is no table of them:
+  /// what the picker offers is what the products already say, so a tag is made
+  /// by typing it on the first product that wants it and is gone when the last
+  /// one drops it. Renaming one across the shelf is an update over the products
+  /// that hold it, which is the price of not keeping a second thing in step
+  /// with this one.
+  ///
+  /// Stored as typed, matched case-insensitively: see lib/stock/tags.ts, which
+  /// is what both the route and the picker fold with, so "Whisky" and "whisky"
+  /// cannot both end up in the list.
+  tags String[] @default([])
+
   entries StockEntry[]
   changes StockChange[]
   lots    StockLot[]
@@ -1536,6 +1550,9 @@ model StockProduct {
   updatedAt DateTime @updatedAt
 
   @@index([category])
+  /// GIN, because the question asked of this column is "which products carry
+  /// this tag", and a btree cannot answer a containment test.
+  @@index([tags], type: Gin)
 }
 
 /// A delivery of countable stock, and the best-before that came with it.

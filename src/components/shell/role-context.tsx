@@ -7,7 +7,7 @@ const Ctx = createContext<CurrentUser | null>(null);
 
 // The current user comes from the Auth.js session (resolved in the app layout
 // and passed in), enriched with the capabilities the session doesn't carry.
-// Everything hangs off the one object — read `user.roles` / `user.holdsCard`.
+// Everything hangs off the one object, read `user.roles` / `user.holdsCard`.
 export function RoleProvider({
   user,
   children,

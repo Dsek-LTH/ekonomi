@@ -41,7 +41,7 @@ export default function BookkeepingClient({
 
   // No predicates: the tab value is a status the server filters on, and the
   // page arrives already narrowed to it. "Bokföring picks up where approval
-  // ends" — approved, booked, exported — is likewise the page's query now
+  // ends" (approved, booked, exported) is likewise the page's query now
   // (ExpenseListScope "signed"), not a filter applied to everything.
   const tabs: TabFilter = [
     { value: "all", label: t("tab.all") },
@@ -49,10 +49,10 @@ export default function BookkeepingClient({
     { value: "BOOKED", label: t("tab.toExport") },
     { value: "EXPORTED", label: t("tab.exported") },
   ];
-  // The OAuth round-trip's result is surfaced globally — see FortnoxAuthResult
+  // The OAuth round-trip's result is surfaced globally, see FortnoxAuthResult
   // in the app layout, since the callback can return to any page.
 
-  // Keyed on the utlägg's id, spoken about by its reference — anything
+  // Keyed on the utlägg's id, spoken about by its reference. Anything
   // exportable has been through attest, so it has one.
   async function doExport(expense: Expense) {
     const id = expense.id;
@@ -101,7 +101,7 @@ export default function BookkeepingClient({
           )}
           {e.status === "BOOKED" && (
             // A disabled control takes no pointer events, so the hint hangs on
-            // the wrapper — otherwise it would never show on hover.
+            // the wrapper, otherwise it would never show on hover.
             <span title={exportBlocked ?? undefined}>
               <Button
                 size="sm"

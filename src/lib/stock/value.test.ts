@@ -137,7 +137,21 @@ describe("valueDelta", () => {
     expect(valueDelta({ qty: 10, valueOre: 100_000 }, { kind: "RETURN", units: 2 })).toBe(20_000);
   });
 
-  it("prices a return against an empty shelf at nothing rather than dividing by it", () => {
+  it("prices an arrival onto an empty shelf from the product's own cost", () => {
+    // There is no average to apply, and zero is the answer that wrote the
+    // opening stocktake in at nothing. Both ways of getting here are ordinary:
+    // a cellar counted onto the shelf for the first time, and a night that took
+    // every bottle out and brought some home.
+    expect(
+      valueDelta({ qty: 0, valueOre: 0 }, { kind: "COUNT", units: 6, costPriceOre: 24_900 }),
+    ).toBe(149_400);
+    expect(
+      valueDelta({ qty: 0, valueOre: 0 }, { kind: "RETURN", units: 2, costPriceOre: 24_900 }),
+    ).toBe(49_800);
+  });
+
+  it("still prices an arrival at nothing when nobody has priced the product", () => {
+    // The gap shows as a gap rather than as a total built on an invented price.
     expect(valueDelta({ qty: 0, valueOre: 0 }, { kind: "RETURN", units: 2 })).toBe(0);
   });
 
@@ -189,6 +203,25 @@ describe("revalue", () => {
     );
     const total = [...out.values()].reduce((n, v) => n + v, 0);
     expect(total).toBe(0);
+  });
+
+  it("prices an opening stocktake, which has no delivery behind it", () => {
+    // The production case this was got wrong for: a cellar entered with the
+    // stocktake button rather than as deliveries. Counted in at 10 kr a bottle,
+    // twelve bottles, and one leaving costs the same 10 kr.
+    const out = revalue([row("a", "COUNT", 12), row("b", "CHECKOUT", -1)], 1000);
+    expect(out.get("a")).toBe(12_000);
+    expect(out.get("b")).toBe(-1000);
+  });
+
+  it("does not re-price a later count from cost, only the one onto an empty shelf", () => {
+    // The second count finds two more than the books say. They are worth the
+    // average of what is already there, which is what the average is for.
+    const out = revalue(
+      [row("a", "PURCHASE", 10), row("b", "COUNT", 2)],
+      1000,
+    );
+    expect(out.get("b")).toBe(2000);
   });
 
   it("has nothing to say about an empty log", () => {
