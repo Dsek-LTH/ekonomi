@@ -333,9 +333,13 @@
       "dateFuture": "Datumet ligger i framtiden. Ett köp kan inte ha gjorts senare än i dag",
       "dateTooLate": "Äldre än {days} dagar. Eget utlägg måste redovisas inom {days} dagar från köpet och kan inte tas emot senare. Hör av dig till skattmästaren för ytterligare hjälp",
       "amount": "Belopp",
+      "directionOut": "Utlägg",
+      "directionReturn": "Retur",
+      "returnMeans": "{amount} kommer tillbaka till sektionen.",
       "distribution": "Kostnadsfördelning",
       "paymentType": "Betalsätt",
       "paymentTypeFixed": "Utlägget redovisar ett köp på ditt sektionskort, så betalsättet är låst. Vill du i stället få tillbaka egna pengar skapar du ett nytt utlägg utan att utgå från transaktionen.",
+      "paymentTypeReturn": "En retur går tillbaka till sektionskortet den betalades med.",
       "matchTitle": "Matcha mot banktransaktion",
       "matchLead": "Välj transaktionen från sektionskortet som hör till köpet. Bara transaktioner på exakt {amount} går att välja. Övriga visas ändå, så att du ser vad som finns.",
       "amountMismatch": "Beloppet stämmer inte med utlägget",
@@ -350,7 +354,9 @@
       "resultUnitConcerned": "berörd resultatenhet",
       "resubmit": "Skicka in igen",
       "submit": "Skicka in för attest",
-      "negateAmount": "Växla till negativt belopp (retur)"
+      "direction": "Vad gäller det?",
+      "directionOutHint": "Något har köpts och ska bokföras eller ersättas.",
+      "directionReturnHint": "Pengar kommer tillbaka, till exempel ett återköp."
     },
     "field": {
       "title": "Beskrivning",
@@ -806,6 +812,7 @@
     "income": "Intäkter",
     "stock": "Lager",
     "stockLog": "Lagerlogg",
+    "stockStats": "Statistik",
     "groupStock": "Lager",
     "stockEvents": "Tillfällen",
     "roles": "Roller & behörigheter"
@@ -816,10 +823,9 @@
     "costCenter": "Kostnadsställe",
     "commentPlaceholder": "Kommentar (valfri)…",
     "amountPlaceholder": "Belopp",
+    "unit": "kr",
     "removeRow": "Ta bort rad",
-    "add": "+ Lägg till kostnadsställe",
-    "negateAmount": "Växla till negativt belopp",
-    "negateLabel": "Retur"
+    "add": "+ Lägg till kostnadsställe"
   },
   "receipt": {
     "prevDocument": "Föregående dokument",
@@ -1929,6 +1935,7 @@
     "saved": "Rörelsen registrerades.",
     "saveFailed": "Kunde inte registrera rörelsen",
     "litres": "{litres} l",
+    "clPerKrona": "{cl} cl/kr",
     "attention": "{count, plural, =1 {1 produkt behöver ses över} other {# produkter behöver ses över}}",
     "counts": {
       "products": "{count, plural, =1 {1 produkt} other {# produkter}}",
@@ -2071,6 +2078,7 @@
         "kind": "Räknas som",
         "size": "Volym",
         "abv": "Alkoholhalt",
+        "alcoholPerKrona": "Alkohol per krona",
         "onHand": "I lager",
         "litres": "Liter",
         "value": "Värde",
@@ -2118,10 +2126,10 @@
       "total": "Summa",
       "col": {
         "product": "Produkt",
+        "price": "Pris/st",
         "in": "In"
       },
-      "each": "à {price}",
-      "unpriced": "inköpspris saknas",
+      "unpriced": "utan pris",
       "noteHint": "Följer med varje rad, till exempel ett fakturanummer.",
       "notePlaceholder": "Faktura 12345",
       "addProduct": "Skriv eller välj en produkt…",
@@ -2164,6 +2172,7 @@
       "size": "Volym per styck",
       "abv": "Alkoholhalt",
       "unitCost": "Inköpspris inkl. pant",
+      "alcoholPerKrona": "Alkohol per krona",
       "totalVolume": "Total volym",
       "events": "Ut och in",
       "eventsHint": "Vad produkten gjort på varje tillfälle. Har någon ändrat en kvälls siffror står det bakom pilen.",
@@ -2271,6 +2280,54 @@
       "value": "Lagervärde",
       "notice": "Siffrorna visar lagret som det såg ut den {date}. Rörelser efter det datumet räknas inte med.",
       "today": "Visa i dag"
+    },
+    "revalue": {
+      "action": "Räkna om lagervärdet",
+      "title": "Räkna om lagervärdet?",
+      "description": "Varje produkts logg läses igenom igen och värdet skrivs om till det reglerna ger. Inköpspriser rörs inte: varje rad bär priset den bokades till.",
+      "done": "{rows} rader på {products} produkter. Lagret: {before} → {after}.",
+      "settled": "Ingenting att räkna om. Lagervärdet är redan det reglerna ger.",
+      "failed": "Kunde inte räkna om lagervärdet."
+    },
+    "stats": {
+      "title": "Lagerstatistik",
+      "description": "Vad hyllan har varit värd, vad den består av och vad som gått genom den.",
+      "period": "Period",
+      "range": {
+        "week": "Vecka",
+        "month": "Månad",
+        "halfYear": "6 månader",
+        "year": "År",
+        "all": "Allt"
+      },
+      "from": "Från",
+      "to": "Till",
+      "clear": "Rensa",
+      "valueTitle": "Lagervärde över tid",
+      "valueNow": "Just nu: {value}",
+      "valueOfWhole": "{shown} av hela lagrets {whole}",
+      "chartAlt": "Lagervärdet över tid, staplat per dryckesslag.",
+      "total": "Totalt",
+      "flowTitle": "Under perioden",
+      "flowHint": "Vad som köpts in och vad som gått åt, till inköpsvärde. De fyra delar upp perioden mellan sig: uttag räknas netto, så det som kom tillbaka oöppnat är inte förbrukat, och spill står för sig.",
+      "flow": {
+        "purchased": "Inköpt",
+        "consumed": "Förbrukat",
+        "wasted": "Spill",
+        "counted": "Inventering"
+      },
+      "mixTitle": "Fördelning nu",
+      "mixHint": "Liter och värde per dryckesslag, i slutet av perioden.",
+      "moversTitle": "Mest omsatta produkter",
+      "moversHint": "Vad som lämnat hyllan under perioden, och vad som står kvar av det.",
+      "nothing": "Ingenting har rört sig i den här perioden.",
+      "category": {
+        "OL": "Öl",
+        "OVRIG_JASTDRYCK": "Övrig jästdryck",
+        "VIN": "Vin",
+        "SPRITDRYCK": "Spritdryck",
+        "ALKOHOLDRYCKSLIKNANDE": "Alkoholdrycksliknande preparat"
+      }
     },
     "ml": "{ml} ml"
   }

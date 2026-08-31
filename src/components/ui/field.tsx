@@ -45,11 +45,21 @@ function fieldContent(
   children: React.ReactNode,
   hint?: string,
   error?: string,
+  action?: React.ReactNode,
 ) {
   return (
     <>
-      <span className="mb-1.5 block text-[13px] font-medium text-foreground">
+      {/* The label's own line, and it is a line whether or not anything else
+          is on it: 24px, the height of the compact controls, so two fields side
+          by side in a grid have their boxes at the same height even when one of
+          them carries something up here.
+
+          What may ride the far end is a second question about this same field
+          (the utlägg's direction beside "Belopp"), which is how it gets asked
+          without costing the form a row. */}
+      <span className="mb-1.5 flex min-h-6 items-center justify-between gap-2 text-[13px] font-medium text-foreground">
         {label}
+        {action}
       </span>
       {children}
       {/* What's wrong with what's typed replaces the standing hint. Two lines
@@ -90,15 +100,19 @@ export function Field({
 export function FieldGroup({
   label,
   hint,
+  action,
   children,
 }: {
   label: string;
   hint?: string;
+  /** A control on the label's own line, at the far end. For a question about
+   *  the field that would otherwise cost the form a row of its own. */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div role="group" aria-label={label} className="block">
-      {fieldContent(label, children, hint)}
+      {fieldContent(label, children, hint, undefined, action)}
     </div>
   );
 }

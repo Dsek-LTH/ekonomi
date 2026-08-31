@@ -333,9 +333,13 @@
       "dateFuture": "The date is in the future. A purchase cannot have been made later than today",
       "dateTooLate": "Older than {days} days. An expense out of your own pocket must be filed within {days} days of the purchase and cannot be accepted later. Contact the skattmästare for further help",
       "amount": "Amount",
+      "directionOut": "Expense",
+      "directionReturn": "Return",
+      "returnMeans": "{amount} comes back to the section.",
       "distribution": "Cost distribution",
       "paymentType": "Payment type",
       "paymentTypeFixed": "This expense accounts for a purchase on your section card, so the payment type is fixed. To claim your own money back instead, start a new expense without picking the transaction.",
+      "paymentTypeReturn": "A return goes back to the guild card it was paid with.",
       "matchTitle": "Match against a bank transaction",
       "matchLead": "Pick the guild card transaction this purchase belongs to. Only transactions for exactly {amount} can be picked. The rest are shown anyway, so you can see what is there.",
       "amountMismatch": "The amount does not match the expense",
@@ -350,7 +354,9 @@
       "resultUnitConcerned": "the result unit concerned",
       "resubmit": "Submit again",
       "submit": "Submit for approval",
-      "negateAmount": "Toggle a negative amount (a return)"
+      "direction": "What is this?",
+      "directionOutHint": "Something was bought, to be booked or reimbursed.",
+      "directionReturnHint": "Money is coming back, a refund for instance."
     },
     "field": {
       "title": "Description",
@@ -806,6 +812,7 @@
     "income": "Income",
     "stock": "Stock",
     "stockLog": "Stock log",
+    "stockStats": "Statistics",
     "groupStock": "Stock",
     "stockEvents": "Occasions",
     "roles": "Roles & permissions"
@@ -816,10 +823,9 @@
     "costCenter": "Cost center",
     "commentPlaceholder": "Comment (optional)…",
     "amountPlaceholder": "Amount",
+    "unit": "kr",
     "removeRow": "Remove row",
-    "add": "+ Add cost center",
-    "negateAmount": "Toggle a negative amount",
-    "negateLabel": "Return"
+    "add": "+ Add cost center"
   },
   "receipt": {
     "prevDocument": "Previous document",
@@ -1929,6 +1935,7 @@
     "saved": "The movement was recorded.",
     "saveFailed": "Could not record the movement",
     "litres": "{litres} l",
+    "clPerKrona": "{cl} cl/kr",
     "attention": "{count, plural, =1 {1 product needs a look} other {# products need a look}}",
     "counts": {
       "products": "{count, plural, =1 {1 product} other {# products}}",
@@ -2071,6 +2078,7 @@
         "kind": "Counted as",
         "size": "Volume",
         "abv": "ABV",
+        "alcoholPerKrona": "Alcohol per krona",
         "onHand": "In stock",
         "litres": "Litres",
         "value": "Value",
@@ -2118,10 +2126,10 @@
       "total": "Total",
       "col": {
         "product": "Product",
+        "price": "Unit price",
         "in": "In"
       },
-      "each": "at {price}",
-      "unpriced": "no purchase price",
+      "unpriced": "no price",
       "noteHint": "Goes on every row. An invoice number, say.",
       "notePlaceholder": "Invoice 12345",
       "addProduct": "Type or pick a product…",
@@ -2164,6 +2172,7 @@
       "size": "Volume each",
       "abv": "Strength",
       "unitCost": "Cost price incl. deposit",
+      "alcoholPerKrona": "Alcohol per krona",
       "totalVolume": "Total volume",
       "events": "Out and in",
       "eventsHint": "What the product did at each occasion. If somebody changed a night's figures, it is behind the arrow.",
@@ -2271,6 +2280,54 @@
       "value": "Stock value",
       "notice": "The figures show the stock as it stood on {date}. Movements after that date are left out.",
       "today": "Show today"
+    },
+    "revalue": {
+      "action": "Recalculate the stock value",
+      "title": "Recalculate the stock value?",
+      "description": "Every product's log is read through again and its value rewritten to what the rules give. Purchase prices are left alone: each row carries the price it was booked at.",
+      "done": "{rows} rows on {products} products. Stock: {before} → {after}.",
+      "settled": "Nothing to recalculate. The stock value is already what the rules give.",
+      "failed": "Could not recalculate the stock value."
+    },
+    "stats": {
+      "title": "Stock statistics",
+      "description": "What the shelf has been worth, what it is made of, and what went through it.",
+      "period": "Period",
+      "range": {
+        "week": "Week",
+        "month": "Month",
+        "halfYear": "6 months",
+        "year": "Year",
+        "all": "All"
+      },
+      "from": "From",
+      "to": "To",
+      "clear": "Clear",
+      "valueTitle": "Stock value over time",
+      "valueNow": "Right now: {value}",
+      "valueOfWhole": "{shown} of the whole shelf's {whole}",
+      "chartAlt": "The stock value over time, stacked by drink type.",
+      "total": "Total",
+      "flowTitle": "In the period",
+      "flowHint": "What was bought and what was got through, at purchase value. The four divide the period between them: checkouts count net, so what came home unopened was not consumed, and spill stands on its own.",
+      "flow": {
+        "purchased": "Purchased",
+        "consumed": "Consumed",
+        "wasted": "Spill",
+        "counted": "Stocktake"
+      },
+      "mixTitle": "The mix now",
+      "mixHint": "Litres and value per drink type, at the end of the period.",
+      "moversTitle": "Most moved products",
+      "moversHint": "What left the shelf in the period, and what is left of it.",
+      "nothing": "Nothing moved in this period.",
+      "category": {
+        "OL": "Beer",
+        "OVRIG_JASTDRYCK": "Other fermented drinks",
+        "VIN": "Wine",
+        "SPRITDRYCK": "Spirits",
+        "ALKOHOLDRYCKSLIKNANDE": "Alcohol-like preparations"
+      }
     },
     "ml": "{ml} ml"
   }

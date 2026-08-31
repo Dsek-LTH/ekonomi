@@ -22,14 +22,19 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { DateInput } from "@/components/ui/field";
-import { IconBox, IconPlus } from "@/components/ui/icons";
+import { IconBox, IconPlus, IconSync } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/icon-button";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useNotify } from "@/components/shell/notifications";
+import { useMutation } from "@/components/shell/use-mutation";
 import { Notice } from "@/components/ui/notice";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
-import { unitVolume } from "@/lib/stock/onhand";
+import { alcoholPerKrona, unitVolume } from "@/lib/stock/onhand";
 import { hasTag, tagsInUse } from "@/lib/stock/tags";
 import { TagChips } from "@/components/stock/tag-chips";
-import { CATEGORIES, ProductDialog } from "./product-dialog";
+import { ProductDialog } from "./product-dialog";
+import { CATEGORIES } from "@/lib/domain/categories";
 
 const kr = (ore: number) =>
   `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
@@ -37,6 +42,11 @@ const kr = (ore: number) =>
 const litres = (ml: number) =>
   new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
     ml / 1000,
+  );
+
+const clPerKrona = (cl: number) =>
+  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+    cl,
   );
 
 export default function StockClient({
@@ -55,7 +65,43 @@ export default function StockClient({
   const t = useTranslations("stock");
   const router = useRouter();
   const controls = useTableControls();
+  const confirm = useConfirm();
+  const notify = useNotify();
+  const { pending, mutate } = useMutation();
   const [adding, setAdding] = useState(false);
+
+  /**
+   * Read every product's log forward again.
+   *
+   * For the two things a write cannot settle by itself: a valuation rule that
+   * has changed since the rows were written, and rows written before there was
+   * a rule at all. It is asked for rather than run on a schedule because it
+   * rewrites stored figures, and it says what it did afterwards because a
+   * maintenance action that reports nothing is one nobody can tell worked.
+   */
+  async function revalue() {
+    const ok = await confirm({
+      title: t("revalue.title"),
+      message: t("revalue.description"),
+      confirmLabel: t("revalue.action"),
+    });
+    if (!ok) return;
+    const done = await mutate<{ products: number; rows: number; beforeOre: number; afterOre: number }>(
+      "/api/stock/revalue",
+      { key: "revalue", error: t("revalue.failed") },
+    );
+    if (!done) return;
+    notify.success(
+      done.rows === 0
+        ? t("revalue.settled")
+        : t("revalue.done", {
+            rows: done.rows,
+            products: done.products,
+            before: kr(done.beforeOre),
+            after: kr(done.afterOre),
+          }),
+    );
+  }
 
   /**
    * The date lives in the URL, not in state. See the page.
@@ -141,6 +187,29 @@ export default function StockClient({
       cell: (p) => {
         const ml = unitVolume(p);
         return ml == null ? <span className="text-muted">–</span> : t("ml", { ml });
+      },
+    },
+    {
+      // What a krona buys of this bottle, in pure alcohol: the ratio somebody
+      // reaches for when two products look similar on the shelf but are not
+      // similar in what they cost per drop. A fact about the product itself,
+      // worked out from its own size and cost price, so it sits with size
+      // rather than with the value column further right, which is what the
+      // *whole* shelf of it is worth today.
+      key: "alcoholPerKrona",
+      header: t("products.col.alcoholPerKrona"),
+      align: "right",
+      className: "tabular-nums",
+      value: (p) => alcoholPerKrona(p) ?? -1,
+      sortable: true,
+      mobile: "hide",
+      cell: (p) => {
+        const cl = alcoholPerKrona(p);
+        return cl == null ? (
+          <span className="text-muted">–</span>
+        ) : (
+          t("clPerKrona", { cl: clPerKrona(cl) })
+        );
       },
     },
     {
@@ -258,9 +327,23 @@ export default function StockClient({
                 <span className="text-xs uppercase tracking-wide text-muted">
                   {t("asOf.value")}
                 </span>
-                <span className="mt-1 flex h-11 items-center justify-end text-lg font-semibold tabular-nums sm:h-9">
-                  {kr(totalValueOre)}
-                </span>
+                <div className="mt-1 flex h-11 items-center justify-end gap-2 sm:h-9">
+                  <span className="text-lg font-semibold tabular-nums">{kr(totalValueOre)}</span>
+                  {/* Beside the figure it repairs, which is the only place it
+                      means anything. It cannot re-price the shelf: every row
+                      carries the cost it was booked at, so this can only settle
+                      what the rules already imply. See the route. */}
+                  {canManage && (
+                    <IconButton
+                      label={t("revalue.action")}
+                      title={t("revalue.action")}
+                      loading={pending === "revalue"}
+                      onClick={revalue}
+                    >
+                      <IconSync className="size-4" />
+                    </IconButton>
+                  )}
+                </div>
               </div>
             </div>
           }

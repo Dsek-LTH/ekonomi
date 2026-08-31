@@ -198,6 +198,14 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconList,
         visible: (u) => canViewStock(u.capabilities),
       },
+      // Last in the group, because it is the one you open to look rather than
+      // to do: the three above are where the work happens.
+      {
+        href: "/stock/stats",
+        label: "stockStats",
+        icon: IconChart,
+        visible: (u) => canViewStock(u.capabilities),
+      },
     ],
   },
   {

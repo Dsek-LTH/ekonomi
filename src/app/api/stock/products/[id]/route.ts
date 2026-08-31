@@ -21,9 +21,22 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
 
+  // Everything a patch may touch, so the change log below can say what each
+  // field was before somebody changed it.
   const existing = await prisma.stockProduct.findUnique({
     where: { id },
-    select: { kind: true, nominalMl: true },
+    select: {
+      kind: true,
+      name: true,
+      category: true,
+      abv: true,
+      unitMl: true,
+      nominalMl: true,
+      ean: true,
+      costPriceOre: true,
+      systembolagetId: true,
+      tags: true,
+    },
   });
   if (!existing) return fail(404, "stock.productNotFound");
 
@@ -46,25 +59,54 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (clash) return clash;
   }
 
+  const data = {
+    name: body.name,
+    kind: body.kind,
+    category: body.category,
+    abv: body.abv,
+    unitMl: body.unitMl,
+    nominalMl: body.nominalMl,
+    ean: body.ean,
+    costPriceOre: body.costPriceOre,
+    systembolagetId: body.systembolagetId,
+    // `undefined` leaves the list as it is; an empty list is a real edit,
+    // the one that takes the last tag off a product.
+    tags: body.tags,
+  };
+
+  /**
+   * What this patch actually changes, field by field.
+   *
+   * A patch carries whatever the form had, most of it identical to what is
+   * already stored, so "what was sent" is not the same question as "what
+   * changed" and only the second is worth recording. Compared as text, which is
+   * also how it is kept: this is read by a person asking who typed 149, not
+   * computed on. See the schema note on StockProductChange.
+   *
+   * The price is the field this exists for. It decides what the *next* delivery
+   * is booked at and nothing before it (see StockEntry.unitCostOre), so a
+   * change here is silent by design, and a silent change to a figure that
+   * values a cellar is one somebody has to be able to look up afterwards.
+   */
+  const asText = (v: unknown): string | null =>
+    v == null ? null : Array.isArray(v) ? v.join(", ") : String(v);
+  const edits = Object.entries(data).flatMap(([field, next]) => {
+    if (next === undefined) return [];
+    const before = asText(existing[field as keyof typeof existing]);
+    const after = asText(next);
+    return before === after ? [] : [{ field, fromValue: before, toValue: after }];
+  });
+
   const updated = await orNotFound(
     () =>
-      prisma.stockProduct.update({
-        where: { id },
-        data: {
-          name: body.name,
-          kind: body.kind,
-          category: body.category,
-          abv: body.abv,
-          unitMl: body.unitMl,
-          nominalMl: body.nominalMl,
-          ean: body.ean,
-          costPriceOre: body.costPriceOre,
-          systembolagetId: body.systembolagetId,
-          // `undefined` leaves the list as it is; an empty list is a real edit,
-          // the one that takes the last tag off a product.
-          tags: body.tags,
-        },
-        select: { id: true },
+      prisma.$transaction(async (tx) => {
+        const row = await tx.stockProduct.update({ where: { id }, data, select: { id: true } });
+        if (edits.length > 0) {
+          await tx.stockProductChange.createMany({
+            data: edits.map((e) => ({ ...e, productId: id, actorId: g.actor.id })),
+          });
+        }
+        return row;
       }),
     "stock.productNotFound",
   );

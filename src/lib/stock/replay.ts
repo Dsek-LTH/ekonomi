@@ -42,6 +42,9 @@ export interface ReplayRow {
    */
   countedQty?: number | null;
   valueDeltaOre: number;
+  /** What a unit cost when this row was written. See the schema note on
+   *  StockEntry.unitCostOre, and lib/stock/value.ts. */
+  unitCostOre?: number | null;
 }
 
 /** What a row should hold once the log has been read forward. */
@@ -62,10 +65,7 @@ export const differs = (row: ReplayRow, want: Settled): boolean =>
  * `rows` in the order they happened: by the day they happened, then by the
  * order they were written, which is the only tiebreak that is stable.
  */
-export function replay(
-  rows: readonly ReplayRow[],
-  costPriceOre: number | null | undefined,
-): Map<string, Settled> {
+export function replay(rows: readonly ReplayRow[]): Map<string, Settled> {
   /** What the shelf holds as the log is walked. Index 0 is whole things. */
   const running: Record<number, number> = { 0: 0, 80: 0, 60: 0, 40: 0, 20: 0 };
   const held: Valued = { qty: 0, valueOre: 0 };
@@ -92,7 +92,11 @@ export function replay(
     running[0] += units;
     for (const level of LEVELS) running[level] += open[level] ?? 0;
 
-    const delta = valueDelta(held, { kind: row.kind, units, costPriceOre });
+    const delta = valueDelta(held, {
+      kind: row.kind,
+      units,
+      unitCostOre: row.unitCostOre,
+    });
     held.qty += costBasis({ units });
     held.valueOre += delta;
 

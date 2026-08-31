@@ -24,18 +24,9 @@ import type { CreateStockProduct } from "@/lib/api/schemas/stock";
 import { parseSystembolagetId } from "@/lib/stock/systembolaget";
 import { MAX_TAG, MAX_TAGS, cleanTags, hasTag } from "@/lib/stock/tags";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
+import { CATEGORIES } from "@/lib/domain/categories";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
-
-/** The order the pickers list them in: what the cellar carries most of first,
- *  the rarities last. */
-export const CATEGORIES: DrinkCategory[] = [
-  "OL",
-  "OVRIG_JASTDRYCK",
-  "VIN",
-  "SPRITDRYCK",
-  "ALKOHOLDRYCKSLIKNANDE",
-];
 
 type Draft = {
   name: string;

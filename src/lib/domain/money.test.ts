@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   commaForm,
-  flipSign,
+  groupForm,
   isAmountInput,
   oreToSEK,
   parseOre,
@@ -61,6 +61,8 @@ describe("parseSEK", () => {
   });
 
   it("reads a return as a negative amount", () => {
+    // Nothing types one of these, and the database holds them: a stored return
+    // is read here before a screen shows its magnitude.
     expect(parseSEK("-250")).toBe(-250);
     expect(parseSEK("-1 234,50")).toBe(-1234.5);
   });
@@ -73,6 +75,8 @@ describe("parseSEK", () => {
     expect(parseSEK("-")).toBe(0);
   });
 });
+
+
 
 describe("parseOre", () => {
   it("goes from typed text straight to integer öre", () => {
@@ -87,7 +91,6 @@ describe("isAmountInput", () => {
     expect(isAmountInput("12,50")).toBe(true);
     expect(isAmountInput("12.50")).toBe(true);
     expect(isAmountInput("1 234,50")).toBe(true);
-    expect(isAmountInput("-12,50")).toBe(true);
     expect(isAmountInput("0,01")).toBe(true);
   });
 
@@ -95,7 +98,6 @@ describe("isAmountInput", () => {
   // would mean a field nobody can type a decimal into.
   it("takes half-typed input", () => {
     expect(isAmountInput("")).toBe(true);
-    expect(isAmountInput("-")).toBe(true);
     expect(isAmountInput("12")).toBe(true);
     expect(isAmountInput("12,")).toBe(true);
     expect(isAmountInput("12,5")).toBe(true);
@@ -114,6 +116,15 @@ describe("isAmountInput", () => {
     expect(isAmountInput("12,50 kr")).toBe(false);
     expect(isAmountInput("1,2,3")).toBe(false);
   });
+
+  it("refuses everything the keyboard cannot type", () => {
+    // A magnitude, and only a magnitude. No sign, because no phone keypad has
+    // one and the direction of an utlägg is a control of its own; no operator,
+    // because a receipt of several lines is several rows.
+    expect(isAmountInput("-100")).toBe(false);
+    expect(isAmountInput("100+200")).toBe(false);
+    expect(isAmountInput("100-50")).toBe(false);
+  });
 });
 
 describe("round trip", () => {
@@ -121,6 +132,23 @@ describe("round trip", () => {
     for (const sek of [0, 1, 19.99, 123.45, -250, 1234.5, 0.01]) {
       expect(oreToSEK(sekToOre(sek))).toBe(sek);
     }
+  });
+});
+
+describe("groupForm", () => {
+  it("groups a figure the way it is read", () => {
+    // A non-breaking space between the thousands, which is what Swedish uses
+    // and what the guard therefore has to take back when it is pasted.
+    expect(groupForm("1234.5")).toBe("1\u00a0234,50");
+    expect(groupForm("700")).toBe("700");
+    expect(isAmountInput(groupForm("1234.5"))).toBe(true);
+  });
+
+  it("leaves a field with nothing in it alone", () => {
+    // Including the moment between the separator and the öre, where formatting
+    // would rewrite what somebody is still typing.
+    expect(groupForm("")).toBe("");
+    expect(groupForm(" ")).toBe(" ");
   });
 });
 
@@ -139,29 +167,5 @@ describe("commaForm", () => {
 
   it("leaves a lone minus alone", () => {
     expect(commaForm("-")).toBe("-");
-  });
-});
-
-describe("flipSign", () => {
-  it("turns a positive amount negative and back", () => {
-    expect(flipSign("12,50")).toBe("-12,50");
-    expect(flipSign("-12,50")).toBe("12,50");
-  });
-
-  it("flips an empty field to a lone minus", () => {
-    // Somebody reaching for the sign before the digits, which isAmountInput
-    // already allows as partial input.
-    expect(flipSign("")).toBe("-");
-    expect(isAmountInput(flipSign(""))).toBe(true);
-  });
-
-  it("takes the minus back off again", () => {
-    expect(flipSign("-")).toBe("");
-  });
-
-  it("always leaves something the field will accept", () => {
-    for (const v of ["", "12", "12,50", "-12,50", "1 234,50", "-"]) {
-      expect(isAmountInput(flipSign(v))).toBe(true);
-    }
   });
 });

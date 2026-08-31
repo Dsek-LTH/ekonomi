@@ -69,10 +69,11 @@ export const unitCostOre = (held: Valued): number | null =>
 /**
  * What a delivery is worth.
  *
- * The product's recorded unit cost times the units, and nothing else. The price
- * belongs to the product rather than to the movement: it is the same number for
- * every delivery of it, and asking for it again on each one is asking somebody
- * standing in a cellar with a crate to remember what a bottle costs.
+ * The unit cost this row captured, times the units, and nothing else. The
+ * price is copied off the product when the row is written, so nobody standing
+ * in a cellar with a crate has to remember what a bottle costs, and correcting
+ * the product afterwards cannot reach back and re-price what already
+ * happened.
  *
  * Zero when nobody has priced the product. A gap that shows up as a gap, a
  * shelf worth nothing when it plainly is not, rather than a total quietly
@@ -80,10 +81,10 @@ export const unitCostOre = (held: Valued): number | null =>
  */
 export function purchaseValueOre(
   units: number,
-  costPriceOre: number | null | undefined,
+  unitCostOre: number | null | undefined,
 ): number {
-  if (costPriceOre == null) return 0;
-  return Math.round(costPriceOre * units);
+  if (unitCostOre == null) return 0;
+  return Math.round(unitCostOre * units);
 }
 
 /**
@@ -126,16 +127,16 @@ export function purchaseValueOre(
  */
 export function valueDelta(
   held: Valued,
-  change: { kind: StockEntryKind; units: number; costPriceOre?: number | null },
+  change: { kind: StockEntryKind; units: number; unitCostOre?: number | null },
 ): number {
-  if (change.kind === "PURCHASE") return purchaseValueOre(change.units, change.costPriceOre);
+  if (change.kind === "PURCHASE") return purchaseValueOre(change.units, change.unitCostOre);
 
   const qty = costBasis({ units: change.units });
   if (qty < 0) return -costOfRemoval(held, -qty);
   if (qty > 0) {
     return held.qty > 0
       ? Math.round((held.valueOre * qty) / held.qty)
-      : purchaseValueOre(qty, change.costPriceOre);
+      : purchaseValueOre(qty, change.unitCostOre);
   }
   return 0;
 }
@@ -156,15 +157,28 @@ export function valueDelta(
  * The figures it produces are not the ones that were computed at the time, and
  * that is the point. They are the ones that would have been computed if the
  * corrected figure had been right all along, which is what a correction means.
+ *
+ * It takes no price of its own. Every row carries the cost it was booked at, so
+ * this cannot re-price history even by accident: replaying a product after a
+ * price edit produces exactly what it produced before, and the only way a past
+ * value moves is somebody deliberately correcting the row that holds it.
  */
 export function revalue(
-  rows: readonly { id: string; kind: StockEntryKind; units: number }[],
-  costPriceOre: number | null | undefined,
+  rows: readonly {
+    id: string;
+    kind: StockEntryKind;
+    units: number;
+    unitCostOre?: number | null;
+  }[],
 ): Map<string, number> {
   const held: Valued = { qty: 0, valueOre: 0 };
   const out = new Map<string, number>();
   for (const row of rows) {
-    const delta = valueDelta(held, { kind: row.kind, units: row.units, costPriceOre });
+    const delta = valueDelta(held, {
+      kind: row.kind,
+      units: row.units,
+      unitCostOre: row.unitCostOre,
+    });
     held.qty += costBasis({ units: row.units });
     held.valueOre += delta;
     out.set(row.id, delta);

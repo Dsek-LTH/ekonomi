@@ -262,7 +262,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // What a count has to say, and what everything cost, both follow from the
     // rows before them, so the log is read forward rather than patched.
     for (const productId of touched) {
-      await replayProduct(tx, productId, byId.get(productId)!.costPriceOre);
+      await replayProduct(tx, productId);
     }
 
     return { written } as const;

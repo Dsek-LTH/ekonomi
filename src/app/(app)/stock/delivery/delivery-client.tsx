@@ -411,10 +411,16 @@ export default function DeliveryClient({
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
-              <th className={cn(headerCell, "w-[64%] text-left")}>
+              <th className={cn(headerCell, "w-[46%] text-left")}>
                 {t("delivery.col.product")}
               </th>
-              <th className={cn(headerCell, "w-[36%]")}>{t("delivery.col.in")}</th>
+              {/* A column of its own, because it is a figure this sheet is read
+                  against an invoice by, and a figure hiding in a sentence
+                  beside a name cannot be scanned down. */}
+              <th className={cn(headerCell, "w-[22%] text-right")}>
+                {t("delivery.col.price")}
+              </th>
+              <th className={cn(headerCell, "w-[32%]")}>{t("delivery.col.in")}</th>
             </tr>
           </thead>
 
@@ -430,20 +436,6 @@ export default function DeliveryClient({
                         <Link href={`/stock/${id}`} className="font-medium hover:underline">
                           {product.name}
                         </Link>
-                        {/* The unit price, because the total above is only
-                            checkable if the parts of it are. A product with no
-                            price says so here rather than quietly contributing
-                            nothing to it. */}
-                        <span
-                          className={cn(
-                            "ml-2 text-xs",
-                            product.costPriceOre == null ? "text-warning" : "text-muted",
-                          )}
-                        >
-                          {product.costPriceOre == null
-                            ? t("delivery.unpriced")
-                            : t("delivery.each", { price: kr(product.costPriceOre) })}
-                        </span>
                       </span>
                       {/* Always there on a phone, which has no hover to reveal
                           it with. A control you can only get at with a pointer
@@ -459,6 +451,28 @@ export default function DeliveryClient({
                         <IconX className="size-4" />
                       </button>
                     </div>
+                  </td>
+                  {/* Text, not a disabled box. What a price is on this sheet
+                      is the product's own figure, and the way to change it is
+                      to change the product: a box that refuses to be typed in
+                      is an invitation followed by a no. Nothing here is
+                      focusable, so it is not a stop on the way to the quantity
+                      beside it, and it sits on the header's ground rather than
+                      the row's, which is what says "read this" next to a cell
+                      that says "fill this in".
+
+                      A product nobody has priced says so, in the warning
+                      colour: it is about to be delivered onto the shelf at a
+                      value of nothing. */}
+                  <td
+                    className={cn(
+                      "bg-surface/40 px-2 py-1.5 text-right text-xs tabular-nums",
+                      product.costPriceOre == null ? "text-warning" : "text-muted",
+                    )}
+                  >
+                    {product.costPriceOre == null
+                      ? t("delivery.unpriced")
+                      : kr(product.costPriceOre)}
                   </td>
                   <td className="p-0 align-middle">{cellFor(product)}</td>
                 </tr>
@@ -502,6 +516,7 @@ export default function DeliveryClient({
                   </IconButton>
                 </div>
               </td>
+              <td className="bg-surface/40" />
               <td />
             </tr>
           </tbody>

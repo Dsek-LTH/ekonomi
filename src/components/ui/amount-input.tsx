@@ -4,35 +4,42 @@
 //
 // Every amount field in the app repeated the same three lines (`inputMode`,
 // the `isAmountInput` guard, and a raw string of kronor) and every one of them
-// had the same two holes on a phone, which is where most utlägg are actually
-// filed:
+// had the same hole on a phone, which is where most utlägg are actually filed:
+// the decimal separator. A phone's decimal pad offers whatever its *device*
+// locale uses, so a Swedish member with an English phone gets a full stop and
+// no comma. Both have always parsed; what was missing is that the field then
+// sat there reading "12.50" in a form where everything else is written with a
+// comma. It is taken as typed and shown back as a comma on blur.
 //
-//   • the decimal separator. A phone's decimal pad offers whatever its *device*
-//     locale uses, so a Swedish member with an English phone gets a full stop
-//     and no comma. Both have always parsed; what was missing is that the field
-//     then sat there reading "12.50" in a form where everything else is written
-//     with a comma. It is taken as typed and shown back as a comma on blur.
+// What this field is not asked to do is anything the keyboard cannot type. A
+// phone's number pad is ten digits and a separator: no minus, at any inputmode
+// and behind no pattern, and no plus either, since iOS draws the decimal pad as
+// its telephone pad with `+ * #` swapped for the separator. Both were tried
+// here, as a sign cell inside the field and then as a strip floated over the
+// keyboard, and the second one loses: the web has no `inputAccessoryView`, so a
+// strip can only guess where the keyboard is, and on iOS it guesses wrong and
+// lands in the row Safari keeps for its own AutoFill icons.
 //
-//   • the minus. No mobile numeric keypad has one, not iOS's, not Android's,
-//     at any `inputMode`, so a negative amount could not be entered on a phone
-//     at all. A return is an ordinary thing here (the same utlägg with the sign
-//     flipped, which the edit route and the allocations both handle), so where
-//     one is meaningful the sign gets a button rather than being unreachable.
+// So the form asks differently instead. A figure is a magnitude, one per field;
+// which way the money goes is a control of its own on the utlägg (see the
+// wizard's direction toggle), and a receipt of several lines is several rows.
+// Nothing here needs a key that is not on the pad.
 //
 // Not `type="number"`: it drops a lone leading "-" from `.value`, refuses
 // "1 234,50", and hands back a locale-dependent empty string for anything it
 // dislikes, so a half-typed amount vanishes as you type it.
-import { commaForm, isAmountInput } from "@/lib/domain/money";
-import { Input, type ControlSize } from "@/components/ui/field";
+import { useState } from "react";
+
+import { commaForm, groupForm, isAmountInput } from "@/lib/domain/money";
+import { Input, SuffixedInput, type ControlSize } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
 
 /**
  * The props any amount field needs, for an input that draws itself.
  *
- * For the ones inside a table (the voucher's debit and credit columns, an
- * allocation row) which carry their own classes and cannot be a boxed control.
- * Spread it over a bare `<input>` and the guard, the keypad and the separator
- * all come with it.
+ * For the ones inside a table (the voucher's debit and credit columns) which
+ * carry their own classes and cannot be a boxed control. Spread it over a bare
+ * `<input>` and the guard, the keypad and the separator all come with it.
  */
 export function amountFieldProps({
   value,
@@ -61,151 +68,74 @@ export function amountFieldProps({
 }
 
 /**
- * The two halves of a signed amount field, mirroring CONTROL_SIZES.
+ * The boxed amount field: an utlägg's total, and each row it is split across.
  *
- * The border, the rounding and the height belong to the box; the padding
- * belongs to the parts inside it. So the sizes are split here rather than taken
- * whole. A control that put `px` on the wrapper would inset its own segments.
- */
-const SPLIT_SIZES: Record<ControlSize, { box: string; cell: string }> = {
-  sm: { box: "h-11 rounded-lg sm:h-9", cell: "px-2.5" },
-  md: { box: "rounded-xl", cell: "px-3.5 py-2.5" },
-};
-
-/**
- * An amount whose sign is a part of the field rather than a character in it.
+ * Two things beyond the props above.
  *
- * The sign was a minus typed into the box, and on a phone that is not something
- * anybody can do. No mobile numeric keypad has the key. So it stops being text
- * at all: the field is split, the left cell holds the sign and cannot be typed
- * in, and the digits beside it are only ever a magnitude. Pressing the cell is
- * the only way the sign changes, which also means the guard on the text no
- * longer has to allow a character the keypad cannot produce.
+ * While nobody is in it the figure is grouped the way it is read (1 234,50) and
+ * while somebody is it is exactly what they typed, because a thousands space is
+ * pleasant to read and miserable to backspace through.
  *
- * The value handed up is still the ordinary signed string, "-1234,50", since
- * that is what `parseSEK` reads and what every caller stores. The split is what
- * the reader sees, not what the form holds.
- *
- * `label` is the word beside the glyph, and it is the difference between the
- * two places this is used. The utlägg's own total says "Retur", because that is
- * what a negative total *is* and the field has room to say it. A row of the
- * distribution underneath says nothing. It is one line of a sum, its sign
- * decides whether it adds or subtracts, and five controls already share that
- * row. Same control, and the word only where it is the whole meaning.
- */
-export function SignedAmountInput({
-  value,
-  onChange,
-  label,
-  title,
-  size = "md",
-  className,
-  inputClassName,
-  ...props
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  /** The word beside the sign. Omitted, the cell is the glyph alone. */
-  label?: string;
-  /** The longer phrasing, for a pointer. */
-  title?: string;
-  size?: ControlSize;
-  className?: string;
-  inputClassName?: string;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size">) {
-  const negative = value.startsWith("-");
-  const magnitude = negative ? value.slice(1) : value;
-  const sizes = SPLIT_SIZES[size];
-
-  // The box takes the sign back off the text on the way in, and puts it back on
-  // the way out. A minus reaching this from a hardware keyboard is refused: the
-  // sign has a control of its own now, and two ways to set one thing is how the
-  // two disagree.
-  const field = amountFieldProps({
-    value: magnitude,
-    onChange: (next) => onChange(next.startsWith("-") ? value : (negative ? "-" : "") + next),
-  });
-
-  return (
-    <div
-      className={cn(
-        "focus-ring-within flex items-stretch overflow-hidden border bg-background text-sm",
-        "transition-[color,background-color,border-color] duration-150",
-        sizes.box,
-        // The whole field answers, not just the cell. A figure the section is
-        // getting back rather than paying out is worth more than one character.
-        negative ? "border-danger" : "border-border",
-        className,
-      )}
-    >
-      {/* No `aria-label`: with a word on it the button says what it is, and a
-          label reading "Växla till negativt belopp" over a face reading "Retur"
-          is the mismatch WCAG 2.5.3 is about. Someone driving this by voice
-          says what they can see. Without a word there is nothing to read, so
-          the title carries the name instead. `aria-pressed` has the state
-          either way. */}
-      <button
-        type="button"
-        onClick={() => onChange(negative ? magnitude : `-${magnitude}`)}
-        title={title}
-        aria-label={label ? undefined : title}
-        aria-pressed={negative}
-        className={cn(
-          "flex shrink-0 items-center gap-1 border-r font-medium",
-          "transition-[color,background-color,border-color] duration-150",
-          sizes.cell,
-          negative
-            ? "border-danger bg-danger-soft text-danger"
-            : "border-border text-muted hover:bg-surface hover:text-foreground",
-        )}
-      >
-        {/* U+2212, not a hyphen: it is the character the figure beside it is
-            printed with, and at this size a hyphen reads as a dash. */}
-        <span aria-hidden className="text-base leading-none">
-          {negative ? "\u2212" : "+"}
-        </span>
-        {label}
-      </button>
-
-      <input
-        {...props}
-        {...field}
-        className={cn(
-          "w-full min-w-0 flex-1 bg-transparent tabular-nums placeholder:text-muted/60",
-          sizes.cell,
-          negative && "text-danger",
-          inputClassName,
-        )}
-      />
-    </div>
-  );
-}
-
-/**
- * The plain amount field, for the amounts that cannot be negative.
- *
- * A voucher line is a positive figure on one side or the other, and a schablon
- * is not a debt. Where a return is a real case, an utlägg's total and the rows
- * it is split across, the caller reaches for SignedAmountInput instead.
+ * And it can carry its unit inside the box, the way the strength field on a
+ * stock product carries its "%". A "kr" standing outside the field is a third
+ * thing on a crowded row, and the first to be mistaken for a word in the
+ * comment beside it; inside, it is part of the figure it belongs to.
  */
 export function AmountInput({
   value,
   onChange,
+  suffix,
   size = "md",
   className,
+  inputClassName,
+  onFocus,
+  onBlur,
   ...props
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** The unit, inside the box: "kr". Hidden from a screen reader, which has the
+   *  field's own label to go on. */
+  suffix?: React.ReactNode;
   size?: ControlSize;
+  /** The control: its width and where it sits. */
   className?: string;
+  /** The text inside it: an alignment. Without a suffix there is one element
+   *  and both land on it. */
+  inputClassName?: string;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size">) {
-  return (
-    <Input
-      {...props}
-      {...amountFieldProps({ value, onChange })}
-      size={size}
-      className={cn("tabular-nums", className)}
-    />
-  );
+  const [focused, setFocused] = useState(false);
+  const field = amountFieldProps({ value, onChange });
+
+  const shared = {
+    ...props,
+    ...field,
+    value: focused ? value : groupForm(value),
+    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+      setFocused(true);
+      onFocus?.(e);
+    },
+    onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+      setFocused(false);
+      field.onBlur();
+      onBlur?.(e);
+    },
+    size,
+  };
+
+  if (suffix != null) {
+    return (
+      <SuffixedInput
+        {...shared}
+        className={className}
+        inputClassName={cn("tabular-nums", inputClassName)}
+        suffix={
+          <span aria-hidden className="shrink-0 text-xs text-muted">
+            {suffix}
+          </span>
+        }
+      />
+    );
+  }
+  return <Input {...shared} className={cn("tabular-nums", className, inputClassName)} />;
 }

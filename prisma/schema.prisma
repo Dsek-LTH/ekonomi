@@ -210,6 +210,7 @@ model User {
   stockEntries         StockEntry[]            @relation("StockEntryActor")
   stockEvents          StockEvent[]            @relation("StockEventCreator")
   stockChanges         StockChange[]           @relation("StockChangeActor")
+  stockProductChanges  StockProductChange[]    @relation("StockProductChangeActor")
   mileageRates         MileageRate[]           @relation("MileageRateAuthor")
 
   createdAt DateTime @default(now())
@@ -1544,6 +1545,7 @@ model StockProduct {
 
   entries StockEntry[]
   changes StockChange[]
+  edits   StockProductChange[]
   lots    StockLot[]
 
   createdAt DateTime @default(now())
@@ -1642,6 +1644,25 @@ model StockEntry {
   /// unique index, so a nullable rung would let a product's whole-bottle cell
   /// be written twice over.
   level Int @default(0)
+
+  /// What one whole unit of this product cost, in öre, when this row was
+  /// written.
+  ///
+  /// Copied off the product at that moment and never read from it again. That
+  /// is the whole point: a price is a fact about the day stock arrived, not a
+  /// property of the product that reaches backwards. Correcting a product's
+  /// price changes what the *next* delivery will be booked at and nothing else,
+  /// which is how every inventory system worth the name behaves.
+  ///
+  /// What uses it: a row that brings stock in is worth this times what arrived.
+  /// A row that takes stock out is priced by the moving average at that moment
+  /// instead, and ignores this, but it is captured on every row all the same so
+  /// that replaying a product's value never has to consult anything that can
+  /// change underneath it. See lib/stock/value.ts.
+  ///
+  /// Null where nobody had priced the product. That is a gap showing as a gap:
+  /// the stock is worth nothing until somebody says what it cost.
+  unitCostOre Int?
 
   /// On a stocktake: what was actually counted at this rung.
   ///
@@ -1788,6 +1809,21 @@ model StockChange {
   fromQty Int?
   toQty   Int?
 
+  /// The same, for the price a row was booked at.
+  ///
+  /// A delivery captures what a unit cost when it was written
+  /// (StockEntry.unitCostOre) and nothing may move it afterwards, because a
+  /// price is a fact about the day stock arrived. The one exception is the
+  /// price having been wrong from the start, and that is not an edit somebody
+  /// should be able to make quietly: correcting it re-values every movement of
+  /// that product after it, so what it was, what it became and who decided that
+  /// is recorded here.
+  ///
+  /// Null on a row that only moved a quantity, which is most of them. A single
+  /// change may carry both.
+  fromUnitCostOre Int?
+  toUnitCostOre   Int?
+
   at      DateTime @default(now())
   actorId String
   actor   User     @relation("StockChangeActor", fields: [actorId], references: [id], onDelete: Restrict)
@@ -1795,6 +1831,44 @@ model StockChange {
   @@index([eventId, at])
   @@index([productId, at])
   @@index([entryId])
+}
+
+/// What was changed on a product, and by whom.
+///
+/// The entry log next door records what happened to the *stock*: rows written,
+/// corrected, removed. Nothing recorded what happened to the product itself,
+/// so a cost price could be corrected from 149 to 249 by anyone with stock
+/// rights and the only trace was that figures started coming out differently.
+///
+/// Deliberately a trail rather than a table of prices over time. What a
+/// delivery cost is already on the delivery (StockEntry.unitCostOre), which is
+/// where valuation reads it and the only place it touches money; what was
+/// missing is who typed a figure and when. A price list with dates would answer
+/// "what did we think it cost in March", which nothing in the app asks, and
+/// would put "the current price" in two places at once.
+///
+/// Everything is text, including the figures. This is read, not computed on:
+/// the field's own name and the two spellings of it are what a person needs to
+/// see what somebody did.
+model StockProductChange {
+  id String @id @default(cuid())
+
+  productId String
+  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// The field as the API names it: "costPriceOre", "name", "abv". Not a
+  /// translated label: the log outlives the wording of any screen.
+  field String
+
+  /// As it stood, and as it stands. Null where the field held nothing.
+  fromValue String?
+  toValue   String?
+
+  at      DateTime @default(now())
+  actorId String
+  actor   User     @relation("StockProductChangeActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([productId, at])
 }
 
 enum StockChangeAction {

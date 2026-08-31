@@ -162,3 +162,28 @@ export function pureAlcoholMl(product: StockSubject, ml: number): number | null 
   if (product.abv == null) return null;
   return Math.round((ml * product.abv) / 100);
 }
+
+/**
+ * How much of a krona spent on this product is pure alcohol, in centilitres.
+ *
+ * Systembolaget's own way of putting two different drinks on the same
+ * footing: a strong, cheap spirit and a weak, pricey lager can share a shelf
+ * price and still not be worth the same thing to drink. Worked out from one
+ * whole unit's own size and cost price, never from what is left on the
+ * shelf, so a product with nothing in stock still has an answer, and for
+ * showing only, the same rule as `unitCostOre` in lib/stock/value.ts.
+ *
+ * Null when the ABV, the size or the cost price is missing, or the price is
+ * zero: a ratio against nothing is not a number, and a gap should show as a
+ * gap rather than as a division by it.
+ */
+export function alcoholPerKrona(
+  product: StockSubject & { costPriceOre?: number | null },
+): number | null {
+  if (!product.costPriceOre) return null;
+  const ml = unitVolume(product);
+  if (ml == null) return null;
+  const alcoholMl = pureAlcoholMl(product, ml);
+  if (alcoholMl == null) return null;
+  return alcoholMl / 10 / (product.costPriceOre / 100);
+}

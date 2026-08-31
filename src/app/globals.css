@@ -48,6 +48,23 @@
     --color-on-danger: #ffffff;
 
 
+    /* ── Series ──────────────────────────────────────────────────
+       Five hues for five drink types, in the order they stack. Not picked by
+       eye: run through the palette checks (lightness band, chroma floor,
+       colour-blind separation on every adjacent pair, contrast against the card
+       they are drawn on) and the worst adjacent pair here clears ΔE 14 for a
+       protanope, against a target of 8.
+
+       The hue means something where it can (beer amber, wine red) and the
+       lightness varies as well as the hue, which is what carries a palette
+       through red/green colour blindness. The dark theme has its own steps
+       further down: a palette is chosen for its ground, never flipped. */
+    --series-ol: #c98200;
+    --series-ovrig-jastdryck: #116b3c;
+    --series-vin: #e86a90;
+    --series-spritdryck: #2450c0;
+    --series-alkoholdrycksliknande: #a97bd8;
+
     /* Misc */
     --color-ring: #c93663;
     --color-scrollbar: #c7c7cc;
@@ -136,6 +153,17 @@
   --color-danger-soft: #3a2323;
   --color-on-danger: #ffffff;
 
+
+  /* Series, stepped for the near-black card rather than lightened from the
+     light theme's. The band a dark ground allows is narrower and darker than
+     it looks (L 0.48–0.67), so these are mid-tones, not pastels; the green
+     goes teal, which is what the checks allow beside this pink. Worst adjacent
+     pair ΔE 8.6 for a deuteranope. */
+  --series-ol: #c98200;
+  --series-ovrig-jastdryck: #1fa98c;
+  --series-vin: #c93663;
+  --series-spritdryck: #3e63dd;
+  --series-alkoholdrycksliknande: #a97bd8;
 
   /* Misc */
   --color-ring: #ff7fa5;

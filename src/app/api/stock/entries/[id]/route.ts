@@ -141,7 +141,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         actorId: g.actor.id,
       },
     });
-    await replayProduct(tx, entry.productId, product.costPriceOre);
+    await replayProduct(tx, entry.productId);
     return true;
   }).catch((e: Error) => e.message);
 
@@ -195,7 +195,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         actorId: g.actor.id,
       },
     });
-    await replayProduct(tx, entry.productId, product.costPriceOre);
+    await replayProduct(tx, entry.productId);
     return true;
   }).catch((e: Error) => e.message);
 

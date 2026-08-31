@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
-import { SignedAmountInput } from "@/components/ui/amount-input";
+import { AmountInput } from "@/components/ui/amount-input";
 import { PageShell } from "@/components/page-shell";
 import { wizardChrome } from "./wizard-chrome";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go. See `matchLead` below.
 import { formatSEK } from "@/lib/ui/format";
-import { parseOre, parseSEK, sekToOre } from "@/lib/domain/money";
+import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
@@ -37,6 +37,7 @@ import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import { cn } from "@/lib/ui/utils";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
+import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import type { AllocationRow } from "@/components/allocation-editor";
 
 // The step keys, named by `expenses.wizard.step.<key>` in messages. The match
@@ -51,6 +52,34 @@ const optionCard = (selected: boolean) =>
     "w-full rounded-xl border px-4 py-3 text-left transition-colors",
     selected ? "border-accent bg-accent-soft" : "border-border hover:bg-surface",
   );
+
+/**
+ * Which way the money goes.
+ *
+ * A question of its own rather than a minus in front of the amount, because a
+ * phone's number pad has no minus key and never will (see
+ * components/ui/amount-input.tsx). Every figure in the form is a magnitude and
+ * this says what they mean, once, for the whole claim.
+ */
+type Direction = "out" | "return";
+
+/** What the wizard is holding: every field it fills in, and nothing derived. */
+type WizardDraft = {
+  form: { title: string; purchaseDate: string; gross: string };
+  direction: Direction;
+  allocations: AllocationRow[];
+  paymentType: PaymentType;
+  matchId: string | null;
+};
+
+/**
+ * Where a half-filled new utlägg waits.
+ *
+ * Versioned, so a draft written before this screen asked for something it now
+ * needs is left where it is rather than loaded into a form that no longer has a
+ * place to put it.
+ */
+const DRAFT_KEY = "utlagg:new-expense:v1";
 
 // Shared by both "New expense" and "Edit expense": the same wizard, only
 // pre-filled from `existing` when editing.
@@ -93,8 +122,99 @@ export default function NewExpenseClient({
     return id ? bankTransactions.find((t) => t.id === id) : undefined;
   })();
   const [step, setStep] = useState(0);
+  /**
+   * Everything the wizard is holding that the server has not been told about.
+   *
+   * One object rather than four pieces of state, because it is one thing: what
+   * has been filled in so far. That is also what makes it storable, so a new
+   * utlägg survives the tab being closed and the phone locking itself in the
+   * queue at ICA. See below, and lib/ui/use-local-draft.ts.
+   */
+  const startingDraft: WizardDraft = existing
+    ? {
+        form: {
+          title: existing.title,
+          purchaseDate: existing.purchaseDate,
+          // Signed in the database, a magnitude in the form. The sign is what
+          // the toggle below holds instead.
+          gross: String(Math.abs(existing.grossAmount)),
+        },
+        direction: existing.grossAmount < 0 ? "return" : "out",
+        // The cost centre starts unpicked on a new utlägg. Choosing one is the
+        // submitter's call, and defaulting to whichever happens to sort first
+        // invites a wrong one going through unnoticed. submitBlocker refuses to
+        // submit until each row has one.
+        allocations: existing.allocations.length
+          ? existing.allocations.map((a) =>
+              makeRow(a.costCenterCode, String(Math.abs(a.amount)), a.comment ?? ""),
+            )
+          : [makeRow("", "")],
+        paymentType: existing.paymentType,
+        matchId: existing.matchedTransactionId ?? null,
+      }
+    : {
+        form: presetTxn
+          ? {
+              title: presetTxn.description,
+              purchaseDate: presetTxn.transactionDate,
+              gross: String(Math.abs(presetTxn.amount)),
+            }
+          : { title: "", purchaseDate: "", gross: "" },
+        // A card purchase is money leaving; a credit on the card is one coming
+        // back. The transaction says which, so the wizard does not have to ask.
+        direction: presetTxn && presetTxn.amount > 0 ? "return" : "out",
+        allocations: [makeRow("", presetTxn ? String(Math.abs(presetTxn.amount)) : "")],
+        paymentType: holdsCard ? "CARD" : "REIMBURSEMENT",
+        matchId: presetTxn ? presetTxn.id : null,
+      };
+
+  /**
+   * Kept in this browser until the utlägg exists on the server.
+   *
+   * Only for a new one. An utlägg being edited is already the server's, and a
+   * local copy that outlived somebody else's change would put a stale figure
+   * back on the screen, which is worse than the lost draft it would be saving.
+   *
+   * A card purchase started from a bank transaction gets a key of its own, so
+   * the half-filled claim for one payment cannot be restored on top of another.
+   * The version in the key is what makes an old draft, written before this
+   * screen asked for something it now needs, simply not load.
+   *
+   * The receipt is the one thing that cannot come along: a picked file is not
+   * something a browser can be asked to keep. Everything typed survives; the
+   * file has to be chosen again.
+   */
+  const draftKey = presetTxn ? `${DRAFT_KEY}:${presetTxn.id}` : DRAFT_KEY;
+  const [draft, setDraft, , forgetDraft] = useLocalDraft<WizardDraft>(
+    draftKey,
+    startingDraft,
+    !existing,
+  );
+  const { form, direction, allocations, paymentType, matchId } = draft;
+
+  /**
+   * Which way, chosen before anything else is filled in.
+   *
+   * A return is money coming back to the section, and the only way that
+   * happens is a refund landing on the card it was paid from: a member does not
+   * hand the section money through an utlägg. So it is offered to somebody
+   * holding the card and to nobody else, and choosing it settles the payment
+   * type there and then rather than leaving a combination for the form to
+   * refuse further down.
+   */
+  const canReturn = holdsCard || direction === "return";
+  const chooseDirection = (next: Direction) =>
+    setDraft((d) => ({
+      ...d,
+      direction: next,
+      paymentType: next === "return" ? "CARD" : d.paymentType,
+    }));
+
   // CARD is only offered to card holders; the expense being edited keeps its
-  // type as an option even if the user no longer holds a card.
+  // type as an option even if the user no longer holds a card. A return is
+  // narrower still: it is money coming back to the card, so it leaves one
+  // answer here, which the group below says out loud rather than showing as a
+  // lone card nobody chose.
   //
   // And when this wizard was opened to account for one particular purchase on
   // the card, the payment type is not a choice at all: that money has already
@@ -110,16 +230,20 @@ export default function NewExpenseClient({
   // components/new-expense-menu.tsx. It was a third card in the group below for
   // a while: a door standing among two switches, at the bottom of a step, which
   // discarded everything typed above it when taken.
-  const paymentTypes = presetTxn
-    ? (["CARD"] as PaymentType[])
-    : PAYMENT_TYPES.filter(
-        (pt) =>
-          pt !== "MILEAGE" &&
-          (holdsCard || pt !== "CARD" || existing?.paymentType === "CARD"),
-      );
-  const [paymentType, setPaymentType] = useState<PaymentType>(
-    existing?.paymentType ?? (holdsCard ? "CARD" : "REIMBURSEMENT"),
-  );
+  const paymentTypes =
+    presetTxn || direction === "return"
+      ? (["CARD"] as PaymentType[])
+      : PAYMENT_TYPES.filter(
+          (pt) =>
+            pt !== "MILEAGE" &&
+            (holdsCard || pt !== "CARD" || existing?.paymentType === "CARD"),
+        );
+  const patchDraft = <K extends keyof WizardDraft>(key: K, value: WizardDraft[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+  const setForm = (value: WizardDraft["form"]) => patchDraft("form", value);
+  const setAllocations = (value: AllocationRow[]) => patchDraft("allocations", value);
+  const setMatchId = (value: string | null) => patchDraft("matchId", value);
+
   // The step flow depends on payment type: a reimbursement skips "Matcha".
   // Uploading isn't among them. The receipt panel beside the form is where a
   // receipt goes and where it then stays, so it needs no step of its own.
@@ -128,35 +252,6 @@ export default function NewExpenseClient({
     : (["review", "submit"] as const);
   const stepLabels = stepKeys.map((k) => t(`step.${k}`));
   const cur = stepKeys[step] ?? stepKeys[stepKeys.length - 1];
-  const [form, setForm] = useState(() => {
-    if (existing) {
-      return {
-        title: existing.title,
-        purchaseDate: existing.purchaseDate,
-        gross: String(existing.grossAmount),
-      };
-    }
-    return presetTxn
-      ? {
-          title: presetTxn.description,
-          purchaseDate: presetTxn.transactionDate,
-          gross: String(-presetTxn.amount),
-        }
-      : { title: "", purchaseDate: "", gross: "" };
-  });
-  // The cost centre starts unpicked. Choosing one is the submitter's call, and
-  // defaulting to whichever happens to sort first invites a wrong one going
-  // through unnoticed. submitBlocker refuses to submit until each row has one.
-  const [allocations, setAllocations] = useState<AllocationRow[]>(() =>
-    existing?.allocations.length
-      ? existing.allocations.map((a) =>
-          makeRow(a.costCenterCode, String(a.amount), a.comment ?? ""),
-        )
-      : [makeRow("", presetTxn ? String(-presetTxn.amount) : "")],
-  );
-  const [matchId, setMatchId] = useState<string | null>(
-    existing?.matchedTransactionId ?? (presetTxn ? presetTxn.id : null),
-  );
   // One busy scope for the whole wizard: saving and submitting, and the
   // receipt upload inside them, block the same footer.
   const { pending, mutate } = useMutation();
@@ -294,7 +389,22 @@ export default function NewExpenseClient({
   // A submitted/approved expense can be edited but not re-submitted from here.
   const submittable = !existing || isSubmittable(existing.status);
 
-  const grossSEK = parseSEK(form.gross);
+  /**
+   * What the figures in the form mean, as a signed number.
+   *
+   * The form holds magnitudes and the toggle holds the direction; every reader
+   * below this line wants the two put together, because that is what an utlägg
+   * is worth and what the database stores. The one multiplication lives here so
+   * no screen has to remember to do it.
+   */
+  const sign = direction === "return" ? -1 : 1;
+  const magnitude = parseSEK(form.gross);
+  const grossSEK = sign * magnitude;
+  const signedAllocations = allocations.map((a) => ({
+    ...a,
+    value: sign * parseSEK(a.amount),
+  }));
+
   // Saving a draft is allowed with fields still empty, but not with a partial
   // date, which would be stored as 1 January of the year typed so far, and not
   // with one that hasn't happened yet, which the server refuses anyway. And not
@@ -320,8 +430,8 @@ export default function NewExpenseClient({
     // "match it first" hint rather than letting submit fail at the server.
     matchedTransactionId: matchDone ? matchId ?? undefined : undefined,
     submitterHasPayout: Boolean(payoutClearing && payoutAccount),
-    allocations: allocations.map((a) => ({
-      amount: parseSEK(a.amount),
+    allocations: signedAllocations.map((a) => ({
+      amount: a.value,
       costCenterCode: a.costCenterCode,
     })),
   });
@@ -371,9 +481,9 @@ export default function NewExpenseClient({
       title: form.title,
       purchaseDate: form.purchaseDate || null,
       grossAmount: sekToOre(grossSEK),
-      allocations: allocations.map((a) => ({
+      allocations: signedAllocations.map((a) => ({
         costCenterCode: a.costCenterCode,
-        amount: parseOre(a.amount),
+        amount: sekToOre(a.value),
         comment: a.comment || undefined,
       })),
       paymentType,
@@ -396,6 +506,11 @@ export default function NewExpenseClient({
 
   // Both exits from the wizard save first, then land on the expense itself.
   function done(id: string) {
+    // The utlägg exists on the server now, so the copy in this browser is spent
+    // and must not be restored over it the next time somebody starts a new one.
+    // `forget` rather than `clear`: the form is still on the screen for the
+    // frame before the page changes, and blanking it there reads as work lost.
+    forgetDraft();
     // Replaces the wizard's history entry rather than pushing past it: the
     // form has been submitted, and Back leading into a spent one is not a way
     // back to anything. See useReturnTo.
@@ -471,6 +586,38 @@ export default function NewExpenseClient({
                 nobody needs. Selected as well as focused, which only matters
                 when an existing utlägg is being edited, because then the title is
                 already there and typing should replace it. */}
+            {/* Before anything else, because it is the question everything
+                below it depends on: what the figures mean, which payment types
+                are left, and which bank transactions can match. Asked in the
+                same shape as the payment type further down, since it is the
+                same kind of question and two shapes for one kind is how a form
+                stops reading as one form.
+
+                Not asked at all of somebody with no card, who cannot file a
+                return: the whole group goes rather than standing there with
+                one answer available. */}
+            {canReturn && (
+              <FieldGroup label={t("direction")}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(["out", "return"] as Direction[]).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => chooseDirection(d)}
+                      className={optionCard(direction === d)}
+                      aria-pressed={direction === d}
+                    >
+                      <span className="block text-sm font-medium">
+                        {t(d === "out" ? "directionOut" : "directionReturn")}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted">
+                        {t(d === "out" ? "directionOutHint" : "directionReturnHint")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </FieldGroup>
+            )}
+
             <Field label={t("description")}>
               <Input
                 autoFocus
@@ -510,24 +657,42 @@ export default function NewExpenseClient({
                   way to reach a negative amount on a phone: no mobile numeric
                   keypad has a minus key. A return is the same utlägg with the
                   sign flipped, so it is a case this field has to allow. */}
+              {/* FieldGroup, not Field: the label carries a control of its
+                  own, and a <label> forwards a click anywhere in its box to
+                  the first labelable element inside it, which here would be
+                  one of the two direction buttons.
+
+                  The direction rides the label's line rather than standing
+                  above the box, so this cell is exactly as tall as the date
+                  beside it. Which way the money goes is not a minus typed into
+                  the figure: no phone number pad has the key, and a word says
+                  it where a character has to be noticed. */}
               <Field label={t("amount")}>
-                <SignedAmountInput
+                <AmountInput
                   value={form.gross}
-                  title={t("negateAmount")}
-                  onChange={(gross) => {
+                  onChange={(gross: string) => {
                     setForm({ ...form, gross });
+                    // A single row is the whole amount, so it follows it.
                     if (allocations.length === 1) {
                       setAllocations([{ ...allocations[0], amount: gross }]);
                     }
                   }}
                 />
+                {/* What the unusual answer means, in the words somebody would
+                    use for it. Only when it is chosen, so the ordinary utlägg
+                    carries no extra line. */}
+                {direction === "return" && magnitude > 0 && (
+                  <p className="mt-1 text-xs text-danger">
+                    {t("returnMeans", { amount: formatSEK(magnitude) })}
+                  </p>
+                )}
               </Field>
             </div>
 
             <FieldGroup label={t("distribution")}>
               <AllocationEditor
                 costCenters={selectableCostCenters}
-                grossAmount={grossSEK}
+                grossAmount={magnitude}
                 value={allocations}
                 onChange={setAllocations}
               />
@@ -536,14 +701,16 @@ export default function NewExpenseClient({
             <FieldGroup label={t("paymentType")}>
               {/* Said out loud, because a group that offers one answer reads
                   as a group that is broken. */}
-              {presetTxn && (
+              {presetTxn ? (
                 <p className="mb-3 text-xs text-muted">{t("paymentTypeFixed")}</p>
-              )}
+              ) : direction === "return" ? (
+                <p className="mb-3 text-xs text-muted">{t("paymentTypeReturn")}</p>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 {paymentTypes.map((pt) => (
                   <button
                     key={pt}
-                    onClick={() => setPaymentType(pt)}
+                    onClick={() => patchDraft("paymentType", pt)}
                     className={optionCard(paymentType === pt)}
                   >
                     <span className="block text-sm font-medium">
@@ -656,7 +823,7 @@ export default function NewExpenseClient({
                 <DetailRow
                   key={a.id}
                   label={i === 0 ? t("distribution") : ""}
-                  value={<>{a.costCenterCode} – <Amount value={parseSEK(a.amount)} signed /></>}
+                  value={<>{a.costCenterCode} – <Amount value={signedAllocations[i].value} signed /></>}
                 />
               ))}
               <DetailRow label={t("paymentType")} value={tPayment(`${paymentType}.label`)} />

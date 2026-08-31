@@ -20,7 +20,7 @@ export function isCompleteDate(value: string): boolean {
 // be refused as being in the future. Everyone typing a date here is reading it
 // off a Swedish receipt, so Stockholm is the calendar that decides.
 // sv-SE prints exactly the YYYY-MM-DD the date fields already carry.
-const stockholmDay = new Intl.DateTimeFormat("sv-SE", {
+export const stockholmDay = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",
   year: "numeric",
   month: "2-digit",

@@ -31,6 +31,7 @@ import type { Column } from "@/components/ui/data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { EntryDialog } from "../entry-dialog";
 import { LEVELS, bottlesAt } from "@/lib/stock/levels";
+import { alcoholPerKrona } from "@/lib/stock/onhand";
 import { cn } from "@/lib/ui/utils";
 import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
 
@@ -40,6 +41,11 @@ const kr = (ore: number) =>
 const litres = (ml: number) =>
   new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
     ml / 1000,
+  );
+
+const clPerKrona = (cl: number) =>
+  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+    cl,
   );
 
 const signed = (n: number) =>
@@ -223,6 +229,16 @@ export default function StockProductClient({
                   <span className="text-muted">{t("product.noCostPrice")}</span>
                 ) : (
                   kr(product.costPriceOre)
+                )
+              }
+            />
+            <Detail
+              label={t("product.alcoholPerKrona")}
+              value={
+                alcoholPerKrona(product) == null ? (
+                  <span className="text-muted">–</span>
+                ) : (
+                  t("clPerKrona", { cl: clPerKrona(alcoholPerKrona(product)!) })
                 )
               }
             />

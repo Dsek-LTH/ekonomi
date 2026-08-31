@@ -130,6 +130,10 @@ export async function POST(req: Request) {
             kind: "COUNT",
             level: w.level,
             countedQty: w.qty,
+            // What the product costs today, kept on the row. A stocktake that
+            // finds stock the log had lost is worth what that stock cost, and
+            // that has to stay what it was when a price is corrected later.
+            unitCostOre: product.costPriceOre,
             occurredAt: new Date(body.occurredAt),
             actorId: g.actor.id,
             note: body.note ?? null,
@@ -149,7 +153,7 @@ export async function POST(req: Request) {
           },
         });
       }
-      await replayProduct(tx, product.id, product.costPriceOre);
+      await replayProduct(tx, product.id);
       return ids;
     });
     return NextResponse.json({ id: made[0] }, { status: 201 });
@@ -264,7 +268,10 @@ export async function POST(req: Request) {
   // what this movement was worth. See lib/stock/value.ts.
   const valueDeltaOre = valueDelta(
     { qty: costBasis({ units: held.units }), valueOre: held.valueOre },
-    { kind: body.kind, units, costPriceOre: product.costPriceOre },
+    // The price as it stands now, which is also what the row is about to
+    // capture: from here on the two are the same figure and neither can be
+    // moved by re-pricing the product.
+    { kind: body.kind, units, unitCostOre: product.costPriceOre },
   );
 
   if (body.lotId) {
@@ -306,6 +313,9 @@ export async function POST(req: Request) {
       open40: open[40] ?? 0,
       open20: open[20] ?? 0,
       valueDeltaOre,
+      // The price as it stands now, captured so that nothing computed from it
+      // can move when the product is re-priced. See the schema note.
+      unitCostOre: product.costPriceOre,
       spilledQty,
       level,
       eventId: body.eventId ?? null,
@@ -334,7 +344,7 @@ export async function POST(req: Request) {
 
   // A delivery dated before rows that already exist changes what they cost, and
   // any row before a count changes what the count's difference has to be.
-  await bulkTransaction(async (tx) => replayProduct(tx, product.id, product.costPriceOre));
+  await bulkTransaction(async (tx) => replayProduct(tx, product.id));
 
   return NextResponse.json({ id: entry.id }, { status: 201 });
 }

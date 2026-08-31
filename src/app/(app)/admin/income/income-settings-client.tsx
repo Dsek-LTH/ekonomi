@@ -225,14 +225,17 @@ export function IncomeSettingsClient({
           )}
 
           <div className="flex flex-wrap items-end gap-2">
-            <AmountInput
-              value={newFallback.amount}
-              onChange={(amount) => setNewFallback({ ...newFallback, amount })}
-              placeholder={t("fallbacks.amountPlaceholder")}
-              size="sm"
-              className="w-28"
-              aria-label={t("fallbacks.amount")}
-            />
+            {/* The width on the box, not on the control: a control is
+                `w-full` inside whatever holds it. See the allocation editor. */}
+            <div className="w-28 shrink-0">
+              <AmountInput
+                value={newFallback.amount}
+                onChange={(amount) => setNewFallback({ ...newFallback, amount })}
+                placeholder={t("fallbacks.amountPlaceholder")}
+                size="sm"
+                aria-label={t("fallbacks.amount")}
+              />
+            </div>
             <Input
               value={newFallback.message}
               onChange={(e) => setNewFallback({ ...newFallback, message: e.target.value })}

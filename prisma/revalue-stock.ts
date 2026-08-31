@@ -65,6 +65,7 @@ async function main() {
         open20: true,
         countedQty: true,
         valueDeltaOre: true,
+        unitCostOre: true,
       },
     });
     if (rows.length === 0) continue;
@@ -77,9 +78,10 @@ async function main() {
       open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
       countedQty: r.countedQty,
       valueDeltaOre: r.valueDeltaOre,
+      unitCostOre: r.unitCostOre,
     });
 
-    const settled = replay(rows.map(asRow), product.costPriceOre);
+    const settled = replay(rows.map(asRow));
     const was = rows.reduce((n, r) => n + r.valueDeltaOre, 0);
     const will = rows.reduce((n, r) => n + (settled.get(r.id)?.valueDeltaOre ?? 0), 0);
     before += was;
