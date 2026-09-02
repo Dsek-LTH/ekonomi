@@ -11,6 +11,15 @@ import { impossible, onHand, type OnHand } from "@/lib/stock/onhand";
 import { tagTotals, type TagMovement } from "@/lib/stock/event";
 import { cellQty, cellTotals, type CellKind, type CellRow } from "@/lib/stock/cells";
 import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/types";
+import {
+  DEFAULT_LEAD_DAYS,
+  checkOf,
+  lastEmptied,
+  soonestCheck,
+  type Check,
+} from "@/lib/stock/expiry";
+import type { StockEntry } from "@/lib/generated/prisma/client";
+import { today } from "@/lib/domain/date";
 
 export interface StockProductDto {
   id: string;
@@ -22,6 +31,9 @@ export interface StockProductDto {
   unitMl?: number;
   nominalMl?: number;
   costPriceOre?: number;
+  /** How long it keeps from delivery, in whole months. Absent where nobody has
+   *  said, and on everything that does not go off. See lib/stock/expiry.ts. */
+  shelfLifeMonths?: number;
   ean?: string;
   /** Systembolaget's article number. See lib/stock/systembolaget.ts. */
   systembolagetId?: string;
@@ -59,6 +71,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
       unitMl: true,
       nominalMl: true,
       costPriceOre: true,
+      shelfLifeMonths: true,
       ean: true,
       systembolagetId: true,
       tags: true,
@@ -73,6 +86,7 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
     unitMl: opt(p.unitMl),
     nominalMl: opt(p.nominalMl),
     costPriceOre: opt(p.costPriceOre),
+    shelfLifeMonths: opt(p.shelfLifeMonths),
     ean: opt(p.ean),
     systembolagetId: opt(p.systembolagetId),
     tags: p.tags,
@@ -810,6 +824,14 @@ export interface CellarRowDto {
   /** Set on a movement: what it did to the shelf. */
   units?: number;
   open?: { 80: number; 60: number; 40: number; 20: number };
+  /**
+   * Which rung the row is about: 0 for a whole thing, or one of the four.
+   *
+   * Carried so the correction dialog can read back the figure somebody typed.
+   * A write-off of an opened bottle moves nothing but its rung, so `units` is
+   * nought on it and a dialog reading only that would offer to correct a zero.
+   */
+  level?: number;
   /** On a stocktake: what was counted, per rung. */
   counted?: { level: number; qty: number }[];
   valueDeltaOre?: number;
@@ -892,6 +914,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
       actorName: e.actor.name,
       units: e.units,
       open: { 80: e.open80, 60: e.open60, 40: e.open40, 20: e.open20 },
+      level: e.level,
       valueDeltaOre: e.valueDeltaOre,
       note: opt(e.note),
       // A stocktake is corrected by counting again; a night's figures belong to
@@ -916,4 +939,177 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
   for (const row of counts.values()) row.counted!.sort((a, b) => a.level - b.level);
   rows.sort((a, b) => b.at.localeCompare(a.at));
   return rows;
+}
+
+/**
+ * How many movements the log holds for one product.
+ *
+ * Only ever asked before deleting it: the confirmation has to say what is about
+ * to go, and "ta bort" over a product that carries two terms of a lagerbokföring
+ * is a different act from the same word over one typed a minute ago. Counted
+ * rather than loaded, because the figure is the whole answer.
+ */
+export async function getProductMovementCount(productId: string): Promise<number> {
+  return prisma.stockEntry.count({ where: { productId } });
+}
+
+
+/** How much notice the section wants before a delivery's estimated date. */
+export async function getStockSettings(): Promise<{ expiryLeadDays: number }> {
+  const row = await prisma.stockSettings.findUnique({ where: { id: "singleton" } });
+  return { expiryLeadDays: row?.expiryLeadDays ?? DEFAULT_LEAD_DAYS };
+}
+
+/**
+ * Which products want somebody to go and read a crate, and which delivery is
+ * the reason.
+ *
+ * One entry per product, keyed by product id, holding its oldest outstanding
+ * check. Not one per delivery: a lager bought monthly for three years has
+ * thirty-six of them, and a list somebody cannot get to the bottom of is a list
+ * that stops being read. The rule for which of them still count is
+ * lib/stock/expiry.ts, and it is pure, so the flag on a row and the count in a
+ * filter cannot disagree.
+ *
+ * Two queries whatever the shelf holds. The deliveries that could possibly be
+ * due, and the movements needed to know which products have run out since.
+ * `bestBefore` is indexed, and the second query is over products the first one
+ * named rather than over the whole log.
+ */
+export async function getExpiryChecks(now: string = today()): Promise<Map<string, Check>> {
+  const { expiryLeadDays } = await getStockSettings();
+
+  // The window the rule can possibly fire in. Anything dated further out than
+  // the lead time is not due, and asking the database that is cheaper than
+  // walking every delivery ever made through a pure function.
+  const horizon = new Date(now);
+  horizon.setDate(horizon.getDate() + expiryLeadDays);
+
+  const deliveries = await prisma.stockEntry.findMany({
+    where: { kind: "PURCHASE", bestBefore: { not: null, lte: horizon } },
+    orderBy: { bestBefore: "asc" },
+    select: { id: true, productId: true, occurredAt: true, bestBefore: true, checkedAt: true },
+  });
+  if (deliveries.length === 0) return new Map();
+
+  const productIds = [...new Set(deliveries.map((d) => d.productId))];
+
+  // Everything those products have ever done, so `lastEmptied` can find the day
+  // each shelf was bare. Only the columns the walk reads: this is the widest
+  // query on the page and it has no business fetching values or notes.
+  const movements = await prisma.stockEntry.findMany({
+    where: { productId: { in: productIds } },
+    orderBy: { occurredAt: "asc" },
+    select: {
+      productId: true,
+      occurredAt: true,
+      units: true,
+      open80: true,
+      open60: true,
+      open40: true,
+      open20: true,
+    },
+  });
+
+  const steps = new Map<string, { occurredAt: string; units: number; openUnits: number }[]>();
+  for (const m of movements) {
+    const list = steps.get(m.productId) ?? [];
+    list.push({
+      occurredAt: day(m.occurredAt),
+      units: m.units,
+      openUnits: m.open80 + m.open60 + m.open40 + m.open20,
+    });
+    steps.set(m.productId, list);
+  }
+
+  const emptied = new Map(
+    productIds.map((id) => [id, lastEmptied(steps.get(id) ?? [])] as const),
+  );
+
+  const byProduct = new Map<string, Check[]>();
+  for (const d of deliveries) {
+    const check = checkOf(
+      asDelivery(d),
+      expiryLeadDays,
+      emptied.get(d.productId) ?? null,
+      now,
+    );
+    if (check) byProduct.set(d.productId, [...(byProduct.get(d.productId) ?? []), check]);
+  }
+
+  // One per product, and only where something is actually owed. `soonestCheck`
+  // is what applies that second half, so the flag on a row and the schedule on
+  // the product's page cannot disagree about what "due" means.
+  const out = new Map<string, Check>();
+  for (const [productId, checks] of byProduct) {
+    const worst = soonestCheck(checks);
+    if (worst) out.set(productId, worst);
+  }
+  return out;
+}
+
+/** The columns a delivery contributes to a check, as the rule wants them. */
+const asDelivery = (
+  e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "checkedAt">,
+) => ({
+  id: e.id,
+  occurredAt: day(e.occurredAt),
+  bestBefore: e.bestBefore ? day(e.bestBefore) : null,
+  checkedAt: e.checkedAt ? day(e.checkedAt) : null,
+});
+
+/**
+ * Every check one product will raise, oldest date first.
+ *
+ * The whole schedule rather than the one thing owed: what is overdue, what is
+ * coming inside the notice period, what is months off, and what somebody has
+ * already been down and looked at. The overview asks the narrow question and
+ * gets one flag; this is where the answer is worked through, one delivery at a
+ * time, which is why they are dismissed one at a time too.
+ *
+ * Deliveries the shelf has been empty since are not here at all. They are not
+ * dismissed, they are gone, and a page listing them would be asking somebody to
+ * clear rows about beer that was drunk two years ago.
+ */
+export async function getProductChecks(
+  productId: string,
+  now: string = today(),
+): Promise<Check[]> {
+  const { expiryLeadDays } = await getStockSettings();
+
+  // No horizon, unlike the overview's query. This is one product and the page
+  // wants what is coming as well as what is owed.
+  const [deliveries, movements] = await Promise.all([
+    prisma.stockEntry.findMany({
+      where: { productId, kind: "PURCHASE", bestBefore: { not: null } },
+      orderBy: { bestBefore: "asc" },
+      select: { id: true, occurredAt: true, bestBefore: true, checkedAt: true },
+    }),
+    prisma.stockEntry.findMany({
+      where: { productId },
+      orderBy: { occurredAt: "asc" },
+      select: {
+        occurredAt: true,
+        units: true,
+        open80: true,
+        open60: true,
+        open40: true,
+        open20: true,
+      },
+    }),
+  ]);
+  if (deliveries.length === 0) return [];
+
+  const emptied = lastEmptied(
+    movements.map((m) => ({
+      occurredAt: day(m.occurredAt),
+      units: m.units,
+      openUnits: m.open80 + m.open60 + m.open40 + m.open20,
+    })),
+  );
+
+  return deliveries.flatMap((d) => {
+    const check = checkOf(asDelivery(d), expiryLeadDays, emptied, now);
+    return check ? [check] : [];
+  });
 }

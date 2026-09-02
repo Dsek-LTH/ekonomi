@@ -1,0 +1,17 @@
+-- Stock destroyed in the cellar, as opposed to spilled at a pub.
+--
+-- WASTE has always needed an event, and that is right for what it means: a
+-- spill at a pub is stock that left the cellar at CHECKOUT, so it is already
+-- off the shelf and its quantity lives in `spilledQty`, which moves nothing.
+-- Subtracting it again would take the same bottle away twice.
+--
+-- A bottle dropped in the cellar is the opposite act. It never left, so it has
+-- to come off the shelf, and its cost has to be written down at the moving
+-- average like any other removal. That is an ordinary negative movement, and
+-- giving it its own kind means every rule already written for one applies to it
+-- without asking whether an event happens to be attached.
+--
+-- Appended rather than slotted in beside WASTE, because Postgres appends and a
+-- schema that claims a different order is a type the next migration wants to
+-- rewrite for no reason.
+ALTER TYPE "StockEntryKind" ADD VALUE 'SPOILAGE';

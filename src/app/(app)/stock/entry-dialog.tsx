@@ -25,8 +25,19 @@ import { isQuantityInput, quantity } from "@/lib/stock/quantity";
 import type { PatchStockEntry } from "@/lib/api/schemas/stock";
 import type { CellarRowDto } from "@/lib/data/stock";
 
-/** The figure the row shows a person: positive, in things. */
-const shown = (row: CellarRowDto): number => Math.abs(row.units ?? 0);
+/**
+ * The figure the row shows a person: positive, in things.
+ *
+ * Read off the rung the row is about, not off `units`, because a row about an
+ * opened bottle leaves that at nought and puts its one bottle on the ladder.
+ * The same rule the route applies when it writes the row back. See
+ * api/stock/entries/[id]/route.ts.
+ */
+const shown = (row: CellarRowDto): number => {
+  const level = row.level ?? 0;
+  if (level === 0) return Math.abs(row.units ?? 0);
+  return Math.abs(row.open?.[level as 80] ?? 0);
+};
 
 export function EntryDialog({
   row,

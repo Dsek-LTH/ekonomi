@@ -749,7 +749,7 @@
       "purchaseNotPositive": "Ett inköp lägger till i lagret och kan inte vara negativt.",
       "removalNotNegative": "Utskänkning och svinn tar från lagret.",
       "eventNotFound": "Tillfället hittades inte.",
-      "eventOnNightOnly": "Inköp och inventering hör inte till ett tillfälle.",
+      "eventOnNightOnly": "Inköp, inventering och kassation hör inte till ett tillfälle.",
       "eventRequired": "Uttag, återlämning och spill måste höra till ett tillfälle.",
       "volumeOnUnitProduct": "Produkten räknas i styck och har ingen egen volym.",
       "cellMoved": "Någon annan har bokfört på tillfället under tiden. Siffrorna läses om. Kontrollera dem och försök igen.",
@@ -762,7 +762,7 @@
       "sizeRequired": "Volymen per styck behövs.",
       "eanTaken": "Streckkoden används redan av {name}.",
       "nameTaken": "Det finns redan en produkt som heter {name}.",
-      "productInUse": "Produkten har {count, plural, =1 {1 rörelse} other {# rörelser}} i loggen och går inte att ta bort."
+      "noCheckOnRow": "Bara en leverans kan ha ett bäst före-datum att kolla."
     },
     "mileage": {
       "noReadings": "Milersättningen saknar mätarställning före eller efter resan.",
@@ -794,6 +794,7 @@
     "resultUnits": "Resultatenheter",
     "cards": "Sektionskort",
     "mileageRates": "Milersättning",
+    "stockSettings": "Lager",
     "users": "Användare",
     "faq": "Frågor & svar",
     "profile": "Min profil",
@@ -810,7 +811,7 @@
     "skipToContent": "Hoppa till innehållet",
     "mainNav": "Huvudmeny",
     "income": "Intäkter",
-    "stock": "Lager",
+    "stock": "Produkter",
     "stockLog": "Lagerlogg",
     "stockStats": "Statistik",
     "groupStock": "Lager",
@@ -1052,6 +1053,50 @@
     "noAccountsMatch": "Inga konton matchar filtret.",
     "noRowsInPeriod": "Inga bokförda rader i perioden.",
     "calculatedResult": "Beräknat resultat",
+    "charts": {
+      "view": "Tabell eller diagram",
+      "table": "Tabell",
+      "diagram": "Diagram",
+      "loadFailed": "Kunde inte hämta diagrammen.",
+      "empty": "Ingenting bokfört i perioden.",
+      "monthly": {
+        "title": "Resultat per månad",
+        "hint": "Intäkter över nollan, kostnader under, och resultatet som linje över dem.",
+        "alt": "Intäkter, kostnader och resultat per månad.",
+        "income": "Intäkter",
+        "costs": "Kostnader",
+        "result": "Resultat"
+      },
+      "cumulative": {
+        "title": "Ackumulerat resultat",
+        "withBudget": "Resultatet räknat från periodens början, mot budgeten fördelad jämnt över året.",
+        "noBudget": "Resultatet räknat från periodens början. Välj en budget att jämföra med, så ritas takten mot den också.",
+        "alt": "Ackumulerat resultat över perioden.",
+        "actual": "Utfall",
+        "pace": "Budgettakt",
+        "against": "Mot takten"
+      },
+      "ranking": {
+        "title": "Kostnadsställen",
+        "hint": "Resultat per kostnadsställe i perioden, störst omsättning först.",
+        "budgetMark": "Strecket är budgeten för hela året.",
+        "showAll": "Visa alla {count}",
+        "showFewer": "Visa färre"
+      },
+      "stack": {
+        "title": "Kostnader per kostnadsställe",
+        "hint": "Vad varje kostnadsställe drog, månad för månad. De sex största var för sig, resten tillsammans.",
+        "alt": "Kostnader per månad, staplade per kostnadsställe.",
+        "others": "Övriga ({count})",
+        "total": "Totalt"
+      },
+      "composition": {
+        "title": "Vad pengarna gick till",
+        "hint": "Periodens kostnader per kontogrupp.",
+        "alt": "Periodens kostnader fördelade per kontogrupp.",
+        "share": "{share} %"
+      }
+    },
     "col": {
       "account": "Konto",
       "opening": "Ingående balans",
@@ -1706,6 +1751,18 @@
       "confirmOwnTitle": "Du tar bort något från dig själv",
       "confirmOwnBody": "Du har rollen {role}. Tar du bort {capability} från den förlorar du den också.",
       "confirmOwnAction": "Ta bort ändå"
+    },
+    "stock": {
+      "title": "Lager",
+      "description": "Inställningar för lagret. Hur länge en produkt håller sätts på produkten, inte här.",
+      "save": "Spara",
+      "saveFailed": "Kunde inte spara inställningen",
+      "expiry": {
+        "title": "Påminnelse om bäst före",
+        "hint": "Vi vet aldrig vad som står på en back. Det vi vet är när en leverans kom in och hur länge produkten håller, och utifrån det ber vi någon gå ner och läsa på förpackningen.",
+        "leadDays": "Varsel i dagar",
+        "leadDaysHint": "Hur långt innan det beräknade datumet vi börjar fråga. 30 dagar är lagom: en back hinner drickas upp på en månad om någon vet om det."
+      }
     }
   },
   "errorPage": {
@@ -1928,8 +1985,8 @@
     }
   },
   "stock": {
-    "title": "Lager",
-    "description": "Alkohollagret: vad som finns, vad som kommit in och vad som gått ut.",
+    "title": "Produkter",
+    "description": "Allt sektionen lagerför, och vad som finns på hyllan av varje.",
     "save": "Spara",
     "cancel": "Avbryt",
     "saved": "Rörelsen registrerades.",
@@ -1966,7 +2023,8 @@
       "COUNT": "Inventering",
       "CORRECTION": "Rättelse",
       "CHECKOUT": "Ut",
-      "RETURN": "In"
+      "RETURN": "In",
+      "SPOILAGE": "Kassation"
     },
     "kindName": {
       "UNIT": "Styckvara",
@@ -2043,7 +2101,9 @@
       "removed": "Produkten togs bort.",
       "removeFailed": "Kunde inte ta bort produkten",
       "removeTitle": "Ta bort {name}?",
-      "removeDescription": "Det går bara att ta bort en produkt som ingen rörelse är bokförd på. Har den använts finns den kvar i loggen.",
+      "removedWithLog": "Produkten togs bort, och med den {count, plural, =1 {1 rörelse} other {# rörelser}} i loggen.",
+      "removeDescription": "Ingen rörelse är bokförd på produkten, så ingenting annat ändras av att den försvinner.",
+      "removeUsed": "{count, plural, =1 {1 rörelse} other {# rörelser}} i loggen tas bort tillsammans med produkten: leveranser, inventeringar och det som bokats på tillfällen. Lagervärdet räknas om utan dem, och de inköpta volymer en redan lämnad restaurangrapport bygger på går inte längre att få fram. Det går inte att ångra.",
       "empty": "Inga produkter upplagda ännu.",
       "saved": "Produkten sparades.",
       "saveFailed": "Kunde inte spara produkten",
@@ -2070,7 +2130,10 @@
         "tagRemove": "Ta bort taggen {tag}",
         "tagsNone": "Inga taggar ännu",
         "tagsFull": "Högst {max} taggar",
-        "tagTooLong": "Taggen är för lång, högst {max} tecken"
+        "tagTooLong": "Taggen är för lång, högst {max} tecken",
+        "shelfLife": "Hållbarhet",
+        "shelfLifeHint": "Antal månader från leverans. Öl brukar vara 9, cider 21. Lämna tomt för sådant som inte blir gammalt, till exempel sprit.",
+        "shelfLifePlaceholder": "månader"
       },
       "col": {
         "name": "Produkt",
@@ -2088,7 +2151,8 @@
       "noSize": "volym saknas",
       "purchase": "Inköp",
       "stocktake": "Inventera",
-      "products": "Produkter"
+      "onShelf": "På hyllan",
+      "spoilage": "Kassera"
     },
     "scan": {
       "action": "Skanna",
@@ -2109,7 +2173,7 @@
     },
     "notice": {
       "worth": "Lagervärdet ökar med {value}, räknat från inköpspriset på produkten.",
-      "noCostPrice": "Produkten saknar inköpspris, så leveransen läggs in utan värde. Fyll i priset under Lagerprodukter först om lagervärdet ska stämma."
+      "noCostPrice": "Produkten saknar inköpspris, så leveransen läggs in utan värde. Fyll i priset på produkten först om lagervärdet ska stämma."
     },
     "purchase": {
       "title": "Registrera inköp",
@@ -2156,6 +2220,19 @@
       "agrees": "Stämmer med loggen. Inget att justera.",
       "noteHint": "Skriv gärna varför det skiljer, om ni vet."
     },
+    "spoilage": {
+      "title": "Kassera",
+      "lead": "För det som gick sönder eller blev för gammalt i lagret. Antalet tas bort från hyllan och lagervärdet skrivs ned.",
+      "units": "Antal",
+      "bottles": "Antal oöppnade flaskor",
+      "level": "Vilka flaskor",
+      "sealed": "Oöppnade",
+      "onShelf": "På hyllan: {count}",
+      "worth": "Lagervärdet skrivs ned med ungefär {value}.",
+      "noValue": "Produkten saknar värde i lagret, så kassationen skrivs in utan belopp.",
+      "noteHint": "Skriv gärna vad som hände.",
+      "atEvent": "Gick något sönder på ett tillfälle bokförs det som spill på tillfället, inte här."
+    },
     "filterCategory": "Dryckesslag",
     "filterTag": "Taggar",
     "product": {
@@ -2197,6 +2274,13 @@
       "newHint": "Ett tillfälle är en kväll eller ett evenemang. Allt som tas ut och lämnas tillbaka bokförs på det.",
       "create": "Skapa",
       "saveFailed": "Tillfället kunde inte skapas.",
+      "remove": "Ta bort tillfället",
+      "removeTitle": "Ta bort {name}?",
+      "removeDescription": "Inget är bokfört på tillfället, så ingenting annat ändras av att det försvinner.",
+      "removeUsed": "{count, plural, =1 {1 rörelse} other {# rörelser}} på {products, plural, =1 {1 produkt} other {# produkter}} tas bort tillsammans med tillfället. Det som togs ut hamnar tillbaka på hyllan, och det som kom tillbaka öppnat försvinner från den. Lagervärdet räknas om utan kvällen. Det går inte att ångra.",
+      "removeFailed": "Kunde inte ta bort tillfället",
+      "removed": "Tillfället togs bort.",
+      "removedWithLog": "Tillfället togs bort, och med det {count, plural, =1 {1 rörelse} other {# rörelser}} i loggen.",
       "stillOut": "Kvar ute",
       "sold": "Vad som gick åt",
       "nothing": "Inget är bokfört på det här tillfället ännu. Lägg till en produkt nedan.",
@@ -2329,6 +2413,25 @@
         "ALKOHOLDRYCKSLIKNANDE": "Alkoholdrycksliknande preparat"
       }
     },
-    "ml": "{ml} ml"
+    "ml": "{ml} ml",
+    "expiry": {
+      "filter": "Bäst före",
+      "filterDue": "Behöver kollas",
+      "filterOver": "Passerat datum",
+      "flagSoon": "Kolla om {days} d",
+      "flagOver": "Kolla datum",
+      "rowHint": "Levererat {delivered}. Håller ungefär till {date} enligt produktens hållbarhet.",
+      "checked": "Kollat, ser bra ut",
+      "checkedDone": "Noterat att du kollat. Vi frågar igen om ett tag.",
+      "checkFailed": "Kunde inte notera kontrollen",
+      "title": "Bäst före",
+      "hint": "En rad per leverans som fortfarande kan stå kvar. Datumen är räknade på produktens hållbarhet, inte avlästa på förpackningen. Gå ner och kolla, och bocka av en rad i taget.",
+      "none": "Inga leveranser att hålla koll på.",
+      "deliveredOn": "Levererat {date}",
+      "stateOver": "Passerat med {days} d",
+      "stateSoon": "Om {days} d",
+      "stateLater": "Om {days} d",
+      "stateChecked": "Kollad {date}"
+    }
   }
 }

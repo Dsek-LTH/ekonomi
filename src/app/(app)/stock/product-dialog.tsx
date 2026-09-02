@@ -36,6 +36,7 @@ type Draft = {
   unitMl: string;
   nominalMl: string;
   costPrice: string;
+  shelfLifeMonths: string;
   ean: string;
   systembolagetId: string;
   tags: string[];
@@ -49,6 +50,7 @@ const emptyDraft = (): Draft => ({
   unitMl: "",
   nominalMl: "",
   costPrice: "",
+  shelfLifeMonths: "",
   ean: "",
   systembolagetId: "",
   tags: [],
@@ -62,6 +64,7 @@ const draftOf = (p: StockProductDto): Draft => ({
   unitMl: p.unitMl?.toString() ?? "",
   nominalMl: p.nominalMl?.toString() ?? "",
   costPrice: p.costPriceOre != null ? (p.costPriceOre / 100).toString() : "",
+  shelfLifeMonths: p.shelfLifeMonths?.toString() ?? "",
   ean: p.ean ?? "",
   systembolagetId: p.systembolagetId ?? "",
   tags: p.tags,
@@ -189,6 +192,10 @@ export function ProductDialog({
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
       costPriceOre: Math.round((num(d.costPrice) ?? 0) * 100),
+      // Optional, and null rather than undefined when cleared: a product that
+      // turns out not to go off has to be able to stop raising checks, and
+      // undefined in a PATCH means "leave it alone".
+      shelfLifeMonths: int(d.shelfLifeMonths) || null,
       ean: d.ean.trim(),
       // Whatever was pasted, reduced to the article number. The route takes
       // only digits. Null rather than undefined so clearing the field clears
@@ -350,10 +357,31 @@ export function ProductDialog({
           </Field>
         )}
 
-        {/* Last, and the only optional thing on the form: everything above is
-            what a product has to be before it can exist, and a tag is how
-            somebody finds it afterwards. FieldGroup, not Field: what it labels
-            is a row of chips and a picker, not one control. */}
+        {/* How long it keeps, which is a fact about the product and the only
+            place one can live: nothing is written on the crates in this cellar,
+            they get mixed on the shelf, and they come off it in whatever order
+            somebody reaches. Months, because that is the unit the answer is
+            known in. Nobody says a beer keeps 274 days.
+
+            Optional, and meant to be: a spirit does not go off, and a product
+            left empty here raises no checks at all rather than inheriting a
+            default nobody believes. See lib/stock/expiry.ts. */}
+        <Field
+          label={t("products.field.shelfLife")}
+          hint={t("products.field.shelfLifeHint")}
+        >
+          <Input
+            value={d.shelfLifeMonths}
+            onChange={(e) => set("shelfLifeMonths", e.target.value)}
+            inputMode="numeric"
+            placeholder={t("products.field.shelfLifePlaceholder")}
+          />
+        </Field>
+
+        {/* Last: everything above the shelf life is what a product has to be
+            before it can exist, and a tag is how somebody finds it afterwards.
+            FieldGroup, not Field: what it labels is a row of chips and a
+            picker, not one control. */}
         <FieldGroup label={t("products.field.tags")} hint={t("products.field.tagsHint")}>
           <div className="space-y-2">
             <TagChips

@@ -131,6 +131,23 @@ describe("valueDelta", () => {
     );
   });
 
+  it("writes a cellar breakage down at the moving average", () => {
+    // The whole reason a write-off in the cellar is its own kind rather than a
+    // spill with no event: a spill at a pub moves no stock and so is worth
+    // nothing here, and a bottle broken in the cellar has to cost the shelf
+    // what the shelf paid for it. It needs no rule of its own to do that. It is
+    // a removal, and every removal is priced this way.
+    expect(valueDelta({ qty: 10, valueOre: 100_000 }, { kind: "SPOILAGE", units: -2 })).toBe(
+      -20_000,
+    );
+    expect(valueDelta({ qty: 3, valueOre: 100_001 }, { kind: "SPOILAGE", units: -3 })).toBe(
+      -100_001,
+    );
+    // An opened bottle is already worth nothing to the stock, so breaking one
+    // writes nothing down. Its cost left the books when it was opened.
+    expect(valueDelta({ qty: 10, valueOre: 100_000 }, { kind: "SPOILAGE", units: 0 })).toBe(0);
+  });
+
   it("prices stock arriving at the same average", () => {
     // A bottle coming home unopened is worth what it was worth when it left;
     // pricing it at nothing would let a night out write the stock down.

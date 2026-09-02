@@ -1,4 +1,4 @@
-// Edit a product, or retire one.
+// Edit a product, or delete it and its log.
 //
 // The product is editable and the log is not, which is the right way round: a
 // name corrected or a tare re-measured should apply everywhere the product
@@ -34,6 +34,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       nominalMl: true,
       ean: true,
       costPriceOre: true,
+      shelfLifeMonths: true,
       systembolagetId: true,
       tags: true,
     },
@@ -68,6 +69,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     nominalMl: body.nominalMl,
     ean: body.ean,
     costPriceOre: body.costPriceOre,
+    shelfLifeMonths: body.shelfLifeMonths,
     systembolagetId: body.systembolagetId,
     // `undefined` leaves the list as it is; an empty list is a real edit,
     // the one that takes the last tag off a product.
@@ -116,31 +118,52 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 /**
- * Delete a product nothing has ever been recorded against.
+ * Delete a product, and everything the log holds about it.
  *
- * A product with movements is never deleted: every row of the log points at it,
- * and a log whose products can vanish is a log that stops being readable the
- * first time somebody tidies up. It used to be retired instead: kept out of
- * the pickers, kept on the historical rows, which was a second kind of product
- * that every picker, scan and check had to know about.
+ * This used to refuse a product with movements on it, and the refusal was the
+ * point: every row of the log points at a product, and a log whose products can
+ * vanish stops being readable the first time somebody tidies up. What that
+ * argument missed is that a product typed wrong is often only noticed after it
+ * has been booked on, and the app then had no way out of it at all.
  *
- * So the protection stays and the hidden state does not: a product that has
- * been used is refused, in words, and stays exactly what it was. What is left
- * to delete is the case this is actually for: a product typed wrong a minute
- * ago and never booked on.
+ * So it goes, and the rows go with it. Two things follow, and both are said out
+ * loud on the screen that asks. The shelf's value changes retroactively, since
+ * it is the sum of `valueDeltaOre` over rows that no longer exist. And the
+ * purchased volumes behind a filed restaurangrapport stop reproducing, so a
+ * product that has been reported on should be corrected rather than deleted.
+ *
+ * The order below is the dependency order, and every step of it is a foreign
+ * key this app deliberately declared `Restrict` (see the schema). Nothing here
+ * relaxes those: a stray `stockProduct.delete` anywhere else still fails, which
+ * is what keeps this the only route that can do it.
+ *
+ *   1. `correctsId` is cleared first. A correction names the row it corrects,
+ *      always one of the same product's, and Postgres checks a RESTRICT
+ *      reference the moment the row goes rather than at the end of the
+ *      statement, so a single deleteMany over both would refuse itself.
+ *   2. The entries, which is the log.
+ *   3. The change trail, which is keyed to the product rather than to the rows.
+ *   4. The product, whose lots and edits are `Cascade` and follow it.
  */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate(canManageStock, "stock.noAccess");
   if (!g.ok) return g.res;
 
-  const used = await prisma.stockEntry.count({ where: { productId: id } });
-  if (used > 0) return fail(409, "stock.productInUse", { values: { count: used } });
-
   const gone = await orNotFound(
-    () => prisma.stockProduct.delete({ where: { id } }),
+    () =>
+      prisma.$transaction(async (tx) => {
+        await tx.stockEntry.updateMany({
+          where: { productId: id, correctsId: { not: null } },
+          data: { correctsId: null },
+        });
+        const entries = await tx.stockEntry.deleteMany({ where: { productId: id } });
+        await tx.stockChange.deleteMany({ where: { productId: id } });
+        await tx.stockProduct.delete({ where: { id } });
+        return { entries: entries.count };
+      }),
     "stock.productNotFound",
   );
   if (gone instanceof NextResponse) return gone;
-  return new Response(null, { status: 204 });
+  return NextResponse.json(gone);
 }

@@ -48,22 +48,52 @@
     --color-on-danger: #ffffff;
 
 
-    /* ── Series ──────────────────────────────────────────────────
-       Five hues for five drink types, in the order they stack. Not picked by
-       eye: run through the palette checks (lightness band, chroma floor,
-       colour-blind separation on every adjacent pair, contrast against the card
-       they are drawn on) and the worst adjacent pair here clears ΔE 14 for a
-       protanope, against a target of 8.
+    /* ── Chart series ────────────────────────────────────────────
+       One categorical palette for every chart in the app, and it is the status
+       palette: the six tones an utlägg is already drawn in (see
+       lib/domain/status.ts) plus two hues that only ever appear in a chart.
+       Aliases, not copies, so a status pill and the band beside it cannot
+       drift apart, and so the dark theme's steps come along for free.
 
-       The hue means something where it can (beer amber, wine red) and the
-       lightness varies as well as the hue, which is what carries a palette
-       through red/green colour blindness. The dark theme has its own steps
-       further down: a palette is chosen for its ground, never flipped. */
-    --series-ol: #c98200;
-    --series-ovrig-jastdryck: #116b3c;
-    --series-vin: #e86a90;
-    --series-spritdryck: #2450c0;
-    --series-alkoholdrycksliknande: #a97bd8;
+       This replaced a second palette of five hues named after drink types.
+       Two palettes meant the stock chart and everything else were coloured by
+       two separate decisions, and neither knew about the other. The stock
+       chart takes its five out of this list now; the mapping and the order
+       both live in lib/ui/chart-colors.ts.
+
+       Read a chart drawn in these knowing that hue carries no meaning on its
+       own. --chart-5 is the app's danger red everywhere else, and a band
+       painted in it is the fifth series, not a problem. What is over budget is
+       said in words and in the direction of a bar, never in colour alone. The
+       one place the pairing is deliberate is money in against money out, where
+       the bars also sit on opposite sides of the axis.
+
+       What reusing the status tones costs, stated because it cannot be fixed
+       here: --chart-4 and --chart-5, the app's warning amber and its danger
+       red, are ΔE 2.9 apart for a deuteranope. That is two colours nobody with
+       that vision can tell apart, and no choice of the two hues below can lift
+       it, because the collision is between two tokens the app means things with
+       elsewhere. Two things follow, and both are load-bearing. The order series
+       are handed out in (lib/ui/chart-colors.ts) keeps that pair far apart, so
+       the worst *adjacent* pair in a stack is ΔE 35 light and 28 dark, which is
+       the number that matters where two bands touch. And every chart in the app
+       carries a legend or a labelled row, so colour is the second way to tell a
+       series apart and never the only one. */
+    --chart-1: var(--color-accent);
+    --chart-2: var(--color-purple);
+    --chart-3: var(--color-success);
+    --chart-4: var(--color-warning);
+    --chart-5: var(--color-danger);
+    /* The two the status palette has no opinion about, stepped for this ground
+       rather than lightened from anything: lightness varies as well as hue,
+       which is what carries a series list through red/green colour blindness.
+       Chosen to sit as far as possible from the five above and from each other,
+       which puts the closest pair either of them is in at ΔE 13.9. */
+    --chart-6: #3323b8;
+    --chart-7: #0b6270;
+    /* Last, and not one of the seven: the neutral tone, for the bucket that is
+       an absence rather than a thing ("utan kostnadsställe", "övriga"). */
+    --chart-8: var(--color-muted);
 
     /* Misc */
     --color-ring: #c93663;
@@ -154,16 +184,16 @@
   --color-on-danger: #ffffff;
 
 
-  /* Series, stepped for the near-black card rather than lightened from the
-     light theme's. The band a dark ground allows is narrower and darker than
-     it looks (L 0.48–0.67), so these are mid-tones, not pastels; the green
-     goes teal, which is what the checks allow beside this pink. Worst adjacent
-     pair ΔE 8.6 for a deuteranope. */
-  --series-ol: #c98200;
-  --series-ovrig-jastdryck: #1fa98c;
-  --series-vin: #c93663;
-  --series-spritdryck: #3e63dd;
-  --series-alkoholdrycksliknande: #a97bd8;
+  /* Chart series. Six of the eight are aliases of tokens this block already
+     redefines above, so they are already on this ground and are not repeated
+     here. These two are the palette's own, chosen for a near-black card rather
+     than lightened from the light theme's, and by the same rule: as far from
+     the five status hues and from each other as the space allows, which lands
+     the closest pair either is in at ΔE 13.2. The blue is the one colour here
+     with a contrast to watch, 3.9 against the card, which is a fill and not
+     text and reads. */
+  --chart-6: #4f70e8;
+  --chart-7: #70ebd6;
 
   /* Misc */
   --color-ring: #ff7fa5;

@@ -21,20 +21,13 @@ import { CATEGORIES } from "@/lib/domain/categories";
 import { isWholeDate } from "@/lib/data/list-query";
 import type { DrinkCategory } from "@/lib/domain/types";
 import type { StockStats } from "@/lib/data/stock-stats";
+import { DRINK_SERIES } from "@/lib/ui/chart-colors";
 import { cn } from "@/lib/ui/utils";
 
 const kr = (ore: number) =>
   `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
 const litres = (l: number) =>
   new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 }).format(l);
-
-const SERIES: Record<DrinkCategory, string> = {
-  OL: "var(--series-ol)",
-  OVRIG_JASTDRYCK: "var(--series-ovrig-jastdryck)",
-  VIN: "var(--series-vin)",
-  SPRITDRYCK: "var(--series-spritdryck)",
-  ALKOHOLDRYCKSLIKNANDE: "var(--series-alkoholdrycksliknande)",
-};
 
 export default function StockStatsClient({
   stats,
@@ -163,47 +156,47 @@ export default function StockStatsClient({
             </FieldGroup>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <FieldGroup label={t("stats.from")}>
-              <DateInput
-                size="sm"
-                value={dates.from}
-                onChange={(e) => typeDate("from", e.target.value)}
-              />
-            </FieldGroup>
-            <FieldGroup label={t("stats.to")}>
-              {/* Today, when nobody has said otherwise, rather than an empty
-                  box: a period with a blank end invites "up to when, then?",
-                  and today is the answer the figures were computed with. Asking
-                  for today is asking for the ordinary page, so it is not put in
-                  the address. The stock list settles its own date the same
-                  way. */}
-              <DateInput
-                size="sm"
-                value={dates.to || today}
-                onChange={(e) => typeDate("to", e.target.value)}
-              />
-            </FieldGroup>
-            <FieldGroup label={t("filterCategory")}>
-              <MultiCombobox
-                size="sm"
-                options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
-                values={categories}
-                onChange={(cats) => ask({ cats })}
-                placeholder={t("filterCategory")}
-                aria-label={t("filterCategory")}
-              />
-            </FieldGroup>
-            <FieldGroup label={t("filterTag")}>
-              <MultiCombobox
-                size="sm"
-                options={stats.tags.map((tag) => ({ value: tag, label: tag }))}
-                values={tags}
-                onChange={(next) => ask({ tags: next })}
-                placeholder={t("filterTag")}
-                emptyText={t("products.field.tagsNone")}
-                aria-label={t("filterTag")}
-              />
-            </FieldGroup>
+              <FieldGroup label={t("stats.from")}>
+                <DateInput
+                  size="sm"
+                  value={dates.from}
+                  onChange={(e) => typeDate("from", e.target.value)}
+                />
+              </FieldGroup>
+              <FieldGroup label={t("stats.to")}>
+                {/* Today, when nobody has said otherwise, rather than an empty
+                    box: a period with a blank end invites "up to when, then?",
+                    and today is the answer the figures were computed with.
+                    Asking for today is asking for the ordinary page, so it is
+                    not put in the address. The stock list settles its own date
+                    the same way. */}
+                <DateInput
+                  size="sm"
+                  value={dates.to || today}
+                  onChange={(e) => typeDate("to", e.target.value)}
+                />
+              </FieldGroup>
+              <FieldGroup label={t("filterCategory")}>
+                <MultiCombobox
+                  size="sm"
+                  options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
+                  values={categories}
+                  onChange={(cats) => ask({ cats })}
+                  placeholder={t("filterCategory")}
+                  aria-label={t("filterCategory")}
+                />
+              </FieldGroup>
+              <FieldGroup label={t("filterTag")}>
+                <MultiCombobox
+                  size="sm"
+                  options={stats.tags.map((tag) => ({ value: tag, label: tag }))}
+                  values={tags}
+                  onChange={(next) => ask({ tags: next })}
+                  placeholder={t("filterTag")}
+                  emptyText={t("products.field.tagsNone")}
+                  aria-label={t("filterTag")}
+                />
+              </FieldGroup>
             </div>
           </CardBody>
         </Card>
@@ -229,16 +222,23 @@ export default function StockStatsClient({
           </CardBody>
         </Card>
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        {/* `minmax(0,1fr)` for the one column this is below lg: an implicit
+            grid column is `auto`, and an `auto` track is never narrower than
+            the min-content of the card standing in it. See the product page. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <Card>
             <CardHeader title={t("stats.flowTitle")} subtitle={t("stats.flowHint")} />
             <CardBody className="grid grid-cols-2 gap-4">
               {tiles.map((tile) => (
-                <div key={tile.key}>
+                // `min-w-0`, because a grid track is as wide as its content
+                // unless told otherwise and a six-figure sum in `text-xl` has
+                // no space to break at: without it the two columns push the
+                // card off the side of a phone rather than wrapping.
+                <div key={tile.key} className="min-w-0">
                   <p className="text-xs uppercase tracking-wide text-muted">
                     {t(`stats.flow.${tile.key}`)}
                   </p>
-                  <p className={cn("mt-1 text-xl font-semibold tabular-nums", tile.tone)}>
+                  <p className={cn("mt-1 text-lg font-semibold tabular-nums sm:text-xl", tile.tone)}>
                     {tile.value}
                   </p>
                 </div>
@@ -251,25 +251,36 @@ export default function StockStatsClient({
               be hovered for. */}
           <Card>
             <CardHeader title={t("stats.mixTitle")} subtitle={t("stats.mixHint")} />
+            {/* A name and three figures. On anything but a phone that is one
+                line; on a phone the three figures are 240px of fixed columns
+                against a 300px card, which left the drink type squeezed to a
+                letter and a half and then pushed the row off the edge anyway.
+                So the row wraps: `flex-wrap` with a floor under the name, and
+                the figures drop to a line of their own, still right-aligned by
+                the `ml-auto` that keeps them there on one line too. */}
             <CardBody className="space-y-2">
               {stats.holdings.map((h) => {
                 const share = shown > 0 ? (h.valueOre / shown) * 100 : 0;
                 return (
-                  <div key={h.category} className="flex items-center gap-3 text-sm">
+                  <div key={h.category} className="flex flex-wrap items-center gap-x-3 text-sm">
                     <span
                       aria-hidden
                       className="size-2.5 shrink-0 rounded-[3px]"
-                      style={{ background: SERIES[h.category] }}
+                      style={{ background: DRINK_SERIES[h.category] }}
                     />
-                    <span className="min-w-0 flex-1 truncate">{t(`category.${h.category}`)}</span>
-                    <span className="w-24 text-right tabular-nums text-muted">
-                      {h.litres == null ? "–" : t("litres", { litres: litres(h.litres) })}
+                    <span className="min-w-[7rem] flex-1 truncate">
+                      {t(`category.${h.category}`)}
                     </span>
-                    <span className="w-24 text-right font-medium tabular-nums">
-                      {kr(h.valueOre)}
-                    </span>
-                    <span className="w-12 text-right text-xs tabular-nums text-muted">
-                      {share.toFixed(0)} %
+                    <span className="ml-auto flex shrink-0 items-baseline gap-3">
+                      <span className="w-20 text-right tabular-nums text-muted">
+                        {h.litres == null ? "–" : t("litres", { litres: litres(h.litres) })}
+                      </span>
+                      <span className="w-24 text-right font-medium tabular-nums">
+                        {kr(h.valueOre)}
+                      </span>
+                      <span className="w-10 text-right text-xs tabular-nums text-muted">
+                        {share.toFixed(0)} %
+                      </span>
                     </span>
                   </div>
                 );
@@ -284,18 +295,28 @@ export default function StockStatsClient({
             {stats.movers.length === 0 ? (
               <p className="text-sm text-muted">{t("stats.nothing")}</p>
             ) : (
+              // Wrapping on a phone for the same reason the mix above does, and
+              // with more of a case for it: a product name is the row, and a
+              // product name truncated to "Norr…" is a row that says nothing.
               stats.movers.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 text-sm">
+                <div key={m.id} className="flex flex-wrap items-center gap-x-3 text-sm">
                   <span
                     aria-hidden
                     className="size-2.5 shrink-0 rounded-[3px]"
-                    style={{ background: SERIES[m.category] }}
+                    style={{ background: DRINK_SERIES[m.category] }}
                   />
-                  <Link href={`/stock/${m.id}`} className="min-w-0 flex-1 truncate hover:underline">
+                  <Link
+                    href={`/stock/${m.id}`}
+                    className="min-w-[8rem] flex-1 truncate hover:underline"
+                  >
                     {m.name}
                   </Link>
-                  <span className="w-28 text-right tabular-nums text-muted">{kr(m.outOre)}</span>
-                  <span className="w-28 text-right font-medium tabular-nums">{kr(m.valueOre)}</span>
+                  <span className="ml-auto flex shrink-0 items-baseline gap-3">
+                    <span className="w-24 text-right tabular-nums text-muted">{kr(m.outOre)}</span>
+                    <span className="w-24 text-right font-medium tabular-nums">
+                      {kr(m.valueOre)}
+                    </span>
+                  </span>
                 </div>
               ))
             )}

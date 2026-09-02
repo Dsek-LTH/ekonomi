@@ -747,7 +747,18 @@ function MobileRow<T>({
           // `gap-x-1` as well as the dots: a single cell may itself render two
           // blocks (a card holder's name over its last four digits), and as
           // flex items those would meet with nothing between them.
-          <div className="mt-0.5 flex min-w-0 items-center gap-x-1 overflow-hidden text-xs text-muted">
+          //
+          // `relative`, and this is the one that is not obvious. Each item below
+          // carries an `sr-only` label, which is `position: absolute`, and an
+          // absolutely positioned box is only clipped by `overflow` on a box
+          // that is also its containing block or inside it. Without a positioned
+          // ancestor here the nearest one is the row itself, so those labels
+          // escaped the clip, sat at whatever x the unclipped flex line put them
+          // at, and pushed the *document* wider than the screen: every list in
+          // the app scrolled sideways on a phone as soon as one row had enough
+          // metadata to overflow. Making this the containing block puts them
+          // back inside the box that clips them.
+          <div className="relative mt-0.5 flex min-w-0 items-center gap-x-1 overflow-hidden text-xs text-muted">
             {meta.map(([c, node], i) => (
               <Fragment key={c.key}>
                 {i > 0 && (

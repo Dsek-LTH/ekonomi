@@ -22,6 +22,7 @@ export const StockEntryKind = z.enum([
   "CHECKOUT",
   "RETURN",
   "WASTE",
+  "SPOILAGE",
   "COUNT",
   "CORRECTION",
 ]);
@@ -93,6 +94,15 @@ export const CreateStockProduct = z.object({
   unitMl: z.int().positive().nullish(),
   nominalMl: z.int().positive().nullish(),
   costPriceOre: Ore.min(0),
+  /**
+   * How long the product keeps from delivery, in whole months.
+   *
+   * Nullable rather than optional-only, so clearing it is expressible: a
+   * product that turns out not to go off has to be able to stop raising
+   * checks. Capped at twenty years, which is not a shelf life anybody means but
+   * is the point past which a typo is more likely than a claim.
+   */
+  shelfLifeMonths: z.int().positive().max(240).nullish(),
   systembolagetId: SystembolagetId.nullish(),
   // No default: absent has to keep meaning "not touching these" once this
   // schema is made partial for the PATCH below, and a default would make an
@@ -173,6 +183,10 @@ export const CreateStockEntry = z.object({
    * Its own figure because a spill on an event moves no stock: the goods left the
    * cellar when they were checked out, and taking them off the shelf again
    * would remove them twice.
+   *
+   * Never on a SPOILAGE, which is the same loss suffered in the cellar. That
+   * stock never left, so it comes off the shelf through `units` and `open` like
+   * any other removal, and the route refuses this field on it.
    */
   spilledQty: z.int().min(0).optional(),
   /**
@@ -253,3 +267,19 @@ export const PatchStockEntry = z.object({
   note: NonEmpty.max(500).nullish(),
 });
 export type PatchStockEntry = z.infer<typeof PatchStockEntry>;
+
+/**
+ * PATCH /api/stock/settings.
+ *
+ * How many days before a delivery's estimated best-before to start asking about
+ * it. Section-wide, because the notice period is about how long it takes to
+ * drink a crate once somebody knows it needs drinking, which is the same
+ * however long the product itself keeps.
+ *
+ * Bounded at a year. Beyond that every delivery is permanently due and the
+ * warning has stopped saying anything.
+ */
+export const UpdateStockSettings = z.object({
+  expiryLeadDays: z.int().min(0).max(365),
+});
+export type UpdateStockSettings = z.infer<typeof UpdateStockSettings>;

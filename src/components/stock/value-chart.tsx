@@ -14,6 +14,8 @@ import { useTranslations } from "next-intl";
 
 import { CATEGORIES } from "@/lib/domain/categories";
 import type { DrinkCategory } from "@/lib/domain/types";
+import { DRINK_SERIES } from "@/lib/ui/chart-colors";
+import { axisTicks, labelPositions, plotOf, useChartGeometry } from "@/lib/ui/chart-geometry";
 import { cn } from "@/lib/ui/utils";
 
 export interface ValuePoint {
@@ -22,45 +24,7 @@ export interface ValuePoint {
   totalOre: number;
 }
 
-/** The token each band is painted with. Defined in globals.css, one per drink
- *  type, stepped for each theme and checked against the colour-blind
- *  separation rules rather than picked by eye. */
-const SERIES: Record<DrinkCategory, string> = {
-  OL: "var(--series-ol)",
-  OVRIG_JASTDRYCK: "var(--series-ovrig-jastdryck)",
-  VIN: "var(--series-vin)",
-  SPRITDRYCK: "var(--series-spritdryck)",
-  ALKOHOLDRYCKSLIKNANDE: "var(--series-alkoholdrycksliknande)",
-};
-
-// The drawing is done in its own coordinate space and scaled by the browser, so
-// the component needs no measuring to be responsive. The numbers are chosen so
-// a hairline is a hairline at the width this actually renders at.
-const W = 960;
-const H = 300;
-const PAD = { top: 12, right: 12, bottom: 26, left: 62 };
-const PLOT = { w: W - PAD.left - PAD.right, h: H - PAD.top - PAD.bottom };
-
 const kr = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
-
-/**
- * A y axis a person reads: four or five round figures, not the data's own
- * maximum to the öre.
- *
- * The last tick is at or above the peak, always. An axis that stops under the
- * data is not a rounding, it is a chart with its top cut off: the band is
- * clipped at the plot's edge and the shelf silently looks flat for a month.
- */
-function ticks(maxOre: number): number[] {
-  if (maxOre <= 0) return [0];
-  const rough = maxOre / 4;
-  const magnitude = 10 ** Math.floor(Math.log10(rough));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= rough) ?? magnitude * 10;
-  const out: number[] = [];
-  for (let v = 0; v < maxOre; v += step) out.push(v);
-  out.push(out[out.length - 1] + step);
-  return out;
-}
 
 export function StockValueChart({
   points,
@@ -74,11 +38,19 @@ export function StockValueChart({
   const svgRef = useRef<SVGSVGElement>(null);
   const [at, setAt] = useState<number | null>(null);
 
+  // One of the two module constants in lib/ui/chart-geometry, never a computed
+  // one, so its identity is stable and the memos below can depend on it.
+  const geometry = useChartGeometry();
+  const { W, H, PAD, labels: wantedLabels } = geometry;
+  const PLOT = plotOf(geometry);
+
   const max = useMemo(
     () => Math.max(1, ...points.map((p) => p.totalOre)),
     [points],
   );
-  const axis = useMemo(() => ticks(max), [max]);
+  // From zero: a shelf is never worth less than nothing, so the axis this chart
+  // wants is the one-sided case of the shared ladder.
+  const axis = useMemo(() => axisTicks(0, max), [max]);
   const top = axis[axis.length - 1];
 
   const x = (i: number) =>
@@ -103,19 +75,20 @@ export function StockValueChart({
       for (let i = 0; i < floors.length; i++) floors[i] = tops[i];
       return { category, d, carries };
     });
+    // `x` and `y` read the geometry, so a change of coordinate space has to
+    // redraw the bands. It is in the list; the rule cannot see it through them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, top]);
+  }, [points, top, PAD, PLOT.w, PLOT.h]);
 
   const hovered = at == null ? null : points[at];
 
-  /** Evenly spaced label positions, both ends always among them. */
-  const labels = useMemo(() => {
-    const last = points.length - 1;
-    if (last <= 0) return [0];
-    const wanted = Math.min(5, last + 1);
-    const step = last / (wanted - 1);
-    return [...new Set(Array.from({ length: wanted }, (_, n) => Math.round(n * step)))];
-  }, [points.length]);
+  /** Evenly spaced label positions, both ends always among them. A date needs
+   *  about 90 units of the wide space and about 70 of the narrow one, which is
+   *  what each geometry's `labels` counts. */
+  const labels = useMemo(
+    () => labelPositions(points.length, wantedLabels),
+    [points.length, wantedLabels],
+  );
 
   /** The point under the pointer, in the chart's own coordinates. */
   function track(e: React.PointerEvent<SVGSVGElement>) {
@@ -176,7 +149,7 @@ export function StockValueChart({
                 <path
                   key={category}
                   d={d}
-                  fill={SERIES[category]}
+                  fill={DRINK_SERIES[category]}
                   // The 2px gap that keeps two bands from reading as one shape,
                   // painted in the card's own colour rather than left as a hole.
                   stroke="var(--color-background)"
@@ -233,7 +206,7 @@ export function StockValueChart({
                   <span
                     aria-hidden
                     className="size-2 shrink-0 rounded-[2px]"
-                    style={{ background: SERIES[c] }}
+                    style={{ background: DRINK_SERIES[c] }}
                   />
                   <dt className="min-w-0 flex-1 truncate text-muted">{t(`category.${c}`)}</dt>
                   <dd className="tabular-nums">{kr.format(hovered.byCategory[c] / 100)}</dd>
@@ -256,7 +229,7 @@ export function StockValueChart({
             <span
               aria-hidden
               className="size-2.5 rounded-[3px]"
-              style={{ background: SERIES[c] }}
+              style={{ background: DRINK_SERIES[c] }}
             />
             {t(`category.${c}`)}
           </span>

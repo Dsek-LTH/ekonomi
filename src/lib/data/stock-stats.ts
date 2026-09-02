@@ -65,6 +65,17 @@ export interface PeriodFlow {
    * a reader adding them up has to get what actually moved.
    */
   consumedOre: number;
+  /**
+   * Stock destroyed, at what it cost: dropped at a pub and dropped in the
+   * cellar, added together.
+   *
+   * Only the second half carries a figure, and that is not a gap. A spill at a
+   * pub is stock the checkout has already taken off the shelf and charged for,
+   * so pricing it again here would charge the section twice for one bottle.
+   * What it cost is in `consumedOre`, which is the honest place for it: the
+   * shelf cannot tell a bottle that was drunk from one that hit the floor
+   * after it left the building.
+   */
   wastedOre: number;
   countedOre: number;
 }
@@ -108,6 +119,21 @@ const zero = (): Record<DrinkCategory, number> =>
 const day = (d: Date): string => stockholmDay.format(d);
 
 /**
+ * Stock destroyed, wherever it was standing when it happened.
+ *
+ * Two kinds because the ledger has to keep them apart: a spill at a pub had
+ * already left the cellar and moves nothing, a bottle broken in the cellar
+ * comes off the shelf. Nobody reading a term's figures cares which, so the
+ * screen adds them, and this is the one place that says so.
+ *
+ * Only SPOILAGE brings a value with it, for the same reason. A WASTE's cost
+ * left at the checkout that carried it out of the door, and counting it here
+ * as well would charge the section twice for one bottle.
+ */
+const destroyed = (kind: StockEntryKind): boolean =>
+  kind === "WASTE" || kind === "SPOILAGE";
+
+/**
  * What a movement takes off the shelf for good, as a positive figure.
  *
  * A return is part of it and adds back: out and home again is a net nothing,
@@ -125,7 +151,7 @@ const gone = (
   valueDeltaOre: number,
   withSpill: boolean,
 ): number =>
-  kind === "CHECKOUT" || kind === "RETURN" || (withSpill && kind === "WASTE")
+  kind === "CHECKOUT" || kind === "RETURN" || (withSpill && destroyed(kind))
     ? -valueDeltaOre
     : 0;
 
@@ -193,7 +219,7 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
 
     if (e.kind === "PURCHASE") flow.purchasedOre += e.valueDeltaOre;
     else if (e.kind === "COUNT" || e.kind === "CORRECTION") flow.countedOre += e.valueDeltaOre;
-    else if (e.kind === "WASTE") flow.wastedOre += -e.valueDeltaOre;
+    else if (destroyed(e.kind)) flow.wastedOre += -e.valueDeltaOre;
     flow.consumedOre += gone(e.kind, e.valueDeltaOre, false);
 
     const left = gone(e.kind, e.valueDeltaOre, true);

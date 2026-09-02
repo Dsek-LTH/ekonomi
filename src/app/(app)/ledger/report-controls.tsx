@@ -246,6 +246,8 @@ export function ReportBar({
   onEditParameters,
   count,
   action,
+  views,
+  charting,
 }: {
   view: ViewOptions;
   onView: (patch: Partial<ViewOptions>) => void;
@@ -266,6 +268,22 @@ export function ReportBar({
    * follow.
    */
   action?: React.ReactNode;
+  /**
+   * Table or charts, as a ViewToggle. Its own slot rather than part of
+   * `action`: those are things you do *to* the report (export it, print it) and
+   * this changes how it is drawn, which the app tells apart by shape. See
+   * components/ui/segmented-control.tsx for the grammar of the four switchers.
+   */
+  views?: React.ReactNode;
+  /**
+   * Whether the charts are what is on screen.
+   *
+   * Everything on the left of this bar narrows *rows*: a search over account
+   * names, a chip that drops the empty ones, a column of shares. None of it
+   * means anything to a chart of the same period, and a control that is present
+   * and inert is worse than one that is absent.
+   */
+  charting?: boolean;
 }) {
   const t = useTranslations("ledger");
   return (
@@ -283,26 +301,30 @@ export function ReportBar({
       )}
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <SearchInput
-          id="report-search"
-          className="w-full sm:w-64"
-          value={view.query}
-          onChange={(e) => onView({ query: e.target.value })}
-          placeholder={t("accountSearch")}
-          aria-label={t("accountSearch")}
-        />
-        <Chip active={view.hideZero} onClick={() => onView({ hideZero: !view.hideZero })}>
-          {t("hideZeroRows")}
-        </Chip>
-        <Chip active={view.share} onClick={() => onView({ share: !view.share })}>
-          {t("shareOfTotal")}
-        </Chip>
-        {/* Nothing to take a difference against without a comparison, so the
-            toggle is absent rather than present and inert. */}
-        {showComparison && (
-          <Chip active={view.diff} onClick={() => onView({ diff: !view.diff })}>
-            {t("difference")}
-          </Chip>
+        {!charting && (
+          <>
+            <SearchInput
+              id="report-search"
+              className="w-full sm:w-64"
+              value={view.query}
+              onChange={(e) => onView({ query: e.target.value })}
+              placeholder={t("accountSearch")}
+              aria-label={t("accountSearch")}
+            />
+            <Chip active={view.hideZero} onClick={() => onView({ hideZero: !view.hideZero })}>
+              {t("hideZeroRows")}
+            </Chip>
+            <Chip active={view.share} onClick={() => onView({ share: !view.share })}>
+              {t("shareOfTotal")}
+            </Chip>
+            {/* Nothing to take a difference against without a comparison, so the
+                toggle is absent rather than present and inert. */}
+            {showComparison && (
+              <Chip active={view.diff} onClick={() => onView({ diff: !view.diff })}>
+                {t("difference")}
+              </Chip>
+            )}
+          </>
         )}
 
         {/* Only once the panel has scrolled away. While it's on screen it
@@ -321,9 +343,10 @@ export function ReportBar({
         )}
 
         <div className="ml-auto shrink-0 whitespace-nowrap text-sm text-muted">
-          {count}
+          {charting ? null : count}
         </div>
 
+        {views}
         {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
     </div>

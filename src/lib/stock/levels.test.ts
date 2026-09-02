@@ -6,6 +6,7 @@ import {
   openMl,
   pickFault,
   returnFault,
+  shortfall,
   shelfFromHomecoming,
   suggestPick,
   type BottleStock,
@@ -155,5 +156,25 @@ describe("bottlesAt", () => {
   it("reads a rung nobody is on as none", () => {
     expect(bottlesAt(shelf.open, 60)).toBe(0);
     expect(bottlesAt(shelf.open, 40)).toBe(2);
+  });
+});
+
+
+describe("shortfall", () => {
+  // Availability alone. What `pickFault` adds to it is a rule about choosing,
+  // and nobody chooses which bottle falls off a shelf.
+  it("does not make the dregs go first", () => {
+    // The case it exists for: a sealed bottle broken in the cellar while a
+    // 20 % one stands beside it. `pickFault` refuses this, rightly, for stock
+    // being carried to a pub. Refusing it for a breakage would ask somebody to
+    // write down a different accident from the one that happened.
+    expect(pickFault(shelf, { sealed: 1, open: {} })).toBe("openBottlesFirst");
+    expect(shortfall(shelf, { sealed: 1, open: {} })).toBeNull();
+  });
+
+  it("still refuses bottles the shelf has not got", () => {
+    expect(shortfall(shelf, { sealed: 7, open: {} })).toBe("notThatManySealed");
+    expect(shortfall(shelf, { sealed: 0, open: { 40: 3 } })).toBe("notThatManyOpen");
+    expect(shortfall(shelf, { sealed: 0, open: { 60: 1 } })).toBe("notThatManyOpen");
   });
 });

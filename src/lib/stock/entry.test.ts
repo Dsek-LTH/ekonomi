@@ -165,3 +165,39 @@ describe("entryFault, on a spill", () => {
     expect(entryFault({ kind: "WASTE", units: 0, spilledQty: -2 }, { kind: "UNIT" })).toBeNull();
   });
 });
+
+
+describe("entryFault, on a cellar write-off", () => {
+  // The other half of a spill, and a separate kind because the two happened in
+  // two places. A bottle broken at a pub was already off the shelf when it hit
+  // the floor; one broken in the cellar never left it. So this one moves stock,
+  // and falls through every rule a checkout does rather than being answered
+  // ahead of them.
+  it("takes stock off the shelf", () => {
+    expect(entryFault({ kind: "SPOILAGE", units: -2 }, { kind: "UNIT" })).toBeNull();
+    expect(
+      entryFault({ kind: "SPOILAGE", units: 0, open: { 40: -1 } }, { kind: "VOLUME" }),
+    ).toBeNull();
+  });
+
+  it("insists on the sign its meaning fixes", () => {
+    // Stock destroyed that turned up as an addition would read as a delivery to
+    // everybody who came after it.
+    expect(entryFault({ kind: "SPOILAGE", units: 2 }, { kind: "UNIT" })).toBe(
+      "removalNotNegative",
+    );
+    expect(
+      entryFault({ kind: "SPOILAGE", units: 0, open: { 40: 1 } }, { kind: "VOLUME" }),
+    ).toBe("levelsOnReturnOnly");
+  });
+
+  it("is not a row that moves nothing", () => {
+    expect(entryFault({ kind: "SPOILAGE", units: 0 }, { kind: "UNIT" })).toBe("nothingMoved");
+  });
+
+  it("has no ladder on a can", () => {
+    expect(entryFault({ kind: "SPOILAGE", units: 0, open: { 40: -1 } }, { kind: "UNIT" })).toBe(
+      "volumeOnUnitProduct",
+    );
+  });
+});

@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       nominalMl: body.nominalMl ?? null,
       ean: body.ean ?? null,
       costPriceOre: body.costPriceOre ?? null,
+      shelfLifeMonths: body.shelfLifeMonths ?? null,
       systembolagetId: body.systembolagetId ?? null,
       // Cleaned by the schema; the fallback is only the field being left out,
       // which a product with nothing to label itself is entitled to do.

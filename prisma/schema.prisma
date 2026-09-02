@@ -1479,6 +1479,25 @@ enum StockEntryKind {
   COUNT
   /// An entry undoing or amending an earlier one. Never an edit.
   CORRECTION
+  /// Destroyed in the cellar: dropped on the stairs, broken in the crate it
+  /// arrived in, out of date on the shelf.
+  ///
+  /// Its own kind rather than a WASTE with no event, because the two differ in
+  /// the one way the books care about: where the stock was standing when it was
+  /// destroyed. A spill at a pub is stock that left the cellar at CHECKOUT and
+  /// was already off the shelf, which is the whole reason WASTE carries
+  /// `spilledQty` and moves nothing. This is stock that never left, so it comes
+  /// off the shelf here, as an ordinary negative movement priced at the moving
+  /// average, exactly the way a checkout is.
+  ///
+  /// So it never carries an event and never carries `spilledQty`, and every
+  /// rule already written for a removal applies to it unread. Anybody asking
+  /// what a term's svinn cost wants the two added together, which is one line
+  /// in lib/data/stock-stats.ts rather than a shape both kinds have to share.
+  ///
+  /// Last in the enum because Postgres appends: keeping the order the database
+  /// has is what stops a later migration wanting to rewrite the type.
+  SPOILAGE
 }
 
 /// A thing the bar keeps a stock of.
@@ -1528,6 +1547,24 @@ model StockProduct {
   /// What the stock is worth is the sum of `StockEntry.valueDeltaOre`, never
   /// this times a count. See lib/stock/value.ts.
   costPriceOre Int?
+
+  /// How long this keeps from the day it is delivered, in whole months.
+  ///
+  /// A fact about the product rather than about a crate, which is the only
+  /// place it can live: nothing is written on the crates, they get mixed on the
+  /// shelf, and they come off it in whatever order somebody reaches. So the app
+  /// never claims to know a real best-before date. It knows that a lager keeps
+  /// about nine months and a cider about twenty-one, and that a delivery from
+  /// March is therefore worth going and looking at before Christmas.
+  ///
+  /// Months rather than days because that is how the answer is known. Nobody
+  /// says a beer keeps 274 days.
+  ///
+  /// Null where nobody has said, and on everything that does not go off. A
+  /// product with no figure here raises no checks at all, which is the gap
+  /// showing as a gap rather than as a default nobody believes. See
+  /// lib/stock/expiry.ts.
+  shelfLifeMonths Int?
 
   /// Free labels the cellar sorts by: "whisky", "cognac", "vodka".
   ///
@@ -1664,6 +1701,35 @@ model StockEntry {
   /// the stock is worth nothing until somebody says what it cost.
   unitCostOre Int?
 
+  /// On a delivery: roughly when this stops being worth drinking.
+  ///
+  /// Worked out when the row is written, from the day it arrived and the
+  /// product's `shelfLifeMonths`, and never read from the product again. The
+  /// same rule as `unitCostOre` above and for the same reason: what a delivery
+  /// keeps is a fact about the day it arrived, and correcting a product's shelf
+  /// life changes what the *next* delivery will be watched for rather than
+  /// reaching backwards into deliveries somebody has already checked.
+  ///
+  /// It is also the one place a real date can be typed. Where somebody has
+  /// actually read the crate, this is what they overwrite, and from then on the
+  /// row carries a fact instead of an estimate.
+  ///
+  /// Null on a product with no shelf life, and on everything that is not a
+  /// delivery. Nothing else brings stock into the building with an age.
+  bestBefore DateTime? @db.Date
+
+  /// When somebody last stood at the shelf and said this delivery was still
+  /// fine.
+  ///
+  /// What makes a warning dismissable, which is what stops the list filling up
+  /// with checks nobody can clear. It pushes the next check out by the lead
+  /// time rather than silencing the row for good: a crate looked at in December
+  /// still wants looking at in January.
+  ///
+  /// Set across every outstanding delivery of a product at once, because that
+  /// is what physically happened. Somebody looked at the shelf, not at a crate.
+  checkedAt DateTime? @db.Date
+
   /// On a stocktake: what was actually counted at this rung.
   ///
   /// The row still stores a difference in the columns above, because the log is
@@ -1738,6 +1804,9 @@ model StockEntry {
   /// Postgres counts nulls as distinct, which is the behaviour wanted here: a
   /// cellar takes as many deliveries of a product as it takes.
   @@unique([eventId, productId, kind, level])
+  /// Which deliveries are due a look: a range over the date, and most rows do
+  /// not have one.
+  @@index([bestBefore])
   @@index([productId, occurredAt])
   @@index([occurredAt])
   @@index([kind, occurredAt])
@@ -1875,6 +1944,28 @@ enum StockChangeAction {
   CREATE
   UPDATE
   DELETE
+}
+
+// The stock feature's own settings. One row, like BookkeepingSettings.
+//
+// Everything here is a policy rather than a fact: a number somebody chose, not
+// one the world handed us. Facts about a product live on the product.
+model StockSettings {
+  id String @id @default("singleton")
+
+  /// How many days before a delivery's best-before to start asking about it.
+  ///
+  /// A policy and therefore section-wide, not a property of any product. A
+  /// lager keeps nine months and a cider twenty-one, and both want the same
+  /// amount of notice, because the notice is about how long it takes to drink a
+  /// crate once somebody knows it needs drinking.
+  ///
+  /// Folding it into the product's own figure would have been the cheaper
+  /// schema and the wrong one: changing your mind about how much warning you
+  /// want would then mean editing every product on the shelf.
+  expiryLeadDays Int @default(30)
+
+  updatedAt DateTime @updatedAt
 }
 
 model StockEvent {

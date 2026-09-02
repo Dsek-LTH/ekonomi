@@ -55,11 +55,18 @@ export type DrinkCategory =
 // CHECKOUT and RETURN are the pair a pub night makes: bottles leave the store
 // and come back, and the return is the one moment anybody looks at a bottle and
 // says what is left in it. See lib/stock/levels.ts.
+//
+// WASTE and SPOILAGE are both stock destroyed, and they are two kinds because
+// they happened in two places. A spill at a pub was already off the shelf when
+// it hit the floor, so WASTE moves no stock and its quantity sits in its own
+// column. A bottle dropped in the cellar never left, so SPOILAGE takes it off
+// the shelf like any other removal. See the enum in prisma/schema.prisma.
 export type StockEntryKind =
   | "PURCHASE"
   | "CHECKOUT"
   | "RETURN"
   | "WASTE"
+  | "SPOILAGE"
   | "COUNT"
   | "CORRECTION";
 

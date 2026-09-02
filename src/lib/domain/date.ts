@@ -51,3 +51,25 @@ export function daysAgo(value: string, now: string = today()): number {
   const day = Date.parse(`${now}T00:00:00Z`);
   return Math.round((day - then) / 86_400_000);
 }
+
+// A date so many whole months later, clamped to a day that exists.
+//
+// Adding nine months to 31 May cannot land on 31 February, and the answer
+// everybody means by it is the last day of the month it lands in. JavaScript's
+// own Date rolls that forward into March instead, quietly, which would put a
+// best-before three days later than the one anybody would have written down.
+//
+// Read at UTC midnight like the rest of this file, so no clock change can move
+// the result by a day.
+export function addMonths(value: string, months: number): string {
+  const [y, m, d] = value.split("-").map(Number);
+  // Month 0 is January here, so the arithmetic is on a 0-based index and the
+  // year carries itself.
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  // Day 0 of the following month is the last day of this one.
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}

@@ -30,11 +30,13 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { Notice } from "@/components/ui/notice";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
+import type { Check } from "@/lib/stock/expiry";
 import { alcoholPerKrona, unitVolume } from "@/lib/stock/onhand";
 import { hasTag, tagsInUse } from "@/lib/stock/tags";
 import { TagChips } from "@/components/stock/tag-chips";
 import { ProductDialog } from "./product-dialog";
 import { CATEGORIES } from "@/lib/domain/categories";
+import { cn } from "@/lib/ui/utils";
 
 const kr = (ore: number) =>
   `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
@@ -51,11 +53,21 @@ const clPerKrona = (cl: number) =>
 
 export default function StockClient({
   levels,
+  checks,
   asOf,
   today,
   canManage,
 }: {
   levels: StockLevelDto[];
+  /**
+   * Which products want somebody to go and read a crate, by product id.
+   *
+   * Keyed rather than folded into the level, because it answers a different
+   * question from the rest of the row: everything else here is what the shelf
+   * holds on the date being looked at, and a check is a thing to do this week.
+   * See lib/stock/expiry.ts.
+   */
+  checks: Record<string, Check>;
   /** The day the figures are as of, when it is not today. */
   asOf?: string;
   /** Today, in Stockholm, decided by the server. See the page. */
@@ -142,6 +154,28 @@ export default function StockClient({
         predicate: (p: StockLevelDto) => p.category === c,
       })),
     },
+    // Only where something is actually due. A filter that can only ever return
+    // nothing is a control that reads as broken, the same reason the tag filter
+    // below waits for a tag.
+    ...(Object.keys(checks).length > 0
+      ? [
+          {
+            label: t("expiry.filter"),
+            options: [
+              {
+                value: "check:any",
+                label: t("expiry.filterDue"),
+                predicate: (p: StockLevelDto) => checks[p.id] !== undefined,
+              },
+              {
+                value: "check:over",
+                label: t("expiry.filterOver"),
+                predicate: (p: StockLevelDto) => checks[p.id]?.state === "over",
+              },
+            ],
+          },
+        ]
+      : []),
     // Nothing to offer until something is tagged, and an empty dropdown is a
     // control that reads as broken.
     ...(tags.length > 0
@@ -281,12 +315,44 @@ export default function StockClient({
       header: "",
       align: "right",
       mobile: "meta",
-      cell: (p) =>
-        p.impossible ? (
-          <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">
-            {t("flag.impossible")}
-          </span>
-        ) : null,
+      // Said on the row rather than gathered into a banner, which is this
+      // page's whole rule: a warning away from its subject has to name it and
+      // then be kept in step with it.
+      //
+      // The wording is careful, because the app does not know a real date and
+      // must not sound as if it does. Nothing is written on a crate here. What
+      // it knows is that a delivery from March exists and the product keeps
+      // nine months, so what it says is "go and look", not "this has expired".
+      cell: (p) => {
+        const check = checks[p.id];
+        return (
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            {p.impossible && (
+              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">
+                {t("flag.impossible")}
+              </span>
+            )}
+            {check && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  check.state === "over"
+                    ? "bg-warning-soft text-warning"
+                    : "bg-surface text-muted",
+                )}
+                title={t("expiry.rowHint", {
+                  date: check.bestBefore,
+                  delivered: check.occurredAt,
+                })}
+              >
+                {check.state === "over"
+                  ? t("expiry.flagOver")
+                  : t("expiry.flagSoon", { days: check.daysLeft })}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -294,7 +360,7 @@ export default function StockClient({
     <PageShell title={t("title")} description={t("description")} width="wide">
       <Card>
         <CardHeader
-          title={t("products.products")}
+          title={t("products.onShelf")}
           subtitle={t("counts.products", { count: levels.length })}
           action={
             // The figure the page exists to produce, given its own corner
@@ -363,7 +429,14 @@ export default function StockClient({
               // Two buttons, so on a phone they take half the row each rather
               // than huddling at its left end. The toolbar stretches whatever
               // it is handed; this says how to divide what it gets.
-              <div className="flex items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
+              //
+              // `flex-wrap`, because half a row is not always enough of one. A
+              // button's label is `whitespace-nowrap`, so "Registrera leverans"
+              // beside "Ny produkt" has a min-content width of about 340px and
+              // `flex-1` cannot take it below that: on a 360px phone the pair
+              // ran off the side of the card. Wrapped they are two full-width
+              // buttons, which is what a phone wanted from them anyway.
+              <div className="flex flex-wrap items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
                 {/* A pallet's worth of deliveries, on its own screen. It sits
                     beside "new product" rather than on a product because that
                     is what it is not about: a delivery of twenty things found

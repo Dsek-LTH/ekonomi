@@ -749,7 +749,7 @@
       "purchaseNotPositive": "A purchase adds to the stock and cannot be negative.",
       "removalNotNegative": "Servings and waste take from the stock.",
       "eventNotFound": "The occasion was not found.",
-      "eventOnNightOnly": "Purchases and stocktakes do not belong to an occasion.",
+      "eventOnNightOnly": "Purchases, stocktakes and write-offs do not belong to an occasion.",
       "eventRequired": "Takeouts, returns and spills have to belong to an occasion.",
       "volumeOnUnitProduct": "This product is counted in units and has no volume of its own.",
       "cellMoved": "Somebody else booked on this occasion in the meantime. The figures are being re-read. Check them and try again.",
@@ -762,7 +762,7 @@
       "sizeRequired": "The volume per unit is needed.",
       "eanTaken": "That barcode already belongs to {name}.",
       "nameTaken": "There is already a product called {name}.",
-      "productInUse": "The product has {count, plural, =1 {1 movement} other {# movements}} in the log and cannot be removed."
+      "noCheckOnRow": "Only a delivery can have a best-before date to check."
     },
     "mileage": {
       "noReadings": "The mileage claim is missing an odometer reading before or after the journey.",
@@ -794,6 +794,7 @@
     "resultUnits": "Result units",
     "cards": "Guild cards",
     "mileageRates": "Mileage",
+    "stockSettings": "Stock",
     "users": "Users",
     "faq": "FAQ",
     "profile": "My profile",
@@ -810,7 +811,7 @@
     "skipToContent": "Skip to content",
     "mainNav": "Main navigation",
     "income": "Income",
-    "stock": "Stock",
+    "stock": "Products",
     "stockLog": "Stock log",
     "stockStats": "Statistics",
     "groupStock": "Stock",
@@ -1052,6 +1053,50 @@
     "noAccountsMatch": "No accounts match the filter.",
     "noRowsInPeriod": "No booked rows in the period.",
     "calculatedResult": "Calculated result",
+    "charts": {
+      "view": "Table or charts",
+      "table": "Table",
+      "diagram": "Charts",
+      "loadFailed": "Could not load the charts.",
+      "empty": "Nothing was booked in the period.",
+      "monthly": {
+        "title": "Result per month",
+        "hint": "Income above the line, costs below it, and the result drawn across them.",
+        "alt": "Income, costs and result per month.",
+        "income": "Income",
+        "costs": "Costs",
+        "result": "Result"
+      },
+      "cumulative": {
+        "title": "Result so far",
+        "withBudget": "The result added up from the start of the period, against the budget spread evenly over the year.",
+        "noBudget": "The result added up from the start of the period. Pick a budget to compare with and the pace towards it is drawn too.",
+        "alt": "The result added up over the period.",
+        "actual": "Actual",
+        "pace": "Budget pace",
+        "against": "Against the pace"
+      },
+      "ranking": {
+        "title": "Cost centres",
+        "hint": "The result per cost centre in the period, busiest first.",
+        "budgetMark": "The mark is the budget for the whole year.",
+        "showAll": "Show all {count}",
+        "showFewer": "Show fewer"
+      },
+      "stack": {
+        "title": "Costs per cost centre",
+        "hint": "What each cost centre spent, month by month. The six largest on their own, the rest together.",
+        "alt": "Costs per month, stacked by cost centre.",
+        "others": "Others ({count})",
+        "total": "Total"
+      },
+      "composition": {
+        "title": "Where the money went",
+        "hint": "The period's costs by account group.",
+        "alt": "The period's costs split by account group.",
+        "share": "{share} %"
+      }
+    },
     "col": {
       "account": "Account",
       "opening": "Opening balance",
@@ -1706,6 +1751,18 @@
       "confirmOwnTitle": "You are taking something from yourself",
       "confirmOwnBody": "You hold the {role} role. Removing {capability} from it removes it from you too.",
       "confirmOwnAction": "Remove anyway"
+    },
+    "stock": {
+      "title": "Stock",
+      "description": "Settings for the stock. How long a product keeps is set on the product, not here.",
+      "save": "Save",
+      "saveFailed": "Could not save the setting",
+      "expiry": {
+        "title": "Best-before reminder",
+        "hint": "We never know what is printed on a crate. What we know is when a delivery arrived and how long the product keeps, and from that we ask somebody to go down and read the packaging.",
+        "leadDays": "Notice in days",
+        "leadDaysHint": "How far ahead of the estimated date to start asking. 30 days is about right: a crate can be drunk in a month if somebody knows about it."
+      }
     }
   },
   "errorPage": {
@@ -1928,8 +1985,8 @@
     }
   },
   "stock": {
-    "title": "Stock",
-    "description": "The alcohol stock: what is on the shelf, what came in and what went out.",
+    "title": "Products",
+    "description": "Everything the section keeps in stock, and what is on the shelf of each.",
     "save": "Save",
     "cancel": "Cancel",
     "saved": "The movement was recorded.",
@@ -1966,7 +2023,8 @@
       "COUNT": "Stocktake",
       "CORRECTION": "Correction",
       "CHECKOUT": "Out",
-      "RETURN": "In"
+      "RETURN": "In",
+      "SPOILAGE": "Write-off"
     },
     "kindName": {
       "UNIT": "Counted in units",
@@ -2043,7 +2101,9 @@
       "removed": "The product was removed.",
       "removeFailed": "Could not remove the product",
       "removeTitle": "Remove {name}?",
-      "removeDescription": "Only a product nothing has been booked on can be removed. One that has been used stays in the log.",
+      "removedWithLog": "The product was removed, and {count, plural, =1 {1 movement} other {# movements}} in the log with it.",
+      "removeDescription": "Nothing has been booked on this product, so nothing else changes when it goes.",
+      "removeUsed": "{count, plural, =1 {1 movement} other {# movements}} in the log go with the product: deliveries, stocktakes and whatever was booked on an occasion. The stock value is recomputed without them, and the purchased volumes behind a restaurangrapport already filed can no longer be reproduced. This cannot be undone.",
       "empty": "No products added yet.",
       "saved": "The product was saved.",
       "saveFailed": "Could not save the product",
@@ -2070,7 +2130,10 @@
         "tagRemove": "Remove the tag {tag}",
         "tagsNone": "No tags yet",
         "tagsFull": "At most {max} tags",
-        "tagTooLong": "That tag is too long, at most {max} characters"
+        "tagTooLong": "That tag is too long, at most {max} characters",
+        "shelfLife": "Shelf life",
+        "shelfLifeHint": "Months from delivery. Beer is usually 9, cider 21. Leave empty for anything that does not go off, such as spirits.",
+        "shelfLifePlaceholder": "months"
       },
       "col": {
         "name": "Product",
@@ -2088,7 +2151,8 @@
       "noSize": "no size set",
       "purchase": "Purchase",
       "stocktake": "Stocktake",
-      "products": "Products"
+      "onShelf": "On the shelf",
+      "spoilage": "Write off"
     },
     "scan": {
       "action": "Scan",
@@ -2109,7 +2173,7 @@
     },
     "notice": {
       "worth": "The stock's value goes up by {value}, from the product's purchase price.",
-      "noCostPrice": "This product has no purchase price, so the delivery goes on the shelf worth nothing. Fill the price in under Stock products first if the stock value is to be right."
+      "noCostPrice": "This product has no purchase price, so the delivery goes on the shelf worth nothing. Fill the price in on the product first if the stock value is to be right."
     },
     "purchase": {
       "title": "Register a delivery",
@@ -2156,6 +2220,19 @@
       "agrees": "Agrees with the log. Nothing to adjust.",
       "noteHint": "Say why it differs, if you know."
     },
+    "spoilage": {
+      "title": "Write off",
+      "lead": "For what broke or went out of date in the cellar. The quantity comes off the shelf and the stock value is written down.",
+      "units": "Quantity",
+      "bottles": "Sealed bottles",
+      "level": "Which bottles",
+      "sealed": "Sealed",
+      "onShelf": "On the shelf: {count}",
+      "worth": "The stock's value is written down by roughly {value}.",
+      "noValue": "This product is worth nothing on the shelf, so the write-off is recorded without an amount.",
+      "noteHint": "Say what happened, if you can.",
+      "atEvent": "Something broken at a pub is booked as spill on that occasion, not here."
+    },
     "filterCategory": "Drink type",
     "filterTag": "Tags",
     "product": {
@@ -2197,6 +2274,13 @@
       "newHint": "An occasion is a night or an event. Everything taken out and brought back is booked against it.",
       "create": "Create",
       "saveFailed": "The occasion could not be created.",
+      "remove": "Remove occasion",
+      "removeTitle": "Remove {name}?",
+      "removeDescription": "Nothing is booked on this occasion, so nothing else changes when it goes.",
+      "removeUsed": "{count, plural, =1 {1 movement} other {# movements}} across {products, plural, =1 {1 product} other {# products}} go with the occasion. What went out comes back onto the shelf, and what came home part-used leaves it. The stock value is recomputed without the night. This cannot be undone.",
+      "removeFailed": "Could not remove the occasion",
+      "removed": "The occasion was removed.",
+      "removedWithLog": "The occasion was removed, and {count, plural, =1 {1 movement} other {# movements}} in the log with it.",
       "stillOut": "Still out",
       "sold": "What was used",
       "nothing": "Nothing has been booked on this occasion yet. Add a product below.",
@@ -2329,6 +2413,25 @@
         "ALKOHOLDRYCKSLIKNANDE": "Alcohol-like preparations"
       }
     },
-    "ml": "{ml} ml"
+    "ml": "{ml} ml",
+    "expiry": {
+      "filter": "Best before",
+      "filterDue": "Needs a look",
+      "filterOver": "Past the date",
+      "flagSoon": "Check in {days} d",
+      "flagOver": "Check dates",
+      "rowHint": "Delivered {delivered}. Keeps until roughly {date}, going by the product's shelf life.",
+      "checked": "Checked, looks fine",
+      "checkedDone": "Noted that you looked. We will ask again in a while.",
+      "checkFailed": "Could not record the check",
+      "title": "Best before",
+      "hint": "One row per delivery that could still be down there. The dates are worked out from the product's shelf life, not read off the packaging. Go and look, and tick off one row at a time.",
+      "none": "No deliveries to keep an eye on.",
+      "deliveredOn": "Delivered {date}",
+      "stateOver": "{days} d past",
+      "stateSoon": "In {days} d",
+      "stateLater": "In {days} d",
+      "stateChecked": "Checked {date}"
+    }
   }
 }

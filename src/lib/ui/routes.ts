@@ -28,12 +28,12 @@ export function routePath(url: string): string {
  * where you are. Longest and not first, because a route can be a prefix of
  * another without being its parent: /stock, /stock/events and /stock/log are
  * three sections that share an area of the URL space, and the events list is
- * filed under /stock rather than being a page *of* Lager. A test that stopped
+ * filed under /stock rather than being a page *of* Produkter. A test that stopped
  * at the first match lit both rows and said nothing about which one you were
  * actually on.
  *
  * The `${route}/` boundary makes it a route boundary rather than a string one:
- * without it a future /stockholm would belong to Lager.
+ * without it a future /stockholm would belong to Produkter.
  *
  * Null for a path no route owns (/profile, an utlägg's own page). Those are
  * pages under a section rather than sections, and they carry their own heading

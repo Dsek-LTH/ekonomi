@@ -56,12 +56,12 @@ describe("owningRoute", () => {
   it("gives a page the section it sits under", () => {
     expect(owner("/expenses/abc123")).toBe("/expenses");
     expect(owner("/expenses/abc123/book")).toBe("/expenses");
-    // A product page, which the nav does not list. Lager owns it.
+    // A product page, which the nav does not list. Produkter owns it.
     expect(owner("/stock/xyz")).toBe("/stock");
   });
 
   it("gives a nested section to itself and not to the one above it", () => {
-    // The bug this replaced: the sidebar lit Lager *and* Tillfällen here,
+    // The bug this replaced: the sidebar lit Produkter *and* Tillfällen here,
     // because /stock is a prefix of /stock/events.
     expect(owner("/stock/events")).toBe("/stock/events");
     expect(owner("/stock/log")).toBe("/stock/log");

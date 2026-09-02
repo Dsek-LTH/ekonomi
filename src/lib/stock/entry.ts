@@ -52,16 +52,18 @@ export interface ProposedEntry {
 /**
  * The kinds whose sign is fixed by what they mean.
  *
- * A delivery and a homecoming add; a checkout takes away. Nothing else about
- * the row says which, and a checkout entered as +3 would read as stock
- * appearing to everyone who came after.
+ * A delivery and a homecoming add; a checkout and a cellar write-off take away.
+ * Nothing else about the row says which, and a checkout entered as +3 would
+ * read as stock appearing to everyone who came after.
  *
  * COUNT and CORRECTION are deliberately absent: a count can go either way,
  * that is the whole point of counting, and so can a correction. WASTE is
  * absent because it moves no stock at all, so it has no sign to get right.
+ * SPOILAGE is here rather than beside it precisely because it does move stock:
+ * a bottle broken in the cellar never left the shelf, so it leaves now.
  */
 const ADDS: readonly StockEntryKind[] = ["PURCHASE", "RETURN"];
-const REMOVES: readonly StockEntryKind[] = ["CHECKOUT"];
+const REMOVES: readonly StockEntryKind[] = ["CHECKOUT", "SPOILAGE"];
 
 export function entryFault(
   entry: ProposedEntry,
@@ -70,7 +72,7 @@ export function entryFault(
   const { kind, units, open } = entry;
   const movedLevels = LEVELS.some((level) => (open?.[level] ?? 0) !== 0);
 
-  // ── A spill, which is the one kind that moves no stock ──
+  // ── A spill at a pub, which is the one kind that moves no stock ──
   //
   // What was dropped left the cellar when it was checked out; taking it off the
   // shelf again would remove it twice and the crate would come up short at the
@@ -79,6 +81,11 @@ export function entryFault(
   // here rather than falling through them. It used to fall through, and every
   // spill came back as "nothing moved": the row was, correctly, moving no
   // stock at all.
+  //
+  // A bottle broken in the cellar is SPOILAGE and none of this applies to it.
+  // That one never left, so it is an ordinary removal and falls through every
+  // rule below exactly as a checkout does. Two kinds rather than one shape that
+  // has to be read twice.
   if (kind === "WASTE") {
     if ((entry.spilledQty ?? 0) === 0) return "nothingSpilled";
     if (units !== 0 || movedLevels) return "spillMovesNoStock";

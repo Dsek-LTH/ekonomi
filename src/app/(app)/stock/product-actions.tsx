@@ -1,17 +1,17 @@
 "use client";
 
-// The two movements that belong to a product rather than to a night.
+// The movements that belong to a product rather than to a night.
 //
-// A delivery and a stocktake are both stock movements and both end up in the
-// same log as everything else, but they are not what this feature is used for.
-// They happen a few times a term, they are done sitting down with an invoice or
-// standing at a shelf with a clipboard, and they ask questions the in/out flow
-// never asks. Leaving them in that dialog made the common act pick its way past
-// two options it never wanted, so they moved here, onto the product they are
-// about.
+// A delivery, a stocktake and a write-off are all stock movements and all end
+// up in the same log as everything else, but they are not what this feature is
+// used for. They happen a few times a term, they are done sitting down with an
+// invoice or standing at a shelf with a clipboard, and they ask questions the
+// in/out flow never asks. Leaving them in that dialog made the common act pick
+// its way past options it never wanted, so they moved here, onto the product
+// they are about.
 //
-// Both write through the same route as everything else. Nothing here is a
-// special kind of stock movement; it is the same log, reached from where the
+// All of them write through the same route as everything else. Nothing here is
+// a special kind of stock movement; it is the same log, reached from where the
 // question is asked.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -22,7 +22,8 @@ import { Notice } from "@/components/ui/notice";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
-import { LEVELS, bottlesAt, type OpenBottles } from "@/lib/stock/levels";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { LEVELS, bottlesAt, type Level, type OpenBottles } from "@/lib/stock/levels";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -234,6 +235,138 @@ export function StocktakeDialog({
           {t("cancel")}
         </Button>
         <Button onClick={save} disabled={!anyDifference} loading={pending !== null}>
+          {t("save")}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+
+/**
+ * A write-off: what broke or went out of date in the cellar.
+ *
+ * The other half of a spill, and a different kind in the log for the one reason
+ * that matters. A spill at a pub is stock the checkout already took off the
+ * shelf, so it moves nothing and is booked on the night it happened. This never
+ * left the cellar, so it comes off the shelf here, at the moving average, the
+ * same way a checkout does. See the StockEntryKind enum in the schema.
+ *
+ * One rung at a time, because that is what an accident is. A dropped bottle
+ * loses everything left in it, so the rung it came off is the whole of what it
+ * cost, and two rungs at once would be two accidents wearing one row. A can has
+ * no ladder and is never asked.
+ *
+ * What it will not do is second-guess which bottle broke. The store's usual
+ * rule is that open bottles leave before sealed ones, and it has no business
+ * here: the sealed one on the top shelf is the one that fell. See `shortfall`
+ * in lib/stock/levels.ts, which is what the route checks this against.
+ */
+export function SpoilageDialog({
+  product,
+  onClose,
+}: {
+  product: StockLevelDto;
+  onClose: () => void;
+}) {
+  const t = useTranslations("stock");
+  const { pending, mutate } = useMutation();
+  const isVolume = product.kind === "VOLUME";
+  const [level, setLevel] = useState(0);
+  const [qty, setQty] = useState("");
+  const [occurredAt, setOccurredAt] = useState(today());
+  const [note, setNote] = useState("");
+
+  const count = int(qty);
+  const onShelf =
+    level === 0 ? product.onHand.units : bottlesAt(product.onHand.open, level as Level);
+
+  // What the shelf loses. Sealed stock carries the whole value of the product
+  // (see lib/stock/value.ts), so an opened bottle is worth nothing to write
+  // down: its cost left the books the moment it was opened. Approximate,
+  // because the route prices the row at the average it finds when it writes it,
+  // and this is the same average read a moment earlier.
+  const unitOre =
+    product.onHand.units > 0 ? product.onHand.valueOre / product.onHand.units : 0;
+  const writeDownOre = level === 0 ? Math.round(unitOre * count) : 0;
+
+  async function save() {
+    const body: CreateStockEntry = {
+      productId: product.id,
+      kind: "SPOILAGE",
+      occurredAt,
+      level: level as 0 | 80 | 60 | 40 | 20,
+      // Negative, because the shelf is what this takes from. The route holds
+      // the same rule and refuses the row if the sign and the kind disagree.
+      units: level === 0 ? -count : 0,
+      open: level === 0 ? undefined : { [String(level)]: -count },
+      note: note.trim() || undefined,
+    };
+    const saved = await mutate("/api/stock/entries", {
+      body,
+      error: t("saveFailed"),
+      success: t("saved"),
+    });
+    if (saved) onClose();
+  }
+
+  return (
+    <Modal label={t("spoilage.title")} onClose={onClose} className="max-w-md">
+      <ModalHeader title={t("spoilage.title")} subtitle={product.name} />
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+        <p className="text-sm text-muted">{t("spoilage.lead")}</p>
+
+        {isVolume && (
+          <Field label={t("spoilage.level")}>
+            <SegmentedControl
+              value={String(level)}
+              onChange={(v) => setLevel(Number(v))}
+              options={[
+                { value: "0", label: t("spoilage.sealed") },
+                ...LEVELS.map((l) => ({ value: String(l), label: t("field.levelOf", { level: l }) })),
+              ]}
+            />
+          </Field>
+        )}
+
+        <Field
+          label={isVolume ? t("spoilage.bottles") : t("spoilage.units")}
+          hint={t("spoilage.onShelf", { count: onShelf })}
+        >
+          <Input
+            inputMode="numeric"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            placeholder="0"
+            autoFocus
+          />
+        </Field>
+
+        <Field label={t("field.date")}>
+          <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
+        </Field>
+
+        {count > 0 &&
+          (writeDownOre > 0 ? (
+            <Notice tone="info">{t("spoilage.worth", { value: kr(writeDownOre) })}</Notice>
+          ) : (
+            <Notice tone="info">{t("spoilage.noValue")}</Notice>
+          ))}
+
+        {/* Said out loud rather than left to be discovered, because the two
+            words mean the same thing to somebody holding a broken bottle and
+            the log has to keep them apart. */}
+        <Notice tone="warning">{t("spoilage.atEvent")}</Notice>
+
+        <Field label={t("field.note")} hint={t("spoilage.noteHint")}>
+          <Input value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">
+        <Button variant="secondary" onClick={onClose}>
+          {t("cancel")}
+        </Button>
+        <Button onClick={save} disabled={count <= 0 || count > onShelf} loading={pending !== null}>
           {t("save")}
         </Button>
       </div>

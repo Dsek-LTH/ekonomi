@@ -68,6 +68,23 @@ export interface Pick {
 export const pickedCount = (pick: Pick): number => pick.sealed + openCount(pick.open);
 
 /**
+ * Whether the store holds these bottles at all.
+ *
+ * Availability and nothing else, which is the whole of the rule wherever
+ * nobody is choosing. A bottle broken in the cellar is the bottle that broke:
+ * it may have been the sealed one standing next to a 20 % one, and a rule that
+ * refused to record that would be asking somebody to write down a different
+ * accident from the one that happened. See `pickFault` for taking stock out to
+ * a pub, which is a choice, and where the ladder does have a say.
+ */
+export function shortfall(stock: BottleStock, pick: Pick): PickFault | null {
+  for (const level of LEVELS) {
+    if (bottlesAt(pick.open, level) > bottlesAt(stock.open, level)) return "notThatManyOpen";
+  }
+  return pick.sealed > stock.sealed ? "notThatManySealed" : null;
+}
+
+/**
  * Whether this is a set of bottles the store can actually give up.
  *
  * The interesting rule is the last one. Sealed bottles are refused while any
@@ -77,10 +94,8 @@ export const pickedCount = (pick: Pick): number => pick.sealed + openCount(pick.
  * the dregs leave with you, or the fresh bottle stays.
  */
 export function pickFault(stock: BottleStock, pick: Pick): PickFault | null {
-  for (const level of LEVELS) {
-    if (bottlesAt(pick.open, level) > bottlesAt(stock.open, level)) return "notThatManyOpen";
-  }
-  if (pick.sealed > stock.sealed) return "notThatManySealed";
+  const missing = shortfall(stock, pick);
+  if (missing) return missing;
   if (pick.sealed > 0 && openCount(stock.open) > openCount(pick.open)) {
     return "openBottlesFirst";
   }

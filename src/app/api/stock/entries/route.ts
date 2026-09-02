@@ -11,9 +11,10 @@ import { parseBody } from "@/lib/api/parse";
 import { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { entryFault, type ProposedEntry } from "@/lib/stock/entry";
-import { LEVELS, pickFault, type OpenBottles } from "@/lib/stock/levels";
+import { LEVELS, isLevel, pickFault, shortfall, type OpenBottles } from "@/lib/stock/levels";
 import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock/event";
 import { onHand } from "@/lib/stock/onhand";
+import { bestBeforeOf } from "@/lib/stock/expiry";
 import { costBasis, valueDelta } from "@/lib/stock/value";
 import { replayProduct } from "@/lib/server/stock-replay";
 import { bulkTransaction } from "@/lib/server/tx";
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
       unitMl: true,
       nominalMl: true,
       costPriceOre: true,
+      shelfLifeMonths: true,
     },
   });
   if (!product) return fail(404, "stock.productNotFound");
@@ -175,9 +177,11 @@ export async function POST(req: Request) {
     });
     if (!event) return fail(422, "stock.eventNotFound");
   } else if (body.eventId) {
-    // A delivery and a stocktake are about the cellar rather than a night, and
-    // letting one carry an event would put stock into a night's arithmetic that
-    // never went to it.
+    // A delivery, a stocktake and a cellar write-off are about the cellar
+    // rather than a night, and letting one carry an event would put stock into
+    // a night's arithmetic that never went to it. A SPOILAGE especially: it
+    // takes stock off the shelf, and against an event that had already checked
+    // that stock out it would take the same bottle away twice.
     return fail(422, "stock.eventOnNightOnly");
   }
 
@@ -244,7 +248,15 @@ export async function POST(req: Request) {
         LEVELS.map((l) => [l, Math.max(0, -(open[l] ?? 0))]).filter(([, n]) => (n as number) > 0),
       ) as OpenBottles,
     };
-    const bad = pickFault({ sealed: held.units, open: held.open }, pick);
+    // A write-off is not a choice, so the ladder has no say in it. Somebody
+    // dropped the bottle they dropped, and refusing to record a sealed one
+    // because an open one is still standing on the shelf would be asking them
+    // to write down a different accident. Everything else is stock being
+    // picked, and there the dregs go first. See lib/stock/levels.ts.
+    const bad =
+      body.kind === "SPOILAGE"
+        ? shortfall({ sealed: held.units, open: held.open }, pick)
+        : pickFault({ sealed: held.units, open: held.open }, pick);
     if (bad) return fail(422, `stock.${bad}`);
   }
 
@@ -300,6 +312,12 @@ export async function POST(req: Request) {
     if (!expense) return fail(422, "stock.expenseNotFound");
   }
 
+  // Only a delivery brings stock into the building with an age. A return is
+  // stock coming back from a night out, and it is already as old as whatever
+  // delivery carried it in.
+  const bestBeforeAt =
+    body.kind === "PURCHASE" ? bestBeforeOf(body.occurredAt, product.shelfLifeMonths) : null;
+
   // Recorded as something somebody did, not only as something that happened.
   // The product's own feed is where "why does Fireball say 20?" gets answered,
   // and a delivery has no event to ask it from.
@@ -316,6 +334,14 @@ export async function POST(req: Request) {
       // The price as it stands now, captured so that nothing computed from it
       // can move when the product is re-priced. See the schema note.
       unitCostOre: product.costPriceOre,
+      // And, on a delivery, roughly how long what just arrived keeps. Captured
+      // for the same reason and at the same moment: it is a fact about the day
+      // the stock came in, and correcting a product's shelf life afterwards
+      // must change what the next delivery is watched for rather than reach
+      // back into one somebody has already been out to check. Null on every
+      // other kind, and on a product nobody has given a shelf life. See
+      // lib/stock/expiry.ts.
+      bestBefore: bestBeforeAt ? new Date(bestBeforeAt) : null,
       spilledQty,
       level,
       eventId: body.eventId ?? null,
@@ -329,6 +355,16 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
+  // The figure somebody typed, at the rung the row is about. A spill carries
+  // its own count; everything else is what the shelf columns moved, and for a
+  // row about an opened bottle that is the rung rather than `units`, which is
+  // nought on one. A feed that logged those as nothing would be a feed that
+  // lost the movement it exists to explain.
+  const movedQty =
+    body.kind === "WASTE"
+      ? spilledQty
+      : Math.abs(isLevel(level) ? (open[level] ?? 0) : units);
+
   await prisma.stockChange.create({
     data: {
       entryId: entry.id,
@@ -337,7 +373,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       kind: body.kind,
       level,
-      toQty: body.kind === "WASTE" ? spilledQty : Math.abs(units),
+      toQty: movedQty,
       actorId: g.actor.id,
     },
   });

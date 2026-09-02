@@ -22,6 +22,13 @@ type Translator = (key: string, values?: Record<string, string | number>) => str
  * Narrowing the sheet matters more than it sounds: a night can run to thirty
  * products, and scrolling past twenty-nine of them to find the one on the
  * trolley is most of the work.
+ *
+ * Removing the night rides here too, which is not the same kind of control as
+ * the rest and has nowhere better to be. The rule the app keeps is that what
+ * you can do to a thing belongs to the card that describes it (see PageShell,
+ * which has no action slot on purpose), and this sheet is the only card an
+ * event has. So the button says it is removing the night rather than the sheet,
+ * and sits apart from the date at the far end of the row.
  */
 export function SheetHeader({
   t,
@@ -33,6 +40,7 @@ export function SheetHeader({
   kinds,
   column,
   onColumn,
+  onRemove,
 }: {
   t: Translator;
   /** A reader who may not write gets the sheet without its controls. */
@@ -44,6 +52,8 @@ export function SheetHeader({
   kinds: readonly CellKind[];
   column: CellKind;
   onColumn: (kind: CellKind) => void;
+  /** Undo the whole night. Absent for a reader, like every other control. */
+  onRemove?: () => void;
 }) {
   return (
     <>
@@ -60,6 +70,16 @@ export function SheetHeader({
                   aria-label={t("field.date")}
                 />
               </div>
+              {onRemove && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-danger hover:bg-danger-soft"
+                  onClick={onRemove}
+                >
+                  {t("event.remove")}
+                </Button>
+              )}
             </div>
           ) : undefined
         }

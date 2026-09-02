@@ -43,6 +43,7 @@ const KINDS: StockEntryKind[] = [
   "CHECKOUT",
   "RETURN",
   "WASTE",
+  "SPOILAGE",
   "COUNT",
   "CORRECTION",
 ];
@@ -174,10 +175,12 @@ export default function StockLogClient({
       align: "right",
       className: "tabular-nums",
       mobile: "meta",
-      // A spill's count lives in its own column, because it must not move the
-      // shelf, but it is still a quantity that went somewhere, and a breakage
-      // that showed a dash in every column was a row this screen could not
-      // explain to an inspection.
+      // A spill at a pub keeps its count in its own column, because it must
+      // not move the shelf, but it is still a quantity that went somewhere, and
+      // a breakage that showed a dash in every column was a row this screen
+      // could not explain to an inspection. A write-off in the cellar needs
+      // none of that: it took stock off the shelf, so it reads out of `units`
+      // like every other removal.
       cell: (r) => {
         const n = r.kind === "WASTE" ? -r.spilledQty : r.units;
         return n === 0 ? (

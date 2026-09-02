@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
 import { SkeletonSheet } from "@/components/ui/skeleton";
 import { type ComboOption } from "@/components/ui/combobox";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import { IconChart, IconViewTable } from "@/components/ui/icons";
 
 import type { FortnoxStatus } from "@/lib/domain/types";
 import { ReportBar, ReportParameters } from "./report-controls";
@@ -21,6 +23,7 @@ import {
   useColumnScrollSync,
   type Shape,
 } from "./report-table";
+import { ReportCharts, type TrendResponse } from "./report-charts";
 import { downloadCsv, filterReport, reportToCsv } from "./report-view";
 import { useFormat } from "@/lib/ui/use-format";
 import {
@@ -36,9 +39,13 @@ import {
 
 // Month names come from the locale rather than a table of our own: they are
 // the one piece of wording here that Intl already knows in every language.
-const monthName = (locale: string, monthIndex: number) =>
+//
+// Two lengths, because two places ask. A picker and a readout have room for
+// "September"; a chart's x axis has room for twelve labels and therefore for
+// none of them at that length.
+const monthName = (locale: string, monthIndex: number, long = true) =>
   new Date(Date.UTC(2000, monthIndex, 1)).toLocaleString(locale, {
-    month: "long",
+    month: long ? "long" : "short",
     timeZone: "UTC",
   });
 
@@ -93,6 +100,17 @@ export default function LedgerClient({
     const [y, mm] = m.split("-");
     return `${capitalize(monthName(locale, Number(mm) - 1))} ${y}`;
   };
+  // What the charts label a month with. Short and yearless on the axis, since
+  // the axis is one financial year and repeating it twelve times says nothing;
+  // full in a readout, which is read one at a time.
+  const chartMonthLabel = useCallback(
+    (m: string, long = false) => {
+      const [y, mm] = m.split("-");
+      const name = capitalize(monthName(locale, Number(mm) - 1, long));
+      return long ? `${name} ${y}` : name;
+    },
+    [locale],
+  );
 
   const [data, setData] = useState<ReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +118,22 @@ export default function LedgerClient({
 
   const [query, setQuery] = useState<QueryState>(INITIAL);
   const [view, setView] = useState<ViewOptions>(EMPTY_VIEW);
+
+  /**
+   * Table or charts. The same report either way: everything the parameter panel
+   * decides applies to both, and switching does not re-ask the server for the
+   * report itself.
+   *
+   * The charts are their own fetch, made the first time somebody switches and
+   * not before. The report is already the slowest request in the app, and a
+   * second aggregate over the same table on every parameter change would be
+   * paid for by every reader, including the ones who never leave the table.
+   */
+  const [mode, setMode] = useState<"TABLE" | "CHART">("TABLE");
+  const [trend, setTrend] = useState<TrendResponse | null>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState<string | null>(null);
+  const latestTrend = useRef(0);
 
   // Per-account drill-down state.
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -155,6 +189,51 @@ export default function LedgerClient({
     }
   }, [t, tAll, tCommon]);
 
+  /**
+   * The same period, cut for the charts. See /api/ledger/trend.
+   *
+   * Only ever asked about the result report: a balance sheet is a position
+   * rather than a period, and its "months" would be twelve copies of one
+   * balance. The charts view says so instead of drawing something meaningless.
+   */
+  const loadTrend = useCallback(
+    async (q: QueryState) => {
+      if (q.kind !== "RESULT" || q.year == null) return;
+      const id = ++latestTrend.current;
+      setTrendLoading(true);
+      setTrendError(null);
+      try {
+        const params = new URLSearchParams({ year: String(q.year), compare: q.compare });
+        if (q.from) params.set("from", q.from);
+        if (q.to) params.set("to", q.to);
+        if (q.costCenter != null) params.set("costCenter", q.costCenter);
+        if (q.budget) params.set("budget", q.budget);
+        const res = await fetch(`/api/ledger/trend?${params.toString()}`);
+        const json = await res.json();
+        if (id !== latestTrend.current) return;
+        if (!res.ok) throw new Error(resolveApiError(tAll, json) ?? t("loadFailed"));
+        setTrend(json);
+      } catch (e) {
+        if (id !== latestTrend.current) return;
+        setTrendError(e instanceof Error ? e.message : tCommon("error.network"));
+      } finally {
+        if (id === latestTrend.current) setTrendLoading(false);
+      }
+    },
+    [t, tAll, tCommon],
+  );
+
+  // Fetched when the charts are on screen and the parameters they describe have
+  // moved, which is also the first time somebody switches to them. A parameter
+  // changed while the table is showing invalidates what was fetched (see
+  // `update`), so arriving back at the charts asks again rather than showing a
+  // picture of a period nobody is looking at.
+  useEffect(() => {
+    if (mode !== "CHART" || trend !== null || trendLoading || query.year == null) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTrend(query);
+  }, [mode, trend, trendLoading, query, loadTrend]);
+
   // load() does set state before it awaits, but on this first call it sets
   // `loading` to true and `error` to null, which is what they already are, so
   // React bails out and no extra render happens. The rule cannot see that the
@@ -183,6 +262,11 @@ export default function LedgerClient({
   function update(patch: Partial<QueryState>) {
     setOpenKey(null);
     setRows({});
+    // The charts describe a period, so a change of period makes what was
+    // fetched a picture of something else. Dropped rather than refetched here:
+    // the effect above asks again if, and only if, the charts are what is on
+    // screen.
+    setTrend(null);
     const next = { ...query, ...patch };
     // A new year has its own months, so the period resets with it. The budget
     // does not: any budget may be compared against any year, and one that was
@@ -193,6 +277,11 @@ export default function LedgerClient({
       next.from = null;
       next.to = null;
     }
+    // A balansrapport has nothing these charts draw, so the toggle is not
+    // offered for one. Somebody standing in the charts when they switch report
+    // is put back in the table rather than left looking at a view that has
+    // stopped existing.
+    if (next.kind !== "RESULT") setMode("TABLE");
     setQuery(next);
     load(next);
   }
@@ -263,6 +352,10 @@ export default function LedgerClient({
   // dropping the column.
   const comparisonMissing =
     data != null && data.comparisonRequested !== "NONE" && data.comparison === "NONE";
+
+  // Which of the two views is on screen. Not simply `mode`: a report kind with
+  // no charts to show is always the table, whatever was last switched to.
+  const charting = mode === "CHART" && !isBalance;
 
   // One description of the columns for every table in the report, so a cost
   // centre's table, the next one's and the bottom line all agree.
@@ -358,8 +451,25 @@ export default function LedgerClient({
             showComparison={showComparison}
             summary={summary}
             showSummary={!panelOnScreen}
+            charting={charting}
             onEditParameters={() =>
               panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+            views={
+              // Only for the result report: the balansrapport has no period to
+              // draw. Offering a switch that led to "not for this report" would
+              // be a control whose whole job is to disappoint.
+              isBalance ? undefined : (
+                <ViewToggle
+                  aria-label={t("charts.view")}
+                  value={mode}
+                  onChange={setMode}
+                  options={[
+                    { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
+                    { value: "CHART", label: t("charts.diagram"), icon: IconChart },
+                  ]}
+                />
+              )
             }
             action={
               report && report.groups.length > 0 ? (
@@ -416,16 +526,35 @@ export default function LedgerClient({
             </p>
           </div>
 
-          {filtered?.filtered && (
-            <p className="text-sm text-muted print:hidden">{t("totalsNote")}</p>
-          )}
-
+          {/* Above the branch: a comparison that could not be applied is as
+              true of the charts as of the table, and the charts pace against
+              exactly the budget this warns is missing. */}
           {comparisonMissing && (
             <p className="text-sm text-warning">
               {data?.comparisonRequested === "BUDGET"
                 ? t("noBudgetForYear", { year: selectedYear?.year ?? t("theYear") })
                 : t("priorYearNotSynced")}
             </p>
+          )}
+
+          {charting ? (
+            trendError ? (
+              <EmptyState title={t("charts.loadFailed")} description={trendError} />
+            ) : trendLoading || !trend ? (
+              // The same skeleton the table uses, in the same place, so
+              // switching views does not also change what waiting looks like.
+              <SkeletonSheet rows={10} columns={4} />
+            ) : (
+              <ReportCharts
+                data={trend}
+                monthLabel={chartMonthLabel}
+                noCostCenterLabel={t("noCostCenter")}
+              />
+            )
+          ) : (
+            <>
+          {filtered?.filtered && (
+            <p className="text-sm text-muted print:hidden">{t("totalsNote")}</p>
           )}
 
           {!report || report.groups.length === 0 ? (
@@ -463,6 +592,8 @@ export default function LedgerClient({
                 label={t("calculatedResult")}
                 register={registerScroll}
               />
+            </>
+          )}
             </>
           )}
         </div>

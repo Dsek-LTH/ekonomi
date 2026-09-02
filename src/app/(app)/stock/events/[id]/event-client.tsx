@@ -57,6 +57,8 @@ import {
 } from "@/components/ui/icons";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useNotify } from "@/components/shell/notifications";
+import { useReturnTo } from "@/components/shell/route-history";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
@@ -101,6 +103,8 @@ export default function EventClient({
   const router = useRouter();
   const { pending, mutate } = useMutation();
   const confirm = useConfirm();
+  const notify = useNotify();
+  const returnTo = useReturnTo();
 
   // Only the cells somebody is typing in. Everything else reads from the event,
   // so a cell nobody has touched shows what is booked, including what the
@@ -441,6 +445,47 @@ export default function EventClient({
   }
 
   /**
+   * Undo the night.
+   *
+   * The question changes with what is booked on it, the way the product page's
+   * does. A duplicate made a minute ago is a name and nothing else; a pub that
+   * ran in March is every crate that went out, and undoing it puts them back on
+   * the shelf. A dialog that cried wolf over an empty event would be one people
+   * stop reading by the time it matters.
+   *
+   * The draft goes with it. It lives in localStorage under the event's id, and
+   * an event that no longer exists cannot be the thing anybody meant to type
+   * those figures into.
+   */
+  async function remove() {
+    const ok = await confirm({
+      title: t("event.removeTitle", { name: event.name }),
+      message:
+        event.entries > 0
+          ? t("event.removeUsed", { count: event.entries, products: event.products })
+          : t("event.removeDescription"),
+      confirmLabel: t("event.remove"),
+      tone: "danger",
+    });
+    if (!ok) return;
+    const gone = await mutate<{ entries: number; products: number }>(
+      `/api/stock/events/${event.id}`,
+      { method: "DELETE", error: t("event.removeFailed") },
+    );
+    if (gone === null) return;
+    clearDraft();
+    // Counted by the transaction rather than by the page: somebody else may
+    // have booked on the night between this screen loading and the button.
+    notify.success(
+      gone.entries > 0
+        ? t("event.removedWithLog", { count: gone.entries })
+        : t("event.removed"),
+    );
+    // Not a push. The event is gone, and Back must not lead to its page.
+    returnTo("/stock/events");
+  }
+
+  /**
    * Take a product off the event: every cell of it back to nothing.
    *
    * Typed into the draft rather than written, like everything else on this
@@ -729,6 +774,7 @@ export default function EventClient({
           kinds={CELL_KINDS}
           column={column}
           onColumn={setColumn}
+          onRemove={canManage ? remove : undefined}
         />
 
         {/* No CardBody: the sheet is ruled to the card's own edge, the way the

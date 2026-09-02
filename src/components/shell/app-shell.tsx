@@ -230,6 +230,7 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: "/admin/result-units", label: "resultUnits", icon: IconHierarchy, visible: ALL },
       { href: "/admin/cards", label: "cards", icon: IconCard, visible: ALL },
       { href: "/admin/mileage", label: "mileageRates", icon: IconCar, visible: ALL },
+      { href: "/admin/stock", label: "stockSettings", icon: IconBox, visible: ALL },
       // Directly above Användare, which is the screen it explains: that one
       // lists who holds what and cannot change it, and this is where what a
       // holding *means* is decided.
@@ -262,7 +263,7 @@ export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
  * See lib/ui/routes' `owningRoute`, which is where the rule and its tests live.
  *
  * One rule for two readers. The sidebar lit every row whose route was a prefix
- * of the path, so /stock/events lit Lager and Tillfällen together, while
+ * of the path, so /stock/events lit Produkter and Tillfällen together, while
  * this same lookup, one screen away, was already answering "Tillfällen" for the
  * phone's top bar. They cannot disagree now.
  */

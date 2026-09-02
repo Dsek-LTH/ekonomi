@@ -1,4 +1,5 @@
-// Correcting a delivery or a stocktake.
+// Correcting a row that belongs to the cellar rather than to a night: a
+// delivery, a stocktake, a write-off.
 //
 // The case this exists for: somebody books 200 bottles of Fireball meaning 20.
 // Until now the only way out was a second row of −180, which left the log
@@ -82,7 +83,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   // What the row becomes. Only its size changes; which rung and which direction
   // it was are what it *is*, and a row that changed those would be a different
   // movement wearing an old row's history.
-  const sign = entry.kind === "CHECKOUT" || entry.kind === "WASTE" ? -1 : 1;
+  const sign =
+    entry.kind === "CHECKOUT" || entry.kind === "WASTE" || entry.kind === "SPOILAGE" ? -1 : 1;
   const open: OpenBottles = {};
   let units = 0;
   let spilledQty = 0;
