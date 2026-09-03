@@ -237,6 +237,157 @@ export function ReportParameters({
   );
 }
 
+/**
+ * The parameters, as the charts need them.
+ *
+ * A card of its own rather than the report's, because most of the report's
+ * panel says nothing to a chart and a control that is present and inert is
+ * worse than one that is absent. What is left out, and why:
+ *
+ *   report kind    A balansrapport is a position rather than a period, so there
+ *                    is nothing here to draw and the switch to these charts is
+ *                    not offered for one. Everything on this card is therefore
+ *                    about a result report already.
+ *   grouping       Summed or per cost centre is how the *table* stacks its
+ *                    rows. /api/ledger/trend never reads it: the charts break
+ *                    the period down per cost centre whatever it says, because
+ *                    that is what two of the five are about.
+ *   prior year     The one comparison these charts do not draw. Only a budget
+ *                    gives them anything, the pace line on the cumulative
+ *                    chart and the marks on the ranking, so the three-way
+ *                    choice becomes the one question that has an answer here.
+ *
+ * What it writes is the same `QueryState` the report panel writes, deliberately.
+ * The two views describe one period, and a second copy of the year and the
+ * period would be two things to keep in step and a screen that changed its mind
+ * about what it was showing when you switched.
+ */
+export function ChartParameters({
+  query,
+  onQuery,
+  years,
+  months,
+  costCenters,
+  budgets,
+}: {
+  query: QueryState;
+  onQuery: (patch: Partial<QueryState>) => void;
+  years: { id: number; year: number }[];
+  months: ComboOption[];
+  costCenters: { code: string; name: string }[];
+  budgets: BudgetOption[];
+}) {
+  const t = useTranslations("ledger");
+  const tAlloc = useTranslations("allocation");
+  const yearOptions: ComboOption[] = years.map((y) => ({
+    value: String(y.id),
+    label: String(y.year),
+  }));
+  const ccOptions: ComboOption[] = [
+    { value: CC_ALL, label: t("allCostCenters") },
+    { value: CC_NONE, label: t("noCostCenter") },
+    ...costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}` })),
+  ];
+  const pacing = query.compare === "BUDGET";
+
+  return (
+    <Card className="print:hidden">
+      <Row>
+        <Field label={t("year")} className="w-28">
+          <Combobox
+            size="sm"
+            options={yearOptions}
+            value={query.year != null ? String(query.year) : ""}
+            onChange={(v) => onQuery({ year: Number(v) })}
+            placeholder={t("yearPlaceholder")}
+            searchPlaceholder={t("yearSearch")}
+            emptyText={t("noYears")}
+            aria-label={t("year")}
+          />
+        </Field>
+        <Field label={t("from")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
+          <Combobox
+            size="sm"
+            options={months}
+            value={query.from ?? ""}
+            onChange={(v) => onQuery({ from: v })}
+            placeholder={t("monthPlaceholder")}
+            searchPlaceholder={t("monthSearch")}
+            aria-label={t("fromMonth")}
+          />
+        </Field>
+        <Field label={t("to")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
+          <Combobox
+            size="sm"
+            options={months}
+            value={query.to ?? ""}
+            onChange={(v) => onQuery({ to: v })}
+            placeholder={t("monthPlaceholder")}
+            searchPlaceholder={t("monthSearch")}
+            aria-label={t("toMonth")}
+          />
+        </Field>
+      </Row>
+
+      <Row>
+        <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
+          <Combobox
+            size="sm"
+            options={ccOptions}
+            value={query.costCenter == null ? CC_ALL : query.costCenter || CC_NONE}
+            onChange={(v) =>
+              onQuery({ costCenter: v === CC_ALL ? null : v === CC_NONE ? "" : v })
+            }
+            placeholder={t("allCostCenters")}
+            searchPlaceholder={tAlloc("search")}
+            emptyText={t("noCostCenters")}
+            aria-label={tAlloc("costCenter")}
+          />
+        </Field>
+      </Row>
+
+      <Row>
+        {/* Two answers where the report offers three, because a budget is the
+            only comparison these charts have anywhere to put. It is the same
+            setting the report's comparison holds, so turning it on here does
+            replace a prior-year column over there. That is not a side effect to
+            hide: it is one report, and you have just changed what it is
+            compared against. */}
+        <Field label={t("charts.pacing")}>
+          <SegmentedControl
+            className={PILLS}
+            options={[
+              { value: "NONE", label: t("none") },
+              { value: "BUDGET", label: t("budget") },
+            ]}
+            value={pacing ? "BUDGET" : "NONE"}
+            onChange={(v) => onQuery({ compare: v as ComparisonMode })}
+          />
+        </Field>
+
+        {/* The same rule the report panel applies: offered unless there is
+            nothing to choose, meaning one budget that is already the one in
+            use. See the note there. */}
+        {pacing
+          && (budgets.length > 1 || (budgets.length === 1 && query.budget !== budgets[0].id)) && (
+          <Field label={t("budget")} className="w-full sm:w-64">
+            <Combobox
+              size="sm"
+              options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
+              value={query.budget ?? ""}
+              onChange={(v) => onQuery({ budget: v })}
+              placeholder={t("budgetPlaceholder")}
+              searchPlaceholder={t("budgetSearch")}
+              emptyText={t("noBudgets")}
+              aria-label={t("budgetAria")}
+            />
+          </Field>
+        )}
+      </Row>
+    </Card>
+  );
+}
+
 export function ReportBar({
   view,
   onView,
@@ -246,7 +397,6 @@ export function ReportBar({
   onEditParameters,
   count,
   action,
-  views,
   charting,
 }: {
   view: ViewOptions;
@@ -269,19 +419,19 @@ export function ReportBar({
    */
   action?: React.ReactNode;
   /**
-   * Table or charts, as a ViewToggle. Its own slot rather than part of
-   * `action`: those are things you do *to* the report (export it, print it) and
-   * this changes how it is drawn, which the app tells apart by shape. See
-   * components/ui/segmented-control.tsx for the grammar of the four switchers.
-   */
-  views?: React.ReactNode;
-  /**
    * Whether the charts are what is on screen.
    *
    * Everything on the left of this bar narrows *rows*: a search over account
    * names, a chip that drops the empty ones, a column of shares. None of it
    * means anything to a chart of the same period, and a control that is present
    * and inert is worse than one that is absent.
+   *
+   * That so much of this bar has to disappear is why the switch between the two
+   * is no longer in it. It sits beside the page title now, in the track
+   * register, because the charts are a different question about the period
+   * rather than the same rows drawn differently. What stays here in either mode
+   * is what is true of both: which period is on screen, and what you can do
+   * with it.
    */
   charting?: boolean;
 }) {
@@ -346,7 +496,6 @@ export function ReportBar({
           {charting ? null : count}
         </div>
 
-        {views}
         {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
     </div>

@@ -1054,9 +1054,10 @@
     "noRowsInPeriod": "Inga bokförda rader i perioden.",
     "calculatedResult": "Beräknat resultat",
     "charts": {
-      "view": "Tabell eller diagram",
-      "table": "Tabell",
+      "view": "Vy",
+      "table": "Rapport",
       "diagram": "Diagram",
+      "pacing": "Jämför med",
       "loadFailed": "Kunde inte hämta diagrammen.",
       "empty": "Ingenting bokfört i perioden.",
       "monthly": {

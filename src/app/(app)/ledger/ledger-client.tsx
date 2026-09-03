@@ -9,11 +9,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
 import { SkeletonSheet } from "@/components/ui/skeleton";
 import { type ComboOption } from "@/components/ui/combobox";
-import { ViewToggle } from "@/components/ui/view-toggle";
-import { IconChart, IconViewTable } from "@/components/ui/icons";
 
 import type { FortnoxStatus } from "@/lib/domain/types";
-import { ReportBar, ReportParameters } from "./report-controls";
+import { ChartParameters, ReportBar, ReportParameters } from "./report-controls";
 import {
   ReportGroupCard,
   ReportScroller,
@@ -401,12 +399,35 @@ export default function LedgerClient({
     downloadCsv(`${t("csv.filename")}-${t(isBalance ? "csv.balance" : "csv.result")}-${stamp}.csv`, csv);
   }
 
+  /**
+   * What is on screen, named once for the two places that say it: the bar's
+   * summary when the panel has scrolled away, and the heading on paper.
+   *
+   * Not the report kind on the charts. Somebody looking at five pictures of a
+   * period is not looking at a resultatrapport, and a line that opens by
+   * naming one is wrong before it reaches the facts that follow. The word is
+   * the one on the switch beside the title, so the page calls the thing you
+   * picked what it called it when you picked it.
+   */
+  const documentTitle = charting
+    ? t("charts.diagram")
+    : isBalance
+      ? t("balanceReport")
+      : t("resultReport");
+
+  // The comparison clause is dropped on the charts unless it is a budget: a
+  // prior-year column is a real thing about the report and nothing the charts
+  // draw, so naming it here would describe a screen nobody is looking at.
+  const summaryComparison = charting
+    ? data?.comparison === "BUDGET"
+    : showComparison;
+
   const summary = [
-    isBalance ? t("balanceReport") : t("resultReport"),
+    documentTitle,
     selectedYear ? String(selectedYear.year) : null,
     periodLabel,
     costCenterLabel,
-    showComparison ? t("vs", { comparison: comparisonPhrase }) : null,
+    summaryComparison ? t("vs", { comparison: comparisonPhrase }) : null,
   ]
     .filter(Boolean)
     .join(" – ");
@@ -419,18 +440,60 @@ export default function LedgerClient({
           ? ` ${t("lastSynced", { time: dateTime(selectedYear.lastSyncAt) })}`
           : ""
       }`}
+      // Beside the title, in the track register, which is the coarsest of the
+      // four switchers and the right one here. It looked like a view toggle and
+      // is not: the charts are a different question asked of the same period,
+      // off their own endpoint (/api/ledger/trend), and not one row of the
+      // table is redrawn into them. Everything in the bar below narrows rows,
+      // so down there it sat among controls that meant nothing to it and had to
+      // hide half of them to say so.
+      //
+      // Undefined for a balansrapport, which has no period these charts draw.
+      // A switch that led to "not for this report" would be a control whose
+      // whole job is to disappoint.
+      collections={
+        isBalance
+          ? undefined
+          : {
+              label: t("charts.view"),
+              value: mode,
+              options: [
+                { value: "TABLE", label: t("charts.table") },
+                { value: "CHART", label: t("charts.diagram") },
+              ],
+              onChange: (v) => setMode(v as "TABLE" | "CHART"),
+            }
+      }
     >
+      {/* One slot, two cards. The parameters are not the same question in the
+          two views: most of the report's panel says nothing to a chart, and the
+          charts turn its three-way comparison into the one part of it they can
+          draw. Both write the same `QueryState`, so the period survives a
+          switch and the two views cannot end up describing different things.
 
+          The same ref either way, so the bar's summary and its "change" button
+          keep working: what they point at is whichever panel is on screen. */}
       {hasPanel && (
         <div ref={panelRef}>
-          <ReportParameters
-            query={query}
-            onQuery={update}
-            years={data.years}
-            months={monthOptions}
-            costCenters={costCenters}
-            budgets={data.budgets ?? []}
-          />
+          {charting ? (
+            <ChartParameters
+              query={query}
+              onQuery={update}
+              years={data.years}
+              months={monthOptions}
+              costCenters={costCenters}
+              budgets={data.budgets ?? []}
+            />
+          ) : (
+            <ReportParameters
+              query={query}
+              onQuery={update}
+              years={data.years}
+              months={monthOptions}
+              costCenters={costCenters}
+              budgets={data.budgets ?? []}
+            />
+          )}
         </div>
       )}
 
@@ -454,22 +517,6 @@ export default function LedgerClient({
             charting={charting}
             onEditParameters={() =>
               panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-            }
-            views={
-              // Only for the result report: the balansrapport has no period to
-              // draw. Offering a switch that led to "not for this report" would
-              // be a control whose whole job is to disappoint.
-              isBalance ? undefined : (
-                <ViewToggle
-                  aria-label={t("charts.view")}
-                  value={mode}
-                  onChange={setMode}
-                  options={[
-                    { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
-                    { value: "CHART", label: t("charts.diagram"), icon: IconChart },
-                  ]}
-                />
-              )
             }
             action={
               report && report.groups.length > 0 ? (
@@ -502,10 +549,12 @@ export default function LedgerClient({
           />
 
           {/* On paper the panel and the bar are gone, so this is the only thing
-              that says what was printed. */}
+              that says what was printed. It has to name whichever view was on
+              screen when the button was pressed, since that is what came out of
+              the printer. */}
           <div className="hidden print:block">
             <h2 className="text-lg font-semibold">
-              {isBalance ? t("balanceReport") : t("resultReport")}
+              {documentTitle}
               {fortnox.companyName ? ` – ${fortnox.companyName}` : ""}
             </h2>
             <p className="mt-0.5 text-sm text-muted">
@@ -513,8 +562,11 @@ export default function LedgerClient({
                 selectedYear ? t("financialYear", { year: selectedYear.year }) : null,
                 periodLabel,
                 costCenterLabel,
-                showComparison ? t("comparedWith", { comparison: comparisonPhrase }) : null,
-                filtered?.filtered
+                summaryComparison ? t("comparedWith", { comparison: comparisonPhrase }) : null,
+                // How many accounts the search narrowed to, which is a fact
+                // about the table. The charts are drawn from the whole period
+                // whatever is typed in a box they do not have.
+                !charting && filtered?.filtered
                   ? t("selection", { shown: filtered.shown, total: filtered.total })
                   : null,
               ]
