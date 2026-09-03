@@ -110,7 +110,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
             labelable element inside, so the label's own whitespace would pop
             the menu open. See components/ui/field.tsx. */}
         <div className="w-48">
-          <FieldGroup label={t("fetch.source")}>
+          <FieldGroup label={t("fetch.source")} requirement="required">
             <Combobox
               options={SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
               value={source}
@@ -129,12 +129,12 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
             field that grew with the row would be mostly empty. Both the same,
             because they are the two ends of one range. */}
         <div className="w-40">
-          <Field label={t("fetch.from")}>
+          <Field label={t("fetch.from")} requirement="required">
             <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
           </Field>
         </div>
         <div className="w-40">
-          <Field label={t("fetch.to")}>
+          <Field label={t("fetch.to")} requirement="required">
             <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
           </Field>
         </div>

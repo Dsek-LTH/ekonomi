@@ -1,5 +1,7 @@
+import { urlKey } from "./routes";
+
 /**
- * What kind of navigation is currently in flight.
+ * What kind of navigation is currently in flight, and where it is going.
  *
  * The App Router tells you that the URL changed and nothing whatsoever about
  * how it changed: a push, a replace and a Back press all arrive as the same
@@ -21,25 +23,41 @@
  */
 export type NavIntent = "push" | "replace" | "pop";
 
-// A stated intent is only good for the navigation it was stated about. If the
-// URL never changes (`router.replace` to the address you are already at, a
-// popstate the router declines to act on) the note is left behind, and
-// applying it to whatever happens next would be worse than not having it.
-// Long enough to cover a navigation that has to reach the database, which
-// every page in this app does.
-const INTENT_TTL_MS = 3_000;
+// The note carries the address it is about, and is believed only by the
+// arrival at that address. A bare intent was read by whatever navigation
+// happened to land next, and two ordinary things left one lying around:
+//
+//   a replace to the address you are already at (clicking "Alla" while the
+//   list is already showing Alla) changes no URL, so nothing ever arrives to
+//   consume the note
+//   the search box commits on a timer, and that timer can fire just after a
+//   row was clicked, which states "replace" about a navigation that is already
+//   on its way somewhere else
+//
+// Either way the next push, into an utlägg, was recorded as a replace: the
+// list you came from was overwritten in the stack by the page you had opened,
+// and the back link, finding no list behind it, fell back to the bare route
+// and dropped you in Mina. See lib/ui/history-stack.
+const INTENT_TTL_MS = 10_000;
 
-let pending: { intent: NavIntent; at: number } | null = null;
+let pending: { intent: NavIntent; url: string; at: number } | null = null;
 
-/** Say what the navigation about to happen is. */
-export function noteIntent(intent: NavIntent): void {
-  pending = { intent, at: Date.now() };
+/** Say what the navigation about to happen is, and where it is going. */
+export function noteIntent(intent: NavIntent, url: string): void {
+  pending = { intent, url: urlKey(url), at: Date.now() };
 }
 
-/** Read and clear it. "push" when nothing was said, or said too long ago. */
-export function takeIntent(): NavIntent {
+/**
+ * The intent behind an arrival at `url`, clearing the note either way.
+ *
+ * "push" when nothing was said, when what was said was about somewhere else,
+ * or when it was said so long ago that the navigation it described plainly
+ * never happened. The TTL is generous because every page in this app is a
+ * database round trip, and a slow replace is still a replace.
+ */
+export function takeIntent(url: string): NavIntent {
   const note = pending;
   pending = null;
   if (!note || Date.now() - note.at > INTENT_TTL_MS) return "push";
-  return note.intent;
+  return note.url === urlKey(url) ? note.intent : "push";
 }

@@ -1,7 +1,26 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/ui/utils";
 import { DateInput as DateInputBase } from "./date-input";
+
+/**
+ * Whether a form can be submitted without this field.
+ *
+ * Both halves are said out loud, rather than one being marked and the other
+ * left to be inferred from the absence of a mark. An unmarked field then means
+ * one thing only: it is not part of a form that asks the question. A filter
+ * bar's date range and a search box are not fields you have to fill in, they
+ * are ways of looking at a list, and an asterisk on one would be answering a
+ * question nobody asked.
+ *
+ * The two are marked differently on purpose. Required is a star on the name,
+ * where the convention puts it and where the eye finds it while reading down a
+ * column of labels. Optional is a word at the far end, because it is
+ * permission rather than a demand and reads as an aside.
+ */
+export type Requirement = "required" | "optional";
 
 // No focus styling here: the app draws one ring for everything from
 // globals.css, and utilities can't override it anyway. This used to add an
@@ -40,13 +59,22 @@ export const CONTROL_SIZES: Record<ControlSize, string> = {
 const SIZES = CONTROL_SIZES;
 const control = (size: Size, className?: string) => cn(CONTROL, SIZES[size], className);
 
-function fieldContent(
-  label: string,
-  children: React.ReactNode,
-  hint?: string,
-  error?: string,
-  action?: React.ReactNode,
-) {
+function FieldContent({
+  label,
+  children,
+  hint,
+  error,
+  action,
+  requirement,
+}: {
+  label: string;
+  children: React.ReactNode;
+  hint?: string;
+  error?: string;
+  action?: React.ReactNode;
+  requirement?: Requirement;
+}) {
+  const t = useTranslations("common.field");
   return (
     <>
       {/* The label's own line, and it is a line whether or not anything else
@@ -58,8 +86,29 @@ function fieldContent(
           (the utlägg's direction beside "Belopp"), which is how it gets asked
           without costing the form a row. */}
       <span className="mb-1.5 flex min-h-6 items-center justify-between gap-2 text-[13px] font-medium text-foreground">
-        {label}
-        {action}
+        <span className="flex min-w-0 items-center gap-1">
+          {label}
+          {requirement === "required" && (
+            <>
+              {/* The star is a picture of a word, so the word is here too. A
+                  <label> reads out everything inside it, which makes the
+                  field's name "Namn krävs" to a screen reader and a bare
+                  asterisk to nobody. */}
+              <span aria-hidden className="text-accent">
+                *
+              </span>
+              <span className="sr-only">{t("required")}</span>
+            </>
+          )}
+        </span>
+        {(requirement === "optional" || action) && (
+          <span className="flex shrink-0 items-center gap-2">
+            {requirement === "optional" && (
+              <span className="text-xs font-normal text-muted">{t("optional")}</span>
+            )}
+            {action}
+          </span>
+        )}
       </span>
       {children}
       {/* What's wrong with what's typed replaces the standing hint. Two lines
@@ -80,15 +129,24 @@ export function Field({
   label,
   hint,
   error,
+  requirement,
   children,
 }: {
   label: string;
   hint?: string;
   /** Shown in place of `hint` while what's typed isn't accepted. */
   error?: string;
+  /** See Requirement. Left off outside a form, where the question is not asked. */
+  requirement?: Requirement;
   children: React.ReactNode;
 }) {
-  return <label className="block">{fieldContent(label, children, hint, error)}</label>;
+  return (
+    <label className="block">
+      <FieldContent label={label} hint={hint} error={error} requirement={requirement}>
+        {children}
+      </FieldContent>
+    </label>
+  );
 }
 
 // A label for a composite: a picker, a row of choice buttons, a whole sub-editor.
@@ -101,6 +159,7 @@ export function FieldGroup({
   label,
   hint,
   action,
+  requirement,
   children,
 }: {
   label: string;
@@ -108,11 +167,15 @@ export function FieldGroup({
   /** A control on the label's own line, at the far end. For a question about
    *  the field that would otherwise cost the form a row of its own. */
   action?: React.ReactNode;
+  /** See Requirement. Left off outside a form, where the question is not asked. */
+  requirement?: Requirement;
   children: React.ReactNode;
 }) {
   return (
     <div role="group" aria-label={label} className="block">
-      {fieldContent(label, children, hint, undefined, action)}
+      <FieldContent label={label} hint={hint} action={action} requirement={requirement}>
+        {children}
+      </FieldContent>
     </div>
   );
 }

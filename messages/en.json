@@ -64,6 +64,10 @@
     "confirm": "Confirm",
     "loading": "Loading…",
     "datePlaceholder": "YYYY-MM-DD",
+    "field": {
+      "required": "required",
+      "optional": "Optional"
+    },
     "themeMode": {
       "light": "Light",
       "dark": "Dark",
@@ -1870,6 +1874,7 @@
       "destination": "To committee",
       "destinationHint": "The items join that committee's report for the same day. If it has none, one is created.",
       "destinationPlaceholder": "Pick a committee…",
+        "destinationRequired": "Pick where the items are moving to",
       "setAll": "Set all to:",
       "setAllTo": "Set every row to account {account}",
       "noAccounts": "This committee has no product prefixes. Pick an account for each row.",
@@ -1892,6 +1897,7 @@
       "unit": "Committee",
       "unitHint": "Whose takings the report becomes.",
       "unitPlaceholder": "Pick a committee…",
+        "unitRequired": "Pick whose takings the report becomes",
       "alreadyExists": "That committee already has a report for the day, so that one opens instead. Two reports for one day could not both be booked.",
       "footerHint": "The report is created empty.",
       "cancel": "Cancel",
@@ -2054,6 +2060,8 @@
       "nothingReturned": "Say what came back",
       "spillMovesNoStock": "A spill moves no stock",
       "nothingSpilled": "Say how much was destroyed",
+      "purchaseNothing": "Say how many came in",
+      "moreThanOnShelf": "There are only {count} on the shelf",
       "moreBottlesThanWentOut": "More bottles home than went out",
       "nameRequired": "The product needs a name",
       "eanRequired": "The barcode is needed. Scan it or type it in (8–14 digits)",
@@ -2108,7 +2116,7 @@
       "empty": "No products added yet.",
       "saved": "The product was saved.",
       "saveFailed": "Could not save the product",
-      "dialogHint": "The weights are what convert a reading on the scale into millilitres.",
+      "dialogHint": "A name, a barcode, a strength, a size and a price are needed before the product can be saved. The rest is optional.",
       "field": {
         "name": "Name",
         "kind": "Counted as",
@@ -2121,7 +2129,6 @@
         "eanHint": "Lets the product be scanned in the cellar.",
         "cost": "Cost price incl. deposit (kr)",
         "systembolagetId": "Systembolaget article number",
-        "systembolagetIdHint": "The digits at the end of the product's address on systembolaget.se. Paste the whole link if you like. The number gets picked out of it.",
         "systembolagetIdInvalid": "No article number in there. Paste the product's link from systembolaget.se, or type just the digits.",
         "tags": "Tags",
         "tagsHint": "Free labels to find the product by: whisky, cognac, vodka. Optional.",
@@ -2247,6 +2254,7 @@
       "details": "Details",
       "ean": "Barcode",
       "noEan": "No barcode",
+      "noSystembolagetId": "No article number",
       "size": "Volume each",
       "abv": "Strength",
       "unitCost": "Cost price incl. deposit",
@@ -2289,6 +2297,7 @@
       "field": {
         "name": "Name",
         "nameHint": "What you call the night. The name is picked from a list afterwards, so the spelling only has to be settled once.",
+        "nameRequired": "The occasion needs a name",
         "namePlaceholder": "Wednesday pub",
         "date": "Date"
       },
@@ -2356,6 +2365,7 @@
       "hint": "{kind}, {date}. Type what it should have been. We work out the difference.",
       "qty": "Quantity",
       "qtyHint": "Says {was} now. Zero removes the row entirely.",
+        "unchanged": "The figure is unchanged, so there is nothing to save",
       "remove": "Remove the row",
       "save": "Save",
       "failed": "The row could not be changed."

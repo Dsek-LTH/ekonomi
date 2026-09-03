@@ -64,6 +64,10 @@
     "confirm": "Bekräfta",
     "loading": "Laddar…",
     "datePlaceholder": "ÅÅÅÅ-MM-DD",
+    "field": {
+      "required": "krävs",
+      "optional": "Frivilligt"
+    },
     "themeMode": {
       "light": "Ljust",
       "dark": "Mörkt",
@@ -1870,6 +1874,7 @@
       "destination": "Till verksamhet",
       "destinationHint": "Varorna hamnar på verksamhetens rapport för samma dag. Finns ingen skapas den.",
       "destinationPlaceholder": "Välj verksamhet…",
+        "destinationRequired": "Välj vart varorna ska flyttas",
       "setAll": "Sätt alla till:",
       "setAllTo": "Sätt alla rader till konto {account}",
       "noAccounts": "Verksamheten har inga produktprefix. Välj konto för varje rad.",
@@ -1892,6 +1897,7 @@
       "unit": "Verksamhet",
       "unitHint": "Vems intäkter rapporten blir.",
       "unitPlaceholder": "Välj verksamhet…",
+        "unitRequired": "Välj vems intäkter rapporten blir",
       "alreadyExists": "Verksamheten har redan en rapport för den dagen, så den öppnas i stället. Två rapporter för samma dag går inte att bokföra båda två.",
       "footerHint": "Rapporten skapas tom.",
       "cancel": "Avbryt",
@@ -2054,6 +2060,8 @@
       "nothingReturned": "Säg vad som kom tillbaka",
       "spillMovesNoStock": "Ett spill flyttar inget lager",
       "nothingSpilled": "Ange hur mycket som gick sönder",
+      "purchaseNothing": "Skriv hur många som kom in",
+      "moreThanOnShelf": "Det finns bara {count} på hyllan",
       "moreBottlesThanWentOut": "Fler flaskor tillbaka än som togs ut",
       "nameRequired": "Produkten behöver ett namn",
       "eanRequired": "Streckkoden behövs. Skanna den eller skriv in den (8–14 siffror)",
@@ -2108,7 +2116,7 @@
       "empty": "Inga produkter upplagda ännu.",
       "saved": "Produkten sparades.",
       "saveFailed": "Kunde inte spara produkten",
-      "dialogHint": "Vikterna används för att räkna om vägningar till millilitrar.",
+      "dialogHint": "Namn, streckkod, styrka, storlek och pris behövs innan produkten kan sparas. Resten är frivilligt.",
       "field": {
         "name": "Namn",
         "kind": "Räknas som",
@@ -2121,7 +2129,6 @@
         "eanHint": "Gör att produkten kan skannas fram i förrådet.",
         "cost": "Inköpspris inkl. pant (kr)",
         "systembolagetId": "Systembolagets artikelnummer",
-        "systembolagetIdHint": "Siffrorna sist i produktens adress på systembolaget.se. Klistra in hela länken om du vill. Numret plockas ut.",
         "systembolagetIdInvalid": "Hittar inget artikelnummer. Klistra in produktens länk från systembolaget.se, eller skriv bara siffrorna.",
         "tags": "Taggar",
         "tagsHint": "Fria etiketter att hitta produkten på: whisky, cognac, vodka. Frivilligt.",
@@ -2247,6 +2254,7 @@
       "details": "Uppgifter",
       "ean": "Streckkod",
       "noEan": "Ingen streckkod",
+      "noSystembolagetId": "Inget artikelnummer",
       "size": "Volym per styck",
       "abv": "Alkoholhalt",
       "unitCost": "Inköpspris inkl. pant",
@@ -2289,6 +2297,7 @@
       "field": {
         "name": "Namn",
         "nameHint": "Det du kallar kvällen. Namnet väljs sedan i listan, så stavningen behöver bara bestämmas en gång.",
+        "nameRequired": "Tillfället behöver ett namn",
         "namePlaceholder": "Onsdagspub",
         "date": "Datum"
       },
@@ -2356,6 +2365,7 @@
       "hint": "{kind}, {date}. Skriv vad det skulle ha varit. Mellanskillnaden räknas ut åt dig.",
       "qty": "Antal",
       "qtyHint": "Står på {was} nu. Noll tar bort raden helt.",
+        "unchanged": "Antalet är oförändrat, så det finns inget att spara",
       "remove": "Ta bort raden",
       "save": "Spara",
       "failed": "Raden kunde inte ändras."

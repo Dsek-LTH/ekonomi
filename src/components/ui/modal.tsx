@@ -20,6 +20,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { Card } from "./card";
+import { IconAlert } from "./icons";
 import { useEscape } from "@/lib/ui/escape";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
@@ -142,10 +143,36 @@ export function ModalBody({ children }: { children: React.ReactNode }) {
 
 /** The strip along the bottom: what is being done on the left, the buttons on
  *  the right. */
-export function ModalFooter({ children }: { children: React.ReactNode }) {
+export function ModalFooter({
+  blocker,
+  children,
+}: {
+  /**
+   * Why the dialog's own button is dead, in one sentence, or null when it is
+   * not. Drawn above the buttons, so the reason sits with the button rather
+   * than at the bottom of a body somebody would have to scroll to reach.
+   *
+   * A form that computes this from the same expression that disables the
+   * button cannot end up with a dead button and no explanation, which is what
+   * a static "this field is required" mark never quite manages: the mark says
+   * a field matters, and this says which one is in the way right now.
+   */
+  blocker?: string | null;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-inset py-4">
-      {children}
+    <div className="shrink-0 border-t border-border px-inset py-4">
+      {blocker && (
+        // role="status", like Notice: it is announced when it appears without
+        // taking focus. Not a Notice, though. The tinted box is for a
+        // condition about the thing on the screen, and this is one line about
+        // the button under it.
+        <p role="status" className="mb-3 flex items-start gap-2 text-xs text-warning">
+          <IconAlert className="mt-px size-3.5 shrink-0" />
+          {blocker}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">{children}</div>
     </div>
   );
 }

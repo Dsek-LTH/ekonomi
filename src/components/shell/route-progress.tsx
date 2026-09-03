@@ -155,8 +155,10 @@ export function useProgressRouter(): Router {
           // The one kind of navigation nothing downstream could work out for
           // itself: it changes the URL without adding a history entry, and a
           // stack that counted it would send every Back press one step wrong.
-          // A push needs no such note. See lib/ui/nav-intent.
-          noteIntent("replace");
+          // A push needs no such note. The address goes with it, so that a
+          // replace which moves nothing (the filter you are already on) is not
+          // read by whatever navigation lands next. See lib/ui/nav-intent.
+          noteIntent("replace", href);
           router.replace(href, options);
         }),
       refresh: () => startTransition(() => router.refresh()),

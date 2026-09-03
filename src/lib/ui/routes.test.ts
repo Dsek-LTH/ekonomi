@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { owningRoute, samePath } from "./routes";
+import { owningRoute, samePath, urlKey } from "./routes";
 
 describe("samePath", () => {
   it("ignores the query, which is the whole point", () => {
@@ -27,6 +27,26 @@ describe("samePath", () => {
   it("treats a trailing slash as the same route", () => {
     expect(samePath("/expenses/", "/expenses")).toBe(true);
     expect(samePath("/", "/")).toBe(true);
+  });
+});
+
+describe("urlKey", () => {
+  it("is the same key for the same screen spelled two ways", () => {
+    expect(urlKey("/expenses?view=ALL&q=hotell")).toBe(urlKey("/expenses?q=hotell&view=ALL"));
+  });
+
+  it("keeps two screens of one route apart", () => {
+    expect(urlKey("/expenses?view=ALL")).not.toBe(urlKey("/expenses"));
+    expect(urlKey("/expenses?view=ALL")).not.toBe(urlKey("/expenses?view=MINE"));
+  });
+
+  it("drops the fragment and a trailing slash, which name no screen", () => {
+    expect(urlKey("/budget/#sheet")).toBe("/budget");
+  });
+
+  it("leaves a bare route alone", () => {
+    expect(urlKey("/expenses")).toBe("/expenses");
+    expect(urlKey("/expenses?")).toBe("/expenses");
   });
 });
 

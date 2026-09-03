@@ -264,7 +264,12 @@ export default function StockProductClient({
                     {product.systembolagetId}
                   </a>
                 ) : (
-                  <span className="text-muted">–</span>
+                  // Named, like the missing barcode above it, rather than left
+                  // as a dash. The field is for finding the article's page
+                  // again, and plenty of the cellar is not bought there at all,
+                  // so an empty one is a product with no article number and not
+                  // a product somebody forgot to finish.
+                  <span className="text-muted">{t("product.noSystembolagetId")}</span>
                 )
               }
             />

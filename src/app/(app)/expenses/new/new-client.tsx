@@ -597,7 +597,7 @@ export default function NewExpenseClient({
                 return: the whole group goes rather than standing there with
                 one answer available. */}
             {canReturn && (
-              <FieldGroup label={t("direction")}>
+              <FieldGroup label={t("direction")} requirement="required">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(["out", "return"] as Direction[]).map((d) => (
                     <button
@@ -618,7 +618,7 @@ export default function NewExpenseClient({
               </FieldGroup>
             )}
 
-            <Field label={t("description")}>
+            <Field label={t("description")} requirement="required">
               <Input
                 autoFocus
                 onFocus={selectOnce}
@@ -635,6 +635,7 @@ export default function NewExpenseClient({
             <div className="grid grid-cols-2 gap-3 sm:gap-5">
               <Field
                 label={t("purchaseDate")}
+                requirement="required"
                 error={
                   dateIncomplete
                     ? t("dateIncomplete")
@@ -667,7 +668,7 @@ export default function NewExpenseClient({
                   beside it. Which way the money goes is not a minus typed into
                   the figure: no phone number pad has the key, and a word says
                   it where a character has to be noticed. */}
-              <Field label={t("amount")}>
+              <Field label={t("amount")} requirement="required">
                 <AmountInput
                   value={form.gross}
                   onChange={(gross: string) => {
@@ -689,7 +690,7 @@ export default function NewExpenseClient({
               </Field>
             </div>
 
-            <FieldGroup label={t("distribution")}>
+            <FieldGroup label={t("distribution")} requirement="required">
               <AllocationEditor
                 costCenters={selectableCostCenters}
                 grossAmount={magnitude}
@@ -698,7 +699,7 @@ export default function NewExpenseClient({
               />
             </FieldGroup>
 
-            <FieldGroup label={t("paymentType")}>
+            <FieldGroup label={t("paymentType")} requirement="required">
               {/* Said out loud, because a group that offers one answer reads
                   as a group that is broken. */}
               {presetTxn ? (

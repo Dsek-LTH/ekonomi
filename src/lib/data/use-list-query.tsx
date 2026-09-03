@@ -51,6 +51,18 @@ type BaseControls = {
   setDateFrom: (v: string) => void;
   dateTo: string;
   setDateTo: (v: string) => void;
+  /**
+   * Picks and the date range back to their resting state, in one move.
+   *
+   * One move because on a URL-backed list each setter is a navigation, and
+   * three of them fired from the same handler do not see each other's work:
+   * `commit` reads the address as it stands, which does not change until the
+   * router has been round the houses, so each write was merged onto the
+   * address the *first* one started from and the last one out won. Clearing
+   * the sheet left the picks it had just cleared. The search box is not part
+   * of this, it is not in the sheet either. See DataTable's filter sheet.
+   */
+  clearFilters: () => void;
   pageSize: PageSize;
   setPageSize: (n: PageSize) => void;
   page: number;
@@ -130,6 +142,14 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
   const setDateTo    = withReset(setDateToRaw);
   const setPageSize  = withReset(setPageSizeRaw);
   const setView      = withReset(setViewRaw);
+  // Three state writes React batches into one render. Nothing to merge here,
+  // unlike the URL-backed version below.
+  const clearFilters = () => {
+    setPage(0);
+    setPicksRaw([]);
+    setDateFromRaw("");
+    setDateToRaw("");
+  };
 
   const toggleSort = (key: string) => {
     if (sortKey === key) {
@@ -143,7 +163,7 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
 
   const paginate = <T,>(items: T[]): T[] => items.slice(page * pageSize, (page + 1) * pageSize);
 
-  return { tab, setTab, picks, setPicks, query, setQuery, dateFrom, setDateFrom, dateTo, setDateTo, pageSize, setPageSize, page, setPage, paginate, sortKey, sortDir, toggleSort, view, setView, server: false };
+  return { tab, setTab, picks, setPicks, query, setQuery, dateFrom, setDateFrom, dateTo, setDateTo, clearFilters, pageSize, setPageSize, page, setPage, paginate, sortKey, sortDir, toggleSort, view, setView, server: false };
 }
 
 // ── The same controls, kept in the URL ────────────────────────────
@@ -260,6 +280,12 @@ export function useUrlTableControls(
   // Everything except the search box resets to the first page: page 4 of a
   // narrower list is usually past the end of it, and an empty table is a
   // confusing answer to "show me the drafts".
+  //
+  // One call per handler. `commit` merges onto the address as it stands, and
+  // the address stands still until the navigation lands, so two of these in a
+  // row would both be merged onto the state the first one started from and the
+  // second would undo the first. Anything that changes two things at once
+  // says so in a single commit, as `clearFilters` does.
   const set = <K extends keyof ListQuery>(key: K) => (v: ListQuery[K]) =>
     commit({ [key]: v, page: 0 } as Partial<ListQuery>);
 
@@ -271,6 +297,10 @@ export function useUrlTableControls(
   });
   const [dateFrom, setDateFrom] = useUrlDraft(q.from, set("from"), { ready: wholeOrEmpty });
   const [dateTo, setDateTo] = useUrlDraft(q.to, set("to"), { ready: wholeOrEmpty });
+
+  // The drafts above follow: clearing the dates in the URL is the URL moving
+  // without anyone typing, which is what re-seeds them. See useUrlDraft.
+  const clearFilters = () => commit({ picks: [], from: "", to: "", page: 0 });
 
   const toggleSort = (key: string) => {
     // Same rule as the local version: re-clicking the active column flips it,
@@ -290,6 +320,7 @@ export function useUrlTableControls(
     setDateFrom,
     dateTo,
     setDateTo,
+    clearFilters,
     pageSize: q.pageSize,
     setPageSize: set("pageSize"),
     page: q.page,

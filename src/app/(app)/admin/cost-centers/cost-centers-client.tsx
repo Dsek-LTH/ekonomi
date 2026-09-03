@@ -269,7 +269,7 @@ export function CostCentersClient({
             subtitle={t("newLocalSubtitle")}
           />
           <CardBody>
-            <FieldGroup label={t("codeAndName")} hint={t("codeAndNameHint")}>
+            <FieldGroup label={t("codeAndName")} hint={t("codeAndNameHint")} requirement="required">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="w-40">
                   <Input

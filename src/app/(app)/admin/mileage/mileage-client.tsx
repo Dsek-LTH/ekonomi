@@ -118,16 +118,16 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
         // fields, and a new rate is read straight after it is entered: the row
         // appearing at the top of the list below is the confirmation.
         <div className="grid gap-4 border-b border-border px-5 py-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-end">
-          <Field label={t("validFrom")}>
+          <Field label={t("validFrom")} requirement="required">
             <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </Field>
-          <Field label={t("rate")} hint={t("rateHint")}>
+          <Field label={t("rate")} hint={t("rateHint")} requirement="required">
             {/* A schablon is never negative, so no sign button, but the
                 separator is the same problem it is everywhere: a phone offers
                 the one its own locale uses. */}
             <AmountInput value={krPerMil} onChange={setKrPerMil} />
           </Field>
-          <Field label={t("note")}>
+          <Field label={t("note")} requirement="optional">
             <Input
               value={note}
               onChange={(e) => setNote(e.target.value)}

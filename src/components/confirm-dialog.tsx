@@ -174,7 +174,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             </div>
             {pending.comment && (
               <div className="mt-4">
-                <Field label={pending.comment.label}>
+                <Field
+                  label={pending.comment.label}
+                  requirement={pending.comment.required ? "required" : "optional"}
+                >
                   <Textarea
                     autoFocus
                     rows={3}

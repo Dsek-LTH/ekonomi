@@ -17,7 +17,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DateInput, Field, Input } from "@/components/ui/field";
-import { Modal, ModalHeader } from "@/components/ui/modal";
+import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/notice";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { StockLevelDto } from "@/lib/data/stock";
@@ -57,6 +57,8 @@ export function PurchaseDialog({
   const [note, setNote] = useState("");
 
   const count = int(units);
+  // Why the save button is dead, in the words of the errand. See ModalFooter.
+  const blocker = count <= 0 ? t("fault.purchaseNothing") : null;
 
   async function save() {
     const body: CreateStockEntry = {
@@ -81,6 +83,7 @@ export function PurchaseDialog({
         <Field
           label={product.kind === "VOLUME" ? t("purchase.bottles") : t("purchase.units")}
           hint={t("purchase.sealedHint")}
+          requirement="required"
         >
           <Input
             inputMode="numeric"
@@ -91,7 +94,7 @@ export function PurchaseDialog({
           />
         </Field>
 
-        <Field label={t("field.date")}>
+        <Field label={t("field.date")} requirement="required">
           <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </Field>
 
@@ -105,18 +108,20 @@ export function PurchaseDialog({
           )
         )}
 
-        <Field label={t("field.note")}>
+        <Field label={t("field.note")} requirement="optional">
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">
-        <Button variant="secondary" onClick={onClose}>
-          {t("cancel")}
-        </Button>
-        <Button onClick={save} disabled={count <= 0} loading={pending !== null}>
-          {t("save")}
-        </Button>
-      </div>
+      <ModalFooter blocker={blocker}>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button onClick={save} disabled={Boolean(blocker)} loading={pending !== null}>
+            {t("save")}
+          </Button>
+        </div>
+      </ModalFooter>
     </Modal>
   );
 }
@@ -183,6 +188,7 @@ export function StocktakeDialog({
         <Field
           label={isVolume ? t("stocktake.sealed") : t("stocktake.units")}
           hint={t("stocktake.expected", { count: product.onHand.units })}
+          requirement="required"
         >
           <Input
             inputMode="numeric"
@@ -199,6 +205,7 @@ export function StocktakeDialog({
               key={level}
               label={t("field.levelOf", { level })}
               hint={t("stocktake.expected", { count: bottlesAt(product.onHand.open, level) })}
+              requirement="required"
             >
               <Input
                 inputMode="numeric"
@@ -211,7 +218,7 @@ export function StocktakeDialog({
             </Field>
           ))}
 
-        <Field label={t("field.date")}>
+        <Field label={t("field.date")} requirement="required">
           <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </Field>
 
@@ -226,18 +233,23 @@ export function StocktakeDialog({
             : t("stocktake.agrees")}
         </Notice>
 
-        <Field label={t("field.note")} hint={t("stocktake.noteHint")}>
+        <Field label={t("field.note")} hint={t("stocktake.noteHint")} requirement="optional">
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">
-        <Button variant="secondary" onClick={onClose}>
-          {t("cancel")}
-        </Button>
-        <Button onClick={save} disabled={!anyDifference} loading={pending !== null}>
-          {t("save")}
-        </Button>
-      </div>
+      {/* No `blocker`: the notice a few lines up already says why a count that
+          agrees with the log has nothing to save, and saying it twice on one
+          screen is worse than saying it once where it belongs. */}
+      <ModalFooter>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button onClick={save} disabled={!anyDifference} loading={pending !== null}>
+            {t("save")}
+          </Button>
+        </div>
+      </ModalFooter>
     </Modal>
   );
 }
@@ -281,6 +293,14 @@ export function SpoilageDialog({
   const onShelf =
     level === 0 ? product.onHand.units : bottlesAt(product.onHand.open, level as Level);
 
+  // Why the save button is dead, in the words of the errand. See ModalFooter.
+  const blocker =
+    count <= 0
+      ? t("fault.nothingSpilled")
+      : count > onShelf
+        ? t("fault.moreThanOnShelf", { count: onShelf })
+        : null;
+
   // What the shelf loses. Sealed stock carries the whole value of the product
   // (see lib/stock/value.ts), so an opened bottle is worth nothing to write
   // down: its cost left the books the moment it was opened. Approximate,
@@ -317,7 +337,7 @@ export function SpoilageDialog({
         <p className="text-sm text-muted">{t("spoilage.lead")}</p>
 
         {isVolume && (
-          <Field label={t("spoilage.level")}>
+          <Field label={t("spoilage.level")} requirement="required">
             <SegmentedControl
               value={String(level)}
               onChange={(v) => setLevel(Number(v))}
@@ -332,6 +352,7 @@ export function SpoilageDialog({
         <Field
           label={isVolume ? t("spoilage.bottles") : t("spoilage.units")}
           hint={t("spoilage.onShelf", { count: onShelf })}
+          requirement="required"
         >
           <Input
             inputMode="numeric"
@@ -342,7 +363,7 @@ export function SpoilageDialog({
           />
         </Field>
 
-        <Field label={t("field.date")}>
+        <Field label={t("field.date")} requirement="required">
           <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </Field>
 
@@ -358,18 +379,20 @@ export function SpoilageDialog({
             the log has to keep them apart. */}
         <Notice tone="warning">{t("spoilage.atEvent")}</Notice>
 
-        <Field label={t("field.note")} hint={t("spoilage.noteHint")}>
+        <Field label={t("field.note")} hint={t("spoilage.noteHint")} requirement="optional">
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">
-        <Button variant="secondary" onClick={onClose}>
-          {t("cancel")}
-        </Button>
-        <Button onClick={save} disabled={count <= 0 || count > onShelf} loading={pending !== null}>
-          {t("save")}
-        </Button>
-      </div>
+      <ModalFooter blocker={blocker}>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button onClick={save} disabled={Boolean(blocker)} loading={pending !== null}>
+            {t("save")}
+          </Button>
+        </div>
+      </ModalFooter>
     </Modal>
   );
 }

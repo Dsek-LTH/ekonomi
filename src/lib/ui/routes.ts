@@ -22,6 +22,29 @@ export function routePath(url: string): string {
 }
 
 /**
+ * A URL reduced to what identifies a screen: its route and its query, with the
+ * parameters in a fixed order and the fragment dropped.
+ *
+ * For comparing an address someone is about to go to with the address that
+ * later turns up, which is how a navigation's stated intent is matched to the
+ * navigation it was stated about (see lib/ui/nav-intent). The two are spelled
+ * by different hands: one is written by `listQueryToSearch`, the other read
+ * back out of `useSearchParams`, so ordering is not something to rely on.
+ *
+ * App-relative paths, like everything else here.
+ */
+export function urlKey(url: string): string {
+  const withoutHash = url.split("#")[0];
+  const path = routePath(withoutHash);
+  const q = withoutHash.indexOf("?");
+  if (q < 0) return path;
+  const params = new URLSearchParams(withoutHash.slice(q + 1));
+  params.sort();
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+/**
  * Which of `routes` owns `path`: the longest one it sits under, or null.
  *
  * The sidebar's rule for what to light up, and the top bar's for what to call

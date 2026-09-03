@@ -83,7 +83,7 @@ export function NewReportDialog({
       />
 
       <ModalBody>
-        <FieldGroup label={t("unit")} hint={t("unitHint")}>
+        <FieldGroup label={t("unit")} hint={t("unitHint")} requirement="required">
           <Combobox
             options={unitOptions}
             value={resultUnitId}
@@ -96,7 +96,7 @@ export function NewReportDialog({
         {existing && <Notice tone="info">{t("alreadyExists")}</Notice>}
       </ModalBody>
 
-      <ModalFooter>
+      <ModalFooter blocker={resultUnitId ? null : t("unitRequired")}>
         <span className="text-sm text-muted">{t("footerHint")}</span>
         <div className="flex items-center gap-2.5">
           <Button variant="secondary" onClick={onCancel}>

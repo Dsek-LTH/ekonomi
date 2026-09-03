@@ -354,7 +354,7 @@ export default function MileageClient({
       {step === 0 && (
         <Card>
           <CardBody className="space-y-5">
-            <Field label={t("description")} hint={t("descriptionHint")}>
+            <Field label={t("description")} hint={t("descriptionHint")} requirement="required">
               <Input
                 autoFocus
                 onFocus={selectOnce}
@@ -365,6 +365,7 @@ export default function MileageClient({
 
             <Field
               label={t("journeyDate")}
+              requirement="required"
               error={
                 dateIncomplete
                   ? tWizard("dateIncomplete")
@@ -384,7 +385,7 @@ export default function MileageClient({
             {/* The two readings, side by side because they are one measurement
                 taken twice, and in the order they happen, so filling them in
                 reads like the journey did. */}
-            <FieldGroup label={t("odometer.label")} hint={t("odometer.hint")}>
+            <FieldGroup label={t("odometer.label")} hint={t("odometer.hint")} requirement="required">
               <div className="grid grid-cols-2 gap-3 sm:gap-5">
                 {odometerField(t("odometer.start"), startText, setStartText)}
                 {odometerField(t("odometer.end"), endText, setEndText)}
@@ -407,7 +408,7 @@ export default function MileageClient({
               <span className="text-lg font-semibold tabular-nums">{money(grossSEK)} kr</span>
             </div>
 
-            <FieldGroup label={tWizard("distribution")}>
+            <FieldGroup label={tWizard("distribution")} requirement="required">
               <AllocationEditor
                 costCenters={selectableCostCenters}
                 grossAmount={grossSEK}

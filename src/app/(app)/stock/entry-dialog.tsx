@@ -19,7 +19,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { Modal, ModalHeader } from "@/components/ui/modal";
+import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useMutation } from "@/components/shell/use-mutation";
 import { isQuantityInput, quantity } from "@/lib/stock/quantity";
 import type { PatchStockEntry } from "@/lib/api/schemas/stock";
@@ -80,7 +80,7 @@ export function EntryDialog({
         })}
       />
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
-        <Field label={t("entry.qty")} hint={t("entry.qtyHint", { was })}>
+        <Field label={t("entry.qty")} hint={t("entry.qtyHint", { was })} requirement="required">
           <Input
             value={text}
             inputMode="numeric"
@@ -93,7 +93,10 @@ export function EntryDialog({
           />
         </Field>
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-inset py-3">
+      {/* The blocker is about the save button alone. Removing the row is still
+          live while it shows, which is the point of saying which button is
+          waiting for what rather than greying the strip out. */}
+      <ModalFooter blocker={qty === was ? t("entry.unchanged") : null}>
         {/* Removing it outright, for the row that should never have existed.
             Not a destructive act on the record: the product's feed keeps what
             it said and who took it off. */}
@@ -108,7 +111,7 @@ export function EntryDialog({
             {t("entry.save")}
           </Button>
         </div>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

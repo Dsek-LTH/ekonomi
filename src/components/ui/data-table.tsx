@@ -323,11 +323,6 @@ export function DataTable<T>({
   const filters = asFilters(filter);
   const activeFilters =
     controls.picks.length + (controls.dateFrom ? 1 : 0) + (controls.dateTo ? 1 : 0);
-  const clearFilters = () => {
-    controls.setPicks([]);
-    controls.setDateFrom("");
-    controls.setDateTo("");
-  };
 
   return (
     <>
@@ -489,7 +484,7 @@ export function DataTable<T>({
           <ModalFooter>
             {/* Nothing is pending, because every control above has already
                 applied itself, so this is "put it all back", not "cancel". */}
-            <Button variant="ghost" onClick={clearFilters} disabled={activeFilters === 0}>
+            <Button variant="ghost" onClick={controls.clearFilters} disabled={activeFilters === 0}>
               {t("clearFilters")}
             </Button>
             <Button onClick={() => setFiltering(false)}>{t("filtersDone")}</Button>

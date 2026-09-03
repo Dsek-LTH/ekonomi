@@ -146,7 +146,7 @@ export function MoveLinesDialog({
       />
 
       <ModalBody>
-        <Field label={t("destination")} hint={t("destinationHint")}>
+        <Field label={t("destination")} hint={t("destinationHint")} requirement="required">
           <Combobox
             options={unitOptions}
             value={toResultUnitId}
@@ -224,7 +224,9 @@ export function MoveLinesDialog({
         {target && unchanged > 0 && <Notice>{t("stillOnOldAccount", { count: unchanged })}</Notice>}
       </ModalBody>
 
-      <ModalFooter>
+      {/* Only the destination is worth a sentence. With no lines there is
+          nothing on the screen to move and the dialog would not be open. */}
+      <ModalFooter blocker={target ? null : t("destinationRequired")}>
         <span className="text-sm text-muted">
           {t("movingTotal")} <Amount value={total} />
         </span>

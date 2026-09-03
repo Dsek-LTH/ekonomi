@@ -206,7 +206,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
         {open && (
           <div className="border-t border-border px-inset py-4">
             <div className="space-y-4">
-              <FieldGroup label={t("kindLabel")}>
+              <FieldGroup label={t("kindLabel")} requirement="required">
                 <SegmentedControl<ChangeKind>
                   options={[
                     { value: "AVSTEG", label: t("kind.AVSTEG") },
@@ -220,7 +220,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                 </p>
               </FieldGroup>
 
-              <Field label={t("reason")} hint={t("reasonHint")}>
+              <Field label={t("reason")} hint={t("reasonHint")} requirement="required">
                 <Textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -228,7 +228,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                 />
               </Field>
 
-              <FieldGroup label={t("entries")}>
+              <FieldGroup label={t("entries")} requirement="required">
                 <div className="space-y-2">
                   {rows.map((row) => {
                     const sheet = sheetById.get(row.costCenterId);

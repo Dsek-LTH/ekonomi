@@ -389,14 +389,14 @@ export default function DeliveryClient({
             call it. Above the sheet rather than on every row, because an
             invoice is one date and one number however many products it lists. */}
         <div className="grid gap-3 border-b border-border px-inset py-3 sm:grid-cols-2">
-          <Field label={t("field.date")}>
+          <Field label={t("field.date")} requirement="required">
             <DateInput
               size="sm"
               value={occurredAt}
               onChange={(e) => setOccurredAt(e.target.value)}
             />
           </Field>
-          <Field label={t("field.note")} hint={t("delivery.noteHint")}>
+          <Field label={t("field.note")} hint={t("delivery.noteHint")} requirement="optional">
             <Input
               size="sm"
               value={note}

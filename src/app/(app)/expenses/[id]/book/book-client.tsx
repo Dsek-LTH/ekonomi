@@ -319,7 +319,7 @@ export default function BookExpenseClient({
         <div className="min-w-0 space-y-6">
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
-          <Field label={t("voucherDate")}>
+          <Field label={t("voucherDate")} requirement="required">
             {/* Where the booking starts, so it is where the cursor starts. The
                 field already holds a date, the utlägg's own, so it is
                 selected as well as focused: the mask takes eight digits and no
@@ -334,7 +334,7 @@ export default function BookExpenseClient({
               onChange={(e) => setDate(e.target.value)}
             />
           </Field>
-          <Field label={t("voucherText")}>
+          <Field label={t("voucherText")} requirement="optional">
             {/* Prefix and input are one field, so the ring goes round the pair
                 (focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}

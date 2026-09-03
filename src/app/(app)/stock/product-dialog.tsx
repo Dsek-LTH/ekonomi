@@ -16,8 +16,7 @@ import { Field, FieldGroup, Input, SuffixedInput } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconScan } from "@/components/ui/icons";
 import { BarcodeScanner } from "@/components/stock/barcode-scanner";
-import { Modal, ModalHeader } from "@/components/ui/modal";
-import { Notice } from "@/components/ui/notice";
+import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { StockProductDto } from "@/lib/data/stock";
 import type { CreateStockProduct } from "@/lib/api/schemas/stock";
@@ -143,6 +142,12 @@ export function ProductDialog({
     set("tags", cleanTags([...d.tags, text]));
   };
 
+  // The article number is optional, so an empty box is fine. Something typed
+  // that is not an article number is a mistake worth stopping, not worth
+  // silently storing as nothing.
+  const sbFault =
+    d.systembolagetId.trim() !== "" && parseSystembolagetId(d.systembolagetId) === null;
+
   /**
    * What is still missing before this is a product.
    *
@@ -156,16 +161,13 @@ export function ProductDialog({
    * a spirit the bottle size is what its rungs are fractions of. Without it
    * every level is worth nothing and a night's arithmetic comes to zero.
    *
+   * Everything not on this list is optional and says so in its own hint: the
+   * article number, the shelf life, the tags.
+   *
    * The same rule the route refuses on, so the button is never live for
    * something the server would reject.
    */
-  // Optional, so an empty box is fine, but something typed that is not an
-  // article number is a mistake worth stopping, not worth silently storing as
-  // nothing.
-  const sbFault =
-    d.systembolagetId.trim() !== "" && parseSystembolagetId(d.systembolagetId) === null;
-
-  const fault =
+  const blockerFault =
     d.name.trim() === ""
       ? "nameRequired"
       : !/^\d{8,14}$/.test(d.ean.trim())
@@ -180,14 +182,29 @@ export function ProductDialog({
                 ? "costRequired"
                 : null;
 
+  /**
+   * Why the save button is dead, in one sentence, or null when it is not.
+   *
+   * The sentence used to be drawn inside the branch that gives a spirit its
+   * bottle size, so it was shown for a bottle of vodka and for nothing else. A
+   * can of beer with no barcode yet had a dead button and no word anywhere
+   * about which box was still empty, and filling in every empty box you can
+   * see is a reasonable thing to do about that.
+   */
+  const blocker = blockerFault
+    ? t(`fault.${blockerFault}`)
+    : sbFault
+      ? t("products.field.systembolagetIdInvalid")
+      : null;
+
   async function save() {
     const body: CreateStockProduct = {
       name: d.name.trim(),
       kind: d.kind,
       category: d.category,
-      // The button is dead until `fault` is null, and `fault` is exactly the
-      // check that these are all there, so the fallbacks below are for the
-      // compiler rather than for anything that can happen.
+      // The button is dead until `blocker` is null, and `blockerFault` is
+      // exactly the check that these are all there, so the fallbacks below are
+      // for the compiler rather than for anything that can happen.
       abv: num(d.abv) ?? 0,
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
@@ -227,7 +244,7 @@ export function ProductDialog({
         subtitle={t("products.dialogHint")}
       />
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
-        <Field label={t("products.field.name")}>
+        <Field label={t("products.field.name")} requirement="required">
           <Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus />
         </Field>
 
@@ -235,7 +252,11 @@ export function ProductDialog({
             and a <label> forwards a click anywhere in its area to the first
             labelable element inside it, which on a phone is the difference
             between tapping the scanner and opening the keyboard. */}
-        <FieldGroup label={t("products.field.ean")} hint={t("products.field.eanHint")}>
+        <FieldGroup
+          label={t("products.field.ean")}
+          hint={t("products.field.eanHint")}
+          requirement="required"
+        >
           <SuffixedInput
             inputMode="numeric"
             value={d.ean}
@@ -266,11 +287,14 @@ export function ProductDialog({
 
         {/* Takes a pasted product URL as readily as the bare number: the number
             is only ever found on the product's page, so the address bar is what
-            the person filling this in actually has. Reduced to digits on save. */}
+            the person filling this in actually has. Reduced to digits on save.
+            No hint saying so: the field is marked Frivilligt, the placeholder
+            shows what a number looks like, and a paragraph under it repeating
+            both was the longest thing on a form of short ones. */}
         <Field
           label={t("products.field.systembolagetId")}
-          hint={t("products.field.systembolagetIdHint")}
           error={sbFault ? t("products.field.systembolagetIdInvalid") : undefined}
+          requirement="optional"
         >
           <Input
             value={d.systembolagetId}
@@ -286,7 +310,7 @@ export function ProductDialog({
             empty space beside it pops the menu open. Field's own note says so.
           */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup label={t("products.field.kind")}>
+          <FieldGroup label={t("products.field.kind")} requirement="required">
             <Combobox
               value={d.kind}
               onChange={(v) => set("kind", v as StockKind)}
@@ -294,7 +318,7 @@ export function ProductDialog({
               aria-label={t("products.field.kind")}
             />
           </FieldGroup>
-          <FieldGroup label={t("products.field.category")}>
+          <FieldGroup label={t("products.field.category")} requirement="required">
             {/* Eight drink types with names like "Alkoholdrycksliknande
                 preparat": long enough that a native select is a scroll, and
                 exactly what a searchable field is for, type "sta" for
@@ -310,7 +334,7 @@ export function ProductDialog({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("products.field.abv")}>
+          <Field label={t("products.field.abv")} requirement="required">
             {/* The unit inside the box rather than in the label, because it is
                 the one field where the wrong reading (0,4 for 40 %) is a
                 plausible number that nothing downstream would question. */}
@@ -328,7 +352,7 @@ export function ProductDialog({
               }
             />
           </Field>
-          <Field label={t("products.field.cost")}>
+          <Field label={t("products.field.cost")} requirement="required">
             <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
           </Field>
         </div>
@@ -338,17 +362,16 @@ export function ProductDialog({
             {/* The whole a level is a fraction of. Nothing is weighed any more
                 A bottle is judged by eye at 80, 60, 40 or 20 per cent, so
                 this is all a spirit needs. */}
-            <Field label={t("products.field.nominalMl")}>
+            <Field label={t("products.field.nominalMl")} requirement="required">
               <Input
                 value={d.nominalMl}
                 onChange={(e) => set("nominalMl", e.target.value)}
                 inputMode="numeric"
               />
             </Field>
-            {fault && <Notice tone="warning">{t(`fault.${fault}`)}</Notice>}
           </>
         ) : (
-          <Field label={t("products.field.unitMl")}>
+          <Field label={t("products.field.unitMl")} requirement="required">
             <Input
               value={d.unitMl}
               onChange={(e) => set("unitMl", e.target.value)}
@@ -369,6 +392,7 @@ export function ProductDialog({
         <Field
           label={t("products.field.shelfLife")}
           hint={t("products.field.shelfLifeHint")}
+          requirement="optional"
         >
           <Input
             value={d.shelfLifeMonths}
@@ -382,7 +406,11 @@ export function ProductDialog({
             before it can exist, and a tag is how somebody finds it afterwards.
             FieldGroup, not Field: what it labels is a row of chips and a
             picker, not one control. */}
-        <FieldGroup label={t("products.field.tags")} hint={t("products.field.tagsHint")}>
+        <FieldGroup
+          label={t("products.field.tags")}
+          hint={t("products.field.tagsHint")}
+          requirement="optional"
+        >
           <div className="space-y-2">
             <TagChips
               tags={d.tags}
@@ -418,14 +446,18 @@ export function ProductDialog({
         </FieldGroup>
       </div>
 
-      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-inset py-3">
-        <Button variant="secondary" onClick={onClose}>
-          {t("cancel")}
-        </Button>
-        <Button onClick={save} disabled={Boolean(fault) || sbFault} loading={pending !== null}>
-          {t("save")}
-        </Button>
-      </div>
+      {/* The reason travels with the button rather than sitting at the foot of
+          a body you would have to scroll to reach. See ModalFooter. */}
+      <ModalFooter blocker={blocker}>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button onClick={save} disabled={Boolean(blocker)} loading={pending !== null}>
+            {t("save")}
+          </Button>
+        </div>
+      </ModalFooter>
 
       {scanning && (
         <BarcodeScanner

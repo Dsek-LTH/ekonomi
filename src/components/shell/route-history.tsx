@@ -85,7 +85,7 @@ function persist() {
 
 /** Note a route as visited, in whatever way it was arrived at. */
 function record(url: string) {
-  const next = applyNav(stack, url, takeIntent());
+  const next = applyNav(stack, url, takeIntent(url));
   if (next === stack) return;
   stack = next;
   persist();
@@ -121,7 +121,11 @@ export function RouteHistoryRecorder() {
   // arrive here and nowhere else. Without this a Back press is recorded as a
   // move forward, and the page you just left becomes the page you came from.
   useEffect(() => {
-    const onPop = () => noteIntent("pop");
+    // `popstate` fires once the address bar is already the destination's, so
+    // the note can name where the pop is going, which is what tells it apart
+    // from any other navigation in flight. See lib/ui/nav-intent.
+    const onPop = () =>
+      noteIntent("pop", window.location.pathname + window.location.search);
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
