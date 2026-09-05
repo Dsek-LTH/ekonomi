@@ -18,21 +18,10 @@ import { IconLink } from "@/components/ui/icons";
 import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+import type { MatchCandidate } from "@/lib/domain/matching";
 import type { BankTransaction } from "@/lib/domain/types";
 
 import { optionCard, StepFooter } from "./step-chrome";
-
-/**
- * A statement row this utlägg could account for.
- *
- * `selectable` is false for a near miss, which is kept in the list and shown
- * greyed rather than filtered out: seeing a 249,50 purchase sitting there is
- * what tells somebody the amount was mistyped, which an empty list never would.
- */
-export interface Candidate {
-  txn: BankTransaction;
-  selectable: boolean;
-}
 
 export function MatchStep({
   candidates,
@@ -47,7 +36,7 @@ export function MatchStep({
   canContinue,
   onContinue,
 }: {
-  candidates: Candidate[];
+  candidates: MatchCandidate<BankTransaction>[];
   matchId: string | null;
   onPick: (id: string) => void;
   /** What is being accounted for, for the lead line. */

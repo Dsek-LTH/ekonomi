@@ -31,7 +31,7 @@ import { Amount } from "@/components/ui/amount";
 import { formatSEK } from "@/lib/ui/format";
 import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
-import { cancelsOut, isMatchable } from "@/lib/domain/matching";
+import { cancelsOut, isMatchable, matchCandidates } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
 import { MatchStep } from "./match-step";
 import { optionCard, StepFooter } from "./step-chrome";
@@ -325,36 +325,35 @@ export default function NewExpenseClient({
     return true;
   }
 
-  const candidates = useMemo(() => {
-    const gross = parseSEK(form.gross);
-    // A return is money coming back, so it matches an incoming (positive) bank
-    // row; an ordinary purchase matches an outgoing (negative) one.
-    const incoming = gross < 0;
-    // Unmatched transactions, plus the one already matched to this expense (so
-    // it stays visible/selected while editing). The near misses are kept and
-    // shown disabled: seeing a 249,50 purchase sitting there is what tells you
-    // the amount was mistyped, which an empty list never would.
-    return bankTransactions
-      .filter(
-        (txn) =>
-          (!txn.matchedExpenseId || txn.id === matchId) &&
-          (incoming ? txn.amount > 0 : txn.amount < 0),
-      )
-      .map((txn) => ({ txn, selectable: cancelsOut(txn.amount, gross) }))
-      .sort(
-        (a, b) =>
-          // Selectable first, then closest by size.
-          Number(b.selectable) - Number(a.selectable) ||
-          Math.abs(Math.abs(a.txn.amount) - Math.abs(gross)) -
-            Math.abs(Math.abs(b.txn.amount) - Math.abs(gross)),
-      )
-      .slice(0, 5);
-  }, [form.gross, bankTransactions, matchId]);
+  /**
+   * What the figures in the form mean, as a signed number.
+   *
+   * The form holds magnitudes and the toggle holds the direction; every reader
+   * below this line wants the two put together, because that is what an utlägg
+   * is worth and what the database stores. The one multiplication lives here so
+   * no screen has to remember to do it.
+   *
+   * High up, and deliberately: the matching below needs it, and reading
+   * `parseSEK(form.gross)` there instead is what broke returns. A magnitude and
+   * a signed amount are the same number for a purchase, so the mistake was
+   * invisible on the only path anybody took.
+   */
+  const sign = direction === "return" ? -1 : 1;
+  const magnitude = parseSEK(form.gross);
+  const grossSEK = sign * magnitude;
+
+  // Which card rows could settle this, best first. The rule is in
+  // lib/domain/matching.ts, where it can be tested; see `matchCandidates` for
+  // why `grossSEK` and not the form's own figure.
+  const candidates = useMemo(
+    () => matchCandidates(bankTransactions, grossSEK, matchId),
+    [bankTransactions, grossSEK, matchId],
+  );
 
   // A match only counts while it still cancels the amount out. Editing the
   // amount afterwards silently invalidates it, and the server rejects it too.
   const matchedTxn = bankTransactions.find((t) => t.id === matchId);
-  const matchDone = !!matchedTxn && cancelsOut(matchedTxn.amount, parseSEK(form.gross));
+  const matchDone = !!matchedTxn && cancelsOut(matchedTxn.amount, grossSEK);
   // The date field is a mask, so it can be left half-typed ("2026", "2026-07").
   // Empty is a draft in progress; a partial date is an error to point at.
   const dateComplete = isCompleteDate(form.purchaseDate);
@@ -371,7 +370,7 @@ export default function NewExpenseClient({
   // centre on every row.
   const filledForm =
     hasReceipt &&
-    parseSEK(form.gross) !== 0 &&
+    magnitude !== 0 &&
     dateComplete &&
     !dateInFuture &&
     !dateTooLate &&
@@ -380,17 +379,6 @@ export default function NewExpenseClient({
   // A submitted/approved expense can be edited but not re-submitted from here.
   const submittable = !existing || isSubmittable(existing.status);
 
-  /**
-   * What the figures in the form mean, as a signed number.
-   *
-   * The form holds magnitudes and the toggle holds the direction; every reader
-   * below this line wants the two put together, because that is what an utlägg
-   * is worth and what the database stores. The one multiplication lives here so
-   * no screen has to remember to do it.
-   */
-  const sign = direction === "return" ? -1 : 1;
-  const magnitude = parseSEK(form.gross);
-  const grossSEK = sign * magnitude;
   const signedAllocations = allocations.map((a) => ({
     ...a,
     value: sign * parseSEK(a.amount),
