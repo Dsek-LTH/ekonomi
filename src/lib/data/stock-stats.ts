@@ -77,7 +77,24 @@ interface PeriodFlow {
    * after it left the building.
    */
   wastedOre: number;
-  countedOre: number;
+  /**
+   * What a stocktake or a correction moved the shelf by, netted over the
+   * period.
+   *
+   * Two kinds, not one, which is why this is not called "inventering". A COUNT
+   * is a physical finding: somebody counted the shelf and it did not hold what
+   * the log predicted, so a negative figure here is stock gone that no
+   * checkout, no spill and no sale accounts for. A CORRECTION is a fix to an
+   * earlier entry, a delivery typed at the wrong quantity, which moves the
+   * shelf by the same arithmetic and means something else entirely.
+   *
+   * Kept together because both are adjustments to what the log claimed, and the
+   * four figures have to divide the period between them or the card does not
+   * add up. Told apart is a job for the log, which names each entry's kind; the
+   * label here says "justeringar" rather than promising an inventering it
+   * cannot deliver on its own.
+   */
+  adjustmentOre: number;
 }
 
 interface ProductMover {
@@ -189,7 +206,7 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
     : [];
 
   const running = zero();
-  const flow: PeriodFlow = { purchasedOre: 0, consumedOre: 0, wastedOre: 0, countedOre: 0 };
+  const flow: PeriodFlow = { purchasedOre: 0, consumedOre: 0, wastedOre: 0, adjustmentOre: 0 };
   const out = new Map<string, number>();
 
   /**
@@ -218,7 +235,7 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
     closes.set(date, { ...running });
 
     if (e.kind === "PURCHASE") flow.purchasedOre += e.valueDeltaOre;
-    else if (e.kind === "COUNT" || e.kind === "CORRECTION") flow.countedOre += e.valueDeltaOre;
+    else if (e.kind === "COUNT" || e.kind === "CORRECTION") flow.adjustmentOre += e.valueDeltaOre;
     else if (destroyed(e.kind)) flow.wastedOre += -e.valueDeltaOre;
     flow.consumedOre += gone(e.kind, e.valueDeltaOre, false);
 

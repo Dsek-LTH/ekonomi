@@ -2399,12 +2399,12 @@
       "chartAlt": "The stock value over time, stacked by drink type.",
       "total": "Total",
       "flowTitle": "In the period",
-      "flowHint": "What was bought and what was got through, at purchase value. The four divide the period between them: checkouts count net, so what came home unopened was not consumed, and spill stands on its own.",
+      "flowHint": "What was bought in and what was got through, at purchase value. The four divide the period between them: checkouts count net, so what came back unopened is not consumed, and spillage stands on its own. Adjustments is what stocktakes and corrections moved the shelf by, so a negative figure is stock missing that nothing else here accounts for.",
       "flow": {
         "purchased": "Purchased",
         "consumed": "Consumed",
         "wasted": "Spill",
-        "counted": "Stocktake"
+        "adjusted": "Adjustments"
       },
       "mixTitle": "The mix now",
       "mixHint": "Litres and value per drink type, at the end of the period.",

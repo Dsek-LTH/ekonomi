@@ -2399,12 +2399,12 @@
       "chartAlt": "Lagervärdet över tid, staplat per dryckesslag.",
       "total": "Totalt",
       "flowTitle": "Under perioden",
-      "flowHint": "Vad som köpts in och vad som gått åt, till inköpsvärde. De fyra delar upp perioden mellan sig: uttag räknas netto, så det som kom tillbaka oöppnat är inte förbrukat, och spill står för sig.",
+      "flowHint": "Vad som köpts in och vad som gått åt, till inköpsvärde. De fyra delar upp perioden mellan sig: uttag räknas netto, så det som kom tillbaka oöppnat är inte förbrukat, och spill står för sig. Justeringar är vad inventeringar och rättelser flyttat lagret med, och en negativ siffra är alltså sprit som fattas utan att något annat här förklarar den.",
       "flow": {
         "purchased": "Inköpt",
         "consumed": "Förbrukat",
         "wasted": "Spill",
-        "counted": "Inventering"
+        "adjusted": "Justeringar"
       },
       "mixTitle": "Fördelning nu",
       "mixHint": "Liter och värde per dryckesslag, i slutet av perioden.",

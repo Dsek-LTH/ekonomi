@@ -736,9 +736,6 @@ model Receipt {
   mimeType  String // the stored file's type (images are normalised to image/jpeg)
   byteSize  Int?
 
-  ocrText   String? // raw extracted text
-  ocrResult Json? // structured OCR pre-fill (amount, vat, merchant, date…)
-
   uploadedBy   User?   @relation("ReceiptUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   uploadedById String?
 

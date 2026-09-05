@@ -126,10 +126,12 @@ export default function StockStatsClient({
     { key: "purchased", value: formatOreKr(flow.purchasedOre), tone: "" },
     { key: "consumed", value: formatOreKr(-flow.consumedOre), tone: "text-muted" },
     { key: "wasted", value: formatOreKr(-flow.wastedOre), tone: flow.wastedOre > 0 ? "text-warning" : "" },
+    // Negative is worth looking at: the shelf held less than the log said, and
+    // nothing else on this card accounts for the difference.
     {
-      key: "counted",
-      value: formatOreKr(flow.countedOre),
-      tone: flow.countedOre < 0 ? "text-warning" : "",
+      key: "adjusted",
+      value: formatOreKr(flow.adjustmentOre),
+      tone: flow.adjustmentOre < 0 ? "text-warning" : "",
     },
   ];
 
