@@ -273,14 +273,21 @@ export function cellFault(
 
   // The bar's rule: the dregs leave with you, or the fresh bottle stays. Only a
   // sealed bottle *leaving* is subject to it. Putting one back, or taking an
-  // opened one, is never the choice this guards against. Judged on the cellar
-  // as the night found it, so a night's own returns do not lock its sealed
-  // bottles away from it.
+  // opened one, is never the choice this guards against.
+  //
+  // What it asks about is the bottles left *behind*, so the night's own Ut
+  // ladder counts. Take the last 20 % bottle along with a sealed one and
+  // nothing is being left in the cellar to go stale, which is the whole of the
+  // rule. Refusing it asked somebody to take the dregs and then told them they
+  // had not. The rungs are read as the night found them (`beforeTheNight`,
+  // against the log) less what the sheet takes off them, so a night's own
+  // returns still do not lock its sealed bottles away.
   if (ref.kind === "CHECKOUT" && ref.level === WHOLE && delta > 0) {
-    const standing = LEVELS.reduce(
-      (n, level) => n + beforeTheNight(shelf, state.booked, ref.productId, level),
-      0,
-    );
+    const standing = LEVELS.reduce((n, level) => {
+      const there = beforeTheNight(shelf, state.booked, ref.productId, level);
+      const taken = cellValue(after, { productId: ref.productId, kind: "CHECKOUT", level });
+      return n + Math.max(0, there - taken);
+    }, 0);
     if (standing > 0) return "openBottlesFirst";
   }
   return null;

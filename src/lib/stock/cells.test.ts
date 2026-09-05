@@ -335,6 +335,41 @@ describe("cellFault, against what the night found", () => {
     expect(cellFault(vodka, shelf, saved(new Map()), out(WHOLE), 1)).toBe("openBottlesFirst");
   });
 
+  it("lets a sealed bottle go along with the last of the open ones", () => {
+    // The rule is about what stays behind. The cellar's one 20 % bottle is
+    // already on this night's Ut ladder, so the shelf reads empty at that rung
+    // and nothing is being left to go stale.
+    const shelf = { sealed: 5, open: {} };
+    const cells = cellsOf(stored({ level: 20, open: { 20: -1 } }));
+    expect(cellFault(vodka, shelf, saved(cells), out(WHOLE), 2)).toBeNull();
+  });
+
+  it("counts the open ones typed and not yet saved", () => {
+    // The commonest way round: both rungs are typed into the sheet and neither
+    // has been sent, so the shelf still shows them and only the night's own Ut
+    // column knows the dregs are coming too.
+    const shelf = { sealed: 5, open: { 60: 1, 20: 1 } };
+    const typing: SheetState = {
+      booked: new Map<string, number>(),
+      sheet: cellsOf(
+        stored({ level: 60, open: { 60: -1 } }),
+        stored({ level: 20, open: { 20: -1 } }),
+      ),
+    };
+    expect(cellFault(vodka, shelf, typing, out(WHOLE), 2)).toBeNull();
+  });
+
+  it("still refuses a sealed one while a rung is left behind", () => {
+    // Taking the 60 % bottle and leaving the 20 % one is exactly what the rule
+    // exists to stop.
+    const shelf = { sealed: 5, open: { 60: 1, 20: 1 } };
+    const typing: SheetState = {
+      booked: new Map<string, number>(),
+      sheet: cellsOf(stored({ level: 60, open: { 60: -1 } })),
+    };
+    expect(cellFault(vodka, shelf, typing, out(WHOLE), 2)).toBe("openBottlesFirst");
+  });
+
   it("lets a return be undone while the bottles are still on the shelf", () => {
     const shelf = { sealed: 0, open: { 60: 2 } };
     const cells = cellsOf(

@@ -173,9 +173,22 @@ export default function EventClient({
   // The products the night has already touched, in the order the event lists
   // them, then whatever has been added since. Nothing is ever taken off by the
   // sheet: a product with movements booked on it is part of what happened.
+  //
+  // "Added since" is two things, and it used to be one. `added` is this
+  // screen's own list, which a reload throws away, but the figures typed into
+  // those rows live in the draft and survive it. A product picked onto the
+  // sheet and filled in before the phone locked itself came back with no row
+  // at all: the counts were still in localStorage, still on their way to the
+  // log on the next save, and nowhere on the screen. So the draft names rows
+  // too, and anything typed is somewhere to be seen and corrected.
+  const drafted = Object.entries(typed)
+    .filter(([, text]) => text.trim() !== "")
+    .map(([key]) => key.split("|")[0]);
   const rows: string[] = [
     ...event.lines.map((l) => l.productId),
-    ...added.filter((id) => !lineOf.has(id) && byId.has(id)),
+    ...[...added, ...drafted].filter(
+      (id, i, all) => !lineOf.has(id) && byId.has(id) && all.indexOf(id) === i,
+    ),
   ];
 
   /**
