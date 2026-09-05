@@ -49,9 +49,25 @@ export function withoutLine(b: Budget, lineId: string): Budget {
   };
 }
 
-/** The budget with an account appended to a sheet (a created account, as returned). */
+/**
+ * The budget with a created account put into a sheet, in account-number order.
+ *
+ * Placed, not appended. The sheet is ordered by account code (lib/data/budget.ts),
+ * so a new 3010 dropped at the end would sit under 5800 until the next reload
+ * and then jump, which reads as the app having changed its mind about where the
+ * row goes. Same rule on both sides of the wire, so the optimistic sheet and the
+ * reloaded one agree.
+ *
+ * BAS codes are four digits throughout, so comparing them as strings is
+ * comparing them as numbers.
+ */
 export function withNewAccount(b: Budget, sheetId: string, account: Account): Budget {
-  return withSheet(b, sheetId, (cc) => ({ ...cc, accounts: [...cc.accounts, account] }));
+  return withSheet(b, sheetId, (cc) => ({
+    ...cc,
+    accounts: [...cc.accounts, account].sort((x, y) =>
+      x.accountCode.localeCompare(y.accountCode),
+    ),
+  }));
 }
 
 /** The budget without an account, and so without the rows that hung off it. */

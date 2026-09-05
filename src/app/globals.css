@@ -649,6 +649,14 @@ summary {
     position: sticky;
     top: 0;
     z-index: 20;
+    /* A fill on the block itself, under the cells' own.
+       The cells below paint every pixel they own, but under `border-collapse`
+       the rules between them belong to the table rather than to either cell,
+       and at a fractional device pixel ratio the seam that leaves is a hairline
+       of scrolling row showing between the header and the rows it is pinned
+       over. Backing the whole thead means any such seam falls on paint instead
+       of on content. It costs nothing where the cells already cover. */
+    background: var(--color-background);
   }
   /* The cells still paint their own fill and rules, both of which are needed
      once they move: the rows' rules belong to the table under `border-collapse`

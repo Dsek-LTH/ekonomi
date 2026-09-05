@@ -32,7 +32,6 @@ const account = (id: string, lineIds: string[]): Account => ({
   id,
   accountCode: id,
   accountName: id,
-  sortOrder: 0,
   kindOverride: null,
   lineItems: lineIds.map(line),
   comments: [],
@@ -89,10 +88,24 @@ describe("the rest", () => {
     expect(idsOf(b, "B")).toEqual(["2"]);
   });
 
-  it("appends a created account to its sheet, and removes one with its rows", () => {
+  it("puts a created account in its sheet, and removes one with its rows", () => {
     const added = withNewAccount(budgetOf(account("A", ["1"])), "sheet", account("B", []));
     expect(added.costCenters[0].accounts.map((a) => a.id)).toEqual(["A", "B"]);
     const removed = withoutAccount(added, "A");
     expect(removed.costCenters[0].accounts.map((a) => a.id)).toEqual(["B"]);
+  });
+
+  it("places a created account by its number rather than at the end", () => {
+    // The sheet is ordered by account code on the server, so an account added
+    // in the middle of the chart has to land in the middle here too. Appending
+    // it left 3010 sitting under 5800 until a reload moved it, which reads as
+    // the app changing its mind about where the row goes.
+    const sheet = budgetOf(account("3010", []), account("5800", []));
+    const added = withNewAccount(sheet, "sheet", account("4010", []));
+    expect(added.costCenters[0].accounts.map((a) => a.accountCode)).toEqual([
+      "3010",
+      "4010",
+      "5800",
+    ]);
   });
 });

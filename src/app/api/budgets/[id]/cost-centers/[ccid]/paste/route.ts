@@ -136,11 +136,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       });
       let into = existing?.id;
       if (!into) {
-        const last = await tx.budgetAccount.findFirst({
-          where: { budgetCostCenterId: ccId },
-          orderBy: { sortOrder: "desc" },
-          select: { sortOrder: true },
-        });
         const made = await tx.budgetAccount.create({
           data: {
             budgetCostCenterId: ccId,
@@ -149,7 +144,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
             // Carried over: an account put on the income side by hand is there
             // for a reason, and it is not one its code can be asked about.
             kindOverride: source.kindOverride,
-            sortOrder: nextSortOrder(last),
           },
           select: { id: true },
         });
@@ -183,7 +177,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
     include: {
       costCenter: true,
       accounts: {
-        orderBy: { sortOrder: "asc" },
+        // Same order the sheet is loaded in (lib/data/budget.ts), or a paste
+        // would hand back a sheet ordered unlike the one a reload draws.
+        orderBy: { accountCode: "asc" },
         include: {
           lineItems: { orderBy: { sortOrder: "asc" } },
           comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, id: true } } } },

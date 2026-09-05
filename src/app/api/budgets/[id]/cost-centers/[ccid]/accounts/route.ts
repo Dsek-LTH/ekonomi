@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { appendInOrder, nextSortOrder } from "@/lib/server/sort-order";
+import { prisma } from "@/lib/server/db";
 import { allowBudgetWrite } from "@/lib/budget/access";
 import { resolveBudgetAccount } from "@/lib/budget/account-validation";
 import { fail } from "@/lib/api/guard";
@@ -24,12 +24,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
   const accountCode = check.code;
   const accountName = check.name;
 
-  const account = await appendInOrder({ model: "budgetCostCenter", id: budgetCostCenterId }, async (tx) => {
-    const last = await tx.budgetAccount.findFirst({ where: { budgetCostCenterId }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
-    return tx.budgetAccount.create({
-      data: { budgetCostCenterId, accountCode, accountName, kindOverride, sortOrder: nextSortOrder(last) },
-      include: { lineItems: true, comments: true },
-    });
+  // A plain insert. It used to run inside `appendInOrder`, which locks the
+  // parent so that a `MAX(sortOrder) + 1` read inside it is still the answer
+  // when the write lands. There is no sortOrder to compute any more: the sheet
+  // is ordered by account code, and two people adding the same account at once
+  // are stopped by @@unique([budgetCostCenterId, accountCode]) in the database
+  // rather than by a lock held in front of it.
+  const account = await prisma.budgetAccount.create({
+    data: { budgetCostCenterId, accountCode, accountName, kindOverride },
+    include: { lineItems: true, comments: true },
   });
   return NextResponse.json(account, { status: 201 });
 }

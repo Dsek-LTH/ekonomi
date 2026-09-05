@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
-import { MultiCombobox } from "./combobox";
+import { Combobox, MultiCombobox } from "./combobox";
 import { EmptyNote } from "./empty-state";
 import { DateInput, FieldGroup } from "./field";
 import { SearchInput } from "./search-input";
@@ -863,7 +863,6 @@ function Pagination({
   const from = totalItems === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
-  const select = "h-8 rounded-lg border border-border bg-background px-2 text-sm";
   const btn = "flex size-8 items-center justify-center rounded-lg border border-border bg-background text-sm transition-colors hover:bg-surface disabled:opacity-40 disabled:pointer-events-none";
 
   return (
@@ -872,23 +871,34 @@ function Pagination({
         {totalItems === 0 ? t("noResults") : t("showing", { from, to, total: totalItems })}
       </p>
       <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-muted">
-          {/* On a phone the select and the arrows are what matter; the words
-              around them are the first thing to give up the width. */}
+        {/* The app's own picker, not a bare <select>. This was the last one in
+            the app, and it carried its own 32px box: shorter than every other
+            compact control, a different corner radius, and below the 44px both
+            Apple and Google ask of something you tap. `size="sm"` is the same
+            table CONTROL_SIZES hands the filter bar above it.
+
+            Not searchable: a box to type in, in order to choose between four
+            numbers, is more work than the menu it would shorten.
+
+            On a phone the picker and the arrows are what matter; the words
+            around them are the first thing to give up the width. */}
+        <span className="flex items-center gap-1.5 text-xs text-muted">
           <span className="hidden sm:inline">{t("show")}</span>
-          <select
-            value={pageSize}
-            // The visible label is gone below sm, so the select carries its own.
+          <Combobox
+            size="sm"
+            searchable={false}
+            // An explicit width, because the trigger is `w-full` of this
+            // wrapper: left to shrink to fit, it has nothing to size against.
+            // Wide enough for "200" beside the chevron at the compact size.
+            className="w-24"
+            // The visible words are gone below sm, so the picker carries its own.
             aria-label={`${t("show")} ${t("perPage")}`}
-            onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
-            className={select}
-          >
-            {PAGE_SIZES.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
+            value={String(pageSize)}
+            options={PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))}
+            onChange={(v) => onPageSizeChange(Number(v) as PageSize)}
+          />
           <span className="hidden sm:inline">{t("perPage")}</span>
-        </label>
+        </span>
         <button
           className={btn}
           disabled={page === 0}

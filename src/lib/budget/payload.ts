@@ -43,7 +43,6 @@ export interface Account {
   id: string;
   accountCode: string;
   accountName: string;
-  sortOrder: number;
   kindOverride: AccountKind | null;
   lineItems: LineItem[];
   comments: Comment[];

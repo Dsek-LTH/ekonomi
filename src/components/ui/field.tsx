@@ -1,9 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/ui/utils";
+import { isCompleteDate } from "@/lib/domain/date";
 import { DateInput as DateInputBase } from "./date-input";
+import { IconButton } from "./icon-button";
+import { IconCalendar } from "./icons";
 
 /**
  * Whether a form can be submitted without this field.
@@ -58,6 +62,29 @@ export const CONTROL_SIZES: Record<ControlSize, string> = {
 };
 const SIZES = CONTROL_SIZES;
 const control = (size: Size, className?: string) => cn(CONTROL, SIZES[size], className);
+
+/**
+ * The box a control wears when something is fastened inside it: a unit, or a
+ * button. The ring goes round the pair rather than round the input, so focusing
+ * the text does not outline half a field (see `focus-ring-within` in
+ * globals.css).
+ *
+ * Named because two components draw it now, SuffixedInput and DateInput, and a
+ * box that drifted between them would be two fields that look almost alike.
+ */
+const suffixBox = (size: Size, className?: string) =>
+  cn("focus-ring-within flex items-center gap-1.5", control(size), className);
+
+/**
+ * The text inside such a box.
+ *
+ * `w-0` with a floor, not `w-full`: a flex child sized by its content refuses
+ * to shrink past it, and a long value would push the suffix out of the box
+ * rather than scroll under it. CONTROL's own placeholder rule is on the box,
+ * where `::placeholder` matches nothing, so it is restated here on the element
+ * that has one.
+ */
+const SUFFIXED_TEXT = "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted/60";
 
 function FieldContent({
   label,
@@ -231,19 +258,8 @@ export function SuffixedInput({
   ref?: React.Ref<HTMLInputElement>;
 }) {
   return (
-    <div className={cn("focus-ring-within flex items-center gap-1.5", control(size), className)}>
-      {/* w-0 with a floor, not `w-full`: a flex child sized by its content
-          refuses to shrink past it, and a long barcode would push the suffix
-          out of the box rather than scroll under it. */}
-      <input
-        {...props}
-        className={cn(
-          // CONTROL's own placeholder rule is on the box, where `::placeholder`
-          // matches nothing, so it is restated on the element that has one.
-          "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted/60",
-          inputClassName,
-        )}
-      />
+    <div className={suffixBox(size, className)}>
+      <input {...props} className={cn(SUFFIXED_TEXT, inputClassName)} />
       {suffix}
     </div>
   );
@@ -256,11 +272,108 @@ export function Textarea({
   return <textarea className={control("md", cn("min-h-24 resize-y", className))} {...props} />;
 }
 
+/**
+ * A date field: the mask to type into, and a calendar to pick from.
+ *
+ * Two ways in, because the two suit different moments. Typing is faster for a
+ * date you know ("19032026" is eight keystrokes and no aiming), and a calendar
+ * is what you want for "the Tuesday before the pub", which is a date nobody
+ * holds as digits. The mask stays the field; the calendar is a shortcut into
+ * it, the same shape as the barcode scanner fastened inside the EAN field.
+ *
+ * The calendar itself is the browser's. It is the one control here that is not
+ * drawn in the app's own hand, and that is a trade taken deliberately: a date
+ * grid is not a checkbox. Doing it ourselves means a month grid, keyboard
+ * arrows, week starts per locale, focus trapping and a positioned popover,
+ * several hundred lines to reimplement something every browser already ships,
+ * localises and makes accessible, and on a phone the native one is a far better
+ * control than anything we would put there. If the OS look ever grates enough
+ * to be worth that, this is the one place it would be replaced.
+ */
 export function DateInput({
   className,
   size = "md",
+  value,
+  onChange,
+  disabled,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size"> & { size?: Size }) {
-  return <DateInputBase className={control(size, className)} {...props} />;
+  const t = useTranslations("common");
+  const picker = useRef<HTMLInputElement>(null);
+
+  const openPicker = () => {
+    const el = picker.current;
+    if (!el) return;
+    // `showPicker` throws where the browser will not allow it and is missing
+    // from older ones. Focusing the control is the honest fallback: whatever a
+    // browser does with a focused date input beats a button that does nothing.
+    try {
+      el.showPicker();
+    } catch {
+      el.focus();
+    }
+  };
+
+  return (
+    // `relative`, for the hidden native control below. `pr-1` so the button can
+    // sit near the edge, as the scanner does in the EAN field.
+    //
+    // The disabled look is spelled out rather than left to CONTROL, whose
+    // `disabled:` rules key off the element carrying the attribute and here
+    // that is the input inside, not the box. SuffixedInput has the same gap and
+    // says so; this one is closed because DateInput takes `disabled` as a prop
+    // and a field that ignored it would look editable while refusing to be.
+    <div
+      className={suffixBox(
+        size,
+        cn("relative pr-1", disabled && "cursor-not-allowed bg-surface text-muted", className),
+      )}
+    >
+      <DateInputBase
+        {...props}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={SUFFIXED_TEXT}
+      />
+      {/* The calendar the button opens, kept out of sight and out of the tab
+          order: it is not a second field to fill in. Placed at the bottom of
+          the box rather than at its origin so the popup the browser anchors to
+          it opens under the field it belongs to.
+
+          `visibility` rather than `display: none` or width zero alone: a
+          browser will refuse to open a picker for a control it considers
+          unrendered, and several refuse silently. */}
+      <input
+        ref={picker}
+        type="date"
+        tabIndex={-1}
+        aria-hidden
+        disabled={disabled}
+        // Whole dates only. The mask holds "2026" and "2026-07" while somebody
+        // is part-way through typing, and a native date input handed a partial
+        // value clears itself, which would open an empty calendar on a field
+        // that visibly has a year in it.
+        value={isCompleteDate(String(value ?? "")) ? String(value) : ""}
+        onChange={(e) =>
+          onChange?.({
+            target: { value: e.target.value },
+          } as React.ChangeEvent<HTMLInputElement>)
+        }
+        className="pointer-events-none absolute bottom-0 left-2 size-0 opacity-0"
+      />
+      <IconButton
+        label={t("openDatePicker")}
+        disabled={disabled}
+        onClick={openPicker}
+        // Gives up its vertical margin so it does not set the box's height:
+        // a tappable button inside a field that still measures what its
+        // neighbours do.
+        className="-my-1.5"
+      >
+        <IconCalendar className="size-4" />
+      </IconButton>
+    </div>
+  );
 }
 

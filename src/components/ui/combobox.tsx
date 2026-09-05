@@ -43,6 +43,17 @@ type SharedProps = {
   /** The offer, given what was typed. Defaults to a plain "Create …". */
   createLabel?: (text: string) => string;
   clearLabel?: string;
+  /**
+   * Whether the menu carries a box to filter by.
+   *
+   * On by default, because most of these stand over a list nobody can read at a
+   * glance: a chart of accounts, every cost centre the section has. Off for a
+   * short fixed set, where a search box is a field asking to be typed into in
+   * order to choose between four numbers, which is more work than the menu it
+   * is meant to shorten. Keyboard use survives either way; the list itself
+   * takes the arrows and Enter when there is no box to hold them.
+   */
+  searchable?: boolean;
   disabled?: boolean;
   // How the selected value sits on the trigger. "center" is for grid/table
   // cells, where a left-aligned value reads as misaligned against its column.
@@ -126,6 +137,7 @@ function ComboboxBase({
   searchPlaceholder,
   emptyText,
   onCreate,
+  searchable = true,
   createLabel,
   clearLabel,
   disabled,
@@ -241,9 +253,15 @@ function ComboboxBase({
   }
 
   // Focus the search when opening; close on outside click, scroll, resize.
+  //
+  // With no search box, the list takes the focus instead. Something inside the
+  // panel has to hold it or the arrows and Enter would still be going to the
+  // trigger, and closing would leave focus on an element that no longer exists.
   useEffect(() => {
-    if (open) searchRef.current?.focus();
-  }, [open]);
+    if (!open) return;
+    if (searchable) searchRef.current?.focus();
+    else listRef.current?.focus();
+  }, [open, searchable]);
 
   // The trigger, not the menu: the field is where you were sent, and the
   // trigger's type-to-open means the first character you type opens the search
@@ -375,6 +393,7 @@ function ComboboxBase({
           // how anything above it would have been opened in the first place.
           className="z-[210] flex flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
         >
+          {searchable && (
           <div className="shrink-0 border-b border-border p-2">
             <input
               ref={searchRef}
@@ -390,14 +409,24 @@ function ComboboxBase({
               className="h-8 w-full rounded-lg border border-border bg-background px-2.5 text-sm"
             />
           </div>
+          )}
           {/* tabIndex -1: the list scrolls, and a scroll container with no
-              focusable children of its own becomes a tab stop in Chrome. */}
+              focusable children of its own becomes a tab stop in Chrome.
+
+              With no search box above it, this is also what holds the focus and
+              therefore what the arrows, Enter and Escape arrive at. Same
+              handler either way, so the two modes cannot drift into two
+              different sets of keys. */}
           <ul
             ref={listRef}
             id={listId}
             role="listbox"
             aria-multiselectable={multiple || undefined}
+            aria-activedescendant={
+              !searchable && filtered[active] ? optionId(active) : undefined
+            }
             tabIndex={-1}
+            onKeyDown={searchable ? undefined : onSearchKey}
             className="min-h-0 flex-1 overflow-y-auto p-1"
           >
             {onClear && picked.length > 0 && (

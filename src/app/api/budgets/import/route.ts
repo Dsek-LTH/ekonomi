@@ -71,10 +71,9 @@ export async function POST(req: Request) {
           label: costCenterId ? null : sheet.costCenterName,
           sortOrder: si,
           accounts: {
-            create: sheet.accounts.map((account, ai) => ({
+            create: sheet.accounts.map((account) => ({
               accountCode: account.code,
               accountName: account.name,
-              sortOrder: ai,
               lineItems: {
                 create: account.lines.map((line, li) => ({
                   description: line.description,

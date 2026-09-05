@@ -1122,7 +1122,6 @@ model BudgetAccount {
   budgetCostCenterId String
   accountCode        String // e.g. "3010"
   accountName        String // e.g. "Biljettintäkter"
-  sortOrder          Int                @default(0)
   // Income vs. cost. When null the kind is inferred from the account code
   // (BAS: 3xxx = income, everything else = cost); set to override.
   kindOverride       BudgetAccountKind?

@@ -23,7 +23,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.accountCode = check.code;
     data.accountName = check.name;
   }
-  if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
   // kindOverride: "INCOME" | "COST" sets the override; "" / null clears it
   // (falling back to code-based inference).
   if ("kindOverride" in body) {

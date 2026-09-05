@@ -26,7 +26,6 @@ import { changeLabel, isActive } from "@/lib/budget/changes";
 type SourceAccount = {
   accountCode: string;
   accountName: string;
-  sortOrder: number;
   kindOverride: "INCOME" | "COST" | null;
   lineItems: {
     id: string;
@@ -50,7 +49,6 @@ type AccountRow = {
   budgetCostCenterId: string;
   accountCode: string;
   accountName: string;
-  sortOrder: number;
   kindOverride: "INCOME" | "COST" | null;
 };
 
@@ -67,7 +65,12 @@ type LineRow = {
 
 // What a copy needs to read off an account, for both copy paths.
 const sourceAccountInclude = {
-  orderBy: { sortOrder: "asc" },
+  // By account number, the order the sheet is read in everywhere else
+  // (lib/data/budget.ts). A clone that walked its accounts in some other order
+  // would still come out right, since nothing about a copy depends on the
+  // order, but a query that disagreed with the rest would be one more thing to
+  // reconcile the next time somebody reads this.
+  orderBy: { accountCode: "asc" },
   include: {
     lineItems: { orderBy: { sortOrder: "asc" } },
     adjustments: { include: { change: true } },
@@ -109,7 +112,6 @@ function planAccounts(
       budgetCostCenterId: targetCostCenterId,
       accountCode: acct.accountCode,
       accountName: acct.accountName,
-      sortOrder: acct.sortOrder,
       // Carried over deliberately: an account reclassified income↔cost by hand
       // would silently revert to code-based inference in the copy without this.
       kindOverride: acct.kindOverride,

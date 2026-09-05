@@ -64,6 +64,7 @@
     "confirm": "Confirm",
     "loading": "Loading…",
     "datePlaceholder": "YYYY-MM-DD",
+    "openDatePicker": "Pick a date from a calendar",
     "field": {
       "required": "required",
       "optional": "Optional"

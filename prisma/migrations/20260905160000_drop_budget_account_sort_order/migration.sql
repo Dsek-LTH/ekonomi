@@ -1,0 +1,20 @@
+-- Accounts in a sheet are ordered by their number, so nothing sorts on this.
+--
+-- The column held the order somebody happened to add accounts in, and the sheet
+-- was read back in it, which is why 3010 could sit under 5800 with nothing on
+-- the screen to explain it. Line items are the draggable thing in a budget
+-- sheet; accounts never were. So the value was written on every insert, carried
+-- through the payload and the client types, and answered a question nobody
+-- asked once the read paths moved to `ORDER BY "accountCode"`.
+--
+-- Dropped rather than kept as a reservation for accounts becoming reorderable
+-- one day. A written-but-unread column is worse than an absent one: it reads as
+-- the ordering the sheet uses, and the next person to trust it would be wrong.
+-- If hand-ordered accounts are ever wanted, this comes back shaped around that
+-- feature instead of around the insert order it actually recorded.
+--
+-- Nothing else depended on it. Uniqueness of an account within a sheet is
+-- @@unique([budgetCostCenterId, accountCode]), enforced by the database, so the
+-- row lock the insert used to take (appendInOrder, which existed only to keep
+-- MAX(sortOrder) + 1 true) went with it.
+ALTER TABLE "BudgetAccount" DROP COLUMN "sortOrder";

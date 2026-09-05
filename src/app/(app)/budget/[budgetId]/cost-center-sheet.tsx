@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
 import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
+import { autoScrollStep, verticalScroller } from "@/lib/ui/auto-scroll";
 import { useFormat } from "@/lib/ui/use-format";
 import { usePhone } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
@@ -273,9 +274,15 @@ export function CostCenterSheet(props: {
     ids: Record<string, string[]>;
     /** The same, as the drag found it: for Escape, and for "nothing moved". */
     before: Record<string, string[]>;
-    /** Where the pointer is, and how far down the row it took hold. */
+    /** Where the pointer is, and how far down the row it took hold.
+     *  `pointerX` is only for re-asking what is under it while the view scrolls
+     *  under a pointer that has stopped moving. */
+    pointerX: number;
     pointerY: number;
     grab: number;
+    /** What scrolls when the row is carried to the edge: the main column from
+     *  md, the page below it. Resolved once, when the drag starts. */
+    scroller: HTMLElement | null;
   }
   const lineDrag = useRef<LineDrag | null>(null);
   const [draggingLineId, setDraggingLineId] = useState<string | null>(null);
@@ -391,8 +398,10 @@ export function CostCenterSheet(props: {
       accountId: account.id,
       ids,
       before: ids,
+      pointerX: e.clientX,
       pointerY: e.clientY,
       grab: e.clientY - tr.getBoundingClientRect().top,
+      scroller: verticalScroller(tr),
     };
     setPlacement(ids);
     setDraggingLineId(li.id);
@@ -415,20 +424,24 @@ export function CostCenterSheet(props: {
       lineDrag.current = null;
       setDraggingLineId(null);
     };
-    const move = (e: PointerEvent) => {
-      const d = lineDrag.current;
-      if (!d) return;
-      d.pointerY = e.clientY;
+    /**
+     * Where the row would land, given where the pointer is.
+     *
+     * Taken out of `move` because the frame loop below needs it too: while the
+     * view scrolls under a pointer that has stopped, different rows arrive
+     * under it and there is no pointer event coming to say so.
+     */
+    const resolve = (d: LineDrag) => {
       // What is under the pointer, asked of the page rather than worked out:
       // the lifted row is `pointer-events-none`, so this sees the sheet it is
       // being carried over. A heading or a Summa is nothing to land on, and the
       // placement simply stands until the pointer is over a row again.
-      const under = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const under = document.elementFromPoint(d.pointerX, d.pointerY) as HTMLElement | null;
       const over = under?.closest<HTMLElement>("tr[data-line]");
       const end = under?.closest<HTMLElement>("tr[data-line-end]");
       if (over?.dataset.line && over.dataset.account && over.dataset.line !== d.id) {
         const box = over.getBoundingClientRect();
-        place(d, over.dataset.account, over.dataset.line, e.clientY > box.top + box.height / 2);
+        place(d, over.dataset.account, over.dataset.line, d.pointerY > box.top + box.height / 2);
       } else if (end?.dataset.lineEnd) {
         // The new-row line, under the last of an account's rows, and the only
         // thing to aim at in an account that has none.
@@ -436,6 +449,36 @@ export function CostCenterSheet(props: {
       }
       lift();
     };
+
+    const move = (e: PointerEvent) => {
+      const d = lineDrag.current;
+      if (!d) return;
+      d.pointerX = e.clientX;
+      d.pointerY = e.clientY;
+      resolve(d);
+    };
+
+    /**
+     * Carrying a row to the edge scrolls the view.
+     *
+     * A frame loop rather than something hung off `move`: the pointer stops at
+     * the edge of the screen and there are no more events, which is exactly the
+     * moment the view has to keep going. Somewhere further down the sheet is
+     * where the row is being taken, and without this it can only be dropped
+     * where the screen already happened to show.
+     *
+     * The placement is redone only on a frame that actually moved. At the end of
+     * the list the scroll does nothing, and re-asking what is under a
+     * stationary pointer over a stationary sheet would be the same answer at
+     * 60Hz for as long as somebody holds the row there.
+     */
+    let frame = 0;
+    const tick = () => {
+      const d = lineDrag.current;
+      if (d && autoScrollStep(d.scroller, d.pointerY)) resolve(d);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
     // Saved once, when it is let go, not on every row it crossed on the way.
     // One request even when the row changed account: the rows it left keep the
     // order they had, and the route moves it over (see the reorder endpoint).
@@ -471,6 +514,7 @@ export function CostCenterSheet(props: {
     window.addEventListener("pointercancel", cancel);
     window.addEventListener("keydown", key);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", cancel);
@@ -534,73 +578,80 @@ export function CostCenterSheet(props: {
             is when the result is actually worth looking at. What the tiles said
             underneath, the compared side and what the changes have done, is one
             tap down rather than always printed. */}
-        <div className="sticky top-14 z-10 rounded-2xl border border-border bg-background shadow-[var(--shadow-card)] md:hidden">
-          <button
-            type="button"
-            onClick={() => setSummaryOpen((o) => !o)}
-            aria-expanded={summaryOpen}
-            className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
-          >
-            {summary.map((s) => (
-              <span key={s.label} className="min-w-0">
-                <span className="block truncate text-[11px] text-muted">{s.label}</span>
-                <span
-                  className={cn(
-                    "block truncate text-sm font-semibold tabular-nums",
-                    s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
-                  )}
-                >
-                  {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+        {/* Two elements, not one: the sticky layer is square and opaque, the
+            card inside it is rounded. Pinning the rounded box itself left its
+            four corner arcs transparent, and the rows scrolling under the strip
+            showed through them. `bg-canvas` is the page's own colour, so the
+            arcs read exactly as they do at rest. */}
+        <div className="sticky top-14 z-10 bg-canvas md:hidden">
+          <div className="rounded-2xl border border-border bg-background shadow-[var(--shadow-card)]">
+            <button
+              type="button"
+              onClick={() => setSummaryOpen((o) => !o)}
+              aria-expanded={summaryOpen}
+              className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
+            >
+              {summary.map((s) => (
+                <span key={s.label} className="min-w-0">
+                  <span className="block truncate text-[11px] text-muted">{s.label}</span>
+                  <span
+                    className={cn(
+                      "block truncate text-sm font-semibold tabular-nums",
+                      s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
+                    )}
+                  >
+                    {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+                  </span>
                 </span>
-              </span>
-            ))}
-          </button>
+              ))}
+            </button>
 
-          {summaryOpen && (
-            <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
-              {compare &&
-                summary.map((s) => (
-                  <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
-                    <span className="truncate">
-                      {s.label} – {compare.label}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-foreground">
-                      {fmt(s.a)}
-                      <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
-                        {fmtSigned(s.a - s.v)}
+            {summaryOpen && (
+              <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
+                {compare &&
+                  summary.map((s) => (
+                    <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
+                      <span className="truncate">
+                        {s.label} – {compare.label}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-foreground">
+                        {fmt(s.a)}
+                        <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
+                          {fmtSigned(s.a - s.v)}
+                        </span>
+                      </span>
+                    </p>
+                  ))}
+                {changeImpact !== 0 && (
+                  <p className="flex items-baseline justify-between gap-2 text-muted">
+                    <span className="truncate">{tRam("changes")}</span>
+                    <span className="shrink-0 tabular-nums">
+                      <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
+                      <span className="ml-2 text-muted">
+                        {t("originallyLabel")}{" "}
+                        <span className="tabular-nums text-foreground">
+                          {fmtSigned(totals.result - changeImpact)}
+                        </span>
                       </span>
                     </span>
                   </p>
-                ))}
-              {changeImpact !== 0 && (
-                <p className="flex items-baseline justify-between gap-2 text-muted">
-                  <span className="truncate">{tRam("changes")}</span>
-                  <span className="shrink-0 tabular-nums">
-                    <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
-                    <span className="ml-2 text-muted">
-                      {t("originallyLabel")}{" "}
-                      <span className="tabular-nums text-foreground">
-                        {fmtSigned(totals.result - changeImpact)}
-                      </span>
-                    </span>
-                  </span>
-                </p>
-              )}
-              {/* The comparison's own columns add ~200px to a sheet that has
-                  361px to spend, so on a phone they are asked for rather than
-                  assumed. Off, the sheet fits; on, it scrolls sideways, which is
-                  a fair price for a thing you turned on. */}
-              {compare && (
-                <button
-                  type="button"
-                  onClick={() => setCompareOnPhone((v) => !v)}
-                  className="text-xs font-medium text-accent"
-                >
-                  {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
-                </button>
-              )}
-            </div>
-          )}
+                )}
+                {/* The comparison's own columns add ~200px to a sheet that has
+                    361px to spend, so on a phone they are asked for rather than
+                    assumed. Off, the sheet fits; on, it scrolls sideways, which is
+                    a fair price for a thing you turned on. */}
+                {compare && (
+                  <button
+                    type="button"
+                    onClick={() => setCompareOnPhone((v) => !v)}
+                    className="text-xs font-medium text-accent"
+                  >
+                    {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* From md: the three tiles, exactly as they were. */}

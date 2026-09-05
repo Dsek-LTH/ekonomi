@@ -128,17 +128,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // have something to point at.
     const createdIds = new Map<string, string>();
     for (const [key, spec] of toCreate) {
-      const last = await tx.budgetAccount.findFirst({
-        where: { budgetCostCenterId: spec.budgetCostCenterId },
-        orderBy: { sortOrder: "desc" },
-        select: { sortOrder: true },
-      });
       const created = await tx.budgetAccount.create({
         data: {
           budgetCostCenterId: spec.budgetCostCenterId,
           accountCode: spec.accountCode,
           accountName: spec.accountName,
-          sortOrder: (last?.sortOrder ?? -1) + 1,
         },
       });
       createdIds.set(key, created.id);

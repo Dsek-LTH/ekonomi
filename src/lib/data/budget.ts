@@ -132,7 +132,14 @@ export async function getEvaluatedBudget(
         include: {
           costCenter: true,
           accounts: {
-            orderBy: { sortOrder: "asc" },
+            // By account number, which is the order a chart of accounts is
+            // read in and the one every printed budget uses. It was
+            // `sortOrder`, and since accounts are not draggable (only line
+            // items are) that amounted to "the order somebody happened to add
+            // them", so 3010 could sit under 5800 for no reason a reader could
+            // see. BAS codes are four digits throughout, so the string sort is
+            // the numeric one.
+            orderBy: { accountCode: "asc" },
             include: {
               lineItems: { orderBy: { sortOrder: "asc" } },
               comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, id: true } } } },
@@ -226,7 +233,6 @@ export async function getEvaluatedBudget(
         id: acct.id,
         accountCode: acct.accountCode,
         accountName: acct.accountName,
-        sortOrder: acct.sortOrder,
         kindOverride: acct.kindOverride,
         lineItems: acct.lineItems.map((li) => ({
           id: li.id,

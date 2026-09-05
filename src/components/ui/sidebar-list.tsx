@@ -78,8 +78,16 @@ export function SidebarPanel({
       <>
         {/* `top-14` under the phone's app bar; from md the frame is fixed and
             the main column is the scrollport, so the bar sticks to the top of
-            that instead. z-10 to stay under the app bar's own 20. */}
-        <div className="sticky top-14 z-10 md:top-0">
+            that instead. z-10 to stay under the app bar's own 20.
+
+            `bg-canvas` on the wrapper, not just the Card inside it. The Card is
+            opaque but rounded, and a rounded box pinned over a scrolling list
+            is transparent at its four corner arcs: the rows underneath slid
+            through them, which reads as the bar being slightly see-through
+            rather than as the geometry it is. Canvas is the page's own colour
+            (body, globals.css), so the arcs go on showing exactly what they
+            show when nothing is scrolling. */}
+        <div className="sticky top-14 z-10 bg-canvas md:top-0">
           <Card className="overflow-hidden">
             <button
               type="button"

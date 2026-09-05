@@ -71,7 +71,6 @@ export type CreateAccount = z.infer<typeof CreateAccount>;
 /** PATCH /api/budget-accounts/[id]. */
 export const PatchAccount = z.object({
   accountCode: NonEmpty.optional(),
-  sortOrder: z.int().optional(),
   kindOverride: Clearable(AccountKind).optional(),
 });
 export type PatchAccount = z.infer<typeof PatchAccount>;

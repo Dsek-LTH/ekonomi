@@ -64,6 +64,7 @@
     "confirm": "Bekräfta",
     "loading": "Laddar…",
     "datePlaceholder": "ÅÅÅÅ-MM-DD",
+    "openDatePicker": "Välj datum i kalender",
     "field": {
       "required": "krävs",
       "optional": "Frivilligt"
