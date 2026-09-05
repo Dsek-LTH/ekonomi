@@ -116,7 +116,7 @@ export function AccountBlock({ account }: { account: Account }) {
   const totalIncomplete = badAccount.has(accountKey);
   const open = openComments.has(account.id);
   const d = draft(account.id);
-  const incomeLike = effectiveKind(account.accountCode, account.kindOverride) === "INCOME";
+  const incomeLike = effectiveKind(account.accountCode) === "INCOME";
 
   // The same account on the other side. Rows are matched on their description
   // (lineKeys), so `keys[i]` is what this sheet's i-th row is known as over
@@ -144,17 +144,17 @@ export function AccountBlock({ account }: { account: Account }) {
           grid.accountRow.get(`${ccCode}|${account.id}`),
           isAdmin && tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
         )}
+        {/* No grip. An account used to be draggable from one section to the
+            other, which set an override saying a cost account was income. The
+            side is the account number's to decide now, so there is nothing to
+            drag it to. */}
         <td className="group relative border-r border-border/60 bg-brand p-0 align-middle">
-          {isAdmin && (
-            <DragHandle
-              onDragStart={(e) => { e.dataTransfer.setData("accountId", account.id); e.dataTransfer.effectAllowed = "move"; }}
-              className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center px-1.5 text-on-brand/60 hover:text-on-brand group-hover:pointer-events-auto"
-              title={t("dragToSection")}
-            />
-          )}
           {isAdmin ? (
             <Combobox
-              options={accountOptionsFor(account.accountCode)}
+              // Its own side only. Swapping 3010 for 5010 while the row sits
+              // under Intäkter would send it to the other heading mid-edit;
+              // an account changes what it is, not where it lives.
+              options={accountOptionsFor(effectiveKind(account.accountCode), account.accountCode)}
               value={account.accountCode}
               onChange={(v) => {
                 if (v === account.accountCode) return;
@@ -457,7 +457,7 @@ export function AddAccountRow({ kind }: { kind: AccountKind }) {
         <td className="w-9 border-r border-border/60" />
         <td className="p-0" colSpan={columns.length + 1}>
           <Combobox
-            options={accountOptionsFor()}
+            options={accountOptionsFor(kind)}
             value=""
             onChange={(v) => createAccount(kind, v)}
             placeholder={t(kind === "INCOME" ? "newIncomeAccount" : "newCostAccount")}

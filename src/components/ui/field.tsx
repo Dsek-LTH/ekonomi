@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { createContext, useContext, useId, useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/ui/utils";
@@ -8,6 +8,54 @@ import { isCompleteDate } from "@/lib/domain/date";
 import { DateInput as DateInputBase } from "./date-input";
 import { IconButton } from "./icon-button";
 import { IconCalendar } from "./icons";
+
+/**
+ * What a `Field` tells the one control inside it.
+ *
+ * Not props threaded through `children`, because a Field takes arbitrary nodes
+ * and reaching into them means `cloneElement`, which breaks the moment somebody
+ * wraps their input in a div. A context is asked for by whoever wants it.
+ *
+ * The id exists for two reasons and only one of them is the browser's. Chrome
+ * warns that a field with neither id nor name cannot be autofilled, which is
+ * the shallow half. The real half is that a Field draws a hint and, when what
+ * is typed is refused, an error, and neither was tied to the control: a screen
+ * reader read "Kvittodatum" and stopped, and the sentence explaining why the
+ * date would not be accepted was on screen for people who could see it and
+ * nowhere at all for anybody else.
+ */
+interface FieldWiring {
+  /** The control's own id, so the label and the description can point at it. */
+  id: string;
+  /** Id of the hint or error paragraph under it, for `aria-describedby`. */
+  describedBy?: string;
+  /** Whether what is typed is currently refused. */
+  invalid?: boolean;
+}
+
+const FieldCtx = createContext<FieldWiring | null>(null);
+
+/**
+ * The wiring for a control, whether or not it is inside a Field.
+ *
+ * Outside one it still gets an id of its own: a search box in a toolbar is a
+ * form field too, and the id costs nothing.
+ */
+function useFieldWiring(given?: string): {
+  id: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: true;
+} {
+  const fallback = useId();
+  const ctx = useContext(FieldCtx);
+  return {
+    // An id passed by the caller wins over both: it is the one another element
+    // is already pointing at.
+    id: given ?? ctx?.id ?? fallback,
+    "aria-describedby": ctx?.describedBy,
+    "aria-invalid": ctx?.invalid || undefined,
+  };
+}
 
 /**
  * Whether a form can be submitted without this field.
@@ -93,7 +141,10 @@ function FieldContent({
   error,
   action,
   requirement,
+  describedBy,
 }: {
+  /** Id for the hint/error paragraph, where a control is listening for it. */
+  describedBy?: string;
   label: string;
   children: React.ReactNode;
   hint?: string;
@@ -140,11 +191,14 @@ function FieldContent({
       {children}
       {/* What's wrong with what's typed replaces the standing hint. Two lines
           of small text under one control read as one sentence and neither
-          lands. Same warning colour as the submit blocker on the last step. */}
+          lands. Same warning colour as the submit blocker on the last step.
+
+          Carries the id the control points `aria-describedby` at, so whichever
+          of the two is showing is the one read out after the label. */}
       {error ? (
-        <span className="mt-1 block text-xs text-warning">{error}</span>
+        <span id={describedBy} className="mt-1 block text-xs text-warning">{error}</span>
       ) : (
-        hint && <span className="mt-1 block text-xs text-muted">{hint}</span>
+        hint && <span id={describedBy} className="mt-1 block text-xs text-muted">{hint}</span>
       )}
     </>
   );
@@ -167,12 +221,32 @@ export function Field({
   requirement?: Requirement;
   children: React.ReactNode;
 }) {
+  const id = useId();
+  // Only where there is something to point at. An empty `aria-describedby` is
+  // a promise of a description that is not there.
+  const describedBy = error || hint ? `${id}-note` : undefined;
   return (
-    <label className="block">
-      <FieldContent label={label} hint={hint} error={error} requirement={requirement}>
-        {children}
-      </FieldContent>
-    </label>
+    // The label wraps the control, which is what associates the two and what
+    // makes clicking the words focus it. No `htmlFor`: it would have to name
+    // the control's id, and a Field takes arbitrary children, so anything that
+    // does not ask for the wiring below would leave the label pointing at an
+    // id no element carries. Worse than the implicit association it duplicates.
+    // The provider is outside the label, not between it and its contents: a
+    // <label> whose only child is a context provider stops looking like a
+    // label to anything reading the tree, tooling included.
+    <FieldCtx.Provider value={{ id, describedBy, invalid: Boolean(error) }}>
+      <label className="block">
+        <FieldContent
+          label={label}
+          hint={hint}
+          error={error}
+          requirement={requirement}
+          describedBy={describedBy}
+        >
+          {children}
+        </FieldContent>
+      </label>
+    </FieldCtx.Provider>
   );
 }
 
@@ -210,6 +284,7 @@ export function FieldGroup({
 export function Input({
   className,
   size = "md",
+  id,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   size?: Size;
@@ -219,7 +294,8 @@ export function Input({
   // be able to reach the element.
   ref?: React.Ref<HTMLInputElement>;
 }) {
-  return <input className={control(size, className)} {...props} />;
+  const wiring = useFieldWiring(id);
+  return <input {...wiring} className={control(size, className)} {...props} />;
 }
 
 /**
@@ -249,6 +325,7 @@ export function SuffixedInput({
   size = "md",
   className,
   inputClassName,
+  id,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   suffix: React.ReactNode;
@@ -259,7 +336,7 @@ export function SuffixedInput({
 }) {
   return (
     <div className={suffixBox(size, className)}>
-      <input {...props} className={cn(SUFFIXED_TEXT, inputClassName)} />
+      <input {...useFieldWiring(id)} {...props} className={cn(SUFFIXED_TEXT, inputClassName)} />
       {suffix}
     </div>
   );
@@ -267,9 +344,17 @@ export function SuffixedInput({
 
 export function Textarea({
   className,
+  id,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={control("md", cn("min-h-24 resize-y", className))} {...props} />;
+  const wiring = useFieldWiring(id);
+  return (
+    <textarea
+      {...wiring}
+      className={control("md", cn("min-h-24 resize-y", className))}
+      {...props}
+    />
+  );
 }
 
 /**
@@ -296,9 +381,13 @@ export function DateInput({
   value,
   onChange,
   disabled,
+  id,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size"> & { size?: Size }) {
   const t = useTranslations("common");
+  // On the masked input, not on the box or the hidden picker: it is the one a
+  // reader lands on and the one the Field's hint is describing.
+  const wiring = useFieldWiring(id);
   const picker = useRef<HTMLInputElement>(null);
 
   const openPicker = () => {
@@ -330,6 +419,7 @@ export function DateInput({
       )}
     >
       <DateInputBase
+        {...wiring}
         {...props}
         value={value}
         onChange={onChange}

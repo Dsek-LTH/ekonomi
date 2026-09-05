@@ -122,7 +122,6 @@ interface BudgetLike {
     accounts: {
       accountCode: string;
       accountName: string;
-      kindOverride: AccountKind | null;
       lineItems: { id: string; description: string }[];
     }[];
   }[];
@@ -149,7 +148,7 @@ export function snapshotOf(budget: BudgetLike, label: string): Snapshot {
         return {
           code: a.accountCode,
           name: a.accountName,
-          kind: effectiveKind(a.accountCode, a.kindOverride),
+          kind: effectiveKind(a.accountCode),
           total: budget.evaluated.accounts[`${sheetKey(cc)}:${a.accountCode}`],
           lines: a.lineItems.map((li, j) => ({
             key: keys[j],

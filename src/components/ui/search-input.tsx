@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 import { cn } from "@/lib/ui/utils";
 import { CONTROL_SIZES } from "./field";
 import { IconSearch } from "./icons";
@@ -10,15 +12,21 @@ import { IconSearch } from "./icons";
 export function SearchInput({
   className,
   inputClassName,
+  id,
   ...props
 }: {
   className?: string;
   inputClassName?: string;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "className">) {
+  // Every form field wants an id, whether or not anything points at it: a
+  // browser will not autofill one that has neither id nor name, and says so in
+  // the console. Overridable, for a caller that has already named it.
+  const autoId = useId();
   return (
     <div className={cn("relative", className)}>
       <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/60" />
       <input
+        id={id ?? autoId}
         type="search"
         // Measured from the shared table rather than from a copy of it: this
         // sits in the same toolbar as a combobox and a date input, and it used

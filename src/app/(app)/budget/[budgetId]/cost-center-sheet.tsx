@@ -4,7 +4,7 @@
 // useCellEdit, and the cell renderers and `api` from the budget client.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { effectiveKind, type AccountKind } from "@/lib/budget";
+import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
 import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { autoScrollStep, verticalScroller } from "@/lib/ui/auto-scroll";
@@ -17,10 +17,9 @@ import { IconTrash } from "@/components/ui/icons";
 import { StatRow } from "./stat-row";
 import { resultImpact } from "@/lib/budget/changes";
 
-import { insideRect } from "@/components/ui/drag";
 import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
 import {
-  withAccount, withLine, withLineOrder, withNewAccount, withSheet
+  withLine, withLineOrder, withNewAccount, withSheet
 } from "./patch-budget";
 import { useCellEdit } from "./use-cell-edit";
 import { useSheetClipboard } from "./use-sheet-clipboard";
@@ -103,15 +102,15 @@ export function CostCenterSheet(props: {
     </IconButton>
   );
 
-  const income = cc.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "INCOME");
-  const cost = cc.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "COST");
+  const income = cc.accounts.filter((a) => effectiveKind(a.accountCode) === "INCOME");
+  const cost = cc.accounts.filter((a) => effectiveKind(a.accountCode) === "COST");
   const totals = ccTotals(cc, ev);
 
   // How much of this sheet's result is editorial changes rather than what
   // was adopted. The totals above already contain them; this is what says so.
   const changeImpact = cc.accounts.reduce((sum, a) => {
     const net = (adjustments.get(a.id) ?? []).reduce((s, r) => s + r.amount, 0);
-    return sum + resultImpact(effectiveKind(a.accountCode, a.kindOverride), net);
+    return sum + resultImpact(effectiveKind(a.accountCode), net);
   }, 0);
 
   // Whatever is being compared against, the year's utfall or another budget
@@ -198,17 +197,29 @@ export function CostCenterSheet(props: {
     if (ok) setNewRow((m) => { const n = { ...m }; delete n[accountId]; return n; });
   }
 
-  // The live drag-reclassify target.
-  const [dropKind, setDropKind] = useState<AccountKind | null>(null);
-
   // Accounts come from the synced chart, so a budget can only refer to accounts
   // the ledger actually reports on. Ones already on this sheet are filtered out
   // and `keep` is the row's own account, which has to stay in its own picker for
   // the value to resolve to a label.
+  //
+  // Narrowed twice more. Balance accounts are never offered: 1xxx and 2xxx are
+  // what the section owns and owes, not what a year earns or spends, and one
+  // picked by mistake used to be filed silently as a cost. And a section only
+  // offers its own side, so the picker under Intäkter lists 3xxx and the one
+  // under Kostnader lists 4xxx-8xxx. The server refuses the rest either way
+  // (lib/budget/account-validation.ts); this is so the wrong one is never
+  // reachable in the first place.
   const used = new Set(cc.accounts.map((a) => a.accountCode));
-  const accountOptionsFor = (keep?: string) =>
+  const accountOptionsFor = (kind: AccountKind, keep?: string) =>
     accounts
-      .filter((a) => (a.number === keep ? true : a.active && !used.has(a.number)))
+      .filter((a) =>
+        a.number === keep
+          ? true
+          : a.active &&
+            !used.has(a.number) &&
+            isResultAccount(a.number) &&
+            effectiveKind(a.number) === kind,
+      )
       .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number }));
 
   async function createAccount(kind: AccountKind, code: string) {
@@ -220,30 +231,12 @@ export function CostCenterSheet(props: {
     await api(
       `/api/budgets/${budgetId}/cost-centers/${cc.id}/accounts`,
       "POST",
-      { accountCode: code.trim(), kindOverride: kind },
+      // The section, so the server can refuse a code that does not belong on
+      // it. Not a classification: 3xxx is income whatever this said.
+      { accountCode: code.trim(), kind },
       (b, data) => withNewAccount(b, cc.id, data as Account),
     );
   }
-
-  // Dropping an account card flips its income/cost classification. Gated on the
-  // "accountid" drag payload so it ignores line-row drags (which carry "lineid").
-  const dropProps = (kind: AccountKind) => ({
-    onDragOver: (e: React.DragEvent) => { if (!e.dataTransfer.types.includes("accountid")) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dropKind !== kind) setDropKind(kind); },
-    onDragLeave: (e: React.DragEvent) => { if (insideRect(e)) return; setDropKind((k) => (k === kind ? null : k)); },
-    onDrop: (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes("accountid")) return;
-      e.preventDefault();
-      setDropKind(null);
-      const id = e.dataTransfer.getData("accountId");
-      // Only the override moves; the account keeps its rows, which the response
-      // does not carry and this must not drop.
-      if (id) {
-        api(`/api/budget-accounts/${id}`, "PATCH", { kindOverride: kind }, (b, data) =>
-          withAccount(b, id, (a) => ({ ...a, kindOverride: (data as Account).kindOverride })),
-        );
-      }
-    },
-  });
 
   /**
    * Reordering a line by hand, within its account or onto another one.
@@ -348,9 +341,13 @@ export function CostCenterSheet(props: {
   }, []);
 
   // Ticking rows, and copying them onto another sheet. See ./use-sheet-clipboard.
-  const { toggle, clearTicks, marked, sheetKeys, isTicked, copySelection } = useSheetClipboard({
+  const { toggle, clearTicks, marked, isTicked, copySelection } = useSheetClipboard({
     accounts: cc.accounts,
     linesOf,
+    sheetRef,
+    // Read when a key arrives, not when this renders: the listener is on the
+    // document and outlives any one render of the sheet.
+    isEditing: () => cellEdit.className.includes("is-editing"),
     clip,
     onCopy,
     canPaste: isAdmin,
@@ -368,13 +365,10 @@ export function CostCenterSheet(props: {
     t,
   });
 
-  const sheetProps = {
-    ...cellEdit,
-    onKeyDownCapture: (e: React.KeyboardEvent) => {
-      if (sheetKeys(e, cellEdit.className.includes("is-editing"))) return;
-      cellEdit.onKeyDownCapture(e);
-    },
-  };
+  // Just the cell layer now. The sheet's own ⌘C/⌘V used to wrap this handler,
+  // which meant they were only heard while something inside the sheet had
+  // focus; they are on the document now. See use-sheet-clipboard.
+  const sheetProps = cellEdit;
 
   /** The tick box in the margin, on every row that can be copied. The app's own
    *  square, the one the multi-select picker marks its options with. */
@@ -552,7 +546,6 @@ export function CostCenterSheet(props: {
     t, tCol, tRam, tChanges, tAlloc, tBook, tLedger,
     income, cost, totals, compareTotals, compareAccounts, changeImpact,
     badAccount, badLine, liUrl, accountOptionsFor,
-    dropKind, dropProps,
     isTicked, marked, tickBox,
     draggingLineId, liftRef, linesOf, startLineDrag,
     draft, setDraft, createLine, createAccount,

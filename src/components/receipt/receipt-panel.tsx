@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -367,6 +368,43 @@ export function ReceiptPanelColumn() {
   // does the one thing it cannot avoid, lay the column out, and does it once
   // per frame rather than once per event.
   const panelRef = useRef<HTMLElement>(null);
+  const tabRef = useRef<HTMLButtonElement>(null);
+  /**
+   * Set when the panel is folded away while the focus is still inside it, so
+   * the focus can be handed to the tab rather than dropped.
+   *
+   * Which is what happens every time somebody uses the collapse button: they
+   * are standing on a control that is about to leave the screen. Left alone,
+   * the focus falls to <body> and the next Tab starts again from the top of the
+   * document, which on a phone is a nav bar and half a page away from the thing
+   * they were reading.
+   *
+   * Read at the moment of closing rather than afterwards, because by the time
+   * an effect runs `inert` has already moved the focus out and the question
+   * cannot be asked any more.
+   */
+  const handBackFocus = useRef(false);
+
+  /**
+   * The focus follows the panel out, onto the tab that brings it back.
+   *
+   * The tab is already mounted by now (`!open && tab` below, and `open` is
+   * false the moment the fold starts), so this is handing the focus from one
+   * shape of the same object to the other rather than parking it somewhere
+   * arbitrary.
+   *
+   * Only where the panel was holding the focus to begin with. Closed from a
+   * keyboard shortcut while somebody was typing in the form beside it, taking
+   * their focus away would be the rudeness this is meant to prevent.
+   *
+   * A layout effect, so it lands in the same frame the panel starts leaving in
+   * and there is never a paint with the focus on nothing.
+   */
+  useLayoutEffect(() => {
+    if (open || !handBackFocus.current) return;
+    handBackFocus.current = false;
+    tabRef.current?.focus();
+  }, [open]);
   const frame = useRef(0);
   const pending = useRef(0);
 
@@ -424,6 +462,7 @@ export function ReceiptPanelColumn() {
   // Folding is the reader's, so it gets the motion: the panel leaves toward the
   // edge, and the tab it uncovers marks itself once.
   const foldAway = () => {
+    handBackFocus.current = panelRef.current?.contains(document.activeElement) ?? false;
     // Whichever way it was already going, it is going this way now. An enter
     // animation still running would otherwise hold the panel at its resting
     // place, because a keyframe beats a transition, and it would vanish at the end of
@@ -608,6 +647,7 @@ export function ReceiptPanelColumn() {
   // each width wants it rather than one width's answer worn at both.
   const tab = (
     <button
+      ref={tabRef}
       type="button"
       onClick={unfold}
       title={t("expand")}
@@ -673,7 +713,16 @@ export function ReceiptPanelColumn() {
       {(open || leavingNow) && (
         <aside
           ref={panelRef}
-          aria-hidden={leavingNow || undefined}
+          // `inert`, not `aria-hidden`. The panel stays mounted while it slides
+          // out, and the control that folded it away is still inside it holding
+          // the focus, so `aria-hidden` was hiding a focused element from
+          // assistive technology. Browsers refuse that outright and log it.
+          //
+          // `inert` is the attribute that means what was meant here: out of the
+          // accessibility tree, out of the tab order, and unfocusable, so the
+          // browser moves the focus out for us rather than being asked to
+          // pretend a focused thing is not there.
+          inert={leavingNow}
           // The drag writes this same property straight onto the node; this is
           // the value it starts from and the value React puts back on release.
           style={{ "--receipt-w": `${width}px` } as React.CSSProperties}

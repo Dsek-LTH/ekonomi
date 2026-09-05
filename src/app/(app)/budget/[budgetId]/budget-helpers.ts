@@ -132,7 +132,7 @@ export function ccTotals(cc: BudgetCC, ev: Evaluated | undefined): Totals {
   let income = 0, cost = 0;
   for (const a of cc.accounts) {
     const t = ev?.accounts[`${sheetKey(cc)}:${a.accountCode}`] ?? 0;
-    if (effectiveKind(a.accountCode, a.kindOverride) === "INCOME") income += t; else cost += t;
+    if (effectiveKind(a.accountCode) === "INCOME") income += t; else cost += t;
   }
   return { income, cost, result: income - cost };
 }
@@ -180,7 +180,7 @@ export function changeImpactBySheet(budget: Budget): Map<string, number> {
   }
   const kindOfAccount = new Map(
     budget.costCenters.flatMap((cc) =>
-      cc.accounts.map((a) => [a.id, effectiveKind(a.accountCode, a.kindOverride)] as const),
+      cc.accounts.map((a) => [a.id, effectiveKind(a.accountCode)] as const),
     ),
   );
 

@@ -89,14 +89,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     let kindOfAccount: "INCOME" | "COST";
     if (existing) {
       accountId = existing.id;
-      kindOfAccount = effectiveKind(existing.accountCode, existing.kindOverride);
+      kindOfAccount = effectiveKind(existing.accountCode);
     } else {
       // A code the sheet doesn't budget for. It still has to be a real account,
       // the same rule the ordinary "+ nytt konto" goes through.
       const check = await resolveBudgetAccount(code);
       if (!check.ok) return fail(422, check.error, { values: check.values });
       accountId = `new:${sheet.id}:${check.code}`; // stands in until it exists; see below
-      kindOfAccount = effectiveKind(check.code, null);
+      kindOfAccount = effectiveKind(check.code);
       if (!toCreate.has(accountId)) {
         toCreate.set(accountId, {
           budgetCostCenterId: sheet.id,

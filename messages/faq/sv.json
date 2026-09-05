@@ -30,12 +30,35 @@
             "v": "Är du utskottsledare gäller dessutom attesteringen: du granskar och godkänner utläggen som hör till ditt utskott innan de bokförs."
           }
         ]
+      },
+      {
+        "id": "three-kinds",
+        "q": "Vilka sorters redovisning finns det?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Tre. Det första du väljer när du redovisar är vilken av dem det gäller, och valet styr resten av formuläret."
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Sektionskort: sektionens pengar har redan lämnat kontot, och du redovisar vad de gick till.",
+              "Sektionskort, retur: pengar kommer tillbaka till kortet, till exempel ett återköp.",
+              "Eget utlägg: du har betalat själv och ska få tillbaka pengarna.",
+              "Milersättning: du körde egen bil på sektionens ärende och ersätts per kilometer."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "Ett kortköp ska matchas mot banktransaktionen som betalade det. Ett eget utlägg kräver att du har ett utbetalningskonto. En milersättning har inget kvitto alls, för det finns inget att fotografera när du kört din egen bil."
+          }
+        ]
       }
     ]
   },
   {
     "id": "expenses",
-    "label": "Utlägg",
+    "label": "Innan du handlar",
     "items": [
       {
         "id": "what-is",
@@ -91,104 +114,8 @@
     ]
   },
   {
-    "id": "card",
-    "label": "Sektionskort",
-    "items": [
-      {
-        "id": "who-gets",
-        "q": "Vem får ett sektionskort?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Har du en post som kräver många och dyra köp får du ett sektionskort. Kortet är kopplat till D-sektionens bankkonto, så att du slipper ligga ute med egna pengar."
-          }
-        ]
-      },
-      {
-        "id": "card-rules",
-        "q": "Får jag köpa vad jag vill med sektionskortet?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Nej. Ett sektionskort innebär INTE att du får köpa vad du vill. Alla köp med ett sektionskort ska godkännas av din utskottsledare i förväg, och varje köp måste redovisas i efterhand."
-          },
-          {
-            "t": "note",
-            "tone": "danger",
-            "v": "Om olovliga köp genomförs på ditt sektionskort blir du personligen betalningsskyldig."
-          }
-        ]
-      },
-      {
-        "id": "declined",
-        "q": "Betalningen nekas i kassan, vad gör jag?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Då har vi inte flyttat över tillräckligt med pengar till kortkontot. Är det brådskande gör du bäst i att ringa oss direkt:"
-          },
-          {
-            "t": "link",
-            "v": "Skattmästaren (Ludwig): 070-893 55 85",
-            "href": "tel:+46708935585"
-          },
-          {
-            "t": "link",
-            "v": "Vice skattmästare (Edvin): 079-349 06 22",
-            "href": "tel:+46793490622"
-          }
-        ]
-      },
-      {
-        "id": "lend",
-        "q": "Får jag låna ut mitt sektionskort?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan. Det är knutet till dig och till din post."
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "invoices",
-    "label": "Fakturor",
-    "items": [
-      {
-        "id": "can-invoice",
-        "q": "Kan jag ta ett köp på faktura?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Ja, blir du erbjuden att ta ett köp på faktura kan du göra det."
-          },
-          {
-            "t": "note",
-            "tone": "warn",
-            "v": "Kolla ALLTID med din utskottsledare innan du tar något på faktura. Är kraven inte uppfyllda riskerar du att själv bli betalningsskyldig."
-          }
-        ]
-      },
-      {
-        "id": "invoice-recipient",
-        "q": "Vem ska fakturan ställas till?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Sektionen. Se till att leverantören fakturerar D-sektionen och inte dig som privatperson."
-          },
-          {
-            "t": "p",
-            "v": "Sektionen betalar ALDRIG fakturor som inte är ställda till sektionen. Har du blivit fakturerad privat måste du betala fakturan själv och sedan göra ett utlägg på den."
-          }
-        ]
-      }
-    ]
-  },
-  {
     "id": "reporting",
-    "label": "Redovisning",
+    "label": "Redovisa",
     "items": [
       {
         "id": "how",
@@ -196,17 +123,22 @@
         "a": [
           {
             "t": "p",
-            "v": "Alla köp måste redovisas. Det är kravet för att du ska få ersättning för ett privat utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort. När du redovisar fyller du i:"
+            "v": "Alla köp måste redovisas. Det är kravet för att du ska få ersättning för ett eget utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort."
           },
           {
-            "t": "ul",
+            "t": "ol",
             "v": [
-              "Datum på kvittot.",
-              "En övergripande titel som beskriver affärshändelsen.",
-              "Om köpet gjordes med sektionskort eller privat.",
-              "Kvittot eller kvittona.",
-              "Kostnadsställe och belopp för varje del av köpet."
+              "Välj vad det gäller: sektionskort, sektionskort retur, eller eget utlägg.",
+              "Skriv en beskrivning av affärshändelsen, fyll i datumet från kvittot och beloppet.",
+              "Fördela beloppet på kostnadsställen. Raderna ska summera till kvittots totalbelopp.",
+              "Dra in kvittot i panelen bredvid formuläret.",
+              "Gäller det sektionskortet: välj banktransaktionen som betalade köpet.",
+              "Skicka in."
             ]
+          },
+          {
+            "t": "p",
+            "v": "Du kan spara som utkast när som helst och fortsätta senare."
           },
           {
             "t": "action",
@@ -216,16 +148,16 @@
         ]
       },
       {
-        "id": "multiple-receipts",
-        "q": "Kan jag lägga flera kvitton på samma redovisning?",
+        "id": "draft",
+        "q": "Kan jag fortsätta senare?",
         "a": [
           {
             "t": "p",
-            "v": "Ja, om kvittona avser SAMMA HÄNDELSE, till exempel två olika köp samma dag inför samma event. Tryck på \"lägg till kvitto\" och redovisa dem tillsammans."
+            "v": "Ja. Spara utkast när som helst, så ligger det under Utlägg tills du skickar in det."
           },
           {
             "t": "p",
-            "v": "Kvitton som hör till olika händelser ska redovisas var för sig."
+            "v": "Det du skrivit ligger dessutom kvar i webbläsaren om sidan laddas om innan du hunnit spara, kvittot du valt inkluderat. Byter du enhet eller rensar webbläsardata är det borta, så spara utkast om du ska vara borta ett tag."
           }
         ]
       },
@@ -329,11 +261,15 @@
         "a": [
           {
             "t": "p",
-            "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp (privat utlägg såväl som köp med sektionskort) inte redovisas inom 60 dagar från att köpet genomfördes."
+            "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp, eget utlägg såväl som köp med sektionskort, inte redovisas inom 60 dagar från att köpet genomfördes."
+          },
+          {
+            "t": "p",
+            "v": "Appen stoppar ett eget utlägg och en milersättning som är äldre än 60 dagar: de går inte att skicka in, för det är dina pengar sektionen ska betala tillbaka och kravet är för gammalt att ta emot. Ett kortköp går fortfarande att redovisa efteråt, eftersom sektionens pengar redan är borta och köpet måste bokföras oavsett hur sent det kommer. Det betyder inte att fristen inte gäller dig."
           },
           {
             "t": "note",
-            "tone": "warn",
+            "tone": "danger",
             "v": "Skattmästeriet har inte tid att jaga er för att ni ska redovisa i tid. Redovisa dina köp med en gång."
           }
         ]
@@ -344,7 +280,11 @@
         "a": [
           {
             "t": "p",
-            "v": "Ja. Returer av varor som var ämnade för sektionen redovisas precis som vanliga köp, med skillnaden att beloppet du anger ska vara negativt."
+            "v": "Ja. En retur redovisas som ett kortköp med retur valt, och beloppet blir negativt. Precis som ett köp ska den matchas mot banktransaktionen, fast mot inbetalningen som kom tillbaka i stället för mot en utbetalning."
+          },
+          {
+            "t": "p",
+            "v": "Returer går bara på sektionskortet. Pengar kommer tillbaka dit de betalades från, och en medlem lämnar inte pengar till sektionen genom ett utlägg. Har du betalat själv och fått pengarna tillbaka privat ska det ursprungliga utlägget rättas eller tas bort i stället."
           }
         ]
       },
@@ -355,6 +295,226 @@
           {
             "t": "p",
             "v": "Gör köpet via Klarna om du kan. Andra länder behöver inte följa svenska regelverk och är därför inte skyldiga att lämna kvitto på samma sätt som en svensk säljare. Men går köpet via Klarna får du alltid ett giltigt kvitto."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "card",
+    "label": "Sektionskortet",
+    "items": [
+      {
+        "id": "who-gets",
+        "q": "Vem får ett sektionskort?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Har du en post som kräver många och dyra köp får du ett sektionskort. Kortet är kopplat till D-sektionens bankkonto, så att du slipper ligga ute med egna pengar."
+          }
+        ]
+      },
+      {
+        "id": "card-rules",
+        "q": "Får jag köpa vad jag vill med sektionskortet?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. Ett sektionskort innebär INTE att du får köpa vad du vill. Alla köp med ett sektionskort ska godkännas av din utskottsledare i förväg, och varje köp måste redovisas i efterhand."
+          },
+          {
+            "t": "note",
+            "tone": "danger",
+            "v": "Om olovliga köp genomförs på ditt sektionskort blir du personligen betalningsskyldig."
+          }
+        ]
+      },
+      {
+        "id": "declined",
+        "q": "Betalningen nekas i kassan, vad gör jag?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Då har vi inte flyttat över tillräckligt med pengar till kortkontot. Är det brådskande gör du bäst i att ringa oss direkt:"
+          },
+          {
+            "t": "link",
+            "v": "Skattmästaren (Ludwig): 070-893 55 85",
+            "href": "tel:+46708935585"
+          },
+          {
+            "t": "link",
+            "v": "Vice skattmästare (Edvin): 079-349 06 22",
+            "href": "tel:+46793490622"
+          }
+        ]
+      },
+      {
+        "id": "lend",
+        "q": "Får jag låna ut mitt sektionskort?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan. Det är knutet till dig och till din post."
+          }
+        ]
+      },
+      {
+        "id": "match",
+        "q": "Varför måste ett kortköp matchas mot en banktransaktion?",
+        "a": [
+          {
+            "t": "p",
+            "v": "För att redovisningen ska peka på pengarna. Matchningen säger att just den här raden på kortkontot är pengarna som lämnade sektionen för just det här köpet, och därmed att raden är redovisad och köpet bokfört mot rätt belopp."
+          },
+          {
+            "t": "p",
+            "v": "Utan den vet ingen om två redovisningar beskriver samma köp eller två olika, och kortkontot går inte att stämma av. Därför går ett kortköp inte att skicka in omatchat."
+          },
+          {
+            "t": "p",
+            "v": "Transaktionen måste vara på exakt samma belopp och gå åt rätt håll: ett köp matchas mot en utbetalning, en retur mot en inbetalning."
+          }
+        ]
+      },
+      {
+        "id": "no-match",
+        "q": "Jag hittar inte mitt köp i listan, vad är fel?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Listan visar alla rader på ditt kort, även de du inte kan välja, och skriver ut skälet på varje. Fyra saker gör en rad ovalbar:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Annat belopp. Raden står kvar med hur mycket den skiljer sig, till exempel “6,50 kr mer än utlägget”. Då är det oftast beloppet du skrivit som ska rättas.",
+              "Fel håll. En inbetalning matchar bara en retur, en utbetalning bara ett köp.",
+              "Redan redovisad. Någon annan har tagit köpet på ett eget utlägg. Hör av dig till dem eller till skattmästaren.",
+              "Annans kort. Du ser bara transaktionerna på ditt eget kort."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "Står köpet inte där alls är kontoutdraget troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen. Spara som utkast så länge."
+          },
+          {
+            "t": "action",
+            "v": "Till kortköpen",
+            "href": "/bank"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "mileage",
+    "label": "Milersättning",
+    "items": [
+      {
+        "id": "mileage-what",
+        "q": "Vad är milersättning?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ersättning för att du kört din egen bil på sektionens ärende. Du får betalt per kilometer efter Skatteverkets schablon, i stället för att lämna in ett kvitto på bensin."
+          },
+          {
+            "t": "p",
+            "v": "Det är inte ett utlägg med kvitto, utan en egen sorts redovisning med ett eget formulär."
+          },
+          {
+            "t": "action",
+            "v": "Ny milersättning",
+            "href": "/expenses/new/mileage"
+          }
+        ]
+      },
+      {
+        "id": "mileage-how",
+        "q": "Hur redovisar jag en resa?",
+        "a": [
+          {
+            "t": "ol",
+            "v": [
+              "Skriv vad resan gällde, och vilken dag du körde.",
+              "Fyll i varje ställe du stannade på, i tur och ordning.",
+              "Fyll i mätarställningen före och efter resan.",
+              "Fördela beloppet på kostnadsställen och skicka in."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "En resa per redovisning. Körde du tre gånger gör du tre, för varje resa attesteras för sig och landar på sitt eget kostnadsställe."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Milersättning har samma frist som ett eget utlägg: 60 dagar från resdagen. Den går inte att skicka in efter det."
+          }
+        ]
+      },
+      {
+        "id": "mileage-odometer",
+        "q": "Vilken mätare menas?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Totalmätaren, alltså bilens sammanlagda körsträcka. Inte trippmätaren."
+          },
+          {
+            "t": "p",
+            "v": "Skälet är att siffrorna ska gå att kontrollera. En trippmätare kan nollställas när som helst, så 0 → 42 på en sådan är bara ett påstående om att du kört 42 km. Totalmätarens värden går att hålla mot bilen, och mot dina andra resor med samma bil, som bara kan gå uppåt."
+          },
+          {
+            "t": "p",
+            "v": "Sträckan räknar appen ut själv som skillnaden mellan de två. Du skriver aldrig in ett antal kilometer."
+          }
+        ]
+      },
+      {
+        "id": "mileage-route",
+        "q": "Hur fyller jag i resvägen?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ett ställe per rad, i den ordning du stannade på dem. Ort eller namn räcker, till exempel E-huset och Snabbgross."
+          },
+          {
+            "t": "p",
+            "v": "Kom du tillbaka dit du startade skriver du det stället sist också. Det finns en knapp för det. Annars beskriver resvägen bara halva sträckan mätaren visar, och den som attesterar ser en resa på 21 km mot en mätare som säger 42."
+          },
+          {
+            "t": "p",
+            "v": "Skatteverket vill se var resan gick, inte bara hur långt den var. Mätarställningarna visar att bilen rullade, resvägen visar att det var sektionens ärende. Därför krävs minst två ställen för att kunna skicka in."
+          }
+        ]
+      },
+      {
+        "id": "mileage-rate",
+        "q": "Hur mycket får jag per kilometer?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Skatteverkets schablon, som skattmästeriet lägger in i appen. Beloppet räknas ut åt dig när du fyllt i mätarställningarna."
+          },
+          {
+            "t": "p",
+            "v": "Varje resa värderas efter den ersättning som gällde den dag du körde. Ändras schablonen vid ett årsskifte räknas alltså inte en redan inskickad resa om, och en resa i december som redovisas i januari får decembers ersättning."
+          }
+        ]
+      },
+      {
+        "id": "mileage-receipt",
+        "q": "Behöver jag något kvitto?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. Det finns inget att fotografera när du kört din egen bil, och du ska inte lämna in kvitto på bensin: schablonen täcker hela kostnaden för att äga och köra bilen, inte bara drivmedlet."
+          },
+          {
+            "t": "p",
+            "v": "Underlaget är i stället utläggsräkningen som appen ritar, med resvägen, mätarställningarna och ersättningen per kilometer på. Det är den som följer med till bokföringen."
           }
         ]
       }
@@ -393,6 +553,24 @@
             "t": "note",
             "tone": "warn",
             "v": "Saknas något av ovanstående, eller går det inte att TYDLIGT urskilja, kommer attesteringen inte att godkännas. Då får du begära ett giltigt kvitto från leverantören."
+          }
+        ]
+      },
+      {
+        "id": "one-receipt",
+        "q": "Kan jag lägga flera kvitton på samma redovisning?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Nej. En redovisning bär ett kvitto. Laddar du upp ett nytt ersätter det det förra."
+          },
+          {
+            "t": "p",
+            "v": "Två kvitton är två affärshändelser, och de ska bokföras var för sig även när de gjordes samma dag inför samma event. Handlade du på två ställen gör du alltså två redovisningar."
+          },
+          {
+            "t": "p",
+            "v": "Ett kvitto som gick över flera sidor är däremot en händelse: slå ihop sidorna till en PDF och ladda upp den."
           }
         ]
       },
@@ -511,6 +689,94 @@
     ]
   },
   {
+    "id": "invoices",
+    "label": "Fakturor",
+    "items": [
+      {
+        "id": "can-invoice",
+        "q": "Kan jag ta ett köp på faktura?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Ja, blir du erbjuden att ta ett köp på faktura kan du göra det."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "Kolla ALLTID med din utskottsledare innan du tar något på faktura. Är kraven inte uppfyllda riskerar du att själv bli betalningsskyldig."
+          }
+        ]
+      },
+      {
+        "id": "invoice-recipient",
+        "q": "Vem ska fakturan ställas till?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Sektionen. Se till att leverantören fakturerar D-sektionen och inte dig som privatperson."
+          },
+          {
+            "t": "p",
+            "v": "Sektionen betalar ALDRIG fakturor som inte är ställda till sektionen. Har du blivit fakturerad privat måste du betala fakturan själv och sedan göra ett utlägg på den."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "payout",
+    "label": "Pengarna tillbaka",
+    "items": [
+      {
+        "id": "payout-account",
+        "q": "Var lägger jag in mitt kontonummer?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Under Profil. Clearingnummer och kontonummer, till kontot du vill ha pengarna på."
+          },
+          {
+            "t": "p",
+            "v": "Utan det går ett eget utlägg och en milersättning inte att skicka in, för då finns ingenstans att betala. Ett kortköp behöver det inte: där har sektionen redan betalat."
+          },
+          {
+            "t": "action",
+            "v": "Till profilen",
+            "href": "/profile"
+          }
+        ]
+      },
+      {
+        "id": "after-submit",
+        "q": "Vad händer efter att jag skickat in?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Redovisningen går igenom fyra lägen, och du ser vilket den står i under Utlägg:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Väntar på attest: din utskottsledare granskar den. Behöver något rättas kommer den tillbaka som Behöver ändras, med en kommentar om vad.",
+              "Attesterat: godkänd, och kön till bokföringen.",
+              "Bokfört: skattmästeriet har konterat den.",
+              "Exporterat: den ligger i Fortnox, och pengarna betalas ut."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "Har du lagt ut egna pengar kommer de tillbaka efter att redovisningen bokförts. Går det lång tid utan att något händer, hör av dig till din utskottsledare först, det är där kön oftast står."
+          },
+          {
+            "t": "action",
+            "v": "Till mina utlägg",
+            "href": "/expenses"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "approval",
     "label": "Attestering",
     "items": [
@@ -544,8 +810,13 @@
               "Stämmer angivet datum med kvittots datum?",
               "Är beskrivningen lämplig med avseende på varorna?",
               "Är kostnadsstället korrekt?",
-              "Är sektionskort respektive privatkort korrekt angivet?"
+              "Är sektionskort respektive eget utlägg korrekt angivet?",
+              "På en milersättning: är resvägen ifylld, och stämmer sträckan med den? En resa tur och retur ska ha startstället både först och sist."
             ]
+          },
+          {
+            "t": "p",
+            "v": "Du attesterar per kostnadsställe. Är utlägget fördelat på flera godkänner du bara de rader du svarar för, och resten väntar på den som svarar för dem."
           }
         ]
       }

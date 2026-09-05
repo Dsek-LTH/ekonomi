@@ -87,10 +87,15 @@ describe("matchCandidates", () => {
     txn("in-100", 100),
   ];
 
-  it("offers outgoing rows for money the section spent", () => {
+  type Candidates = ReturnType<typeof matchCandidates<ReturnType<typeof txn>>>;
+  const idsOf = (cs: Candidates) => cs.map((c) => c.txn.id);
+  const find = (cs: Candidates, id: string) => cs.find((c) => c.txn.id === id)!;
+
+  it("settles money the section spent with an outgoing row", () => {
     const found = matchCandidates(rows, 250);
-    expect(found.map((c) => c.txn.id)).toEqual(["out-250", "out-249"]);
+    expect(found[0].txn.id).toBe("out-250");
     expect(found[0].selectable).toBe(true);
+    expect(found[0].blocked).toBeNull();
   });
 
   // The bug this exists for. A return is money coming back, so it is settled
@@ -100,53 +105,87 @@ describe("matchCandidates", () => {
   // the refund that would settle it was filtered out. Since a return is always
   // a card purchase, and a card purchase cannot be submitted unmatched, no
   // return could be completed at all.
-  it("offers incoming rows for money coming back", () => {
+  it("settles money coming back with an incoming row", () => {
     const found = matchCandidates(rows, -250);
-    expect(found.map((c) => c.txn.id)).toEqual(["in-250", "in-100"]);
+    expect(found[0].txn.id).toBe("in-250");
     expect(found[0].selectable).toBe(true);
   });
 
-  it("never offers a row pointing the wrong way", () => {
-    // Same size, wrong direction: it cannot settle this and must not be shown
-    // as a near miss either, which would invite a click that does nothing.
-    expect(matchCandidates(rows, 250).map((c) => c.txn.id)).not.toContain("in-250");
-    expect(matchCandidates(rows, -250).map((c) => c.txn.id)).not.toContain("out-250");
+  it("keeps a row pointing the wrong way, and names the direction", () => {
+    // Same size, other way round. It used to be dropped, which made a +250 row
+    // invisible to a +250 claim and left "the purchase is right there and it is
+    // not in the list" with no answer at all. Told apart from a wrong amount on
+    // purpose: the figure is identical, so "annat belopp" would send somebody
+    // off to check a number that was never wrong.
+    const wrong = find(matchCandidates(rows, 250), "in-250");
+    expect(wrong.selectable).toBe(false);
+    expect(wrong.blocked).toBe("direction");
   });
 
-  it("keeps a near miss, and says it cannot be picked", () => {
+  it("keeps a near miss, and says how far off it is", () => {
     // An empty list would say "no card purchase looks like this"; the greyed
-    // 249,50 says "one nearly does, check the amount you typed".
-    const near = matchCandidates(rows, 249);
-    expect(near.map((c) => c.txn.id)).toContain("out-249");
-    expect(near.every((c) => c.selectable)).toBe(false);
+    // 249,50 with "0,50 kr mindre" on it says which digit was mistyped.
+    const near = find(matchCandidates(rows, 250), "out-249");
+    expect(near.blocked).toBe("amount");
+    expect(near.offBy).toBe(-0.5);
+  });
+
+  it("measures offBy as magnitudes, whichever way the claim points", () => {
+    // A return of 250 against an incoming 260 is 10 kr over, the same as a
+    // purchase of 250 against an outgoing 260. The reader is asking how far off
+    // the row is, not which way the two are signed.
+    expect(find(matchCandidates([txn("a", -260)], 250), "a").offBy).toBe(10);
+    expect(find(matchCandidates([txn("a", 260)], -250), "a").offBy).toBe(10);
   });
 
   it("puts the ones that would settle it first, then the closest", () => {
-    const found = matchCandidates([txn("a", -100), txn("b", -260), txn("c", -250)], 250);
-    expect(found.map((c) => c.txn.id)).toEqual(["c", "b", "a"]);
+    expect(idsOf(matchCandidates([txn("a", -100), txn("b", -260), txn("c", -250)], 250)))
+      .toEqual(["c", "b", "a"]);
   });
 
-  it("hides rows already spoken for, except this claim's own", () => {
-    const taken = [txn("mine", -250, "e1"), txn("theirs", -250, "e2"), txn("free", -250)];
-    expect(matchCandidates(taken, 250).map((c) => c.txn.id)).toEqual(["free"]);
-    // Editing a claim: the row it already holds stays visible, so it can show
-    // as picked rather than vanishing from under the selection. Named by the
-    // transaction, which is what the screen is holding.
-    expect(
-      matchCandidates(taken, 250, "mine")
-        .map((c) => c.txn.id)
-        .sort(),
-    ).toEqual(["free", "mine"]);
+  it("keeps a row another utlägg claims, and says so", () => {
+    // The one that used to be silent. Somebody else redovisade your purchase
+    // and the row was simply gone, so the answer to "where is it?" was a hint
+    // guessing at an unimported bank file. It now sits directly under the rows
+    // that work, because it is the answer.
+    const taken = [txn("theirs", -250, "e2"), txn("free", -250)];
+    const found = matchCandidates(taken, 250);
+    expect(find(found, "theirs").blocked).toBe("taken");
+    expect(find(found, "theirs").selectable).toBe(false);
+    expect(find(found, "free").selectable).toBe(true);
+    expect(idsOf(found)[0]).toBe("free");
   });
 
-  it("offers nothing while there is no amount to settle", () => {
-    // Zero is not a direction. Every row would be a near miss, and a list of
-    // the whole statement is no help before a figure has been typed.
+  it("counts this claim's own row as free rather than taken", () => {
+    // Editing a claim: the row it already holds has to read as pickable, or the
+    // selection it is showing would be greyed out under the cursor.
+    const taken = [txn("mine", -250, "e1"), txn("free", -250)];
+    expect(find(matchCandidates(taken, 250, "mine"), "mine").selectable).toBe(true);
+  });
+
+  it("reports a wrong amount even on a row somebody else has claimed", () => {
+    // Both are true, and only one is worth saying. "Redan redovisad" about a
+    // row that would not have fitted anyway sends the reader after the wrong
+    // thing entirely.
+    expect(find(matchCandidates([txn("t", -300, "e2")], 250), "t").blocked).toBe("amount");
+  });
+
+  it("settles nothing while there is no amount to settle", () => {
+    // Zero is not a direction, and nothing cancels it out.
     expect(matchCandidates(rows, 0).every((c) => !c.selectable)).toBe(true);
   });
 
-  it("shows at most a handful", () => {
+  it("returns the whole statement, not a handful of it", () => {
+    // The cap was five, silently. A transaction that happened to be sixth
+    // closest was missing with nothing to say it existed; the screens search
+    // and scroll instead.
     const many = Array.from({ length: 20 }, (_, i) => txn(`t${i}`, -100 - i));
-    expect(matchCandidates(many, 250)).toHaveLength(5);
+    expect(matchCandidates(many, 250)).toHaveLength(20);
+  });
+
+  it("orders two rows of the same size the same way twice", () => {
+    // Otherwise a list re-sorts under the pointer between renders.
+    const same = [txn("b", -250), txn("a", -250)];
+    expect(idsOf(matchCandidates(same, 250))).toEqual(idsOf(matchCandidates(same, 250)));
   });
 });

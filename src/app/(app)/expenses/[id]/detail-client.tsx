@@ -7,19 +7,17 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
-import { IconLink } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { NoMatchNote, TransactionPicker } from "@/components/transaction-picker";
 import { expenseDocuments } from "@/lib/expense/document-url";
 import { Amount } from "@/components/ui/amount";
 // For the amount that sits inside a translated sentence ("Pick a transaction for
 // exactly …"), where a React node cannot go. Everything rendered as a figure in
 // its own right uses Amount.
 import { formatSEK } from "@/lib/ui/format";
-import { cancelsOut } from "@/lib/domain/matching";
+import { cancelsOut, matchCandidates } from "@/lib/domain/matching";
 import { useFormat } from "@/lib/ui/use-format";
-import { cn } from "@/lib/ui/utils";
 import type { BankTransaction, Expense, FortnoxStatus } from "@/lib/domain/types";
 import { DetailsCard, TimelineCard, VerificationCard } from "./detail-sections";
 import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
@@ -196,8 +194,13 @@ function BankTransactionCard({
   onMatch: (transactionId: string | null) => void;
 }) {
   const t = useTranslations("expenses.detail");
+  const tMatch = useTranslations("expenses.match");
   const { date } = useFormat();
   const txn = bankTransactions.find((t) => t.id === expense.matchedTransactionId);
+  // Which row was clicked. `matching` says a write is in flight but not which
+  // one, and the list stays on screen throughout, so without this the click
+  // looks ignored.
+  const [picked, setPicked] = useState<string | null>(null);
 
   return (
     <Card>
@@ -225,107 +228,38 @@ function BankTransactionCard({
             )}
           </>
         ) : canMatch ? (
-          <TransactionPicker
-            // Every unmatched purchase on this member's card, not just the ones
-            // that fit: the picker greys out the rest, so a mistyped amount
-            // shows up as "the right purchase is there but not selectable"
-            // instead of an empty list.
-            transactions={bankTransactions.filter(
-              (t) => !t.matchedExpenseId && t.cardHolderId === cardHolderId,
-            )}
-            grossAmount={expense.grossAmount}
-            onSelect={onMatch}
-            disabled={matching}
-          />
+          <div className="space-y-2">
+            <p className="text-sm text-muted">
+              {tMatch("lead", { amount: formatSEK(Math.abs(expense.grossAmount)) })}
+            </p>
+            {/* Every row on this member's card, the claimed ones included. They
+                used to be filtered out here, so a purchase somebody else had
+                already redovisat simply was not in the list and the reason was
+                unfindable. The picker greys them and names the utlägg holding
+                them. */}
+            <TransactionPicker
+              candidates={matchCandidates(
+                bankTransactions.filter((t) => t.cardHolderId === cardHolderId),
+                expense.grossAmount,
+              )}
+              onPick={(id) => {
+                setPicked(id);
+                onMatch(id);
+              }}
+              busy={matching}
+              pendingId={picked}
+            />
+            {!bankTransactions.some(
+              (t) =>
+                t.cardHolderId === cardHolderId &&
+                !t.matchedExpenseId &&
+                cancelsOut(t.amount, expense.grossAmount),
+            ) && <NoMatchNote hasRows={bankTransactions.length > 0} />}
+          </div>
         ) : (
           <p className="text-sm text-muted">{t("noMatch")}</p>
         )}
       </CardBody>
     </Card>
-  );
-}
-
-function TransactionPicker({
-  transactions,
-  grossAmount,
-  onSelect,
-  disabled,
-}: {
-  transactions: BankTransaction[];
-  /** The expense's amount. Only a row that cancels it out can be picked. */
-  grossAmount: number;
-  onSelect: (id: string) => void;
-  disabled: boolean;
-}) {
-  const t = useTranslations("expenses.detail");
-  const tList = useTranslations("expenses");
-  const { date } = useFormat();
-  const [query, setQuery] = useState("");
-  // Which row was clicked. `disabled` says a match is being written but not
-  // which one, and the answer is the only thing worth showing here. The list
-  // stays on screen throughout, so without it the click looks ignored.
-  const [picked, setPicked] = useState<string | null>(null);
-  const q = query.trim().toLowerCase();
-  const filtered = transactions
-    .filter((t) => !q || t.description.toLowerCase().includes(q))
-    .map((txn) => ({ txn, selectable: cancelsOut(txn.amount, grossAmount) }))
-    // Selectable first; within each group the incoming date order (newest
-    // first) is kept, so the list stays predictable.
-    .sort((a, b) => Number(b.selectable) - Number(a.selectable));
-
-  return (
-    <div className="space-y-2">
-      <p className="text-sm text-muted">
-        {t("pickTransaction", { amount: formatSEK(Math.abs(grossAmount)) })}
-      </p>
-      <SearchInput
-        placeholder={t("searchTransaction")}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <ul className="max-h-52 divide-y divide-border overflow-y-auto rounded-xl border border-border">
-        {filtered.map(({ txn, selectable }) => (
-          <li key={txn.id}>
-            <button
-              onClick={() => {
-                setPicked(txn.id);
-                onSelect(txn.id);
-              }}
-              disabled={disabled || !selectable}
-              title={selectable ? undefined : t("amountMismatch")}
-              className={cn(
-                "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:pointer-events-none",
-                selectable ? "hover:bg-surface disabled:opacity-40" : "opacity-45",
-              )}
-            >
-              {/* The spinner sits in the link glyph's box so the row doesn't
-                  shift under the pointer while the match is written. */}
-              <span className="grid size-4 shrink-0 place-items-center">
-                {disabled && picked === txn.id ? (
-                  <Spinner size="sm" className="text-accent" />
-                ) : (
-                  <IconLink className="size-4 text-muted" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{txn.description}</p>
-                <p className="text-xs text-muted">
-                  {date(txn.transactionDate)}
-                  {txn.cardHolderName && <> – {txn.cardHolderName}</>}
-                  {!selectable && ` – ${t("otherAmount")}`}
-                </p>
-              </div>
-              <span className="shrink-0"><Amount value={txn.amount} /></span>
-            </button>
-          </li>
-        ))}
-        {filtered.length === 0 && (
-          <li className="px-4 py-4 text-center text-sm text-muted">
-            {t("noUnmatched")}
-          </li>
-        )}
-      </ul>
-      <p className="text-xs text-muted">{tList("noMatchHint")}</p>
-    </div>
   );
 }

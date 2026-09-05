@@ -26,7 +26,6 @@ import { changeLabel, isActive } from "@/lib/budget/changes";
 type SourceAccount = {
   accountCode: string;
   accountName: string;
-  kindOverride: "INCOME" | "COST" | null;
   lineItems: {
     id: string;
     description: string;
@@ -49,7 +48,6 @@ type AccountRow = {
   budgetCostCenterId: string;
   accountCode: string;
   accountName: string;
-  kindOverride: "INCOME" | "COST" | null;
 };
 
 type LineRow = {
@@ -114,7 +112,6 @@ function planAccounts(
       accountName: acct.accountName,
       // Carried over deliberately: an account reclassified income↔cost by hand
       // would silently revert to code-based inference in the copy without this.
-      kindOverride: acct.kindOverride,
     });
 
     for (const li of acct.lineItems) {

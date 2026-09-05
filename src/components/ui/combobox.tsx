@@ -397,6 +397,11 @@ function ComboboxBase({
           <div className="shrink-0 border-b border-border p-2">
             <input
               ref={searchRef}
+              // An id like every other field, so the browser does not report
+              // one it cannot autofill. Nothing points at it: the listbox is
+              // named by `aria-controls` below and the trigger carries the
+              // field's own label.
+              id={`${listId}-search`}
               role="combobox"
               aria-expanded
               aria-controls={listId}

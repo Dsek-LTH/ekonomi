@@ -174,7 +174,7 @@ export async function budgetComparison(
       const ore = accounts.get(`${cc.costCenter.code}:${acct.accountCode}`);
       if (ore == null) continue;
       // Income is a credit, cost a debit. The report re-orients from there.
-      const kind = effectiveKind(acct.accountCode, acct.kindOverride);
+      const kind = effectiveKind(acct.accountCode);
       const net = ore * (kind === "INCOME" ? -1 : 1);
       const key = `${acct.accountCode}|${cc.costCenter.code}`;
       out.set(key, (out.get(key) ?? 0) + net);

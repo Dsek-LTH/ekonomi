@@ -105,21 +105,12 @@ export interface SheetValue {
   badLine: Set<string>;
   liUrl: (id: string) => string;
   /** The chart, minus the codes this sheet already has (`keep` stays offered). */
-  accountOptionsFor: (keep?: string) => { value: string; label: string }[];
+  /** The chart, narrowed to what may go under `kind` on this sheet. `keep` is
+   *  a row's own account, kept in its own picker so the value resolves. */
+  accountOptionsFor: (kind: AccountKind, keep?: string) => { value: string; label: string }[];
 
   // ── Dropping an account into the other section ───────────────────
   //
-  // Moving an account between Intäkter and Kostnader is a drag onto the other
-  // card, so the card is the drop zone and needs to know when it is being
-  // hovered.
-  /** The section currently being dragged over, for its highlight. */
-  dropKind: AccountKind | null;
-  dropProps: (kind: AccountKind) => {
-    onDragOver: (e: React.DragEvent) => void;
-    onDragLeave: (e: React.DragEvent) => void;
-    onDrop: (e: React.DragEvent) => void;
-  };
-
   // ── Ticking and copying (lib: ./use-sheet-clipboard) ─────────────
   isTicked: (kind: "rows" | "accounts", id: string) => boolean;
   marked: { accounts: string[]; rows: string[] };

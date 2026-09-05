@@ -189,7 +189,7 @@ export default function BudgetClient({
     (budget?.costCenters ?? []).map((cc) => ({
       code: sheetKey(cc),
       accounts: cc.accounts.map((a) => ({
-        id: a.id, accountCode: a.accountCode, kindOverride: a.kindOverride,
+        id: a.id, accountCode: a.accountCode,
         lineItems: a.lineItems.map((li) => ({ id: li.id })),
       })),
     })),

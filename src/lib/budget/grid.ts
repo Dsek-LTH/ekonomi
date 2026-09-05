@@ -11,7 +11,7 @@
 // Both round-trip back to a live A1 coordinate through this grid. The evaluator
 // (lib/budget/eval.ts) understands both token forms.
 
-import { effectiveKind, type AccountKind } from "@/lib/budget";
+import { effectiveKind } from "@/lib/budget";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -54,7 +54,7 @@ function legacyField(s: string): string {
 }
 
 interface GridLineItem { id: string }
-interface GridAccount { id: string; accountCode: string; kindOverride: AccountKind | null; lineItems: GridLineItem[] }
+interface GridAccount { id: string; accountCode: string; lineItems: GridLineItem[] }
 export interface GridSheet { code: string; accounts: GridAccount[] }
 
 type RowKind = "section" | "account" | "line";
@@ -82,8 +82,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
   for (const sheet of sheets) {
     const code = sheet.code;
     let r = 0;
-    const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "INCOME");
-    const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "COST");
+    const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "INCOME");
+    const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "COST");
     const emit = (accts: GridAccount[]) => {
       r++; rowAt.set(`${code}|${r}`, { row: r, kind: "section" });
       for (const a of accts) {

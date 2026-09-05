@@ -18,7 +18,6 @@ import { Stepper } from "@/components/ui/stepper";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { IconCheck } from "@/components/ui/icons";
 import {
-  PAYMENT_TYPES,
   REIMBURSEMENT_DEADLINE_DAYS,
   isLateReimbursement,
   isSubmittable,
@@ -27,7 +26,7 @@ import {
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
 import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
-// React node cannot go. See `matchLead` below.
+// React node cannot go.
 import { formatSEK } from "@/lib/ui/format";
 import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
@@ -36,6 +35,7 @@ import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/do
 import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
 import { MatchStep } from "./match-step";
 import { optionCard, StepFooter } from "./step-chrome";
+import { dropKeptFile, keepFile, readKeptFile } from "@/lib/ui/kept-file";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
@@ -93,7 +93,6 @@ export default function NewExpenseClient({
 }) {
   const returnTo = useReturnTo();
   const t = useTranslations("expenses.wizard");
-  const tPayment = useTranslations("common.payment");
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const { date } = useFormat();
@@ -172,9 +171,10 @@ export default function NewExpenseClient({
    * The version in the key is what makes an old draft, written before this
    * screen asked for something it now needs, simply not load.
    *
-   * The receipt is the one thing that cannot come along: a picked file is not
-   * something a browser can be asked to keep. Everything typed survives; the
-   * file has to be chosen again.
+   * The picked receipt is kept too, under the same key, but in IndexedDB
+   * rather than here: a file is a Blob and localStorage holds strings. See
+   * lib/ui/kept-file.ts. The two halves are written and forgotten together, so
+   * what the wizard is holding survives a reload whole or not at all.
    */
   const draftKey = presetTxn ? `${DRAFT_KEY}:${presetTxn.id}` : DRAFT_KEY;
   const [draft, setDraft, , forgetDraft] = useLocalDraft<WizardDraft>(
@@ -185,51 +185,67 @@ export default function NewExpenseClient({
   const { form, direction, allocations, paymentType, matchId } = draft;
 
   /**
-   * Which way, chosen before anything else is filled in.
+   * What is being claimed, asked once instead of twice.
    *
-   * A return is money coming back to the section, and the only way that
-   * happens is a refund landing on the card it was paid from: a member does not
-   * hand the section money through an utlägg. So it is offered to somebody
-   * holding the card and to nobody else, and choosing it settles the payment
-   * type there and then rather than leaving a combination for the form to
-   * refuse further down.
+   * The direction and the payment type used to be two groups of option cards
+   * with three fields between them, one at the top of this step and one at the
+   * bottom. They are the same question: a return is money coming back, and the
+   * only way that happens is a refund landing on the card it was paid from, so
+   * "retur" already forced CARD and left the group below it with one answer.
+   * Three combinations exist, and this asks for one of them.
+   *
+   * It also has to come first, which is why the split was a bug and not only a
+   * repetition. The payment type decides whether the 60-day deadline applies,
+   * whether a payout account is needed, and whether the wizard has a Matcha
+   * step at all. Asked at the bottom, it meant typing a four-month-old date for
+   * a card purchase and being told, by a field three groups above the answer,
+   * that the claim was too old to file. Continue was dead until you scrolled
+   * down and changed something the form had already guessed for you.
+   *
+   * The pair is still what the draft stores. This is a reading of it, so a
+   * draft written before the two groups were merged still loads.
    */
-  const canReturn = holdsCard || direction === "return";
-  const chooseDirection = (next: Direction) =>
+  type Claim = "card" | "cardReturn" | "own";
+  const CLAIMS: Record<Claim, { direction: Direction; paymentType: PaymentType }> = {
+    card: { direction: "out", paymentType: "CARD" },
+    cardReturn: { direction: "return", paymentType: "CARD" },
+    own: { direction: "out", paymentType: "REIMBURSEMENT" },
+  };
+  const claim: Claim =
+    paymentType === "CARD" ? (direction === "return" ? "cardReturn" : "card") : "own";
+
+  /**
+   * Which of the three are on offer.
+   *
+   * The card ones only to somebody who holds one, plus an utlägg already filed
+   * as a card purchase, which keeps its own answer visible even if the card has
+   * since changed hands. Opened from a particular purchase there is no choice at
+   * all: that money has already left the section's account, and the transaction
+   * itself says which way it went.
+   */
+  // `existing` as well as the current answer: somebody who no longer holds the
+  // card, editing an utlägg filed as a card purchase, must be able to switch
+  // away and back. On the current answer alone, switching to "eget utlägg"
+  // would close the door behind them.
+  const cardAllowed = holdsCard || paymentType === "CARD" || existing?.paymentType === "CARD";
+  const claimOptions: Claim[] = presetTxn
+    ? [claim]
+    : cardAllowed
+      ? (["card", "cardReturn", "own"] as Claim[])
+      : (["own"] as Claim[]);
+
+  const chooseClaim = (next: Claim) =>
     setDraft((d) => ({
       ...d,
-      direction: next,
-      paymentType: next === "return" ? "CARD" : d.paymentType,
+      ...CLAIMS[next],
+      // A match belongs to a card purchase and to nothing else (see
+      // isMatchable). Carrying one across to an eget utlägg would have the
+      // section paying for the purchase twice, and the PATCH route drops it
+      // anyway; dropping it here is what keeps the screen saying the same thing
+      // the server will.
+      matchId: CLAIMS[next].paymentType === "CARD" ? d.matchId : null,
     }));
 
-  // CARD is only offered to card holders; the expense being edited keeps its
-  // type as an option even if the user no longer holds a card. A return is
-  // narrower still: it is money coming back to the card, so it leaves one
-  // answer here, which the group below says out loud rather than showing as a
-  // lone card nobody chose.
-  //
-  // And when this wizard was opened to account for one particular purchase on
-  // the card, the payment type is not a choice at all: that money has already
-  // left the section's account. Offering "eget utlägg" beside a purchase the
-  // section has already paid for is offering to pay for it a second time, into
-  // the member's own account, which is what this used to do, quietly, because
-  // the transaction stayed matched to the utlägg through the switch. Someone
-  // who meant to claim their own money back wants a new utlägg, not this one.
-  //
-  // MILEAGE is never among them, and is not offered here at all. Which *form*
-  // you need is a different question from how this purchase was paid, and it is
-  // answered before either form exists, on the "Nytt utlägg" menu. See
-  // components/new-expense-menu.tsx. It was a third card in the group below for
-  // a while: a door standing among two switches, at the bottom of a step, which
-  // discarded everything typed above it when taken.
-  const paymentTypes =
-    presetTxn || direction === "return"
-      ? (["CARD"] as PaymentType[])
-      : PAYMENT_TYPES.filter(
-          (pt) =>
-            pt !== "MILEAGE" &&
-            (holdsCard || pt !== "CARD" || existing?.paymentType === "CARD"),
-        );
   const patchDraft = <K extends keyof WizardDraft>(key: K, value: WizardDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
   const setForm = (value: WizardDraft["form"]) => patchDraft("form", value);
@@ -291,7 +307,43 @@ export default function NewExpenseClient({
     setPreviewUrl(URL.createObjectURL(file));
     setUploadedMime(file.type);
     setUploadedName(file.name);
+    // Kept for a reload, on the same terms as what is typed: only for a new
+    // claim, since an utlägg being edited is the server's and a local copy
+    // outliving somebody else's change is the thing `useLocalDraft` refuses to
+    // do. Not awaited; a receipt that failed to be kept is one that has to be
+    // picked again after a reload, which is where this started.
+    if (!existing) void keepFile(draftKey, file);
   }
+
+  /**
+   * The receipt picked before the last reload, put back.
+   *
+   * Once, on mount, and only over an empty hand: a file already picked in this
+   * session is newer than anything stored, and the panel is showing it.
+   *
+   * The preview URL is made here rather than by `handleFile` so that the stored
+   * file does not count as a fresh pick; everything else about it is the same.
+   */
+  useEffect(() => {
+    if (existing) return;
+    let live = true;
+    void readKeptFile(draftKey).then((file) => {
+      if (!live || !file) return;
+      setPendingFile((held) => {
+        if (held) return held;
+        setPreviewUrl(URL.createObjectURL(file));
+        setUploadedMime(file.type);
+        setUploadedName(file.name);
+        return file;
+      });
+    });
+    return () => {
+      live = false;
+    };
+    // Once per key. `pendingFile` is read through the setter rather than taken
+    // as a dependency, so a pick landing between the read starting and
+    // finishing wins without the read re-running every time one does.
+  }, [draftKey, existing]);
 
   // Whether there is a receipt, which is the only form of the question this
   // page ever asks. Every gate here (continue, save, submit) wants "has the
@@ -323,6 +375,10 @@ export default function NewExpenseClient({
     // local copy that the effect above is about to revoke.
     setPendingFile(null);
     setPreviewUrl(null);
+    // And the browser's copy is spent: the file is somewhere it can be read
+    // back from, and restoring it over a later claim would attach the wrong
+    // receipt to it.
+    void dropKeptFile(draftKey);
     return true;
   }
 
@@ -491,6 +547,10 @@ export default function NewExpenseClient({
     // `forget` rather than `clear`: the form is still on the screen for the
     // frame before the page changes, and blanking it there reads as work lost.
     forgetDraft();
+    // The receipt half of the same copy. `writeReceipt` has usually dropped it
+    // already; this covers the exits where there was nothing to upload, an
+    // utlägg saved with its receipt still to come.
+    void dropKeptFile(draftKey);
     // Replaces the wizard's history entry rather than pushing past it: the
     // form has been submitted, and Back leading into a spent one is not a way
     // back to anything. See useReturnTo.
@@ -567,36 +627,77 @@ export default function NewExpenseClient({
                 when an existing utlägg is being edited, because then the title is
                 already there and typing should replace it. */}
             {/* Before anything else, because it is the question everything
-                below it depends on: what the figures mean, which payment types
-                are left, and which bank transactions can match. Asked in the
-                same shape as the payment type further down, since it is the
-                same kind of question and two shapes for one kind is how a form
-                stops reading as one form.
+                below it depends on: what the figures mean, whether the 60-day
+                deadline applies, whether a payout account is wanted, and
+                whether this wizard has a Matcha step at all.
 
-                Not asked at all of somebody with no card, who cannot file a
-                return: the whole group goes rather than standing there with
-                one answer available. */}
-            {canReturn && (
-              <FieldGroup label={t("direction")} requirement="required">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(["out", "return"] as Direction[]).map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => chooseDirection(d)}
-                      className={optionCard(direction === d)}
-                      aria-pressed={direction === d}
-                    >
-                      <span className="block text-sm font-medium">
-                        {t(d === "out" ? "directionOut" : "directionReturn")}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted">
-                        {t(d === "out" ? "directionOutHint" : "directionReturnHint")}
-                      </span>
-                    </button>
-                  ))}
+                One group, not two. The direction and the payment type were
+                asked separately, at the top and the bottom of this same card,
+                and they are one question with three answers. Split, the date
+                three fields down was being judged against a payment type
+                nobody had reached yet: a four-month-old card purchase came up
+                as "too old to file" and Continue stayed dead until you scrolled
+                past the fördelning to change it.
+
+                Not asked at all where there is one answer. Somebody with no
+                card can only be laying out their own money, and a lone card
+                nobody chose reads as a group that is broken. */}
+            {claimOptions.length > 1 && (
+              <FieldGroup label={t("claim")} requirement="required">
+                {/* A container query, not a viewport one, because the width
+                    these three have is not the window's. The receipt panel is
+                    ~520px of it and the nav rail another 64, so at 941px with
+                    the panel open this column is about 320px: `sm:grid-cols-3`
+                    was true and there were three 100px cards in it. `@xl` is
+                    the column being wide enough for three, whatever the window
+                    is doing and whether the panel is open or shut.
+
+                    42rem, not the 36 that three cards technically fit in: at 36
+                    each one is 184px wide and "Sektionskort, retur" is most of
+                    that. Stacked is never broken, only taller, so the threshold
+                    is where three read comfortably rather than where they last
+                    fit.
+
+                    The same trick the fördelning below already uses. */}
+                <div className="@container">
+                  <div className="grid gap-3 @2xl:grid-cols-3">
+                    {claimOptions.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => chooseClaim(c)}
+                        className={optionCard(claim === c)}
+                        aria-pressed={claim === c}
+                      >
+                        {/* The icon in its own colour, which is the same mark
+                            the list will show this claim with afterwards.
+                            Learning it here is the point: choosing is the one
+                            moment they are side by side with their meanings
+                            spelled out.
+
+                            `min-w-0` on the label, so a long one wraps inside
+                            the card rather than pushing the icon out of it. */}
+                        <span className="flex items-start gap-2">
+                          <PaymentIcon
+                            type={CLAIMS[c].paymentType}
+                            className="mt-0.5 size-4 shrink-0"
+                          />
+                          <span className="min-w-0 text-sm font-medium">
+                            {t(`claimOption.${c}`)}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {t(`claimHint.${c}`)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </FieldGroup>
             )}
+
+            {/* Opened from one purchase on the card: there is no choice, and
+                saying why beats showing a single card nobody picked. */}
+            {presetTxn && <p className="text-xs text-muted">{t("paymentTypeFixed")}</p>}
 
             <Field label={t("description")} requirement="required">
               <Input
@@ -679,37 +780,6 @@ export default function NewExpenseClient({
               />
             </FieldGroup>
 
-            <FieldGroup label={t("paymentType")} requirement="required">
-              {/* Said out loud, because a group that offers one answer reads
-                  as a group that is broken. */}
-              {presetTxn ? (
-                <p className="mb-3 text-xs text-muted">{t("paymentTypeFixed")}</p>
-              ) : direction === "return" ? (
-                <p className="mb-3 text-xs text-muted">{t("paymentTypeReturn")}</p>
-              ) : null}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {paymentTypes.map((pt) => (
-                  <button
-                    key={pt}
-                    onClick={() => patchDraft("paymentType", pt)}
-                    className={optionCard(paymentType === pt)}
-                  >
-                    {/* The icon in its own colour, which is the same mark
-                        the list will show this claim with afterwards. Learning
-                        it here is the point: choosing is the one moment the
-                        three are side by side with their meanings spelled
-                        out. */}
-                    <span className="flex items-center gap-2">
-                      <PaymentIcon type={pt} className="size-4 shrink-0" />
-                      <span className="text-sm font-medium">{tPayment(`${pt}.label`)}</span>
-                    </span>
-                    <span className="mt-0.5 block text-xs text-muted">
-                      {tPayment(`${pt}.description`)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </FieldGroup>
             {/* The receipt is a condition like any other, and the one that
                 isn't in this card. Without saying so, Fortsätt is a dead
                 button with its reason off at the edge of the screen. */}

@@ -185,7 +185,6 @@
       "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet. Det här kvittot är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel.",
       "tooLateMileage": "Milersättning måste redovisas inom {days} dagar från resan. Den här resan är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel."
     },
-    "noMatchHint": "Hittar du inte köpet? Kolla beloppet först. Bara transaktioner på exakt samma summa går att välja. Om köpet ändå saknas kan kontoutdraget vara oimporterat, så be kassören läsa in senaste bankfilen under Bank & matchning.",
     "event": {
       "CREATED": "Skapade utlägget",
       "EDITED": "Uppdaterade uppgifter",
@@ -224,11 +223,6 @@
       "bankTransaction": "Banktransaktion",
       "removeMatch": "Ta bort matchning",
       "noMatch": "Ingen matchning.",
-      "pickTransaction": "Välj en transaktion på exakt {amount}:",
-      "searchTransaction": "Sök transaktion…",
-      "amountMismatch": "Beloppet stämmer inte med utlägget",
-      "otherAmount": "annat belopp",
-      "noUnmatched": "Inga omatchade transaktioner hittades",
       "more": "Mer",
       "book": "Bokför",
       "export": "Exportera till Fortnox",
@@ -334,21 +328,12 @@
       "date": "Datum",
       "dateIncomplete": "Skriv hela datumet (ÅÅÅÅ-MM-DD)",
       "dateFuture": "Datumet ligger i framtiden. Ett köp kan inte ha gjorts senare än i dag",
-      "dateTooLate": "Äldre än {days} dagar. Eget utlägg måste redovisas inom {days} dagar från köpet och kan inte tas emot senare. Hör av dig till skattmästaren för ytterligare hjälp",
+      "dateTooLate": "Äldre än {days} dagar. Ett eget utlägg måste redovisas inom {days} dagar från köpet. Var det sektionskortet du använde? Ändra det överst. Var det dina egna pengar, hör av dig till skattmästaren.",
       "amount": "Belopp",
-      "directionOut": "Utlägg",
-      "directionReturn": "Retur",
       "returnMeans": "{amount} kommer tillbaka till sektionen.",
       "distribution": "Kostnadsfördelning",
-      "paymentType": "Betalsätt",
       "paymentTypeFixed": "Utlägget redovisar ett köp på ditt sektionskort, så betalsättet är låst. Vill du i stället få tillbaka egna pengar skapar du ett nytt utlägg utan att utgå från transaktionen.",
-      "paymentTypeReturn": "En retur går tillbaka till sektionskortet den betalades med.",
       "matchTitle": "Matcha mot banktransaktion",
-      "matchLead": "Välj transaktionen från sektionskortet som hör till köpet. Bara transaktioner på exakt {amount} går att välja. Övriga visas ändå, så att du ser vad som finns.",
-      "amountMismatch": "Beloppet stämmer inte med utlägget",
-      "suggested": "Föreslagen",
-      "otherAmount": "annat belopp",
-      "noCandidates": "Inga transaktioner på ditt sektionskort att välja bland.",
       "reviewTitle": "Granska och skicka in",
       "match": "Matchning",
       "payoutTo": "Utbetalas till",
@@ -357,9 +342,17 @@
       "resultUnitConcerned": "berörd resultatenhet",
       "resubmit": "Skicka in igen",
       "submit": "Skicka in för attest",
-      "direction": "Vad gäller det?",
-      "directionOutHint": "Något har köpts och ska bokföras eller ersättas.",
-      "directionReturnHint": "Pengar kommer tillbaka, till exempel ett återköp."
+      "claim": "Vad gäller det?",
+      "claimOption": {
+        "card": "Sektionskort",
+        "cardReturn": "Sektionskort, retur",
+        "own": "Eget utlägg"
+      },
+      "claimHint": {
+        "card": "Köp gjort med sektionens kort.",
+        "cardReturn": "Pengar tillbaka till kortet, till exempel ett återköp.",
+        "own": "Du betalade själv och får tillbaka pengarna."
+      }
     },
     "field": {
       "title": "Beskrivning",
@@ -377,6 +370,23 @@
       "ordinaryHint": "Du har ett kvitto: kort eller eget",
       "mileage": "Milersättning",
       "mileageHint": "Du körde egen bil på sektionens ärende"
+    },
+    "match": {
+      "lead": "Välj transaktionen från sektionskortet som betalade köpet. Den måste vara på exakt {amount} och gå åt rätt håll. Övriga står kvar med skälet, så du ser vad som finns.",
+      "search": "Sök på text eller belopp",
+      "suggested": "Föreslagen",
+      "overBy": "{amount} kr mer än utlägget",
+      "underBy": "{amount} kr mindre än utlägget",
+      "isIncoming": "en inbetalning, matchar bara en återbetalning",
+      "isOutgoing": "en utbetalning, matchar bara ett köp",
+      "taken": "redan redovisad på ett annat utlägg",
+      "takenBy": "redan redovisad på {reference}",
+      "noneAtAll": "Det finns inga transaktioner på ditt sektionskort ännu.",
+      "noneMatchSearch": "Ingen transaktion matchar sökningen.",
+      "stuckTitle": "Hittar du inte köpet?",
+      "stuckWithRows": "Ingen av raderna ovan går att välja. Står köpet där med \"annat belopp\" är det beloppet du skrivit som behöver rättas. Står det som redan redovisat har någon annan redan tagit det, hör av dig till dem eller till skattmästaren.",
+      "stuckNoRows": "Kontoutdraget är troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen under Bank & matchning.",
+      "stuckDraft": "Ett kortköp går inte att skicka in utan matchning. Spara som utkast så länge och kom tillbaka när transaktionen finns."
     }
   },
   "mileage": {
@@ -663,7 +673,10 @@
       "codeRequired": "Kontonummer krävs",
       "notFound": "Kontoposten hittades inte",
       "unknown": "Kontot {code} finns inte i kontoplanen.",
-      "emptyChart": "Kontoplanen är tom. Synka den under Inställningar → Fortnox först."
+      "emptyChart": "Kontoplanen är tom. Synka den under Inställningar → Fortnox först.",
+      "notResultAccount": "Konto {code} är ett balanskonto. En budget håller bara resultatkonton, alltså 3000 till 8999.",
+      "notIncome": "Konto {code} är ett kostnadskonto och kan inte ligga under Intäkter.",
+      "notCost": "Konto {code} är ett intäktskonto och kan inte ligga under Kostnader."
     },
     "voucher": {
       "twoLines": "Minst två rader krävs",
@@ -1284,8 +1297,6 @@
       "removeMessage": "Kontona och raderna på bladet tas bort permanent. Andra budgetar påverkas inte.",
       "remove": "Ta bort",
       "dragToReorder": "Dra för att flytta raden eller ändra ordning",
-      "dragToSection": "Dra till Intäkter eller Kostnader",
-      "dropHere": "släpp för att flytta hit",
       "accountNumber": "Kontonummer",
       "noMoreAccounts": "Inga fler konton",
       "emptyChart": "Kontoplanen är tom. Synka under Inställningar → Fortnox",
@@ -1424,6 +1435,21 @@
     "imageMissing": "Bild saknas"
   },
   "admin": {
+    "index": {
+      "title": "Inställningar",
+      "description": "Kopplingar, tabeller och behörigheter som resten av appen vilar på.",
+      "section": {
+        "fortnox": "Kopplingen till Fortnox, och synk av kontoplan och kostnadsställen.",
+        "costCenters": "Kostnadsställen som utlägg och budget kan fördelas på.",
+        "income": "Hur en försäljningsdag delas upp på konton och verksamheter.",
+        "resultUnits": "Vilka kostnadsställen som hör ihop, och vem som attesterar dem.",
+        "cards": "Sektionens kort och vem som håller vilket.",
+        "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
+        "stockSettings": "Konton och inställningar för lagerbokföringen.",
+        "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
+        "users": "Vem som finns och vilka roller de har."
+      }
+    },
     "users": {
       "title": "Användare",
       "description": "Roller styr åtkomst och attesträttigheter. De hämtas från Authentik.",

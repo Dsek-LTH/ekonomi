@@ -30,12 +30,35 @@
             "v": "If you chair a committee, approval applies to you as well: you review and approve the expenses belonging to your committee before they are booked."
           }
         ]
+      },
+      {
+        "id": "three-kinds",
+        "q": "What kinds of claim are there?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Three. The first thing you choose when filing is which one this is, and the choice governs the rest of the form."
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Section card: the section's money has already left the account, and you are accounting for what it went to.",
+              "Section card, refund: money coming back to the card, a return for instance.",
+              "Out of pocket: you paid yourself and get the money back.",
+              "Mileage: you drove your own car on the section's errand and are paid per kilometre."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "A card purchase has to be matched to the bank transaction that paid for it. An out-of-pocket claim needs a payout account on file. A mileage claim has no receipt at all, because there is nothing to photograph about driving your own car."
+          }
+        ]
       }
     ]
   },
   {
     "id": "expenses",
-    "label": "Expenses",
+    "label": "Before you buy",
     "items": [
       {
         "id": "what-is",
@@ -91,141 +114,50 @@
     ]
   },
   {
-    "id": "card",
-    "label": "Guild card",
-    "items": [
-      {
-        "id": "who-gets",
-        "q": "Who gets a guild card?",
-        "a": [
-          {
-            "t": "p",
-            "v": "If your post involves many or expensive purchases, you get a guild card. It is tied to D-sektionen's bank account, so you don't have to spend your own money up front."
-          }
-        ]
-      },
-      {
-        "id": "card-rules",
-        "q": "Can I buy whatever I want with the guild card?",
-        "a": [
-          {
-            "t": "p",
-            "v": "No. A guild card does NOT mean you may buy whatever you like. Every purchase on a guild card must be approved by your committee chair in advance, and every purchase must be reported afterwards."
-          },
-          {
-            "t": "note",
-            "tone": "danger",
-            "v": "If unauthorised purchases are made on your guild card, you become personally liable for them."
-          }
-        ]
-      },
-      {
-        "id": "declined",
-        "q": "My card was declined at the register, what do I do?",
-        "a": [
-          {
-            "t": "p",
-            "v": "That means we haven't moved enough money over to the card account. If it is urgent, your best move is to call us straight away:"
-          },
-          {
-            "t": "link",
-            "v": "Treasurer (Ludwig): 070-893 55 85",
-            "href": "tel:+46708935585"
-          },
-          {
-            "t": "link",
-            "v": "Vice treasurer (Edvin): 079-349 06 22",
-            "href": "tel:+46793490622"
-          }
-        ]
-      },
-      {
-        "id": "lend",
-        "q": "Can I lend out my guild card?",
-        "a": [
-          {
-            "t": "p",
-            "v": "No. A guild card must never be lent to anyone else. It belongs to you and to your post."
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "invoices",
-    "label": "Invoices",
-    "items": [
-      {
-        "id": "can-invoice",
-        "q": "Can I put a purchase on an invoice?",
-        "a": [
-          {
-            "t": "p",
-            "v": "Yes, if you are offered the option of paying by invoice you may take it."
-          },
-          {
-            "t": "note",
-            "tone": "warn",
-            "v": "ALWAYS check with your committee chair before putting anything on an invoice. If the requirements are not met, you risk having to pay for it yourself."
-          }
-        ]
-      },
-      {
-        "id": "invoice-recipient",
-        "q": "Who should the invoice be addressed to?",
-        "a": [
-          {
-            "t": "p",
-            "v": "The guild. Make sure the supplier invoices D-sektionen and not you as a private person."
-          },
-          {
-            "t": "p",
-            "v": "The guild will NEVER pay invoices that are not addressed to the guild. If you have been invoiced privately, you have to pay the invoice yourself and then file it as an expense claim."
-          }
-        ]
-      }
-    ]
-  },
-  {
     "id": "reporting",
-    "label": "Reporting",
+    "label": "Filing a claim",
     "items": [
       {
         "id": "how",
-        "q": "How do I report a purchase?",
+        "q": "How do I file a purchase?",
         "a": [
           {
             "t": "p",
-            "v": "Every purchase must be reported. That is what entitles you to reimbursement for a private expense, and what keeps you from becoming personally liable for a guild card purchase. When you report, you fill in:"
+            "v": "Every purchase has to be filed. It is the condition for getting your money back on an out-of-pocket claim, and for not becoming personally liable for a purchase on the section card."
           },
           {
-            "t": "ul",
+            "t": "ol",
             "v": [
-              "The date on the receipt.",
-              "An overall title describing the transaction.",
-              "Whether the purchase was made with a guild card or privately.",
-              "The receipt, or receipts.",
-              "Cost centre and amount for each part of the purchase."
+              "Choose what it is: section card, section card refund, or out of pocket.",
+              "Describe what happened, enter the date from the receipt and the amount.",
+              "Split the amount across cost centres. The rows have to add up to the receipt's total.",
+              "Drop the receipt into the panel beside the form.",
+              "For a card purchase: pick the bank transaction that paid for it.",
+              "Send it in."
             ]
           },
           {
+            "t": "p",
+            "v": "You can save a draft at any point and come back to it."
+          },
+          {
             "t": "action",
-            "v": "Report a purchase",
+            "v": "File a purchase",
             "href": "/expenses/new"
           }
         ]
       },
       {
-        "id": "multiple-receipts",
-        "q": "Can I put several receipts on one report?",
+        "id": "draft",
+        "q": "Can I finish this later?",
         "a": [
           {
             "t": "p",
-            "v": "Yes, if the receipts concern THE SAME EVENT, for instance two separate purchases on the same day for the same event. Press \"add receipt\" and report them together."
+            "v": "Yes. Save a draft at any point and it sits under Expenses until you send it in."
           },
           {
             "t": "p",
-            "v": "Receipts belonging to different events must be reported separately."
+            "v": "What you have typed also survives a reload before you got that far, the receipt you picked included. Switch device or clear site data and it is gone, so save a draft if you are going to be a while."
           }
         ]
       },
@@ -325,26 +257,34 @@
       },
       {
         "id": "deadline",
-        "q": "How quickly do I have to report?",
+        "q": "How quickly do I have to file?",
         "a": [
           {
             "t": "p",
-            "v": "Under the financial policy, the treasurer has the right to hold you personally liable if a purchase (a private expense as well as a guild card purchase) is not reported within 60 days of the purchase being made."
+            "v": "Under the section's finance policy the treasurer may hold you personally liable if a purchase, out of pocket or on the section card, is not filed within 60 days of the purchase being made."
+          },
+          {
+            "t": "p",
+            "v": "The app refuses an out-of-pocket claim or a mileage claim older than 60 days: they cannot be sent, because that is your money the section would be paying back and the claim is too old to accept. A card purchase can still be filed after that, because the section's money is already gone and the purchase has to be booked however late it arrives. That does not mean the deadline is not yours."
           },
           {
             "t": "note",
-            "tone": "warn",
-            "v": "The treasury does not have time to chase you to report on time. Report your purchases immediately."
+            "tone": "danger",
+            "v": "The treasury does not have time to chase you for filing on time. File your purchases straight away."
           }
         ]
       },
       {
         "id": "returns",
-        "q": "I returned an item, does that have to be reported?",
+        "q": "I returned something, does that have to be filed?",
         "a": [
           {
             "t": "p",
-            "v": "Yes. Returns of goods intended for the guild are reported exactly like purchases, except that the amount you enter must be negative."
+            "v": "Yes. A return is filed as a section card claim with refund chosen, and the amount is negative. Like a purchase it is matched against the bank transaction, but against the money coming back rather than money going out."
+          },
+          {
+            "t": "p",
+            "v": "Returns only exist on the section card. Money comes back to where it was paid from, and a member does not hand the section money through a claim. If you paid yourself and were refunded privately, the original claim is corrected or deleted instead."
           }
         ]
       },
@@ -355,6 +295,226 @@
           {
             "t": "p",
             "v": "Pay through Klarna if you can. Other countries are not bound by Swedish rules and are therefore not obliged to give you a receipt the way a Swedish seller is. But if the purchase goes through Klarna, Klarna always gives you a valid receipt."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "card",
+    "label": "The section card",
+    "items": [
+      {
+        "id": "who-gets",
+        "q": "Who gets a guild card?",
+        "a": [
+          {
+            "t": "p",
+            "v": "If your post involves many or expensive purchases, you get a guild card. It is tied to D-sektionen's bank account, so you don't have to spend your own money up front."
+          }
+        ]
+      },
+      {
+        "id": "card-rules",
+        "q": "Can I buy whatever I want with the guild card?",
+        "a": [
+          {
+            "t": "p",
+            "v": "No. A guild card does NOT mean you may buy whatever you like. Every purchase on a guild card must be approved by your committee chair in advance, and every purchase must be reported afterwards."
+          },
+          {
+            "t": "note",
+            "tone": "danger",
+            "v": "If unauthorised purchases are made on your guild card, you become personally liable for them."
+          }
+        ]
+      },
+      {
+        "id": "declined",
+        "q": "My card was declined at the register, what do I do?",
+        "a": [
+          {
+            "t": "p",
+            "v": "That means we haven't moved enough money over to the card account. If it is urgent, your best move is to call us straight away:"
+          },
+          {
+            "t": "link",
+            "v": "Treasurer (Ludwig): 070-893 55 85",
+            "href": "tel:+46708935585"
+          },
+          {
+            "t": "link",
+            "v": "Vice treasurer (Edvin): 079-349 06 22",
+            "href": "tel:+46793490622"
+          }
+        ]
+      },
+      {
+        "id": "lend",
+        "q": "Can I lend out my guild card?",
+        "a": [
+          {
+            "t": "p",
+            "v": "No. A guild card must never be lent to anyone else. It belongs to you and to your post."
+          }
+        ]
+      },
+      {
+        "id": "match",
+        "q": "Why does a card purchase have to be matched to a bank transaction?",
+        "a": [
+          {
+            "t": "p",
+            "v": "So the claim points at the money. The match says that this particular row on the card account is the money that left the section for this particular purchase, and so that the row is accounted for and the purchase booked against the right amount."
+          },
+          {
+            "t": "p",
+            "v": "Without it nobody can tell whether two claims describe one purchase or two, and the card account cannot be reconciled. That is why a card purchase cannot be sent unmatched."
+          },
+          {
+            "t": "p",
+            "v": "The transaction has to be for exactly the same amount and go the right way: a purchase settles against money out, a refund against money in."
+          }
+        ]
+      },
+      {
+        "id": "no-match",
+        "q": "I can't find my purchase in the list, what is wrong?",
+        "a": [
+          {
+            "t": "p",
+            "v": "The list shows every row on your card, the ones you cannot pick included, and writes the reason on each. Four things make a row unpickable:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "A different amount. The row stays, saying how far off it is, “6,50 kr more than the claim” for instance. Usually it is the amount you typed that needs correcting.",
+              "The wrong way. Money in only settles a refund, money out only settles a purchase.",
+              "Already claimed. Somebody else has taken the purchase on a claim of their own. Talk to them or to the treasurer.",
+              "Somebody else's card. You only see transactions on your own."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "If the purchase is not listed at all, the statement has probably not been imported yet. Ask the treasurer to import the latest bank file. Save a draft in the meantime."
+          },
+          {
+            "t": "action",
+            "v": "To card purchases",
+            "href": "/bank"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "mileage",
+    "label": "Mileage",
+    "items": [
+      {
+        "id": "mileage-what",
+        "q": "What is a mileage claim?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Payment for driving your own car on the section's errand. You are paid per kilometre at Skatteverket's standard rate, rather than handing in a receipt for petrol."
+          },
+          {
+            "t": "p",
+            "v": "It is not a claim with a receipt on it, but its own kind with its own form."
+          },
+          {
+            "t": "action",
+            "v": "New mileage claim",
+            "href": "/expenses/new/mileage"
+          }
+        ]
+      },
+      {
+        "id": "mileage-how",
+        "q": "How do I file a journey?",
+        "a": [
+          {
+            "t": "ol",
+            "v": [
+              "Write what the journey was for, and which day you drove.",
+              "Enter every place you stopped, in order.",
+              "Enter the odometer before and after the journey.",
+              "Split the amount across cost centres and send it in."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "One journey per claim. If you drove three times you file three, because each journey is attested on its own and lands on its own cost centre."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "A mileage claim has the same deadline as an out-of-pocket one: 60 days from the day you drove. It cannot be sent after that."
+          }
+        ]
+      },
+      {
+        "id": "mileage-odometer",
+        "q": "Which odometer is meant?",
+        "a": [
+          {
+            "t": "p",
+            "v": "The total one, the car's lifetime distance. Not the trip meter."
+          },
+          {
+            "t": "p",
+            "v": "The reason is that the figures have to be checkable. A trip meter can be zeroed at will, so 0 → 42 on one is just an assertion that you drove 42 km. The total reading can be held against the car, and against your other journeys in it, which only ever go upwards."
+          },
+          {
+            "t": "p",
+            "v": "The app works the distance out itself as the difference between the two. You never type a number of kilometres."
+          }
+        ]
+      },
+      {
+        "id": "mileage-route",
+        "q": "How do I fill in the route?",
+        "a": [
+          {
+            "t": "p",
+            "v": "One place per row, in the order you stopped at them. A town or a name is enough, E-huset and Snabbgross for instance."
+          },
+          {
+            "t": "p",
+            "v": "If you came back to where you started, write that place last as well. There is a button for it. Otherwise the route describes half the distance the odometer shows, and whoever attests it sees a 21 km journey against a meter saying 42."
+          },
+          {
+            "t": "p",
+            "v": "Skatteverket wants to see where the journey went, not only how far. The readings show the car moved; the route shows it was the section's errand. That is why at least two places are required before it can be sent."
+          }
+        ]
+      },
+      {
+        "id": "mileage-rate",
+        "q": "How much do I get per kilometre?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Skatteverket's standard rate, which the treasury enters into the app. The amount is worked out for you once the readings are in."
+          },
+          {
+            "t": "p",
+            "v": "Each journey is valued at the rate in force on the day you drove. So a change at the new year does not re-value a claim already filed, and a December journey filed in January is paid at December's rate."
+          }
+        ]
+      },
+      {
+        "id": "mileage-receipt",
+        "q": "Do I need a receipt?",
+        "a": [
+          {
+            "t": "p",
+            "v": "No. There is nothing to photograph about driving your own car, and you should not hand in a receipt for petrol: the standard rate covers the whole cost of owning and running the car, not just the fuel."
+          },
+          {
+            "t": "p",
+            "v": "The documentation is instead the expense report the app draws, carrying the route, the readings and the rate per kilometre. That is what follows the claim into the books."
           }
         ]
       }
@@ -393,6 +553,24 @@
             "t": "note",
             "tone": "warn",
             "v": "If any of the above is missing, or cannot be made out CLEARLY, the approval will be rejected. You then have to request a valid receipt from the supplier."
+          }
+        ]
+      },
+      {
+        "id": "one-receipt",
+        "q": "Can I put several receipts on one claim?",
+        "a": [
+          {
+            "t": "p",
+            "v": "No. A claim carries one receipt. Uploading a new one replaces the previous."
+          },
+          {
+            "t": "p",
+            "v": "Two receipts are two business events, and they are booked separately even when they happened on the same day for the same event. If you shopped in two places you file two claims."
+          },
+          {
+            "t": "p",
+            "v": "A receipt that ran to several pages is one event, though: merge the pages into one PDF and upload that."
           }
         ]
       },
@@ -511,8 +689,96 @@
     ]
   },
   {
+    "id": "invoices",
+    "label": "Invoices",
+    "items": [
+      {
+        "id": "can-invoice",
+        "q": "Can I put a purchase on an invoice?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Yes, if you are offered the option of paying by invoice you may take it."
+          },
+          {
+            "t": "note",
+            "tone": "warn",
+            "v": "ALWAYS check with your committee chair before putting anything on an invoice. If the requirements are not met, you risk having to pay for it yourself."
+          }
+        ]
+      },
+      {
+        "id": "invoice-recipient",
+        "q": "Who should the invoice be addressed to?",
+        "a": [
+          {
+            "t": "p",
+            "v": "The guild. Make sure the supplier invoices D-sektionen and not you as a private person."
+          },
+          {
+            "t": "p",
+            "v": "The guild will NEVER pay invoices that are not addressed to the guild. If you have been invoiced privately, you have to pay the invoice yourself and then file it as an expense claim."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "payout",
+    "label": "Getting paid",
+    "items": [
+      {
+        "id": "payout-account",
+        "q": "Where do I enter my account number?",
+        "a": [
+          {
+            "t": "p",
+            "v": "Under Profile. Clearing number and account number, for the account you want the money in."
+          },
+          {
+            "t": "p",
+            "v": "Without it an out-of-pocket claim and a mileage claim cannot be sent, because there is nowhere to pay. A card purchase does not need it: there the section has already paid."
+          },
+          {
+            "t": "action",
+            "v": "To your profile",
+            "href": "/profile"
+          }
+        ]
+      },
+      {
+        "id": "after-submit",
+        "q": "What happens after I send it in?",
+        "a": [
+          {
+            "t": "p",
+            "v": "The claim goes through four states, and you can see which one it is in under Expenses:"
+          },
+          {
+            "t": "ul",
+            "v": [
+              "Pending approval: your committee head is reviewing it. If something needs correcting it comes back as Needs changes, with a comment saying what.",
+              "Approved: cleared, and queued for the books.",
+              "Booked: the treasury has entered it.",
+              "Exported: it is in Fortnox, and the money is paid out."
+            ]
+          },
+          {
+            "t": "p",
+            "v": "If you paid out of your own pocket, the money comes back after the claim is booked. If a long time passes with nothing happening, ask your committee head first: that is usually where the queue is."
+          },
+          {
+            "t": "action",
+            "v": "To my expenses",
+            "href": "/expenses"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "approval",
-    "label": "Approval",
+    "label": "Attesting",
     "items": [
       {
         "id": "what-is-attest",
@@ -531,21 +797,26 @@
       },
       {
         "id": "attest-check",
-        "q": "What should I check before I approve?",
+        "q": "What should I check before approving?",
         "a": [
           {
             "t": "p",
-            "v": "The documentation has to be satisfactory. Ask yourself these questions before signing off a transaction:"
+            "v": "The documentation has to be satisfactory. Ask yourself these before approving:"
           },
           {
             "t": "ul",
             "v": [
-              "Is the receipt valid?",
-              "Does the stated date match the date on the receipt?",
-              "Is the description appropriate for the goods?",
-              "Is the cost centre correct?",
-              "Is guild card versus private card stated correctly?"
+              "Is it a valid receipt?",
+              "Does the stated date match the receipt's?",
+              "Is the description appropriate to the goods?",
+              "Is the cost centre right?",
+              "Is section card versus out of pocket stated correctly?",
+              "On a mileage claim: is the route filled in, and does the distance match it? A round trip should have the starting place both first and last."
             ]
+          },
+          {
+            "t": "p",
+            "v": "You attest per cost centre. If the claim is split across several you only approve the rows you answer for, and the rest wait for whoever answers for them."
           }
         ]
       }

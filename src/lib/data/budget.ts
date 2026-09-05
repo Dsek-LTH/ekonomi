@@ -19,7 +19,7 @@ import {
   type EvaluatedBudgetPayload,
 } from "@/lib/budget/payload";
 import { EXTRA_COLUMN_KEYS } from "@/lib/budget/grid";
-import { effectiveKind, inferKind } from "@/lib/budget";
+import { effectiveKind } from "@/lib/budget";
 import type { CompareSheet } from "@/lib/budget/compare";
 import {
   financialYearIdForCalendarYear,
@@ -233,7 +233,6 @@ export async function getEvaluatedBudget(
         id: acct.id,
         accountCode: acct.accountCode,
         accountName: acct.accountName,
-        kindOverride: acct.kindOverride,
         lineItems: acct.lineItems.map((li) => ({
           id: li.id,
           description: li.description,
@@ -285,7 +284,7 @@ async function actualSheets(
   year: number,
   budgeted: {
     costCenter: { code: string } | null;
-    accounts: { accountCode: string; kindOverride: "INCOME" | "COST" | null }[];
+    accounts: { accountCode: string }[];
   }[],
 ): Promise<CompareSheet[]> {
   const raw = await getActualsByAccountCostCenter(year);
@@ -295,7 +294,7 @@ async function actualSheets(
   for (const cc of budgeted) {
     if (!cc.costCenter) continue;
     for (const a of cc.accounts) {
-      budgetKind.set(`${cc.costCenter.code}:${a.accountCode}`, effectiveKind(a.accountCode, a.kindOverride));
+      budgetKind.set(`${cc.costCenter.code}:${a.accountCode}`, effectiveKind(a.accountCode));
     }
   }
 
@@ -324,7 +323,7 @@ async function actualSheets(
       };
       sheets.set(code, sheet);
     }
-    const kind = budgetKind.get(`${code}:${accountCode}`) ?? inferKind(accountCode);
+    const kind = budgetKind.get(`${code}:${accountCode}`) ?? effectiveKind(accountCode);
     const net = kind === "INCOME" ? sums.credit - sums.debit : sums.debit - sums.credit;
     sheet.accounts.push({
       code: accountCode,

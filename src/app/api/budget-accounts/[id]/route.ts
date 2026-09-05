@@ -23,13 +23,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.accountCode = check.code;
     data.accountName = check.name;
   }
-  // kindOverride: "INCOME" | "COST" sets the override; "" / null clears it
-  // (falling back to code-based inference).
-  if ("kindOverride" in body) {
-    data.kindOverride = body.kindOverride === "INCOME" || body.kindOverride === "COST"
-      ? body.kindOverride : null;
-  }
-
   const account = await prisma.budgetAccount.update({ where: { id }, data });
   return NextResponse.json(account);
 }

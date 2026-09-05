@@ -14,7 +14,6 @@
 // Everything is plain JSON. Dates are ISO strings, not Date objects, because
 // that is what a fetch delivers and the page has to hand the client the same
 // shapes its own re-fetch will. See `getEvaluatedBudget`.
-import type { AccountKind } from ".";
 import type { ChangeKind } from "./changes";
 import type { CompareSheet } from "./compare";
 import type { EvalResult } from "./eval";
@@ -43,7 +42,6 @@ export interface Account {
   id: string;
   accountCode: string;
   accountName: string;
-  kindOverride: AccountKind | null;
   lineItems: LineItem[];
   comments: Comment[];
 }

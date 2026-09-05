@@ -185,7 +185,6 @@
       "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase. This receipt is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong.",
       "tooLateMileage": "A mileage claim must be filed within {days} days of the journey. This journey is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong."
     },
-    "noMatchHint": "Can't find the purchase? Check the amount first. Only transactions for exactly the same amount can be picked. If it is still missing, the bank statement may not have been imported yet, so ask the treasurer to import the latest bank file under Bank & matching.",
     "event": {
       "CREATED": "Created the expense",
       "EDITED": "Updated the details",
@@ -224,11 +223,6 @@
       "bankTransaction": "Bank transaction",
       "removeMatch": "Remove match",
       "noMatch": "No match.",
-      "pickTransaction": "Pick a transaction for exactly {amount}:",
-      "searchTransaction": "Search transactions…",
-      "amountMismatch": "The amount does not match the expense",
-      "otherAmount": "different amount",
-      "noUnmatched": "No unmatched transactions found",
       "more": "More",
       "book": "Book",
       "export": "Export to Fortnox",
@@ -334,21 +328,12 @@
       "date": "Date",
       "dateIncomplete": "Type the whole date (YYYY-MM-DD)",
       "dateFuture": "The date is in the future. A purchase cannot have been made later than today",
-      "dateTooLate": "Older than {days} days. An expense out of your own pocket must be filed within {days} days of the purchase and cannot be accepted later. Contact the skattmästare for further help",
+      "dateTooLate": "Older than {days} days. An out-of-pocket claim has to be filed within {days} days of the purchase. Was it the section card you used? Change that at the top. If it was your own money, talk to the treasurer.",
       "amount": "Amount",
-      "directionOut": "Expense",
-      "directionReturn": "Return",
       "returnMeans": "{amount} comes back to the section.",
       "distribution": "Cost distribution",
-      "paymentType": "Payment type",
       "paymentTypeFixed": "This expense accounts for a purchase on your section card, so the payment type is fixed. To claim your own money back instead, start a new expense without picking the transaction.",
-      "paymentTypeReturn": "A return goes back to the guild card it was paid with.",
       "matchTitle": "Match against a bank transaction",
-      "matchLead": "Pick the guild card transaction this purchase belongs to. Only transactions for exactly {amount} can be picked. The rest are shown anyway, so you can see what is there.",
-      "amountMismatch": "The amount does not match the expense",
-      "suggested": "Suggested",
-      "otherAmount": "different amount",
-      "noCandidates": "No transactions on your guild card to pick from.",
       "reviewTitle": "Review and submit",
       "match": "Match",
       "payoutTo": "Paid out to",
@@ -357,9 +342,17 @@
       "resultUnitConcerned": "the result unit concerned",
       "resubmit": "Submit again",
       "submit": "Submit for approval",
-      "direction": "What is this?",
-      "directionOutHint": "Something was bought, to be booked or reimbursed.",
-      "directionReturnHint": "Money is coming back, a refund for instance."
+      "claim": "What is this?",
+      "claimOption": {
+        "card": "Section card",
+        "cardReturn": "Section card, refund",
+        "own": "Out of pocket"
+      },
+      "claimHint": {
+        "card": "A purchase made with the section's card.",
+        "cardReturn": "Money back to the card, a refund for instance.",
+        "own": "You paid yourself and get the money back."
+      }
     },
     "field": {
       "title": "Description",
@@ -377,6 +370,23 @@
       "ordinaryHint": "You have a receipt: card or your own",
       "mileage": "Mileage",
       "mileageHint": "You drove your own car on the section's errand"
+    },
+    "match": {
+      "lead": "Pick the transaction from the section card that paid for this. It has to be exactly {amount} and go the right way. The rest stay listed with the reason, so you can see what is there.",
+      "search": "Search by text or amount",
+      "suggested": "Suggested",
+      "overBy": "{amount} kr more than the claim",
+      "underBy": "{amount} kr less than the claim",
+      "isIncoming": "money in, only settles a return",
+      "isOutgoing": "money out, only settles a purchase",
+      "taken": "already claimed by another expense",
+      "takenBy": "already claimed by {reference}",
+      "noneAtAll": "There are no transactions on your section card yet.",
+      "noneMatchSearch": "No transaction matches that search.",
+      "stuckTitle": "Can't find the purchase?",
+      "stuckWithRows": "None of the rows above can be picked. If the purchase is listed with a different amount, it is the amount you typed that needs correcting. If it is listed as already claimed, somebody else has taken it: talk to them or to the treasurer.",
+      "stuckNoRows": "The statement has probably not been imported yet. Ask the treasurer to import the latest bank file under Bank & matching.",
+      "stuckDraft": "A card purchase cannot be submitted without a match. Save it as a draft and come back when the transaction is there."
     }
   },
   "mileage": {
@@ -663,7 +673,10 @@
       "codeRequired": "An account number is required",
       "notFound": "The account row was not found",
       "unknown": "Account {code} is not in the chart of accounts.",
-      "emptyChart": "The chart of accounts is empty. Sync it under Settings → Fortnox first."
+      "emptyChart": "The chart of accounts is empty. Sync it under Settings → Fortnox first.",
+      "notResultAccount": "Account {code} is a balance-sheet account. A budget holds only result accounts, 3000 to 8999.",
+      "notIncome": "Account {code} is a cost account and cannot sit under Income.",
+      "notCost": "Account {code} is an income account and cannot sit under Costs."
     },
     "voucher": {
       "twoLines": "At least two lines are required",
@@ -1284,8 +1297,6 @@
       "removeMessage": "The accounts and rows on the sheet are permanently deleted. Other budgets are unaffected.",
       "remove": "Remove",
       "dragToReorder": "Drag to move the row or reorder",
-      "dragToSection": "Drag to Income or Costs",
-      "dropHere": "drop to move it here",
       "accountNumber": "Account number",
       "noMoreAccounts": "No more accounts",
       "emptyChart": "The chart of accounts is empty. Sync it under Settings → Fortnox",
@@ -1424,6 +1435,21 @@
     "imageMissing": "Photo missing"
   },
   "admin": {
+    "index": {
+      "title": "Settings",
+      "description": "The connections, tables and permissions the rest of the app rests on.",
+      "section": {
+        "fortnox": "The Fortnox connection, and syncing the chart of accounts and cost centres.",
+        "costCenters": "The cost centres expenses and budgets can be split across.",
+        "income": "How a day's takings are split across accounts and activities.",
+        "resultUnits": "Which cost centres belong together, and who attests them.",
+        "cards": "The section's cards and who holds which.",
+        "mileageRates": "What a kilometre is worth, and from which day.",
+        "stockSettings": "Accounts and settings for the stock bookkeeping.",
+        "roles": "What each role may do. Changed here, not in the code.",
+        "users": "Who exists and which roles they hold."
+      }
+    },
     "users": {
       "title": "Users",
       "description": "Roles govern access and approval authority. They come from Authentik.",

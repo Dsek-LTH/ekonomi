@@ -64,14 +64,22 @@ export type PatchSheet = z.infer<typeof PatchSheet>;
 /** POST /api/budgets/[id]/cost-centers/[ccid]/accounts. */
 export const CreateAccount = z.object({
   accountCode: Trimmed.default(""),
-  kindOverride: Clearable(AccountKind).optional(),
+  /**
+   * The section it is being added under.
+   *
+   * Not a classification the caller gets to choose: 3xxx is income and
+   * 4xxx-8xxx is cost, and this says which side the sheet was asking from so
+   * the server can refuse a code that does not belong there. It replaced
+   * `kindOverride`, which stored the caller's answer and let a cost account sit
+   * under Intäkter.
+   */
+  kind: AccountKind,
 });
 export type CreateAccount = z.infer<typeof CreateAccount>;
 
 /** PATCH /api/budget-accounts/[id]. */
 export const PatchAccount = z.object({
   accountCode: NonEmpty.optional(),
-  kindOverride: Clearable(AccountKind).optional(),
 });
 export type PatchAccount = z.infer<typeof PatchAccount>;
 

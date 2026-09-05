@@ -32,7 +32,6 @@ const account = (id: string, lineIds: string[]): Account => ({
   id,
   accountCode: id,
   accountName: id,
-  kindOverride: null,
   lineItems: lineIds.map(line),
   comments: [],
 });

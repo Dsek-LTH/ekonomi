@@ -22,14 +22,14 @@ const sheets: GridSheet[] = [
   {
     code: "SEX02",
     accounts: [
-      { id: "a1", accountCode: "3010", kindOverride: null, lineItems: [{ id: "li1" }] },
-      { id: "a2", accountCode: "4010", kindOverride: null, lineItems: [{ id: "li2" }, { id: "li3" }] },
+      { id: "a1", accountCode: "3010", lineItems: [{ id: "li1" }] },
+      { id: "a2", accountCode: "4010", lineItems: [{ id: "li2" }, { id: "li3" }] },
     ],
   },
   {
     code: "KM01",
     accounts: [
-      { id: "b1", accountCode: "4010", kindOverride: null, lineItems: [{ id: "li9" }] },
+      { id: "b1", accountCode: "4010", lineItems: [{ id: "li9" }] },
     ],
   },
 ];
@@ -170,11 +170,10 @@ describe("round trip", () => {
         {
           code: "SEX02",
           accounts: [
-            { id: "a1", accountCode: "3010", kindOverride: null, lineItems: [{ id: "li1" }] },
+            { id: "a1", accountCode: "3010", lineItems: [{ id: "li1" }] },
             {
               id: "a2",
               accountCode: "4010",
-              kindOverride: null,
               lineItems: [{ id: "li0" }, { id: "li2" }, { id: "li3" }],
             },
           ],

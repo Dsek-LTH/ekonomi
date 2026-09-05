@@ -10,7 +10,7 @@
 // The rows are named to the server by id, not by content: the paste route is
 // also what re-points equations inside a copied block at the copies, so nothing
 // about a row is described twice.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Account, BudgetClip, LineItem } from "./budget-types";
 
@@ -26,6 +26,8 @@ export function useSheetClipboard({
   onCopy,
   canPaste,
   onPaste,
+  sheetRef,
+  isEditing,
   notify,
   t,
 }: {
@@ -42,7 +44,13 @@ export function useSheetClipboard({
    * null when it is in none, rows have to land in an account, and which one is
    * not for a clipboard to guess.
    */
-  onPaste: (clip: BudgetClip, accountId: string | null) => void;
+  onPaste: (clip: BudgetClip, accountId: string | null) => void | Promise<unknown>;
+  /** The sheet's own element. Keys are taken on the document, so this is what
+   *  says whether a focused text field is one of the sheet's cells. */
+  sheetRef: React.RefObject<HTMLElement | null>;
+  /** Whether a cell is being edited right now. Read at the moment a key
+   *  arrives rather than passed in, since the listener outlives a render. */
+  isEditing: () => boolean;
   notify: { success: (m: string) => void; info: (m: string) => void };
   t: (key: string, values?: Record<string, number>) => string;
 }) {
@@ -105,11 +113,18 @@ export function useSheetClipboard({
       const label = accounts.find((a) => a.id === marked.accounts[0])?.accountCode ?? "";
       onCopy({ kind: "accounts", ids: marked.accounts, label });
       notify.success(t("copiedAccounts", { count: marked.accounts.length }));
+      // The ticks have done their job. Left standing, the "N markerade" bar
+      // stays up over a copy that has already been taken, so nothing on screen
+      // distinguishes "about to copy these" from "copied these a minute ago",
+      // and the next ⌘C silently takes the same rows again. What is on the
+      // clipboard is said by the paste bar instead, which is where it belongs.
+      clearTicks();
       return true;
     }
     if (marked.rows.length > 0) {
       onCopy({ kind: "rows", ids: marked.rows, label: String(marked.rows.length) });
       notify.success(t("copiedRows", { count: marked.rows.length }));
+      clearTicks();
       return true;
     }
     return false;
@@ -135,48 +150,97 @@ export function useSheetClipboard({
     return true;
   }
 
+  /**
+   * True while a paste is in flight.
+   *
+   * A ref, not state: nothing on screen turns on it, and it has to be true for
+   * the very next keydown rather than after a render. Holding ⌘V, or pressing
+   * it twice while the first request is still out, sent two of them. Both
+   * succeeded (the second simply queued behind the first's row lock in the
+   * paste route) and the rows landed twice.
+   */
+  const pasting = useRef(false);
+
   function pasteHere(): boolean {
     if (!clip || !canPaste) return false;
+    // Taken, and deliberately dropped. Returning false would hand the key back
+    // to the browser mid-paste, which is not what a repeat press means.
+    if (pasting.current) return true;
     const at = focusedRow();
     if (clip.kind === "rows" && !at) {
       notify.info(t("pasteNeedsAccount"));
       return true;
     }
-    onPaste(clip, at?.accountId ?? null);
+    pasting.current = true;
+    void Promise.resolve(onPaste(clip, at?.accountId ?? null)).finally(() => {
+      pasting.current = false;
+    });
     return true;
   }
 
   /**
-   * The sheet's own keys, taken before the cell layer sees them, that one
-   * swallows anything it doesn't recognise while a cell is merely selected.
+   * The sheet's own keys.
+   *
+   * On the document, in the capture phase, rather than on the sheet's own
+   * element. The sheet is a plain `div` with no `tabIndex`, so it can never
+   * hold focus itself: a handler on it only ever heard keys from a focused
+   * descendant, meaning a cell input or a tick box. Click a heading, the Summa
+   * row, the gap between two cells, or dismiss a toast, and focus was on
+   * `<body>`, where ⌘V did nothing whatsoever. No message, no toast, nothing to
+   * tell you why. That is most of what made this feel unreliable.
+   *
+   * Capture, because the cell layer's own handler is a capture listener on the
+   * sheet: the document sees a key first there, and the sheet's keys are meant
+   * to be decided before a cell gets the chance to swallow one it does not
+   * recognise. What is taken is stopped outright, so the cell layer never sees
+   * it at all.
    *
    * Nothing is taken while a cell is being edited: ⌘C there is copying text out
-   * of a formula, and it has nothing to do with the rows.
+   * of a formula and has nothing to do with the rows. Nor from a text field
+   * outside the sheet or from an open dialog, where the browser's own copy is
+   * what was meant.
    */
-  const sheetKeys = (e: React.KeyboardEvent, isEditing: boolean): boolean => {
-    if (isEditing) return false;
-    if (!e.metaKey && !e.ctrlKey) return false;
-    if (e.key === "c" || e.key === "C") {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== "c" && key !== "v") return;
+      if (isEditing()) return;
+
+      const target = e.target as HTMLElement | null;
+      // A dialog over the sheet is its own screen. The sheet is still mounted
+      // behind it, and copying its rows from inside one is nobody's intent.
+      if (target?.closest('[role="dialog"]')) return;
+      // Somewhere text is being typed that is not one of the sheet's cells: a
+      // search box, a filter, a field in a panel beside it.
+      const typing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable === true;
+      if (typing && !sheetRef.current?.contains(target)) return;
+
+      const took = key === "c" ? copyHere() : pasteHere();
       // Nothing copied means nothing taken: the browser's own copy still works
-      // anywhere in the sheet that isn't a row.
-      if (!copyHere()) return false;
+      // where the sheet has nothing to offer.
+      if (!took) return;
       e.preventDefault();
-      return true;
-    }
-    if (e.key === "v" || e.key === "V") {
-      if (!pasteHere()) return false;
-      e.preventDefault();
-      return true;
-    }
-    return false;
-  };
+      e.stopPropagation();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+    // No dependency array, deliberately. What a copy takes depends on what is
+    // ticked and what is on the clipboard, and both change on almost every
+    // render of this sheet; listing them would be listing everything, and
+    // getting the list wrong would mean ⌘C quietly copying what was ticked
+    // some renders ago. Re-binding one document listener per render is nothing
+    // beside a keystroke that takes the wrong rows.
+  });
 
   return {
     ticked,
     toggle,
     clearTicks,
     marked,
-    sheetKeys,
     /** Put the ticked things on the clipboard. The toolbar's button. */
     copySelection,
     /** Whether this id is ticked, for the box in the margin. */

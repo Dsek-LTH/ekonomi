@@ -8,7 +8,6 @@
 // none of them.
 import type { AccountKind } from "@/lib/budget";
 import type { JoinedAccount } from "@/lib/budget/compare";
-import { cn } from "@/lib/ui/utils";
 import { fmt } from "./budget-helpers";
 import { AccountBlock, AddAccountRow, GhostAccountBlock } from "./sheet-account";
 import { Hc } from "./sheet-cells";
@@ -31,30 +30,21 @@ export function SectionCard({
   const {
     columns,
     compare,
-    dropKind,
-    dropProps,
     gutWidth,
     actionsWidth,
     narrow,
     showCompare,
     staticWidth,
-    t,
     tCol,
     tLedger,
   } = useSheet();
-  const active = dropKind === kind;
+  // No longer a drop zone. An account used to be dragged onto the other card to
+  // reclassify it; its number decides the side now, so the card is just a card.
   return (
-    <div
-      {...dropProps(kind)}
-      className={cn(
-        "budget-grid overflow-x-auto rounded-2xl border bg-background transition-colors",
-        active ? "border-accent ring-1 ring-accent" : "border-border",
-      )}
-    >
+    <div className="budget-grid overflow-x-auto rounded-2xl border border-border bg-background">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold">
           {label}
-          {active && <span className="ml-2 text-xs font-normal text-muted">– {t("dropHere")}</span>}
         </h3>
         <span className="text-sm tabular-nums text-muted">{fmt(total)}</span>
       </div>

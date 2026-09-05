@@ -18,7 +18,6 @@ import {
   IconIncome,
   IconBook,
   IconBudget,
-  IconCar,
   IconCard,
   IconChart,
   IconCheck,
@@ -29,12 +28,9 @@ import {
   IconGear,
   IconGrid,
   IconHelp,
-  IconHierarchy,
   IconList,
   IconMenu,
   IconReceipt,
-  IconShield,
-  IconUsers,
 } from "../ui/icons";
 import {
   canAccessBookkeeping,
@@ -45,6 +41,7 @@ import {
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import type { Theme } from "@/lib/ui/theme";
+import { SETTINGS_SECTIONS } from "./settings-sections";
 
 import { owningRoute } from "@/lib/ui/routes";
 import { cn } from "@/lib/ui/utils";
@@ -109,7 +106,13 @@ export const NAV_PINNED_COOKIE = "nav_pinned";
 // Where settings lands, and the prefix that switches the sidebar over to the
 // settings nav.
 const SETTINGS_ROOT = "/admin";
-const SETTINGS_HOME = "/admin/fortnox";
+// The landing page, not the first section. It used to point straight at
+// /admin/fortnox, on the reasoning that the sidebar lists the sections so there
+// was nothing for an index to add. True at this width and false on a phone,
+// where there is no sidebar: you were dropped on Fortnox, whatever you came
+// for, and had to open the menu a second time to get anywhere. See
+// (app)/admin/page.tsx.
+const SETTINGS_HOME = SETTINGS_ROOT;
 
 // Standalone top-level link (no group heading).
 const OVERVIEW: NavItem = { href: "/dashboard", label: "overview", icon: IconGrid, visible: ALL };
@@ -220,23 +223,17 @@ const NAV_GROUPS: NavGroup[] = [
 // section may need its own list-and-detail layout, and with the app nav still
 // in place that would be a third column, so while the path is under /admin the
 // sidebar shows these instead, with a way back at the top.
+// Built from the same list the landing page lays out as cards, so a section
+// cannot be added to one and forgotten in the other. See ./settings-sections.
 const SETTINGS_NAV: NavGroup[] = [
   {
     label: "settings",
-    items: [
-      { href: "/admin/fortnox", label: "fortnox", icon: IconFortnox, visible: ALL },
-      { href: "/admin/cost-centers", label: "costCenters", icon: IconChart, visible: ALL },
-      { href: "/admin/income", label: "income", icon: IconIncome, visible: ALL },
-      { href: "/admin/result-units", label: "resultUnits", icon: IconHierarchy, visible: ALL },
-      { href: "/admin/cards", label: "cards", icon: IconCard, visible: ALL },
-      { href: "/admin/mileage", label: "mileageRates", icon: IconCar, visible: ALL },
-      { href: "/admin/stock", label: "stockSettings", icon: IconBox, visible: ALL },
-      // Directly above Användare, which is the screen it explains: that one
-      // lists who holds what and cannot change it, and this is where what a
-      // holding *means* is decided.
-      { href: "/admin/roles", label: "roles", icon: IconShield, visible: ALL },
-      { href: "/admin/users", label: "users", icon: IconUsers, visible: ALL },
-    ],
+    items: SETTINGS_SECTIONS.map((s) => ({
+      href: s.href,
+      label: s.label,
+      icon: s.icon,
+      visible: ALL,
+    })),
   },
 ];
 

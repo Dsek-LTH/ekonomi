@@ -141,9 +141,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
             budgetCostCenterId: ccId,
             accountCode: source.accountCode,
             accountName: source.accountName,
-            // Carried over: an account put on the income side by hand is there
-            // for a reason, and it is not one its code can be asked about.
-            kindOverride: source.kindOverride,
           },
           select: { id: true },
         });

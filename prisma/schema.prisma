@@ -1011,10 +1011,6 @@ model LedgerRow {
 // ── Budget ────────────────────────────────────────────────────────
 
 // A budget: a year, a name, and everything budgeted in it.
-enum BudgetAccountKind {
-  INCOME // intäkt
-  COST // kostnad
-}
 
 // Budgets stand alone. Any number may share a year. The adopted one and a
 // revision drafted beside it are simply two budgets, and none of them knows
@@ -1122,9 +1118,6 @@ model BudgetAccount {
   budgetCostCenterId String
   accountCode        String // e.g. "3010"
   accountName        String // e.g. "Biljettintäkter"
-  // Income vs. cost. When null the kind is inferred from the account code
-  // (BAS: 3xxx = income, everything else = cost); set to override.
-  kindOverride       BudgetAccountKind?
   lineItems          BudgetLineItem[]
   comments           BudgetComment[]
   adjustments        BudgetAdjustment[]

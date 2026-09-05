@@ -107,7 +107,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
       // isn't one to use.
       accountId: existing?.id ?? `${sheet.id}:${r.accountCode}`,
       amount: parseAmount(r.amount),
-      kind: effectiveKind(r.accountCode, existing?.kindOverride ?? null),
+      kind: effectiveKind(r.accountCode),
       scope: scopeKey(sheet),
       scopeLabel: scopeLabel(sheet, sheetName(sheet, tSheet("unnamed"))),
     }];
@@ -436,7 +436,7 @@ function findAccount(sheets: BudgetCC[], accountId: string) {
       sheetLabel: cc.costCenter ? `${cc.costCenter.code} ${cc.costCenter.name}` : sheetName(cc),
       accountCode: account.accountCode,
       accountName: account.accountName,
-      kind: effectiveKind(account.accountCode, account.kindOverride),
+      kind: effectiveKind(account.accountCode),
     };
   }
   return null;

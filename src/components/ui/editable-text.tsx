@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/ui/utils";
 
 // A value that is an input the whole time, dressed as plain text until you go
@@ -53,6 +53,7 @@ export function EditableText({
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autoId = useId();
   // Escape blurs the input, and the blur would otherwise commit the very edit
   // that was just abandoned.
   const abandoned = useRef(false);
@@ -95,6 +96,10 @@ export function EditableText({
   const input = (
     <input
       ref={inputRef}
+      // Named so the browser does not report a field it cannot autofill. It is
+      // dressed as plain text until you go into it, but it is an input the
+      // whole time (see the note at the top).
+      id={autoId}
       value={draft}
       type={type}
       onChange={(e) => setDraft(e.target.value)}
