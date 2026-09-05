@@ -159,13 +159,18 @@ describe("submitting a milersättning", () => {
   // out-of-pocket, so it has the 60-day filing deadline, which is a blocker of
   // its own and, rightly, reported ahead of anything else. These cases are
   // about the journey check, so the date is kept out of their way.
+
+  // The route, which every case below fills in: these are about the readings
+  // and the rate, and a missing route is its own blocker reported ahead of
+  // both. It has a case of its own further down.
+  const JOURNEY = { stops: ["Kårhuset, Lund", "Snabbgross", "Kårhuset, Lund"] };
   const mileage = (over: Partial<Expense> = {}) =>
     expense({
       paymentType: "MILEAGE",
       status: "DRAFT",
       submitterId: "member",
       purchaseDate: today(),
-      mileage: { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 },
+      mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 },
       ...over,
     });
   const owner = viewer(["ORDINARIE"], "member");
@@ -178,7 +183,9 @@ describe("submitting a milersättning", () => {
 
   it("is refused while the readings do not make a journey", () => {
     const can = expenseCapabilities(
-      mileage({ mileage: { odometerStart: 12300, odometerEnd: null, km: null, orePerKm: 250 } }),
+      mileage({
+        mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: null, km: null, orePerKm: 250 },
+      }),
       owner,
     );
     expect(can.submitBlocker).toBe("mileage");
@@ -187,10 +194,33 @@ describe("submitting a milersättning", () => {
 
   it("is refused while nothing has priced the day it was driven", () => {
     const can = expenseCapabilities(
-      mileage({ mileage: { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: null } }),
+      mileage({
+        mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: null },
+      }),
       owner,
     );
     expect(can.submitBlocker).toBe("mileage");
+  });
+
+  it("is refused while the journey names fewer than two places", () => {
+    // The claim is priceable and the readings make a journey, so everything
+    // this used to look at is satisfied. What is missing is the half that says
+    // the driving was the section's errand, which the transition route refuses
+    // on. Offering "Skicka in" here would promise something the server will not
+    // do, which is the failure the readings check was added to stop.
+    const journey = { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 };
+    expect(
+      expenseCapabilities(mileage({ mileage: { ...journey, stops: [] } }), owner).submitBlocker,
+    ).toBe("mileage");
+    expect(
+      expenseCapabilities(mileage({ mileage: { ...journey, stops: ["Lund"] } }), owner)
+        .submitBlocker,
+    ).toBe("mileage");
+    // Blank rows are not places, however many of them an editor left behind.
+    expect(
+      expenseCapabilities(mileage({ mileage: { ...journey, stops: ["Lund", "  ", ""] } }), owner)
+        .submitBlocker,
+    ).toBe("mileage");
   });
 
   it("is never asked for a receipt", () => {

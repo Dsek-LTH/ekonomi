@@ -5,7 +5,11 @@ import {
   EDITABLE_STATUSES,
   EXPENSE_STATUSES,
   SIGNED_STATUSES,
+  PAYMENT_CLASSES,
+  PAYMENT_TEXT,
+  PAYMENT_TYPES,
   STATUS_TONE,
+  TONE_CLASSES,
   isAttestWithdrawable,
   isEditable,
   isInAttestChain,
@@ -334,6 +338,30 @@ describe("status predicates", () => {
     for (const status of EXPENSE_STATUSES) {
       expect(sv.common.status[status]).toBeTruthy();
       expect(en.common.status[status]).toBeTruthy();
+    }
+  });
+
+  it("gives every payment type its own colour, and a word in both locales", () => {
+    // The three are told apart by hue in every list, so a type missing from
+    // either record would render as an unstyled chip, and one sharing another's
+    // classes would make two kinds look like one. Both are the sort of thing
+    // nobody notices until a treasurer sorts by the wrong column.
+    for (const type of PAYMENT_TYPES) {
+      expect(PAYMENT_CLASSES[type]).toBeTruthy();
+      expect(PAYMENT_TEXT[type]).toBeTruthy();
+      expect(sv.common.payment[type].label).toBeTruthy();
+      expect(en.common.payment[type].label).toBeTruthy();
+    }
+    // Distinct, not merely present.
+    expect(new Set(Object.values(PAYMENT_CLASSES)).size).toBe(PAYMENT_TYPES.length);
+    expect(new Set(Object.values(PAYMENT_TEXT)).size).toBe(PAYMENT_TYPES.length);
+    // And none of them borrows a status tone: a row shows both, so one colour
+    // meaning "godkänd" in one column and "milersättning" in the next is the
+    // thing this palette exists to avoid. See app/globals.css.
+    for (const cls of Object.values(PAYMENT_CLASSES)) {
+      for (const tone of Object.values(TONE_CLASSES)) {
+        expect(cls).not.toBe(tone);
+      }
     }
   });
 

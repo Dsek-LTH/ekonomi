@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { claimBlocker, journeyKm, valueJourney, type JourneyInput } from "./claim";
+import {
+  claimBlocker,
+  journeyKm,
+  namedStops,
+  valueJourney,
+  type JourneyInput,
+} from "./claim";
 
 const rates = [
   { orePerKm: 185, validFrom: "2019-01-01" },
@@ -11,6 +17,7 @@ const journey = (over: Partial<JourneyInput> = {}): JourneyInput => ({
   date: "2026-08-11",
   odometerStart: 12300,
   odometerEnd: 12342,
+  stops: ["Kårhuset, Lund", "Snabbgross", "Kårhuset, Lund"],
   ...over,
 });
 
@@ -93,7 +100,57 @@ describe("claimBlocker", () => {
     expect(claimBlocker(journey(), [])).toBe("noRate");
   });
 
+  it("asks where the journey went", () => {
+    // The readings say a car moved. Only the stops say the moving was the
+    // section's errand, which is what the claim is actually asserting.
+    expect(claimBlocker(journey({ stops: [] }), rates)).toBe("noRoute");
+    expect(claimBlocker(journey({ stops: ["Kårhuset, Lund"] }), rates)).toBe("noRoute");
+  });
+
+  it("does not take whitespace for a place", () => {
+    expect(claimBlocker(journey({ stops: ["Lund", "   "] }), rates)).toBe("noRoute");
+    expect(claimBlocker(journey({ stops: ["\t", "\n"] }), rates)).toBe("noRoute");
+  });
+
+  it("takes two stops as a journey, however many more there are", () => {
+    // Out and back is the same place twice, which is a route and not a
+    // duplicate. Four stops is the errand that called at two places on the way.
+    expect(claimBlocker(journey({ stops: ["E-huset", "E-huset"] }), rates)).toBeNull();
+    expect(
+      claimBlocker(
+        journey({ stops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }),
+        rates,
+      ),
+    ).toBeNull();
+  });
+
+  it("counts only the stops that name a place", () => {
+    // An editor leaves a blank row behind when somebody clears one. Two real
+    // places around it is still a journey; one is not.
+    expect(claimBlocker(journey({ stops: ["E-huset", "", "Hem"] }), rates)).toBeNull();
+    expect(claimBlocker(journey({ stops: ["E-huset", "", ""] }), rates)).toBe("noRoute");
+  });
+
   it("reports what is fixed first", () => {
     expect(claimBlocker(journey({ odometerStart: null }), [])).toBe("noReadings");
+    // The stops come before the readings, matching the order of the form.
+    expect(claimBlocker(journey({ stops: [], odometerStart: null }), [])).toBe("noRoute");
+  });
+});
+
+describe("namedStops", () => {
+  it("keeps the order and drops what names nothing", () => {
+    expect(namedStops(["E-huset", "  ", "Snabbgross", ""])).toEqual([
+      "E-huset",
+      "Snabbgross",
+    ]);
+  });
+
+  it("trims what it keeps, so a stray space is not a different place", () => {
+    expect(namedStops([" E-huset ", "Hem"])).toEqual(["E-huset", "Hem"]);
+  });
+
+  it("keeps a place repeated, which is how a round trip is written", () => {
+    expect(namedStops(["E-huset", "Snabbgross", "E-huset"])).toHaveLength(3);
   });
 });

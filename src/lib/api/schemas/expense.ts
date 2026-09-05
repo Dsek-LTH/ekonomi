@@ -26,17 +26,28 @@ export const AllocationInput = z.object({
 export type AllocationInput = z.infer<typeof AllocationInput>;
 
 /**
- * An odometer reading, in kilometres.
+ * A total odometer reading, in kilometres. The car's lifetime figure, not the
+ * trip meter; see the columns on the Expense model for why that distinction is
+ * the whole point of recording readings at all.
  *
- * One decimal, matching the column. A trip meter has one and plenty of
- * dashboards show it. Not negative, and bounded well past what any car reaches,
- * because a slipped digit here is a slipped digit in an amount.
+ * One decimal, matching the column, because some dashboards show one. Not
+ * negative, and bounded well past what any car reaches, because a slipped digit
+ * here is a slipped digit in an amount.
  *
- * Zero is a real reading: a trip meter that was just zeroed, and a car straight
- * off the lot. So the two are `Clearable` rather than falsy-checked anywhere,
- * "not given yet" is null, and a draft is allowed to have one.
+ * Zero is a real reading: a car straight off the lot. So the two are
+ * `Clearable` rather than falsy-checked anywhere, "not given yet" is null, and
+ * a draft is allowed to have one.
  */
 const Odometer = z.number().min(0).max(9_999_999).multipleOf(0.1);
+
+/**
+ * One stop on a journey, as somebody writes it.
+ *
+ * Capped because it goes on the utläggsräkning, where a paragraph in a table
+ * cell is a broken page rather than a better underlag. Long enough for a street
+ * address with a town after it.
+ */
+const Place = Trimmed.max(120);
 
 /**
  * PATCH /api/expenses/[id].
@@ -68,6 +79,22 @@ export const PatchExpense = z.object({
    */
   odometerStart: Clearable(Odometer).optional(),
   odometerEnd: Clearable(Odometer).optional(),
+  /**
+   * Every place the car stopped, in the order it stopped there.
+   *
+   * Sent whole rather than patched per stop: it is a list whose order carries
+   * the meaning, and "change stop 2" is not something a client can express
+   * without the two ends agreeing on what stop 2 was. Absent leaves the stored
+   * list alone; an empty array is a draft with nothing filled in yet.
+   *
+   * Blank entries are allowed through, because an editor with three rows and
+   * the middle one cleared is a real state to save a draft from. `claimBlocker`
+   * is what counts the ones that name a place.
+   *
+   * Capped so a claim cannot carry an unbounded list into a typeset page.
+   * Twenty stops is far past any errand and well short of a denial of service.
+   */
+  journeyStops: z.array(Place).max(20).optional(),
 });
 export type PatchExpense = z.infer<typeof PatchExpense>;
 

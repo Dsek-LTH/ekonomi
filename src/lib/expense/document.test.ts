@@ -17,6 +17,7 @@ const base = {
   grossAmount: 6900,
   odometerStart: null,
   odometerEnd: null,
+  journeyStops: [],
   mileageOrePerKm: null,
   submitter: { name: "Emil Helander", studentId: "em8241he-s" },
   allocations: [
@@ -50,12 +51,12 @@ describe("buildCoverData", () => {
   });
 
   it("names the date for what it is on each kind of utlägg", () => {
-    // A milersättning has no receipt, so "Kvittodatum" over the day of its
-    // last journey would name a document that does not exist, on a page that
-    // is filed as evidence.
+    // A milersättning has no receipt, so "Kvittodatum" over the day it was
+    // driven would name a document that does not exist, on a page that is
+    // filed as evidence.
     expect(buildCoverData(base, TODAY).dateLabel).toBe("Kvittodatum");
     expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe(
-      "Sista resdag",
+      "Resdag",
     );
   });
 
@@ -137,6 +138,7 @@ const mileage = (over: Partial<ForCover> = {}): ForCover => ({
   title: "Hämta sponsorpaket",
   odometerStart: 12300,
   odometerEnd: 12342,
+  journeyStops: ["Kårhuset, Lund", "Snabbgross", "Kårhuset, Lund"],
   mileageOrePerKm: 250,
   ...over,
 });
@@ -152,10 +154,31 @@ describe("buildCoverData, the journey", () => {
 
   it("states the journey the way a körjournal would", () => {
     const j = buildCoverData(mileage(), TODAY).journey!;
+    expect(j.route).toBe("Kårhuset, Lund → Snabbgross → Kårhuset, Lund");
     expect(j.odometerStart).toBe(`12${NB}300,0 km`);
     expect(j.odometerEnd).toBe(`12${NB}342,0 km`);
     expect(j.distance).toBe("42,0 km");
     expect(j.rate).toBe("2,50 kr/km");
+  });
+
+  it("keeps every stop, not just the ends", () => {
+    // The errand that called at two places before going home. Printing only
+    // where it began and ended would drop the reason the distance is what it
+    // is, which is the part Skatteverket asks to see.
+    const j = buildCoverData(
+      mileage({ journeyStops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }),
+      TODAY,
+    ).journey!;
+    expect(j.route).toBe("E-huset → Snabbgross → Systembolaget → Hem");
+  });
+
+  it("says nothing rather than drawing arrows between blanks", () => {
+    // A draft saved with rows still empty. "–" is the honest word for a route
+    // nobody has given; " → → " would look like data.
+    expect(buildCoverData(mileage({ journeyStops: [] }), TODAY).journey!.route).toBe("–");
+    expect(
+      buildCoverData(mileage({ journeyStops: ["E-huset", "  ", ""] }), TODAY).journey!.route,
+    ).toBe("E-huset");
   });
 
   it("writes the readings and the difference to the same precision", () => {

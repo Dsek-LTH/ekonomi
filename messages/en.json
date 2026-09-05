@@ -365,7 +365,10 @@
       "purchaseDate": "Purchase date",
       "grossAmount": "Amount",
       "allocations": "Cost distribution",
-      "paymentType": "Payment type"
+      "paymentType": "Payment type",
+      "odometerStart": "Odometer at the start",
+      "odometerEnd": "Odometer at the end",
+      "journeyStops": "Route"
     },
     "newMenu": {
       "label": "New expense",
@@ -386,9 +389,19 @@
     "journeyDate": "Date driven",
     "dateFuture": "The journey is in the future. Correct the date to the day you drove.",
     "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey and cannot be accepted later. Contact the skattmästare for further help",
+    "route": {
+      "label": "Route",
+      "hint": "Every place you stopped, in order. A town or a name is enough, e.g. \"E-huset\" and \"Snabbgross\". If you came back to where you started, write that place last as well, or the route describes only half the distance the odometer shows.",
+      "stop": "Stop {n}",
+      "firstPlaceholder": "Where you set off from",
+      "nextPlaceholder": "The next place you stopped",
+      "addStop": "Add a stop",
+      "addReturn": "Add the journey back",
+      "removeStop": "Remove the stop"
+    },
     "odometer": {
       "label": "Odometer",
-      "hint": "What the odometer read when you got into the car and when you got out. The distance is the difference.",
+      "hint": "The total odometer, the car's lifetime reading, not the trip meter. What it read when you got into the car and when you got out. The distance is the difference.",
       "start": "At the start",
       "end": "At the end"
     },
@@ -408,7 +421,8 @@
     "blocker": {
       "noReadings": "Enter the odometer both before and after the journey.",
       "notForward": "The reading after the journey must be higher than the one before. Check that the two are the right way round.",
-      "noRate": "No rate per kilometre has been set for the day of the journey. Ask the treasurer."
+      "noRate": "No rate per kilometre has been set for the day of the journey. Ask the treasurer.",
+      "noRoute": "Enter at least two places you stopped at. The odometer shows how far the car went, not that the journey was the section's errand."
     },
     "rates": {
       "title": "Mileage rate",

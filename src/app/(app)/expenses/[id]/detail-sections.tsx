@@ -4,9 +4,10 @@
 // the expense *is*. The interactive parts (actions panel, transaction picker)
 // live with the state they need, in detail-client.tsx.
 import { useTranslations } from "next-intl";
+import { namedStops } from "@/lib/mileage/claim";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Tag } from "@/components/ui/status-pill";
+import { PaymentTag } from "@/components/ui/payment-tag";
 import { IconCheck } from "@/components/ui/icons";
 import { Amount } from "@/components/ui/amount";
 import type { Expense } from "@/lib/domain/types";
@@ -25,7 +26,6 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function DetailsCard({ expense, action }: { expense: Expense; action?: React.ReactNode }) {
   const t = useTranslations("expenses.detail");
-  const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
   return (
     <Card>
@@ -90,7 +90,7 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
         </div>
         <div className="min-w-0 sm:col-span-2">
           <p className="mb-1.5 text-[13px] text-muted">{t("paymentType")}</p>
-          <Tag>{tPayment(`${expense.paymentType}.label`)}</Tag>
+          <PaymentTag type={expense.paymentType} />
         </div>
       </CardBody>
     </Card>
@@ -114,27 +114,62 @@ function JourneyDetail({ journey }: { journey: NonNullable<Expense["mileage"]> }
   const nf = (min: number, max: number) =>
     new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
   const reading = (km: number | null) => (km == null ? "–" : nf(1, 1).format(km));
+  // Only the stops that name a place. A draft saved with a blank row in the
+  // middle would otherwise draw an arrow pointing at nothing.
+  const stops = namedStops(journey.stops);
 
   return (
-    <div className="min-w-0 sm:col-span-2">
-      <p className="mb-1.5 text-[13px] text-muted">{t("odometer.label")}</p>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
-        <span className="tabular-nums">
-          {reading(journey.odometerStart)}
-          <span aria-hidden className="mx-1.5 text-muted">→</span>
-          {reading(journey.odometerEnd)}
-          <span className="ml-1.5 text-muted">km</span>
-        </span>
-        <span className="flex items-center gap-3 tabular-nums">
-          <span className="font-medium">
-            {journey.km == null ? "–" : t("km", { km: nf(0, 1).format(journey.km) })}
-          </span>
-          {journey.orePerKm != null && (
-            <span className="text-xs text-muted">
-              {t("rates.perKm", { amount: nf(2, 2).format(journey.orePerKm / 100) })}
-            </span>
+    <div className="min-w-0 space-y-3 sm:col-span-2">
+      {/* Where it went, above the readings, because that is the order the
+          question is asked in: an attester wants to know what journey this was
+          before they want to know how long it was. A draft that has not said
+          yet reads as a dash rather than an empty row.
+
+          Every stop, not just the ends. A route through the wholesaler and the
+          Systembolaget is what makes a longer distance make sense, and showing
+          only where it began and ended would invite the attester to query a
+          reading that is perfectly correct. Wrapping, since four stops do not
+          fit one line on a phone. */}
+      <div>
+        <p className="mb-1.5 text-[13px] text-muted">{t("route.label")}</p>
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg bg-surface px-3 py-2 text-sm">
+          {stops.length === 0 ? (
+            "–"
+          ) : (
+            stops.map((stop, i) => (
+              <span key={i} className="flex items-center gap-x-1.5">
+                {i > 0 && (
+                  <span aria-hidden className="text-muted">
+                    →
+                  </span>
+                )}
+                {stop}
+              </span>
+            ))
           )}
-        </span>
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-[13px] text-muted">{t("odometer.label")}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
+          <span className="tabular-nums">
+            {reading(journey.odometerStart)}
+            <span aria-hidden className="mx-1.5 text-muted">→</span>
+            {reading(journey.odometerEnd)}
+            <span className="ml-1.5 text-muted">km</span>
+          </span>
+          <span className="flex items-center gap-3 tabular-nums">
+            <span className="font-medium">
+              {journey.km == null ? "–" : t("km", { km: nf(0, 1).format(journey.km) })}
+            </span>
+            {journey.orePerKm != null && (
+              <span className="text-xs text-muted">
+                {t("rates.perKm", { amount: nf(2, 2).format(journey.orePerKm / 100) })}
+              </span>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );

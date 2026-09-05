@@ -139,10 +139,26 @@
 // precision, so the subtraction is one a reader can do by eye. A claim that only
 // stated the distance would be asking to be taken on trust, which is the one
 // thing an underlag must never do.
+//
+// The route comes first, above the figures. Skatteverket asks a milersättning's
+// underlag for two separate things: how far, and where to. The readings answer
+// the first and can never answer the second, and a page that showed only them
+// would state a distance nobody could place.
 #if data.journey != none [
   #v(8pt)
   #text(size: heading-size, weight: "bold")[Resan]
   #v(9pt)
+
+  // One field across the width, not a pair of columns, because a route is one
+  // sentence of arbitrary length: two stops on a short errand, four when
+  // somebody called at the wholesaler and the Systembolaget before driving home.
+  // A fixed pair of columns could hold only the ends and would silently drop
+  // whatever happened between them, which is exactly what Skatteverket asks to
+  // see. Already joined by document.ts, so the wording is decided in one place.
+  //
+  // `field` wraps its value, so a long route runs to a second line rather than
+  // off the page.
+  #field("Resväg", orDash(data.journey.route))
 
   #block[
   #set text(size: table-size, fill: ink)

@@ -237,6 +237,11 @@ interface MileageJourney {
    *  other, and 0 is a real reading. */
   odometerStart: number | null;
   odometerEnd: number | null;
+  /** Every place the car stopped, in order. The first is where the journey
+   *  began, the last where it ended, the rest what was visited on the way. A
+   *  round trip repeats its first stop last. Empty on a draft nobody has filled
+   *  in; a claim cannot be sent naming fewer than two places. */
+  stops: string[];
   /** `odometerEnd - odometerStart`, or null while the two do not make a
    *  journey. */
   km: number | null;

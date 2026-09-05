@@ -39,7 +39,7 @@ export async function getMileageRates(): Promise<MileageRateLike[]> {
  * and `claimBlocker` is what refuses to send it.
  */
 export async function valueForStorage(
-  journey: JourneyInput,
+  journey: Pick<JourneyInput, "date" | "odometerStart" | "odometerEnd">,
 ): Promise<{ grossAmount: number | null; orePerKm: number | null }> {
   const valued = valueJourney(journey, await getMileageRates());
   return { grossAmount: valued.ore, orePerKm: valued.orePerKm };

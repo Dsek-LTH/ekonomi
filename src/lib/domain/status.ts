@@ -265,3 +265,32 @@ export const TONE_CLASSES: Record<Tone, string> = {
 // three, and the only one that takes you to a different form rather than
 // changing the shape of this one. See the wizard's first step.
 export const PAYMENT_TYPES: readonly PaymentType[] = ["CARD", "REIMBURSEMENT", "MILEAGE"];
+
+/**
+ * How an utlägg was paid, as a class name pair.
+ *
+ * Its own vocabulary rather than `TONE_CLASSES`, and deliberately: a payment
+ * type is a property of the claim and a status is where it has got to, a row
+ * shows both, and one colour meaning two things across two columns is worse
+ * than no colour at all. The tokens and the measurements behind them are in
+ * app/globals.css under "How an utlägg was paid".
+ */
+export const PAYMENT_CLASSES: Record<PaymentType, string> = {
+  CARD: "border-pay-card/30 bg-pay-card-soft text-pay-card",
+  REIMBURSEMENT: "border-pay-private/30 bg-pay-private-soft text-pay-private",
+  MILEAGE: "border-pay-mileage/30 bg-pay-mileage-soft text-pay-mileage",
+};
+
+/**
+ * The same three hues, for an icon standing on its own rather than in a chip.
+ *
+ * A second record naming the same tokens rather than one built from a base
+ * name: Tailwind finds classes by scanning for literal strings, so
+ * `text-pay-${type}` is a class whose CSS never gets generated. Written out, and
+ * kept next to the pair above so the two are read together.
+ */
+export const PAYMENT_TEXT: Record<PaymentType, string> = {
+  CARD: "text-pay-card",
+  REIMBURSEMENT: "text-pay-private",
+  MILEAGE: "text-pay-mileage",
+};

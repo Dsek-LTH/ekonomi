@@ -1,0 +1,34 @@
+-- Where the journey went, back on the claim.
+--
+-- 20260827140000 dropped MileageTrip, and the route went out with it: the old
+-- sheet held a place typed at each end of every journey, and folding a sheet
+-- into one journey described by its odometer left the distance recorded and the
+-- geography not. That was the wrong half to lose. Two odometer readings prove a
+-- car moved 42 km. They cannot say the moving was the section's errand, and that
+-- is the only question a skattefri milersättning turns on: Skatteverket asks for
+-- the route beside the distance, and without one the payment is not a cost
+-- reimbursement but ersättning för arbete, with everything that follows from it.
+--
+-- Stored as a list of stops in the order they were driven, not as a "from" and a
+-- "to". A real errand is rarely two places: Kårhuset → Snabbgross →
+-- Systembolaget → hem is one journey with four stops, and a pair of columns
+-- would have to drop two of them or lie about which two it kept. The list also
+-- answers all three things a körjournal is asked for at once, since the first
+-- stop is where the journey started, the last is where it ended, and the ones
+-- between are the places visited. A round trip needs no flag of its own: it is a
+-- list whose last stop repeats its first.
+--
+-- This is not MileageTrip coming back. That table held a sheet of *journeys*,
+-- each with its own distance and its own amount, which is what broke
+-- one-claim-one-attest and why it was removed. These are stops on a single
+-- journey. No distance apiece, no amount apiece, one subtraction and one sum for
+-- the whole claim.
+--
+-- Empty by default, because a draft is allowed to be half-filled. Submitting is
+-- what insists on two; see claimBlocker in lib/mileage/claim.ts.
+ALTER TABLE "Expense" ADD COLUMN "journeyStops" TEXT[] NOT NULL DEFAULT '{}';
+
+-- Nothing to backfill. The places the old sheet held were dropped with the table
+-- two migrations ago and cannot be recovered, and inventing a route would put an
+-- invention on a page that is filed as evidence. Claims from before this keep an
+-- empty list and read as the drafts they now are.

@@ -66,6 +66,38 @@
     --color-on-danger: #ffffff;
 
 
+
+    /* ── How an utlägg was paid ──────────────────────────────────
+       Three kinds, and telling them apart at a glance is the whole job: a
+       purchase on the section's card is already paid for, an eget utlägg and a
+       milersättning are money the section owes a person. They were all one
+       grey tag, so the list said nothing until you opened a row.
+
+       Their own hues rather than the status tones above, because a payment
+       type is not a state: a row shows both, and the same colour meaning
+       "godkänd" in one column and "milersättning" in the next is worse than no
+       colour at all.
+
+       Chosen by measurement, not by eye. Between the three the worst pair is
+       ΔE 35.6 under deuteranopia or protanopia (34.1 dark, 30.9 in print),
+       which is the same floor the chart palette holds its adjacent series to.
+       Each reads at 5:1 or better on its own tint, in all three themes.
+
+       What could not be fixed, and is stated here for the same reason the
+       chart block states its own: five status tones already occupy the wheel,
+       so every hue left over sits near one of them for somebody. The closest
+       is the teal against the accent pink for a protanope, ΔE 4.2. It is not
+       load-bearing, and none of it is: a payment tag is an outlined chip with
+       an icon and a word, a status pill is a filled pill with a dot, they sit
+       in different columns, and the word is the answer. Colour is the second
+       way to tell these apart and never the only one. */
+    --color-pay-card: #1d4ed8;
+    --color-pay-card-soft: #eef2fd;
+    --color-pay-private: #0f766e;
+    --color-pay-private-soft: #ecf8f5;
+    --color-pay-mileage: #7c4a1e;
+    --color-pay-mileage-soft: #f9f1e9;
+
     /* ── Chart series ────────────────────────────────────────────
        One categorical palette for every chart in the app, and it is the status
        palette: the six tones an utlägg is already drawn in (see
@@ -201,6 +233,17 @@
   --color-danger-soft: #3a2323;
   --color-on-danger: #ffffff;
 
+
+
+  /* How an utlägg was paid. Stepped for a near-black ground rather than
+     lightened from the light theme's, so each still reads at 6:1 or better on
+     its own tint and the three stay ΔE 34.1 apart under colour blindness. */
+  --color-pay-card: #8ab0ff;
+  --color-pay-card-soft: #212a3d;
+  --color-pay-private: #4fd1c5;
+  --color-pay-private-soft: #1b3330;
+  --color-pay-mileage: #d9a273;
+  --color-pay-mileage-soft: #372a1e;
 
   /* Chart series. Six of the eight are aliases of tokens this block already
      redefines above, so they are already on this ground and are not repeated
@@ -744,6 +787,9 @@ summary {
     --color-success: #1d7b4f;
     --color-danger: #cb3227;
     --color-warning: #a05c0d;
+    --color-pay-card: #17439c;
+    --color-pay-private: #0c6058;
+    --color-pay-mileage: #6b3f18;
   }
 
   html,

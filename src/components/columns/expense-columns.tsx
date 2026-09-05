@@ -6,7 +6,8 @@
 // an amount or a date reads had to be made three times. They're declared once
 // here; a page picks the ones it wants, in the order it wants, and adds its own
 // alongside them.
-import { StatusPill, Tag } from "@/components/ui/status-pill";
+import { StatusPill } from "@/components/ui/status-pill";
+import { PaymentTag } from "@/components/ui/payment-tag";
 import type { Column } from "@/components/ui/data-table";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
 
@@ -42,13 +43,7 @@ export const expenseDateColumn = (
 // neither, the cell is the title alone.
 export const expenseTitleColumn = (
   header: string,
-  {
-    paymentLabel,
-    reference = true,
-  }: {
-    paymentLabel?: (type: Expense["paymentType"]) => string;
-    reference?: boolean;
-  } = {},
+  { reference = true }: { reference?: boolean } = {},
 ): Column<Expense> => ({
   key: "title",
   header,
@@ -66,20 +61,16 @@ export const expenseTitleColumn = (
     return (
       <>
         <p className="font-medium">{e.title}</p>
-        {(ref || paymentLabel) && (
-          <p className="mt-0.5 text-xs text-muted">
-            {ref}
-            {ref && paymentLabel && " – "}
-            {paymentLabel && <Tag>{paymentLabel(e.paymentType)}</Tag>}
-          </p>
-        )}
+        {ref && <p className="mt-0.5 text-xs text-muted">{ref}</p>}
       </>
     );
   },
 });
 
-// The kind of utlägg, bought on the section card, or paid privately and to be
-// reimbursed. Sorted and searched by the label the reader sees, not the enum.
+// The kind of utlägg: bought on the section card, paid privately and to be
+// reimbursed, or driven. Sorted and searched by the label the reader sees, not
+// the enum, which is why the label still has to be passed in even though the
+// tag now looks it up itself: `value` is a plain string and runs outside React.
 export const expensePaymentTypeColumn = (
   header: string,
   paymentLabel: (type: Expense["paymentType"]) => string,
@@ -90,11 +81,14 @@ export const expensePaymentTypeColumn = (
   sortable: true,
   searchable: true,
   className: "whitespace-nowrap",
-  // Off the phone row. It is one of two values, it is on the page the row
-  // opens, and the muted line holds two or three things before it truncates,
-  // so this is the one that makes room for the date and the reference.
-  mobile: "hide",
-  cell: (e) => <Tag>{paymentLabel(e.paymentType)}</Tag>,
+  // On the phone row after all. It used to be hidden there to make room, back
+  // when it was a grey tag saying a word: three or four of those in one muted
+  // line is what crowds it, and the one that had to go was the one the reader
+  // could get by opening the row. As an icon it costs about 20px and answers
+  // the question the list is most often scanned for, so it earns the room.
+  // See PaymentTag's `compact`: the word is still there for a screen reader.
+  mobile: "meta",
+  cell: (e) => <PaymentTag type={e.paymentType} compact />,
 });
 
 // The utlägg's own reference, "DEK26-0043", the number it is known by

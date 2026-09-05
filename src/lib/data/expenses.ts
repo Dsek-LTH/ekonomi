@@ -143,6 +143,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
         ? {
             odometerStart: e.odometerStart == null ? null : Number(e.odometerStart),
             odometerEnd: e.odometerEnd == null ? null : Number(e.odometerEnd),
+            stops: e.journeyStops,
             km: journeyKm(
               e.odometerStart == null ? null : Number(e.odometerStart),
               e.odometerEnd == null ? null : Number(e.odometerEnd),

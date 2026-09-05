@@ -99,7 +99,7 @@ export async function PATCH(
   // said.
   //
   // Null on every other payment type, and *cleared* by an edit that moves off
-  // MILEAGE. The three columns describe a journey, and an utlägg that is no
+  // MILEAGE. These columns describe a journey, and an utlägg that is no
   // longer a milersättning has none. They used to be spread in only when there
   // was something to value, which left the readings and the schablon sitting on
   // a receipt claim for the rest of its life, with the timeline going on to
@@ -119,6 +119,15 @@ export async function PATCH(
         ? null
         : Number(expense.odometerEnd)
       : body.odometerEnd;
+  // Where it went, on the same terms as the readings: absent leaves it, and
+  // moving off MILEAGE empties it. The stops are not decoration on the
+  // distance. They are what says the driving was the section's errand, and
+  // `claimBlocker` refuses to send a claim naming fewer than two places.
+  //
+  // Replaced whole, never merged. The list's order is its meaning, so there is
+  // no sensible way to fold a sent list into a stored one; the client holds the
+  // editor and sends what it now reads.
+  const journeyStops = !isMileage ? [] : (body.journeyStops ?? expense.journeyStops);
 
   const valued = isMileage
     ? await valueForStorage({
@@ -218,6 +227,10 @@ export async function PATCH(
     expense.odometerEnd == null ? null : Number(expense.odometerEnd),
     odometerEnd,
   );
+  // One line for the whole list, joined, because the diff holds JSON scalars
+  // and because "the route changed" is what the timeline has to say either way.
+  // Only the field *name* reaches the reader, so what these read as never shows.
+  note("journeyStops", expense.journeyStops.join(" → "), journeyStops.join(" → "));
   note("paymentType", expense.paymentType, paymentType);
 
   const allocsChanged =
@@ -273,14 +286,15 @@ export async function PATCH(
           purchaseDate,
           grossAmount,
           paymentType,
-          // All three together, on a milersättning and only there: the
-          // readings, and the rate that valued the distance between them.
+          // The journey, on a milersättning and only there: where it went, the
+          // readings at each end, and the rate that valued the distance.
           // Written onto the claim rather than looked up when it is read, so
           // the amount stays checkable after the schablon moves, and written
           // unconditionally so that moving off MILEAGE takes them back off,
           // rather than leaving a journey on a claim that no longer has one.
           odometerStart,
           odometerEnd,
+          journeyStops,
           mileageOrePerKm: valued?.orePerKm ?? null,
           ...(dropMatch ? { matchedTransactionId: null } : {}),
         },

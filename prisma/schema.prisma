@@ -594,11 +594,47 @@ model Expense {
   // said when it was got into and what it said when it was got out of, which
   // is a fact about the world in a way "42 km" is not.
   //
-  // Null on every other payment type. One decimal because a trip meter has
-  // one and plenty of dashboards show it; whole kilometres simply arrive with
-  // a zero after the comma.
+  // The *total* odometer, the one that counts the car's whole life, not the
+  // trip meter. A trip meter is zeroed at will, so 0 → 42 on one would be the
+  // claimant asserting the distance again in two fields instead of one, which
+  // is the thing these columns exist to avoid. The total reading can be held
+  // against the car, and against this claimant's other claims on the same car,
+  // which only ever go upwards.
+  //
+  // Null on every other payment type. One decimal because some dashboards show
+  // one; whole kilometres simply arrive with a zero after the comma.
   odometerStart Decimal? @db.Decimal(9, 1)
   odometerEnd   Decimal? @db.Decimal(9, 1)
+
+  /// Every place the car stopped, in the order it stopped there.
+  ///
+  /// The odometer says how far the car went. It cannot say the going was the
+  /// section's errand, and that is the question a skattefri milersättning turns
+  /// on. Skatteverket asks a körjournal for three things this one field answers
+  /// at once: where the journey started, where it ended, and which places were
+  /// visited on the way. The first stop is the start, the last is the end, and
+  /// everything between is what was visited.
+  ///
+  /// A list rather than a `from`/`to` pair, because a real errand is rarely two
+  /// places. Kårhuset → Snabbgross → Systembolaget → hem is one journey with
+  /// four stops, and a pair would have to drop two of them or lie about which
+  /// two it kept. A round trip is simply a list whose last stop repeats its
+  /// first, so no separate flag says so.
+  ///
+  /// Not the MileageTrip table this replaced (see the August migrations). That
+  /// held a sheet of *journeys*, each with its own distance and its own amount,
+  /// which is what broke one-claim-one-attest. These are stops on a single
+  /// journey: no distance apiece, no amount apiece, one subtraction and one sum
+  /// for the whole claim, exactly as now.
+  ///
+  /// Free text. "Kårhuset, Lund" and "Snabbgross" are what people write and
+  /// what an attester can check; a postal address the app validated would be
+  /// precision nobody has.
+  ///
+  /// Empty on every other payment type, and on a half-filled draft. Two
+  /// non-blank stops are required to submit, which is `claimBlocker`'s business
+  /// (lib/mileage/claim.ts).
+  journeyStops String[] @default([])
 
   /// What a kilometre was worth on the day of the journey, in öre.
   ///

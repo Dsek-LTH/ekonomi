@@ -78,8 +78,9 @@ describe("renderCover", () => {
     const bytes = await renderCover({
       ...data,
       paymentType: "Milersättning",
-      dateLabel: "Sista resdag",
+      dateLabel: "Resdag",
       journey: {
+        route: "Kårhuset, Lund → Snabbgross → Kårhuset, Lund",
         odometerStart: "12\u00a0300,0 km",
         odometerEnd: "12\u00a0342,0 km",
         distance: "42,0 km",
@@ -89,10 +90,37 @@ describe("renderCover", () => {
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
 
+  it("fits a long multi-stop route without pushing the page over", async () => {
+    // The errand that called at two places before going home, written out with
+    // real addresses. `field` wraps, so this runs to a second line rather than
+    // off the edge; what is asserted is that it stays one page.
+    const bytes = await renderCover({
+      ...data,
+      paymentType: "Milersättning",
+      dateLabel: "Resdag",
+      journey: {
+        route:
+          "Kårhuset, Ole Römers väg 3, Lund → Snabbgross, Fältspatsvägen 4, Lund → " +
+          "Systembolaget, Mobilia, Malmö → Kårhuset, Ole Römers väg 3, Lund",
+        odometerStart: "12\u00a0300,0 km",
+        odometerEnd: "12\u00a0388,0 km",
+        distance: "88,0 km",
+        rate: "2,50 kr/km",
+      },
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
+
   it("draws a journey of dashes for a half-filled draft", async () => {
     const bytes = await renderCover({
       ...data,
-      journey: { odometerStart: "12\u00a0300,0 km", odometerEnd: "–", distance: "–", rate: "–" },
+      journey: {
+        route: "–",
+        odometerStart: "12\u00a0300,0 km",
+        odometerEnd: "–",
+        distance: "–",
+        rate: "–",
+      },
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });

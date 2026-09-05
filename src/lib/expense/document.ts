@@ -19,7 +19,7 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { expenseDocumentKey, putObject } from "@/lib/server/storage";
-import { journeyKm } from "@/lib/mileage/claim";
+import { journeyKm, namedStops } from "@/lib/mileage/claim";
 import { CoverRenderError, renderCover } from "./cover/typst";
 import type { ExpenseCoverData, ExpenseCoverJourney } from "./cover/types";
 
@@ -88,10 +88,13 @@ type ExpenseForCover = {
   purchaseDate: Date | null;
   paymentType: string;
   grossAmount: number | null;
-  /** The odometer at each end of the journey, for a milersättning. Null on
-   *  anything else, and on a half-filled draft. */
+  /** The total odometer at each end of the journey, for a milersättning. Null
+   *  on anything else, and on a half-filled draft. */
   odometerStart: number | null;
   odometerEnd: number | null;
+  /** Every place the car stopped, in order. Empty on anything but a
+   *  milersättning, and on a draft that has not said yet. */
+  journeyStops: string[];
   /** What a kilometre was worth on the day, in öre. Null where the claim was
    *  never valued, a draft saved before a rate covered its date. */
   mileageOrePerKm: number | null;
@@ -121,6 +124,11 @@ function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
   if (expense.paymentType !== "MILEAGE") return null;
   const distance = journeyKm(expense.odometerStart, expense.odometerEnd);
   return {
+    // Joined here rather than in the template, so the one decision about how a
+    // route reads is made in the file where every other wording decision is,
+    // and can be asserted on without a typesetter. The arrow is the same one the
+    // detail page draws, so the two say the journey the same way.
+    route: namedStops(expense.journeyStops).join(" → ") || DASH,
     odometerStart: expense.odometerStart == null ? DASH : km(expense.odometerStart),
     odometerEnd: expense.odometerEnd == null ? DASH : km(expense.odometerEnd),
     distance: distance == null ? DASH : km(distance),
@@ -152,10 +160,10 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
     title: expense.title,
     purchaseDate: isoDate(expense.purchaseDate),
     // What that date *is*, which is not the same question for all three types.
-    // A milersättning has no receipt, so "Kvittodatum" over the day of its last
-    // journey would be naming a document that does not exist on a page that is
+    // A milersättning has no receipt, so "Kvittodatum" over the day it was
+    // driven would be naming a document that does not exist on a page that is
     // filed as evidence.
-    dateLabel: expense.paymentType === "MILEAGE" ? "Sista resdag" : "Kvittodatum",
+    dateLabel: expense.paymentType === "MILEAGE" ? "Resdag" : "Kvittodatum",
     paymentType: PAYMENT_TYPE[expense.paymentType] ?? expense.paymentType,
     created: isoDate(today)!,
     submitter: {
@@ -200,6 +208,7 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
       grossAmount: true,
       odometerStart: true,
       odometerEnd: true,
+      journeyStops: true,
       mileageOrePerKm: true,
       submitter: { select: { name: true, studentId: true } },
       allocations: {

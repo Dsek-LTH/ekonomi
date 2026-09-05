@@ -27,6 +27,7 @@ import {
   submitBlocker,
   type SubmitBlocker,
 } from "./status";
+import { namedStops } from "@/lib/mileage/claim";
 import type { Capability, Expense, Role } from "./types";
 
 export type ExpenseCapabilities = {
@@ -83,11 +84,19 @@ export function expenseCapabilities(
     // Read off the claim rather than re-derived from the rate table, which is
     // not on this side of the wire: `km` is null until the two readings make a
     // journey, and `orePerKm` is null until one was valued, which is exactly
-    // what claimBlocker refuses on. The wording is the form's business; all
-    // that is needed here is whether something is wrong.
+    // what claimBlocker refuses on. The route is checked here too, for the same
+    // reason and against the same failure: it is the half of the underlag that
+    // says the driving was the section's errand, the transition route refuses a
+    // claim missing it, and a page that offered "Skicka in" anyway would be
+    // promising something the server will not do.
+    //
+    // The wording is the form's business; all that is needed here is whether
+    // something is wrong.
     mileageBlocker:
       expense.paymentType === "MILEAGE" &&
-      (expense.mileage?.km == null || expense.mileage?.orePerKm == null)
+      (expense.mileage?.km == null ||
+        expense.mileage?.orePerKm == null ||
+        namedStops(expense.mileage?.stops ?? []).length < 2)
         ? "incomplete"
         : null,
   });

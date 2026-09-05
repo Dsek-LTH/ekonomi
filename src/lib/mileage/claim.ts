@@ -22,14 +22,34 @@ export interface JourneyInput {
   /** ISO date. Half-typed ("2026-08") counts as missing, not as a day. */
   date: string;
   /**
-   * The odometer when the journey started and when it ended, in kilometres.
+   * The total odometer when the journey started and when it ended, in
+   * kilometres. The car's lifetime reading, not the trip meter: see the
+   * columns behind these on the Expense model.
    *
    * Null for a reading not yet given: a draft is allowed to be half-filled,
-   * and 0 is a real reading (a brand-new car, and a trip meter that was just
-   * zeroed) rather than a way of saying "blank".
+   * and 0 is a real reading (a car straight off the lot) rather than a way of
+   * saying "blank".
    */
   odometerStart: number | null;
   odometerEnd: number | null;
+  /**
+   * Every place the car stopped, in the order it stopped there, as free text.
+   *
+   * The first is where the journey began and the last is where it ended; the
+   * ones between are what was visited on the way. A round trip is a list whose
+   * last stop repeats its first, which is why nothing here flags one.
+   *
+   * May be short or blank while a draft is being filled in. Two stops that say
+   * something are required to send, because the distance alone does not say the
+   * driving was the section's errand, which is what the whole claim rests on.
+   */
+  stops: string[];
+}
+
+/** The stops that actually name a place, in order. Blank rows are what an
+ *  editor leaves behind when somebody clears one, and they are not places. */
+export function namedStops(stops: string[]): string[] {
+  return stops.map((s) => s.trim()).filter((s) => s !== "");
 }
 
 interface ValuedJourney {
@@ -59,9 +79,16 @@ export function journeyKm(start: number | null, end: number | null): number | nu
   return km > 0 ? km : null;
 }
 
-/** Value a journey: the distance, the day's rate, and what it comes to. */
+/**
+ * Value a journey: the distance, the day's rate, and what it comes to.
+ *
+ * Takes only the three fields it actually reads, rather than a whole
+ * `JourneyInput`. What a journey is worth has nothing to do with where it went,
+ * and saying so in the signature means the route valuing a claim need not hand
+ * over a route it would ignore.
+ */
 export function valueJourney(
-  journey: JourneyInput,
+  journey: Pick<JourneyInput, "date" | "odometerStart" | "odometerEnd">,
   rates: MileageRateLike[],
 ): ValuedJourney {
   const km = journeyKm(journey.odometerStart, journey.odometerEnd);
@@ -85,15 +112,22 @@ export function valueJourney(
  * already refuses a missing or future one; saying it twice would mean two
  * places to keep in step and two different sentences for one mistake.
  *
- * Ordered the way somebody fixes them: the readings, then whether they make a
- * journey, then whether the day can be priced.
+ * Ordered the way the form is filled in, so the sentence shown is about the
+ * field somebody is nearest: the stops, then the readings, then whether they
+ * make a journey, then whether the day can be priced.
+ *
+ * Two stops is the floor, not a shape: a journey that went one place and came
+ * back is written as that place twice, and one that visited four is written as
+ * four. What is refused is a claim naming one place or none, which states a
+ * distance nobody can put anywhere.
  */
-type MileageBlocker = "noReadings" | "notForward" | "noRate";
+type MileageBlocker = "noRoute" | "noReadings" | "notForward" | "noRate";
 
 export function claimBlocker(
   journey: JourneyInput,
   rates: MileageRateLike[],
 ): MileageBlocker | null {
+  if (namedStops(journey.stops).length < 2) return "noRoute";
   if (journey.odometerStart == null || journey.odometerEnd == null) return "noReadings";
   if (journeyKm(journey.odometerStart, journey.odometerEnd) == null) return "notForward";
   if (!isCompleteDate(journey.date) || !rateOn(rates, journey.date)) return "noRate";

@@ -365,7 +365,10 @@
       "purchaseDate": "Kvittodatum",
       "grossAmount": "Belopp",
       "allocations": "Kostnadsfördelning",
-      "paymentType": "Betalsätt"
+      "paymentType": "Betalsätt",
+      "odometerStart": "Mätarställning vid start",
+      "odometerEnd": "Mätarställning vid slut",
+      "journeyStops": "Resväg"
     },
     "newMenu": {
       "label": "Nytt utlägg",
@@ -386,9 +389,19 @@
     "journeyDate": "Resdag",
     "dateFuture": "Resan ligger i framtiden. Rätta datumet till dagen du körde.",
     "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan och kan inte tas emot senare. Hör av dig till skattmästaren för ytterligare hjälp",
+    "route": {
+      "label": "Resväg",
+      "hint": "Varje ställe du stannade på, i tur och ordning. Ort eller namn räcker, t.ex. \"E-huset\" och \"Snabbgross\". Kom du tillbaka dit du startade skriver du det stället sist också, annars beskriver resvägen bara halva sträckan mätaren visar.",
+      "stop": "Stopp {n}",
+      "firstPlaceholder": "Varifrån du åkte",
+      "nextPlaceholder": "Nästa ställe du stannade på",
+      "addStop": "Lägg till stopp",
+      "addReturn": "Lägg till resan tillbaka",
+      "removeStop": "Ta bort stoppet"
+    },
     "odometer": {
       "label": "Mätarställning",
-      "hint": "Vad mätaren stod på när du satte dig i bilen och när du klev ur. Sträckan är skillnaden.",
+      "hint": "Totalmätaren, alltså bilens sammanlagda körsträcka, inte trippmätaren. Vad den stod på när du satte dig i bilen och när du klev ur. Sträckan är skillnaden.",
       "start": "Vid start",
       "end": "Vid slut"
     },
@@ -408,7 +421,8 @@
     "blocker": {
       "noReadings": "Fyll i mätarställningen både före och efter resan.",
       "notForward": "Mätarställningen efter resan måste vara högre än före. Kontrollera att siffrorna står i rätt ordning.",
-      "noRate": "Det finns ingen fastställd ersättning per kilometer för resdagen. Hör av dig till skattmästaren."
+      "noRate": "Det finns ingen fastställd ersättning per kilometer för resdagen. Hör av dig till skattmästaren.",
+      "noRoute": "Fyll i minst två ställen du stannade på. Mätarställningen visar hur långt bilen gick, men inte att resan var sektionens ärende."
     },
     "rates": {
       "title": "Milersättning",

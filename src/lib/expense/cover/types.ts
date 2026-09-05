@@ -46,7 +46,12 @@ interface ExpenseCoverAllocation {
  * follows on the next page.
  */
 export interface ExpenseCoverJourney {
-  /** "12 300,0 km": the odometer when the journey began. */
+  /** The journey's stops, already joined for the page: "Kårhuset, Lund →
+   *  Snabbgross → Kårhuset, Lund", or a dash on a draft that has not said yet.
+   *  Without it the page states a distance nobody can place, which is the one
+   *  thing Skatteverket asks of a milersättning's underlag. */
+  route: string;
+  /** "12 300,0 km": the total odometer when the journey began. */
   odometerStart: string;
   odometerEnd: string;
   /** "42,0 km": the difference, which is the distance claimed. */
@@ -63,8 +68,10 @@ export interface ExpenseCoverData {
   purchaseDate: string | null;
   /**
    * What to call that date. "Kvittodatum" for an utlägg with a receipt behind
-   * it, "Sista resdag" for a milersättning, which has no receipt and whose date
-   * is the day of its last journey. See lib/expense/document.ts.
+   * it, "Resdag" for a milersättning, which has no receipt and whose date is
+   * the day it was driven. It read "Sista resdag" from when a claim held a
+   * sheet of journeys; one claim is one journey, so there is no last one to
+   * distinguish. See lib/expense/document.ts.
    */
   dateLabel: string;
   /** "Privat utlägg" / "Sektionskort", already worded. */

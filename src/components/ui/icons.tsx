@@ -58,6 +58,21 @@ export const IconCard = (p: P) => (
   </Svg>
 );
 
+// Eget utlägg: one person, whose own money it was.
+//
+// A wallet and a banknote were both tried first and both are a rounded
+// rectangle, which at 18px is the card above with the details rubbed off. That
+// is the wrong failure: the icon is what carries this when the colour cannot
+// (a printed page, a reader who sees no hue), so its silhouette has to differ
+// from the other two before its detail does. A head and shoulders, a
+// rectangle and a car share no outline at any size.
+export const IconPerson = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M5 20a7 7 0 0 1 14 0" />
+  </Svg>
+);
+
 // Milersättning, the settings screen for it, and nothing else so far. A car
 // from the side: the bonnet line, the body, and the two wheels sitting on it.
 export const IconCar = (p: P) => (
@@ -399,8 +414,8 @@ export const IconMoon = (p: P) => (
   </Svg>
 );
 
-// A second figure standing behind the first: a list of people rather than one
-// person.
+// A second figure standing behind the first: a list of people, where
+// IconPerson is one of them.
 export const IconUsers = (p: P) => (
   <Svg {...p}>
     <circle cx="9.5" cy="8" r="3.4" />

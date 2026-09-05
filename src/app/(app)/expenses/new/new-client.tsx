@@ -33,6 +33,7 @@ import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable, matchCandidates } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
+import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
 import { MatchStep } from "./match-step";
 import { optionCard, StepFooter } from "./step-chrome";
 import { useFormat } from "@/lib/ui/use-format";
@@ -693,8 +694,14 @@ export default function NewExpenseClient({
                     onClick={() => patchDraft("paymentType", pt)}
                     className={optionCard(paymentType === pt)}
                   >
-                    <span className="block text-sm font-medium">
-                      {tPayment(`${pt}.label`)}
+                    {/* The icon in its own colour, which is the same mark
+                        the list will show this claim with afterwards. Learning
+                        it here is the point: choosing is the one moment the
+                        three are side by side with their meanings spelled
+                        out. */}
+                    <span className="flex items-center gap-2">
+                      <PaymentIcon type={pt} className="size-4 shrink-0" />
+                      <span className="text-sm font-medium">{tPayment(`${pt}.label`)}</span>
                     </span>
                     <span className="mt-0.5 block text-xs text-muted">
                       {tPayment(`${pt}.description`)}
@@ -750,7 +757,7 @@ export default function NewExpenseClient({
                   value={<>{a.costCenterCode} – <Amount value={signedAllocations[i].value} signed /></>}
                 />
               ))}
-              <DetailRow label={t("paymentType")} value={tPayment(`${paymentType}.label`)} />
+              <DetailRow label={t("paymentType")} value={<PaymentTag type={paymentType} />} />
               {paymentType === "CARD" ? (
                 <DetailRow
                   label={t("match")}

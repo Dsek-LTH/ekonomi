@@ -31,6 +31,7 @@ import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
+import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
 import { wizardChrome } from "../wizard-chrome";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -39,7 +40,8 @@ import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { Stepper } from "@/components/ui/stepper";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { Amount } from "@/components/ui/amount";
-import { IconCheck } from "@/components/ui/icons";
+import { IconCheck, IconX } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/icon-button";
 import { AllocationEditor, makeRow, type AllocationRow } from "@/components/allocation-editor";
 import {
   REIMBURSEMENT_DEADLINE_DAYS,
@@ -49,7 +51,7 @@ import {
 } from "@/lib/domain/status";
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
 import { commaForm, oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
-import { claimBlocker, valueJourney } from "@/lib/mileage/claim";
+import { claimBlocker, namedStops, valueJourney } from "@/lib/mileage/claim";
 import type { MileageRateLike } from "@/lib/mileage/rate";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import type { CostCenter, Expense } from "@/lib/domain/types";
@@ -61,9 +63,8 @@ import { useSelectOnce } from "@/lib/ui/use-select-once";
  * fields are: "12 300," is something somebody is in the middle of typing, and a
  * number input would either refuse it or silently make it 12300.
  *
- * Null rather than 0 for "nothing typed yet". 0 is a real reading (a trip
- * meter just zeroed, a car straight off the lot), so the two must not collapse
- * into the same value.
+ * Null rather than 0 for "nothing typed yet". 0 is a real reading (a car
+ * straight off the lot), so the two must not collapse into the same value.
  */
 const readOdometer = (text: string): number | null => {
   const cleaned = text.replace(/\s/g, "").replace(",", ".");
@@ -81,6 +82,11 @@ const isOdometerInput = (text: string): boolean => /^\d{0,7}([.,]\d?)?$/.test(te
  *  Swedish reader would have typed it with. */
 const showOdometer = (km: number | null | undefined): string =>
   km == null ? "" : String(km).replace(".", ",");
+
+/** As many stops as the API will take (PatchExpense.journeyStops). Far past any
+ *  errand; the cap is there so a claim cannot carry an unbounded list onto a
+ *  typeset page. */
+const MAX_STOPS = 20;
 
 export default function MileageClient({
   costCenters,
@@ -119,6 +125,21 @@ export default function MileageClient({
     showOdometer(existing?.mileage?.odometerStart),
   );
   const [endText, setEndText] = useState(() => showOdometer(existing?.mileage?.odometerEnd));
+  /**
+   * Every place the car stopped, in order.
+   *
+   * Two empty rows to start with, because two is the fewest a journey can have
+   * and an editor that opened with one would be asking for a route by showing
+   * half of one. A claim that went somewhere and came back is that place typed
+   * twice; one that called at three is three rows.
+   *
+   * Plain strings keyed by index rather than rows with ids, unlike the
+   * allocation editor: nothing here is focused after the fact, and the order is
+   * the whole meaning, so an id would be a handle nothing reaches for.
+   */
+  const [stops, setStops] = useState<string[]>(() =>
+    existing?.mileage?.stops.length ? existing.mileage.stops : ["", ""],
+  );
   // Unpicked to start with, exactly as the ordinary wizard's is: choosing a
   // cost centre is the claimant's call, and defaulting to whichever sorts first
   // is how a wrong one goes through unnoticed.
@@ -144,6 +165,7 @@ export default function MileageClient({
     date: journeyDate,
     odometerStart: readOdometer(startText),
     odometerEnd: readOdometer(endText),
+    stops,
   };
 
   // What the journey comes to, worked out here with the same function the
@@ -240,6 +262,7 @@ export default function MileageClient({
       purchaseDate: journeyDate || null,
       odometerStart: journey.odometerStart,
       odometerEnd: journey.odometerEnd,
+      journeyStops: stops,
       allocations: allocations.map((a) => ({
         costCenterCode: a.costCenterCode,
         amount: parseOre(a.amount),
@@ -382,6 +405,82 @@ export default function MileageClient({
               />
             </Field>
 
+            {/* Where the journey went, above the readings because that is the
+                order it is remembered in, and because it is the half that makes
+                the other half mean anything. Two readings prove a car moved;
+                only the route says the moving was the section's errand, which
+                is what the claim is asking to be paid for. Skatteverket asks
+                for both, and `claimBlocker` refuses to send one without the
+                other.
+
+                A list rather than a "from" and a "to": an errand that called at
+                the wholesaler and then the Systembolaget before going home is
+                one journey with four stops, and a pair of fields would have to
+                drop two of them. Coming back is that first place typed again at
+                the end, which is also what makes a 42 km reading agree with a
+                shop 21 km away. */}
+            <FieldGroup label={t("route.label")} hint={t("route.hint")} requirement="required">
+              <div className="space-y-2">
+                {stops.map((stop, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    {/* Numbered rather than labelled "Från" and "Till": with a
+                        variable number of rows only the first and last would
+                        have a name, and the ones between are the point. */}
+                    <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted">
+                      {i + 1}
+                    </span>
+                    <Input
+                      value={stop}
+                      aria-label={t("route.stop", { n: i + 1 })}
+                      placeholder={
+                        i === 0
+                          ? t("route.firstPlaceholder")
+                          : t("route.nextPlaceholder")
+                      }
+                      onChange={(e) =>
+                        setStops(stops.map((s, j) => (j === i ? e.target.value : s)))
+                      }
+                    />
+                    <IconButton
+                      tone="danger"
+                      label={t("route.removeStop")}
+                      // Two is the fewest a journey can have, so the last pair
+                      // stays put. Emptying a row is still how you clear one.
+                      disabled={stops.length <= 2}
+                      onClick={() => setStops(stops.filter((_, j) => j !== i))}
+                    >
+                      <IconX className="size-4" />
+                    </IconButton>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStops([...stops, ""])}
+                  disabled={stops.length >= MAX_STOPS}
+                  className="text-sm font-medium text-accent hover:underline disabled:opacity-40"
+                >
+                  {t("route.addStop")}
+                </button>
+                {/* The common shape, in one press. Nearly every errand ends where
+                    it began, and typing "Kårhuset, Lund" a second time is the
+                    kind of retyping people skip, leaving a route that describes
+                    half the distance the readings record. */}
+                {stops.length < MAX_STOPS &&
+                  stops[0].trim() !== "" &&
+                  stops[stops.length - 1].trim() !== stops[0].trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setStops([...stops, stops[0]])}
+                      className="text-sm font-medium text-accent hover:underline"
+                    >
+                      {t("route.addReturn")}
+                    </button>
+                  )}
+              </div>
+            </FieldGroup>
+
             {/* The two readings, side by side because they are one measurement
                 taken twice, and in the order they happen, so filling them in
                 reads like the journey did. */}
@@ -423,9 +522,14 @@ export default function MileageClient({
                 forms look like different features rather than one question
                 answered three ways. The other two are a link back. */}
             <FieldGroup label={tWizard("paymentType")}>
-              <div className="rounded-xl border border-accent bg-accent-soft px-4 py-3">
-                <span className="block text-sm font-medium">
-                  {tPayment("MILEAGE.label")}
+              {/* In milersättning's own colour rather than the accent, which
+                  here would mean "selected" and there is nothing to select.
+                  The same mark and hue this claim will carry in every list it
+                  appears in afterwards; see components/ui/payment-tag.tsx. */}
+              <div className="rounded-xl border border-pay-mileage/30 bg-pay-mileage-soft px-4 py-3">
+                <span className="flex items-center gap-2">
+                  <PaymentIcon type="MILEAGE" className="size-4 shrink-0" />
+                  <span className="text-sm font-medium">{tPayment("MILEAGE.label")}</span>
                 </span>
                 <span className="mt-0.5 block text-xs text-muted">
                   {tPayment("MILEAGE.description")}
@@ -486,6 +590,10 @@ export default function MileageClient({
                 label={t("journeyDate")}
                 value={journeyDate ? date(journeyDate) : "–"}
               />
+              <DetailRow
+                label={t("route.label")}
+                value={namedStops(stops).join(" → ") || "–"}
+              />
               {/* The readings as well as the distance: the review step is the
                   last look before this becomes somebody else's to check, and
                   what they will be checking is these two numbers. */}
@@ -509,7 +617,7 @@ export default function MileageClient({
                   }
                 />
               ))}
-              <DetailRow label={tWizard("paymentType")} value={tPayment("MILEAGE.label")} />
+              <DetailRow label={tWizard("paymentType")} value={<PaymentTag type="MILEAGE" />} />
               <DetailRow
                 label={tWizard("payoutTo")}
                 value={

@@ -473,9 +473,12 @@ export async function POST(
     //
     // A milersättning has no underlag to upload: nobody photographs driving
     // their own car, and the journey it rests on is typeset onto the
-    // utläggsräkning from the odometer readings. So what is required of it is
-    // that the two readings are there and describe a journey that can be priced, the same answer the form was showing while
-    // it was being filled in, asked again here where it is actually enforced.
+    // utläggsräkning instead. So the journey *is* the underlag, and what is
+    // required of it is what Skatteverket asks of one: where it went, and how
+    // far, at a rate the day can be priced at. The readings give the distance,
+    // the stops give the errand, and neither on its own is evidence of a
+    // tjänsteresa. The same answer the form was showing while it was being
+    // filled in, asked again here where it is actually enforced.
     // See lib/mileage/claim.ts.
     if (expense.paymentType === "MILEAGE") {
       const blocker = claimBlocker(
@@ -486,6 +489,7 @@ export async function POST(
           odometerStart:
             expense.odometerStart == null ? null : Number(expense.odometerStart),
           odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+          stops: expense.journeyStops,
         },
         await getMileageRates(),
       );
