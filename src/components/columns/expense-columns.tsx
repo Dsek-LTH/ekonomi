@@ -132,6 +132,12 @@ export const expenseStatusColumn = (header: string): Column<Expense> => ({
   // shape you read at a glance, which is worth the right-hand column and is
   // wasted in a row of dot-separated text.
   mobile: "trailing",
+  // Under the amount, not over it. Both sit in the right-hand column on a
+  // phone, and the figure is what somebody is running their eye down a list of
+  // utlägg for; the status is what they check once one has stopped them. The
+  // order used to fall out of where these two columns happen to sit on the
+  // desktop table, which is not a decision anybody made about the card.
+  mobileOrder: 1,
   cell: (e) => <StatusPill status={e.status} />,
 });
 

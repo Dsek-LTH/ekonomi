@@ -140,6 +140,18 @@ export interface Column<T> {
   // applied there, because it carries table geometry (`w-44`, `text-right`) that
   // means nothing in a card, so the card styles each slot itself.
   mobile?: MobileSlot;
+  /**
+   * Where this column sits among the others in its phone slot. Lower first,
+   * unset is 0, and equal values keep the order the columns are declared in.
+   *
+   * Only needed where a slot holds more than one column, which today is the
+   * utlägg list's `trailing`: the amount and the status stack there, and the
+   * amount reads first because it is the figure somebody is scanning a list of
+   * money for. Without this that order was whatever the *table's* column order
+   * happened to be, so moving a column on the desktop table silently reordered
+   * the phone card.
+   */
+  mobileOrder?: number;
 }
 
 //   title    – the row's headline, on the left. Its header is not shown.
@@ -185,11 +197,17 @@ type MobileGroups<T> = {
 function mobileSlots<T>(cols: Column<T>[]): MobileGroups<T> {
   const visible = cols.filter((c) => c.mobile !== "hide");
   const title = visible.find((c) => c.mobile === "title") ?? visible[0];
+  // Sort is stable, so a slot where nobody has an opinion keeps the order the
+  // columns were declared in, which is what every slot but one relies on.
+  const inSlot = (slot: MobileSlot) =>
+    visible
+      .filter((c) => c !== title && (c.mobile ?? "meta") === slot)
+      .sort((a, b) => (a.mobileOrder ?? 0) - (b.mobileOrder ?? 0));
   return {
     title,
-    trailing: visible.filter((c) => c.mobile === "trailing"),
-    meta: visible.filter((c) => c !== title && (c.mobile ?? "meta") === "meta"),
-    actions: visible.filter((c) => c.mobile === "actions"),
+    trailing: inSlot("trailing"),
+    meta: inSlot("meta"),
+    actions: inSlot("actions"),
   };
 }
 
@@ -737,8 +755,23 @@ function MobileRow<T>({
           // A flex row because a block child inside ordinary inline flow starts
           // a line of its own, which would quietly turn this one-line summary
           // into two or three. As flex items they stay on the row whatever they
-          // are, and what does not fit is clipped, which is what the row opens
-          // to show.
+          // are.
+          //
+          // Wrapping, though, which it did not do. It was one line, every item
+          // `shrink-0` but the last, and whatever ran past the edge was cut off
+          // by the `overflow-hidden` below: no ellipsis, because the clip is on
+          // the box and not on the text, so the last item or two simply were not
+          // there. On an utlägg that is a reference, a date, a payment type and
+          // a submitter against about 220px of phone, and two of the four were
+          // gone with nothing to say so. The design leaned on the row opening to
+          // show the rest, and a list that passes no `expansion` has no such
+          // thing to open.
+          //
+          // A second line costs a few pixels of row and is the only version of
+          // this that does not hide data. The row is already `min-h-16` rather
+          // than a fixed height for the same reason: a headline that wraps takes
+          // the room.
+          //
           // `gap-x-1` as well as the dots: a single cell may itself render two
           // blocks (a card holder's name over its last four digits), and as
           // flex items those would meet with nothing between them.
@@ -753,19 +786,27 @@ function MobileRow<T>({
           // the app scrolled sideways on a phone as soon as one row had enough
           // metadata to overflow. Making this the containing block puts them
           // back inside the box that clips them.
-          <div className="relative mt-0.5 flex min-w-0 items-center gap-x-1 overflow-hidden text-xs text-muted">
+          <div className="relative mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-xs text-muted">
             {meta.map(([c, node], i) => (
-              <Fragment key={c.key}>
+              // The separator lives inside the item it precedes rather than
+              // beside it, so a wrap can never leave a dash stranded at the
+              // start of a line with nothing before it.
+              //
+              // `shrink` and `truncate`, not `shrink-0`: with room on the next
+              // line an item wraps rather than shrinking, and where there is no
+              // next line to take (one value longer than the whole row) it
+              // ellipsises instead of being cut mid-letter by the box.
+              <span key={c.key} className="flex min-w-0 shrink items-center gap-x-1">
                 {i > 0 && (
-                  <span aria-hidden className="mx-0.5 shrink-0 text-muted/50">
+                  <span aria-hidden className="shrink-0 text-muted/50">
                     –
                   </span>
                 )}
-                <span className="min-w-0 shrink-0 truncate last:shrink">
+                <span className="min-w-0 truncate">
                   <span className="sr-only">{c.header}: </span>
                   {node}
                 </span>
-              </Fragment>
+              </span>
             ))}
           </div>
         )}

@@ -83,11 +83,37 @@ export function ProfileClient({
             <p className="mt-1 text-sm text-muted">{tProfile("payoutDescription")}</p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
+            {/* Named, and told outright that they are not credentials.
+                Unnamed, these are two text fields over a Save button, which is
+                the shape of a login form, and a password manager offering to
+                put a username in Kontonummer is what that guess looks like.
+                `autoComplete="off"` is the standard half; managers routinely
+                ignore it, so 1Password's own opt-out says it again in the one
+                language it does read. If another manager starts guessing here,
+                it will have an attribute of its own to add beside this one.
+
+                No `inputMode="numeric"`: the format asked for carries a hyphen
+                and spaces (see the placeholders), and a digits-only keypad on a
+                phone has no way to type either. */}
             <Field label={tProfile("clearing")}>
-              <Input value={clearing} placeholder={tProfile("clearingPlaceholder")} onChange={(e) => setClearing(e.target.value)} />
+              <Input
+                name="bank-clearing"
+                autoComplete="off"
+                data-1p-ignore
+                value={clearing}
+                placeholder={tProfile("clearingPlaceholder")}
+                onChange={(e) => setClearing(e.target.value)}
+              />
             </Field>
             <Field label={tProfile("account")}>
-              <Input value={account} placeholder={tProfile("accountPlaceholder")} onChange={(e) => setAccount(e.target.value)} />
+              <Input
+                name="bank-account"
+                autoComplete="off"
+                data-1p-ignore
+                value={account}
+                placeholder={tProfile("accountPlaceholder")}
+                onChange={(e) => setAccount(e.target.value)}
+              />
             </Field>
           </div>
 
