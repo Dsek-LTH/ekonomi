@@ -23,11 +23,11 @@ import type { DrinkCategory } from "@/lib/domain/types";
 import type { StockStats } from "@/lib/data/stock-stats";
 import { DRINK_SERIES } from "@/lib/ui/chart-colors";
 import { cn } from "@/lib/ui/utils";
+import { formatOreKr } from "@/lib/ui/format";
 
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
-const litres = (l: number) =>
-  new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 }).format(l);
+/** Already litres, not millilitres: these come out of the stats query summed. */
+const formatLitreCount = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 }).format;
+
 
 export default function StockStatsClient({
   stats,
@@ -123,12 +123,12 @@ export default function StockStatsClient({
   const flow = stats.flow;
 
   const tiles = [
-    { key: "purchased", value: kr(flow.purchasedOre), tone: "" },
-    { key: "consumed", value: kr(-flow.consumedOre), tone: "text-muted" },
-    { key: "wasted", value: kr(-flow.wastedOre), tone: flow.wastedOre > 0 ? "text-warning" : "" },
+    { key: "purchased", value: formatOreKr(flow.purchasedOre), tone: "" },
+    { key: "consumed", value: formatOreKr(-flow.consumedOre), tone: "text-muted" },
+    { key: "wasted", value: formatOreKr(-flow.wastedOre), tone: flow.wastedOre > 0 ? "text-warning" : "" },
     {
       key: "counted",
-      value: kr(flow.countedOre),
+      value: formatOreKr(flow.countedOre),
       tone: flow.countedOre < 0 ? "text-warning" : "",
     },
   ];
@@ -206,8 +206,8 @@ export default function StockStatsClient({
             title={t("stats.valueTitle")}
             subtitle={
               narrowed
-                ? t("stats.valueOfWhole", { shown: kr(shown), whole: kr(stats.wholeShelfOre) })
-                : t("stats.valueNow", { value: kr(shown) })
+                ? t("stats.valueOfWhole", { shown: formatOreKr(shown), whole: formatOreKr(stats.wholeShelfOre) })
+                : t("stats.valueNow", { value: formatOreKr(shown) })
             }
             action={
               filtering ? (
@@ -273,10 +273,10 @@ export default function StockStatsClient({
                     </span>
                     <span className="ml-auto flex shrink-0 items-baseline gap-3">
                       <span className="w-20 text-right tabular-nums text-muted">
-                        {h.litres == null ? "–" : t("litres", { litres: litres(h.litres) })}
+                        {h.litres == null ? "–" : t("litres", { litres: formatLitreCount(h.litres) })}
                       </span>
                       <span className="w-24 text-right font-medium tabular-nums">
-                        {kr(h.valueOre)}
+                        {formatOreKr(h.valueOre)}
                       </span>
                       <span className="w-10 text-right text-xs tabular-nums text-muted">
                         {share.toFixed(0)} %
@@ -312,9 +312,9 @@ export default function StockStatsClient({
                     {m.name}
                   </Link>
                   <span className="ml-auto flex shrink-0 items-baseline gap-3">
-                    <span className="w-24 text-right tabular-nums text-muted">{kr(m.outOre)}</span>
+                    <span className="w-24 text-right tabular-nums text-muted">{formatOreKr(m.outOre)}</span>
                     <span className="w-24 text-right font-medium tabular-nums">
-                      {kr(m.valueOre)}
+                      {formatOreKr(m.valueOre)}
                     </span>
                   </span>
                 </div>

@@ -7,6 +7,8 @@
 // the utfall charts needed the same two answers, because the interesting part
 // of each is a decision rather than a calculation, and a decision copied is a
 // decision that gets made differently the second time.
+import { useRef, useState } from "react";
+
 import { usePhone } from "./media";
 
 export interface ChartGeometry {
@@ -31,14 +33,14 @@ export interface ChartGeometry {
  * The numbers are otherwise chosen so a hairline is a hairline at the width
  * each renders at, and the left pad is what the widest tick figure needs.
  */
-export const WIDE_GEOMETRY: ChartGeometry = {
+const WIDE_GEOMETRY: ChartGeometry = {
   W: 960,
   H: 300,
   PAD: { top: 12, right: 12, bottom: 26, left: 62 },
   labels: 5,
 };
 
-export const NARROW_GEOMETRY: ChartGeometry = {
+const NARROW_GEOMETRY: ChartGeometry = {
   W: 320,
   H: 220,
   PAD: { top: 10, right: 6, bottom: 22, left: 50 },
@@ -134,4 +136,60 @@ export function labelPositions(count: number, wanted: number): number[] {
   const n = Math.min(wanted, count);
   const step = last / (n - 1);
   return [...new Set(Array.from({ length: n }, (_, i) => Math.round(i * step)))];
+}
+
+/**
+ * A value's y coordinate, on an axis running `lo` to `hi`.
+ *
+ * The one line every chart here needs and each had written out:
+ * `PAD.top + plot.h - ((v - lo) / (hi - lo)) * plot.h`. Three copies, and the
+ * fourth had the one-sided form (`lo` fixed at 0) spelled differently again.
+ *
+ * `hi === lo` cannot happen with a ladder from `axisTicks`, which always spans
+ * at least one step, but a caller passing its own bounds could; the guard puts
+ * the line on the floor rather than returning NaN and drawing nothing.
+ */
+export function linearScale(
+  lo: number,
+  hi: number,
+  g: ChartGeometry,
+): (value: number) => number {
+  const plot = plotOf(g);
+  const span = hi - lo;
+  return (value) => g.PAD.top + plot.h - (span === 0 ? 0 : ((value - lo) / span) * plot.h);
+}
+
+/**
+ * Which point or band the pointer is over, and a ref for the svg it is over.
+ *
+ * Written twice: once in the utfall charts as `useTracker`, once inside the
+ * stock value chart as a bare `track` handler with its own `useState`. The two
+ * differ in exactly one thing, and it is not incidental, so it is the argument:
+ *
+ *   "band"   a bar chart. The pointer is inside a column, so the index is
+ *            floored and the readout follows the column rather than the nearest
+ *            gridline.
+ *   "point"  a line or area chart. The value lives *at* a position, so the
+ *            index is the nearest one and the readout snaps to it.
+ */
+export function usePointerIndex(
+  count: number,
+  g: ChartGeometry,
+  mode: "band" | "point" = "band",
+) {
+  const ref = useRef<SVGSVGElement>(null);
+  const [at, setAt] = useState<number | null>(null);
+  const plot = plotOf(g);
+
+  function track(e: React.PointerEvent<SVGSVGElement>) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect || count === 0) return;
+    // Into the drawing's own units, which are not the pixels it is rendered at.
+    const local = ((e.clientX - rect.left) / rect.width) * g.W;
+    const ratio = (local - g.PAD.left) / plot.w;
+    const i = mode === "band" ? Math.floor(ratio * count) : Math.round(ratio * (count - 1));
+    setAt(Math.min(count - 1, Math.max(0, i)));
+  }
+
+  return { ref, at, track, clear: () => setAt(null) };
 }

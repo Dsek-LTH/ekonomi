@@ -57,15 +57,19 @@ export default function BookkeepingClient({
   async function doExport(expense: Expense) {
     const id = expense.id;
     const name = expenseLabel(expense);
-    const data = await mutate(`/api/expenses/${id}/export`, {
+    const data = await mutate<{
+      label: string;
+      attachWarning: string | null;
+      coverWarning: string | null;
+    }>(`/api/expenses/${id}/export`, {
       key: id,
       error: t("exportFailed", { id: name }),
     });
     if (!data) return;
-    const done = t("exportDone", { id: name, label: String(data.label) });
+    const done = t("exportDone", { id: name, label: data.label });
     // The warning describes itself, so it's passed through verbatim.
     if (data.attachWarning) {
-      notify.info(`${done}. ${tExpense("export.attachWarning", { detail: String(data.attachWarning) })}`);
+      notify.info(`${done}. ${tExpense("export.attachWarning", { detail: data.attachWarning })}`);
     }
     else notify.success(`${done}.`);
   }

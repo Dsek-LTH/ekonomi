@@ -352,25 +352,27 @@ export function AppShell({
   // `transition-transform` is not both, it is whichever Tailwind emitted last.
   //
   // These all track the panel's width, so they open on the same things it does
-  // and on nothing else. See the aside for why the keyboard's one is
-  // `:focus-visible` rather than `:focus-within`.
+  // and on nothing else, which is what the `nav-open` variant is: one place
+  // that says what "open" means, instead of `md:group-hover:X` and
+  // `md:group-has-[:focus-visible]:X` written out beside every value. See
+  // globals.css.
   const labelFade = pinned
     ? ""
-    : "md:opacity-0 md:group-hover:opacity-100 md:group-has-[:focus-visible]:opacity-100";
+    : "md:opacity-0 md:nav-open:opacity-100";
 
   // A group heading is a word, and a word in a 64px rail is nothing but noise,
   // so on the rail the headings become the rules they would have been sitting
   // above, and swap back to their labels as the panel opens.
   const groupRule = pinned
     ? "opacity-0"
-    : "opacity-0 transition-opacity md:opacity-100 md:group-hover:opacity-0 md:group-has-[:focus-visible]:opacity-0";
+    : "opacity-0 transition-opacity md:opacity-100 md:nav-open:opacity-0";
 
   // Sits in the header row past the rail's edge, so while collapsed it is both
   // invisible and out of reach rather than an invisible click target hanging
   // over the intäkter list.
   const pinButton = pinned
     ? "transition-opacity"
-    : "pointer-events-none opacity-0 transition-opacity md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-has-[:focus-visible]:pointer-events-auto md:group-has-[:focus-visible]:opacity-100";
+    : "pointer-events-none opacity-0 transition-opacity md:nav-open:pointer-events-auto md:nav-open:opacity-100";
 
   // The quick switches at the foot. Unlike a label, these are rows of their own,
   // so fading them would leave the rail with 80px of blank footer above the
@@ -380,7 +382,7 @@ export function AppShell({
   // be re-measured every time a switch changes size.
   const switchReveal = pinned
     ? "grid-rows-[1fr]"
-    : "md:grid-rows-[0fr] md:group-hover:grid-rows-[1fr] md:group-has-[:focus-visible]:grid-rows-[1fr]";
+    : "md:grid-rows-[0fr] md:nav-open:grid-rows-[1fr]";
 
   // The Fortnox box at the foot: a 36px square on the rail, holding nothing but
   // the mark, that opens into a full-width button with its label inside it. A
@@ -395,8 +397,7 @@ export function AppShell({
     ? "w-[calc(100%-4px)]"
     : cn(
         "w-[calc(100%-4px)] md:w-9",
-        "md:group-hover:w-[calc(100%-4px)]",
-        "md:group-has-[:focus-visible]:w-[calc(100%-4px)]",
+        "md:nav-open:w-[calc(100%-4px)]",
       );
 
   // And its dot travels with the width: badged on the corner of the square
@@ -409,8 +410,7 @@ export function AppShell({
     : cn(
         "top-1/2 right-[15px]",
         "md:top-0 md:right-0",
-        "md:group-hover:top-1/2 md:group-hover:right-[15px]",
-        "md:group-has-[:focus-visible]:top-1/2 md:group-has-[:focus-visible]:right-[15px]",
+        "md:nav-open:top-1/2 md:nav-open:right-[15px]",
       );
 
   // Exactly one row is lit, and it is the section that owns this page rather
@@ -551,20 +551,13 @@ export function AppShell({
                   // always on screen as the rail, and opening is a width.
                   "-translate-x-full shadow-[var(--shadow-card)]",
                   "md:w-16 md:translate-x-0 md:shadow-none",
-                  // The hover reveal, and the keyboard's way in: tabbing to a
-                  // link whose label is still clipped would otherwise walk the
-                  // reader through a menu they cannot read.
-                  //
-                  // `:focus-visible`, not `:focus-within`. Clicking a link
-                  // focuses it, and focus does not end when the pointer leaves,
-                  // so with `focus-within` the panel stayed open after every
-                  // click on it, until something else was clicked. Which is the
-                  // one interaction it gets most: pick a section, move away,
-                  // and the menu follows you out over the page. `:focus-visible`
-                  // is only set when the focus came from the keyboard, which is
-                  // exactly the case this is here for.
-                  "md:group-hover:w-64 md:group-hover:shadow-xl",
-                  "md:group-has-[:focus-visible]:w-64 md:group-has-[:focus-visible]:shadow-xl",
+                  // The reveal itself: the panel's width is what every other
+                  // `nav-open` class below tracks. Hover, and the keyboard's
+                  // way in, because tabbing to a link whose label is still
+                  // clipped would otherwise walk the reader through a menu they
+                  // cannot read. See the `nav-open` variant in globals.css for
+                  // why it is `:focus-visible` and not `:focus-within`.
+                  "md:nav-open:w-64 md:nav-open:shadow-xl",
                 ),
           )}
         >

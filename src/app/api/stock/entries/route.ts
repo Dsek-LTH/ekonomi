@@ -13,7 +13,7 @@ import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { entryFault, type ProposedEntry } from "@/lib/stock/entry";
 import { LEVELS, isLevel, pickFault, shortfall, type OpenBottles } from "@/lib/stock/levels";
 import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock/event";
-import { onHand } from "@/lib/stock/onhand";
+import { heldOnHand, openColumns, openOf } from "@/lib/server/stock-state";
 import { bestBeforeOf } from "@/lib/stock/expiry";
 import { costBasis, valueDelta } from "@/lib/stock/value";
 import { replayProduct } from "@/lib/server/stock-replay";
@@ -66,31 +66,9 @@ export async function POST(req: Request) {
   if (!product) return fail(404, "stock.productNotFound");
 
   // What the log already says this product holds. Needed twice below: to turn a
-  // weighing into a movement, and to price whatever is leaving.
-  const sums = await prisma.stockEntry.aggregate({
-    where: { productId: product.id },
-    _sum: {
-      units: true,
-      open80: true,
-      open60: true,
-      open40: true,
-      open20: true,
-      valueDeltaOre: true,
-    },
-  });
-  const held = onHand(product, [
-    {
-      kind: "COUNT",
-      units: sums._sum.units ?? 0,
-      open: {
-        80: sums._sum.open80 ?? 0,
-        60: sums._sum.open60 ?? 0,
-        40: sums._sum.open40 ?? 0,
-        20: sums._sum.open20 ?? 0,
-      },
-      valueDeltaOre: sums._sum.valueDeltaOre ?? 0,
-    },
-  ]);
+  // weighing into a movement, and to price whatever is leaving, which is what
+  // `withValue` is for.
+  const held = await heldOnHand(prisma, product, { withValue: true });
 
   // ── The bottles ──
   //
@@ -123,40 +101,40 @@ export async function POST(req: Request) {
       })),
     ].filter((w) => product.kind === "VOLUME" || w.level === 0);
 
+    // Two statements rather than ten. A stocktake of a VOLUME product is five
+    // rungs, each of which was its own entry insert followed by its own change
+    // insert, in sequence, inside the transaction.
     const made = await bulkTransaction(async (tx) => {
-      const ids: string[] = [];
-      for (const w of wanted) {
-        const row = await tx.stockEntry.create({
-          data: {
-            productId: product.id,
-            kind: "COUNT",
-            level: w.level,
-            countedQty: w.qty,
-            // What the product costs today, kept on the row. A stocktake that
-            // finds stock the log had lost is worth what that stock cost, and
-            // that has to stay what it was when a price is corrected later.
-            unitCostOre: product.costPriceOre,
-            occurredAt: new Date(body.occurredAt),
-            actorId: g.actor.id,
-            note: body.note ?? null,
-          },
-          select: { id: true },
-        });
-        ids.push(row.id);
-        await tx.stockChange.create({
-          data: {
-            entryId: row.id,
-            productId: product.id,
-            action: "CREATE",
-            kind: "COUNT",
-            level: w.level,
-            toQty: w.qty,
-            actorId: g.actor.id,
-          },
-        });
-      }
+      const rows = await tx.stockEntry.createManyAndReturn({
+        data: wanted.map((w) => ({
+          productId: product.id,
+          kind: "COUNT" as const,
+          level: w.level,
+          countedQty: w.qty,
+          // What the product costs today, kept on the row. A stocktake that
+          // finds stock the log had lost is worth what that stock cost, and
+          // that has to stay what it was when a price is corrected later.
+          unitCostOre: product.costPriceOre,
+          occurredAt: new Date(body.occurredAt),
+          actorId: g.actor.id,
+          note: body.note ?? null,
+        })),
+        select: { id: true },
+      });
+      // In the order given, which is what pairs each row with its rung.
+      await tx.stockChange.createMany({
+        data: rows.map((row, i) => ({
+          entryId: row.id,
+          productId: product.id,
+          action: "CREATE" as const,
+          kind: "COUNT" as const,
+          level: wanted[i].level,
+          toQty: wanted[i].qty,
+          actorId: g.actor.id,
+        })),
+      });
       await replayProduct(tx, product.id);
-      return ids;
+      return rows.map((r) => r.id);
     });
     return NextResponse.json({ id: made[0] }, { status: 201 });
   }
@@ -208,7 +186,7 @@ export async function POST(req: Request) {
         booked.map((b) => ({
           kind: b.kind,
           units: b.units,
-          open: { 80: b.open80, 60: b.open60, 40: b.open40, 20: b.open20 },
+          open: openOf(b),
           spilledQty: b.spilledQty,
           level: b.level,
         })),
@@ -286,31 +264,25 @@ export async function POST(req: Request) {
     { kind: body.kind, units, unitCostOre: product.costPriceOre },
   );
 
-  if (body.lotId) {
-    const lot = await prisma.stockLot.findUnique({
-      where: { id: body.lotId },
-      select: { productId: true },
-    });
-    if (!lot) return fail(422, "stock.lotNotFound");
-    // A lot belongs to one product; crediting a return back to another
-    // product's delivery would carry that delivery's best-before with it.
-    if (lot.productId !== product.id) return fail(422, "stock.lotWrongProduct");
-  }
+  // The two rows this one may name. Looked up together: they are independent
+  // questions, and asking them in sequence made the second wait on the first
+  // for no reason. Both resolve to null when the body did not name one.
+  const [target, expense] = await Promise.all([
+    body.correctsId
+      ? prisma.stockEntry.findUnique({
+          where: { id: body.correctsId },
+          select: { productId: true },
+        })
+      : null,
+    body.expenseId
+      ? prisma.expense.findUnique({ where: { id: body.expenseId }, select: { id: true } })
+      : null,
+  ]);
   if (body.correctsId) {
-    const target = await prisma.stockEntry.findUnique({
-      where: { id: body.correctsId },
-      select: { productId: true },
-    });
     if (!target) return fail(422, "stock.correctionTargetNotFound");
     if (target.productId !== product.id) return fail(422, "stock.correctionWrongProduct");
   }
-  if (body.expenseId) {
-    const expense = await prisma.expense.findUnique({
-      where: { id: body.expenseId },
-      select: { id: true },
-    });
-    if (!expense) return fail(422, "stock.expenseNotFound");
-  }
+  if (body.expenseId && !expense) return fail(422, "stock.expenseNotFound");
 
   // Only a delivery brings stock into the building with an age. A return is
   // stock coming back from a night out, and it is already as old as whatever
@@ -326,10 +298,7 @@ export async function POST(req: Request) {
       productId: product.id,
       kind: body.kind,
       units,
-      open80: open[80] ?? 0,
-      open60: open[60] ?? 0,
-      open40: open[40] ?? 0,
-      open20: open[20] ?? 0,
+      ...openColumns(open),
       valueDeltaOre,
       // The price as it stands now, captured so that nothing computed from it
       // can move when the product is re-priced. See the schema note.
@@ -347,7 +316,6 @@ export async function POST(req: Request) {
       eventId: body.eventId ?? null,
       occurredAt: new Date(body.occurredAt),
       actorId: g.actor.id,
-      lotId: body.lotId ?? null,
       expenseId: body.expenseId ?? null,
       correctsId: body.correctsId ?? null,
       note: body.note ?? null,

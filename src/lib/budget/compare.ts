@@ -17,7 +17,7 @@
 import { effectiveKind, sheetKey, sheetName, type AccountKind } from "@/lib/budget";
 
 /** One row, with its figure on this side. */
-export interface CompareLine {
+interface CompareLine {
   key: string; // what it is matched on, see lineKeys
   description: string;
   value: number | undefined; // öre
@@ -162,7 +162,7 @@ export function snapshotOf(budget: BudgetLike, label: string): Snapshot {
   };
 }
 
-export interface JoinedLine {
+interface JoinedLine {
   key: string;
   description: string;
   /** One per side, in the order they were joined. `undefined` = that side has no such row. */

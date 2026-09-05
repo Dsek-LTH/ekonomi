@@ -27,7 +27,7 @@ import type { DrinkCategory } from "@/lib/domain/types";
  * Pink leads because it is the section's own colour, and the red is spent last,
  * so a chart of two or three series is never mostly alarm-coloured.
  */
-export const CHART_SERIES = [
+const CHART_SERIES = [
   "var(--chart-1)", // pink, the section's
   "var(--chart-6)", // indigo
   "var(--chart-3)", // green

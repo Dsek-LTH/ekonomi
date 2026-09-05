@@ -33,7 +33,7 @@ export interface GroupableLine {
  * The heading carries no figures. Quantities and amounts belong to the lines,
  * and a group total would be a number the document does not have.
  */
-export type ProductRow<T> =
+type ProductRow<T> =
   | { kind: "group"; key: string; name: string }
   | {
       kind: "line";

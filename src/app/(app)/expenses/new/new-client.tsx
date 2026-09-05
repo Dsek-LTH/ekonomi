@@ -16,7 +16,7 @@ import { DetailList, DetailRow } from "@/components/ui/detail-list";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { Stepper } from "@/components/ui/stepper";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
-import { IconCheck, IconLink } from "@/components/ui/icons";
+import { IconCheck } from "@/components/ui/icons";
 import {
   PAYMENT_TYPES,
   REIMBURSEMENT_DEADLINE_DAYS,
@@ -33,9 +33,10 @@ import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable } from "@/lib/domain/matching";
 import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
+import { MatchStep } from "./match-step";
+import { optionCard, StepFooter } from "./step-chrome";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
-import { cn } from "@/lib/ui/utils";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import type { AllocationRow } from "@/components/allocation-editor";
@@ -43,15 +44,6 @@ import type { AllocationRow } from "@/components/allocation-editor";
 // The step keys, named by `expenses.wizard.step.<key>` in messages. The match
 // step only exists for card purchases; a reimbursement goes straight from
 // review to submit.
-
-// The wizard asks two "pick one of these" questions: the payment type and the
-// bank transaction to match. Both are a bordered card that fills with accent
-// once chosen.
-const optionCard = (selected: boolean) =>
-  cn(
-    "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-    selected ? "border-accent bg-accent-soft" : "border-border hover:bg-surface",
-  );
 
 /**
  * Which way the money goes.
@@ -103,7 +95,6 @@ export default function NewExpenseClient({
   const tPayment = useTranslations("common.payment");
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
-  const tList = useTranslations("expenses");
   const { date } = useFormat();
   // The description opens focused. See the field on the first step.
   const selectOnce = useSelectOnce();
@@ -740,75 +731,19 @@ export default function NewExpenseClient({
 
       {/* Step 2: match (card purchases only) */}
       {cur === "match" && (
-        <Card>
-          <CardBody className="space-y-5">
-            <div>
-              <h2 className="text-base font-semibold">{t("matchTitle")}</h2>
-              <p className="mt-1 text-sm text-muted">
-                {t("matchLead", { amount: formatSEK(Math.abs(grossSEK)) })}
-              </p>
-            </div>
-            <ul className="space-y-2.5">
-                  {candidates.map(({ txn, selectable }, i) => {
-                    const selected = matchId === txn.id;
-                    const suggested = selectable && i === 0;
-                    return (
-                      <li key={txn.id}>
-                        <button
-                          disabled={!selectable}
-                          title={selectable ? undefined : t("amountMismatch")}
-                          onClick={() => setMatchId(txn.id)}
-                          className={cn(
-                            optionCard(selected),
-                            "flex items-center gap-3",
-                            !selectable && "cursor-not-allowed opacity-45 hover:bg-transparent",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "flex size-9 items-center justify-center rounded-full",
-                              selected
-                                ? "brand-fill text-on-brand"
-                                : "bg-surface text-muted",
-                            )}
-                          >
-                            <IconLink className="size-4" />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-medium">
-                                {txn.description}
-                              </p>
-                              {suggested && (
-                                <span className="rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
-                                  {t("suggested")}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted">
-                              {date(txn.transactionDate)}
-                              {!selectable && ` – ${t("otherAmount")}`}
-                            </p>
-                          </div>
-                          <Amount value={txn.amount} />
-                        </button>
-                      </li>
-                    );
-                  })}
-              {candidates.length === 0 && (
-                <li className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted">
-                  {t("noCandidates")}
-                </li>
-              )}
-            </ul>
-            <p className="text-xs text-muted">{tList("noMatchHint")}</p>
-            <StepFooter onBack={() => setStep(0)} onSave={saveDraft} saveLabel={saveLabel} saveDisabled={!canPersist} saving={exit === "draft"}>
-              <Button disabled={!matchDone} onClick={() => setStep(2)}>
-                {t("continue")}
-              </Button>
-            </StepFooter>
-          </CardBody>
-        </Card>
+        <MatchStep
+          candidates={candidates}
+          matchId={matchId}
+          onPick={setMatchId}
+          grossSEK={grossSEK}
+          onBack={() => setStep(0)}
+          onSave={saveDraft}
+          saveLabel={saveLabel}
+          saveDisabled={!canPersist}
+          saving={exit === "draft"}
+          canContinue={matchDone}
+          onContinue={() => setStep(2)}
+        />
       )}
 
       {/* Final step: review and submit */}
@@ -879,39 +814,5 @@ export default function NewExpenseClient({
         </Card>
       )}
     </PageShell>
-  );
-}
-
-// Every wizard step ends the same way: back on the left, "save draft" and the
-// step's own primary action on the right.
-function StepFooter({ onBack, onSave, saveLabel, saveDisabled, saving, children }: {
-  /** Omitted on the first step, which has nowhere to go back to. */
-  onBack?: () => void;
-  onSave: () => void;
-  saveLabel: string;
-  saveDisabled: boolean;
-  /** The draft save this footer owns is in flight, not the step's own action. */
-  saving: boolean;
-  children?: React.ReactNode;
-}) {
-  const t = useTranslations("expenses.wizard");
-  return (
-    <div className="flex flex-wrap justify-between gap-2.5 pt-1">
-      {onBack ? (
-        <Button variant="secondary" onClick={onBack}>
-          {t("back")}
-        </Button>
-      ) : (
-        // Keeps the save/primary pair against the right edge, where they are on
-        // every other step.
-        <span />
-      )}
-      <div className="flex gap-2.5">
-        <Button variant="secondary" onClick={onSave} loading={saving} disabled={saveDisabled}>
-          {saveLabel}
-        </Button>
-        {children}
-      </div>
-    </div>
   );
 }

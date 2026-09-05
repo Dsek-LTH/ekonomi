@@ -39,7 +39,7 @@ export { incomeVoucherKey };
  * connected is a decision, a failed call is an outage, and only the second is
  * worth putting in front of anyone.
  */
-export type IncomeCheckSkip = "notConnected" | "failed";
+type IncomeCheckSkip = "notConnected" | "failed";
 
 export interface FortnoxIncomeVouchers {
   /** False means nothing was compared. Treat every day as unknown, not free. */

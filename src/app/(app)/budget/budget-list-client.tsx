@@ -62,8 +62,13 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
     success: string,
     key = "create",
   ) {
-    const data = await mutate("/api/budgets", { key, body, error: t("createFailed"), success });
-    if (data?.id) router.push(`/budget/${String(data.id)}`);
+    const data = await mutate<{ id: string }>("/api/budgets", {
+      key,
+      body,
+      error: t("createFailed"),
+      success,
+    });
+    if (data?.id) router.push(`/budget/${data.id}`);
   }
 
   const createEmpty = () => create({ year: thisYear }, t("created"));

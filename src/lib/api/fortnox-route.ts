@@ -18,7 +18,7 @@ export async function denyNoFortnox(): Promise<NextResponse | null> {
   return (await getConnection()) ? null : fail(409, "fortnox.notConnected");
 }
 
-export type ServiceGate =
+type ServiceGate =
   | { ok: true; actor: Actor; token: string }
   | { ok: false; res: NextResponse };
 

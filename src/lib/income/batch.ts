@@ -13,7 +13,7 @@ import { incomeVoucherKey, type FortnoxIncomeVouchers } from "./duplicate";
 import type { IncomeFeeReportDto, IncomeReportDto } from "./types";
 import { incomeVoucherDescription } from "./voucher";
 
-export interface CreateBatchResult {
+interface CreateBatchResult {
   batchId: string;
   created: number;
   /** The reports that were stored. */

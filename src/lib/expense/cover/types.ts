@@ -20,7 +20,7 @@
 // where it is decided.
 
 /** One cost-centre slice of the utlägg, with the attest that cleared it. */
-export interface ExpenseCoverAllocation {
+interface ExpenseCoverAllocation {
   /** "SEKT05 – Sexmästeriet": code and name, as the ledger writes it. */
   costCenter: string;
   amount: string;

@@ -18,7 +18,7 @@ export interface WizardTitles {
   (key: "editTitle", values: { id: string }): string;
 }
 
-export interface WizardChrome {
+interface WizardChrome {
   title: string;
   description: string;
   back: { href: string; label: string };

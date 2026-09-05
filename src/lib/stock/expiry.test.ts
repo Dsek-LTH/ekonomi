@@ -179,4 +179,46 @@ describe("lastEmptied", () => {
     // same screen by `impossible`. Either way there is nothing down there.
     expect(lastEmptied([step("2026-01-01", 24), step("2026-02-01", -30)])).toBe("2026-02-01");
   });
+
+  // ── Starting part-way through the log ────────────────────────────
+  //
+  // The loaders do not fetch every movement a product has ever made; they cut
+  // the log at the oldest delivery being asked about and sum what came before
+  // into one opening balance (see `getExpiryChecks`). These pin that the cut
+  // cannot change the answer.
+  describe("with an opening balance", () => {
+    const whole = [
+      step("2026-01-01", 24),
+      step("2026-02-01", -24),
+      step("2026-03-01", 24),
+      step("2026-04-01", -12),
+    ];
+
+    it("answers the same as the whole log when the empty day is inside the window", () => {
+      // Cut after the first delivery: 24 on the shelf, and February still
+      // empties it.
+      expect(lastEmptied(whole)).toBe("2026-02-01");
+      expect(lastEmptied(whole.slice(1), 24)).toBe("2026-02-01");
+    });
+
+    it("reports nothing when the shelf only emptied before the window", () => {
+      // Cut after February. Nothing inside the window empties the shelf, and
+      // the empty day before it is out of reach, which is exactly the case
+      // `checkOf` cannot be affected by: no delivery in the window is older
+      // than it.
+      expect(lastEmptied(whole.slice(2), 0)).toBeNull();
+    });
+
+    it("carries the opening balance into the first day", () => {
+      // The opening stock is what the first step in the window works against:
+      // taking 24 out of an empty window is only an empty shelf if there were
+      // 24 there to start with.
+      expect(lastEmptied([step("2026-05-01", -24)], 24)).toBe("2026-05-01");
+      expect(lastEmptied([step("2026-05-01", -24)], 36)).toBeNull();
+    });
+
+    it("defaults to nothing on the shelf, which is the whole-log case", () => {
+      expect(lastEmptied(whole, 0)).toBe(lastEmptied(whole));
+    });
+  });
 });

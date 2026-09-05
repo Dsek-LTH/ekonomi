@@ -1,9 +1,12 @@
 // Resultat- and balansrapport over the Fortnox ledger mirror. Returns the
 // available financial years too, so the report page is self-contained.
 // Auth: any signed-in user (it's the org's own accounting).
+//
+// The period comes from lib/ledger/period.ts, shared with /api/ledger/trend so
+// the table and the charts cannot end up describing different spans.
 import { NextResponse } from "next/server";
 import { gate } from "@/lib/api/guard";
-import { getLedgerYears } from "@/lib/ledger";
+import { periodOf, resolveLedgerPeriod } from "@/lib/ledger/period";
 import { getLedgerReport, type GroupMode } from "@/lib/ledger/report";
 import {
   budgetComparison,
@@ -14,34 +17,16 @@ import {
 } from "@/lib/ledger/comparison";
 import type { ReportKind } from "@/lib/ledger/bas";
 
-// "YYYY-MM" → the month's first day (UTC). Falls back to `fallback`.
-function monthStart(raw: string | null, fallback: Date): Date {
-  const m = /^(\d{4})-(\d{2})$/.exec(raw ?? "");
-  if (!m) return fallback;
-  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
-}
-
-// "YYYY-MM" → the month's last day (UTC).
-function monthEnd(raw: string | null, fallback: Date): Date {
-  const m = /^(\d{4})-(\d{2})$/.exec(raw ?? "");
-  if (!m) return fallback;
-  return new Date(Date.UTC(Number(m[1]), Number(m[2]), 0));
-}
-
-const clamp = (d: Date, lo: Date, hi: Date) => (d < lo ? lo : d > hi ? hi : d);
-
 export async function GET(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;
 
   const url = new URL(req.url);
-  const years = await getLedgerYears();
-  const yearParam = Number(url.searchParams.get("year"));
-  const selected = years.find((y) => y.id === yearParam) ?? years[0];
-
-  if (!selected) {
+  const period = await resolveLedgerPeriod(url);
+  if (!period) {
     return NextResponse.json({ years: [], year: null, report: null, comparison: "NONE" });
   }
+  const { years, selected, yearStart, from, to, costCenterCode } = period;
 
   const kind: ReportKind = url.searchParams.get("kind") === "BALANCE" ? "BALANCE" : "RESULT";
   const group: GroupMode =
@@ -49,15 +34,6 @@ export async function GET(req: Request) {
   const compareParam = url.searchParams.get("compare");
   const compare: ComparisonMode =
     compareParam === "PRIOR" || compareParam === "BUDGET" ? compareParam : "NONE";
-
-  const yearStart = new Date(`${selected.fromDate}T00:00:00Z`);
-  const yearEnd = new Date(`${selected.toDate}T00:00:00Z`);
-  const from = clamp(monthStart(url.searchParams.get("from"), yearStart), yearStart, yearEnd);
-  const to = clamp(monthEnd(url.searchParams.get("to"), yearEnd), from, yearEnd);
-
-  // `costCenter=` (empty) is the "no cost centre" bucket; absent means all.
-  const ccParam = url.searchParams.get("costCenter");
-  const costCenterCode = ccParam === null ? undefined : ccParam;
 
   // Budget comparison only makes sense for the result report. Balance-sheet
   // accounts aren’t budgeted. The caller may name which budget to compare
@@ -92,7 +68,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     years,
     year: selected,
-    period: { from: from.toISOString().slice(0, 7), to: to.toISOString().slice(0, 7) },
+    period: periodOf(period),
     report,
     // What was actually applied: asking for a comparison that has no data
     // (an unsynced prior year, a year with no budget) reports back as NONE.

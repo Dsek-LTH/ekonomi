@@ -76,7 +76,7 @@ export const documentUrl = (report: IncomeReportRow) =>
   `/api/income/reports/${report.id}/document?v=${encodeURIComponent(report.updatedAt)}`;
 
 /** Where the money landed, which is a property of how it was paid. */
-export const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
+const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
   report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount;
 
 /**

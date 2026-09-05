@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
+import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
@@ -150,7 +151,6 @@ function ComboboxBase({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -181,6 +181,11 @@ function ComboboxBase({
     : picked.length === 1 ? picked[0].short ?? picked[0].label
     : t("nSelected", { count: picked.length });
 
+  // Where the field is on screen, kept current while the menu is open. See
+  // lib/ui/anchored-panel.ts, shared with the menu, which explains why this
+  // follows the trigger rather than closing when the page moves.
+  const [rect, setRect] = useAnchorRect(open, triggerRef, panelRef, close);
+
   function openMenu(initial = "") {
     if (disabled) return;
     setRect(triggerRef.current?.getBoundingClientRect() ?? null);
@@ -189,6 +194,7 @@ function ComboboxBase({
     setOpen(true);
   }
   function close() { setOpen(false); }
+
   // Picking one of several is rarely the last thing you want to do, so multi
   // stays open and keeps the search you typed; single has nothing left to offer.
   function commit(v: string) {
@@ -219,30 +225,19 @@ function ComboboxBase({
    * jumping over the field. Flipping is the last resort it was meant to be:
    * only when there is genuinely more room the other way.
    */
-  const GAP = 4;
-  const EDGE = 8;
   /** Search box and its border, plus the list's own padding. */
   const CHROME = 58;
   const ROW = 30;
 
   function menuStyle(): React.CSSProperties {
     if (!rect) return {};
-    const width = Math.max(rect.width, 240);
-    const left = Math.min(Math.max(EDGE, rect.left), window.innerWidth - width - EDGE);
-
     // Counted from the whole list rather than what is filtered right now, so
     // the menu does not hop about as somebody types.
     const listRows = options.length + (onClear ? 1 : 0) + (onCreate ? 1 : 0);
     const wanted = CHROME + Math.min(240, Math.max(1, listRows) * ROW);
-
-    const under = window.innerHeight - rect.bottom - GAP - EDGE;
-    const over = rect.top - GAP - EDGE;
-    const dropUp = under < wanted && over > under;
-    const maxHeight = Math.max(140, Math.min(wanted, dropUp ? over : under));
-
-    return dropUp
-      ? { position: "fixed", bottom: window.innerHeight - rect.top + GAP, left, width, maxHeight }
-      : { position: "fixed", top: rect.bottom + GAP, left, width, maxHeight };
+    // `cap`, unlike the menu's: this list knows how tall it wants to be, so
+    // growing past that would leave blank panel under the last option.
+    return placeAnchored(rect, { wanted, cap: true, width: Math.max(rect.width, 240) });
   }
 
   // Focus the search when opening; close on outside click, scroll, resize.
@@ -266,54 +261,16 @@ function ComboboxBase({
       ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }, [active, open]);
-  // Outside taps close it; the page moving underneath re-places it.
+  // Outside taps close it; the page moving underneath re-places it (see the
+  // anchor above). Both halves were written for a pointer and neither survived
+  // an iPhone, which is why both now live in one place: lib/ui/dismiss.ts on
+  // why the event is `pointerdown`, and lib/ui/anchored-panel.ts on why the
+  // menu follows the field instead of closing when the keyboard scrolls it.
   //
-  // Both halves were written for a pointer and neither survived an iPhone.
-  //
-  // `mousedown` was the wrong event. iOS only synthesises mouse events for
-  // things it considers clickable (a link, a button, something with a click
-  // handler or `cursor: pointer`) so a tap on the ordinary page behind the
-  // menu fired nothing at all and the menu would not dismiss. `pointerdown` is
-  // native there and fires for every target.
-  //
-  // And the menu used to *close* on scroll or resize, on the grounds that a
-  // fixed menu whose field has moved is a menu in the wrong place. True, but on
-  // iOS opening the menu focuses the search box, focusing the search box raises
-  // the keyboard, and the keyboard fires both a resize and a scroll, so the
-  // menu shut itself the instant it opened, every time, which is the whole of
-  // "the combobox doesn't work". Following the field is the better answer
-  // anyway: the menu stays where it belongs instead of vanishing because
-  // something nudged the page.
   // The trigger and the panel are both the layer: the panel is portalled out of
   // the trigger's subtree, so a press on it is not a press "inside" the field.
   useDismissOnOutside(open, [triggerRef, panelRef], close);
 
-  useEffect(() => {
-    if (!open) return;
-    // Not while scrolling the menu's own list, which moves nothing.
-    const follow = (e?: Event) => {
-      if (e && panelRef.current?.contains(e.target as Node)) return;
-      const el = triggerRef.current;
-      // The field has gone from the page under us, a row deleted while its
-      // menu was open. There is nothing left to point at.
-      if (!el || !el.isConnected) return close();
-      setRect(el.getBoundingClientRect());
-    };
-    window.addEventListener("resize", follow);
-    window.addEventListener("scroll", follow, true);
-    // The keyboard on iOS changes the visual viewport without necessarily
-    // moving the layout one, and `menuStyle` measures itself against
-    // `window.innerHeight`, so the menu has to be told, or it keeps sizing
-    // itself to a screen half of which is now keyboard.
-    window.visualViewport?.addEventListener("resize", follow);
-    window.visualViewport?.addEventListener("scroll", follow);
-    return () => {
-      window.removeEventListener("resize", follow);
-      window.removeEventListener("scroll", follow, true);
-      window.visualViewport?.removeEventListener("resize", follow);
-      window.visualViewport?.removeEventListener("scroll", follow);
-    };
-  }, [open]);
 
   function onSearchKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }

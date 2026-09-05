@@ -19,7 +19,7 @@
 // The three that are a series over time are SVG. The two that are a ranked list
 // of labelled things are HTML bars: their rows carry a name, a figure and
 // sometimes a link, and laying text out is what HTML is for.
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -28,10 +28,12 @@ import { CHART_NEUTRAL, CHART_SERIES_COUNT, seriesColor } from "@/lib/ui/chart-c
 import {
   axisTicks,
   fittedLabels,
+  linearScale,
   plotOf,
   useChartGeometry,
-  type ChartGeometry,
+  usePointerIndex,
 } from "@/lib/ui/chart-geometry";
+import { YGrid } from "@/components/ui/chart-axis";
 import { formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
 import type { LedgerTrend, TrendCostCenter, TrendMonth } from "@/lib/ledger/trend";
@@ -147,25 +149,6 @@ function Legend({ items }: { items: { key: string; label: string; color: string 
  * Shared because all three time charts track the same way and getting it subtly
  * different in each is how a crosshair ends up one band off in one of them.
  */
-function useTracker(count: number, geometry: ChartGeometry) {
-  const ref = useRef<SVGSVGElement>(null);
-  const [at, setAt] = useState<number | null>(null);
-  const plot = plotOf(geometry);
-
-  function track(e: React.PointerEvent<SVGSVGElement>) {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect || count === 0) return;
-    const local = ((e.clientX - rect.left) / rect.width) * geometry.W;
-    // Band-centred, so the readout follows the column the pointer is over
-    // rather than the nearest gridline.
-    const ratio = (local - geometry.PAD.left) / plot.w;
-    const i = Math.floor(ratio * count);
-    setAt(Math.min(count - 1, Math.max(0, i)));
-  }
-
-  return { ref, at, track, clear: () => setAt(null) };
-}
-
 // ── 1. Resultat per månad ───────────────────────────────────────────
 
 /**
@@ -188,7 +171,7 @@ function MonthlyResult({
   const geometry = useChartGeometry();
   const { W, H, PAD } = geometry;
   const plot = plotOf(geometry);
-  const { ref, at, track, clear } = useTracker(months.length, geometry);
+  const { ref, at, track, clear } = usePointerIndex(months.length, geometry);
 
   const axis = useMemo(() => {
     const hi = Math.max(0, ...months.map((m) => m.income), ...months.map((m) => m.result));
@@ -199,7 +182,7 @@ function MonthlyResult({
   const hi = axis[axis.length - 1];
   const fmt = axisFormat(Math.max(Math.abs(lo), Math.abs(hi)));
 
-  const y = (v: number) => PAD.top + plot.h - ((v - lo) / (hi - lo)) * plot.h;
+  const y = linearScale(lo, hi, geometry);
   const band = plot.w / Math.max(1, months.length);
   // A gutter each side of the column, so neighbouring months do not touch.
   const barW = Math.max(2, band * 0.54);
@@ -221,27 +204,7 @@ function MonthlyResult({
           onPointerMove={track}
           onPointerLeave={clear}
         >
-          {axis.map((v) => (
-            <g key={v}>
-              <line
-                x1={PAD.left}
-                x2={W - PAD.right}
-                y1={y(v)}
-                y2={y(v)}
-                className="stroke-border"
-                strokeWidth={1}
-              />
-              <text
-                x={PAD.left - 8}
-                y={y(v)}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-muted text-[11px] tabular-nums"
-              >
-                {fmt(v)}
-              </text>
-            </g>
-          ))}
+          <YGrid ticks={axis} y={y} geometry={geometry} format={fmt} />
 
           {/* The zero line is the one gridline that is a fact rather than a
               ruler mark, so it is drawn over the bars and in the text colour. */}
@@ -379,7 +342,7 @@ function Cumulative({
   const geometry = useChartGeometry();
   const { W, H, PAD } = geometry;
   const plot = plotOf(geometry);
-  const { ref, at, track, clear } = useTracker(months.length, geometry);
+  const { ref, at, track, clear } = usePointerIndex(months.length, geometry);
 
   /** The budget spent evenly, at the end of the period's i-th month. */
   const pace = (i: number): number | null =>
@@ -397,7 +360,7 @@ function Cumulative({
   const hi = axis[axis.length - 1];
   const fmt = axisFormat(Math.max(Math.abs(lo), Math.abs(hi)));
 
-  const y = (v: number) => PAD.top + plot.h - ((v - lo) / (hi - lo)) * plot.h;
+  const y = linearScale(lo, hi, geometry);
   const x = (i: number) =>
     PAD.left + (months.length === 1 ? plot.w / 2 : (i / (months.length - 1)) * plot.w);
 
@@ -417,27 +380,7 @@ function Cumulative({
           onPointerMove={track}
           onPointerLeave={clear}
         >
-          {axis.map((v) => (
-            <g key={v}>
-              <line
-                x1={PAD.left}
-                x2={W - PAD.right}
-                y1={y(v)}
-                y2={y(v)}
-                className={v === 0 ? "stroke-foreground/45" : "stroke-border"}
-                strokeWidth={1}
-              />
-              <text
-                x={PAD.left - 8}
-                y={y(v)}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-muted text-[11px] tabular-nums"
-              >
-                {fmt(v)}
-              </text>
-            </g>
-          ))}
+          <YGrid ticks={axis} y={y} geometry={geometry} format={fmt} zeroRule />
 
           {budgetTotal != null && (
             <polyline
@@ -675,7 +618,7 @@ function CostCenterStack({
   const geometry = useChartGeometry();
   const { W, H, PAD } = geometry;
   const plot = plotOf(geometry);
-  const { ref, at, track, clear } = useTracker(trend.stack.length, geometry);
+  const { ref, at, track, clear } = usePointerIndex(trend.stack.length, geometry);
   const clipId = useId();
 
   /** The bands, in the order they stack: the biggest spenders, then the rest. */
@@ -722,7 +665,7 @@ function CostCenterStack({
   const hi = axis[axis.length - 1];
   const fmt = axisFormat(hi);
 
-  const y = (v: number) => PAD.top + plot.h - (v / (hi || 1)) * plot.h;
+  const y = linearScale(0, hi || 1, geometry);
   const band = plot.w / Math.max(1, columns.length);
   const barW = Math.max(2, band * 0.6);
   const cx = (i: number) => PAD.left + band * (i + 0.5);
@@ -748,27 +691,7 @@ function CostCenterStack({
             </clipPath>
           </defs>
 
-          {axis.map((v) => (
-            <g key={v}>
-              <line
-                x1={PAD.left}
-                x2={W - PAD.right}
-                y1={y(v)}
-                y2={y(v)}
-                className="stroke-border"
-                strokeWidth={1}
-              />
-              <text
-                x={PAD.left - 8}
-                y={y(v)}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-muted text-[11px] tabular-nums"
-              >
-                {fmt(v)}
-              </text>
-            </g>
-          ))}
+          <YGrid ticks={axis} y={y} geometry={geometry} format={fmt} />
 
           <g clipPath={`url(#${clipId})`}>
             {columns.map((c, i) => {

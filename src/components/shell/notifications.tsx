@@ -10,7 +10,7 @@ import { cn, uid } from "@/lib/ui/utils";
 // dismissible banners at the top of the page content. Errors persist until
 // dismissed; success/info auto-dismiss after a few seconds. Use via useNotify().
 
-export type NotifyTone = "error" | "success" | "info";
+type NotifyTone = "error" | "success" | "info";
 
 /**
  * Where the message says to go, as somewhere the reader can actually go.
@@ -20,12 +20,12 @@ export type NotifyTone = "error" | "success" | "info";
  * menu and remembering what it said. See `API_ERROR_ACTIONS` in
  * lib/ui/api-error.ts for which failures carry one.
  */
-export interface NotifyAction {
+interface NotifyAction {
   href: string;
   label: string;
 }
 
-export interface Notification {
+interface Notification {
   id: string;
   tone: NotifyTone;
   title?: string;
@@ -39,7 +39,7 @@ export interface Notification {
  * twenty-odd `notify.success(msg)` and `notify.success(msg, title)` call sites
  * stay as they read today. The shape only changes for callers that need more.
  */
-export type NotifyOptions = string | { title?: string; action?: NotifyAction };
+type NotifyOptions = string | { title?: string; action?: NotifyAction };
 
 interface NotifyApi {
   error: (message: string, opts?: NotifyOptions) => string;

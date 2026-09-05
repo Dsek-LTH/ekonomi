@@ -12,7 +12,7 @@
 import { createHash } from "node:crypto";
 import { amountToOre, splitCsvLine } from "@/lib/domain/csv";
 
-export interface ParsedTransaction {
+interface ParsedTransaction {
   transactionDate: string; // YYYY-MM-DD, Transdag (Bokfdag if absent)
   description: string; // Referens with the trailing card token stripped
   amount: number; // öre, negative = outgoing
@@ -20,7 +20,7 @@ export interface ParsedTransaction {
   importHash: string; // stable per (account,date,ref,amount,occurrence)
 }
 
-export interface ParseResult {
+interface ParseResult {
   transactions: ParsedTransaction[];
   cardLast4s: string[]; // distinct card numbers seen in the file
   skippedRows: number; // data rows that couldn't be parsed

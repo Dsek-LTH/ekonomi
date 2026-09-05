@@ -23,9 +23,7 @@ import type { Column } from "@/components/ui/data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockEventDto } from "@/lib/data/stock";
 import { EventDialog } from "./event-dialog";
-
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
+import { formatOreKr } from "@/lib/ui/format";
 
 export default function EventsClient({
   events,
@@ -94,7 +92,7 @@ export default function EventsClient({
       sortable: true,
       mobile: "trailing",
       cell: (e) =>
-        e.soldValueOre > 0 ? kr(e.soldValueOre) : <span className="text-muted">–</span>,
+        e.soldValueOre > 0 ? formatOreKr(e.soldValueOre) : <span className="text-muted">–</span>,
     },
   ];
 

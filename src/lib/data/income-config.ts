@@ -7,7 +7,7 @@ import "server-only";
 import { oreToSEK } from "@/lib/domain/money";
 import { prisma } from "@/lib/server/db";
 
-export interface IncomePrefixRow {
+interface IncomePrefixRow {
   id: string;
   code: string;
   /** The income profile it routes to, ResultUnitIncome.id. */
@@ -26,7 +26,7 @@ export interface IncomePrefixRow {
  * being one register. A unit with `income: null` is one that takes no money in,
  * and the screen offers to give it settings rather than hiding it.
  */
-export interface IncomeUnitRow {
+interface IncomeUnitRow {
   /** ResultUnit.id, the unit itself, which exists either way. */
   resultUnitId: string;
   name: string;
@@ -37,7 +37,7 @@ export interface IncomeUnitRow {
   inUse: boolean;
 }
 
-export interface IncomeProfileRow {
+interface IncomeProfileRow {
   /** ResultUnitIncome.id, what the profile routes hang off. */
   id: string;
   key: string;
@@ -50,7 +50,7 @@ export interface IncomeProfileRow {
   prefixes: IncomePrefixRow[];
 }
 
-export interface SwishFallbackRow {
+interface SwishFallbackRow {
   /** SEK, for display. The database keeps öre. */
   amount: number;
   message: string;

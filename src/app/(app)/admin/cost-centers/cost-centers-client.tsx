@@ -18,7 +18,9 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
+import { sentence } from "@/lib/ui/format";
 import type { CostCenter } from "@/lib/domain/types";
+import type { CostCenterSyncResult } from "@/lib/fortnox/sync";
 
 // Retired cost centres stay in the list. Seeing that SEX02 exists but is
 // inactive is what explains why it isn't in the picker, but the default filter
@@ -51,22 +53,18 @@ export function CostCentersClient({
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
 
   async function sync() {
-    const data = await mutate("/api/cost-centers/sync", {
+    const data = await mutate<CostCenterSyncResult>("/api/cost-centers/sync", {
       key: "sync",
       error: t("syncFailed"),
     });
     if (!data) return;
-    const updated = Number(data.upserted);
-    const retired = Number(data.deactivated);
-    const deleted = Number(data.deleted);
+    const { upserted, deactivated, deleted } = data;
     notify.success(
-      retired && deleted
-        ? t("syncSummaryWithRetiredAndDeleted", { updated, retired, deleted })
-        : deleted
-          ? t("syncSummaryWithDeleted", { updated, deleted })
-          : retired
-            ? t("syncSummaryWithRetired", { updated, retired })
-            : t("syncSummary", { updated }),
+      sentence(
+        t("syncSummary.updated", { count: upserted }),
+        deactivated && t("syncSummary.retired", { count: deactivated }),
+        deleted && t("syncSummary.deleted", { count: deleted }),
+      ),
       t("syncDone"),
     );
   }
@@ -117,7 +115,7 @@ export function CostCentersClient({
       tone: "danger",
     });
     if (!ok) return;
-    const data = await mutate(`/api/cost-centers/${cc.id}`, {
+    const data = await mutate<{ retired: boolean }>(`/api/cost-centers/${cc.id}`, {
       key: `delete-${cc.id}`,
       method: "DELETE",
       error: t("deleteFailed"),

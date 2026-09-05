@@ -21,11 +21,6 @@ import { getBudgetSummaries, getEvaluatedBudget } from "@/lib/data/budget";
 import { budgetLabel, snapshotOf, type Snapshot } from "@/lib/budget/compare";
 import { CompareClient } from "./compare-client";
 
-// The shape `snapshotOf` reads. The payload is described where it is consumed
-// (budget/[budgetId]/budget-types.ts); this is the cast across that boundary,
-// in the one place it happens.
-type BudgetPayload = Parameters<typeof snapshotOf>[0] & { year: number; name: string };
-
 export default async function BudgetComparePage({
   searchParams,
 }: {
@@ -44,10 +39,10 @@ export default async function BudgetComparePage({
   ];
 
   const [loaded, all] = await Promise.all([
-    // No outcome and no serialising pass: this page reads each budget through
-    // `snapshotOf`, which takes its sheets and its evaluated figures and never
-    // the ledger, and a snapshot is what crosses to the client, not the budget.
-    Promise.all(ids.map((id) => getEvaluatedBudget(id, { actuals: false, serialize: false }))),
+    // No outcome: this page reads each budget through `snapshotOf`, which takes
+    // its sheets and its evaluated figures and never the ledger, and a snapshot
+    // is what crosses to the client, not the budget.
+    Promise.all(ids.map((id) => getEvaluatedBudget(id, { actuals: false }))),
     getBudgetSummaries(),
   ]);
 
@@ -56,10 +51,7 @@ export default async function BudgetComparePage({
   // nothing to say about a budget that no longer exists.
   const snapshots: Snapshot[] = loaded
     .filter((b): b is NonNullable<typeof b> => b !== null)
-    .map((b) => {
-      const budget = b as unknown as BudgetPayload;
-      return snapshotOf(budget, budgetLabel(budget));
-    });
+    .map((budget) => snapshotOf(budget, budgetLabel(budget)));
 
   return (
     <CompareClient

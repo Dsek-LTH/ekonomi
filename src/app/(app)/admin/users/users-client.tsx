@@ -22,7 +22,7 @@
 // answer comes from /api/users/[id]/authority, which re-runs the sign-in
 // derivation over the group list stored on the row and reports its workings,
 // including the case that prompted all this: a role nothing grants any more.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,6 +35,7 @@ import { cn } from "@/lib/ui/utils";
 import { ASSIGNABLE_ROLES } from "@/lib/domain/permissions";
 import type { UserAuthority } from "@/lib/data/authority";
 import type { User } from "@/lib/domain/types";
+import { useQuery } from "@/components/shell/use-query";
 import { PersonSearch } from "./person-search";
 
 export function UsersClient({ holders }: { holders: User[] }) {
@@ -169,31 +170,11 @@ function WhyPanel({ userId }: { userId: string }) {
   const t = useTranslations("admin.users");
   const tRole = useTranslations("common.role");
 
-  const [data, setData] = useState<UserAuthority | null>(null);
-  const [failed, setFailed] = useState(false);
+  // The caller mounts this under a key, so switching member remounts rather
+  // than reusing the panel, and there is no stale answer to clear.
+  const { data, error } = useQuery<UserAuthority>(`/api/users/${userId}/authority`);
 
-  // Every setState happens in the async callback rather than in the effect body,
-  // the same way the person search does it: a render per mount is not a render
-  // per keystroke, but the rule is worth keeping in one shape. Which is also why
-  // the caller mounts this under a key. The state that would otherwise need
-  // clearing here simply does not exist yet.
-  useEffect(() => {
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/users/${userId}/authority`, { signal: controller.signal });
-        if (!res.ok) throw new Error(String(res.status));
-        setData(await res.json());
-      } catch (err) {
-        if ((err as Error)?.name !== "AbortError") setFailed(true);
-      }
-    })();
-
-    return () => controller.abort();
-  }, [userId]);
-
-  if (failed) return <p className="mt-4 text-xs text-muted">{t("whyFailed")}</p>;
+  if (error) return <p className="mt-4 text-xs text-muted">{t("whyFailed")}</p>;
   if (!data) {
     return (
       <p className="mt-4 flex items-center gap-2 text-xs text-muted">

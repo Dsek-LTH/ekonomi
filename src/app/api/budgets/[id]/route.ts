@@ -35,7 +35,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const budget = await getEvaluatedBudget(id, {
     actuals: q.get("actuals") !== "0",
     evaluated: q.get("evaluated") !== "0",
-    serialize: false,
   });
   if (!budget) return fail(404, "budget.notFound");
   return NextResponse.json(budget);

@@ -21,7 +21,7 @@ import { stockholmDay, today } from "@/lib/domain/date";
 
 /** What the screen narrowed itself to. Everything is optional; nothing set is
  *  the whole shelf, all of time. */
-export interface StockStatsQuery {
+interface StockStatsQuery {
   /** Inclusive, `YYYY-MM-DD`. Absent means "since the first movement". */
   from?: string;
   /** Inclusive. Absent means today. */
@@ -39,7 +39,7 @@ export interface ValuePoint {
 }
 
 /** What one drink type holds right now. */
-export interface CategoryHolding {
+interface CategoryHolding {
   category: DrinkCategory;
   valueOre: number;
   units: number;
@@ -49,7 +49,7 @@ export interface CategoryHolding {
 }
 
 /** What moved in the period, by what kind of movement it was. */
-export interface PeriodFlow {
+interface PeriodFlow {
   purchasedOre: number;
   /**
    * What left the cellar and did not come back, at what it cost.
@@ -80,7 +80,7 @@ export interface PeriodFlow {
   countedOre: number;
 }
 
-export interface ProductMover {
+interface ProductMover {
   id: string;
   name: string;
   category: DrinkCategory;

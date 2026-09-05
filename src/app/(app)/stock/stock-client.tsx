@@ -37,19 +37,8 @@ import { TagChips } from "@/components/stock/tag-chips";
 import { ProductDialog } from "./product-dialog";
 import { CATEGORIES } from "@/lib/domain/categories";
 import { cn } from "@/lib/ui/utils";
+import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
 
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 }).format(ore / 100)} kr`;
-
-const litres = (ml: number) =>
-  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-    ml / 1000,
-  );
-
-const clPerKrona = (cl: number) =>
-  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    cl,
-  );
 
 export default function StockClient({
   levels,
@@ -109,8 +98,8 @@ export default function StockClient({
         : t("revalue.done", {
             rows: done.rows,
             products: done.products,
-            before: kr(done.beforeOre),
-            after: kr(done.afterOre),
+            before: formatOreKr(done.beforeOre),
+            after: formatOreKr(done.afterOre),
           }),
     );
   }
@@ -242,7 +231,7 @@ export default function StockClient({
         return cl == null ? (
           <span className="text-muted">–</span>
         ) : (
-          t("clPerKrona", { cl: clPerKrona(cl) })
+          t("clPerKrona", { cl: formatClPerKrona(cl) })
         );
       },
     },
@@ -294,7 +283,7 @@ export default function StockClient({
         p.onHand.totalMl == null ? (
           <span className="text-muted">–</span>
         ) : (
-          t("litres", { litres: litres(p.onHand.totalMl) })
+          t("litres", { litres: formatLitres(p.onHand.totalMl) })
         ),
     },
     {
@@ -308,7 +297,7 @@ export default function StockClient({
       // somebody opened this for.
       mobile: "trailing",
       cell: (p) =>
-        p.onHand.valueOre > 0 ? kr(p.onHand.valueOre) : <span className="text-muted">–</span>,
+        p.onHand.valueOre > 0 ? formatOreKr(p.onHand.valueOre) : <span className="text-muted">–</span>,
     },
     {
       key: "flags",
@@ -394,7 +383,7 @@ export default function StockClient({
                   {t("asOf.value")}
                 </span>
                 <div className="mt-1 flex h-11 items-center justify-end gap-2 sm:h-9">
-                  <span className="text-lg font-semibold tabular-nums">{kr(totalValueOre)}</span>
+                  <span className="text-lg font-semibold tabular-nums">{formatOreKr(totalValueOre)}</span>
                   {/* Beside the figure it repairs, which is the only place it
                       means anything. It cannot re-price the shelf: every row
                       carries the cost it was booked at, so this can only settle

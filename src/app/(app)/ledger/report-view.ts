@@ -32,7 +32,7 @@ function isZeroRow(a: ReportAccount, isBalance: boolean): boolean {
     : a.amount === 0;
 }
 
-export interface FilteredReport {
+interface FilteredReport {
   report: LedgerReport;
   shown: number;
   total: number;

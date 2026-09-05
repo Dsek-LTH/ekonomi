@@ -56,7 +56,7 @@ export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
 /** Who the rendered report is attested by, when the batch cannot say. */
-export interface DocumentAttestation {
+interface DocumentAttestation {
   name: string;
   studentId: string;
 }

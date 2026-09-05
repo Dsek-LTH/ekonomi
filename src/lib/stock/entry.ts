@@ -17,7 +17,7 @@ import type { StockEntryKind, StockKind } from "@/lib/domain/types";
  * `errors.stock`, so the route returns it as a code and the screen shows the
  * same sentence.
  */
-export type EntryFault =
+type EntryFault =
   | "nothingMoved"
   | "purchaseNotPositive"
   | "removalNotNegative"

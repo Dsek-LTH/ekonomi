@@ -116,9 +116,16 @@ export default function BudgetClient({
   // those out for every cell it commits anyway (`recomputeBudget`, the same
   // evaluator the server runs); asking for them meant evaluating the budget
   // twice over and sending every line's figure back for the pleasure.
+  // Not a `useQuery`: this is a refetch on demand rather than a question the
+  // url asks, and it may make a second request depending on the first one's
+  // answer. What it does borrow is the staleness guard. Two writes in quick
+  // succession are two reloads, and the slower one landing second would put the
+  // earlier budget back on screen, undoing the later edit until the next write.
+  const reload = useRef(0);
   const load = useCallback(async () => {
+    const id = ++reload.current;
     const res = await fetch(`/api/budgets/${budgetId}?actuals=0&evaluated=0`);
-    if (!res.ok) return;
+    if (!res.ok || id !== reload.current) return;
     const fresh = (await res.json()) as Budget;
     // Unless the budget has been moved to another year, when the outcome beside
     // it is a different year's and the only honest thing is to go and get it.
@@ -133,6 +140,7 @@ export default function BudgetClient({
         };
       }
     }
+    if (id !== reload.current) return;
     setBudget(recomputeBudget({ ...fresh, ...outcome.current }));
   }, [budgetId]);
 
@@ -307,7 +315,7 @@ export default function BudgetClient({
 
   // Duplicate the open sheet and jump to the copy, which lands unconnected.
   async function cloneCc(sourceId: string) {
-    const data = await mutate(`/api/budgets/${budgetId}/cost-centers`, {
+    const data = await mutate<{ id: string }>(`/api/budgets/${budgetId}/cost-centers`, {
       body: { cloneFromId: sourceId },
       success: t("cloned"),
       error: t("cloneFailed"),
@@ -315,7 +323,7 @@ export default function BudgetClient({
     });
     if (!data) return;
     await load();
-    if (data.id) setSelected(String(data.id));
+    if (data.id) setSelected(data.id);
   }
 
   return (

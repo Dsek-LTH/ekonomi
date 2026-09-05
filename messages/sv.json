@@ -119,7 +119,6 @@
     "mineTitle": "Dina utlägg",
     "mineEmpty": "Du har inga utlägg än.",
     "allExpenses": "Alla utlägg",
-    "newExpense": "Nytt utlägg",
     "actionHeader": "Åtgärd",
     "action": {
       "FIX": "Åtgärda",
@@ -197,7 +196,6 @@
       "COST_CENTER_APPROVED": "Attesterade kostnadsställe",
       "ATTEST_WITHDRAWN": "Drog tillbaka sin attest",
       "APPROVED": "Attesterade utlägget",
-      "REJECTED": "Avslog utlägget",
       "BOOKED": "Bokförde utlägget",
       "EXPORTED": "Exporterade till Fortnox",
       "EXPORT_REVERTED": "Markerade som ej exporterad",
@@ -476,7 +474,6 @@
     },
     "notFound": "Hittades inte",
     "request": {
-      "rolesList": "roles måste vara en lista",
       "orderedIdsRequired": "orderedIds krävs",
       "costCenterIdRequired": "costCenterId krävs",
       "yearAndAccountRequired": "year och account krävs",
@@ -488,7 +485,6 @@
     "expense": {
       "notFound": "Utlägget hittades inte",
       "descriptionRequired": "Beskrivning krävs",
-      "invalidDate": "Ange ett fullständigt datum (ÅÅÅÅ-MM-DD)",
       "futureDate": "Kvittodatumet kan inte ligga i framtiden",
       "reimbursementTooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet och kan inte tas emot senare. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel.",
       "noEditAccess": "Du har inte behörighet att ändra det här utlägget",
@@ -578,9 +574,7 @@
     },
     "user": {
       "notFound": "Användaren hittades inte",
-      "unknown": "Okänd användare",
-      "invalidRole": "Ogiltig roll",
-      "lastSettingsAdmin": "Det här är den sista skattmästaren. Utse en ny innan du tar bort rollen, annars kommer ingen åt inställningarna."
+      "unknown": "Okänd användare"
     },
     "resultUnit": {
       "notFound": "Resultatenheten hittades inte",
@@ -706,7 +700,6 @@
       "moveDestinationBooked": "Verksamhetens rapport för den dagen är redan bokförd. Varorna kan inte flyttas dit.",
       "noBatch": "Ingen hämtning finns att koppla rapporten till. Hämta försäljning först.",
       "unknownAccount": "Kontot {account} finns inte i kontoplanen.",
-      "noDocument": "Ingen intäktsräkning är renderad än.",
       "documentMissing": "Intäktsräkningen saknas i lagringen.",
       "storageUnavailable": "Lagringen är inte tillgänglig.",
       "documentStepFailed": "{step} misslyckades: {detail}",
@@ -738,8 +731,6 @@
       "eanUnknown": "Ingen produkt har den streckkoden.",
       "expenseNotFound": "Utlägget hittades inte.",
       "levelsOnReturnOnly": "Nivån sätts när flaskan kommer tillbaka, inte när den tas ut.",
-      "lotNotFound": "Leveransen hittades inte.",
-      "lotWrongProduct": "Leveransen hör till en annan produkt.",
       "moreThanWentOut": "Mer än vad som togs ut på tillfället.",
       "noAccess": "Du har inte behörighet till lagret.",
       "notThatManyOpen": "Det finns inte så många öppnade flaskor på den nivån.",
@@ -806,7 +797,6 @@
     "backToApp": "Tillbaka till appen",
     "toDsek": "Till dsek.se",
     "openMenu": "Öppna menyn",
-    "closeMenu": "Stäng meny",
     "doneMenu": "Klar",
     "collapseMenu": "Fäll ihop menyn",
     "fortnoxSignIn": "Logga in i Fortnox",
@@ -980,8 +970,7 @@
       "all": "Alla"
     },
     "colCard": "Kort",
-    "account": "Redovisa",
-    "expenseStarted": "Påbörjat"
+    "account": "Redovisa"
   },
   "bookkeeping": {
     "title": "Bokföring",
@@ -1480,10 +1469,6 @@
       "syncing": "Synkar…",
       "syncFailed": "Synk misslyckades",
       "syncDone": "Synk klar",
-      "syncSummary": "Uppdaterade {updated} kostnadsställen.",
-      "syncSummaryWithRetired": "Uppdaterade {updated} kostnadsställen, inaktiverade {retired}.",
-      "syncSummaryWithDeleted": "Uppdaterade {updated} kostnadsställen, tog bort {deleted}.",
-      "syncSummaryWithRetiredAndDeleted": "Uppdaterade {updated} kostnadsställen, inaktiverade {retired}, tog bort {deleted}.",
       "newLocal": "Nytt lokalt",
       "newLocalTitle": "Nytt lokalt kostnadsställe",
       "newLocalSubtitle": "Finns bara här, inte i Fortnox. Används för sådant som inte ska bokföras på ett kostnadsställe där, till exempel alkohol som bokas på balanskonto.",
@@ -1520,7 +1505,12 @@
       "fortnoxHint": "Speglas från Fortnox. Ändra det där och synka om.",
       "searchPlaceholder": "Sök kod, benämning eller resultatenhet…",
       "emptyNone": "Inga kostnadsställen ännu. Synka från Fortnox för att hämta in dem.",
-      "emptyNoMatch": "Inga kostnadsställen matchar filtret."
+      "emptyNoMatch": "Inga kostnadsställen matchar filtret.",
+      "syncSummary": {
+        "updated": "Uppdaterade {count} kostnadsställen",
+        "retired": "inaktiverade {count}",
+        "deleted": "tog bort {count}"
+      }
     },
     "resultUnits": {
       "title": "Resultatenheter",
@@ -1586,9 +1576,7 @@
       },
       "saveFailed": "Kunde inte spara.",
       "noOwnerGroups": "Ingen Authentik-grupp är kopplad till den här resultatenheten. Kopplingen görs i lib/server/authentik-roles.ts.",
-      "noOwnersHolding": "Ingen innehar posten just nu.",
-      "unmappedTitle": "Kopplingar utan resultatenhet",
-      "unmappedBody": "Authentik-kopplingen pekar ut resultatenheter som inte finns här. Den som innehar posten blir resultatansvarig utan att ansvara för något. Byt namn på resultatenheten nedan, eller rätta kopplingen i lib/server/authentik-roles.ts."
+      "noOwnersHolding": "Ingen innehar posten just nu."
     },
     "fortnox": {
       "description": "Anslutning, kontoplan och huvudbok.",
@@ -1616,8 +1604,6 @@
       "syncChart": "Synka kontoplan",
       "chartSyncFailed": "Kunde inte synka kontoplanen",
       "chartSynced": "Kontoplan synkad",
-      "chartSummary": "{fetched} konton hämtade.",
-      "chartSummaryWithRetired": "{fetched} konton hämtade, {retired} inaktiverade.",
       "chartEmpty": "Kontoplanen är tom. Synka från Fortnox för att hämta in den.",
       "chartNoMatch": "Inga konton matchar sökningen.",
       "bankAccount": "Bankkonto",
@@ -1634,7 +1620,11 @@
       "ledgerSummary": "Synkade {count} verifikationer.",
       "noYears": "Inga räkenskapsår hämtade ännu.",
       "neverSynced": "Aldrig synkad",
-      "openingBalancesNote": "Ingående balanser (<code>#IB</code>) hämtas vid synk. Ett år som synkades innan balansrapporten fanns behöver synkas om för att visa rätt saldon."
+      "openingBalancesNote": "Ingående balanser (<code>#IB</code>) hämtas vid synk. Ett år som synkades innan balansrapporten fanns behöver synkas om för att visa rätt saldon.",
+      "chartSummary": {
+        "fetched": "{count} konton hämtade",
+        "retired": "{count} inaktiverade"
+      }
     },
     "income": {
       "title": "Intäkter",
@@ -1667,7 +1657,6 @@
         "description": "Resultatenheterna, och de intäktsinställningar som låter dem ta in pengar. En rapport per verksamhet och dag; prefixen avgör vad som hamnar var.",
         "add": "Lägg till",
         "key": "Nyckel",
-        "keyPlaceholder": "cafe",
         "name": "Namn",
         "namePlaceholder": "Cafémästeriet",
         "empty": "Inga resultatenheter uppsatta än.",
@@ -1675,20 +1664,16 @@
         "remove": "Ta bort",
         "removeTitle": "Ta bort {name}?",
         "removeBody": "Intäktsinställningarna och prefixen tas bort. Resultatenheten finns kvar.",
-        "retireBody": "Verksamheten har bokförda rapporter och avslutas i stället för att tas bort. Den slutar synas i routningen. Rapporterna finns kvar.",
         "defaultCostCenter": "Standardkostnadsställe",
         "noCostCenter": "Inget kostnadsställe",
         "noFallback": "Inget prefix är markerat som reserv. Produkter utan igenkänt prefix har ingenstans att ta vägen, och hämtningar kommer att nekas.",
-        "manageUnits": "Hantera resultatenheter",
-        "enableIncome": "Lägg till intäkter",
-        "noCostCentres": "Äger inga kostnadsställen"
+        "manageUnits": "Hantera resultatenheter"
       },
       "prefixes": {
         "add": "Lägg till prefix",
         "save": "Spara",
         "none": "Inga prefix",
         "code": "Prefix",
-        "codePlaceholder": "s1",
         "account": "Konto",
         "accountPlaceholder": "3011",
         "remove": "Ta bort prefix",
@@ -1820,9 +1805,7 @@
     "counts": {
       "reports": "{count} rapporter",
       "toBook": "{count} att bokföra",
-      "toExport": "{count} att exportera",
-      "allHandled": "Allt hanterat",
-      "toExportShort": "Att exportera"
+      "toExport": "{count} att exportera"
     },
     "empty": {
       "description": "Hämta en period från Zettle, eller ladda upp en Swish-rapport.",
@@ -1845,7 +1828,6 @@
       "status": "Status",
       "fees": "Zettleavgifter",
       "chooseCostCenter": "Välj kostnadsställe",
-      "toggleLines": "Visa varor",
       "voucher": "Verifikation"
     },
     "lines": {
@@ -1874,7 +1856,7 @@
       "destination": "Till verksamhet",
       "destinationHint": "Varorna hamnar på verksamhetens rapport för samma dag. Finns ingen skapas den.",
       "destinationPlaceholder": "Välj verksamhet…",
-        "destinationRequired": "Välj vart varorna ska flyttas",
+      "destinationRequired": "Välj vart varorna ska flyttas",
       "setAll": "Sätt alla till:",
       "setAllTo": "Sätt alla rader till konto {account}",
       "noAccounts": "Verksamheten har inga produktprefix. Välj konto för varje rad.",
@@ -1897,7 +1879,7 @@
       "unit": "Verksamhet",
       "unitHint": "Vems intäkter rapporten blir.",
       "unitPlaceholder": "Välj verksamhet…",
-        "unitRequired": "Välj vems intäkter rapporten blir",
+      "unitRequired": "Välj vems intäkter rapporten blir",
       "alreadyExists": "Verksamheten har redan en rapport för den dagen, så den öppnas i stället. Två rapporter för samma dag går inte att bokföra båda två.",
       "footerHint": "Rapporten skapas tom.",
       "cancel": "Avbryt",
@@ -2156,7 +2138,6 @@
         "tags": "Taggar"
       },
       "search": "Sök produkt…",
-      "noSize": "volym saknas",
       "purchase": "Inköp",
       "stocktake": "Inventera",
       "onShelf": "På hyllan",
@@ -2365,7 +2346,7 @@
       "hint": "{kind}, {date}. Skriv vad det skulle ha varit. Mellanskillnaden räknas ut åt dig.",
       "qty": "Antal",
       "qtyHint": "Står på {was} nu. Noll tar bort raden helt.",
-        "unchanged": "Antalet är oförändrat, så det finns inget att spara",
+      "unchanged": "Antalet är oförändrat, så det finns inget att spara",
       "remove": "Ta bort raden",
       "save": "Spara",
       "failed": "Raden kunde inte ändras."

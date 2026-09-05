@@ -20,7 +20,7 @@ export const THEME_COOKIE = "theme";
 export type Theme = "light" | "dark";
 
 /** Light unless it says otherwise. There is no third state deferring to the OS. */
-export const DEFAULT_THEME: Theme = "light";
+const DEFAULT_THEME: Theme = "light";
 
 /**
  * Read a stored preference. Anything that is not exactly "dark" is the default,

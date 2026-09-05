@@ -25,6 +25,81 @@ import { useEscape } from "@/lib/ui/escape";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
 
+/**
+ * The chrome every dialog in this app needs, without saying anything about the
+ * card inside it: portalled to <body>, a scrim that dismisses when clicked,
+ * Escape as the keyboard way out, Tab held inside, and the page behind held
+ * still while it is up.
+ *
+ * Separate from `Modal` because the two dialogs this app has want the same
+ * chrome and genuinely different cards. `Modal` is a form: a header strip, a
+ * scrolling body, a footer of buttons, and on a phone it comes up from the
+ * bottom as a sheet. The confirm dialog is a sentence and two buttons, centred
+ * at every width. Folding one into the other would have turned every "are you
+ * sure" on a phone into a full-width sheet.
+ *
+ * It used to be copied instead, and the copy had already diverged in the one
+ * way that matters: the confirm dialog was not portalled. `position: fixed`
+ * only means "the viewport" while no ancestor has a transform, a filter or a
+ * `contain`, any one of which silently turns the scrim into a box the size of
+ * whatever grew it. It worked because the provider happens to sit near the
+ * root, which is a fact about where it is mounted and not about the dialog.
+ */
+export function DialogLayer({
+  /** Whether the layer is up. Escape and the focus trap stack on this. */
+  active = true,
+  onDismiss,
+  /** The scrim's own layout: how the card inside is placed against it. */
+  className,
+  children,
+}: {
+  active?: boolean;
+  onDismiss: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Escape closes this and only this. Anything opened on top of it answers
+  // first. See lib/ui/escape.ts, and lib/ui/focus-trap.ts, which stacks the
+  // same way.
+  useEscape(active, onDismiss);
+  useFocusTrap(active, boxRef);
+
+  useEffect(() => {
+    if (!active) return;
+    // Below md the document is what scrolls, so the page would drift behind the
+    // dialog without this.
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [active]);
+
+  // Every dialog in the app is opened by a click, so there is never one in the
+  // first render to mismatch, but the guard is what says that out loud rather
+  // than leaving the file to throw on a server that has no document.
+  if (!active || typeof document === "undefined") return null;
+
+  return createPortal(
+    // Clicking away dismisses. That is a mouse affordance with a keyboard
+    // equivalent already (Escape, above) so the rules asking for a key handler
+    // here are asking for a second copy of one that exists somewhere it works
+    // better.
+    //
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    <div className={cn("fixed inset-0 z-[200] bg-black/40", className)} onClick={onDismiss}>
+      {/* `contents`, so the trap's box adds no layout of its own between the
+          scrim and the card it is placing. */}
+      <div ref={boxRef} className="contents">
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function Modal({
   /** What a screen reader announces on arrival. */
   label,
@@ -38,49 +113,12 @@ export function Modal({
   className?: string;
   children: React.ReactNode;
 }) {
-  // Only when this dialog is the topmost thing open. A menu or a scanner on
-  // top of it answers Escape first, and one press should close one thing. See
-  // lib/ui/escape.ts.
-  useEscape(true, onClose);
-
-  const boxRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(true, boxRef);
-
-  useEffect(() => {
-    // Below md the document is what scrolls, so the page would drift behind the
-    // dialog without this.
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
-
-  // Every dialog in the app is opened by a click, so there is never one in the
-  // first render to mismatch, but the guard is what says that out loud rather
-  // than leaving the file to throw on a server that has no document.
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    // Portalled to <body> rather than left where it was written. A dialog is
-    // the topmost thing on the screen, and `position: fixed` only means "the
-    // viewport" while nothing above it in the tree has a transform, a filter or
-    // a `contain`, any one of which silently turns the scrim into a box the
-    // size of whatever page element grew it, which is how a centred dialog ends
-    // up hanging off one edge. Out here it has no ancestors to be caught by.
-    //
-    // Clicking away closes. That is a mouse affordance with a keyboard
-    // equivalent already (Escape, above) so the rules asking for a key
-    // handler here are asking for a second copy of one that exists somewhere it
-    // works better.
-    //
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div
-      className="fixed inset-0 z-[200] bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-6"
-      onClick={onClose}
+  return (
+    <DialogLayer
+      onDismiss={onClose}
+      className="sm:flex sm:items-center sm:justify-center sm:p-6"
     >
       <Card
-        ref={boxRef}
         role="dialog"
         aria-modal="true"
         aria-label={label}
@@ -111,12 +149,10 @@ export function Modal({
       >
         {children}
       </Card>
-    </div>,
-    document.body,
+    </DialogLayer>
   );
 }
 
-/** The title strip every dialog opens with: a heading and a line under it. */
 export function ModalHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     // shrink-0, here and on the footer: the card is capped at a fraction of the

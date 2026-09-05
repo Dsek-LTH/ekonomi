@@ -22,7 +22,7 @@
 /** The status whose cover page says nothing yet. See below. */
 const DRAFT = "DRAFT";
 
-export interface ExpenseDocumentSubject {
+interface ExpenseDocumentSubject {
   id: string;
   status: string;
   /**
@@ -43,7 +43,7 @@ export interface ExpenseDocumentSubject {
 /** One document in the panel: where it is and what it is. Structural on
  *  purpose, so this file (which knows nothing about the viewer) can be the
  *  one place that decides what the panel gets. */
-export interface PanelDocument {
+interface PanelDocument {
   src: string;
   mimeType: string;
   /** Alt text, for a document that is an image. */

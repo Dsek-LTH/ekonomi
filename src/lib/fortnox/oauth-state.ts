@@ -16,7 +16,7 @@ export const STATE_COOKIE = "fortnox_oauth_state";
  * The mode, the anti-CSRF nonce and where to return afterwards all ride in one
  * httpOnly cookie; only the nonce goes to Fortnox as `state`.
  */
-export interface OAuthState {
+interface OAuthState {
   nonce: string;
   mode: FortnoxAuthMode;
   returnTo: string;

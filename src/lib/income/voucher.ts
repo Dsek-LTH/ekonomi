@@ -150,7 +150,7 @@ export interface IncomeVoucherInput {
  * is one whose voucher would be rejected by Fortnox, but only at export, long
  * after the app had said it was booked. Better to refuse it here.
  */
-export type IncomeVoucherBlocker =
+type IncomeVoucherBlocker =
   | "noDistributions"
   | "unbalanced"
   | "noClearingAccount"
@@ -212,7 +212,7 @@ export function buildIncomeVoucherLines(input: IncomeVoucherInput): IncomeVouche
   ];
 }
 
-export interface FeeVoucherInput {
+interface FeeVoucherInput {
   report: IncomeFeeReportDto;
   /** Debited: Zettle's fees are a cost to the section.  */
   feeAccount: string;

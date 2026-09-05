@@ -57,15 +57,13 @@ export const openMl = (open: OpenBottles, nominalMl: number): number =>
  * Why these bottles cannot be taken out. Each is a message key under
  * `errors.stock`, so the form and the route say the same sentence.
  */
-export type PickFault = "openBottlesFirst" | "notThatManyOpen" | "notThatManySealed";
+type PickFault = "openBottlesFirst" | "notThatManyOpen" | "notThatManySealed";
 
 /** What somebody is taking out: some open bottles, and some sealed ones. */
 export interface Pick {
   sealed: number;
   open: OpenBottles;
 }
-
-export const pickedCount = (pick: Pick): number => pick.sealed + openCount(pick.open);
 
 /**
  * Whether the store holds these bottles at all.
@@ -142,7 +140,7 @@ export const homecomingCount = (h: Homecoming): number =>
   h.sealed + openCount(h.open) + h.emptied;
 
 /** Why this cannot be what came back. A message key under `errors.stock`. */
-export type ReturnFault = "moreThanWentOut" | "nothingReturned";
+type ReturnFault = "moreThanWentOut" | "nothingReturned";
 
 /**
  * Whether these bottles can be the ones that were out.

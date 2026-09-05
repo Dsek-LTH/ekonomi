@@ -119,7 +119,6 @@
     "mineTitle": "Your expenses",
     "mineEmpty": "You have no expenses yet.",
     "allExpenses": "All expenses",
-    "newExpense": "New expense",
     "actionHeader": "Action",
     "action": {
       "FIX": "Fix",
@@ -197,7 +196,6 @@
       "COST_CENTER_APPROVED": "Approved a cost center",
       "ATTEST_WITHDRAWN": "Withdrew their approval",
       "APPROVED": "Approved the expense",
-      "REJECTED": "Rejected the expense",
       "BOOKED": "Booked the expense",
       "EXPORTED": "Exported to Fortnox",
       "EXPORT_REVERTED": "Marked as not exported",
@@ -476,7 +474,6 @@
     },
     "notFound": "Not found",
     "request": {
-      "rolesList": "roles has to be a list",
       "orderedIdsRequired": "orderedIds is required",
       "costCenterIdRequired": "costCenterId is required",
       "yearAndAccountRequired": "year and account are required",
@@ -488,7 +485,6 @@
     "expense": {
       "notFound": "The expense was not found",
       "descriptionRequired": "A description is required",
-      "invalidDate": "Enter a complete date (YYYY-MM-DD)",
       "futureDate": "The purchase date cannot be in the future",
       "reimbursementTooLate": "An expense out of your own pocket must be filed within {days} days of the purchase and cannot be accepted later. Contact the skattmästare if you have questions or if the date is wrong.",
       "noEditAccess": "You are not allowed to change this expense",
@@ -578,9 +574,7 @@
     },
     "user": {
       "notFound": "The user was not found",
-      "unknown": "Unknown user",
-      "invalidRole": "Invalid role",
-      "lastSettingsAdmin": "This is the last treasurer left. Appoint another one before you remove the role, or nobody will be able to reach the settings."
+      "unknown": "Unknown user"
     },
     "resultUnit": {
       "notFound": "The result unit was not found",
@@ -706,7 +700,6 @@
       "moveDestinationBooked": "That committee's report for the day is already booked. The items cannot be moved there.",
       "noBatch": "There is no fetch to attach the report to. Fetch some sales first.",
       "unknownAccount": "Account {account} is not in the chart of accounts.",
-      "noDocument": "No report has been rendered yet.",
       "documentMissing": "The rendered report is missing from storage.",
       "storageUnavailable": "Storage is unavailable.",
       "documentStepFailed": "{step} failed: {detail}",
@@ -738,8 +731,6 @@
       "eanUnknown": "No product has that barcode.",
       "expenseNotFound": "The expense was not found.",
       "levelsOnReturnOnly": "A level is set when the bottle comes back, not when it is taken out.",
-      "lotNotFound": "The delivery was not found.",
-      "lotWrongProduct": "That delivery belongs to another product.",
       "moreThanWentOut": "More than went out on that occasion.",
       "noAccess": "You do not have access to the stock.",
       "notThatManyOpen": "There are not that many open bottles at that level.",
@@ -806,7 +797,6 @@
     "backToApp": "Back to the app",
     "toDsek": "To dsek.se",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu",
     "doneMenu": "Done",
     "collapseMenu": "Collapse menu",
     "fortnoxSignIn": "Sign in to Fortnox",
@@ -980,8 +970,7 @@
       "all": "All"
     },
     "colCard": "Card",
-    "account": "Account for it",
-    "expenseStarted": "Started"
+    "account": "Account for it"
   },
   "bookkeeping": {
     "title": "Bookkeeping",
@@ -1480,10 +1469,6 @@
       "syncing": "Syncing…",
       "syncFailed": "The sync failed",
       "syncDone": "Sync complete",
-      "syncSummary": "Updated {updated} cost centers.",
-      "syncSummaryWithRetired": "Updated {updated} cost centers, retired {retired}.",
-      "syncSummaryWithDeleted": "Updated {updated} cost centers, removed {deleted}.",
-      "syncSummaryWithRetiredAndDeleted": "Updated {updated} cost centers, retired {retired}, removed {deleted}.",
       "newLocal": "New local",
       "newLocalTitle": "New local cost center",
       "newLocalSubtitle": "Exists only here, not in Fortnox. Use it for things that should not be booked on a cost center there, such as alcohol booked to a balance sheet account.",
@@ -1520,7 +1505,12 @@
       "fortnoxHint": "Mirrored from Fortnox. Change it there and sync again.",
       "searchPlaceholder": "Search codes, names or result units…",
       "emptyNone": "No cost centers yet. Sync from Fortnox to pull them in.",
-      "emptyNoMatch": "No cost centers match the filter."
+      "emptyNoMatch": "No cost centers match the filter.",
+      "syncSummary": {
+        "updated": "Updated {count} cost centres",
+        "retired": "deactivated {count}",
+        "deleted": "removed {count}"
+      }
     },
     "resultUnits": {
       "title": "Result units",
@@ -1586,9 +1576,7 @@
       },
       "saveFailed": "Could not save.",
       "noOwnerGroups": "No Authentik group is mapped to this result unit. The mapping lives in lib/server/authentik-roles.ts.",
-      "noOwnersHolding": "Nobody holds the post right now.",
-      "unmappedTitle": "Mappings without a result unit",
-      "unmappedBody": "The Authentik mapping names result units that do not exist here. Whoever holds those posts becomes resultatansvarig for nothing. Rename the result unit below, or correct the mapping in lib/server/authentik-roles.ts."
+      "noOwnersHolding": "Nobody holds the post right now."
     },
     "fortnox": {
       "description": "Connection, chart of accounts and general ledger.",
@@ -1616,8 +1604,6 @@
       "syncChart": "Sync chart of accounts",
       "chartSyncFailed": "Could not sync the chart of accounts",
       "chartSynced": "Chart of accounts synced",
-      "chartSummary": "{fetched} accounts fetched.",
-      "chartSummaryWithRetired": "{fetched} accounts fetched, {retired} retired.",
       "chartEmpty": "The chart of accounts is empty. Sync from Fortnox to pull it in.",
       "chartNoMatch": "No accounts match the search.",
       "bankAccount": "Bank account",
@@ -1634,7 +1620,11 @@
       "ledgerSummary": "Synced {count} vouchers.",
       "noYears": "No financial years fetched yet.",
       "neverSynced": "Never synced",
-      "openingBalancesNote": "Opening balances (<code>#IB</code>) are fetched on sync. A year synced before the balance sheet existed has to be re-synced to show the right balances."
+      "openingBalancesNote": "Opening balances (<code>#IB</code>) are fetched on sync. A year synced before the balance sheet existed has to be re-synced to show the right balances.",
+      "chartSummary": {
+        "fetched": "{count} accounts fetched",
+        "retired": "{count} deactivated"
+      }
     },
     "income": {
       "title": "Income",
@@ -1667,7 +1657,6 @@
         "description": "The result units, and the income settings that let them take money in. One report per verksamhet per day; the prefixes decide what goes where.",
         "add": "Add",
         "key": "Key",
-        "keyPlaceholder": "cafe",
         "name": "Name",
         "namePlaceholder": "Cafémästeriet",
         "empty": "No result units set up yet.",
@@ -1675,20 +1664,16 @@
         "remove": "Remove",
         "removeTitle": "Remove {name}?",
         "removeBody": "The income settings and prefixes are removed. The result unit itself stays.",
-        "retireBody": "It has booked reports, so it is retired rather than removed. It stops appearing in the routing table. The reports stay.",
         "defaultCostCenter": "Default cost centre",
         "noCostCenter": "No cost centre",
         "noFallback": "No prefix is marked as the fallback. Products matching nothing have nowhere to go, and fetches will be refused.",
-        "manageUnits": "Manage result units",
-        "enableIncome": "Add income",
-        "noCostCentres": "Owns no cost centres"
+        "manageUnits": "Manage result units"
       },
       "prefixes": {
         "add": "Add prefix",
         "save": "Save",
         "none": "No prefixes",
         "code": "Prefix",
-        "codePlaceholder": "s1",
         "account": "Account",
         "accountPlaceholder": "3011",
         "remove": "Remove prefix",
@@ -1820,9 +1805,7 @@
     "counts": {
       "reports": "{count} reports",
       "toBook": "{count} to book",
-      "toExport": "{count} to export",
-      "allHandled": "All handled",
-      "toExportShort": "To export"
+      "toExport": "{count} to export"
     },
     "empty": {
       "description": "Fetch a period from Zettle, or upload a Swish report.",
@@ -1845,7 +1828,6 @@
       "status": "Status",
       "fees": "Zettle fees",
       "chooseCostCenter": "Choose a cost centre",
-      "toggleLines": "Show items",
       "voucher": "Voucher"
     },
     "lines": {
@@ -1874,7 +1856,7 @@
       "destination": "To committee",
       "destinationHint": "The items join that committee's report for the same day. If it has none, one is created.",
       "destinationPlaceholder": "Pick a committee…",
-        "destinationRequired": "Pick where the items are moving to",
+      "destinationRequired": "Pick where the items are moving to",
       "setAll": "Set all to:",
       "setAllTo": "Set every row to account {account}",
       "noAccounts": "This committee has no product prefixes. Pick an account for each row.",
@@ -1897,7 +1879,7 @@
       "unit": "Committee",
       "unitHint": "Whose takings the report becomes.",
       "unitPlaceholder": "Pick a committee…",
-        "unitRequired": "Pick whose takings the report becomes",
+      "unitRequired": "Pick whose takings the report becomes",
       "alreadyExists": "That committee already has a report for the day, so that one opens instead. Two reports for one day could not both be booked.",
       "footerHint": "The report is created empty.",
       "cancel": "Cancel",
@@ -2156,7 +2138,6 @@
         "tags": "Tags"
       },
       "search": "Search products…",
-      "noSize": "no size set",
       "purchase": "Purchase",
       "stocktake": "Stocktake",
       "onShelf": "On the shelf",
@@ -2365,7 +2346,7 @@
       "hint": "{kind}, {date}. Type what it should have been. We work out the difference.",
       "qty": "Quantity",
       "qtyHint": "Says {was} now. Zero removes the row entirely.",
-        "unchanged": "The figure is unchanged, so there is nothing to save",
+      "unchanged": "The figure is unchanged, so there is nothing to save",
       "remove": "Remove the row",
       "save": "Save",
       "failed": "The row could not be changed."

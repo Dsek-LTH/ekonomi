@@ -32,7 +32,7 @@ export type LifecycleFailure =
   /** Delete refuses while Fortnox still has the voucher. Unexport first. */
   | { reason: "deleteExportedFirst" };
 
-export type LifecycleResult = { ok: true } | ({ ok: false } & LifecycleFailure);
+type LifecycleResult = { ok: true } | ({ ok: false } & LifecycleFailure);
 
 /**
  * Forget the Fortnox voucher: EXPORTED → BOOKED.

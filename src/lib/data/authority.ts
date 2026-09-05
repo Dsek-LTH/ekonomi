@@ -151,7 +151,7 @@ export async function getAuthority(): Promise<AuthorityData> {
 //   • a role the mapping grants that the row does not have yet: the mirror
 //     image, landing at their next sign-in.
 
-export type RoleReason = {
+type RoleReason = {
   role: Role;
   /** The person's groups that confer it. Empty for ORDINARIE, and for a leftover. */
   groups: string[];
@@ -161,7 +161,7 @@ export type RoleReason = {
   leftover: boolean;
 };
 
-export type UnitReason = {
+type UnitReason = {
   /** A ResultUnit *name*, the way User.resultUnits stores it. */
   unit: string;
   groups: string[];

@@ -12,7 +12,7 @@ import { getIncomeMoveTargets, type IncomeMoveTarget, type IncomeReportRow } fro
 import { getIncomeSettings, type IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 
-export interface IncomeReviewContext {
+interface IncomeReviewContext {
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];

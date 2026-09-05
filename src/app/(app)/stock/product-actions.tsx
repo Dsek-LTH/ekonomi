@@ -24,6 +24,10 @@ import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { LEVELS, bottlesAt, type Level, type OpenBottles } from "@/lib/stock/levels";
+import { formatOreKr } from "@/lib/ui/format";
+
+/** Delivery figures are read against an invoice, so they carry their öre. */
+const formatOreKr2 = (ore: number) => formatOreKr(ore, { decimals: 2 });
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -31,9 +35,6 @@ const int = (s: string): number => {
   const n = Number(s.replace(",", ".").trim());
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
 };
-
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(ore / 100)} kr`;
 
 /**
  * A delivery.
@@ -103,7 +104,7 @@ export function PurchaseDialog({
         ) : (
           count > 0 && (
             <Notice tone="info">
-              {t("notice.worth", { value: kr(product.costPriceOre * count) })}
+              {t("notice.worth", { value: formatOreKr2(product.costPriceOre * count) })}
             </Notice>
           )
         )}
@@ -369,7 +370,7 @@ export function SpoilageDialog({
 
         {count > 0 &&
           (writeDownOre > 0 ? (
-            <Notice tone="info">{t("spoilage.worth", { value: kr(writeDownOre) })}</Notice>
+            <Notice tone="info">{t("spoilage.worth", { value: formatOreKr2(writeDownOre) })}</Notice>
           ) : (
             <Notice tone="info">{t("spoilage.noValue")}</Notice>
           ))}

@@ -22,6 +22,10 @@ const line = (id: string): LineItem => ({
   expression: "0",
   sortOrder: 0,
   values: {},
+  // The "antal × á-pris" form, unused by every function under test: these move
+  // rows about and never look inside one.
+  quantity: null,
+  unitPrice: null,
 });
 
 const account = (id: string, lineIds: string[]): Account => ({

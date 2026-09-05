@@ -21,13 +21,12 @@ import "server-only";
 // action with a record of its own.
 
 import { differs, replay, type ReplayRow } from "@/lib/stock/replay";
-import type { prisma } from "./db";
-
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+import { openColumns, openOf } from "./stock-state";
+import type { TxClient } from "./tx";
 
 /** How many rows it had to write. Nothing to report is the ordinary answer:
  *  every write path calls this, so the log is usually already settled. */
-export async function replayProduct(tx: Tx, productId: string): Promise<number> {
+export async function replayProduct(tx: TxClient, productId: string): Promise<number> {
   const rows = await tx.stockEntry.findMany({
     where: { productId },
     // The day it happened, then the order it was written. The only tiebreak
@@ -53,7 +52,7 @@ export async function replayProduct(tx: Tx, productId: string): Promise<number> 
     kind: r.kind,
     level: r.level,
     units: r.units,
-    open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
+    open: openOf(r),
     countedQty: r.countedQty,
     valueDeltaOre: r.valueDeltaOre,
     unitCostOre: r.unitCostOre,
@@ -69,10 +68,7 @@ export async function replayProduct(tx: Tx, productId: string): Promise<number> 
       where: { id: r.id },
       data: {
         units: want.units,
-        open80: want.open[80] ?? 0,
-        open60: want.open[60] ?? 0,
-        open40: want.open[40] ?? 0,
-        open20: want.open[20] ?? 0,
+        ...openColumns(want.open),
         valueDeltaOre: want.valueDeltaOre,
       },
     });

@@ -6,7 +6,7 @@ import { cookies, headers } from "next/headers";
 export const LOCALES = ["sv", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "sv";
-export const LOCALE_COOKIE = "NEXT_LOCALE";
+const LOCALE_COOKIE = "NEXT_LOCALE";
 
 const isLocale = (v: string | undefined): v is Locale =>
   !!v && (LOCALES as readonly string[]).includes(v);

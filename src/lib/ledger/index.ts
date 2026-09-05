@@ -2,8 +2,7 @@
 // Amounts are returned in SEK (the rest of the UI works in SEK), except the
 // budget-vs-actual helper which stays in öre for exact matching.
 import { prisma } from "@/lib/server/db";
-
-const ore = (v: number | null | undefined) => (v ?? 0) / 100;
+import { oreToSEK } from "@/lib/domain/money";
 
 export interface LedgerYear {
   id: number; // Fortnox financial-year id
@@ -38,7 +37,7 @@ export async function financialYearIdForCalendarYear(year: number): Promise<numb
   return fy?.id ?? null;
 }
 
-export interface LedgerRowView {
+interface LedgerRowView {
   id: string;
   date: string; // ISO
   voucher: string; // e.g. "A-42"
@@ -85,8 +84,8 @@ export async function getLedgerRows(
     costCenter: r.costCenterCode
       ? `${r.costCenterCode}${r.costCenterName ? ` – ${r.costCenterName}` : ""}`
       : null,
-    debit: ore(r.debit),
-    credit: ore(r.credit),
+    debit: oreToSEK(r.debit),
+    credit: oreToSEK(r.credit),
   }));
 }
 

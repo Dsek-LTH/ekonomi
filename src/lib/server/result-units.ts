@@ -51,7 +51,7 @@ export function resultUnitNameForCode(code: string, prefixes: PrefixRow[]): stri
   return resultUnitForCode(code, prefixes)?.resultUnitName ?? null;
 }
 
-export interface PrefixConflict {
+interface PrefixConflict {
   value: string;
   resultUnitName: string;
   // "extends": the new prefix starts with an existing one (S exists, adding SKT)

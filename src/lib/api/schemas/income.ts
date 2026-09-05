@@ -25,7 +25,6 @@ export const FetchIncome = z.object({
   from: IsoDate,
   to: IsoDate,
 });
-export type FetchIncomeInput = z.infer<typeof FetchIncome>;
 
 /**
  * Make an empty report for a verksamhet's day, to move sales onto. See
@@ -41,7 +40,6 @@ export const CreateIncomeReport = z.object({
   date: IsoDate,
   resultUnitId: Id,
 });
-export type CreateIncomeReportInput = z.infer<typeof CreateIncomeReport>;
 
 /**
  * What a treasurer may change about a fetched report before it is booked.
@@ -54,7 +52,6 @@ export type CreateIncomeReportInput = z.infer<typeof CreateIncomeReport>;
 export const UpdateIncomeReport = z.object({
   costCenterId: Clearable(Id).optional(),
 });
-export type UpdateIncomeReportInput = z.infer<typeof UpdateIncomeReport>;
 
 /**
  * Book a day's takings, optionally with the voucher the bookkeeper edited.
@@ -72,7 +69,6 @@ export type UpdateIncomeReportInput = z.infer<typeof UpdateIncomeReport>;
 export const BookIncomeReport = z.object({
   lines: z.array(VoucherLineInput).default([]),
 });
-export type BookIncomeReportInput = z.infer<typeof BookIncomeReport>;
 
 /**
  * Move sold lines onto another verksamhet's report for the same day: a product
@@ -91,7 +87,6 @@ export const MoveIncomeLines = z.object({
     .min(1)
     .max(2000),
 });
-export type MoveIncomeLinesInput = z.infer<typeof MoveIncomeLines>;
 
 /**
  * Re-account sold lines where they are.
@@ -104,7 +99,6 @@ export type MoveIncomeLinesInput = z.infer<typeof MoveIncomeLines>;
 export const UpdateIncomeLines = z.object({
   lines: z.array(z.object({ id: Id, account: AccountNumber })).min(1).max(2000),
 });
-export type UpdateIncomeLinesInput = z.infer<typeof UpdateIncomeLines>;
 
 // ── The routing table (settings) ──────────────────────────────────
 //
@@ -132,7 +126,6 @@ export const CreateIncomeUnit = z.object({
   properName: Clearable(NonEmpty).optional(),
   defaultCostCenterId: Clearable(Id).optional(),
 });
-export type CreateIncomeUnitInput = z.infer<typeof CreateIncomeUnit>;
 
 export const UpdateIncomeUnit = z.object({
   properName: Clearable(NonEmpty).optional(),
@@ -140,7 +133,6 @@ export const UpdateIncomeUnit = z.object({
   defaultCostCenterId: Clearable(Id).optional(),
   active: z.boolean().optional(),
 });
-export type UpdateIncomeUnitInput = z.infer<typeof UpdateIncomeUnit>;
 
 export const CreateIncomePrefix = z.object({
   code: PrefixCode,
@@ -149,14 +141,12 @@ export const CreateIncomePrefix = z.object({
   account: AccountNumber,
   isFallback: z.boolean().optional(),
 });
-export type CreateIncomePrefixInput = z.infer<typeof CreateIncomePrefix>;
 
 export const UpdateIncomePrefix = z.object({
   incomeId: Id.optional(),
   account: AccountNumber.optional(),
   isFallback: z.boolean().optional(),
 });
-export type UpdateIncomePrefixInput = z.infer<typeof UpdateIncomePrefix>;
 
 /**
  * A Swish payment matched by exact amount when its message says nothing usable.
@@ -167,7 +157,6 @@ export const UpsertSwishFallback = z.object({
   amount: Ore.positive(),
   message: NonEmpty,
 });
-export type UpsertSwishFallbackInput = z.infer<typeof UpsertSwishFallback>;
 
 /** Where income lands, and what Zettle's own fees cost. */
 export const UpdateIncomeSettings = z.object({
@@ -183,4 +172,3 @@ export const UpdateIncomeSettings = z.object({
    */
   incomeVoucherSeries: Clearable(UpperCode).optional(),
 });
-export type UpdateIncomeSettingsInput = z.infer<typeof UpdateIncomeSettings>;

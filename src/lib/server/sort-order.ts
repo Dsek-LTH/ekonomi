@@ -31,7 +31,7 @@ const PARENT_TABLE = {
   budgetAccount: '"BudgetAccount"',
 } as const;
 
-export type OrderedListParent = keyof typeof PARENT_TABLE;
+type OrderedListParent = keyof typeof PARENT_TABLE;
 
 /**
  * Take the parent row's lock for the rest of the surrounding transaction.

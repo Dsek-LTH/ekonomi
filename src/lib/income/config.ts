@@ -23,12 +23,12 @@ export type IncomeConfigBlocker =
   | "noFallbackPrefix"
   | "prefixAccountNotNumeric";
 
-export type IncomeConfigResult =
+type IncomeConfigResult =
   | { ok: true; config: IntaktConfig }
   | { ok: false; blocker: IncomeConfigBlocker; detail?: string };
 
 /** Who the report is attested by, the person who asked for it. */
-export interface IncomeAttestation {
+interface IncomeAttestation {
   name: string;
   studentId: string;
 }

@@ -32,7 +32,7 @@
 // answers map onto three requests: a figure where there was none creates the
 // row, a different figure changes it, and an emptied cell removes it. The log
 // keeps the correction either way, as a StockChange.
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -51,16 +51,14 @@ import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
 import { tagsInUse } from "@/lib/stock/tags";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
-import { useGridFocus } from "@/lib/ui/use-grid-focus";
+import { useGridFocus, useSeekFocus } from "@/lib/ui/use-grid-focus";
 import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
+import { formatOreKr } from "@/lib/ui/format";
 
 /** Öre, to the öre, because this is read against an invoice. */
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    ore / 100,
-  )} kr`;
+const formatOreKr2 = (ore: number) => formatOreKr(ore, { decimals: 2 });
 
 /**
  * The sheet as it stands, unsent.
@@ -304,16 +302,9 @@ export default function DeliveryClient({
   // the way.
   const grid: (string | null)[][] = rows.map((id) => [id]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!seeking) return;
-    if (!focusCell(seeking)) return;
-    setSeeking(null);
-    // Re-run when the row it wants may have appeared: after the add, and again
-    // when the server sends a product that was just created.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seeking, products, rows]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  // The row it wants may appear after the add, and again when the server sends
+  // a product that was just created. See lib/ui/use-grid-focus.ts.
+  useSeekFocus(seeking, () => setSeeking(null), focusCell, [products, rows]);
 
   // One column, so there is nowhere sideways to go and left/right stay with
   // the text.
@@ -379,7 +370,7 @@ export default function DeliveryClient({
                 {t("delivery.total")}
               </span>
               <span className="mt-1 flex h-11 items-center justify-end text-lg font-semibold tabular-nums sm:h-9">
-                {kr(totalOre)}
+                {formatOreKr2(totalOre)}
               </span>
             </div>
           }
@@ -472,7 +463,7 @@ export default function DeliveryClient({
                   >
                     {product.costPriceOre == null
                       ? t("delivery.unpriced")
-                      : kr(product.costPriceOre)}
+                      : formatOreKr2(product.costPriceOre)}
                   </td>
                   <td className="p-0 align-middle">{cellFor(product)}</td>
                 </tr>

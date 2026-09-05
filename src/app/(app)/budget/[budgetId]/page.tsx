@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/server/current-user";
 import { getAccounts } from "@/lib/data/accounts";
 import { getCostCenters } from "@/lib/data/cost-centers";
 import { getEvaluatedBudget } from "@/lib/data/budget";
-import type { Budget } from "./budget-types";
 import BudgetClient from "./budget-client";
 
 export default async function BudgetPage({
@@ -27,7 +26,7 @@ export default async function BudgetPage({
       // re-evaluates the whole sheet in the browser) so this is the first
       // copy, not the live one. It re-fetches the same payload from
       // GET /api/budgets/[id] after each write.
-      initialBudget={budget as unknown as Budget}
+      initialBudget={budget}
       costCenters={costCenters}
       accounts={accounts}
     />

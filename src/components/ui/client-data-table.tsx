@@ -43,7 +43,7 @@ export type ClientSelectFilter<T> = {
 
 /** One of them, or several over different dimensions of the same rows. See
  *  DataTable's `SelectFilters`, whose option values these are. */
-export type ClientSelectFilters<T> = ClientSelectFilter<T> | ClientSelectFilter<T>[];
+type ClientSelectFilters<T> = ClientSelectFilter<T> | ClientSelectFilter<T>[];
 
 const asFilters = <T,>(filter: ClientSelectFilters<T> | undefined): ClientSelectFilter<T>[] =>
   filter ? (Array.isArray(filter) ? filter : [filter]) : [];

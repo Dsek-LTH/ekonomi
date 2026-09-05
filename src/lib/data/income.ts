@@ -2,30 +2,13 @@
 //
 // Report-first. A batch is provenance, when someone pressed fetch, and the
 // screens that work with takings work day by day, so the two report queries
-// below are the ones that matter and getIncomeBatches is the history behind
-// them.
+// below are the ones that matter.
 import "server-only";
 
 import { oreToSEK } from "@/lib/domain/money";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import type { IncomeReportStatus, IncomeSource } from "@/lib/domain/types";
-
-/** A batch as the list screen shows it: what was fetched, and how far it got. */
-export interface IncomeBatchSummary {
-  id: string;
-  source: IncomeSource;
-  fromDate: string;
-  toDate: string;
-  filename: string | null;
-  createdAt: string;
-  createdByName: string | null;
-  reportCount: number;
-  /** What the batch's reports come to, in SEK. */
-  total: number;
-  /** Counts per status, so the list can say "12 booked, 3 left" without a second query. */
-  counts: Record<IncomeReportStatus, number>;
-}
 
 // Money here is SEK, not öre: these cross into the browser and are rendered
 // by <Amount>, and the repo's rule is that the database keeps öre and the
@@ -112,60 +95,6 @@ export interface IncomeReportRow {
 }
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
-
-const emptyCounts = (): Record<IncomeReportStatus, number> => ({
-  DRAFT: 0,
-  BOOKED: 0,
-  EXPORTED: 0,
-});
-
-/**
- * The batches, newest first.
- *
- * The per-status counts come from a groupBy rather than from loading the
- * reports: a term of Swish is a hundred-odd reports per batch, and the list
- * shows none of them.
- */
-export async function getIncomeBatches(limit = 50): Promise<IncomeBatchSummary[]> {
-  const batches = await prisma.incomeBatch.findMany({
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: limit,
-    include: { createdBy: { select: { name: true } } },
-  });
-  if (batches.length === 0) return [];
-
-  const grouped = await prisma.incomeReport.groupBy({
-    by: ["batchId", "status"],
-    where: { batchId: { in: batches.map((b) => b.id) } },
-    _count: { _all: true },
-    _sum: { total: true },
-  });
-
-  const byBatch = new Map<string, { counts: Record<IncomeReportStatus, number>; total: number; n: number }>();
-  for (const row of grouped) {
-    const entry = byBatch.get(row.batchId) ?? { counts: emptyCounts(), total: 0, n: 0 };
-    entry.counts[row.status] = row._count._all;
-    entry.n += row._count._all;
-    entry.total += row._sum.total ?? 0;
-    byBatch.set(row.batchId, entry);
-  }
-
-  return batches.map((b) => {
-    const agg = byBatch.get(b.id) ?? { counts: emptyCounts(), total: 0, n: 0 };
-    return {
-      id: b.id,
-      source: b.source,
-      fromDate: isoDate(b.fromDate),
-      toDate: isoDate(b.toDate),
-      filename: b.filename,
-      createdAt: b.createdAt.toISOString(),
-      createdByName: b.createdBy?.name ?? null,
-      reportCount: agg.n,
-      total: oreToSEK(agg.total),
-      counts: agg.counts,
-    };
-  });
-}
 
 // What a report row is loaded with, wherever it is loaded: the review screen,
 // the booked list, a batch. One include, so the four lists cannot drift into

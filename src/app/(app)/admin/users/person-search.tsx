@@ -3,12 +3,13 @@
 // A person picker that queries the server as you type. The section has on the
 // order of a thousand members, so the candidate list is never shipped to the
 // browser, only what a query actually matches.
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
+import { useQuery } from "@/components/shell/use-query";
 import { cn } from "@/lib/ui/utils";
 import type { User } from "@/lib/domain/types";
 
@@ -27,38 +28,19 @@ export function PersonSearch({
 }) {
   const t = useTranslations("admin.users");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search. Every setState happens inside the timer callback rather
-  // than in the effect body, so typing doesn't cascade a render per keystroke.
-  // The abort controller drops a slower earlier response, so results can't
-  // arrive out of order and overwrite a newer query.
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) return; // `shown` derives to [], nothing to clear
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/users?q=${encodeURIComponent(q)}`, {
-          signal: controller.signal,
-        });
-        const json = await res.json();
-        if (res.ok) setResults(json.users ?? []);
-      } catch {
-        // Aborted or offline. Leave the previous results in place.
-      } finally {
-        setLoading(false);
-      }
-    }, 200);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
+  // Debounced, and the previous results stay on screen while the next request
+  // is in flight: a list that emptied itself between keystrokes would flicker
+  // through every prefix of what is being typed. The abort inside `useQuery` is
+  // what stops a slower earlier response landing on top of a newer one.
+  const q = query.trim();
+  const { data, loading } = useQuery<{ users: User[] }>(
+    q ? `/api/users?q=${encodeURIComponent(q)}` : null,
+    { debounceMs: 200 },
+  );
+  const results = data?.users ?? [];
 
   useDismissOnOutside(open, boxRef, () => setOpen(false));
 
@@ -67,8 +49,9 @@ export function PersonSearch({
 
   function pick(user: User) {
     onSelect(user);
+    // Clearing the field is enough: `shown` derives to [] from an empty query,
+    // and the hook stops fetching once there is no url to fetch.
     setQuery("");
-    setResults([]);
     setOpen(false);
   }
 

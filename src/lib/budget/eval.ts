@@ -41,13 +41,13 @@
 //
 // That is where the float drift actually was: not in one row's arithmetic, but
 // in adding a hundred of them together and comparing the answer to something.
-export type AccountTotals = Map<string, number>; // "CC_CODE:ACCT_CODE" → öre
+type AccountTotals = Map<string, number>; // "CC_CODE:ACCT_CODE" → öre
 /** Variable values, in whatever the variable means: kronor, a count, a ratio. */
-export type VarValues    = Map<string, number>;
+type VarValues    = Map<string, number>;
 /** Working values for cell references, in kronor (rounded to öre precision). */
-export type CellValues   = Map<string, number>;
+type CellValues   = Map<string, number>;
 /** Every "CC_CODE:ACCT_CODE" the budget actually holds, rows or no rows. */
-export type KnownAccounts = ReadonlySet<string>;
+type KnownAccounts = ReadonlySet<string>;
 
 // "bad" is a character the language has no meaning for. It used to be skipped
 // silently, which made `=350 kr` evaluate to 350, a formula that quietly drops

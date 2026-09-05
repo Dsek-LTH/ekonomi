@@ -46,7 +46,7 @@ import type { IncomeReportStatus } from "@/lib/domain/types";
  * has to be sayable. "That day is already booked over there" is the answer to
  * a reasonable question, not an internal error.
  */
-export type LineFailure =
+type LineFailure =
   | { reason: "reportNotFound" }
   | { reason: "editOnlyBeforeBooking"; status: IncomeReportStatus }
   | { reason: "noLines" }
@@ -64,7 +64,7 @@ export type MoveFailure =
   | { reason: "moveUnitNoIncome" }
   | { reason: "moveDestinationBooked" };
 
-export interface MoveOutcome {
+interface MoveOutcome {
   ok: true;
   /** Null when the move emptied the source and it was removed. */
   sourceId: string | null;
@@ -74,10 +74,10 @@ export interface MoveOutcome {
   moved: number;
 }
 
-export type MoveResult = MoveOutcome | ({ ok: false } & MoveFailure);
+type MoveResult = MoveOutcome | ({ ok: false } & MoveFailure);
 
 /** One line to move, and the account it should carry once it has. */
-export interface MoveLineInput {
+interface MoveLineInput {
   id: string;
   /**
    * Where the money books on the other side. Optional: left out, the line keeps
@@ -94,12 +94,12 @@ export interface MoveLineInput {
 }
 
 /** One line, and the account it should book to. */
-export interface LineAccountInput {
+interface LineAccountInput {
   id: string;
   account: string;
 }
 
-export type LineAccountResult = { ok: true; updated: number } | ({ ok: false } & LineFailure);
+type LineAccountResult = { ok: true; updated: number } | ({ ok: false } & LineFailure);
 
 /**
  * Re-account lines in place: same report, different revenue account.

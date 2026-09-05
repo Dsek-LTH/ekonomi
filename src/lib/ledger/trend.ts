@@ -19,8 +19,7 @@
 // charts then never have to know which way a BAS account points.
 import { prisma } from "@/lib/server/db";
 import { orient, sectionsFor, type BasSection } from "./bas";
-
-const ore = (v: number | null | undefined) => (v ?? 0) / 100;
+import { oreToSEK } from "@/lib/domain/money";
 
 /** The bucket key for rows carrying no cost centre. The report uses the same. */
 const NO_CC = "";
@@ -59,13 +58,13 @@ export interface TrendCostCenter {
   budget: number | null;
 }
 
-export interface TrendSection {
+interface TrendSection {
   /** A BAS section key, named in messages as `ledger.section.<key>`. */
   key: string;
   total: number;
 }
 
-export interface TrendStack {
+interface TrendStack {
   month: string;
   /** Cost centre code (or "" for none) → what it spent that month, as a
    *  positive magnitude. Costs only: a stack of results, which change sign
@@ -82,7 +81,7 @@ export interface LedgerTrend {
   budgetTotal: number | null;
 }
 
-export interface TrendOptions {
+interface TrendOptions {
   financialYear: number;
   from: Date;
   to: Date;
@@ -170,7 +169,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
     if (i === undefined) continue;
 
     const net = (g._sum.debit ?? 0) - (g._sum.credit ?? 0);
-    const amount = ore(orient(net, section.orientation));
+    const amount = oreToSEK(orient(net, section.orientation));
     const cc = g.costCenterCode ?? NO_CC;
     const isIncome = section.key === INCOME_SECTION;
 
@@ -213,7 +212,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
       const section = sectionOf(account);
       if (!section) continue;
       if (costCenterCode !== undefined && cc !== costCenterCode) continue;
-      const amount = ore(orient(net, section.orientation));
+      const amount = oreToSEK(orient(net, section.orientation));
       budgetByCc.set(cc, (budgetByCc.get(cc) ?? 0) + amount);
       budgetTotal += amount;
     }

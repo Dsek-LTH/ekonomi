@@ -12,7 +12,7 @@
 // nothing whatsoever else.
 
 /** What a typed count came to, or why it did not come to anything. */
-export interface Quantity {
+interface Quantity {
   /** The value to use: a whole number, never negative, never above the cap. */
   value: number;
   /** Whether the text is a sum that adds up at all. Empty text is not. */

@@ -74,7 +74,7 @@ const REQUIRED = {
 // Authentik needs nothing beyond the three above: the endpoints it uses are
 // read from the issuer's discovery document rather than configured (auth.ts).
 
-export type RequiredVar = keyof typeof REQUIRED;
+type RequiredVar = keyof typeof REQUIRED;
 
 /**
  * A required variable's value: what's set, or the development fallback.

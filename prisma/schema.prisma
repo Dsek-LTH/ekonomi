@@ -1583,7 +1583,6 @@ model StockProduct {
   entries StockEntry[]
   changes StockChange[]
   edits   StockProductChange[]
-  lots    StockLot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1592,28 +1591,6 @@ model StockProduct {
   /// GIN, because the question asked of this column is "which products carry
   /// this tag", and a btree cannot answer a containment test.
   @@index([tags], type: Gin)
-}
-
-/// A delivery of countable stock, and the best-before that came with it.
-///
-/// UNIT only. Spirits do not go off, and a bottle cannot carry a date anyway.
-/// Open bottles here are anonymous, by the bar's own account of how it works.
-model StockLot {
-  id        String       @id @default(cuid())
-  productId String
-  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  /// Null when a delivery arrived without one, which is not an error. It is
-  /// simply a lot nothing can be said about.
-  bestBefore DateTime? @db.Date
-  receivedAt DateTime  @db.Date
-  note       String?
-
-  entries StockEntry[]
-
-  createdAt DateTime @default(now())
-
-  @@index([productId, bestBefore])
 }
 
 /// One movement of stock. The log, and the only thing that is true.
@@ -1626,11 +1603,6 @@ model StockEntry {
 
   productId String
   product   StockProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  /// UNIT: which delivery this came off, so a return credits back the lot it
-  /// left and keeps its best-before.
-  lotId String?
-  lot   StockLot? @relation(fields: [lotId], references: [id], onDelete: Restrict)
 
   kind StockEntryKind
 

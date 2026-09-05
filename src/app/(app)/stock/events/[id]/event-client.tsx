@@ -36,7 +36,7 @@
 // and three. That matches the errand, since you are carrying crates one
 // direction at a time, and it is the only arrangement that keeps a row on one line without
 // asking anybody to drag a grid sideways in a cellar.
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -75,18 +75,17 @@ import {
 } from "@/lib/stock/cells";
 import { LEVELS, type BottleStock, type OpenBottles } from "@/lib/stock/levels";
 import { isExpression, isQuantityInput, quantity } from "@/lib/stock/quantity";
-import { useGridFocus } from "@/lib/ui/use-grid-focus";
+import { useGridFocus, useSeekFocus } from "@/lib/ui/use-grid-focus";
 import type { StockChangeDto, StockLevelDto, StockEventDetailDto } from "@/lib/data/stock";
 import type { TagTotals } from "@/lib/stock/event";
 import { ChangeFeed } from "@/components/stock/change-feed";
 import type { WriteStockCells } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
+import { formatMovementLitres } from "@/lib/ui/format";
 
 /** A figure in the product's own unit: litres for a spirit, a count otherwise. */
 const amount = (kind: string, n: number): string =>
-  kind === "VOLUME"
-    ? `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(n / 1000)} l`
-    : String(n);
+  kind === "VOLUME" ? formatMovementLitres(n) : String(n);
 
 export default function EventClient({
   event,
@@ -687,22 +686,27 @@ export default function EventClient({
    * server has been round and sent the list again. It clears itself the moment
    * it lands, so nothing keeps stealing focus.
    */
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!seeking) return;
-    const product = byId.get(seeking);
-    if (!product) return;
-    outer: for (const level of sheetLines(product)) {
-      for (const kind of CELL_KINDS) {
-        if (focusCell(cellKey({ productId: seeking, kind, level }))) break outer;
+  // The row it wants may appear after the add, and again when the server sends
+  // a product that was just created. See lib/ui/use-grid-focus.ts.
+  //
+  // The first cell that will take the caret, walking the product's rungs and
+  // then the three kinds: which of them exists depends on the product and on
+  // which column the phone is showing.
+  useSeekFocus(
+    seeking,
+    () => setSeeking(null),
+    (productId) => {
+      const product = byId.get(productId);
+      if (!product) return false;
+      for (const level of sheetLines(product)) {
+        for (const kind of CELL_KINDS) {
+          if (focusCell(cellKey({ productId, kind, level }))) return true;
+        }
       }
-    }
-    setSeeking(null);
-    // Re-run when the row it wants may have appeared: after the add, and again
-    // when the server sends a product that was just created.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seeking, products, added]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+      return false;
+    },
+    [products, added],
+  );
 
   const onCellKey = (e: React.KeyboardEvent<HTMLInputElement>, key: string) =>
     handleKey(e, key, grid, {

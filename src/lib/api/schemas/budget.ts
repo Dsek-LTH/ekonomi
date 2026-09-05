@@ -151,12 +151,12 @@ export type BudgetCommentBody = z.infer<typeof BudgetCommentBody>;
  * field is free text so a Swede can write "1 234,50", which `parseAmount` in
  * lib/budget/changes.ts turns into öre. A number is taken as öre already.
  */
-export const ChangeEntryInput = z.object({
+const ChangeEntryInput = z.object({
   costCenterId: Id,
   accountCode: Trimmed,
   amount: z.union([z.number(), z.string()]),
 });
-export type ChangeEntryInput = z.infer<typeof ChangeEntryInput>;
+type ChangeEntryInput = z.infer<typeof ChangeEntryInput>;
 
 /** POST /api/budgets/[id]/changes. */
 export const CreateChange = z.object({

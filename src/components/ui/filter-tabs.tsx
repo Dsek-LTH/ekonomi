@@ -25,7 +25,7 @@ import { cn } from "@/lib/ui/utils";
 //
 // The count belongs here and not on the pills, for the same reason: "12 waiting"
 // is a fact about a slice of a list you are already looking at.
-export interface FilterTab<T extends string> {
+interface FilterTab<T extends string> {
   value: T;
   label: string;
   /** Shown after the label when there is something in that slice. */

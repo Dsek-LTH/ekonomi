@@ -9,13 +9,21 @@
 // The form is a stacked area because the question is a magnitude over time that
 // is also made of parts: how much is on the shelf, and how much of it is beer.
 // A line per type would answer the second and lose the first.
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import { CATEGORIES } from "@/lib/domain/categories";
 import type { DrinkCategory } from "@/lib/domain/types";
 import { DRINK_SERIES } from "@/lib/ui/chart-colors";
-import { axisTicks, labelPositions, plotOf, useChartGeometry } from "@/lib/ui/chart-geometry";
+import {
+  axisTicks,
+  labelPositions,
+  linearScale,
+  plotOf,
+  useChartGeometry,
+  usePointerIndex,
+} from "@/lib/ui/chart-geometry";
+import { YGrid } from "@/components/ui/chart-axis";
 import { cn } from "@/lib/ui/utils";
 
 export interface ValuePoint {
@@ -35,8 +43,6 @@ export function StockValueChart({
 }) {
   const t = useTranslations("stock.stats");
   const clipId = useId();
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [at, setAt] = useState<number | null>(null);
 
   // One of the two module constants in lib/ui/chart-geometry, never a computed
   // one, so its identity is stable and the memos below can depend on it.
@@ -55,7 +61,11 @@ export function StockValueChart({
 
   const x = (i: number) =>
     PAD.left + (points.length === 1 ? PLOT.w / 2 : (i / (points.length - 1)) * PLOT.w);
-  const y = (ore: number) => PAD.top + PLOT.h - (ore / top) * PLOT.h;
+  const y = linearScale(0, top, geometry);
+
+  // "point", not "band": this is an area chart, so a day's value sits *at* a
+  // position rather than filling one, and the readout snaps to the nearest.
+  const { ref: svgRef, at, track, clear } = usePointerIndex(points.length, geometry, "point");
 
   /**
    * One band per drink type, stacked from the bottom.
@@ -68,17 +78,19 @@ export function StockValueChart({
     const floors = points.map(() => 0);
     return CATEGORIES.map((category) => {
       const tops = points.map((p, i) => floors[i] + Math.max(0, p.byCategory[category] ?? 0));
-      const up = points.map((p, i) => `${x(i)},${y(tops[i])}`);
-      const down = points.map((p, i) => `${x(i)},${y(floors[i])}`).reverse();
+      const up = points.map((_, i) => `${x(i)},${y(tops[i])}`);
+      const down = points.map((_, i) => `${x(i)},${y(floors[i])}`).reverse();
       const carries = tops.some((v, i) => v - floors[i] > 0);
       const d = `M${up.join("L")}L${down.join("L")}Z`;
       for (let i = 0; i < floors.length; i++) floors[i] = tops[i];
       return { category, d, carries };
     });
     // `x` and `y` read the geometry, so a change of coordinate space has to
-    // redraw the bands. It is in the list; the rule cannot see it through them.
+    // redraw the bands. `geometry` is in the list and is one of two module
+    // constants, so its identity is stable; the rule cannot see the dependency
+    // through the two closures.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, top, PAD, PLOT.w, PLOT.h]);
+  }, [points, top, geometry]);
 
   const hovered = at == null ? null : points[at];
 
@@ -90,16 +102,6 @@ export function StockValueChart({
     [points.length, wantedLabels],
   );
 
-  /** The point under the pointer, in the chart's own coordinates. */
-  function track(e: React.PointerEvent<SVGSVGElement>) {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect || points.length === 0) return;
-    const local = ((e.clientX - rect.left) / rect.width) * W;
-    const ratio = (local - PAD.left) / PLOT.w;
-    const i = Math.round(ratio * (points.length - 1));
-    setAt(Math.min(points.length - 1, Math.max(0, i)));
-  }
-
   return (
     <figure className={cn("m-0", className)}>
       <div className="relative">
@@ -110,7 +112,7 @@ export function StockValueChart({
           role="img"
           aria-label={t("chartAlt")}
           onPointerMove={track}
-          onPointerLeave={() => setAt(null)}
+          onPointerLeave={clear}
         >
           <defs>
             {/* The bands are clipped rather than trusted to stay inside: a
@@ -121,27 +123,12 @@ export function StockValueChart({
           </defs>
 
           {/* Recessive grid: it is there to be measured against, not read. */}
-          {axis.map((v) => (
-            <g key={v}>
-              <line
-                x1={PAD.left}
-                x2={W - PAD.right}
-                y1={y(v)}
-                y2={y(v)}
-                className="stroke-border"
-                strokeWidth={1}
-              />
-              <text
-                x={PAD.left - 8}
-                y={y(v)}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-muted text-[11px] tabular-nums"
-              >
-                {kr.format(v / 100)}
-              </text>
-            </g>
-          ))}
+          <YGrid
+            ticks={axis}
+            y={y}
+            geometry={geometry}
+            format={(v) => kr.format(v / 100)}
+          />
 
           <g clipPath={`url(#${clipId})`}>
             {bands.map(({ category, d, carries }) =>

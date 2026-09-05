@@ -36,20 +36,13 @@ import { EntryDialog } from "../entry-dialog";
 import { LEVELS, bottlesAt } from "@/lib/stock/levels";
 import { alcoholPerKrona } from "@/lib/stock/onhand";
 import { cn } from "@/lib/ui/utils";
+import {
+  formatClPerKrona,
+  formatLitres,
+  formatOreKr,
+  formatMovementLitres,
+} from "@/lib/ui/format";
 import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
-
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(ore / 100)} kr`;
-
-const litres = (ml: number) =>
-  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-    ml / 1000,
-  );
-
-const clPerKrona = (cl: number) =>
-  new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    cl,
-  );
 
 const signed = (n: number) =>
   new Intl.NumberFormat("sv-SE", { signDisplay: "exceptZero" }).format(n);
@@ -299,7 +292,7 @@ export default function StockProductClient({
                 product.costPriceOre == null ? (
                   <span className="text-muted">{t("product.noCostPrice")}</span>
                 ) : (
-                  kr(product.costPriceOre)
+                  formatOreKr(product.costPriceOre, { decimals: 2 })
                 )
               }
             />
@@ -309,7 +302,7 @@ export default function StockProductClient({
                 alcoholPerKrona(product) == null ? (
                   <span className="text-muted">–</span>
                 ) : (
-                  t("clPerKrona", { cl: clPerKrona(alcoholPerKrona(product)!) })
+                  t("clPerKrona", { cl: formatClPerKrona(alcoholPerKrona(product)!) })
                 )
               }
             />
@@ -364,13 +357,13 @@ export default function StockProductClient({
             <Detail
               label={t("product.totalVolume")}
               value={
-                onHand.totalMl == null ? "–" : t("litres", { litres: litres(onHand.totalMl) })
+                onHand.totalMl == null ? "–" : t("litres", { litres: formatLitres(onHand.totalMl) })
               }
               dim={onHand.totalMl == null}
             />
             <Detail
               label={t("product.value")}
-              value={onHand.valueOre > 0 ? kr(onHand.valueOre) : "–"}
+              value={onHand.valueOre > 0 ? formatOreKr(onHand.valueOre) : "–"}
             />
           </CardBody>
         </Card>
@@ -503,7 +496,7 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
   const controls = useTableControls();
   const amount = (n: number) =>
     kind === "VOLUME"
-      ? `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(n / 1000)} l`
+      ? formatMovementLitres(n)
       : String(n);
 
   const figure = (key: string, pick: (r: ProductEventDto) => number, strong = false) => ({
@@ -639,7 +632,7 @@ function CellarTable({
       sortable: true,
       mobile: "trailing",
       cell: (r) =>
-        r.valueDeltaOre ? kr(r.valueDeltaOre) : <span className="text-muted">–</span>,
+        r.valueDeltaOre ? formatOreKr(r.valueDeltaOre) : <span className="text-muted">–</span>,
     },
     {
       key: "actor",

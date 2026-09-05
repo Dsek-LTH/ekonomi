@@ -32,7 +32,7 @@ export interface JourneyInput {
   odometerEnd: number | null;
 }
 
-export interface ValuedJourney {
+interface ValuedJourney {
   /** The distance driven, or null while the two readings do not give one. */
   km: number | null;
   /** Öre per kilometre on the journey's date, or null where none applies. */
@@ -88,7 +88,7 @@ export function valueJourney(
  * Ordered the way somebody fixes them: the readings, then whether they make a
  * journey, then whether the day can be priced.
  */
-export type MileageBlocker = "noReadings" | "notForward" | "noRate";
+type MileageBlocker = "noReadings" | "notForward" | "noRate";
 
 export function claimBlocker(
   journey: JourneyInput,

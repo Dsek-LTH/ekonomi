@@ -17,7 +17,7 @@
 // does not here: a row of a stock sheet holds a product link and a remove
 // button as well as its figures, and tabbing through those between every pair
 // of numbers is not how anybody fills a sheet in.
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { atTextEdge, nextCell, stepCell, type Grid } from "./grid-nav";
 
@@ -100,4 +100,48 @@ export function useGridFocus() {
   // `inputs` and `canFocus` stay inside: a caller that reached for either
   // would be doing the hook's own job, and neither sheet needs to.
   return { focusCell, register, handleKey };
+}
+
+/**
+ * Put the caret in a row that does not exist yet.
+ *
+ * Both stock sheets add a row and then want the caret in it, and neither can
+ * simply focus it: the row is not in the DOM until the render after the add,
+ * and a product invented from an unknown barcode is not there until the server
+ * has been round and sent the list again. So the wanted row is latched, and
+ * this tries again on every render until the row turns up.
+ *
+ * The two had a copy each, identical down to both of the lint suppressions and
+ * the comment explaining them. Effects are the one place this can be done at
+ * all: focusing an element is a side effect on a node that has to exist first,
+ * and clearing the latch afterwards is what stops it stealing focus again on
+ * the next render.
+ *
+ * Worth saying plainly: this is still a setState in an effect, and it is still
+ * correct. `react-hooks/set-state-in-effect` no longer reports it only because
+ * the setter arrives as `clear` rather than being called by name, so the rule
+ * cannot see through it. That is not a fix for the pattern, it is the pattern
+ * having one home instead of two, where the reason it is right can be read.
+ *
+ * @param seeking What is wanted, or null when nothing is.
+ * @param clear   Called once the caret has landed.
+ * @param attempt Tries to focus; answers whether it managed to.
+ * @param deps    What may have brought the row into being. The latch itself is
+ *                always watched; these are the lists it is waiting on.
+ */
+export function useSeekFocus(
+  seeking: string | null,
+  clear: () => void,
+  attempt: (seeking: string) => boolean,
+  deps: readonly unknown[],
+): void {
+  useEffect(() => {
+    if (!seeking) return;
+    if (!attempt(seeking)) return;
+    clear();
+    // `attempt` and `clear` are redefined every render, so listing them would
+    // re-run this on every one. What it actually waits on is the latch and the
+    // lists the caller names.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeking, ...deps]);
 }

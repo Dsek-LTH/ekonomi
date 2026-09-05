@@ -10,20 +10,21 @@ import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
 import { mergeCoverAndReceipt, PdfMergeError } from "@/lib/server/pdf-merge";
 import {
-  connectFileToVoucher,
   createVoucher,
   getConnection,
-  getUserToken,
   uploadInboxFile,
-  FortnoxAuthRequiredError,
   FortnoxError,
-  type VoucherRowInput,
 } from "@/lib/fortnox";
+import {
+  attachBestEffort,
+  recordExport,
+  userToken,
+  voucherRows,
+  VOUCHER_INCLUDE,
+} from "@/lib/fortnox/export";
 import { voucherText } from "@/lib/fortnox/voucher-text";
 
-const ore = (n: number) => Math.round(n) / 100; // öre int → SEK decimal
-
-export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   const g = await gate(canAccessBookkeeping, "auth.bookkeeperExport");
@@ -33,7 +34,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const expense = await prisma.expense.findUnique({
     where: { id },
     include: {
-      verification: { include: { lines: { include: { costCenter: true } } } },
+      verification: VOUCHER_INCLUDE,
       receipts: { orderBy: { createdAt: "desc" }, take: 1 },
       // No odometer readings loaded here: a milersättning's journey is printed
       // on the cover, and the cover reads them itself.
@@ -51,29 +52,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
 
-  const rows: VoucherRowInput[] = verification.lines.map((l) => ({
-    account: Number(l.account),
-    debit: ore(l.debit),
-    credit: ore(l.credit),
-    // Only a cost centre Fortnox itself knows about. A local one is an app-side
-    // dimension (it drives attest and the budget) that Fortnox has never heard
-    // of, and sending its code would have the whole voucher rejected.
-    costCenter: l.costCenter?.source === "FORTNOX" ? l.costCenter.code : undefined,
-    description: l.description ?? undefined,
-  }));
+  const rows = voucherRows(verification.lines);
 
-  // The voucher is written with the bookkeeper's OWN Fortnox login, not the
-  // service account, so Fortnox attributes it to them by name. Fetched before
-  // the try block: needing to log in is a prompt, not an export failure.
-  let token: string;
-  try {
-    token = await getUserToken(user.id);
-  } catch (e) {
-    if (e instanceof FortnoxAuthRequiredError) {
-      return fail(401, e.message, { extra: { needsFortnoxLogin: true } });
-    }
-    throw e;
-  }
+  // The bookkeeper's own Fortnox login, not the service account's. See
+  // lib/fortnox/export.ts.
+  const auth = await userToken(user.id);
+  if (!auth.ok) return auth.res;
+  const token = auth.token;
 
   // The receipt goes up FIRST. A voucher can't be deleted through the API, so
   // anything that fails after it exists leaves a mess someone has to clean up
@@ -161,7 +146,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   let created;
-  let attachWarning: string | null = null;
   try {
     created = await createVoucher(token, {
       series: conn.voucherSeries,
@@ -174,39 +158,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return fail(502, "expense.exportFailed");
   }
 
-  // Linking needs the voucher's series and number, so this is the one step that
-  // can only run after it exists, and therefore the only one still best
-  // effort. The file is already uploaded, so a failure here means attaching it
-  // by hand in Fortnox, not redoing the export.
-  if (fileId) {
-    try {
-      await connectFileToVoucher(
-        token,
-        fileId,
-        created.series,
-        created.number,
-        created.year ?? undefined,
-      );
-    } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
-      // Surfaced verbatim beside the success message, so it is worded by the
-      // client from this code.
-      attachWarning = detail;
-      console.error(`[fortnox] ${id}: could not attach the receipt to the voucher`, e);
-    }
-  }
+  // Surfaced verbatim beside the success message, so it is worded by the client
+  // from this code. See `attachBestEffort` for why this one step is allowed to
+  // fail without failing the export.
+  const attachWarning = await attachBestEffort(token, fileId, created, id);
 
   const label = `${created.series}-${created.number}`;
-  await prisma.$transaction(async (tx) => {
-    await tx.verification.update({
-      where: { id: verification.id },
-      data: {
-        fortnoxSeries: created.series,
-        fortnoxNumber: created.number,
-        fortnoxYear: created.year,
-        exportedAt: new Date(),
-      },
-    });
+  await recordExport(verification.id, created, async (tx) => {
     await tx.expense.update({ where: { id: expense.id }, data: { status: "EXPORTED" } });
     await tx.expenseEvent.create({
       data: {

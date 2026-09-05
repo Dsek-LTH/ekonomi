@@ -99,7 +99,7 @@ export async function putObject(
   );
 }
 
-export interface ObjectStream {
+interface ObjectStream {
   body: ReadableStream;
   contentType: string;
   contentLength?: number;

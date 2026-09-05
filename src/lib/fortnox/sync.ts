@@ -200,7 +200,7 @@ export async function syncAccounts(
   return { upserted: accounts.length, deactivated };
 }
 
-export interface YearSyncResult {
+interface YearSyncResult {
   financialYear: number;
   vouchers: number;
   rows: number;
@@ -293,7 +293,7 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
   };
 }
 
-export interface LedgerSyncResult {
+interface LedgerSyncResult {
   years: YearSyncResult[];
   costCenters?: CostCenterSyncResult;
 }

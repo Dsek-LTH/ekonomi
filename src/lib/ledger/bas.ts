@@ -11,7 +11,7 @@ export type ReportKind = "RESULT" | "BALANCE";
 // How to turn a raw net (debit − credit, öre) into the displayed amount.
 //   "debit":  assets and costs, shown as-is
 //   "credit": income, equity and liabilities, sign-flipped
-export type Orientation = "debit" | "credit";
+type Orientation = "debit" | "credit";
 
 // `key` names the section in messages: `ledger.section.<key>` for the heading
 // and `ledger.sectionTotal.<key>` for its total row.

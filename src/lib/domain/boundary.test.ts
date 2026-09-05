@@ -20,7 +20,12 @@ const FORBIDDEN: { pattern: RegExp; what: string }[] = [
   { pattern: /["']server-only["']/, what: "server-only" },
   { pattern: /@\/lib\/server\//, what: "lib/server" },
   { pattern: /@\/lib\/data\//, what: "lib/data" },
-  { pattern: /generated\/prisma/, what: "the Prisma client" },
+  // The client, but not `generated/prisma/enums`. That one file is the schema's
+  // enums and nothing else: no imports of its own, no engine behind it, and
+  // Prisma marks it importable on its own. lib/domain/types.ts derives the
+  // section's role, status and category unions from it rather than retyping
+  // fourteen enums by hand, which is how the two used to be able to drift.
+  { pattern: /generated\/prisma(?!\/enums)/, what: "the Prisma client" },
   { pattern: /["']next\/navigation["']/, what: "next/navigation" },
   { pattern: /@\/auth["']/, what: "the auth config" },
 ];
@@ -61,7 +66,22 @@ describe.each(["domain", "ui"])("lib/%s stays pure", (folder) => {
 // can unit-test again. So the named ones below are pinned: the list is the
 // promise, and adding to it is how a new pure module gets the same protection.
 const PINNED_PURE: Record<string, string[]> = {
-  budget: ["changes.ts", "compare.ts", "eval.ts", "grid.ts", "index.ts", "paste.ts"],
+  // inputs.ts and payload.ts are both shared across the boundary on purpose.
+  // inputs.ts turns a budget's rows into what `evaluate` reads, and the loader,
+  // the ledger comparison and the browser's own recompute all call it, so it
+  // must run in a browser. payload.ts describes the budget as it crosses the
+  // wire, and is imported by the loader that produces it and the screen that
+  // consumes it: its purity is what lets one description serve both.
+  budget: [
+    "changes.ts",
+    "compare.ts",
+    "eval.ts",
+    "grid.ts",
+    "index.ts",
+    "inputs.ts",
+    "paste.ts",
+    "payload.ts",
+  ],
   // report-shape.ts is the report as it goes over the wire, imported by both
   // report.ts (which queries) and the ledger screen (which runs in the
   // browser). Its purity is the whole point of it: the client takes these

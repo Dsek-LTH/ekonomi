@@ -11,7 +11,7 @@ import { cn } from "@/lib/ui/utils";
 // options are pictures of themselves: a split view looks like a split view.
 //
 // Right-aligned, on the strip immediately above what it redraws.
-export interface ViewOption<T extends string> {
+interface ViewOption<T extends string> {
   value: T;
   /** What it does, for the tooltip and the screen reader. There is no label. */
   label: string;

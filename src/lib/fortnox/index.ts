@@ -393,7 +393,7 @@ export function financialYearsFor(
 }
 
 /** A voucher as the list endpoint describes it, enough to recognise one. */
-export interface FortnoxVoucher {
+interface FortnoxVoucher {
   series: string;
   number: number;
   /** YYYY-MM-DD. */
@@ -477,7 +477,7 @@ export async function fetchSie(token: string, financialYearId: number): Promise<
 
 // ── Domain operations ─────────────────────────────────────────────
 
-export interface FortnoxCostCenter {
+interface FortnoxCostCenter {
   code: string;
   description: string;
   active: boolean;
@@ -496,7 +496,7 @@ export async function listCostCenters(token: string): Promise<FortnoxCostCenter[
   }));
 }
 
-export interface FortnoxAccount {
+interface FortnoxAccount {
   number: string; // BAS account number, e.g. "6071"
   name: string;
   active: boolean;
@@ -541,7 +541,7 @@ export async function listAccounts(
   return out;
 }
 
-export interface FortnoxCompany {
+interface FortnoxCompany {
   name: string | null;
   orgNumber: string | null;
 }
@@ -560,7 +560,7 @@ export async function getCompanyInfo(token: string): Promise<FortnoxCompany> {
   };
 }
 
-export interface FortnoxMe {
+interface FortnoxMe {
   name: string | null;
   email: string | null;
 }

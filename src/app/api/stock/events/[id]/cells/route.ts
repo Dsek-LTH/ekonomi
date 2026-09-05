@@ -30,7 +30,7 @@ import { parseBody } from "@/lib/api/parse";
 import { WriteStockCells } from "@/lib/api/schemas/stock";
 import { canManageStock } from "@/lib/domain/permissions";
 import { entryFault } from "@/lib/stock/entry";
-import { onHand } from "@/lib/stock/onhand";
+import { heldOnHandMany, openColumns, openOf } from "@/lib/server/stock-state";
 import { replayProduct } from "@/lib/server/stock-replay";
 import { bulkTransaction } from "@/lib/server/tx";
 import {
@@ -92,7 +92,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       kind: e.kind as CellKind,
       level: e.level,
       units: e.units,
-      open: { 80: e.open80, 60: e.open60, 40: e.open40, 20: e.open20 },
+      open: openOf(e),
       spilledQty: e.spilledQty,
     });
     const rowFor = new Map(existing.map((e) => [cellKey(asRow(e)), e]));
@@ -121,25 +121,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
-    const shelves = await tx.stockEntry.groupBy({
-      by: ["productId"],
-      where: { productId: { in: productIds } },
-      _sum: { units: true, open80: true, open60: true, open40: true, open20: true },
-    });
+    const shelves = await heldOnHandMany(tx, products);
     const shelfOf = (productId: string) => {
-      const row = shelves.find((s) => s.productId === productId);
-      const held = onHand(byId.get(productId)!, [
-        {
-          kind: "COUNT",
-          units: row?._sum.units ?? 0,
-          open: {
-            80: row?._sum.open80 ?? 0,
-            60: row?._sum.open60 ?? 0,
-            40: row?._sum.open40 ?? 0,
-            20: row?._sum.open20 ?? 0,
-          },
-        },
-      ]);
+      const held = shelves.get(productId)!;
       return { sealed: held.units, open: held.open };
     };
 
@@ -191,10 +175,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           where: { id: row.id },
           data: {
             units: columns.units,
-            open80: columns.open[80] ?? 0,
-            open60: columns.open[60] ?? 0,
-            open40: columns.open[40] ?? 0,
-            open20: columns.open[20] ?? 0,
+            ...openColumns(columns.open),
             spilledQty: columns.spilledQty,
             occurredAt: new Date(body.occurredAt),
             note: body.note ?? null,
@@ -220,10 +201,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             kind: ref.kind,
             level: ref.level,
             units: columns.units,
-            open80: columns.open[80] ?? 0,
-            open60: columns.open[60] ?? 0,
-            open40: columns.open[40] ?? 0,
-            open20: columns.open[20] ?? 0,
+            ...openColumns(columns.open),
             spilledQty: columns.spilledQty,
             eventId: id,
             occurredAt: new Date(body.occurredAt),

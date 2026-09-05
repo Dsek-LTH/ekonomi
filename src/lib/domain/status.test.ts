@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sv from "../../../messages/sv.json";
 import en from "../../../messages/en.json";
 import {
@@ -18,6 +18,22 @@ import {
 // The gate that decides whether an utlägg may be sent for attest. The client
 // uses it to enable the button and to word the hint; the transition route
 // enforces the same rule server-side.
+
+/**
+ * The day these tests are asked on.
+ *
+ * Every case here is about a date rule, so a fixture date only means something
+ * next to a today. This used to be pinned by the four tests that obviously
+ * needed it and left to the real clock by the rest, and on 2026-08-30 the rest
+ * started failing: `ready` is dated 1 July, the reimbursement deadline is 60
+ * days, and the fixture quietly aged past it. Nothing had changed.
+ *
+ * So the whole suite is asked on one day. The dates below stay literal, which
+ * is what makes them readable, and reading one no longer means working out how
+ * long ago it was in real life.
+ */
+const TODAY = new Date("2026-08-03T09:00:00Z");
+
 const ready = {
   title: "Fika till mötet",
   purchaseDate: "2026-07-01",
@@ -30,7 +46,10 @@ const ready = {
 };
 
 describe("submitBlocker", () => {
-  // Only the future-date case pins the clock; the rest read the real one.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+  });
   afterEach(() => vi.useRealTimers());
 
   it("passes a complete card purchase", () => {
@@ -121,10 +140,7 @@ describe("submitBlocker", () => {
   });
 
   it("blocks a purchase dated after today, but not one dated today", () => {
-    // Nothing has been bought tomorrow. `ready` is dated 1 July, so the clock is
-    // pinned to a day after it and the fixture itself stays valid.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
+    // Nothing has been bought tomorrow. Today is TODAY, 3 August.
     expect(submitBlocker({ ...ready, purchaseDate: "2026-08-04" })).toBe("futureDate");
     expect(submitBlocker({ ...ready, purchaseDate: "2027-07-01" })).toBe("futureDate");
     expect(submitBlocker({ ...ready, purchaseDate: "2026-08-03" })).toBeNull();
@@ -132,8 +148,6 @@ describe("submitBlocker", () => {
 
   it("blocks an eget utlägg handed in after the deadline, on the day after", () => {
     // 60 days is in time, 61 is not: the boundary the rule is written around.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     const own = {
       ...ready,
       paymentType: "REIMBURSEMENT" as const,
@@ -147,8 +161,6 @@ describe("submitBlocker", () => {
   it("says the deadline first, ahead of anything the submitter could fix", () => {
     // Past it there is nothing to fix: sending them to My profile for a payout
     // account, or back for a receipt, only wastes the trip.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     expect(
       submitBlocker({
         ...ready,
@@ -165,8 +177,6 @@ describe("submitBlocker", () => {
     // The claimant's own petrol out of the claimant's own account, with
     // nothing on any statement to say it happened, as uncheckable when stale
     // as a stale receipt, and refused on the same day.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     const drove = {
       ...ready,
       paymentType: "MILEAGE" as const,
@@ -182,8 +192,6 @@ describe("submitBlocker", () => {
   it("holds no deadline over a sektionskort purchase", () => {
     // The money is already the section's and the transaction is already on the
     // statement. A late one still has to be accounted for, not refused.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     expect(submitBlocker({ ...ready, purchaseDate: "2025-01-01" })).toBeNull();
   });
 

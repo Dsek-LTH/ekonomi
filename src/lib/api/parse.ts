@@ -66,7 +66,7 @@ export async function parseBody<S extends z.ZodType>(
  * The same, for a value already in hand: a query string turned into an object,
  * or a body a route read for itself before deciding which schema applies.
  */
-export function parseValue<S extends z.ZodType>(raw: unknown, schema: S): Parsed<z.infer<S>> {
+function parseValue<S extends z.ZodType>(raw: unknown, schema: S): Parsed<z.infer<S>> {
   const result = schema.safeParse(raw);
   if (result.success) return { ok: true, data: result.data };
 

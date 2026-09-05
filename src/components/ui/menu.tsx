@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { IconChevronDown } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
+import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 
 // A button that drops a short list of actions beneath itself. For the case where
 // one button is really two or three variants of the same verb, "new budget",
@@ -75,11 +76,12 @@ export function Menu({
   const boxRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  // Where the trigger is on screen. Held in state rather than read at paint,
-  // because the panel is positioned against it from outside its subtree.
-  const [rect, setRect] = useState<DOMRect | null>(null);
-
   const close = () => setOpen(false);
+
+  // Where the trigger is on screen, kept current while open. Held in state
+  // rather than read at paint, because the panel is positioned against it from
+  // outside its subtree. See lib/ui/anchored-panel.ts, shared with the combobox.
+  const [rect, setRect] = useAnchorRect(open, triggerRef, panelRef, close);
 
   function toggle() {
     setOpen((o) => {
@@ -95,58 +97,13 @@ export function Menu({
   // press on a menu item is not a press "inside" the wrapper any more.
   useDismissOnOutside(open, [boxRef, panelRef], close);
 
-  /**
-   * The panel follows the trigger while the page moves under it, and closes if
-   * the trigger goes away (a row deleted with its menu open). Same treatment
-   * the combobox gives its own panel, and for the same reason: a fixed panel
-   * whose trigger has moved is a panel in the wrong place.
-   */
-  useEffect(() => {
-    if (!open) return;
-    const follow = (e?: Event) => {
-      // Not while scrolling the panel's own list, which moves nothing.
-      if (e && panelRef.current?.contains(e.target as Node)) return;
-      const el = triggerRef.current;
-      if (!el || !el.isConnected) return close();
-      setRect(el.getBoundingClientRect());
-    };
-    window.addEventListener("resize", follow);
-    window.addEventListener("scroll", follow, true);
-    window.visualViewport?.addEventListener("resize", follow);
-    window.visualViewport?.addEventListener("scroll", follow);
-    return () => {
-      window.removeEventListener("resize", follow);
-      window.removeEventListener("scroll", follow, true);
-      window.visualViewport?.removeEventListener("resize", follow);
-      window.visualViewport?.removeEventListener("scroll", follow);
-    };
-  }, [open]);
-
-  const GAP = 4;
-  const EDGE = 8;
   /** Below this much room underneath, look at whether there is more above. */
   const WANTED = 220;
 
-  function panelStyle(): React.CSSProperties {
-    if (!rect) return {};
-    const under = window.innerHeight - rect.bottom - GAP - EDGE;
-    const over = rect.top - GAP - EDGE;
-    const dropUp = under < WANTED && over > under;
-    // The horizontal edge is pinned rather than computed from a width, so the
-    // panel keeps sizing itself to its own content (w-max, min-w-56) exactly as
-    // it did while it was an absolutely positioned child.
-    const side = align === "end"
-      ? { right: Math.max(EDGE, window.innerWidth - rect.right) }
-      : { left: Math.min(Math.max(EDGE, rect.left), window.innerWidth - EDGE) };
-    return {
-      position: "fixed",
-      maxHeight: Math.max(140, dropUp ? over : under),
-      ...side,
-      ...(dropUp
-        ? { bottom: window.innerHeight - rect.top + GAP }
-        : { top: rect.bottom + GAP }),
-    };
-  }
+  // No `cap`: WANTED is the flip threshold and not a ceiling. The panel sizes
+  // itself to its own content (w-max, min-w-56), so a long menu with room for
+  // all of it gets all of it. See lib/ui/anchored-panel.ts.
+  const panelStyle = () => placeAnchored(rect, { wanted: WANTED, align });
 
   // Escape closes the menu and hands focus back to the button, and closes
   // only the menu, even inside a dialog that would once have gone with it.

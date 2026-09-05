@@ -16,7 +16,7 @@
 // now the layout is PageShell's, everywhere, and this is only the content.
 import type { Collections } from "@/components/ui/collection-switch";
 
-export type IncomeSection = "review" | "booked";
+type IncomeSection = "review" | "booked";
 
 const HREF: Record<IncomeSection, string> = {
   review: "/income",

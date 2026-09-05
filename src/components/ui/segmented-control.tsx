@@ -33,7 +33,7 @@ import { cn } from "@/lib/ui/utils";
 //
 // So: a pill row that is not inside a Field is one of the other three wearing
 // the wrong clothes.
-export interface SegOption<T extends string> {
+interface SegOption<T extends string> {
   value: T;
   label: string;
   badge?: number;

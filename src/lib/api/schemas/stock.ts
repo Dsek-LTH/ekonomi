@@ -195,7 +195,6 @@ export const CreateStockEntry = z.object({
    * everything left in it, so the rung is the whole of what it cost.
    */
   level: z.union([z.literal(0), z.literal(80), z.literal(60), z.literal(40), z.literal(20)]).optional(),
-  lotId: Id.nullish(),
   expenseId: Id.nullish(),
   correctsId: Id.nullish(),
   note: NonEmpty.max(500).nullish(),
@@ -223,7 +222,7 @@ export type CreateStockEvent = z.infer<typeof CreateStockEvent>;
  * the figure it should have read, rather than one person's work quietly
  * replacing the other's.
  */
-export const CellLevel = z.union([
+const CellLevel = z.union([
   z.literal(0),
   z.literal(80),
   z.literal(60),

@@ -4,9 +4,9 @@
 // Both return raw öre net (debit − credit) keyed `${account}|${costCenterCode}`,
 // the shape lib/ledger/report expects. It applies the display orientation.
 import { prisma } from "@/lib/server/db";
-import { effectiveKind, sheetKey } from "@/lib/budget";
-import { evaluate, type AdjustmentInput, type LineItemInput, type VariableInput } from "@/lib/budget/eval";
-import { adjustmentsByAccount } from "@/lib/budget/changes";
+import { effectiveKind } from "@/lib/budget";
+import { evaluate } from "@/lib/budget/eval";
+import { evaluatorInputs } from "@/lib/budget/inputs";
 
 export type ComparisonMode = "NONE" | "PRIOR" | "BUDGET";
 
@@ -146,35 +146,20 @@ export async function budgetComparison(
   });
   if (!budget) return null;
 
-  const varInputs: VariableInput[] = budget.variables.map((v) => ({
-    name: v.name,
-    expression: v.expression,
-  }));
-  const liInputs: LineItemInput[] = budget.costCenters.flatMap((cc) =>
-    cc.accounts.flatMap((acct) =>
-      acct.lineItems.map((li) => ({
-        id: li.id,
-        accountKey: `${sheetKey(cc)}:${acct.accountCode}`,
-        expression: li.expression,
-        values: (li.values ?? {}) as Record<string, string>,
-      })),
-    ),
+  // The same inputs the budget page and its browser-side recompute build, from
+  // the same function, so the figure this comparison holds the ledger against
+  // is the figure the budget itself shows.
+  //
+  // No extra columns: those are evaluated so that *other formulas* may reference
+  // them, and nothing here reads a cell. Only the account totals are wanted.
+  const inputs = evaluatorInputs(budget);
+  const { accounts } = evaluate(
+    inputs.variables,
+    inputs.lineItems,
+    [],
+    inputs.adjustments,
+    inputs.knownAccounts,
   );
-  const netByAccount = adjustmentsByAccount(budget.changes);
-  const adjustments: AdjustmentInput[] = budget.costCenters.flatMap((cc) =>
-    cc.accounts.flatMap((acct) => {
-      const amount = netByAccount.get(acct.id);
-      return amount === undefined || amount === 0
-        ? []
-        : [{ accountKey: `${sheetKey(cc)}:${acct.accountCode}`, amount }];
-    }),
-  );
-
-  const knownAccounts = budget.costCenters.flatMap((cc) =>
-    cc.accounts.map((acct) => `${sheetKey(cc)}:${acct.accountCode}`),
-  );
-
-  const { accounts } = evaluate(varInputs, liInputs, [], adjustments, knownAccounts);
 
   const out = new Map<string, number>();
   for (const cc of budget.costCenters) {

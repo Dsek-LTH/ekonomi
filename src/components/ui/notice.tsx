@@ -12,7 +12,7 @@ import { cn } from "@/lib/ui/utils";
 //
 // It was drawn from scratch in four places before this, each a few pixels
 // apart, which is how a design language stops being one.
-export type NoticeTone = "warning" | "danger" | "info";
+type NoticeTone = "warning" | "danger" | "info";
 
 // Flat tone, the way status is everywhere else. The gradient belongs to the
 // action register (see DESIGN.md), and a notice is not something you do.

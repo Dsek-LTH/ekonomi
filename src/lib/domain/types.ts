@@ -1,16 +1,22 @@
 // Domain types shared across the app. These mirror the Prisma models closely
 // enough that server and client can reuse the same shapes.
+//
+// The enums are *derived* from the schema rather than retyped from it. Fourteen
+// of them were written out here by hand, which meant adding a value to
+// schema.prisma and forgetting this file compiled fine and then failed at
+// runtime on a string TypeScript had never heard of. Aliasing the generated
+// ones makes that a compile error at every exhaustive switch instead.
+//
+// `generated/prisma/enums` is safe here despite the folder it is in: it has no
+// imports of its own and no engine behind it, only the schema's enums as
+// consts, which is why Prisma marks it importable on its own and why
+// lib/domain/boundary.test.ts admits this one path. The doc comments below stay
+// because the schema cannot carry what a value *means* to this section.
+import type * as Schema from "@/lib/generated/prisma/enums";
 
 // Section role. A user may hold several; access/attest authority is derived
 // from the whole set in lib/domain/permissions.ts.
-export type Role =
-  | "SKATTMASTARE"
-  | "ORDFORANDE"
-  | "VICE_SKATTMASTARE"
-  | "SKATTFORMAN"
-  | "RESULTATANSVARIG"
-  | "STOCKARE"
-  | "ORDINARIE";
+export type Role = Schema.Role;
 
 // One thing a role may be allowed to do. Which roles hold which is a table
 // (RoleCapability) edited in Inställningar → Roller; this list is not, because
@@ -18,36 +24,19 @@ export type Role =
 // tickbox that does nothing. Every value has exactly one helper in
 // lib/domain/permissions.ts. See the enum in prisma/schema.prisma for what each
 // one covers, and why the attest rule is not among them.
-export type Capability =
-  | "ADMIN"
-  | "BOOKKEEPING"
-  | "FORTNOX_LOGIN"
-  | "EXPORT_UNDO"
-  | "SETTINGS"
-  | "STOCK_VIEW"
-  | "STOCK_MANAGE"
-  | "BUDGET_VIEW"
-  | "BUDGET_COMMENT"
-  | "BUDGET_LOCK"
-  | "BUDGET_CHANGE_LOCKED"
-  | "ATTEST_VIEW";
+export type Capability = Schema.Capability;
 
-export type PaymentType = "CARD" | "REIMBURSEMENT" | "MILEAGE";
+export type PaymentType = Schema.PaymentType;
 
 // ── Alkohollager ──────────────────────────────────────────────────
 
 // How a product's stock is counted: whole units (cans) or sealed bottles plus
 // open ones at a fill level. See lib/stock/levels.ts.
-export type StockKind = "UNIT" | "VOLUME";
+export type StockKind = Schema.StockKind;
 
 // The drink types the bar keeps its stock in. All five need a purchased volume
 // on the restaurangrapport, so there is no "reported" subset any more.
-export type DrinkCategory =
-  | "SPRITDRYCK"
-  | "VIN"
-  | "OVRIG_JASTDRYCK"
-  | "OL"
-  | "ALKOHOLDRYCKSLIKNANDE";
+export type DrinkCategory = Schema.DrinkCategory;
 
 // Why stock moved. The report keeps these apart: bought is a volume, served is
 // turnover, spilled is neither, so the log does too.
@@ -61,32 +50,18 @@ export type DrinkCategory =
 // it hit the floor, so WASTE moves no stock and its quantity sits in its own
 // column. A bottle dropped in the cellar never left, so SPOILAGE takes it off
 // the shelf like any other removal. See the enum in prisma/schema.prisma.
-export type StockEntryKind =
-  | "PURCHASE"
-  | "CHECKOUT"
-  | "RETURN"
-  | "WASTE"
-  | "SPOILAGE"
-  | "COUNT"
-  | "CORRECTION";
+export type StockEntryKind = Schema.StockEntryKind;
 
 // Where a day's takings came from. ZETTLE_FEE is Zettle's own transaction
 // fees, which are a cost rather than income and book the other way round.
-export type IncomeSource = "ZETTLE" | "ZETTLE_FEE" | "SWISH";
+export type IncomeSource = Schema.IncomeSource;
 
 // A report's life: fetched, then booked, and finally pushed to Fortnox. A day
 // you decide not to book has no state of its own. It stays a draft until the
 // next fetch clears the working set (see createSalesBatch).
-export type IncomeReportStatus = "DRAFT" | "BOOKED" | "EXPORTED";
+export type IncomeReportStatus = Schema.IncomeReportStatus;
 
-export type ExpenseStatus =
-  | "DRAFT"
-  | "PENDING_MATCH"
-  | "PENDING_APPROVAL"
-  | "CHANGES_REQUESTED"
-  | "APPROVED"
-  | "BOOKED"
-  | "EXPORTED";
+export type ExpenseStatus = Schema.ExpenseStatus;
 
 export interface User {
   id: string;
@@ -116,7 +91,7 @@ export interface CurrentUser extends User {
 }
 
 /** FORTNOX rows mirror the Fortnox chart; LOCAL ones exist only in this app. */
-export type CostCenterSource = "FORTNOX" | "LOCAL";
+export type CostCenterSource = Schema.CostCenterSource;
 
 export interface CostCenter {
   id: string;
@@ -189,7 +164,7 @@ export interface CostAllocation {
   canAttest?: boolean; // whether the requesting viewer may attest this row
 }
 
-export interface RevisionEntry {
+interface RevisionEntry {
   id: string;
   actor: string;
   action: string; // ExpenseEventType, named by `expenses.event.<TYPE>`
@@ -256,7 +231,7 @@ export interface FortnoxStatus {
  * that shows it. One rule, in lib/mileage/claim.ts, and everything downstream
  * reads its answer.
  */
-export interface MileageJourney {
+interface MileageJourney {
   /** The odometer when the journey began and when it ended, in kilometres.
    *  Null for a reading not given yet. A draft may hold one and not the
    *  other, and 0 is a real reading. */

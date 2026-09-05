@@ -13,8 +13,9 @@
 // joined rows" depending on whether a comparison happens to be on.
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { budgetLabel, joinSnapshots, snapshotOf, type Joined, type Snapshot } from "@/lib/budget/compare";
+import { useQuery } from "@/components/shell/use-query";
 import type { Budget } from "./budget-types";
 
 // The sentinel target for "this year's outcome from Fortnox". Anything else is
@@ -36,42 +37,22 @@ export interface Comparison {
 
 export function useComparison(budget: Budget) {
   const [target, setTarget] = useState("");
-  const [budgets, setBudgets] = useState<BudgetSummary[]>([]);
-  // The other budget's figures, once one is picked. Held apart from `target` so
-  // the columns don't flicker in half-loaded while a big budget arrives.
-  const [other, setOther] = useState<{ id: string; snapshot: Snapshot } | null>(null);
 
-  // The picker's contents. Fetched once. A shallow list of every budget is
-  // small, and it is needed the moment the picker is opened.
-  useEffect(() => {
-    let live = true;
-    fetch("/api/budgets")
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => { if (live) setBudgets(data); })
-      .catch(() => {});
-    return () => { live = false; };
-  }, []);
+  // The picker's contents. A shallow list of every budget is small, and it is
+  // needed the moment the picker is opened.
+  const { data: budgets } = useQuery<BudgetSummary[]>("/api/budgets");
 
-  // Fetch the picked budget and keep it as a comparison side. `live` guards the
-  // slow-response-arrives-after-you-switched-again case. What was loaded before
-  // is left in place rather than cleared: `comparison` below only reads it while
-  // it matches the current target, so a stale one is already invisible, and
-  // clearing it here would be a render for nothing.
-  useEffect(() => {
-    if (!target || target === ACTUALS) return;
-    let live = true;
-    // Without the outcome: a comparison reads the other budget's sheets and its
-    // evaluated figures, never the ledger beside it (see `snapshotOf`), and
-    // gathering that is a group-by over the other year's whole ledger.
-    fetch(`/api/budgets/${target}?actuals=0`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((b: Budget | null) => {
-        if (!live || !b) return;
-        setOther({ id: b.id, snapshot: snapshotOf(b, budgetLabel(b)) });
-      })
-      .catch(() => {});
-    return () => { live = false; };
-  }, [target]);
+  // The picked budget, fetched without the outcome: a comparison reads the
+  // other budget's sheets and its evaluated figures, never the ledger beside it
+  // (see `snapshotOf`), and gathering that is a group-by over the other year's
+  // whole ledger.
+  //
+  // `keepPrevious` so the columns do not flicker in half-loaded while a big
+  // budget arrives. The stale side is invisible anyway: `comparison` below only
+  // reads it while its id matches the current target.
+  const { data: other } = useQuery<Budget>(
+    target && target !== ACTUALS ? `/api/budgets/${target}?actuals=0` : null,
+  );
 
   const options = useMemo<CompareOption[]>(() => {
     const out: CompareOption[] = [{
@@ -80,7 +61,7 @@ export function useComparison(budget: Budget) {
         ? `Utfall ${budget.actualsYear}`
         : `Utfall ${budget.actualsYear ?? budget.year} (ej synkat)`,
     }];
-    for (const b of budgets) {
+    for (const b of budgets ?? []) {
       if (b.id === budget.id) continue; // never against itself
       out.push({ value: b.id, label: budgetLabel(b) });
     }
@@ -96,9 +77,11 @@ export function useComparison(budget: Budget) {
       return { joined: joinSnapshots([own, actuals]), otherLabel: label };
     }
     // Still loading, or the budget went away. This budget on its own rather
-    // than half a comparison.
+    // than half a comparison. The id test is what makes a stale side invisible:
+    // it is the previous target's budget until the new one lands.
     if (target && other && other.id === target) {
-      return { joined: joinSnapshots([own, other.snapshot]), otherLabel: other.snapshot.label };
+      const snapshot = snapshotOf(other, budgetLabel(other));
+      return { joined: joinSnapshots([own, snapshot]), otherLabel: snapshot.label };
     }
     return { joined: joinSnapshots([own]), otherLabel: null };
   }, [budget, target, other]);

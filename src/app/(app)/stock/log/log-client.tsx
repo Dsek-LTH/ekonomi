@@ -37,6 +37,10 @@ import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto, StockLogRowDto } from "@/lib/data/stock";
 import { LEVELS } from "@/lib/stock/levels";
 import type { StockEntryKind } from "@/lib/domain/types";
+import { formatOreKr } from "@/lib/ui/format";
+
+/** The log is a column of movements, so the direction travels with the figure. */
+const formatOreKrSigned = (ore: number) => formatOreKr(ore, { sign: true });
 
 const KINDS: StockEntryKind[] = [
   "PURCHASE",
@@ -54,9 +58,6 @@ const toneFor = (n: number) =>
 
 const signed = (n: number) =>
   new Intl.NumberFormat("sv-SE", { signDisplay: "exceptZero" }).format(n);
-
-const kr = (ore: number) =>
-  `${new Intl.NumberFormat("sv-SE", { signDisplay: "exceptZero", maximumFractionDigits: 0 }).format(ore / 100)} kr`;
 
 /** A row's effect on the open bottles, as "80 % → 40 %" or "+ 60 %". Written
  *  out rather than as four numbers, because what a reader wants from the column
@@ -210,7 +211,7 @@ export default function StockLogClient({
         r.valueDeltaOre === 0 ? (
           <span className="text-muted">–</span>
         ) : (
-          <span className={toneFor(r.valueDeltaOre)}>{kr(r.valueDeltaOre)}</span>
+          <span className={toneFor(r.valueDeltaOre)}>{formatOreKrSigned(r.valueDeltaOre)}</span>
         ),
     },
     {

@@ -78,7 +78,7 @@ const CREEP_MS = 160;
 // app forever is worse than one that gives up.
 const ABANDON_MS = 20_000;
 
-export function RouteProgress() {
+function RouteProgress() {
   const active = useSyncExternalStore(subscribe, isNavigating, notNavigating);
   // Only the creep is state. Finishing is a render of `active`, not a write:
   // the bar is at 100% precisely when it is shown and nothing is in flight, so

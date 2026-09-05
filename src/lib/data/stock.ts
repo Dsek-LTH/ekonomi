@@ -17,7 +17,9 @@ import {
   lastEmptied,
   soonestCheck,
   type Check,
+  type ShelfStep,
 } from "@/lib/stock/expiry";
+import { OPEN_SUM, openOf } from "@/lib/server/stock-state";
 import type { StockEntry } from "@/lib/generated/prisma/client";
 import { today } from "@/lib/domain/date";
 
@@ -144,7 +146,7 @@ export async function getStockLevels(asOf?: string): Promise<StockLevelDto[]> {
   });
 }
 
-export interface StockLogPartDto {
+interface StockLogPartDto {
   kind: StockEntryKind;
   /** 0 for a whole thing, or the rung. */
   level: number;
@@ -203,7 +205,7 @@ export interface StockLogRowDto {
   locked?: boolean;
 }
 
-export interface StockLogFilter {
+interface StockLogFilter {
   productIds?: string[];
   kinds?: StockEntryKind[];
   /** One event's rows, which is how an event's page links into the log. */
@@ -467,18 +469,6 @@ export async function getStockChanges(
 }
 
 
-/**
- * What the whole stock is worth, in öre, and what it is made of.
- *
- * Summed over the log rather than over a stored balance, like everything else
- * here: the value is the sum of a column, so a total is one aggregate and
- * cannot disagree with the rows it came from.
- */
-export async function getStockValueOre(): Promise<number> {
-  const sum = await prisma.stockEntry.aggregate({ _sum: { valueDeltaOre: true } });
-  return sum._sum.valueDeltaOre ?? 0;
-}
-
 // ── Events ──────────────────────────────────────────────────────────
 
 export interface StockEventDto {
@@ -502,7 +492,7 @@ export interface StockEventDto {
 }
 
 /** What one product did on one event. */
-export interface TagLineDto {
+interface TagLineDto {
   productId: string;
   productName: string;
   productKind: StockKind;
@@ -994,36 +984,65 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
 
   const productIds = [...new Set(deliveries.map((d) => d.productId))];
 
-  // Everything those products have ever done, so `lastEmptied` can find the day
-  // each shelf was bare. Only the columns the walk reads: this is the widest
-  // query on the page and it has no business fetching values or notes.
-  const movements = await prisma.stockEntry.findMany({
-    where: { productId: { in: productIds } },
-    orderBy: { occurredAt: "asc" },
-    select: {
-      productId: true,
-      occurredAt: true,
-      units: true,
-      open80: true,
-      open60: true,
-      open40: true,
-      open20: true,
-    },
-  });
+  // How far back the walk has to go.
+  //
+  // `checkOf` skips a delivery whose own day is on or before the last day the
+  // shelf was bare, so the only empty days that can change an answer are the
+  // ones at or after the oldest delivery being asked about. Anything earlier
+  // than that gives the same verdict whatever its exact date, which is what
+  // makes the cut safe.
+  //
+  // It matters because this used to fetch every movement those products had
+  // ever made, with no bound at all: the widest query on the page, growing for
+  // the life of the installation, to answer a question about the last few
+  // months. What is before the cut arrives as one summed opening balance
+  // instead of as rows.
+  const earliest = deliveries.reduce(
+    (min, d) => (d.occurredAt < min ? d.occurredAt : min),
+    deliveries[0].occurredAt,
+  );
 
-  const steps = new Map<string, { occurredAt: string; units: number; openUnits: number }[]>();
+  const [opening, movements] = await Promise.all([
+    prisma.stockEntry.groupBy({
+      by: ["productId"],
+      where: { productId: { in: productIds }, occurredAt: { lt: earliest } },
+      _sum: OPEN_SUM,
+    }),
+    // Only the columns the walk reads: it has no business fetching values or
+    // notes.
+    prisma.stockEntry.findMany({
+      where: { productId: { in: productIds }, occurredAt: { gte: earliest } },
+      orderBy: { occurredAt: "asc" },
+      select: {
+        productId: true,
+        occurredAt: true,
+        units: true,
+        open80: true,
+        open60: true,
+        open40: true,
+        open20: true,
+      },
+    }),
+  ]);
+
+  const held = new Map(
+    opening.map((o) => {
+      const open = openOf(o._sum);
+      return [o.productId, (o._sum.units ?? 0) + open[80] + open[60] + open[40] + open[20]];
+    }),
+  );
+
+  const steps = new Map<string, ShelfStep[]>();
   for (const m of movements) {
     const list = steps.get(m.productId) ?? [];
-    list.push({
-      occurredAt: day(m.occurredAt),
-      units: m.units,
-      openUnits: m.open80 + m.open60 + m.open40 + m.open20,
-    });
+    list.push(asStep(m));
     steps.set(m.productId, list);
   }
 
   const emptied = new Map(
-    productIds.map((id) => [id, lastEmptied(steps.get(id) ?? [])] as const),
+    productIds.map(
+      (id) => [id, lastEmptied(steps.get(id) ?? [], held.get(id) ?? 0)] as const,
+    ),
   );
 
   const byProduct = new Map<string, Check[]>();
@@ -1047,6 +1066,27 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
   }
   return out;
 }
+
+/**
+ * One movement as the shelf walk reads it: a day, and what it did to what is
+ * standing there. Both callers of `lastEmptied` map their rows through this,
+ * so the two cannot count an opened bottle differently.
+ */
+const asStep = (m: {
+  occurredAt: Date;
+  units: number;
+  open80: number;
+  open60: number;
+  open40: number;
+  open20: number;
+}): ShelfStep => {
+  const open = openOf(m);
+  return {
+    occurredAt: day(m.occurredAt),
+    units: m.units,
+    openUnits: open[80] + open[60] + open[40] + open[20],
+  };
+};
 
 /** The columns a delivery contributes to a check, as the rule wants them. */
 const asDelivery = (
@@ -1079,14 +1119,29 @@ export async function getProductChecks(
 
   // No horizon, unlike the overview's query. This is one product and the page
   // wants what is coming as well as what is owed.
-  const [deliveries, movements] = await Promise.all([
-    prisma.stockEntry.findMany({
-      where: { productId, kind: "PURCHASE", bestBefore: { not: null } },
-      orderBy: { bestBefore: "asc" },
-      select: { id: true, occurredAt: true, bestBefore: true, checkedAt: true },
+  const deliveries = await prisma.stockEntry.findMany({
+    where: { productId, kind: "PURCHASE", bestBefore: { not: null } },
+    orderBy: { bestBefore: "asc" },
+    select: { id: true, occurredAt: true, bestBefore: true, checkedAt: true },
+  });
+  if (deliveries.length === 0) return [];
+
+  // Bounded at the oldest delivery on the page, with everything before it
+  // summed into an opening balance. Same reasoning as `getExpiryChecks`, where
+  // it is written out: no empty day earlier than the oldest delivery can change
+  // what any of them says.
+  const earliest = deliveries.reduce(
+    (min, d) => (d.occurredAt < min ? d.occurredAt : min),
+    deliveries[0].occurredAt,
+  );
+
+  const [opening, movements] = await Promise.all([
+    prisma.stockEntry.aggregate({
+      where: { productId, occurredAt: { lt: earliest } },
+      _sum: OPEN_SUM,
     }),
     prisma.stockEntry.findMany({
-      where: { productId },
+      where: { productId, occurredAt: { gte: earliest } },
       orderBy: { occurredAt: "asc" },
       select: {
         occurredAt: true,
@@ -1098,15 +1153,10 @@ export async function getProductChecks(
       },
     }),
   ]);
-  if (deliveries.length === 0) return [];
 
-  const emptied = lastEmptied(
-    movements.map((m) => ({
-      occurredAt: day(m.occurredAt),
-      units: m.units,
-      openUnits: m.open80 + m.open60 + m.open40 + m.open20,
-    })),
-  );
+  const open = openOf(opening._sum);
+  const held = (opening._sum.units ?? 0) + open[80] + open[60] + open[40] + open[20];
+  const emptied = lastEmptied(movements.map(asStep), held);
 
   return deliveries.flatMap((d) => {
     const check = checkOf(asDelivery(d), expiryLeadDays, emptied, now);

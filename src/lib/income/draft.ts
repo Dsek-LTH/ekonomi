@@ -33,9 +33,9 @@ import type { IncomeSource } from "@/lib/domain/types";
  * and are never split. The fee report for a day is the fee report for that
  * day. `moveIncomeLines` refuses them for the same reason.
  */
-export type DraftSource = Extract<IncomeSource, "ZETTLE" | "SWISH">;
+type DraftSource = Extract<IncomeSource, "ZETTLE" | "SWISH">;
 
-export type DraftFailure =
+type DraftFailure =
   /** Nothing has ever been fetched, so there is no working set to split. */
   | { reason: "noBatch" }
   /** The unit takes no money in: no key, no voucher text, no PDF. */
@@ -43,7 +43,7 @@ export type DraftFailure =
   /** The day is already booked for this verksamhet, a second could never be. */
   | { reason: "moveDestinationBooked" };
 
-export interface DraftOutcome {
+interface DraftOutcome {
   ok: true;
   id: string;
   /**
@@ -60,9 +60,9 @@ export interface DraftOutcome {
   created: boolean;
 }
 
-export type DraftResult = DraftOutcome | ({ ok: false } & DraftFailure);
+type DraftResult = DraftOutcome | ({ ok: false } & DraftFailure);
 
-export interface CreateDraftInput {
+interface CreateDraftInput {
   source: DraftSource;
   /** ISO date, the day that was sold. */
   date: string;

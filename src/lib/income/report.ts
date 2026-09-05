@@ -13,7 +13,7 @@
 import type { IncomeAccountDistribution, IncomeFeeReportDto, IncomeReportDto } from "./types";
 
 /** The stored shape this reads. Structural, so it is testable without Prisma. */
-export interface StoredReport {
+interface StoredReport {
   date: Date;
   total: number;
   /** The verksamhet, by the key intakt files its reports under. */

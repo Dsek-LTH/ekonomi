@@ -33,7 +33,7 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
 // When the page you came from *is* this route, it returns you to the screen you
 // left rather than to the route's bare form. The query a list keeps its state
 // in is the difference between "Alla" and "Mina". See components/back-link.tsx.
-export interface BackTo {
+interface BackTo {
   href: string;
   /** The destination, as it reads after the arrow: "← Expenses". */
   label: string;

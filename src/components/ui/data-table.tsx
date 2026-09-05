@@ -799,7 +799,7 @@ function MobileRow<T>({
 }
 
 // Sortable table header cell. Renders a <th> with a sort indicator.
-export function SortableHeader({
+function SortableHeader({
   children,
   sortKey: key,
   controls,
@@ -845,7 +845,7 @@ export function SortableHeader({
 }
 
 // Pagination footer, rendered by DataTable after the list.
-export function Pagination({
+function Pagination({
   page,
   onPageChange,
   pageSize,

@@ -28,11 +28,6 @@ export const CELL_KINDS: readonly CellKind[] = ["CHECKOUT", "RETURN", "WASTE"];
 /** The rung of a whole, unopened thing: a sealed bottle, or any can. */
 export const WHOLE = 0;
 
-/** The rungs a cell may sit on, whole first. */
-export const CELL_LEVELS: readonly number[] = [WHOLE, ...LEVELS];
-
-export const isCellLevel = (n: number): boolean => CELL_LEVELS.includes(n);
-
 /**
  * Which cell.
  *
@@ -40,7 +35,7 @@ export const isCellLevel = (n: number): boolean => CELL_LEVELS.includes(n);
  * edited at all: it names exactly one row, so there is one place for a new
  * figure to go and no other cell can be disturbed by it.
  */
-export interface CellRef {
+interface CellRef {
   productId: string;
   kind: CellKind;
   /** `WHOLE`, or one of the four rungs. */
@@ -144,7 +139,7 @@ export function totalsFromCells(
  *
  * For a can the two questions are the same one, since a can's volume is itself.
  */
-export function bottlesFromCells(
+function bottlesFromCells(
   productId: string,
   cells: Map<string, number>,
 ): { out: number; back: number; spilled: number } {
@@ -163,7 +158,7 @@ export function bottlesFromCells(
 }
 
 /** Why a cell cannot hold what somebody typed. A key under `errors.stock`. */
-export type CellFault =
+type CellFault =
   | "openBottlesFirst"
   | "notThatManyOpen"
   | "notThatManySealed"

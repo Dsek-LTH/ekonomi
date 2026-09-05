@@ -95,7 +95,7 @@ export type ClientControls = BaseControls & {
 /** Either kind, for the few helpers that genuinely take both. */
 export type TableControlState = ServerControls | ClientControls;
 
-export type TableControlDefaults = {
+type TableControlDefaults = {
   tab?: string;
   picks?: string[];
   query?: string;

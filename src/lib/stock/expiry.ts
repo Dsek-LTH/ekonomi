@@ -71,7 +71,7 @@ export function bestBeforeOf(
 }
 
 /** Where a delivery stands against its own estimated date. */
-export type CheckState =
+type CheckState =
   /** Past it. */
   | "over"
   /** Inside the lead time, still ahead of it. */
@@ -201,9 +201,16 @@ export interface ShelfStep {
  * fault (`impossible` in onhand.ts says so on the same screen), and treating
  * negative as empty is right either way: there is certainly nothing down there.
  */
-export function lastEmptied(steps: readonly ShelfStep[]): string | null {
+export function lastEmptied(steps: readonly ShelfStep[], opening = 0): string | null {
   const byDay = [...steps].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
-  let held = 0;
+  // What the shelf held before the first step given.
+  //
+  // The walk needs a running balance from the beginning of the log, but not the
+  // beginning of the log itself: a caller that only cares whether the shelf was
+  // empty since some date can sum everything before it in one aggregate and
+  // start there, rather than fetching every movement the product has ever made.
+  // Zero is the whole-history case, which is what the tests use.
+  let held = opening;
   let emptied: string | null = null;
   for (let i = 0; i < byDay.length; i++) {
     held += byDay[i].units + (byDay[i].openUnits ?? 0);

@@ -9,6 +9,7 @@
 // Amounts leave this module in SEK, already oriented for display (see lib/bas):
 // income and equity read positive, costs read negative.
 import { prisma } from "@/lib/server/db";
+import { oreToSEK } from "@/lib/domain/money";
 // The wire shapes live in ./report-shape, which the ledger screen imports
 // too. They are the contract between this module and that one, and a
 // contract written down twice is not one.
@@ -34,7 +35,6 @@ import {
   type ReportKind,
 } from "./bas";
 
-const ore = (v: number | null | undefined) => (v ?? 0) / 100;
 const NO_CC = ""; // the "no cost centre" bucket key
 
 // One account within one cost centre, in raw öre (debit − credit) before the
@@ -321,10 +321,10 @@ function buildGroup(
       .map((c) => ({
         account: c.account,
         accountName: c.accountName,
-        amount: ore(orient(c.movement, def.orientation)),
-        opening: isBalance ? ore(orient(c.opening, def.orientation)) : null,
-        closing: isBalance ? ore(orient(c.opening + c.movement, def.orientation)) : null,
-        comparison: c.comparison == null ? null : ore(orient(c.comparison, def.orientation)),
+        amount: oreToSEK(orient(c.movement, def.orientation)),
+        opening: isBalance ? oreToSEK(orient(c.opening, def.orientation)) : null,
+        closing: isBalance ? oreToSEK(orient(c.opening + c.movement, def.orientation)) : null,
+        comparison: c.comparison == null ? null : oreToSEK(orient(c.comparison, def.orientation)),
       }))
       .sort((a, b) => a.account.localeCompare(b.account));
 

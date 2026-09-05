@@ -22,9 +22,9 @@ export function isNormalisableImage(mime: string): boolean {
 }
 
 /** What a normalised receipt can be stored as. */
-export type NormalisedMime = "image/jpeg" | "image/png";
+type NormalisedMime = "image/jpeg" | "image/png";
 
-export interface NormalisedImage {
+interface NormalisedImage {
   full: Buffer; // display image (EXIF-rotated, downscaled)
   mimeType: NormalisedMime;
 }

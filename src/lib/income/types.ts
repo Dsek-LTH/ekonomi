@@ -12,7 +12,7 @@
 // is kronor.
 
 /** One product line of a report. */
-export interface IncomeProduct {
+interface IncomeProduct {
   name: string;
   variant?: string;
   /** BAS revenue account this line routed to, e.g. "3011". */
@@ -51,7 +51,7 @@ export interface IncomeReportDto {
 }
 
 /** One of Zettle's own transaction fees, which are a cost rather than income. */
-export interface IncomeFeeEntry {
+interface IncomeFeeEntry {
   name: string;
   account: string;
   quantity: number;
@@ -72,7 +72,7 @@ export interface IncomeFeeReportDto {
 // both its yaml and json tags. It is the only place in this app that spells
 // fields that way, and it is not a style slip. It is the other side's format.
 
-export interface IntaktAttestation {
+interface IntaktAttestation {
   name: string;
   stil_id: string;
 }

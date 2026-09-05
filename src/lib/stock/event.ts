@@ -59,7 +59,7 @@ export interface TagSubject {
  * round the same way. Two roundings of the same quantity is how a total and
  * its parts come to disagree by a millilitre.
  */
-export function levelVolume(product: TagSubject, level: number): number {
+function levelVolume(product: TagSubject, level: number): number {
   if (product.kind !== "VOLUME") return 1;
   const whole = product.nominalMl ?? 0;
   if (level === 0) return whole;

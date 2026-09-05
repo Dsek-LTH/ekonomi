@@ -67,14 +67,14 @@ function costCenterFromObjects(brace: string): string | undefined {
   return undefined;
 }
 
-export interface SieTransaction {
+interface SieTransaction {
   account: string;
   costCenterCode?: string;
   amount: number; // SEK decimal; positive = debit, negative = credit
   text?: string;
 }
 
-export interface SieVoucher {
+interface SieVoucher {
   series: string;
   number: number;
   date: string; // YYYY-MM-DD
@@ -82,7 +82,7 @@ export interface SieVoucher {
   transactions: SieTransaction[];
 }
 
-export interface ParsedSie {
+interface ParsedSie {
   accounts: Map<string, string>; // account number → name
   costCenters: Map<string, string>; // dim-1 code → name
   vouchers: SieVoucher[];

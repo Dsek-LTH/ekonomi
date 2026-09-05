@@ -21,7 +21,7 @@ export const REIMBURSEMENT_DEADLINE_DAYS = 60;
 /** Payment types the section pays back to a member, rather than having paid
  *  already from its own account. What the deadline and the payout account both
  *  hang on, so the two cannot come to disagree about which is which. */
-export const OUT_OF_POCKET: readonly PaymentType[] = ["REIMBURSEMENT", "MILEAGE"];
+const OUT_OF_POCKET: readonly PaymentType[] = ["REIMBURSEMENT", "MILEAGE"];
 
 export const isOutOfPocket = (paymentType: PaymentType): boolean =>
   OUT_OF_POCKET.includes(paymentType);
@@ -196,7 +196,7 @@ export const isAttestWithdrawable = (status: string): boolean =>
 export const isRecallable = (status: string): boolean =>
   (status as ExpenseStatus) === "PENDING_APPROVAL";
 
-export const isPendingApproval = (status: string): boolean => status as ExpenseStatus === "PENDING_APPROVAL";
+const isPendingApproval = (status: string): boolean => status as ExpenseStatus === "PENDING_APPROVAL";
 
 // An utlägg that has left the submitter's hands: waiting for attest, or
 // attested and beyond. This is exactly the union the two tabs on the attest

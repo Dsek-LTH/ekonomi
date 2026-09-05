@@ -13,7 +13,7 @@ import { canChangeLockedBudget, isAdmin } from "@/lib/domain/permissions";
 import { fail, gate, type Gate } from "@/lib/api/guard";
 
 // Which entity the route was handed. Exactly one key.
-export type BudgetTarget =
+type BudgetTarget =
   | { budget: string }
   | { costCenter: string } // BudgetCostCenter id (a sheet), not CostCenter
   | { account: string }
@@ -126,7 +126,7 @@ export async function denyDeletingAdjusted(
   );
 }
 
-export type EditorialGate =
+type EditorialGate =
   | { ok: false; res: NextResponse }
   | { ok: true; actorId: string; budgetId: string };
 

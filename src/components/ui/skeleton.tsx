@@ -19,7 +19,7 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 // Paragraph-shaped filler. The last line is short, the way a real one is.
-export function SkeletonText({
+function SkeletonText({
   lines = 3,
   className,
 }: {

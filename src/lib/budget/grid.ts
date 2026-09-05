@@ -15,7 +15,7 @@ import { effectiveKind, type AccountKind } from "@/lib/budget";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-export type ColKind = "konto" | "text" | "number";
+type ColKind = "konto" | "text" | "number";
 
 // The six fixed general-purpose columns between Beskrivning and Belopp.
 export const EXTRA_COLUMN_KEYS = ["x1", "x2", "x3", "x4", "x5", "x6"] as const;
@@ -53,8 +53,8 @@ function legacyField(s: string): string {
   return s === "C" ? "quantity" : s === "D" ? "unitPrice" : s === "E" ? "expression" : s;
 }
 
-export interface GridLineItem { id: string }
-export interface GridAccount { id: string; accountCode: string; kindOverride: AccountKind | null; lineItems: GridLineItem[] }
+interface GridLineItem { id: string }
+interface GridAccount { id: string; accountCode: string; kindOverride: AccountKind | null; lineItems: GridLineItem[] }
 export interface GridSheet { code: string; accounts: GridAccount[] }
 
 type RowKind = "section" | "account" | "line";

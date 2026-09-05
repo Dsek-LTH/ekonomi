@@ -9,7 +9,7 @@ import { prisma } from "@/lib/server/db";
 // Discriminated on `ok`, so a caller that returns early on failure has a code
 // and a name in hand afterwards without asserting they are there. On failure,
 // `error` is a message code under `errors.budgetAccount`, see lib/api/guard.
-export type AccountCheck =
+type AccountCheck =
   | { ok: true; code: string; name: string }
   | { ok: false; error: string; values?: Record<string, string | number> };
 

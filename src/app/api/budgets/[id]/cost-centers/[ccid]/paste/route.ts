@@ -77,34 +77,49 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
     // accounts the same; each account is locked as its rows are added.
     await lockForAppend(tx, "budgetCostCenter", ccId);
 
+    type SourceRow = {
+      id: string;
+      description: string;
+      expression: string;
+      quantity: string | null;
+      unitPrice: string | null;
+      values: Prisma.JsonValue;
+    };
+
     /** Copied row id → the row it became, for the reference rewrite at the end. */
     const copied = new Map<string, string>();
+    /** The new rows, each still holding what it was copied from. */
+    const made: { id: string; from: SourceRow }[] = [];
 
-    async function appendRows(
-      into: string,
-      source: { id: string; description: string; expression: string; quantity: string | null; unitPrice: string | null; values: Prisma.JsonValue }[],
-    ) {
+    async function appendRows(into: string, source: SourceRow[]) {
+      if (source.length === 0) return;
       const last = await tx.budgetLineItem.findFirst({
         where: { accountId: into },
         orderBy: { sortOrder: "desc" },
         select: { sortOrder: true },
       });
       let order = nextSortOrder(last);
-      for (const row of source) {
-        const made = await tx.budgetLineItem.create({
-          data: {
-            accountId: into,
-            description: row.description,
-            expression: row.expression,
-            quantity: row.quantity,
-            unitPrice: row.unitPrice,
-            values: row.values ?? {},
-            sortOrder: order++,
-          },
-          select: { id: true },
-        });
-        copied.set(row.id, made.id);
-      }
+      // One statement for the whole account rather than one per row. A sheet of
+      // two hundred rows was two hundred round trips inside a transaction that
+      // every other paste into this budget is queued behind.
+      const created = await tx.budgetLineItem.createManyAndReturn({
+        data: source.map((row) => ({
+          accountId: into,
+          description: row.description,
+          expression: row.expression,
+          quantity: row.quantity,
+          unitPrice: row.unitPrice,
+          values: row.values ?? {},
+          sortOrder: order++,
+        })),
+        select: { id: true },
+      });
+      // `createManyAndReturn` answers in the order it was given, which is what
+      // pairs each new row with the one it came from.
+      created.forEach((row, i) => {
+        copied.set(source[i].id, row.id);
+        made.push({ id: row.id, from: source[i] });
+      });
     }
 
     if (accountId && rows.length > 0) {
@@ -149,14 +164,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
     // row of the same copy is pointed at that row's copy instead. Anything it
     // pointed at from outside (another sheet, an account total, a variable)
     // is left exactly where it was aimed.
-    for (const to of copied.values()) {
-      const row = await tx.budgetLineItem.findUnique({
-        where: { id: to },
-        select: { expression: true, quantity: true, unitPrice: true, values: true },
-      });
-      if (!row) continue;
-      const bound = rebindCopiedRefs(row, copied);
-      if (bound) await tx.budgetLineItem.update({ where: { id: to }, data: bound });
+    //
+    // Rebound from the source row rather than by reading each copy back. The
+    // copy is a duplicate of its source, formulas included, so the two have the
+    // same references and the round trip per row was asking the database to
+    // repeat something already in hand. Only the rows that actually changed are
+    // written.
+    for (const row of made) {
+      const bound = rebindCopiedRefs(row.from, copied);
+      if (bound) await tx.budgetLineItem.update({ where: { id: row.id }, data: bound });
     }
   });
 

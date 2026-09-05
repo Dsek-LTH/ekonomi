@@ -20,7 +20,7 @@ import { DateInput as DateInputBase } from "./date-input";
  * column of labels. Optional is a word at the far end, because it is
  * permission rather than a demand and reads as an aside.
  */
-export type Requirement = "required" | "optional";
+type Requirement = "required" | "optional";
 
 // No focus styling here: the app draws one ring for everything from
 // globals.css, and utilities can't override it anyway. This used to add an
@@ -264,15 +264,3 @@ export function DateInput({
   return <DateInputBase className={control(size, className)} {...props} />;
 }
 
-export function Select({
-  className,
-  size = "md",
-  children,
-  ...props
-}: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> & { size?: Size }) {
-  return (
-    <select className={control(size, cn("appearance-none pr-9", className))} {...props}>
-      {children}
-    </select>
-  );
-}

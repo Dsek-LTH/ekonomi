@@ -20,31 +20,31 @@
 // meaning survives the trip.
 import { amountToOre, sniffDelimiter, splitCsvLine } from "@/lib/domain/csv";
 
-export interface ParsedBudgetLine {
+interface ParsedBudgetLine {
   description: string;
   quantity: string | null;
   unitPrice: string | null;
   expression: string;
 }
 
-export interface ParsedBudgetAccount {
+interface ParsedBudgetAccount {
   code: string;
   name: string;
   lines: ParsedBudgetLine[];
 }
 
-export interface ParsedBudgetSheet {
+interface ParsedBudgetSheet {
   costCenterCode: string;
   costCenterName: string;
   accounts: ParsedBudgetAccount[];
 }
 
-export interface BudgetCsvProblem {
+interface BudgetCsvProblem {
   line: number; // 1-based line number in the file, so an error can be found
   message: string;
 }
 
-export interface ParsedBudgetCsv {
+interface ParsedBudgetCsv {
   sheets: ParsedBudgetSheet[];
   problems: BudgetCsvProblem[];
 }

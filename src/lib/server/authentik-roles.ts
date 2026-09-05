@@ -49,7 +49,7 @@ export interface Grants {
  * It is what somebody types into Authentik, or looks up in Inställningar →
  * Roller, once they know which one to go and look at.
  */
-export interface GrantSources {
+interface GrantSources {
   /** The section groups this was read from, normalised and deduped, in order. */
   groups: string[];
   /** Each role granted, and the groups behind it. ORDINARIE has none. */
@@ -74,7 +74,7 @@ export interface GrantSources {
  * re-derive everybody from the transaction's own view of the tables rather than
  * from a request cache that is one write out of date.
  */
-export type GroupMapping = ReadonlyMap<
+type GroupMapping = ReadonlyMap<
   string,
   { roles: readonly Role[]; resultUnits: readonly string[] }
 >;

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { useNotify } from "@/components/shell/notifications";
 import { resolveApiError } from "@/lib/ui/api-error";
+import { useQuery } from "@/components/shell/use-query";
 import { Button } from "@/components/ui/button";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
 import { SkeletonSheet } from "@/components/ui/skeleton";
@@ -128,14 +129,21 @@ export default function LedgerClient({
    * paid for by every reader, including the ones who never leave the table.
    */
   const [mode, setMode] = useState<"TABLE" | "CHART">("TABLE");
-  const [trend, setTrend] = useState<TrendResponse | null>(null);
-  const [trendLoading, setTrendLoading] = useState(false);
-  const [trendError, setTrendError] = useState<string | null>(null);
-  const latestTrend = useRef(0);
 
   // Per-account drill-down state.
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [rows, setRows] = useState<Record<string, RowView[]>>({});
+  /**
+   * Which report the cached rows belong to.
+   *
+   * Bumped by `update`, which also empties the cache. Without it a drill-down
+   * still in flight when a filter changed would land afterwards and refill the
+   * cache it had just been cleared from, putting last period's transactions
+   * under an account in this one. Out-of-order responses between two accounts
+   * are already harmless, since each writes under its own key; this is about
+   * the report moving underneath them.
+   */
+  const reportGeneration = useRef(0);
 
   // Control changes can outpace the network; only the newest request may write
   // to state, so a slow early one can't overwrite a fast later one.
@@ -149,6 +157,21 @@ export default function LedgerClient({
   // Joins every table's sideways scrolling, bottom line included.
   const registerScroll = useColumnScrollSync();
 
+  /**
+   * The report itself, and the one fetch on this screen that is not a
+   * `useQuery`.
+   *
+   * It cannot be. The server clamps the period into the financial year and
+   * picks defaults, and the controls have to follow what it actually reported
+   * on, so the response writes back into `query`. Deriving the url from `query`
+   * as well would make that write a second request: the echo produces the same
+   * clamped values, so it would settle after one extra round trip rather than
+   * loop, but one extra round trip on the slowest request in the app, on every
+   * parameter change, is not a tidiness worth paying for.
+   *
+   * The trend fetch below has no such echo, which is exactly why it is
+   * declarative and this is not.
+   */
   const load = useCallback(async (q: QueryState) => {
     const id = ++latest.current;
     setLoading(true);
@@ -190,47 +213,32 @@ export default function LedgerClient({
   /**
    * The same period, cut for the charts. See /api/ledger/trend.
    *
-   * Only ever asked about the result report: a balance sheet is a position
-   * rather than a period, and its "months" would be twelve copies of one
-   * balance. The charts view says so instead of drawing something meaningless.
+   * Declarative, unlike `load` above: this one asks a question and reports the
+   * answer, so the url *is* the state and `useQuery` can own the rest. It
+   * fetches when the charts are on screen and refetches when the parameters
+   * they describe move, which is also what stops a reader arriving back at the
+   * charts and seeing a picture of a period nobody is looking at.
+   *
+   * Null while the table is showing, or for a balansrapport: a balance sheet is
+   * a position rather than a period, and its "months" would be twelve copies of
+   * one balance. The charts view says so instead of drawing something
+   * meaningless.
    */
-  const loadTrend = useCallback(
-    async (q: QueryState) => {
-      if (q.kind !== "RESULT" || q.year == null) return;
-      const id = ++latestTrend.current;
-      setTrendLoading(true);
-      setTrendError(null);
-      try {
-        const params = new URLSearchParams({ year: String(q.year), compare: q.compare });
-        if (q.from) params.set("from", q.from);
-        if (q.to) params.set("to", q.to);
-        if (q.costCenter != null) params.set("costCenter", q.costCenter);
-        if (q.budget) params.set("budget", q.budget);
-        const res = await fetch(`/api/ledger/trend?${params.toString()}`);
-        const json = await res.json();
-        if (id !== latestTrend.current) return;
-        if (!res.ok) throw new Error(resolveApiError(tAll, json) ?? t("loadFailed"));
-        setTrend(json);
-      } catch (e) {
-        if (id !== latestTrend.current) return;
-        setTrendError(e instanceof Error ? e.message : tCommon("error.network"));
-      } finally {
-        if (id === latestTrend.current) setTrendLoading(false);
-      }
-    },
-    [t, tAll, tCommon],
-  );
+  const trendUrl = useMemo(() => {
+    if (mode !== "CHART" || query.kind !== "RESULT" || query.year == null) return null;
+    const params = new URLSearchParams({ year: String(query.year), compare: query.compare });
+    if (query.from) params.set("from", query.from);
+    if (query.to) params.set("to", query.to);
+    if (query.costCenter != null) params.set("costCenter", query.costCenter);
+    if (query.budget) params.set("budget", query.budget);
+    return `/api/ledger/trend?${params.toString()}`;
+  }, [mode, query]);
 
-  // Fetched when the charts are on screen and the parameters they describe have
-  // moved, which is also the first time somebody switches to them. A parameter
-  // changed while the table is showing invalidates what was fetched (see
-  // `update`), so arriving back at the charts asks again rather than showing a
-  // picture of a period nobody is looking at.
-  useEffect(() => {
-    if (mode !== "CHART" || trend !== null || trendLoading || query.year == null) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadTrend(query);
-  }, [mode, trend, trendLoading, query, loadTrend]);
+  const {
+    data: trend,
+    loading: trendLoading,
+    error: trendError,
+  } = useQuery<TrendResponse>(trendUrl, { error: "ledger.loadFailed", keepPrevious: false });
 
   // load() does set state before it awaits, but on this first call it sets
   // `loading` to true and `error` to null, which is what they already are, so
@@ -260,11 +268,10 @@ export default function LedgerClient({
   function update(patch: Partial<QueryState>) {
     setOpenKey(null);
     setRows({});
-    // The charts describe a period, so a change of period makes what was
-    // fetched a picture of something else. Dropped rather than refetched here:
-    // the effect above asks again if, and only if, the charts are what is on
-    // screen.
-    setTrend(null);
+    reportGeneration.current++;
+    // Nothing to drop for the charts: their url is built from `query`, so a
+    // change of period makes it a different url and the fetch follows on its
+    // own, if and only if the charts are what is on screen.
     const next = { ...query, ...patch };
     // A new year has its own months, so the period resets with it. The budget
     // does not: any budget may be compared against any year, and one that was
@@ -292,6 +299,7 @@ export default function LedgerClient({
     }
     setOpenKey(key);
     if (!rows[key] && query.year != null) {
+      const generation = reportGeneration.current;
       const params = new URLSearchParams({
         year: String(query.year),
         account: acct.account,
@@ -309,12 +317,17 @@ export default function LedgerClient({
       try {
         const res = await fetch(`/api/ledger/rows?${params.toString()}`);
         const json = await res.json().catch(() => ({}));
+        // The report moved while this was in flight. Its rows describe a period
+        // nobody is looking at any more, and the failure of one is not worth
+        // reporting either.
+        if (generation !== reportGeneration.current) return;
         if (!res.ok) {
           notify.error(resolveApiError(tAll, json) ?? t("rowsFailed"));
           return;
         }
         setRows((r) => ({ ...r, [key]: json.rows }));
       } catch {
+        if (generation !== reportGeneration.current) return;
         notify.error(tCommon("error.network"));
       }
     }

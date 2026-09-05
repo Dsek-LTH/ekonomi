@@ -23,6 +23,8 @@ import { useMutation } from "@/components/shell/use-mutation";
 
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+import { sentence } from "@/lib/ui/format";
+import type { AccountSyncResult } from "@/lib/fortnox/sync";
 import type {
   AccountRecord,
   BookkeepingSettings,
@@ -95,18 +97,16 @@ export function FortnoxClient({
   }
 
   async function syncAccounts() {
-    const data = await mutate("/api/fortnox/accounts/sync", {
+    const data = await mutate<AccountSyncResult>("/api/fortnox/accounts/sync", {
       key: "accounts",
       error: t("chartSyncFailed"),
     });
     if (!data) return;
     notify.success(
-      data.deactivated
-        ? t("chartSummaryWithRetired", {
-            fetched: Number(data.upserted),
-            retired: Number(data.deactivated),
-          })
-        : t("chartSummary", { fetched: Number(data.upserted) }),
+      sentence(
+        t("chartSummary.fetched", { count: data.upserted }),
+        data.deactivated && t("chartSummary.retired", { count: data.deactivated }),
+      ),
       t("chartSynced"),
     );
   }
@@ -117,7 +117,7 @@ export function FortnoxClient({
   // a long job and stays with the CLI (pnpm fortnox:sync --all) rather than a
   // button someone has to sit and wait on.
   async function syncLedger(target: number | "current") {
-    const data = await mutate("/api/fortnox/sync", {
+    const data = await mutate<{ totalVouchers: number }>("/api/fortnox/sync", {
       key: `ledger-${target}`,
       // Fortnox's financial-year id, which is what FortnoxFinancialYear.id
       // holds and what syncLedger filters on.
@@ -125,7 +125,7 @@ export function FortnoxClient({
       error: tCostCenters("syncFailed"),
     });
     if (!data) return;
-    notify.success(t("ledgerSummary", { count: Number(data.totalVouchers) }), t("ledgerSynced"));
+    notify.success(t("ledgerSummary", { count: data.totalVouchers }), t("ledgerSynced"));
   }
 
   async function saveSetting(body: Record<string, string>, success: string) {

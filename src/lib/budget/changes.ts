@@ -152,7 +152,7 @@ export function validateChange(kind: ChangeKind, entries: readonly ResolvedEntry
 }
 
 /** The shape both the server and the client hold a change in. */
-export interface ChangeLike {
+interface ChangeLike {
   kind: ChangeKind;
   revokedAt: Date | string | null;
   entries: readonly { accountId: string; amount: number }[];
