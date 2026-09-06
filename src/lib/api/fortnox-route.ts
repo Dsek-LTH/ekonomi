@@ -4,7 +4,7 @@
 //
 // Kept apart from lib/fortnox/ on purpose: that module talks to Fortnox and
 // knows nothing about requests, which is what makes it usable from the CLI
-// (prisma/sync-fortnox.ts) and the scheduled job as well as from a route.
+// (scripts/sync-fortnox.ts) and the scheduled job as well as from a route.
 import { NextResponse } from "next/server";
 import { FortnoxError, getConnection, getServiceToken } from "@/lib/fortnox";
 import { fail, gate, type Actor } from "@/lib/api/guard";

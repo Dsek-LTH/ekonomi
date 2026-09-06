@@ -1,0 +1,246 @@
+// The budget: what a year is planned to cost, and the editorial changes
+// an adopted budget is still allowed to record. See lib/budget/.
+
+// ── Budget ────────────────────────────────────────────────────────
+
+// A budget: a year, a name, and everything budgeted in it.
+
+// Budgets stand alone. Any number may share a year. The adopted one and a
+// revision drafted beside it are simply two budgets, and none of them knows
+// anything about the others. Copying one duplicates its contents and then the
+// two go their separate ways: no lineage is stored, nothing is shared, and
+// changing this one's year or name moves nothing else.
+//
+// They stay comparable all the same, because what they are made of lines up on
+// its own: cost-centre codes, account codes and row descriptions mean the same
+// thing in every budget of every year. lib/budget/compare.ts joins any number of
+// them on exactly that, keeping what only one side has rather than dropping it.
+//
+// Locking freezes one budget: it then rejects every write to its numbers (rows,
+// accounts, cost centres, variables, its own name and year, and being deleted)
+// while comments stay open, since those are a discussion about the frozen
+// figures rather than an edit to them. Only the skattmästare may lock or unlock
+// (see canLockBudget in lib/permissions.ts); the guard every budget write goes
+// through is lib/budget/access.ts.
+//
+// A locked budget still moves, but only one way: through a BudgetChange, which
+// adjusts the figures without touching a single row of what was adopted. That is
+// the whole reason the lock is worth having. See BudgetChange below.
+model Budget {
+  id          String    @id @default(cuid())
+  year        Int
+  name        String // "Ursprunglig", "VTM-extra"
+  // The day the meeting adopted it. A date, not a timestamp, because what is
+  // recorded is which möte decided this budget and not the minute it was typed
+  // in. Null until someone says: a draft has not been adopted by anyone, and
+  // guessing a date for one would put a decision in the record that was never
+  // taken.
+  //
+  // Distinct from `createdAt`, which is when the row appeared and is nobody's
+  // decision, and from `lockedAt`, which is the treasurer sealing a budget
+  // afterwards. A budget can be adopted and not yet sealed, or imported years
+  // later and adopted long before it existed here.
+  adoptedAt   DateTime? @db.Date
+  createdBy   User      @relation("BudgetAuthor", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  // Null while open. Both are set together: the timestamp is what the app
+  // tests, the locker is who to name in the UI.
+  lockedAt   DateTime?
+  lockedBy   User?     @relation("BudgetLocker", fields: [lockedById], references: [id], onDelete: SetNull)
+  lockedById String?
+
+  variables   BudgetVariable[]
+  costCenters BudgetCostCenter[]
+  changes     BudgetChange[]
+
+  @@index([year])
+}
+
+// Named global value or expression. Expressions may reference other variables
+// or account totals via account(CC_CODE, ACCT_CODE). Evaluated with
+// fixed-point iteration so cross-cost-center references resolve correctly.
+model BudgetVariable {
+  id         String @id @default(cuid())
+  budget     Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId   String
+  name       String // identifier, e.g. "MEMBERS"
+  expression String // e.g. "300", "TICKET_PRICE * MEMBERS", "account(INFU,3010)"
+  sortOrder  Int    @default(0)
+
+  @@unique([budgetId, name])
+  @@index([budgetId])
+}
+
+// A cost center included in a budget. Ordered by sortOrder.
+//
+// The link to a real cost centre is optional: a sheet cloned inside a budget
+// starts detached, since the code it would copy is already taken by its source
+// (and a budget is often drafted before the cost centre exists in Fortnox at
+// all). A detached sheet budgets normally but stands outside the A1 grid. It
+// has no code for `account(CC, ACCT)` or a `CC!C7` reference to name until an
+// unused cost centre is picked for it. `label` is what it is called meanwhile;
+// once linked, the cost centre's own code and name take over. The label is also
+// what a detached sheet is matched on when budgets are compared, since its id
+// means nothing to any other budget (see lib/budget/compare.ts).
+// The unique pair still holds where it matters: Postgres treats each NULL as
+// distinct, so any number of detached sheets may coexist while a linked cost
+// centre still cannot appear twice in one budget.
+model BudgetCostCenter {
+  id           String          @id @default(cuid())
+  budget       Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId     String
+  costCenter   CostCenter?     @relation(fields: [costCenterId], references: [id])
+  costCenterId String?
+  label        String? // display name while detached
+  sortOrder    Int             @default(0)
+  accounts     BudgetAccount[]
+
+  @@unique([budgetId, costCenterId])
+  @@index([budgetId])
+}
+
+// A BAS account within a cost center. Line items beneath it must sum to its
+// total; the total is derived, never stored, to stay consistent. Editorial
+// adjustments (BudgetAdjustment) are added on top of that sum, so the account
+// total is "what was adopted, plus what has been decided since".
+model BudgetAccount {
+  id                 String             @id @default(cuid())
+  budgetCostCenter   BudgetCostCenter   @relation(fields: [budgetCostCenterId], references: [id], onDelete: Cascade)
+  budgetCostCenterId String
+  accountCode        String // e.g. "3010"
+  accountName        String // e.g. "Biljettintäkter"
+  lineItems          BudgetLineItem[]
+  comments           BudgetComment[]
+  adjustments        BudgetAdjustment[]
+
+  @@unique([budgetCostCenterId, accountCode])
+  @@index([budgetCostCenterId])
+}
+
+// One line item beneath an account. Amount is an expression string so it
+// can reference variables (e.g. "MEMBERS * TICKET_PRICE").
+model BudgetLineItem {
+  id          String        @id @default(cuid())
+  account     BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId   String
+  description String
+  // When both `quantity` and `unitPrice` are set the amount is their product
+  // (the "antal × á-pris" form); otherwise `expression` is used directly.
+  // All three are expression strings, so they may reference variables.
+  quantity    String? // e.g. "2", "MEMBERS", "PASLAG_OL"
+  unitPrice   String? // e.g. "350", "TACK_POLICY"
+  expression  String // e.g. "1500", "MEMBERS * 5"
+  sortOrder   Int           @default(0)
+  // Per-line values for the six general columns, keyed x1…x6 (see
+  // EXTRA_COLUMN_KEYS in lib/budget/grid.ts). Each holds a literal or formula
+  // string, exactly like `expression`.
+  values      Json          @default("{}")
+
+  @@index([accountId])
+}
+
+// ── Redaktionella ändringar ───────────────────────────────────────
+//
+// What a locked budget is allowed to do. An adopted budget is voted through and
+// then sealed, but the year goes on: a sittning costs more than it was budgeted
+// to, a resultatenhet wants to spend one post's money on another. Rather than reopen
+// the adopted figures, which would quietly rewrite what was voted for, the
+// change is recorded beside them and added on top. The sheet shows the new
+// number, and it shows where it came from.
+//
+// Two kinds, told apart by their effect on the rambudget rather than by what the
+// treasurer calls them (see lib/budget/changes.ts, which does the arithmetic):
+//
+//   AVSTEG        a departure from the adopted frame. The section's bottom
+//                   line moves, and that is exactly what must be visible.
+//   FORFLYTTNING  money moved between accounts inside one resultatenhet
+//                   (Sexmästeriet and its cost centres). The bottom line is
+//                   untouched, so the entries must cancel out exactly.
+//
+// A change is never edited and never quietly disappears. Wrongly entered, it is
+// revoked: it stops counting towards the figures the moment it is, and stays in
+// the history struck through, with who revoked it and when. Undoing a real
+// decision is a new, opposite change instead. The history is the record of what
+// happened, not of what the numbers currently are.
+//
+// Only the skattmästare may make one, and only on a locked budget: on an open
+// one there is nothing to depart from, and the figures are simply edited.
+enum BudgetChangeKind {
+  AVSTEG
+  FORFLYTTNING
+}
+
+model BudgetChange {
+  id       String           @id @default(cuid())
+  budget   Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budgetId String
+  // Running number within the budget, from 1. It is what a change is called out loud
+  // ("avsteg #4") and in the sheet, since a cuid is no use to anyone.
+  seq      Int
+  kind     BudgetChangeKind
+  reason   String // motivering, required, because a bare number explains nothing
+
+  createdBy   User     @relation("BudgetChangeAuthor", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  // Set together when the change is revoked. `revokedAt` is what the arithmetic
+  // tests; the revoker is who to name in the history.
+  revokedAt   DateTime?
+  revokedBy   User?     @relation("BudgetChangeRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  revokedById String?
+
+  entries BudgetAdjustment[]
+
+  @@unique([budgetId, seq])
+  @@index([budgetId])
+}
+
+// One account's share of a change: a signed amount in the account's own
+// orientation, i.e. the same direction its line items are budgeted in. +500 on a
+// cost account is 500 kr more spent; +500 on an income account is 500 kr more
+// earned. What that does to the result is a separate question, and the reason
+// the two kinds can be told apart at all. See resultImpact in
+// lib/budget/changes.ts.
+//
+// Stored as a decided number rather than an expression: the rest of the budget
+// is formulas so it can be redrafted, but a change is a decision about an amount
+// and must still be that amount after a variable moves. Otherwise a
+// förflyttning that summed to zero when it was made might not tomorrow.
+model BudgetAdjustment {
+  id        String        @id @default(cuid())
+  change    BudgetChange  @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  changeId  String
+  // Cascades so deleting a whole budget still works. Deleting a single account
+  // that carries adjustments is refused by the API instead, which is where the
+  // history is worth protecting.
+  account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  // Öre, signed in the account's own orientation, the same units as every
+  // other amount in this database, and the same the evaluator now reports in.
+  // This was a Float holding kronor, which is the one thing the note at the top
+  // of this file says money is never stored as: two decided amounts that ought
+  // to cancel could miss by a fraction of an öre, and `isNeutral` in
+  // lib/budget/changes.ts carried a half-öre epsilon to paper over it.
+  amount    Int
+
+  @@index([changeId])
+  @@index([accountId])
+}
+
+// Approver comment on a specific account within a budget. Not copied when a
+// budget is duplicated, because a comment is a discussion about the figures in front of
+// it, not part of them.
+model BudgetComment {
+  id        String        @id @default(cuid())
+  account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  author    User          @relation("BudgetCommentAuthor", fields: [authorId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime      @default(now())
+
+  @@index([accountId])
+}

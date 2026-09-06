@@ -154,7 +154,7 @@ export async function deleteObject(key: string): Promise<void> {
 // rollback, where the request is already failing and there is no useful way to
 // tell the user about a second problem behind the first. The object then
 // outlives the request, and the only way anyone learns that is this log line:
-// the sweeper (prisma/gc-receipts.ts) collects what lands here.
+// the sweeper (scripts/gc-receipts.ts) collects what lands here.
 export async function deleteObjectBestEffort(key: string): Promise<void> {
   try {
     await deleteObject(key);
@@ -164,6 +164,6 @@ export async function deleteObjectBestEffort(key: string): Promise<void> {
 }
 
 // Listing the bucket is the sweeper's business, and the sweeper has its own
-// client (prisma/storage-admin.ts) because a tsx script cannot import a
+// client (scripts/storage-admin.ts) because a tsx script cannot import a
 // `server-only` module. There was a copy of it here too, unreachable from
 // anything, under a comment saying the sweeper needed it.

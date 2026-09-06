@@ -1,0 +1,216 @@
+// Who someone is and what they may do. Identity comes from Authentik;
+// authority is derived from these tables and never from the session.
+// See lib/domain/permissions.ts and lib/server/capabilities.ts.
+
+// One thing a role may be allowed to do. The editable half of authority: which
+// roles hold which of these is a table (RoleCapability), maintained in
+// Inställningar → Roller.
+//
+// The list itself is not editable, and cannot be: a capability is a name a call
+// site asks about, so one nobody checks would be a tickbox that does nothing.
+// Every value here has exactly one helper in lib/domain/permissions.ts, and
+// that is the whole of the contract.
+//
+// What is deliberately NOT in here is the attest rule. Whether you may attest
+// one particular allocation depends on whose utlägg it is, what the submitter
+// holds, and whether the cost centre falls under a result unit you answer for.
+// See canAttestAllocation. That is not a permission a role has, it is a
+// question about two people and a row, and a tickbox claiming to grant it would
+// be a tickbox that lies. ATTEST_VIEW below grants sight of the attest queue,
+// which is what `hasAttestRole` has always meant.
+enum Capability {
+  /// Full authority over other people's utlägg: attest any of them, edit any
+  /// of them. Woven into the attest rule and its query, not merely a page.
+  ADMIN
+  /// Bokföring: see every utlägg, book vouchers, return a wrongly-approved one.
+  BOOKKEEPING
+  /// Books in Fortnox under their own login (drives the status on /profile).
+  FORTNOX_LOGIN
+  /// Mark an exported utlägg as no longer exported.
+  EXPORT_UNDO
+  /// Reach Inställningar. At least one live person must always hold this. See
+  /// lib/server/capabilities.ts.
+  SETTINGS
+  /// Read the stock overview and the log.
+  STOCK_VIEW
+  /// Register movements, run an event, close a stocktake.
+  STOCK_MANAGE
+  /// See the budget pages.
+  BUDGET_VIEW
+  /// Comment on a budget account.
+  BUDGET_COMMENT
+  /// Lock an adopted budget, and unlock it.
+  BUDGET_LOCK
+  /// Record a budgetavsteg or budgetförflyttning on a locked budget.
+  BUDGET_CHANGE_LOCKED
+  /// See the attest queue. Whether any single utlägg in it can actually be
+  /// attested is still canAttestAllocation's answer, per row.
+  ATTEST_VIEW
+}
+
+// Section role. A user may hold several (e.g. skattförman + resultatansvarig),
+// so it's stored as an array. Access and attest authority are derived from the
+// set of roles in lib/permissions.ts, never from a single value.
+//   SKATTMASTARE / ORDFORANDE       admins; full access; attest any expense but their own
+//   VICE_SKATTMASTARE               bookkeeping; attest expenses by "ordinarie" submitters
+//   SKATTFORMAN                     bookkeeping (book + return wrongly-approved)
+//   RESULTATANSVARIG                attest/handle expenses for the result unit(s) they answer for
+//   ORDINARIE                       regular functionary; submits own expenses
+enum Role {
+  SKATTMASTARE
+  ORDFORANDE
+  VICE_SKATTMASTARE
+  SKATTFORMAN
+  RESULTATANSVARIG
+  // Runs the bar's stock. Deliberately outside the treasury roles: keeping the
+  // lagerbokföring is not bookkeeping, and the people who do it are not the
+  // people who book vouchers. See canManageStock in lib/domain/permissions.ts.
+  STOCKARE
+  ORDINARIE
+}
+
+model User {
+  id String @id @default(cuid())
+
+  // Authentik's `preferred_username`, the LTH student id ("lu1234ge-s"), and
+  // the identity this app is keyed on. It is the one thing about a member that
+  // does not change: an email address can be re-pointed and a name can be
+  // changed, and neither should make somebody a different person here. Same
+  // key the guild's own web app uses (Member.studentId), so a future
+  // integration has something to join on.
+  studentId String @unique
+
+  // Descriptive, not identifying. Refreshed from Authentik on each sign-in.
+  email String @unique
+  name  String
+
+  // Derived from the Authentik group list at sign-in, and only there
+  // (lib/server/authentik-roles.ts), which is why a session lasts a day. See
+  // `session` in src/auth.ts. Authority is still read from this column and
+  // never from the token, see lib/server/current-user.ts.
+  roles Role[] @default([ORDINARIE]) // one or more section roles; authority derived in lib/permissions.ts
+
+  // The result units this person answers for, by ResultUnit.name, derived
+  // from the same group list, in the same place, at the same moment as
+  // `roles`. Names rather than ids because the mapping is written against the
+  // section's vocabulary (lib/server/authentik-roles.ts) and a cuid means
+  // nothing there; a name with no row behind it simply grants nothing, which
+  // the settings screen reports.
+  resultUnits String[] @default([])
+
+  // The Authentik group list as it stood at this person's last sign-in.
+  //
+  // Not authority. `roles` and `resultUnits` above are, and they are what every
+  // gate reads. This is the evidence they were derived from, kept so the
+  // derivation can be run again without the person being here: change the
+  // mapping in Inställningar → Roller and everyone it touches is recomputed on
+  // the spot, rather than one by one over the next day as they happen to sign
+  // in. It is also the only way the settings screen can say what a change is
+  // about to do, and the only way a mapping written against a group nobody
+  // holds (a typo, silent by design) can be pointed at.
+  authentikGroups String[] @default([])
+
+  // Bank details for REIMBURSEMENT payouts (Swedish clearing + account no.)
+  bankClearingNumber String?
+  bankAccountNumber  String?
+
+  active Boolean @default(true)
+
+  submittedExpenses    Expense[]               @relation("ExpenseSubmitter")
+  allocationApprovals  ExpenseCostAllocation[] @relation("AllocationApprover")
+  uploadedReceipts     Receipt[]               @relation("ReceiptUploader")
+  events               ExpenseEvent[]          @relation("EventActor")
+  createdVerifications Verification[]          @relation("VerificationCreator")
+  heldCards            Card[]                  @relation("CardHolder")
+  budgets              Budget[]                @relation("BudgetAuthor")
+  lockedBudgets        Budget[]                @relation("BudgetLocker")
+  budgetComments       BudgetComment[]         @relation("BudgetCommentAuthor")
+  budgetChanges        BudgetChange[]          @relation("BudgetChangeAuthor")
+  revokedBudgetChanges BudgetChange[]          @relation("BudgetChangeRevoker")
+  fortnoxConnections   FortnoxConnection[]     @relation("FortnoxConnector")
+  fortnoxSession       FortnoxUserSession?     @relation("FortnoxUserSession")
+  incomeBatches        IncomeBatch[]           @relation("IncomeBatchCreator")
+  stockEntries         StockEntry[]            @relation("StockEntryActor")
+  stockEvents          StockEvent[]            @relation("StockEventCreator")
+  stockChanges         StockChange[]           @relation("StockChangeActor")
+  stockProductChanges  StockProductChange[]    @relation("StockProductChangeActor")
+  mileageRates         MileageRate[]           @relation("MileageRateAuthor")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ── Indexes ─────────────────────────────────────────────────────
+  //
+  // The three array columns are all queried by containment, not by value:
+  // `roles hasSome` behind every capability check (lib/server/capabilities.ts),
+  // `resultUnits has` when a result unit is deleted or renamed, and
+  // `authentikGroups isEmpty` on the settings screen. Postgres answers those
+  // with `&&` and `@>`, which a btree cannot serve at all, so without these
+  // each one is a sequential scan of the whole member table.
+  //
+  // Harmless at the section's current size and not a thing to discover later:
+  // the capability lookup is on the request path for every gated page in the
+  // app, so it is the one that stops being free first.
+  @@index([roles], type: Gin)
+  @@index([resultUnits], type: Gin)
+  @@index([authentikGroups], type: Gin)
+}
+
+// ── Authority ─────────────────────────────────────────────────────
+//
+// Two tables and one rule: an Authentik group confers roles and result units
+// (GroupRole, GroupResultUnit), and a role confers capabilities
+// (RoleCapability). Everything the app asks about authority resolves through
+// these. See lib/server/authentik-roles.ts for the first half and
+// lib/server/capabilities.ts for the second.
+//
+// The rows used to be three tables in lib/server/authentik-roles.ts, deployed.
+// They are data now because the section edits them: a committee is renamed, a
+// unit is handed to someone who is not its head, a role is given the run of a
+// page it did not have. What is NOT data is the Role and Capability enums
+// themselves. Those are names the code says out loud, and a row naming one
+// that does not exist would be a grant nothing can honour.
+
+/// An Authentik group, and a role holding it confers. Several rows per group.
+model GroupRole {
+  /// Lowercased, exactly as Authentik writes it: "dsek.sex.mastare".
+  group String
+  role  Role
+
+  createdAt DateTime @default(now())
+
+  @@id([group, role])
+  @@index([group])
+}
+
+/// An Authentik group, and a result unit holding it makes you answer for.
+///
+/// A row here also confers RESULTATANSVARIG. The role and the reach come from
+/// the same line, so neither can be granted without the other
+/// (lib/server/authentik-roles.ts).
+model GroupResultUnit {
+  group        String
+  resultUnitId String
+  /// Cascades: a result unit that no longer exists cannot be answered for, and
+  /// leaving the row would be an ownership pointing at nothing. This is the
+  /// whole reason the mapping is a foreign key and not a name. It used to be a
+  /// name, and a typo in it granted silently nothing.
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([group, resultUnitId])
+  @@index([group])
+  @@index([resultUnitId])
+}
+
+/// A role, and one thing it is allowed to do.
+model RoleCapability {
+  role       Role
+  capability Capability
+
+  createdAt DateTime @default(now())
+
+  @@id([role, capability])
+  @@index([role])
+}

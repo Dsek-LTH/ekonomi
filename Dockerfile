@@ -53,9 +53,16 @@ RUN pnpm build
 # need the application source, generated client, Next build output, or the
 # application's dependency tree. Its own lockfile keeps this small dependency
 # set reproducible and independently cacheable.
+#
+# docker/migrator/ is npm rather than pnpm on purpose, and it is the only npm
+# lockfile in the repository. `npm ci` against a two-line manifest is what
+# makes this stage independent of the app's install: no workspace file, no
+# overrides, no store mount, nothing to invalidate when a dependency of the app
+# changes. It lives under docker/ because it exists for this stage and nothing
+# else reads it.
 FROM base AS migrator-deps
 WORKDIR /migrator
-COPY prisma/migrator/package.json prisma/migrator/package-lock.json ./
+COPY docker/migrator/package.json docker/migrator/package-lock.json ./
 RUN npm ci --omit=dev
 
 FROM base AS migrator
@@ -66,6 +73,9 @@ FROM base AS migrator
 COPY --from=migrator-deps --chown=1001:0 /migrator/node_modules ./node_modules
 COPY --chown=1001:0 prisma ./prisma
 COPY --chown=1001:0 prisma.config.ts ./
+# prisma.config.ts imports this, so `migrate deploy` does not start without it.
+# The rest of scripts/ is maintenance tooling that has no business in the image.
+COPY --chown=1001:0 scripts/load-env.ts ./scripts/load-env.ts
 # Files in the image are readable and traversable by an arbitrary UID.  OKD's
 # restricted SCC replaces this image user with one from the namespace range;
 # group 0 keeps this usable without an /etc/passwd entry for that UID.

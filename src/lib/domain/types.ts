@@ -22,8 +22,8 @@ export type Role = Schema.Role;
 // (RoleCapability) edited in Inställningar → Roller; this list is not, because
 // each value is a question some call site asks and one nobody asks would be a
 // tickbox that does nothing. Every value has exactly one helper in
-// lib/domain/permissions.ts. See the enum in prisma/schema.prisma for what each
-// one covers, and why the attest rule is not among them.
+// lib/domain/permissions.ts. See the enum in prisma/schema/auth.prisma for what
+// each one covers, and why the attest rule is not among them.
 export type Capability = Schema.Capability;
 
 export type PaymentType = Schema.PaymentType;
@@ -49,7 +49,7 @@ export type DrinkCategory = Schema.DrinkCategory;
 // they happened in two places. A spill at a pub was already off the shelf when
 // it hit the floor, so WASTE moves no stock and its quantity sits in its own
 // column. A bottle dropped in the cellar never left, so SPOILAGE takes it off
-// the shelf like any other removal. See the enum in prisma/schema.prisma.
+// the shelf like any other removal. See the enum in prisma/schema/stock.prisma.
 export type StockEntryKind = Schema.StockEntryKind;
 
 // Where a day's takings came from. ZETTLE_FEE is Zettle's own transaction

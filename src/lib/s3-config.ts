@@ -3,7 +3,7 @@
 // There are two S3 clients in this repo and there have to be: the app's
 // (lib/server/storage.ts) goes through lib/server/env.ts, and both of those are
 // `server-only`, which a tsx script cannot import, so the seed and the sweeper
-// build their own (prisma/storage-admin.ts). That much is unavoidable.
+// build their own (scripts/storage-admin.ts). That much is unavoidable.
 //
 // What was avoidable was each of them carrying its own copy of the endpoint,
 // the region, the addressing mode and the development credentials. Two copies

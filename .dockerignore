@@ -29,3 +29,6 @@ README.md
 Dockerfile
 .dockerignore
 docker-compose*.yml
+
+# The sibling intakt clone. Its own build, never part of this image.
+/intakt

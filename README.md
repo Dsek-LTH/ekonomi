@@ -37,12 +37,13 @@ _Screenshots pending. See the comment in this section for where to put them._
 - [Troubleshooting](#troubleshooting)
 - [Commands](#commands)
 - [Project structure](#project-structure)
-- [Two things to know before changing anything](#two-things-to-know-before-changing-anything)
+- [Three things to know before changing anything](#three-things-to-know-before-changing-anything)
 - [Environment variables](#environment-variables)
 - [Optional integrations](#optional-integrations)
 - [Tests](#tests)
 - [Working with section data](#working-with-section-data)
 - [Production](#production)
+- [Licence](#licence)
 
 ---
 
@@ -53,7 +54,7 @@ refuse to run on older Node.
 
 | Tool | Version | Check with | Notes |
 | --- | --- | --- | --- |
-| **Node.js** | 20.9 or newer (22 LTS recommended) | `node -v` | Install via [nvm](https://github.com/nvm-sh/nvm) so you can switch versions per project. |
+| **Node.js** | 20.9 or newer | `node -v` | `.nvmrc` selects 22, which is what the production image runs; `nvm use` in the repo picks it up. 20.9 is the floor `engines` enforces, not what anyone tests on. |
 | **pnpm** | 10.x | `pnpm -v` | The repo pins its own version. `corepack enable` (ships with Node) picks it up automatically, so don't install pnpm globally. |
 | **Docker** | any recent | `docker compose version` | Runs Postgres and MinIO. Docker Desktop or Docker Engine both work; on Windows use WSL 2 and enable WSL integration in Docker Desktop. |
 | **Git** | any | `git --version` | |
@@ -107,6 +108,11 @@ This starts two containers in the background:
 - **`utlagg-minio`** on ports `9000` (S3 API) and `9001` (web console), object
   storage for receipt files. Receipt images are never stored in Postgres.
 
+Two, and only these two. The income service (intakt) is behind its own compose
+profile because it builds from a separate repository, so a fresh clone starts
+without it and the income pages report it unavailable. See [Optional
+integrations](#optional-integrations) if you need them.
+
 Both keep their data in Docker volumes, so they survive a restart. Check they
 came up with `docker compose ps`; Postgres has a healthcheck and takes a few
 seconds on first boot.
@@ -119,10 +125,12 @@ Stop them again with `pnpm db:down` when you're done for the day.
 pnpm db:generate
 ```
 
-Prisma generates a typed client from `prisma/schema.prisma` into
-`src/lib/generated/prisma`. That directory is **gitignored**, so a fresh clone
+Prisma generates a typed client from `prisma/schema/` into
+`src/lib/generated/prisma`. The schema is a folder, not a file: every `.prisma`
+in it is read as one schema, split by domain so a model is findable by the
+thing it belongs to. That output directory is **gitignored**, so a fresh clone
 has no client at all and TypeScript will report missing modules until you run
-this. Re-run it every time `schema.prisma` changes.
+this. Re-run it every time the schema changes.
 
 ### 5. Create the schema and seed data
 
@@ -268,6 +276,7 @@ See `src/auth.ts`.
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Development server |
+| `pnpm dev:phone` | Development server reachable from a phone on the same network |
 | `pnpm build` / `pnpm start` | Production build and server |
 | `pnpm test` | Unit tests (Vitest) |
 | `pnpm test:watch` | Tests in watch mode |
@@ -275,31 +284,39 @@ See `src/auth.ts`.
 | `pnpm lint` | ESLint |
 | `pnpm db:up` / `db:down` | Postgres + MinIO containers |
 | `pnpm app:up` / `app:down` / `app:logs` | The whole stack in Docker, app included |
+| `pnpm intakt:up` / `intakt:down` | The income service, which needs the sibling clone |
 | `pnpm intakt:build` | Rebuild the intakt container after changing its Go source |
 | `pnpm db:generate` | Regenerate the Prisma client |
 | `pnpm db:migrate` / `db:reset` | Migrations |
 | `pnpm db:seed` | Seed data |
 | `pnpm db:studio` | Prisma Studio, to browse the database |
 | `pnpm db:parse-budget` / `db:import-budget` | Read the budget spreadsheet into JSON, then import it |
+| `pnpm budget:to-csv` | Convert a budget workbook to CSV for the paste-in importer |
+| `pnpm db:import-income-config` | Load the income routing config (committees, revenue accounts) |
 | `pnpm fortnox:sync` | Sync the chart of accounts, cost centres and general ledger |
 | `pnpm receipts:gc` | Delete stored receipt files nothing points at |
+| `pnpm stock:revalue` | Replay the stock ledger and rewrite the valuations |
 
 ---
 
 ## Project structure
 
-All source lives under `src/`; the root is configuration and data.
+All application source lives under `src/`; the root is configuration, the
+database, and the things you run by hand.
 
 ```
 src/app/(app)/    Signed-in views. Each route loads its own data in a Server
                   Component and hands it to a *-client.tsx.
-src/app/api/      REST endpoints. Every handler starts with gate(). See below.
+src/app/api/      REST endpoints, 84 of them. Every handler starts with
+                  gate(). See below.
 src/components/   Shared components. components/ui/ holds the primitives
                   (DataTable, Field, Button …); components/columns/ the column
                   definitions the list screens share; components/shell/ the
-                  frame around every page. The few files directly under
-                  components/ are the ones that are none of those: a page
-                  layout, the confirm dialog, the allocation editor.
+                  frame around every page; components/receipt/ the viewer and
+                  its panel; components/stock/ the stock-specific pieces. The
+                  eight files directly under components/ are the ones that are
+                  none of those: a page layout, the confirm dialog, the
+                  allocation editor.
 src/lib/domain/   Pure rules and shapes: money, status, permissions,
                   matching, the bank file. No side effects, runnable anywhere,
                   and what the tests cover.
@@ -316,27 +333,51 @@ src/lib/api/      What every route handler starts with: gate(), fail(), access.
 src/lib/budget/   The budget engine: formula expressions, grid, comparisons, lock.
 src/lib/ledger/   The general ledger: BAS structure, reports, comparison.
 src/lib/fortnox/  Fortnox API, SIE parsing and sync.
-src/lib/ui/       Presentation helpers (formatting, class names).
+src/lib/expense/  The utlägg document: the Typst cover sheet and the merge.
+src/lib/income/   Intäkter: product groups and the report shapes.
+src/lib/stock/    Alkohollager: the entry replay and valuation.
+src/lib/mileage/  Milersättning: rates and the distance calculation.
+src/lib/ui/       Presentation helpers (formatting, class names, focus, routes).
 src/lib/s3-config.ts
                   The one file directly under lib/, and the exception that
                   proves the rule below: bucket settings shared between the
                   app's `server-only` storage module and the standalone
                   scripts, which cannot import one.
-prisma/           Schema, migrations, seed and the budget import.
+src/i18n/         Locale resolution for next-intl, and the test that holds the
+                  two message files to each other and to the call sites.
+src/auth.ts       NextAuth, wired to Authentik.
+src/types/        Ambient declarations (the NextAuth session shape).
+prisma/           The database and nothing else: schema/ (one file per domain,
+                  read as a single schema), migrations/, and the seed.
+scripts/          Things you run by hand rather than things the app imports:
+                  the Fortnox sync, the receipt sweeper, the stock revaluation,
+                  the storage admin client, and import/ for the budget.
+docker/migrator/  The migration image's own manifest. Deliberately npm and
+                  deliberately tiny; see the Dockerfile for why.
 messages/         Translations (sv is the source language, en the translation).
 public/           Static files.
 Dockerfile        The production image, and the migration step that precedes it.
+docker-compose.yml
+                  Postgres and MinIO by default; the app and the income service
+                  behind the `app` and `intakt` profiles.
 ```
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the conventions that go with this
+layout: the writing style, the boundary rules, and what to run before pushing.
 
 The split inside `lib/` follows what the code *touches*, not what it's *about*:
 everything in `domain/` is pure functions that neither read the database nor
 know about a request, and everything in `server/` does the opposite. The
 boundary is worth keeping. It's what makes the domain logic testable without
-Postgres.
+Postgres, and `lib/domain/boundary.test.ts` fails if someone reaches across it.
+
+The line between `prisma/` and `scripts/` is the same kind of rule: `prisma/`
+holds the database's own definition, and anything that is a program you invoke
+lives in `scripts/`, even when the first thing it does is open a connection.
 
 ---
 
-## Two things to know before changing anything
+## Three things to know before changing anything
 
 **Permissions are derived, never hardcoded.** Who may view, approve and edit is
 decided by `lib/domain/permissions.ts`, and every API route starts with `gate()`
@@ -382,6 +423,31 @@ the Fortnox settings page; the OAuth tokens are stored encrypted with
 `FORTNOX_TOKEN_KEY` (falling back to `AUTH_SECRET`, which means rotating
 `AUTH_SECRET` forces a reconnect, so set it separately to decouple the two).
 
+**intakt** (`INTAKT_URL`, `INTAKT_TOKEN`) reads Zettle and Swish exports and
+renders the intäktsräkningar. It is a separate service in a separate
+repository, a Go program that renders its PDFs with pdflatex, which is the
+reason it is not part of this image: a TeX installation has no business inside
+the container that serves every page of the app.
+
+It is the one thing here a clone of this repository cannot build on its own.
+Clone it beside the app first, into `./intakt`, which is gitignored:
+
+```bash
+git clone git@github.com:LudwigGehlsdorf/intakt.git intakt
+pnpm intakt:up
+```
+
+Then set `INTAKT_URL=http://localhost:8080` and a matching `INTAKT_TOKEN` in
+`.env`. Without it the income pages say the service is unavailable, the same
+way the bookkeeping pages do without Fortnox, and everything else works.
+
+`pnpm db:up` and `pnpm app:up` both leave it out. To run the full stack with
+it:
+
+```bash
+docker compose --profile app --profile intakt up -d
+```
+
 ---
 
 ## Tests
@@ -422,3 +488,14 @@ bad deploy fails instead of going green. `prisma migrate deploy` is a separate
 step, the `migrator` stage of the same Dockerfile, and must run before a new
 version starts. [Running the whole stack in
 Docker](#running-the-whole-stack-in-docker) is the same arrangement locally.
+
+---
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+One exception, and it is not ours to relicense: the Inter font files under
+`src/lib/expense/cover/fonts/`, which the expense cover sheet embeds, are under
+the SIL Open Font License 1.1. Their licence sits beside them in that
+directory.

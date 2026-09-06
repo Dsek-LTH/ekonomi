@@ -1,4 +1,4 @@
-// Imports the real budget from prisma/import/budget-2026.json (produced by
+// Imports the real budget from scripts/import/budget-2026.json (produced by
 // parse-budget.py) as two standalone budgets for the year: the workbook's two
 // value columns, both named by the workbook itself (Parametrar!I5 and I6):
 //
@@ -12,7 +12,7 @@
 // if that check ever fails again, drop the column rather than importing it.
 //
 // Re-runnable: drops and recreates every budget of the year. Pass a name to
-// override the imported column's name: `tsx prisma/import/import-budget.ts VTM`.
+// override the imported column's name: `tsx scripts/import/import-budget.ts VTM`.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/lib/generated/prisma/client";
 import { readFileSync } from "node:fs";

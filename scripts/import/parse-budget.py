@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Parse a budget workbook into prisma/import/budget-2026.json.
+"""Parse a budget workbook into scripts/import/budget-2026.json.
 
-    python3 prisma/import/parse-budget.py [workbook.xlsx]
+    python3 scripts/import/parse-budget.py [workbook.xlsx]
 
 Each committee sheet (AKTU01, SEX02, …) becomes a cost center; its Konto rows
 become accounts and the indented rows beneath become line items. Two value

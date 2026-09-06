@@ -1,5 +1,5 @@
 // Loads .env for the things that run outside `next dev` / `next start`: the
-// Prisma config, the seed, and the maintenance scripts under prisma/. Next
+// Prisma config, the seed, and the maintenance scripts in this directory. Next
 // reads .env itself; tsx and the Prisma CLI do not, so these have to ask.
 //
 // A missing file is not an error. In a container there is no .env, the

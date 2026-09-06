@@ -1,0 +1,359 @@
+// The utlägg itself, and everything that hangs off one: what was bought,
+// who is owed, the receipt, the audit trail, and the bank rows a card
+// purchase is matched against.
+
+enum PaymentType {
+  CARD // section card, matched against the purchase before signing
+  REIMBURSEMENT // out-of-pocket, matched against the payout after signing
+  // Milersättning: driving one's own car on the section's errand. A
+  // reimbursement in every way that matters after submission, being a debt to
+  // the member, matched against the payout and booked against the same
+  // account. It is its own thing in exactly two ways: there is no receipt to upload, and the
+  // amount is not typed but computed from the odometer readings on the utlägg
+  // itself. One journey per claim; see the Milersättning block on Expense.
+  MILEAGE
+}
+
+// One value per state a reader can be in, and no more. There used to be a
+// REJECTED alongside CHANGES_REQUESTED, unreachable from the app and meaning
+// the same thing to anybody looking at it, so every query that filtered on
+// status had to remember to match both, and the mapper had to translate one
+// into the other on the way out. Three places each did that separately. The
+// rows were migrated and the value dropped; see the
+// 20260807_drop_rejected_status migration.
+enum ExpenseStatus {
+  DRAFT
+  PENDING_MATCH
+  PENDING_APPROVAL
+  CHANGES_REQUESTED
+  APPROVED
+  BOOKED
+  EXPORTED
+}
+
+// Structured audit trail. The app renders human-readable (Swedish)
+// labels from the type; the database stays language-neutral and queryable.
+enum ExpenseEventType {
+  CREATED
+  EDITED
+  RECEIPT_UPLOADED
+  MATCHED
+  UNMATCHED
+  SUBMITTED
+  /// The submitter took their own utlägg back out of the attest queue, to a
+  /// draft. Its own event rather than a CHANGES_REQUESTED with a different
+  /// actor: nobody asked for the change, and the timeline reads wrong if it
+  /// says somebody did.
+  RECALLED
+  CHANGES_REQUESTED
+  COST_CENTER_APPROVED
+  ATTEST_WITHDRAWN
+  APPROVED
+  BOOKED
+  EXPORTED
+  EXPORT_REVERTED
+}
+
+model Expense {
+  id        String  @id @default(cuid())
+  // Human-readable, e.g. "DEK26-0042". See lib/domain/reference.ts. Null until
+  // the utlägg is submitted for attest: a draft is not yet a claim on the
+  // section, and numbering one would burn a number every time someone opens the
+  // wizard and walks away. Pages and API routes are keyed on `id`, not on this.
+  reference String? @unique
+  title     String
+
+  submitter   User   @relation("ExpenseSubmitter", fields: [submitterId], references: [id])
+  submitterId String
+
+  paymentType PaymentType
+  status      ExpenseStatus @default(DRAFT)
+
+  // Receipt / OCR-derived details (editable until signed).
+  purchaseDate DateTime? @db.Date
+  grossAmount  Int? // öre
+  currency     String    @default("SEK")
+
+  // One-to-one match to a bank transaction (the correctness source of truth).
+  matchedTransaction   BankTransaction? @relation(fields: [matchedTransactionId], references: [id], onDelete: SetNull)
+  matchedTransactionId String?          @unique
+
+  // The rendered utläggsräkning, the cover page naming who attested what,
+  // written to object storage at export. The same shape as IncomeReport's, for
+  // the same reason: it is the document that substantiates the voucher.
+  //
+  // At export rather than at booking, because that is the moment the page stops
+  // being a rendering and becomes evidence: these bytes are what Fortnox holds.
+  // Before it, the document route draws one on the way past and keeps nothing,
+  // so a cover previewed on a BOOKED utlägg always shows the attestations as
+  // they stand.
+  //
+  // The cover *only*, never the receipt merged into it. The two are stored
+  // apart and joined on the way out (lib/server/pdf-merge.ts), so the receipt's
+  // bytes are held once rather than twice, and since both objects are
+  // immutable, the merge is reproducible without archiving its result.
+  //
+  // Cleared by `unexport`, which exists precisely to amend an utlägg that has
+  // already gone over: the cover describes the version being amended.
+  documentKey      String?
+  documentFilename String?
+
+  // ── Milersättning ────────────────────────────────────────────────
+  //
+  // One journey, on the utlägg itself rather than in a table beside it: a
+  // milersättning *is* a journey, and somebody who drove three times files
+  // three of them. That is not a limitation dressed as a decision. Each
+  // journey is attested on its own, lands on its own cost centre and is paid
+  // as its own claim, which a sheet of journeys sharing one amount could not
+  // do.
+  //
+  // What is recorded is the odometer at each end, not a distance somebody
+  // worked out. The distance is `odometerEnd - odometerStart`, and the two
+  // readings are the thing that can be checked: a claim states what the car
+  // said when it was got into and what it said when it was got out of, which
+  // is a fact about the world in a way "42 km" is not.
+  //
+  // The *total* odometer, the one that counts the car's whole life, not the
+  // trip meter. A trip meter is zeroed at will, so 0 → 42 on one would be the
+  // claimant asserting the distance again in two fields instead of one, which
+  // is the thing these columns exist to avoid. The total reading can be held
+  // against the car, and against this claimant's other claims on the same car,
+  // which only ever go upwards.
+  //
+  // Null on every other payment type. One decimal because some dashboards show
+  // one; whole kilometres simply arrive with a zero after the comma.
+  odometerStart Decimal? @db.Decimal(9, 1)
+  odometerEnd   Decimal? @db.Decimal(9, 1)
+
+  /// Every place the car stopped, in the order it stopped there.
+  ///
+  /// The odometer says how far the car went. It cannot say the going was the
+  /// section's errand, and that is the question a skattefri milersättning turns
+  /// on. Skatteverket asks a körjournal for three things this one field answers
+  /// at once: where the journey started, where it ended, and which places were
+  /// visited on the way. The first stop is the start, the last is the end, and
+  /// everything between is what was visited.
+  ///
+  /// A list rather than a `from`/`to` pair, because a real errand is rarely two
+  /// places. Kårhuset → Snabbgross → Systembolaget → hem is one journey with
+  /// four stops, and a pair would have to drop two of them or lie about which
+  /// two it kept. A round trip is simply a list whose last stop repeats its
+  /// first, so no separate flag says so.
+  ///
+  /// Not the MileageTrip table this replaced (see the August migrations). That
+  /// held a sheet of *journeys*, each with its own distance and its own amount,
+  /// which is what broke one-claim-one-attest. These are stops on a single
+  /// journey: no distance apiece, no amount apiece, one subtraction and one sum
+  /// for the whole claim, exactly as now.
+  ///
+  /// Free text. "Kårhuset, Lund" and "Snabbgross" are what people write and
+  /// what an attester can check; a postal address the app validated would be
+  /// precision nobody has.
+  ///
+  /// Empty on every other payment type, and on a half-filled draft. Two
+  /// non-blank stops are required to submit, which is `claimBlocker`'s business
+  /// (lib/mileage/claim.ts).
+  journeyStops String[] @default([])
+
+  /// What a kilometre was worth on the day of the journey, in öre.
+  ///
+  /// Written onto the claim when it is saved, never looked up when it is read.
+  /// The schablon changes at a new year, and a claim already filed must not
+  /// re-value when it does, for the same reason a stock entry carries its own
+  /// price. See lib/mileage/rate.ts.
+  mileageOrePerKm Int?
+
+  allocations  ExpenseCostAllocation[]
+  receipts     Receipt[]
+  events       ExpenseEvent[]
+  verification Verification? // the booked voucher, once status reaches BOOKED
+  // Stock bought on this utlägg. The receipt on it is the purchase
+  // documentation the lagerbokföring would otherwise have to ask for again.
+  stockEntries StockEntry[]            @relation("StockPurchaseExpense")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ── What the list screens actually ask for ──────────────────────
+  //
+  // Filtering, sorting and paging all happen in the database (see
+  // lib/data/expenses.ts). That only costs what it is supposed to cost if the
+  // ordering is one an index can hand over already sorted. Otherwise every
+  // page of 25 is a full sort of everything that matched, and LIMIT/OFFSET
+  // reads the whole set to throw most of it away. The bare @@index([status])
+  // and @@index([submitterId]) these replace served the filters and left every
+  // ORDER BY to a sort.
+  //
+  // Each ends in `id` because every ordering the app issues does: a page is a
+  // window onto an ordering, and an ordering with ties is a window that can
+  // show one row twice and skip another. Postgres scans a btree in either
+  // direction, so one index covers both asc and desc.
+  //
+  // What is deliberately not here: `title`, `paymentType` and `submitter.name`.
+  // Those are sorts someone chooses by clicking a column, on a table holding a
+  // section's utlägg rather than a bank's. The sort is milliseconds, and an
+  // index apiece would be paid for on every write to buy that back. `reference`
+  // needs none either; it is unique, so it already has one.
+  //
+  // And the honest limit of all of them: a query can use one index. Filtering
+  // by status *and* sorting by amount will use whichever Postgres judges the
+  // better of the two and sort or filter the rest by hand. There is no index
+  // set that makes every combination free.
+
+  // The default order of every list, and of the dashboard.
+  @@index([createdAt, id])
+  // A status tab in that same order, the most common shape in the app.
+  @@index([status, createdAt, id])
+  // "My utlägg, newest first": the dashboard, and the expenses page's MINE view.
+  @@index([submitterId, createdAt, id])
+  // Both the date-range filter and the date column sort.
+  @@index([purchaseDate, id])
+  // The amount column sort.
+  @@index([grossAmount, id])
+}
+
+// One cost-centre slice of an expense. An expense may span several cost centres
+// with a fixed SEK amount each; all amounts must sum to grossAmount.
+// Each allocation is individually approved by that cost centre's designated approver.
+model ExpenseCostAllocation {
+  id           String     @id @default(cuid())
+  expense      Expense    @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId    String
+  costCenter   CostCenter @relation(fields: [costCenterId], references: [id])
+  costCenterId String
+  amount       Int // öre
+  comment      String? // optional note from the submitter
+
+  approvedBy   User?     @relation("AllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  approvedAt   DateTime?
+
+  @@unique([expenseId, costCenterId])
+  @@index([expenseId])
+  // The other direction: "every utlägg touching one of these cost centres",
+  // which is how a resultatansvarig's scope is resolved (lib/data/expense-scope.ts)
+  // and how their attest queue is filtered. Without it that walked the whole
+  // allocation table on every list they open.
+  @@index([costCenterId])
+}
+
+// An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
+//
+// One per utlägg. The relation is a list because that is how Prisma spells the
+// other side of a foreign key, not because there is ever more than one: uploading
+// is a replace, and the previous receipt's object and row go in the same
+// transaction the new one arrives in (api/expenses/[id]/receipts/route.ts). So
+// "the utlägg's receipt" and "its newest receipt" are the same thing, and code
+// that takes the newest is reading the only one.
+model Receipt {
+  id        String  @id @default(cuid())
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String
+
+  objectKey String // MinIO object key (the display-normalised file)
+  filename  String
+  mimeType  String // the stored file's type (images are normalised to image/jpeg)
+  byteSize  Int?
+
+  uploadedBy   User?   @relation("ReceiptUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
+}
+
+// A row from an imported bank CSV. Negative amount = money out.
+model BankTransaction {
+  id              String   @id @default(cuid())
+  // Transdag from the CSV, the day the purchase was made, not the day the
+  // bank settled it. That is the date on the member's receipt.
+  transactionDate DateTime @db.Date
+  description     String
+  amount          Int // öre, negative = outgoing
+  currency        String   @default("SEK")
+
+  // Dedup key for re-imported CSVs (hash of date+amount+description+row).
+  importHash String?  @unique
+  importedAt DateTime @default(now())
+
+  // Which section card made this purchase (from the card number in the CSV).
+  card      Card?   @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  cardId    String?
+  cardLast4 String? // raw last 4 from the CSV; resolved to a Card by last4
+
+  matchedExpense Expense? @relation
+
+  // The same reasoning as on Expense: the bank feed is filtered, sorted and
+  // paged in the database (lib/data/bank.ts), so its default ordering carries
+  // its tiebreaker into the index. The description and card-number sorts are
+  // left to a sort for the same reason the equivalents on Expense are.
+  @@index([transactionDate, id]) // default order, and the date-range filter
+  @@index([amount, id]) // the amount column sort
+  @@index([cardId]) // "this member's card purchases"
+}
+
+// A physical section card ("sektionskort"). Only some members hold one; the
+// card number's last 4 digits appear in the bank CSV, which lets us attribute a
+// card purchase to its holder so they can account for it. Admin-assigned.
+model Card {
+  id       String  @id @default(cuid())
+  last4    String  @unique
+  holder   User?   @relation("CardHolder", fields: [holderId], references: [id], onDelete: SetNull)
+  holderId String?
+  active   Boolean @default(true)
+
+  transactions BankTransaction[]
+
+  createdAt DateTime @default(now())
+
+  @@index([holderId])
+}
+
+model ExpenseEvent {
+  id        String           @id @default(cuid())
+  expense   Expense          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String
+  type      ExpenseEventType
+
+  actor   User?   @relation("EventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+
+  comment String? // e.g. reason on CHANGES_REQUESTED / REJECTED
+  diff    Json? // snapshot of what changed on EDITED
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
+  @@index([type])
+}
+
+// ── Milersättning ──────────────────────────────────────────────────
+
+/// What a kilometre is worth, from a given day.
+///
+/// A table rather than a constant because the figure is Skatteverket's and
+/// moves at a new year, and a deploy is the wrong way to find that out. The row
+/// in force on a date is the newest one whose `validFrom` is not after it; see
+/// lib/mileage/rate.ts, which is where that rule is written once.
+model MileageRate {
+  id String @id @default(cuid())
+
+  /// Öre per kilometre. 250 is the 25 kr/mil schablon.
+  orePerKm Int
+
+  /// The first day this rate applies. Unique: two rates starting on the same
+  /// day is not a period anybody could resolve.
+  validFrom DateTime @unique @db.Date
+
+  /// Free text for whoever comes after, e.g. "Skatteverkets schablon 2026".
+  note String?
+
+  createdBy   User?   @relation("MileageRateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([validFrom])
+}

@@ -6,7 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/generated/prisma/client";
 
 // Standalone run (pnpm db:seed). Load .env ourselves.
-import { loadEnvFile } from "./load-env";
+import { loadEnvFile } from "../scripts/load-env";
 import {
   DEFAULT_GROUP_RESULT_UNITS,
   DEFAULT_GROUP_ROLES,
@@ -14,7 +14,7 @@ import {
 } from "../src/lib/server/authority-defaults";
 
 loadEnvFile();
-import { bucket, deleteKeys, listObjects } from "./storage-admin";
+import { bucket, deleteKeys, listObjects } from "../scripts/storage-admin";
 import {
   BANK_TRANSACTIONS,
   CARDS,

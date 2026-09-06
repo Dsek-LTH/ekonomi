@@ -336,6 +336,7 @@
       "matchTitle": "Match against a bank transaction",
       "reviewTitle": "Review and submit",
       "match": "Match",
+      "paymentType": "Payment type",
       "payoutTo": "Paid out to",
       "payoutMissing": "Add an account under My profile",
       "goesTo": "Goes to {resultUnits} for approval.",

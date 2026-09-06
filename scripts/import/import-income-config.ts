@@ -9,7 +9,7 @@
 // request it sends the service. Run once, keep the YAML as a record, and edit
 // in the app from then on.
 //
-//   tsx prisma/import/import-income-config.ts [path/to/config.yaml]
+//   tsx scripts/import/import-income-config.ts [path/to/config.yaml]
 //
 // Re-runnable: committees and prefixes are upserted by their natural keys, so
 // running it twice changes nothing and running it after editing the YAML brings

@@ -4,10 +4,18 @@
 # Two ways to use this file:
 #
 #   pnpm db:up    postgres + minio only, and you run the app with `pnpm dev`.
-#                 The everyday loop. Unchanged by the `app` profile below.
+#                 The everyday loop. Unchanged by the profiles below.
 #   pnpm app:up   the whole stack, app included, built from the Dockerfile and
 #                 run the way production runs it. Needs real values in .env,
 #                 see "Running the whole stack in Docker" in the README.
+#   pnpm intakt:up
+#                 adds the intakt service. Separate because it builds from a
+#                 sibling repository that is not part of this one, so it is the
+#                 one service here that a bare clone cannot start. See
+#                 "Optional integrations" in the README.
+#
+# Every command above works from a bare clone except `intakt:up`, which is the
+# reason intakt has a profile of its own rather than sitting in the default set.
 services:
   postgres:
     image: postgres:16-alpine
@@ -50,12 +58,16 @@ services:
   # renders its PDFs with pdflatex, and a TeX installation has no business
   # inside the image that serves every page of the app.
   #
-  # Not behind the `app` profile: `pnpm db:up` should bring up everything the
-  # app is developed against, and this is one of those things.
+  # Behind a profile of its own because `context` below points at a repository
+  # that is not this one and is not vendored here. Clone it to ./intakt first
+  # (README, "Optional integrations"), then `pnpm intakt:up`. Without the
+  # profile every other service in this file would refuse to start on a machine
+  # that has not done so, which is what used to happen to `pnpm db:up`.
   #
   # Its image is built once and then reused, so changing the Go source does
   # nothing until it is rebuilt: `pnpm intakt:build`.
   intakt:
+    profiles: ["intakt"]
     build:
       context: ./intakt
       target: runtime
@@ -84,8 +96,8 @@ services:
       ZETTLE_CLIENT_ID: ${ZETTLE_CLIENT_ID:-}
       ZETTLE_API_KEY: ${ZETTLE_API_KEY:-}
     ports:
-      # Published so `pnpm dev` on the host can reach it, which is the whole
-      # point of it not being behind the profile.
+      # Published so `pnpm dev` on the host can reach it, which is the point of
+      # running it at all: the app talks to it over the network either way.
       - "8080:8080"
 
   # ── The app itself, under the `app` profile ─────────────────────────
@@ -143,11 +155,13 @@ services:
         condition: service_completed_successfully
       minio:
         condition: service_started
-      # Only started, not healthy: the app runs perfectly well while intakt is
-      # still booting, and says the service is unavailable if asked before it
-      # is. Waiting on it would make every stack start pay for a TeX container.
-      intakt:
-        condition: service_started
+      # intakt is deliberately not listed. The app runs perfectly well without
+      # it and says the service is unavailable if asked, the same way it does
+      # without Fortnox, so depending on it would only mean `pnpm app:up`
+      # failing on a machine that has not cloned a second repository. Run both
+      # profiles when you want it:
+      #
+      #   docker compose --profile app --profile intakt up -d
 
 volumes:
   utlagg-pgdata:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert a budget workbook to the interchange CSV that /api/budgets/import reads.
 
-    python3 prisma/import/xlsx-to-budget-csv.py [workbook.xlsx] [-c J|L] [-o out.csv]
+    python3 scripts/import/xlsx-to-budget-csv.py [workbook.xlsx] [-c J|L] [-o out.csv]
 
 This script knows one workbook shape: the VTM/DELTA family, where each
 committee sheet (AKTU01, SEX02, …) is a cost centre, column A carries Konto

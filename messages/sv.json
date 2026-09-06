@@ -336,6 +336,7 @@
       "matchTitle": "Matcha mot banktransaktion",
       "reviewTitle": "Granska och skicka in",
       "match": "Matchning",
+      "paymentType": "Betalsätt",
       "payoutTo": "Utbetalas till",
       "payoutMissing": "Lägg till konto i Min profil",
       "goesTo": "Skickas till {resultUnits} för attest.",

@@ -1,0 +1,95 @@
+// The section's own structure: the chart of accounts, the cost centres
+// spend is booked against, and the result units that answer for them.
+
+// Kostnadsställe, the org unit an expense is booked against.
+// Which result unit a cost centre belongs to is NOT stored here. It is derived
+// from ResultUnitPrefix by matching this `code`, so the two can never drift and
+// a Fortnox sync has nothing to preserve. See lib/result-units.ts.
+// Where a cost centre came from, and therefore who owns its lifecycle.
+// FORTNOX rows are a mirror: the sync creates, renames and retires them.
+// LOCAL rows are created here by an admin and the sync must leave them alone.
+// They exist for dimensions Fortnox has no cost centre for (alcohol bought for
+// resale books to a balance account, and for a budget being drafted the cost
+// centre may not exist in Fortnox yet). They are never sent to Fortnox.
+enum CostCenterSource {
+  FORTNOX
+  LOCAL
+}
+
+model CostCenter {
+  id     String           @id @default(cuid())
+  code   String           @unique // e.g. "NÄRU" or "SKT01"
+  name   String
+  active Boolean          @default(true)
+  source CostCenterSource @default(FORTNOX)
+
+  allocations       ExpenseCostAllocation[]
+  verificationLines VerificationLine[]
+  budgetCostCenters BudgetCostCenter[]
+
+  incomeUnits       ResultUnitIncome[]    @relation("IncomeDefaultCostCenter")
+  incomeReports     IncomeReport[]
+  zettleFeeSettings BookkeepingSettings[] @relation("ZettleFeeCostCenter")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// The BAS chart of accounts, mirrored from Fortnox (/3/accounts). Replaces the
+// short hardcoded list this app shipped with: it backs the account picker when
+// booking an expense and validates the accounts a budget refers to. Synced by
+// upsert, because accounts are never deleted: a budget or verification may still
+// reference one that Fortnox has since retired.
+model Account {
+  number String  @id // BAS account number, e.g. "6071"
+  name   String
+  active Boolean @default(true) // Active in Fortnox; inactive stays selectable-but-hidden
+  sru    String? // Fortnox SRU code, informational
+
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([active])
+}
+
+// Resultatenhet: Styrelsen, Sexmästeriet, and the rest. Which cost centres
+// belong to it is decided entirely by its prefixes: a cost centre whose code
+// starts with one of them is part of the result unit. Nothing is stored on
+// CostCenter, so the two can never disagree.
+model ResultUnit {
+  id   String @id @default(cuid())
+  name String @unique // "Skattmästeriet"
+
+  prefixes ResultUnitPrefix[]
+
+  // Who answers for this unit is NOT stored here, and no row names a person. What
+  // is stored is which Authentik *groups* answer for it (GroupResultUnit); the
+  // people follow from whoever holds those groups at their next sign-in, so a
+  // handover in Authentik is a handover here with nothing to remember.
+  groups GroupResultUnit[]
+
+  // The income half, for a unit that takes money in. See ResultUnitIncome.
+  // Optional, and read by nothing outside the income module.
+  income        ResultUnitIncome?
+  incomeReports IncomeReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A cost-centre code prefix owned by a result unit, e.g. "SKT" for SKT01/SKT02.
+// Prefixes are globally unique AND non-overlapping: no prefix may be an
+// extension of another, so at most one can ever match a given code and
+// membership is unambiguous. The overlap rule is enforced in the API, since
+// the database can't express "no row is a prefix of another".
+model ResultUnitPrefix {
+  id           String     @id @default(cuid())
+  resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
+  resultUnitId String
+  value        String     @unique // stored upper-case
+
+  createdAt DateTime @default(now())
+
+  @@index([resultUnitId])
+}
