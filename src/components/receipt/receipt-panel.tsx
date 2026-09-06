@@ -56,7 +56,7 @@ export const DEFAULT_WIDTH = 520;
 // The panel's own controls, matching the viewer's zoom toolbar in the opposite
 // corner so the two read as one set of tools rather than two.
 const FLOATING_BTN =
-  "flex size-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-surface";
+  "flex size-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
 
 type Source = {
   /**

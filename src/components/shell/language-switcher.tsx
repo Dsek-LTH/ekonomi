@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
           aria-pressed={locale === value}
           title={label}
           className={cn(
-          "overflow-hidden flex size-9 items-center justify-center rounded-full border border-border bg-background text-muted transition-colors hover:bg-surface hover:text-foreground",
+          "overflow-hidden flex size-9 items-center justify-center rounded-full border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
             locale === value
               ? ""
               : "border-border opacity-50 hover:opacity-100 focus:opacity-100",

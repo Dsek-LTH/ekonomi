@@ -86,7 +86,7 @@ export function CostCenterSheet(props: {
       <td className="p-0" />
     ) : (
       <td className="relative select-none border-r border-border/60 px-1 align-middle">
-        <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted/50">
+        <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted">
           {n ?? ""}
         </span>
         <span className="flex h-8 items-center justify-center">{box}</span>
@@ -682,7 +682,7 @@ export function CostCenterSheet(props: {
         {/* What is ticked, and what it can be made into. It appears only once
             something is, so the sheet is as quiet as it was until you start. */}
         {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface/60 px-4 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface px-4 py-2 text-sm">
             <span className="font-medium">
               {marked.accounts.length > 0
                 ? t("markedAccounts", { count: marked.accounts.length })

@@ -17,7 +17,6 @@ import { requireUser } from "@/lib/server/current-user";
 import { userHoldsCard } from "@/lib/data/users";
 import { getFortnoxSession } from "@/lib/data/fortnox";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
-import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
 
 // Always render against fresh DB data on a full load. Each page loads its own
 // data (Server Components); the layout only resolves the session user + chrome.
@@ -51,11 +50,6 @@ export default async function AppLayout({
   // Unset means the rail, which is the answer for the screens this was built
   // for; pinning is the wider screen opting out.
   const navPinned = cookieStore.get(NAV_PINNED_COOKIE)?.value === "1";
-  // Read again here rather than handed down from the root layout: what that one
-  // does with it is put a class on <html>, and a layout cannot pass values to
-  // the layouts nested inside it. The cookie is the shared channel, and reading
-  // it twice in one request costs nothing.
-  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>
@@ -86,7 +80,6 @@ export default async function AppLayout({
                 one state the sidebar exists to catch. */}
             <AppShell
               defaultPinned={navPinned}
-              theme={theme}
               fortnox={booksInFortnox ? { session: fortnoxSession } : undefined}
             >
               {children}

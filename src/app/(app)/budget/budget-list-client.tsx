@@ -202,7 +202,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       cell: (b) =>
         b.adoptedAt
           ? <span className="text-sm tabular-nums text-muted">{b.adoptedAt}</span>
-          : <span className="text-sm text-muted/60">{t("notAdopted")}</span>,
+          : <span className="text-sm text-muted">{t("notAdopted")}</span>,
     },
     {
       key: "name",
@@ -285,7 +285,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
               // bound, and the compare view gives each its own column.
               aria-disabled={picked.length < 2}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-surface hover:text-foreground",
+                "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
                 picked.length < 2 && "pointer-events-none opacity-40",
               )}
             >

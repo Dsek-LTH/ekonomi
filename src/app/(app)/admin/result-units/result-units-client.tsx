@@ -287,7 +287,7 @@ export function ResultUnitsClient({
           ).map(([label, rows, isActive]) =>
             rows.length === 0 ? null : (
               <div key={label}>
-                <p className="border-b border-border bg-surface/60 px-inset py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <p className="border-b border-border bg-surface px-inset py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
                   {label} ({rows.length})
                 </p>
                 <ul>

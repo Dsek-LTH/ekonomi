@@ -38,7 +38,6 @@ import { IconCheck, IconChevronLeft, IconChevronRight } from "../ui/icons";
 import type { NavGroup, NavItem } from "./app-shell";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
-import type { Theme } from "@/lib/ui/theme";
 import { cn } from "@/lib/ui/utils";
 
 // One card of an inset grouped list. `divide-y` rather than a border per row,
@@ -59,7 +58,6 @@ export function MobileNav({
   inSettings,
   isActive,
   user,
-  theme,
   fortnox,
 }: {
   open: boolean;
@@ -71,7 +69,6 @@ export function MobileNav({
   inSettings: boolean;
   isActive: (href: string) => boolean;
   user: CurrentUser;
-  theme: Theme;
   fortnox?: { session: FortnoxStatus["session"] | null };
 }) {
   const t = useTranslations("nav");
@@ -111,7 +108,7 @@ export function MobileNav({
             itself to read as anything; in a list of cards the same fill would
             be a row that looks selected rather than a place you already are. */}
         {active && <IconCheck aria-hidden className="size-4 shrink-0 text-accent" />}
-        <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted/60" />
+        <IconChevronRight aria-hidden className="size-4 shrink-0 text-faint" />
       </Link>
     );
   };
@@ -232,7 +229,7 @@ export function MobileNav({
           )}
           <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
             <span className="text-sm font-medium">{tc("theme")}</span>
-            <ThemeToggle initial={theme} />
+            <ThemeToggle />
           </div>
           <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
             <span className="text-sm font-medium">{tc("language")}</span>

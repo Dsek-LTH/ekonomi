@@ -61,7 +61,7 @@ export function SectionCard({
             {narrow ? (
               <th className="p-0" />
             ) : (
-              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted/50">#</th>
+              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted">#</th>
             )}
             {columns.map((col) => (
               <Hc key={col.key} letter={col.letter} align={col.kind === "number" ? "right" : undefined}>{col.custom ? col.name : tCol(col.name)}</Hc>

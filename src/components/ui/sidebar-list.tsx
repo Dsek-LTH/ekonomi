@@ -166,7 +166,7 @@ export function SidebarItem({
       aria-current={active ? "true" : undefined}
       className={cn(
         "w-full px-4 py-2.5 text-left text-sm",
-        active ? "bg-accent-soft text-accent" : "hover:bg-surface",
+        active ? "bg-accent-soft text-accent" : "hover:bg-hover",
         className,
       )}
     >
@@ -188,7 +188,7 @@ export function SidebarGroupLabel({
   action?: React.ReactNode;
 }) {
   return (
-    <p className="flex items-center justify-between gap-2 bg-surface/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+    <p className="flex items-center justify-between gap-2 bg-surface px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
       {/* Only clipped when it is sharing the row: a heading on its own wraps,
           which is what a long result-unit name in a 16rem column needs. */}
       <span className={cn(Boolean(action) && "min-w-0 truncate")}>{children}</span>

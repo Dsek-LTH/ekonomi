@@ -120,10 +120,10 @@ export function EditableText({
         // Text at rest. The border is transparent rather than absent so that
         // gaining one on hover does not move the text by a pixel.
         "rounded-md border border-transparent bg-transparent text-inherit",
-        "placeholder:text-muted/60 transition-colors duration-150",
+        "placeholder:text-muted transition-colors duration-150",
         // The affordance: a surface under the pointer says this is a thing you
         // can act on, before anyone has to guess.
-        "hover:border-border hover:bg-surface",
+        "hover:border-border hover:bg-hover",
         "focus:border-border focus:bg-background",
         // Spinners would appear on hover on a number field and change its
         // width, which for a value that is sized to its content means the whole

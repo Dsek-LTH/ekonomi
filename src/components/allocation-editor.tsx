@@ -80,7 +80,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     "text-sm",
     // The remaining focus: rules are about the text, not the ring. A hint set
     // in grey italic becomes ordinary typing once you are in the field.
-    "placeholder:text-muted/50 focus:not-italic focus:text-foreground",
+    "placeholder:text-muted focus:not-italic focus:text-foreground",
   );
 
   return (

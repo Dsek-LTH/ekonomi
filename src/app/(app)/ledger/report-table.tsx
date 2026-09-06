@@ -385,7 +385,7 @@ function SectionRows({
 
   return (
     <Fragment>
-      <div role="row" className="col-span-full border-t border-border bg-surface/40">
+      <div role="row" className="col-span-full border-t border-border bg-surface">
         <div
           role="cell"
           aria-colspan={cols.length}
@@ -411,8 +411,8 @@ function SectionRows({
               role="row"
               className={cn(
                 ROW,
-                "group border-t border-border hover:bg-surface/50 focus-within:bg-surface/50",
-                open && "bg-surface/40",
+                "group border-t border-border hover:bg-hover focus-within:bg-surface",
+                open && "bg-surface",
               )}
             >
               <div role="cell" className="min-w-0 py-2 pl-inset pr-3">
@@ -460,7 +460,7 @@ function SectionRows({
             </div>
 
             {open && (
-              <div role="row" className="col-span-full border-t border-border bg-surface/30">
+              <div role="row" className="col-span-full border-t border-border bg-surface">
                 <div role="cell" aria-colspan={cols.length} className="px-inset py-3">
                   <VoucherRows rows={rows[key]} showCostCenter={groupMode === "SUMMED"} />
                 </div>

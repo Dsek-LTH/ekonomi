@@ -957,7 +957,7 @@ export default function IncomeReviewClient({
                         had. */}
                     <TableScroll minWidth={canMove ? "min-w-[35rem]" : "min-w-[31rem]"}>
                       <table className="w-full text-sm">
-                        <thead className="border-b border-border bg-surface/40 text-left text-xs text-muted">
+                        <thead className="border-b border-border bg-surface text-left text-xs text-muted">
                           <tr>
                             {canMove && (
                               <>
@@ -1055,7 +1055,7 @@ export default function IncomeReviewClient({
                                   <td className="py-2 pl-3">
                                     <DragHandle
                                       title={t("move.dragHint")}
-                                      className="flex items-center text-muted/40 hover:text-muted"
+                                      className="flex items-center text-faint hover:text-muted"
                                       onDragStart={(e) => {
                                         // Dragging a checked row takes the whole
                                         // selection; dragging an unchecked one is
@@ -1104,7 +1104,7 @@ export default function IncomeReviewClient({
                                 {row.indented ? (
                                   <span className="flex items-center gap-1.5 pl-4">
                                     {/* The same elbow the document draws. */}
-                                    <IconElbow className="size-3.5 shrink-0 text-muted/60" />
+                                    <IconElbow className="size-3.5 shrink-0 text-faint" />
                                     {row.label}
                                   </span>
                                 ) : (

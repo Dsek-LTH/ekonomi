@@ -301,7 +301,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
               {/* The running verdict: what this would do to the frame budget,
                   and, when it can't be saved, the one reason why not, in the
                   same words the API would answer with. */}
-              <div className="rounded-xl border border-border bg-surface/50 px-4 py-3 text-sm">
+              <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
                 <p>
                   {t("effectOnFrame")}{" "}
                   <span className={cn("font-semibold tabular-nums", net !== 0 && (net > 0 ? "text-success" : "text-danger"))}>

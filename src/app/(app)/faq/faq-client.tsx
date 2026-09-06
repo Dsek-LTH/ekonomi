@@ -183,7 +183,7 @@ function Question({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-start justify-between gap-4 px-inset py-4 text-left transition-colors hover:bg-surface/60"
+        className="flex w-full items-start justify-between gap-4 px-inset py-4 text-left transition-colors hover:bg-hover"
       >
         <span className="text-[15px] font-medium">{item.q}</span>
         <IconChevronDown
@@ -331,9 +331,9 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
         // page is maintained by whoever holds the treasury, and a frame that
         // renders nothing is a frame nobody knows how to fill.
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">
-          <IconReceipt className="size-7 text-muted/50" />
+          <IconReceipt className="size-7 text-faint" />
           <p className="text-sm font-medium text-muted">{t("imageMissing")}</p>
-          <code className="break-all text-[11px] leading-tight text-muted/70">
+          <code className="break-all text-[11px] leading-tight text-muted">
             {block.expected}
           </code>
         </div>

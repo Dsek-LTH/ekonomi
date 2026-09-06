@@ -67,7 +67,7 @@ export function SegmentedControl<T extends string>({
               size === "sm" ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm",
               active
                 ? "brand-fill text-on-brand"
-                : "text-muted hover:bg-surface hover:text-foreground",
+                : "text-muted hover:bg-hover hover:text-foreground",
             )}
           >
             {opt.label}

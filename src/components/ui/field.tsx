@@ -79,7 +79,7 @@ type Requirement = "required" | "optional";
 // accent border and a soft halo on top of that ring, which is where the "two
 // outlines, and one of them only on click" came from.
 const CONTROL =
-  "w-full border border-border bg-background text-sm text-foreground placeholder:text-muted/60 transition-[color,background-color] duration-150 disabled:bg-surface disabled:text-muted disabled:cursor-not-allowed";
+  "w-full border border-border bg-background text-sm text-foreground placeholder:text-muted transition-[color,background-color] duration-150 disabled:bg-surface disabled:text-muted disabled:cursor-not-allowed";
 
 // "md" is the form control; "sm" is the compact one that sits in a card header,
 // a filter bar or a table row. Sizes live here so those don't get re-typed.
@@ -132,7 +132,7 @@ const suffixBox = (size: Size, className?: string) =>
  * where `::placeholder` matches nothing, so it is restated here on the element
  * that has one.
  */
-const SUFFIXED_TEXT = "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted/60";
+const SUFFIXED_TEXT = "w-0 min-w-[4ch] flex-1 bg-transparent placeholder:text-muted";
 
 function FieldContent({
   label,

@@ -10,7 +10,7 @@ import { Spinner } from "./spinner";
 type Tone = "muted" | "danger";
 
 const TONES: Record<Tone, string> = {
-  muted: "hover:bg-surface hover:text-foreground",
+  muted: "hover:bg-hover hover:text-foreground",
   danger: "hover:bg-danger/10 hover:text-danger",
 };
 

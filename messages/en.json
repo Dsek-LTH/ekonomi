@@ -70,10 +70,7 @@
       "optional": "Optional"
     },
     "themeMode": {
-      "light": "Light",
-      "dark": "Dark",
-      "current": "Theme: {mode}",
-      "hint": "Theme: {mode} (click to change)"
+      "toggle": "Switch colour theme"
     },
     "combobox": {
       "placeholder": "Select…",

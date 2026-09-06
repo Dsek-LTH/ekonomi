@@ -351,7 +351,7 @@ export default function BookExpenseClient({
                 onChange={(e) => setTextSuffix(e.target.value)}
                 placeholder={t("voucherTextPlaceholder")}
                 aria-label={t("voucherTextAria")}
-                className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted/50"
+                className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted"
               />
             </div>
           </Field>

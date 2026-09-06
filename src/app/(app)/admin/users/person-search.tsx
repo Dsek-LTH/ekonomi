@@ -99,7 +99,7 @@ export function PersonSearch({
                   <button
                     type="button"
                     onClick={() => pick(u)}
-                    className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-surface"
+                    className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-hover"
                   >
                     <Avatar initials={u.initials} />
                     <span className="min-w-0">

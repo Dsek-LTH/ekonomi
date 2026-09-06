@@ -656,7 +656,7 @@ export default function ReceiptViewerImpl({
       // which is the drag starting late, every time. There is nothing to
       // scroll (this element is overflow-hidden), so it was only ever a wait.
       className={cn(
-        "relative touch-none overflow-hidden bg-surface/40",
+        "relative touch-none overflow-hidden bg-surface",
         cursor,
         className,
       )}
@@ -692,7 +692,7 @@ function ToolBtn({
       aria-label={label}
       title={title ?? label}
       className={cn(
-        "flex items-center justify-center rounded-full text-[15px] leading-none text-foreground transition-colors hover:bg-surface disabled:opacity-30",
+        "flex items-center justify-center rounded-full text-[15px] leading-none text-foreground transition-colors hover:bg-hover disabled:opacity-30",
         wide ? "h-7 gap-1.5 px-2" : "size-7",
       )}
     >
@@ -735,7 +735,7 @@ function LoadFailed({
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-surface"
+          className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-hover"
         >
           {t("retry")}
         </button>

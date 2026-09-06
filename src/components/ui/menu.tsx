@@ -206,7 +206,7 @@ export function MenuItem({
         onClick();
       }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface disabled:pointer-events-none disabled:opacity-40",
+        "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
     >

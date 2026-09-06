@@ -70,10 +70,7 @@
       "optional": "Frivilligt"
     },
     "themeMode": {
-      "light": "Ljust",
-      "dark": "Mörkt",
-      "current": "Tema: {mode}",
-      "hint": "Tema: {mode} (klicka för att byta)"
+      "toggle": "Byt färgtema"
     },
     "combobox": {
       "placeholder": "Välj…",

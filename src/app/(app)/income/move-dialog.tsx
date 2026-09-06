@@ -183,7 +183,7 @@ export function MoveLinesDialog({
 
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface/40 text-left text-xs text-muted">
+            <thead className="border-b border-border bg-surface text-left text-xs text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">{tLines("product")}</th>
                 <th className="px-3 py-2 font-medium">{t("account")}</th>

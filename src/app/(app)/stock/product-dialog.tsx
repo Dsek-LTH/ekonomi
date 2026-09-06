@@ -259,6 +259,18 @@ export function ProductDialog({
         >
           <SuffixedInput
             inputMode="numeric"
+            // Named, and told outright that it is not a credential. The same
+            // treatment the payout fields in Min profil needed, for the same
+            // reason and one of its own: an unnamed numeric box that wants
+            // thirteen digits is the shape of a card number, so a password
+            // manager offers to fill one in. `autoComplete="off"` is the
+            // standard half; managers routinely ignore it, so 1Password's own
+            // opt-out says it again in the one language it does read. If
+            // another manager starts guessing here, it will have an attribute
+            // of its own to add beside this one.
+            name="product-ean"
+            autoComplete="off"
+            data-1p-ignore
             value={d.ean}
             onChange={(e) => set("ean", e.target.value.replace(/[^0-9]/g, ""))}
             inputClassName="tabular-nums"

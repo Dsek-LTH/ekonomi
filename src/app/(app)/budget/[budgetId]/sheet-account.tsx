@@ -53,13 +53,13 @@ function lineCell(
           <DragHandle
             onPointerDown={(e) => startLineDrag(e, account, li)}
             className={cn(
-              "flex items-center text-muted/30 hover:text-muted",
+              "flex items-center text-faint hover:text-muted",
               draggingLineId === li.id && "text-muted opacity-100",
             )}
             title={t("dragToReorder")}
           />
         )}
-        <IconElbow className="ml-auto size-3.5 shrink-0 text-muted/40" />
+        <IconElbow className="ml-auto size-3.5 shrink-0 text-faint" />
       </span>
     </td>
   );
@@ -174,7 +174,7 @@ export function AccountBlock({ account }: { account: Account }) {
               emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
               align="center"
               buttonClassName="px-2 py-1.5 font-mono text-sm font-semibold text-on-brand"
-              chevronClassName="text-on-brand/60"
+              chevronClassName="text-on-brand"
               aria-label={t("accountNumber")}
             />
           ) : (
@@ -214,7 +214,7 @@ export function AccountBlock({ account }: { account: Account }) {
             if (el && draggingLineId === li.id) liftRef.current = el;
           }}
           className={cn(
-            "group border-t border-border/40 transition-colors hover:bg-surface/40",
+            "group border-t border-border/40 transition-colors hover:bg-hover",
             // Lifted: over the rows it passes, on the sheet's own background
             // so they don't read through it, and outlined so it is a row in
             // hand rather than one that happens to overlap. Outline and not a
@@ -263,7 +263,7 @@ export function AccountBlock({ account }: { account: Account }) {
                   <span className="min-w-0 truncate text-muted" title={row.change.reason}>
                     {row.change.reason}
                   </span>
-                  <span className="shrink-0 text-xs text-muted/70">
+                  <span className="shrink-0 text-xs text-muted">
                     {date(row.change.createdAt)}
                   </span>
                 </span>
@@ -303,7 +303,7 @@ export function AccountBlock({ account }: { account: Account }) {
         <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
         <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
           {columns.map((col) => {
-            const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40 focus:bg-accent-soft/40";
+            const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted focus:bg-accent-soft/40";
             const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
             if (col.key === "beskrivning") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={t("newLine")} value={d.description} onChange={(e) => setDraft(account.id, { description: e.target.value })} onKeyDown={onEnter} placeholder={t("newLine")} className={cn(base, "pl-5 text-sm text-muted")} /></td>;
             if (col.key === "expression") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={tCol("expression")} value={d.expression} onChange={(e) => setDraft(account.id, { expression: e.target.value })} onKeyDown={onEnter} onBlur={() => createLine(account.id)} placeholder={tCol("expression").toLowerCase()} className={cn(base, "text-right font-mono text-xs")} /></td>;
@@ -316,7 +316,7 @@ export function AccountBlock({ account }: { account: Account }) {
 
       {/* Account total, summed below the individual lines (under Belopp). The
           two trailing cells carry the compared figure and its diff vs budget. */}
-      <tr className="border-t border-border/60 bg-surface/40">
+      <tr className="border-t border-border/60 bg-surface">
         {gut(undefined)}
         <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t("sum")}
@@ -324,7 +324,7 @@ export function AccountBlock({ account }: { account: Account }) {
               voted through, kept beside the one in force so neither has to be
               worked out from the other. */}
           {adjTotal !== 0 && total !== undefined && (
-            <span className="ml-2 font-normal normal-case tracking-normal text-muted/70">
+            <span className="ml-2 font-normal normal-case tracking-normal text-muted">
               {t("originally", { amount: fmt(total - adjTotal) })}
             </span>
           )}
@@ -347,7 +347,7 @@ export function AccountBlock({ account }: { account: Account }) {
               aria-label={t("commentsCount", { count: account.comments.length })}
               aria-expanded={open}
               className={cn(
-                "flex items-center gap-1 rounded-lg px-1.5 py-1 tabular-nums transition hover:bg-surface hover:text-foreground",
+                "flex items-center gap-1 rounded-lg px-1.5 py-1 tabular-nums transition hover:bg-hover hover:text-foreground",
                 // Accent while the thread is open; a plain (unmuted) icon means
                 // "there is something to read here" without opening it.
                 open ? "text-accent" : account.comments.length > 0 && "text-foreground",
@@ -361,7 +361,7 @@ export function AccountBlock({ account }: { account: Account }) {
       </tr>
 
       {open && (
-        <tr className="bg-surface/20">
+        <tr className="bg-surface">
           {/* sheet-field: what's in here is a form field, not a sheet cell.
               it keeps the app's focus ring and this row draws no cell box. */}
           <td colSpan={totalCols} className="sheet-field px-4 py-3">
@@ -463,7 +463,7 @@ export function AddAccountRow({ kind }: { kind: AccountKind }) {
             placeholder={t(kind === "INCOME" ? "newIncomeAccount" : "newCostAccount")}
             searchPlaceholder={tBook("accountSearch")}
             emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-            buttonClassName="w-full bg-transparent px-2 py-1.5 text-sm text-muted/60 hover:bg-accent-soft/40"
+            buttonClassName="w-full bg-transparent px-2 py-1.5 text-sm text-muted hover:bg-accent-soft/40"
             aria-label={t("addAccount")}
           />
         </td>

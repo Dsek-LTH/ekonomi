@@ -207,7 +207,7 @@ export function VoucherEditor({
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
   const cellInput =
-    "block h-10 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted/50 focus-inset";
+    "block h-10 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
   const amountInput = cn(cellInput, "tabular-nums");
   // Tight padding: these two columns are only as wide as a code needs, so the
   // chevron and padding would otherwise be most of the box.
@@ -429,7 +429,7 @@ export function VoucherEditor({
             content can never push the table wider than its container. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
-            <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
+            <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
               <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
               <th className={cn(headerCell, "w-[18%]")}>{t("colAccountName")}</th>
               <th className={cn(headerCell, "w-[18%]")}>{t("colCostCenter")}</th>
@@ -443,7 +443,7 @@ export function VoucherEditor({
           </thead>
           <tbody className="divide-y divide-border">
             {locked && (
-              <tr className="divide-x divide-border bg-surface/40">
+              <tr className="divide-x divide-border bg-surface">
                 <td className="px-2 py-3 text-center align-middle font-medium tabular-nums">
                   {locked.account}
                 </td>
@@ -460,7 +460,7 @@ export function VoucherEditor({
                 </td>
                 <td className="text-center align-middle">
                   <span
-                    className="flex items-center justify-center px-2 text-muted/40"
+                    className="flex items-center justify-center px-2 text-muted"
                     title={locked.hint}
                     aria-label={locked.label}
                   >

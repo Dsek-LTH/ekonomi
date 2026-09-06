@@ -121,7 +121,7 @@ export function ExpensesClient({
                     {attested ? a.approvedByName : (a.resultUnit ?? t("attest.waiting"))}
                   </span>
                   {e.allocations.length > 1 && (
-                    <span className="text-muted/60">{a.costCenterCode}</span>
+                    <span className="text-muted">{a.costCenterCode}</span>
                   )}
                 </div>
               );

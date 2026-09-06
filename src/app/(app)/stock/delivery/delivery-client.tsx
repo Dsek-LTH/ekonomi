@@ -326,7 +326,7 @@ export default function DeliveryClient({
         ref={register(id)}
         inputMode="numeric"
         className={cn(
-          "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted/50 focus-inset",
+          "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset",
           // A cell on its way to the log over a cell that merely holds working.
           changed ? "bg-warning-soft/60 font-medium" : working && "bg-accent-soft/40",
         )}
@@ -401,7 +401,7 @@ export default function DeliveryClient({
             event sheet and the voucher editor are. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
-            <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
+            <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
               <th className={cn(headerCell, "w-[46%] text-left")}>
                 {t("delivery.col.product")}
               </th>
@@ -448,16 +448,25 @@ export default function DeliveryClient({
                       to change the product: a box that refuses to be typed in
                       is an invitation followed by a no. Nothing here is
                       focusable, so it is not a stop on the way to the quantity
-                      beside it, and it sits on the header's ground rather than
-                      the row's, which is what says "read this" next to a cell
-                      that says "fill this in".
+                      beside it.
+
+                      No ground of its own either. This column used to carry the
+                      header's fill to say "read this", which made it read as a
+                      piece of the header band running the length of the sheet.
+                      The distinction that fill was drawing is already on the
+                      screen without it: the quantity beside it is a box you can
+                      type in, and this is small muted text that plainly is not
+                      one. Locked is the shape of the two cells, not a colour,
+                      and a price column with nothing behind it is also the one
+                      that scans best down a column of figures, which is what
+                      this sheet is read against an invoice for.
 
                       A product nobody has priced says so, in the warning
                       colour: it is about to be delivered onto the shelf at a
                       value of nothing. */}
                   <td
                     className={cn(
-                      "bg-surface/40 px-2 py-1.5 text-right text-xs tabular-nums",
+                      "px-2 py-1.5 text-right text-xs tabular-nums",
                       product.costPriceOre == null ? "text-warning" : "text-muted",
                     )}
                   >
@@ -507,7 +516,11 @@ export default function DeliveryClient({
                   </IconButton>
                 </div>
               </td>
-              <td className="bg-surface/40" />
+              {/* Empty, and plain: a product that is not on the sheet yet has
+                  no price to show. It carried the price column's fill while
+                  that column had one, and without it a lone grey block is all
+                  that would be left of it. */}
+              <td />
               <td />
             </tr>
           </tbody>

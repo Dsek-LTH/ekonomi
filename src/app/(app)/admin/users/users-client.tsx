@@ -138,7 +138,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
                         type="button"
                         onClick={() => setInspecting(u)}
                         aria-label={t("explainFor", { name: u.name })}
-                        className="flex w-full items-center gap-3.5 px-inset py-2 text-left transition-colors hover:bg-surface"
+                        className="flex w-full items-center gap-3.5 px-inset py-2 text-left transition-colors hover:bg-hover"
                       >
                         <Avatar initials={u.initials} />
                         <span className="min-w-0 flex-1">

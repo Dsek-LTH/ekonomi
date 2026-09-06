@@ -41,7 +41,7 @@ export function Hc({ letter, align, title, children }: {
 }) {
   return (
     <th title={title} className={cn("border-r border-border/60 px-2 py-2", align === "right" ? "text-right" : "text-left")}>
-      <span className="mr-1 font-mono text-[10px] font-normal text-muted/40">{letter}</span>{children}
+      <span className="mr-1 font-mono text-[10px] font-normal text-muted">{letter}</span>{children}
     </th>
   );
 }

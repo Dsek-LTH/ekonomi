@@ -40,7 +40,6 @@ import {
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
-import type { Theme } from "@/lib/ui/theme";
 import { SETTINGS_SECTIONS } from "./settings-sections";
 
 import { owningRoute } from "@/lib/ui/routes";
@@ -270,16 +269,12 @@ const sectionHref = (path: string): string | null =>
 export function AppShell({
   children,
   defaultPinned = false,
-  theme,
   fortnox,
 }: {
   children: React.ReactNode;
   /** The stored pin, read from the cookie by the layout so a pinned nav renders
    *  pinned on the first paint rather than snapping wide after hydration. */
   defaultPinned?: boolean;
-  /** The stored theme, read from its cookie by the same layout for the same
-   *  reason. It is only passing through, on its way to the footer's toggle. */
-  theme: Theme;
   /**
    * The reader's own Fortnox login, when they are one of the roles that books
    * under one. Absent for everybody else, and the nav shows nothing: the row
@@ -435,7 +430,7 @@ export function AppShell({
           "flex items-center rounded-xl px-[11px] py-2 text-sm font-medium transition-colors",
           isActive(item.href)
             ? "brand-fill text-on-brand"
-            : "text-foreground hover:bg-surface",
+            : "text-foreground hover:bg-hover",
         )}
       >
         <Icon className="size-[18px] shrink-0" />
@@ -504,7 +499,6 @@ export function AppShell({
         inSettings={inSettings}
         isActive={isActive}
         user={user}
-        theme={theme}
         fortnox={fortnox}
       />
 
@@ -631,7 +625,7 @@ export function AppShell({
               title={pinned ? t("collapseMenu") : t("pinMenu")}
               aria-label={pinned ? t("collapseMenu") : t("pinMenu")}
               className={cn(
-                "-me-1 hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground md:flex",
+                "-me-1 hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-foreground md:flex",
                 pinButton,
               )}
             >
@@ -681,7 +675,6 @@ export function AppShell({
           <ProfileFooter
             user={user}
             onNavigate={closeNav}
-            theme={theme}
             labelFade={labelFade}
             switchReveal={switchReveal}
             fortnox={fortnox}
@@ -700,7 +693,7 @@ export function AppShell({
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label={t("openMenu")}
-            className="-ml-1 flex size-9 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-surface"
+            className="-ml-1 flex size-9 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-hover"
           >
             <IconMenu className="size-5" />
           </button>
@@ -816,7 +809,7 @@ function FortnoxLogin({
       // No `overflow-hidden`, deliberately. The dot hangs off the corner while
       // the box is a square, and clipping the box would take it with it.
       className={cn(
-        "relative mx-0.5 mb-2 flex h-9 items-center rounded-lg border border-border transition-[width,background-color] duration-200 ease-out hover:bg-surface",
+        "relative mx-0.5 mb-2 flex h-9 items-center rounded-lg border border-border transition-[width,background-color] duration-200 ease-out hover:bg-hover",
         boxExpand,
       )}
     >
@@ -874,7 +867,6 @@ function FortnoxLogin({
 function ProfileFooter({
   user,
   onNavigate,
-  theme,
   labelFade,
   switchReveal,
   fortnox,
@@ -883,8 +875,6 @@ function ProfileFooter({
 }: {
   user: CurrentUser;
   onNavigate: () => void;
-  /** What the toggle starts on. See lib/ui/theme.ts. */
-  theme: Theme;
   /** How the panel's text behaves as the rail widens. See AppShell. */
   labelFade: string;
   /** The same, for the switch rows, which give back their height too. */
@@ -915,7 +905,7 @@ function ProfileFooter({
           <div className={cn("space-y-1 pb-2 transition-opacity", labelFade)}>
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-xs text-muted">{t("theme")}</span>
-              <ThemeToggle initial={theme} />
+              <ThemeToggle />
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-xs text-muted">{t("language")}</span>
@@ -956,7 +946,7 @@ function ProfileFooter({
           // of the app you are in; this is a corner of the frame, and a block of
           // brand colour under the avatar reads as a notification rather than as
           // "you are here".
-          onProfile ? "bg-surface" : "hover:bg-surface",
+          onProfile ? "bg-surface" : "hover:bg-hover",
         )}
       >
         <Avatar initials={initials} />

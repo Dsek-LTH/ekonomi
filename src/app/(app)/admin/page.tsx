@@ -34,7 +34,7 @@ export default async function AdminPage() {
           narrower than the sentence each one carries. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {SETTINGS_SECTIONS.map((s) => (
-          <Card key={s.href} className="transition-colors hover:bg-surface">
+          <Card key={s.href} className="transition-colors hover:bg-hover">
             {/* The link fills the card, so the whole card is the target rather
                 than the words in it. `block` and padding here rather than on
                 the Card, which draws the border and nothing else. */}
@@ -48,7 +48,7 @@ export default async function AdminPage() {
                   {t(`section.${s.blurb}`)}
                 </span>
               </span>
-              <IconChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-muted/60" />
+              <IconChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-faint" />
             </Link>
           </Card>
         ))}

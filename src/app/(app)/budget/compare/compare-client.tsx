@@ -29,7 +29,7 @@ import { cn } from "@/lib/ui/utils";
 function Cell({ value, className }: { value: number | undefined; className?: string }) {
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", className)}>
-      {value !== undefined ? fmt(value) : <span className="text-muted/40">–</span>}
+      {value !== undefined ? fmt(value) : <span className="text-muted">–</span>}
     </td>
   );
 }
@@ -129,7 +129,7 @@ export function CompareClient({
                   <>
                     <SectionHeader label={t("variables")} cols={cols} />
                     {joined.vars.map((v) => (
-                      <tr key={v.name} className={cn("hover:bg-surface/20", differs(v.values) && "bg-warning/5")}>
+                      <tr key={v.name} className={cn("hover:bg-hover", differs(v.values) && "bg-warning/5")}>
                         <td className="px-4 py-2 font-mono text-xs font-semibold">{v.name}</td>
                         {v.values.map((value, i) => <Cell key={i} value={value} />)}
                         {showDiff && <Diff values={v.values} />}
@@ -163,7 +163,7 @@ const differs = (values: (number | undefined)[]) =>
 
 function SectionHeader({ label, cols }: { label: string; cols: number }) {
   return (
-    <tr className="bg-surface/60">
+    <tr className="bg-surface">
       <td colSpan={cols} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
         {label}
       </td>
@@ -198,7 +198,7 @@ function SheetRows({ sheet, n, cols, showDiff }: {
 function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: boolean }) {
   return (
     <>
-      <tr className={cn("bg-surface/30", differs(account.totals) && "bg-warning/5")}>
+      <tr className={cn("bg-surface", differs(account.totals) && "bg-warning/5")}>
         <td className="px-4 py-2 pl-8">
           <span className="mr-2 font-mono text-xs font-semibold text-muted">{account.code}</span>
           {account.name}
@@ -207,7 +207,7 @@ function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: 
         {showDiff && <Diff values={account.totals} className="font-medium" />}
       </tr>
       {account.lines.map((line) => (
-        <tr key={line.key} className={cn("text-muted hover:bg-surface/20", differs(line.values) && "bg-warning/5")}>
+        <tr key={line.key} className={cn("text-muted hover:bg-hover", differs(line.values) && "bg-warning/5")}>
           <td className="px-4 py-2 pl-14 text-xs">{line.description || "–"}</td>
           {line.values.map((v, i) => <Cell key={i} value={v} className="text-xs" />)}
           {showDiff && <Diff values={line.values} className="text-xs" />}

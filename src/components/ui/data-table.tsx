@@ -585,7 +585,7 @@ export function DataTable<T>({
                   <Fragment key={key}>
                   <tr
                     className={cn(
-                      href && "relative cursor-pointer hover:bg-surface/50",
+                      href && "relative cursor-pointer hover:bg-hover",
                       rowClassName?.(row),
                     )}
                   >
@@ -623,7 +623,7 @@ export function DataTable<T>({
                               type="button"
                               onClick={() => toggle(key)}
                               aria-expanded={open}
-                              className="relative z-10 -ml-1 shrink-0 rounded p-0.5 text-muted hover:bg-surface hover:text-foreground"
+                              className="relative z-10 -ml-1 shrink-0 rounded p-0.5 text-muted hover:bg-hover hover:text-foreground"
                             >
                               <IconChevronRight
                                 className={cn("size-3.5 transition-transform", open && "rotate-90")}
@@ -639,7 +639,7 @@ export function DataTable<T>({
                     ))}
                   </tr>
                   {open && (
-                    <tr className="bg-surface/40">
+                    <tr className="bg-surface">
                       <td colSpan={cols.length} className={cn(CELL_X, "py-0")}>
                         {under}
                       </td>
@@ -717,7 +717,7 @@ function MobileRow<T>({
         // the room, and 64px is what a row that does not wrap comes to: a
         // thumb's worth, and a rhythm the eye can count down the screen.
         "flex min-h-16 items-center gap-3 px-inset py-3",
-        href && "relative cursor-pointer active:bg-surface/50",
+        href && "relative cursor-pointer active:bg-surface",
         className,
       )}
     >
@@ -798,7 +798,7 @@ function MobileRow<T>({
               // ellipsises instead of being cut mid-letter by the box.
               <span key={c.key} className="flex min-w-0 shrink items-center gap-x-1">
                 {i > 0 && (
-                  <span aria-hidden className="shrink-0 text-muted/50">
+                  <span aria-hidden className="shrink-0 text-muted">
                     –
                   </span>
                 )}
@@ -833,7 +833,7 @@ function MobileRow<T>({
           where the row carries actions: two right-hand affordances on a 390px
           row is a row you have to aim at. */}
       {href && actions.length === 0 && (
-        <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted/50" />
+        <IconChevronRight aria-hidden className="size-4 shrink-0 text-faint" />
       )}
     </div>
   );
@@ -904,7 +904,7 @@ function Pagination({
   const from = totalItems === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
-  const btn = "flex size-8 items-center justify-center rounded-lg border border-border bg-background text-sm transition-colors hover:bg-surface disabled:opacity-40 disabled:pointer-events-none";
+  const btn = "flex size-8 items-center justify-center rounded-lg border border-border bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">

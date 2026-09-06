@@ -128,7 +128,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // focus across re-renders instead of remounting on every keystroke.
   const renderCell: CellFn = ({ id, field, actual, className, placeholder, mono, url, payload, gated }: CellArgs) => {
     if (!isAdmin) {
-      return <div className={cn("px-2 py-1.5 min-h-8", mono && "font-mono text-xs", className)}>{actual || <span className="text-muted/40">{placeholder}</span>}</div>;
+      return <div className={cn("px-2 py-1.5 min-h-8", mono && "font-mono text-xs", className)}>{actual || <span className="text-muted">{placeholder}</span>}</div>;
     }
     return (
       <input
@@ -169,7 +169,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
             ? `${pretty} = ${show(computed)}`
             : show(computed);
     if (!isAdmin) {
-      return <div className={cn("px-2 py-1.5 min-h-8", display === "formula" ? "font-mono text-xs" : "text-right tabular-nums", empty && "text-muted/40", bad && !empty && "text-danger", className)} title={isFormula ? formulaText : undefined}>{idle}</div>;
+      return <div className={cn("px-2 py-1.5 min-h-8", display === "formula" ? "font-mono text-xs" : "text-right tabular-nums", empty && "text-muted", bad && !empty && "text-danger", className)} title={isFormula ? formulaText : undefined}>{idle}</div>;
     }
     return (
       <input
@@ -194,7 +194,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         // commit, that display string instead of the formula. Only blur clears it.
         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") clearP(id, field); }}
         className={cn(
-          "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted/40",
+          "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted",
           asFormula ? "font-mono text-xs" : "text-right tabular-nums",
           !asFormula && isFormula && "bg-accent-soft/30",
           bad && !empty && "text-danger",

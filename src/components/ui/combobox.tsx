@@ -354,7 +354,7 @@ function ComboboxBase({
           className={cn(
             "truncate",
             align === "center" && "w-full",
-            triggerLabel === null && "text-muted/60",
+            triggerLabel === null && "text-muted",
           )}
         >
           {triggerLabel ?? placeholder ?? t("placeholder")}
@@ -366,7 +366,7 @@ function ComboboxBase({
           className={cn(
             "size-4 shrink-0",
             align === "center" && "pointer-events-none absolute right-1",
-            chevronClassName ?? "text-muted/60",
+            chevronClassName ?? "text-faint",
           )}
         />
       </button>
@@ -443,7 +443,7 @@ function ComboboxBase({
                     onClear();
                     if (!multiple) { close(); triggerRef.current?.focus(); }
                   }}
-                  className="flex w-full items-center rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:bg-surface"
+                  className="flex w-full items-center rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:bg-hover"
                 >
                   {clearLabel ?? t("clear")}
                 </button>
@@ -464,7 +464,7 @@ function ComboboxBase({
                     close();
                     onCreate?.(query.trim());
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-surface"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-hover"
                 >
                   {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
                 </button>
@@ -492,7 +492,7 @@ function ComboboxBase({
                     // nothing else would draw one. Arrows, Tab and the mouse all
                     // move this same highlight; when the ring moved on its own
                     // it left a second, stale one behind at the top of the list.
-                    i === active ? "bg-surface ring-1 ring-accent" : "hover:bg-surface",
+                    i === active ? "bg-surface ring-1 ring-accent" : "hover:bg-hover",
                     isPicked(o.value) && "font-medium text-accent",
                   )}
                 >

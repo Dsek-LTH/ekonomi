@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -13,18 +13,58 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title"), description: t("description") };
 }
 
+/**
+ * What the browser paints its own chrome in: the address bar on Android, the
+ * status bar area of an installed PWA, the strip either side of the page.
+ *
+ * There was none of this at all, so a dark app sat inside a white browser. It
+ * is a `generateViewport` rather than a constant because the answer is the
+ * reader's stored choice where they have made one, and only where they have not
+ * does it fall back to the pair the OS picks between. The colours are
+ * `--color-canvas` in each theme, the ground the page itself is on, so the
+ * chrome continues the page instead of framing it.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const choice = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  if (choice) return { themeColor: CANVAS[choice] };
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: CANVAS.light },
+      { media: "(prefers-color-scheme: dark)", color: CANVAS.dark },
+    ],
+  };
+}
+
+/** `--color-canvas` in both themes. The one pair of values that has to exist
+ *  outside globals.css, because a <meta> tag cannot read a custom property. */
+const CANVAS = { light: "#fafafa", dark: "#17171a" } as const;
+
 // The visual direction, recorded where the built output can be audited against
 // it. Survives the production build on purpose. Grep the emitted HTML for
 // "seed aab31d9b" to confirm the contract is still shipping.
+//
+// Every hex in it is a token in app/globals.css and has to keep saying what the
+// token says. All four had drifted: the pink had moved to #e85d86 and the text
+// pink to #c93663 without this being touched, and the violet was described as
+// the authority chain when it has only ever marked a budget's standing. A
+// contract whose whole job is to be audited against cannot be audited against
+// when it is the thing that is wrong, so it is now the tokens that are the
+// record and this that follows them.
+//
+// The label is one the contract and the build genuinely disagreed about, and
+// the build won on purpose: white was preferred to the near-black this asked
+// for. The reasoning and the contrast it costs are in globals.css under Brand,
+// which is where a decision like that belongs. This only records the outcome.
 const DIRECTION_CONTRACT = `<!--
 THESIS: A section's money app that looks like it belongs to the section. It refuses
 the two defaults on either side: generic dashboard-blue, and a themed toy. Colour is
 a system with jobs, not a skin.
-OWN-WORLD: D-sektionen's pink #f280a1 as a FILL with a near-black label in both
-themes; the same hue darkened to #d02253 whenever it has to be read as text; #9966cc
-for the authority chain; a near-black ground carrying the violet, cards raised by
-fill in dark and by hairline plus a soft offset shadow in light; system sans, tabular
-figures on every number.
+OWN-WORLD: D-sektionen's pink #e85d86 as a FILL with a white label in both themes
+(near-black in print, where the fill is the lighter #f280a1); the same hue darkened
+to #c93663 whenever it has to be read as text;
+#8b5fc7 for a budget's standing (locked, adopted); a near-black ground carrying the
+violet, cards raised by fill in dark and by hairline plus a soft offset shadow in
+light; system sans, tabular figures on every number.
 STORY: An ordinarie sees one pink thing per screen and it is the way forward.
 Skattmästeriet sees status in colours that never lie and columns of digits that line up.
 FIRST VIEWPORT: Sidebar with the section mark, page title, the primary action as the
@@ -50,7 +90,11 @@ export default async function RootLayout({
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <html lang={locale} className={cn("h-full", theme === "dark" && "dark")}>
+    // No class at all when the reader has never chosen, which is what hands the
+    // question to `prefers-color-scheme` in globals.css. An explicit light is a
+    // class of its own and not the absence of `dark`: on a machine set to dark
+    // those are two different documents. See lib/ui/theme.ts.
+    <html lang={locale} className={cn("h-full", theme)}>
       <body className="min-h-full">
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <NextIntlClientProvider locale={locale} messages={messages}>

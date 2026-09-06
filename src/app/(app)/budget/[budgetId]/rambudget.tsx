@@ -74,7 +74,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
             {showCompare && <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>{comparison.otherLabel}</th>}
             {showCompare && <th className={cn("font-medium", numCls)}>Diff</th>}
           </tr>
-          <tr className="border-b-2 border-border bg-surface/50 font-semibold">
+          <tr className="border-b-2 border-border bg-surface font-semibold">
             <td className="px-3 py-2">{t("total")}</td>
             <Amounts {...sum(rows)} showCompare={showCompare} showImpact={showImpact} />
           </tr>
@@ -95,7 +95,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
                     key={row.sheet.key}
                     className={cn(
                       "border-b border-border/50",
-                      id ? "cursor-pointer hover:bg-surface/60" : "text-muted",
+                      id ? "cursor-pointer hover:bg-hover" : "text-muted",
                     )}
                     onClick={id ? () => onPick(id) : undefined}
                   >
@@ -150,7 +150,7 @@ function FragmentGroup({ resultUnit, own, other, impact, showCompare, showImpact
   const t = useTranslations("budget.rambudget");
   return (
     <>
-      <tr className="border-b border-border bg-surface/30">
+      <tr className="border-b border-border bg-surface">
         <td className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted" colSpan={4 + (showCompare ? 2 : 0) + (showImpact ? 2 : 0)}>{resultUnit}</td>
       </tr>
       {children}

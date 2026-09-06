@@ -113,7 +113,7 @@ export function TransactionPicker({
                 onClick={() => onPick(txn.id)}
                 className={cn(
                   "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:pointer-events-none",
-                  selectable ? "hover:bg-surface" : "opacity-55",
+                  selectable ? "hover:bg-hover" : "opacity-55",
                   selected && "bg-accent-soft",
                 )}
               >

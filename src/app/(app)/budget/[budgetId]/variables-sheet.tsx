@@ -105,7 +105,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
                     if (ok) setNewVar("");
                   }}
                   placeholder={t("addPlaceholder")}
-                  className="w-full bg-transparent px-3 py-1.5 font-mono text-xs outline-none placeholder:text-muted/40 focus:bg-accent-soft/40"
+                  className="w-full bg-transparent px-3 py-1.5 font-mono text-xs outline-none placeholder:text-muted focus:bg-accent-soft/40"
                 />
               </td>
               <td /><td />

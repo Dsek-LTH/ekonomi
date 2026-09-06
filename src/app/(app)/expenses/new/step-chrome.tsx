@@ -17,7 +17,7 @@ import { cn } from "@/lib/ui/utils";
 export const optionCard = (selected: boolean) =>
   cn(
     "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-    selected ? "border-accent bg-accent-soft" : "border-border hover:bg-surface",
+    selected ? "border-accent bg-accent-soft" : "border-border hover:bg-hover",
   );
 
 // Every wizard step ends the same way: back on the left, "save draft" and the

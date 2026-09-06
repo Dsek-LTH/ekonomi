@@ -623,7 +623,7 @@ export default function EventClient({
   // the focus ring land on the cell rather than inside it.
   const headerCell = "px-2 py-2.5 text-center font-medium";
   const cellInput =
-    "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted/50 focus-inset";
+    "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
 
   /**
    * The rows a product takes up.
@@ -726,7 +726,7 @@ export default function EventClient({
     if (lock) {
       return (
         <span
-          className="flex h-10 items-center justify-center text-muted/40"
+          className="flex h-10 items-center justify-center text-muted"
           title={t(`event.sheet.locked.${lock}`)}
         >
           <IconLock className="size-3.5" />
@@ -814,7 +814,7 @@ export default function EventClient({
                 long product name can never push the number columns about. */}
             <table className="w-full table-fixed border-collapse text-sm">
               <thead>
-                <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
+                <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
                   <th className={cn(headerCell, "w-[34%] text-left")}>{t("event.col.product")}</th>
                   {CELL_KINDS.map((kind) => (
                     <th
@@ -845,7 +845,7 @@ export default function EventClient({
                     {/* A spirit's own row carries its name and its total; the
                         typing happens on the ladder below it. A can has no
                         ladder, so its one row is both. */}
-                    <tr className={cn("divide-x divide-border", isVolume && "bg-surface/40")}>
+                    <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>
                       <td className="group px-2 py-1.5 align-middle">
                         <div className="flex items-center justify-between gap-2">
                           {swapping === productId ? (
@@ -963,7 +963,7 @@ export default function EventClient({
                             <span className="flex items-center gap-1 text-xs text-muted">
                               <IconElbow className="size-3 shrink-0" />
                               {rungName(level)}
-                              <span className="text-muted/70">– {available(product, level)}</span>
+                              <span className="text-muted">– {available(product, level)}</span>
                             </span>
                           </td>
                           {CELL_KINDS.map((kind) => (

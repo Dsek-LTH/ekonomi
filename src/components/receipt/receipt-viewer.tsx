@@ -34,7 +34,7 @@ export function ReceiptViewer(props: ReceiptViewerProps) {
   // Reserve the viewer's box (height/border from `className`) while the client
   // chunk loads, to avoid layout shift; the impl fills it.
   return (
-    <div className={cn("relative overflow-hidden bg-surface/40", props.className)}>
+    <div className={cn("relative overflow-hidden bg-surface", props.className)}>
       <Impl {...props} className="h-full w-full" />
     </div>
   );

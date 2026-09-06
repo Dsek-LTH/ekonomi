@@ -5,31 +5,38 @@ import { Spinner } from "./spinner";
 type Variant = "primary" | "secondary" | "ghost" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
-// The section's pink, flat and unmodified, with a near-black label. The same
-// button in both themes, and the only thing on a screen allowed to wear it.
-// `.brand-fill` is the section's two colours meeting: pink running to violet.
-// It marks the action register; purple on its own still means the authority
-// chain. See the note above `.brand-fill` in globals.css.
+// The section's pink, flat and unmodified, with a white label. The same button
+// in both themes, and the only thing on a screen allowed to wear it. It marks
+// the action register.
 //
-// The hairline is not decoration. The ramp's pink end is 2.5:1 on white, under
-// the 3:1 a control owes for its own boundary, so in light the edge draws the
-// shape the fill cannot; in dark the token collapses to the fill and it
-// disappears.
+// The white is a chosen deviation, not an accident: it measures 3.31:1 in light
+// and 2.83 in dark, under the 4.5 a label owes, and the brand block in
+// globals.css carries the alternative and the numbers behind it. What it asks of
+// this file is that the label stays short and the button stays large, which is
+// what `md` and `lg` are for. Nothing small or long goes on the pink.
+//
+// The hairline is not decoration, though the number behind it has moved. The
+// screen pink is 3.31:1 on white, which does clear the 3:1 a control owes for
+// its own boundary; the print pink (#f280a1, globals.css under Print) is 2.51
+// and does not, and a button on a white card wants a drawn edge either way. In
+// dark the token collapses to the fill and the edge disappears, which is the
+// right answer there: the fill is already 6:1 against the card.
 const VARIANTS: Record<Variant, string> = {
   primary:
     "brand-fill text-on-brand border border-brand-edge shadow-[var(--shadow-card)] active:scale-[0.98]",
   secondary:
-    "bg-background text-foreground border border-border hover:bg-surface active:scale-[0.98]",
+    "bg-background text-foreground border border-border hover:bg-hover active:scale-[0.98]",
   ghost: "text-accent hover:bg-accent-soft",
   // The section's pink as an edge rather than a fill: a create button that sits
   // in a toolbar beside a search box, where a filled one is the loudest thing on
   // a page whose subject is the list under it. Same shape as the dashed "add"
   // controls in Inställningar, one step firmer.
   //
-  // `accent` and not `brand`, for the reason the hairline above exists: the
-  // brand pink is 2.5:1 on white and a border owes 3:1, so the fill's colour
-  // cannot draw its own boundary. Accent is the pink that can. It is the one
-  // this app already writes text and links in.
+  // `accent` and not `brand`: a border owes 3:1, the brand pink clears it by a
+  // hair at 3.31:1 and the print pink does not clear it at all, and a boundary
+  // that is only just enough on one substrate is not a boundary. Accent is the
+  // pink that has room, at 5.01:1. It is the one this app already writes text
+  // and links in.
   accentOutline:
     "bg-background text-accent border border-accent hover:bg-accent-soft active:scale-[0.98]",
   danger:
