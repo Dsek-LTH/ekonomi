@@ -1,0 +1,61 @@
+// The gear catalogue, as the settings screen and the rental form read it.
+//
+// Two callers with two different needs, so two functions rather than one with a
+// flag. The settings screen wants everything, retired rows included, with a
+// count of how many contracts point at each so that "remove" can say what it
+// would break. The rental form wants only what can still be let out, and has no
+// use for the counts.
+import "server-only";
+
+import { prisma } from "@/lib/server/db";
+
+export interface RentalItemRow {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Öre, or null for an item priced case by case. */
+  dailyPriceOre: number | null;
+  replacementValueOre: number;
+  active: boolean;
+  /** Contract lines pointing at this item. Drives whether it can be deleted. */
+  usedBy: number;
+}
+
+/** What the rental form picks from: one option per item still on offer. */
+export interface RentalItemOption {
+  id: string;
+  name: string;
+  dailyPriceOre: number | null;
+  replacementValueOre: number;
+}
+
+// Name order, not insertion order. A catalogue is read by looking for a thing
+// you already have in mind, and `sortOrder` exists for a list somebody has
+// arranged deliberately, which this is not yet. It is on the model so that it
+// can become one without a migration.
+const BY_NAME = [{ sortOrder: "asc" as const }, { name: "asc" as const }];
+
+export async function getRentalItemRows(): Promise<RentalItemRow[]> {
+  const rows = await prisma.rentalItem.findMany({
+    orderBy: BY_NAME,
+    include: { _count: { select: { lines: true } } },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    dailyPriceOre: r.dailyPriceOre,
+    replacementValueOre: r.replacementValueOre,
+    active: r.active,
+    usedBy: r._count.lines,
+  }));
+}
+
+export async function getRentalItemOptions(): Promise<RentalItemOption[]> {
+  const rows = await prisma.rentalItem.findMany({
+    where: { active: true },
+    orderBy: BY_NAME,
+    select: { id: true, name: true, dailyPriceOre: true, replacementValueOre: true },
+  });
+  return rows;
+}

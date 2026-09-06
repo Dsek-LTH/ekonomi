@@ -24,6 +24,7 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconContract,
   IconExternal,
   IconGear,
   IconGrid,
@@ -36,6 +37,7 @@ import {
   canAccessBookkeeping,
   canAccessBudget,
   canAccessSettings,
+  canViewContracts,
   canViewStock,
   hasAttestRole,
 } from "@/lib/domain/permissions";
@@ -213,6 +215,16 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "groupAdmin",
     items: [
+      // Above Inställningar, because it is somewhere you go to do a job and
+      // Inställningar is where the app is configured. Its own line rather than
+      // a group of one: the archive is a single screen, and a heading over one
+      // link says nothing the link does not already say.
+      {
+        href: "/contracts",
+        label: "contracts",
+        icon: IconContract,
+        visible: (u) => canViewContracts(u.capabilities),
+      },
       { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.capabilities) },
     ],
   },
@@ -231,7 +243,9 @@ const SETTINGS_NAV: NavGroup[] = [
       href: s.href,
       label: s.label,
       icon: s.icon,
-      visible: ALL,
+      // Most sections ask for nothing beyond having got in here, which is what
+      // ALL means in this list. A section that asks for more says so itself.
+      visible: s.visible ? (u: CurrentUser) => s.visible!(u.capabilities) : ALL,
     })),
   },
 ];

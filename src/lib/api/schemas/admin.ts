@@ -126,7 +126,16 @@ const RoleName = z.enum([
   "ORDINARIE",
 ]);
 
-const CapabilityName = z.enum([
+/**
+ * The capabilities a settings screen may write.
+ *
+ * Written out rather than derived from the Prisma enum, because a request body
+ * is a contract with a client and should not silently widen when the schema
+ * gains a value. The cost is that it can fall behind: a capability drawn in the
+ * grid but missing here is a tickbox that fails to save, with nothing on the
+ * screen to say why. `admin.test.ts` holds the two lists together.
+ */
+export const CapabilityName = z.enum([
   "ADMIN",
   "BOOKKEEPING",
   "FORTNOX_LOGIN",
@@ -139,6 +148,9 @@ const CapabilityName = z.enum([
   "BUDGET_LOCK",
   "BUDGET_CHANGE_LOCKED",
   "ATTEST_VIEW",
+  "CONTRACT_VIEW",
+  "CONTRACT_MANAGE",
+  "EXPENSE_DEADLINE_WAIVE",
 ]);
 
 /**

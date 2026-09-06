@@ -26,8 +26,25 @@ import { useProgressRouter } from "@/components/shell/route-progress";
 // bookkeeper hovering to find out which icon un-exports a verifikation.
 
 /** The comment-carrying transitions. Each one lands on the person who filed the
- *  utlägg, so the server requires a reason and the dialog collects it. */
-type Explained = "request_changes" | "return_approved" | "unexport";
+ *  utlägg, so the server requires a reason and the dialog collects it.
+ *
+ *  `waive_deadline` is here for a second reason as well: the dispens is a
+ *  decision the section has to be able to read back years later, and the reason
+ *  is printed on the utläggsräkning. */
+type Explained =
+  | "request_changes"
+  | "return_approved"
+  | "unexport"
+  | "waive_deadline";
+
+/** Which label opens the dialog for each of them. Was a nested ternary that had
+ *  to grow a branch per action; this grows a line. */
+const EXPLAINED_TITLE: Record<Explained, string> = {
+  request_changes: "requestChanges",
+  return_approved: "reopen",
+  unexport: "unexport",
+  waive_deadline: "waiveDeadline",
+};
 
 /**
  * Exporting needs two separate Fortnox things, and the route checks both: the
@@ -58,6 +75,7 @@ export function ExpenseActions({
   onTransition,
   onWithdrawAttest,
   onRecall,
+  onRevokeDeadlineWaiver,
   onExport,
   onDelete,
 }: {
@@ -71,6 +89,7 @@ export function ExpenseActions({
   ) => Promise<boolean>;
   onWithdrawAttest: () => void;
   onRecall: () => void;
+  onRevokeDeadlineWaiver: () => void;
   onExport: () => void;
   onDelete: () => void;
 }) {
@@ -84,7 +103,7 @@ export function ExpenseActions({
   // before it happens, rather than as standing text next to a button.
   async function explain(action: Explained) {
     const answer = await confirm({
-      title: t(action === "request_changes" ? "requestChanges" : action === "return_approved" ? "reopen" : "unexport"),
+      title: t(EXPLAINED_TITLE[action]),
       message: action === "unexport" ? t("unexportWarning") : undefined,
       confirmLabel: tComment(`${action}.submit`),
       tone: action === "unexport" ? "danger" : "default",
@@ -112,6 +131,14 @@ export function ExpenseActions({
       label: t("export"),
       onClick: onExport,
       disabled: !canExportNow(fortnox),
+    },
+    // Ahead of "Skicka in", because on a late utlägg it is what stands between
+    // the two: nobody can submit until the dispens is given, and the person
+    // reading this page is the only one who can give it.
+    can.canWaiveDeadline && {
+      key: "waive_deadline",
+      label: t("waiveDeadline"),
+      onClick: () => explain("waive_deadline"),
     },
     can.canSubmit && {
       key: "submit",
@@ -155,6 +182,12 @@ export function ExpenseActions({
       label: t("recall"),
       icon: <IconUndo className="size-4" />,
       onClick: onRecall,
+    },
+    can.canRevokeDeadlineWaiver && {
+      key: "revoke_deadline_waiver",
+      label: t("revokeDeadlineWaiver"),
+      icon: <IconUndo className="size-4" />,
+      onClick: onRevokeDeadlineWaiver,
     },
     can.canEdit && {
       key: "edit",
@@ -280,15 +313,27 @@ export function ExpenseActionNotice({
         : t("fortnoxNotConnected")
       : null;
 
-  if (!can.submitBlocker && !fortnoxNote) return null;
+  // The other side of the same sentence. Where the submitter is told their
+  // utlägg is too old to send, whoever can do something about it is told there
+  // is a decision here for them to make, because nothing else on the page would
+  // say so.
+  //
+  // And it replaces the blocker rather than joining it. The skattmästare is an
+  // admin, so they see the submitter's own hint too, and that hint ends "hör av
+  // dig till skattmästaren", which is nobody's idea of help when you are the
+  // skattmästare. The two sentences are about the same fact, so only the one
+  // written for this reader is shown.
+  const waiveNote = can.canWaiveDeadline;
+  const blocker = waiveNote && can.submitBlocker === "tooLate" ? null : can.submitBlocker;
+
+  if (!blocker && !fortnoxNote && !waiveNote) return null;
 
   return (
     <Notice>
       {/* Its own component rather than a line of text: one blocker sends the
           submitter to another page, and the sentence carries the link there. */}
-      {can.submitBlocker && (
-        <SubmitBlockerNote blocker={can.submitBlocker} paymentType={paymentType} />
-      )}
+      {blocker && <SubmitBlockerNote blocker={blocker} paymentType={paymentType} />}
+      {waiveNote && <p>{t("deadlineWaiverPending")}</p>}
       {fortnoxNote && <p>{fortnoxNote}</p>}
     </Notice>
   );

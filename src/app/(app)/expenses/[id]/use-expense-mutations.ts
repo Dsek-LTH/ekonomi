@@ -14,13 +14,20 @@ export type TransitionAction =
   | "recall"
   | "request_changes"
   | "return_approved"
-  | "unexport";
+  | "unexport"
+  // Neither of these moves the status. They decide whether the filing
+  // deadline stands in the way of the submit that follows.
+  | "waive_deadline"
+  | "revoke_deadline_waiver";
 
 // Every write the detail page can make, over the /api/expenses/:id/* routes.
 // Matching gets its own busy scope so picking a transaction doesn't grey out
 // the action buttons.
 export function useExpenseMutations(expenseId: string) {
   const t = useTranslations("expenses.mutations");
+  // The dispens dialog reuses the detail page's own labels: the button that
+  // opens it and the button that confirms it say the same thing.
+  const tDetail = useTranslations("expenses.detail");
   const returnTo = useReturnTo();
   const notify = useNotify();
   const confirm = useConfirm();
@@ -39,6 +46,24 @@ export function useExpenseMutations(expenseId: string) {
       success: t(`transition.${act}`),
     });
     return data !== null;
+  }
+
+  /**
+   * Taking a dispens back, confirmed because of what it costs the other person.
+   *
+   * The utlägg is late by definition (a dispens is only ever granted on one
+   * that is), so revoking puts it back behind a deadline that has already
+   * passed: nobody can submit it again without a new dispens. That is not an
+   * undo, and the dialog says so before it happens.
+   */
+  async function revokeDeadlineWaiver() {
+    const ok = await confirm({
+      title: tDetail("revokeDeadlineWaiver"),
+      message: tDetail("revokeWaiverConfirm"),
+      confirmLabel: tDetail("revokeDeadlineWaiver"),
+      tone: "danger",
+    });
+    if (ok) await transition("revoke_deadline_waiver");
   }
 
   // Confirmed, because on a fully approved expense it visibly knocks the status
@@ -120,6 +145,7 @@ export function useExpenseMutations(expenseId: string) {
     transition,
     withdrawAttest,
     recall,
+    revokeDeadlineWaiver,
     exportToFortnox,
     match,
     remove,

@@ -23,6 +23,9 @@ const data: ExpenseCoverData = {
   // Not a milersättning: its underlag is a real receipt and follows on the
   // next page, so the page draws no journey section.
   journey: null,
+  // In time, so there is no dispens to state. The one that is takes its own
+  // test below.
+  waiver: null,
   total: "1 069,00 kr",
   allocations: [
     {
@@ -68,6 +71,24 @@ describe("renderCover", () => {
           approvedAt: null,
         },
       ],
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
+
+  it("states a dispens without pushing the page over", async () => {
+    // A late utlägg taken anyway, with a reason of the length somebody actually
+    // writes. The block sits above the attesteringar and must not cost the
+    // page its second half.
+    const bytes = await renderCover({
+      ...data,
+      waiver: {
+        by: "Nora Lindqvist",
+        at: "2026-06-03",
+        reason:
+          "Kvittot kom bort i flytten till det nya förrådet och har eftersökts sedan i maj. " +
+          "Utlägget är styrkt mot leverantörens kopia och tas emot trots fristen.",
+        lateness: "76 dagar efter köpet",
+      },
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });

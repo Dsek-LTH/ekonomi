@@ -14,6 +14,22 @@ export function isCompleteDate(value: string): boolean {
   return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
+/**
+ * An ISO day as the instant that names it, or null when there is no day.
+ *
+ * Midnight UTC, deliberately, and never the server's own timezone. A `@db.Date`
+ * column stores a day rather than a moment, so the instant handed to it only
+ * has to land on the right calendar square; built from a host set to UTC in
+ * Swedish summer time, a local-midnight Date lands on the square before.
+ *
+ * The same construction lib/data/list-query.ts uses for a range's ends. Named
+ * here because writing a single date column wants it too, and the two must
+ * agree about which day they mean.
+ */
+export function isoToDate(day: string | null | undefined): Date | null {
+  return day ? new Date(`${day}T00:00:00.000Z`) : null;
+}
+
 // Today, as the section counts days. Deliberately not the server's own day: the
 // app runs on a host set to UTC, and between midnight and 02:00 Swedish summer
 // time that host still says yesterday, long enough for a late-night purchase to

@@ -244,3 +244,60 @@ export const CARDS: SeedCard[] = [
     transactionIds: [],
   },
 ];
+
+// ── Uthyrningsobjekt ──────────────────────────────────────────────
+//
+// The gear a section like this actually lets out, with values that are the
+// right order of magnitude rather than exact. The replacement value is the
+// figure that matters: it is what the liability clause of an uthyrningsavtal
+// points at, so a catalogue whose values were all 100 kr would make the whole
+// feature look harmless in a way it is not.
+//
+// Öre, like every other amount in this app.
+export const RENTAL_ITEMS = [
+  {
+    name: "Högtalare, aktiv 12 tum",
+    description: "Med stativ och kabel. Ett par räcker till en sittning.",
+    dailyPriceOre: 25_000,
+    replacementValueOre: 650_000,
+  },
+  {
+    name: "Mixerbord, 8 kanaler",
+    description: null,
+    dailyPriceOre: 15_000,
+    replacementValueOre: 420_000,
+  },
+  {
+    name: "Mikrofon, trådlös",
+    description: "Handhållen, med mottagare.",
+    dailyPriceOre: 7_500,
+    replacementValueOre: 180_000,
+  },
+  {
+    name: "Mikrofonstativ",
+    description: null,
+    dailyPriceOre: 2_500,
+    replacementValueOre: 45_000,
+  },
+  {
+    name: "Partytält 3×6 m",
+    description: "Väger en del. Kräver bil.",
+    dailyPriceOre: 40_000,
+    replacementValueOre: 900_000,
+  },
+  {
+    name: "Ölbord med bänkar",
+    description: null,
+    dailyPriceOre: 5_000,
+    replacementValueOre: 120_000,
+  },
+  {
+    // No standing price: what it costs depends on how long and for what, so it
+    // is priced per rental. Null rather than zero, which would print
+    // "0,00 kr per dag" on a contract.
+    name: "Projektor",
+    description: "Med HDMI-kabel och duk.",
+    dailyPriceOre: null,
+    replacementValueOre: 550_000,
+  },
+];

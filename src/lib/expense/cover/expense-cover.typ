@@ -196,6 +196,40 @@
   ]
 ]
 
+// ── Dispens ───────────────────────────────────────────────────────────
+//
+// Only where one was given, which is nearly never.
+//
+// It stands above the attesteringar rather than below them, because it is the
+// question a reader has already formed by the time they get here: the kvittodatum
+// at the top of the page is months before everything else on it, and until this
+// block answers why, the whole document reads as a mistake. Ruled off, so it is
+// not mistaken for part of the utlägg's own description.
+//
+// The reason is set in the granter's own words. Nothing here rewrites it: this
+// is the record of a decision somebody made about the section's money, and a
+// page that summarised it would be putting words in their mouth.
+#if data.waiver != none [
+  #v(8pt)
+  #text(size: heading-size, weight: "bold")[Dispens från redovisningsfristen]
+  #v(9pt)
+
+  #block[
+  #set text(size: table-size, fill: ink)
+  #line(length: 100%, stroke: rule-strong)
+  #v(9pt)
+  #grid(
+    columns: (1fr, 1fr, 1fr),
+    column-gutter: 16pt,
+    field("Beviljad av", data.waiver.by),
+    field("Beviljad", data.waiver.at),
+    field("Redovisat", data.waiver.lateness),
+  )
+  #field("Skäl", data.waiver.reason)
+  #line(length: 100%, stroke: rule-hair)
+  ]
+]
+
 // ── Attesteringar ─────────────────────────────────────────────────────
 //
 // The reason this page exists. One row per cost-centre slice, each with the

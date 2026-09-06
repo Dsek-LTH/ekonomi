@@ -421,7 +421,34 @@ export default function NewExpenseClient({
   // Past the 60-day deadline for an eget utlägg. Depends on the payment type,
   // which is picked further down this same step, so switching to "Eget utlägg"
   // lights this up on an old receipt then and there.
+  //
+  // A warning, not an error, and it stops nothing on this form. It used to stop
+  // everything: the wizard would neither continue nor save, so a late receipt
+  // could not be written down at all. That was right while a late claim could
+  // never be paid, and wrong the moment a dispens existed, because a dispens is
+  // granted against a claim, and there was no way to bring one into being for
+  // the skattmästare to look at.
+  //
+  // Sending it is still refused, by `blocker` below and by the transition route
+  // behind it. What the submitter can now do is finish the utlägg and leave it
+  // as a draft, which is the thing a dispens is asked for.
   const dateTooLate = isLateReimbursement(form.purchaseDate, paymentType);
+  // What to say about it, in the order the reader should try things: the rule,
+  // then the cheap fix, then the expensive one.
+  //
+  // The cheap fix is only offered to somebody it is open to. "Var det
+  // sektionskortet du använde?" is a question with no answer for a member who
+  // holds no card, and pointing them at a picker that does not offer CARD is
+  // worse than saying nothing: it reads as though they have missed something.
+  // `cardAllowed` is the same condition the picker itself is built from, so the
+  // sentence and the options it describes cannot come apart.
+  const tooLateHint = [
+    t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS }),
+    cardAllowed ? t("dateTooLateCard") : null,
+    t("dateTooLateWaiver"),
+  ]
+    .filter(Boolean)
+    .join(" ");
   // Enough to move on: a receipt, an amount (either sign, but not zero), a
   // whole date that has already happened and is still in time, and a cost
   // centre on every row.
@@ -430,7 +457,6 @@ export default function NewExpenseClient({
     magnitude !== 0 &&
     dateComplete &&
     !dateInFuture &&
-    !dateTooLate &&
     allocations.length > 0 &&
     allocations.every((a) => a.costCenterCode);
   // A submitted/approved expense can be edited but not re-submitted from here.
@@ -451,7 +477,6 @@ export default function NewExpenseClient({
     form.title.trim() !== "" &&
     !dateIncomplete &&
     !dateInFuture &&
-    !dateTooLate &&
     hasReceipt &&
     !saving;
   // Everything required to send for attest (complete details + match/payout);
@@ -466,6 +491,11 @@ export default function NewExpenseClient({
     // "match it first" hint rather than letting submit fail at the server.
     matchedTransactionId: matchDone ? matchId ?? undefined : undefined,
     submitterHasPayout: Boolean(payoutClearing && payoutAccount),
+    // False, and it cannot be anything else here: a dispens is granted against
+    // an utlägg that already exists, by somebody who is not the person filling
+    // this in. Somebody whose claim is too old sees the deadline here and asks
+    // the skattmästare, and the dispens shows up on the detail page.
+    deadlineWaived: false,
     allocations: signedAllocations.map((a) => ({
       amount: a.value,
       costCenterCode: a.costCenterCode,
@@ -722,10 +752,13 @@ export default function NewExpenseClient({
                     ? t("dateIncomplete")
                     : dateInFuture
                       ? t("dateFuture")
-                      : dateTooLate
-                        ? t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS })
-                        : undefined
+                      : undefined
                 }
+                // A hint rather than an error: the date is a real day and the
+                // form accepts it. What it cannot do is be sent without a
+                // dispens, and marking the field invalid would be saying the
+                // submitter typed something wrong when they typed the truth.
+                hint={dateTooLate ? tooLateHint : undefined}
               >
                 <DateInput
                   value={form.purchaseDate}

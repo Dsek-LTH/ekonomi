@@ -3,12 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObject } from "@/lib/server/storage";
-import {
-  REIMBURSEMENT_DEADLINE_DAYS,
-  isEditable,
-  isRecallable,
-  isLateReimbursement,
-} from "@/lib/domain/status";
+import { isEditable, isRecallable } from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
 import { isMatchable } from "@/lib/domain/matching";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -243,27 +238,33 @@ export async function PATCH(
     JSON.stringify([...newAllocKeys].sort((a, b) => a.cc.localeCompare(b.cc)));
   if (allocsChanged) diff["allocations"] = { from: null, to: null };
 
-  // The filing deadline for an eget utlägg, enforced against what this edit
-  // leaves behind rather than what it sends: switching an old sektionskort
-  // purchase over to "eget utlägg" makes the same inadmissible claim as typing
-  // the old date would.
+  // The filing deadline is not enforced here at all, and that is deliberate.
   //
-  // Only when this edit is what sets it, though. A draft can sit untouched long
-  // enough to cross the deadline on its own, and refusing every save from then
-  // on would strand it. Its owner can no longer correct a mistyped date, move
-  // it to the section card, or write down what the skattmästare said. Submitting
-  // is where a late one is actually stopped, and the transition route says so
-  // whatever it was saved as.
+  // This route used to refuse a save that *set* a late date, on the grounds
+  // that an inadmissible claim should not be written down. That was right while
+  // a late claim could never be paid. It stopped being right the moment a
+  // dispens existed: a dispens is granted against a claim, by somebody looking
+  // at it, and a claim that cannot be saved is one nobody can look at. The
+  // wizard would neither continue nor save on a receipt two months old, so
+  // there was nothing for the skattmästare to decide about.
+  //
+  // Submitting is where a late one is stopped, and the transition route says so
+  // whatever this was saved as. Writing down a purchase that happened is not
+  // the same act as claiming the money for it.
   const dateOrTypeChanged = "purchaseDate" in diff || "paymentType" in diff;
-  if (
-    dateOrTypeChanged &&
-    purchaseDate &&
-    isLateReimbursement(dateStr(purchaseDate)!, paymentType)
-  ) {
-    return fail(422, "expense.reimbursementTooLate", {
-      values: { days: REIMBURSEMENT_DEADLINE_DAYS },
-    });
-  }
+
+  // A dispens is granted against one claim, and the two fields the deadline is
+  // read from are what make it that claim. Change either and the dispens is
+  // spent: the skattmästare allowed a purchase on a date, not this utlägg
+  // forever. Without this, a waived draft could be re-dated or moved to another
+  // payment type and carry its dispens over to a claim nobody looked at.
+  //
+  // Deliberately not the amount. The dispens says a late claim may be filed at
+  // all; what it is worth is the attest's question, and every krona still has
+  // to be signed for by whoever answers for the cost centre. Clearing it on
+  // every öre corrected would only teach a treasurer to re-grant without
+  // reading.
+  const dropWaiver = dateOrTypeChanged && expense.deadlineWaivedAt !== null;
 
   // A changed distribution is one of the fields in `diff`, so this covers the
   // allocations too. It used to let a request that carried allocations through
@@ -272,7 +273,8 @@ export async function PATCH(
   const changedFields = Object.keys(diff);
   // `dropMatch` is work of its own: it isn't one of the diffed fields, and on
   // an utlägg already holding the contradictory pair it can be the only thing
-  // this save has to do.
+  // this save has to do. `dropWaiver` never is: it only ever follows a changed
+  // date or payment type, both of which are diffed fields.
   if (changedFields.length === 0 && !dropMatch) {
     return NextResponse.json({ id, changed: 0 });
   }
@@ -297,8 +299,29 @@ export async function PATCH(
           journeyStops,
           mileageOrePerKm: valued?.orePerKm ?? null,
           ...(dropMatch ? { matchedTransactionId: null } : {}),
+          ...(dropWaiver
+            ? {
+                deadlineWaivedById: null,
+                deadlineWaivedAt: null,
+                deadlineWaiverReason: null,
+              }
+            : {}),
         },
       });
+
+      // Its own event, beside the EDITED one rather than inside it. The edit is
+      // the submitter's; losing the dispens is what it cost them, and a
+      // timeline that only said "Uppdaterade uppgifter" would leave them to
+      // discover it at the submit button.
+      if (dropWaiver) {
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "DEADLINE_WAIVER_REVOKED",
+            actorId: g.actor.id,
+          },
+        });
+      }
 
       // Its own event, not a line in the diff: the timeline already has a word
       // for a match coming off, and this is that, whoever pressed what.

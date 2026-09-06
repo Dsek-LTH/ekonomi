@@ -87,6 +87,13 @@ const PINNED_PURE: Record<string, string[]> = {
   // browser). Its purity is the whole point of it: the client takes these
   // types without the query layer coming along behind them.
   ledger: ["bas.ts", "report-shape.ts"],
+  // tags.ts is the one rule that decides what a tag looks like, and both the
+  // API and the search go through it. status.ts derives a contract's state,
+  // including the expiry that is deliberately not a column, and the list screen
+  // runs it in the browser. file-roles.ts says which files are evidence, and it
+  // is split out from files.ts precisely so the screen can ask without dragging
+  // Prisma across the boundary.
+  contract: ["file-roles.ts", "status.ts", "tags.ts"],
   fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
 };
 

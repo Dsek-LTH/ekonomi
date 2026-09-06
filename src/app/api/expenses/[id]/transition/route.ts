@@ -8,7 +8,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { claimReference, withReferenceRetry } from "@/lib/server/expense-reference";
-import { canAttestAllocation, canReturnApproved, canUnexport, isAdmin } from "@/lib/domain/permissions";
+import {
+  canAttestAllocation,
+  canReturnApproved,
+  canUnexport,
+  canWaiveFilingDeadline,
+  isAdmin,
+} from "@/lib/domain/permissions";
 import { resultUnitNameForCode, getPrefixes, ownedResultUnits } from "@/lib/server/result-units";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -423,6 +429,115 @@ export async function POST(
     return NextResponse.json({ id, status: "BOOKED" });
   }
 
+  // ── Dispens från redovisningsfristen ──────────────────────────────────────
+  //
+  // An eget utlägg handed in more than REIMBURSEMENT_DEADLINE_DAYS after the
+  // purchase is not reimbursed. This is the section deciding, for this one
+  // claim, to take it anyway.
+  //
+  // Three conditions, and each of them is the rule rather than a convenience:
+  //
+  //   the capability   which is the skattmästare's, and only theirs by default
+  //   a status that has not gone for attest yet, because the deadline stops a
+  //                    late claim from *entering* the queue, so a dispens given
+  //                    afterwards would be permitting what already happened
+  //   an actually late claim, so that a dispens on the record always means
+  //                    something. Granting one on a claim in good time would
+  //                    leave a reason nobody can read back.
+  //
+  // And a reason, required, because "who allowed this and why" is the whole of
+  // what the record is for. The utläggsräkning prints it.
+  if (action === "waive_deadline" || action === "revoke_deadline_waiver") {
+    if (!canWaiveFilingDeadline(actor.capabilities)) {
+      return fail(403, "expense.noWaiveAccess");
+    }
+    if (!SUBMITTABLE_STATUSES.includes(expense.status)) {
+      return fail(409, "expense.waiveOnlyBeforeAttest", {
+        values: { status: { key: `common.status.${expense.status}` } },
+      });
+    }
+
+    if (action === "revoke_deadline_waiver") {
+      if (!expense.deadlineWaivedAt) return fail(422, "expense.noWaiverToRevoke");
+      const revoked = await commit(() =>
+        prisma.$transaction(async (tx) => {
+          // Still waived, and still unsent, when the write lands.
+          applied(
+            await tx.expense.updateMany({
+              where: {
+                id: expense.id,
+                status: { in: SUBMITTABLE_STATUSES },
+                deadlineWaivedAt: { not: null },
+              },
+              data: {
+                deadlineWaivedById: null,
+                deadlineWaivedAt: null,
+                deadlineWaiverReason: null,
+              },
+            }),
+          );
+          await tx.expenseEvent.create({
+            data: {
+              expenseId: expense.id,
+              type: "DEADLINE_WAIVER_REVOKED",
+              actorId,
+              // Optional here, unlike on the grant. Taking a dispens back
+              // returns the utlägg to the rule everybody already knows, and
+              // there is nothing to explain that the rule does not.
+              comment: comment || null,
+            },
+          });
+        }),
+      );
+      if (revoked instanceof NextResponse) return revoked;
+      return NextResponse.json({ id, deadlineWaived: false });
+    }
+
+    // The claim has to be one the deadline actually stops. A draft with no date
+    // yet is not late; it is unfinished, and `isLateReimbursement` says so by
+    // wanting a whole date.
+    const purchaseDate = expense.purchaseDate?.toISOString().slice(0, 10) ?? "";
+    if (!isLateReimbursement(purchaseDate, expense.paymentType)) {
+      return fail(422, "expense.nothingToWaive", {
+        values: { days: REIMBURSEMENT_DEADLINE_DAYS },
+      });
+    }
+    if (!comment) return fail(422, "expense.commentRequiredWaive");
+    if (expense.deadlineWaivedAt) return fail(409, "expense.alreadyWaived");
+
+    const waived = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Not yet waived, and not yet sent, when the write lands: two
+        // skattmästare granting at once would otherwise both log a reason and
+        // the second would overwrite the first.
+        applied(
+          await tx.expense.updateMany({
+            where: {
+              id: expense.id,
+              status: { in: SUBMITTABLE_STATUSES },
+              deadlineWaivedAt: null,
+            },
+            data: {
+              deadlineWaivedById: actorId,
+              deadlineWaivedAt: new Date(),
+              deadlineWaiverReason: comment,
+            },
+          }),
+        );
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "DEADLINE_WAIVED",
+            actorId,
+            comment,
+          },
+        });
+      }),
+    );
+    if (waived instanceof NextResponse) return waived;
+    return NextResponse.json({ id, deadlineWaived: true });
+  }
+
   // ── Simple state-machine transitions ──────────────────────────────────────
   // Whatever is left is one of the two simple transitions. The schema's enum
   // is what says so, and the check that used to answer 400 for an unknown
@@ -457,7 +572,13 @@ export async function POST(
     // in more than 60 days after the purchase is not reimbursed, so it never
     // enters anyone's attest queue. A draft that aged past the deadline is
     // stopped here even though PATCH kept letting it be saved.
+    //
+    // Unless it has been given a dispens, which is exactly the moment one is
+    // for: the skattmästare has already decided, on the record and with a
+    // reason, that this late claim may be filed. See the branch below and the
+    // dispens columns on Expense.
     if (
+      !expense.deadlineWaivedAt &&
       isLateReimbursement(
         expense.purchaseDate.toISOString().slice(0, 10),
         expense.paymentType,

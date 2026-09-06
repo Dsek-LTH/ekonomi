@@ -21,6 +21,7 @@ import {
   COST_CENTERS,
   CURRENT_USERS,
   EXPENSES,
+  RENTAL_ITEMS,
 } from "./seed-data";
 
 const prisma = new PrismaClient({
@@ -69,6 +70,8 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
+  await prisma.contract.deleteMany(); // cascades → files, parties, rental → lines
+  await prisma.rentalItem.deleteMany();
   await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
   await prisma.costCenter.deleteMany();
@@ -277,6 +280,14 @@ async function main() {
     }
   }
 
+  // ── Uthyrningsobjekt ────────────────────────────────────────────
+  //
+  // The gear catalogue, so a fresh checkout can draw an uthyrningsavtal without
+  // somebody first having to invent a speaker. No contracts are seeded: one
+  // would carry a document, and the seed brings no files of its own. Drawing
+  // one is the first thing to try on /contracts.
+  await prisma.rentalItem.createMany({ data: [...RENTAL_ITEMS] });
+
   const counts = {
     users: await prisma.user.count(),
     costCenters: await prisma.costCenter.count(),
@@ -285,6 +296,7 @@ async function main() {
     expenses: await prisma.expense.count(),
     allocations: await prisma.expenseCostAllocation.count(),
     events: await prisma.expenseEvent.count(),
+    rentalItems: await prisma.rentalItem.count(),
   };
   console.log("Seeded:", counts);
 }

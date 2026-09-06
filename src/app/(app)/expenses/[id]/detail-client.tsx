@@ -141,6 +141,7 @@ function ExpenseDetail({
                     expense.allocations.filter((a) => a.approvedById).length,
                   )
                 }
+                onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
                 onExport={mutations.exportToFortnox}
                 onDelete={mutations.remove}
               />

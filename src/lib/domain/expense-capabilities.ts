@@ -16,11 +16,13 @@ import {
   canBookkeep,
   canLogInToFortnox,
   canUnexport,
+  canWaiveFilingDeadline,
   isAdmin,
 } from "@/lib/domain/permissions";
 import {
   isAttestWithdrawable,
   isEditable,
+  isLateReimbursement,
   isRecallable,
   isSigned,
   isSubmittable,
@@ -56,6 +58,19 @@ export type ExpenseCapabilities = {
   canUnexport: boolean;
   canEditVerification: boolean;
   canEdit: boolean;
+  /**
+   * May grant this late utlägg a dispens from the filing deadline.
+   *
+   * Offered only where there is something to grant: a claim that is actually
+   * late, still in the submitter's hands, and without a dispens already. The
+   * deadline stops a late claim from entering the attest queue, so once it has
+   * left those statuses a dispens would be permitting something that already
+   * happened, which is why the status is part of the question and not just the
+   * capability. See canWaiveFilingDeadline.
+   */
+  canWaiveDeadline: boolean;
+  /** May take that dispens back, while the utlägg is still unsent. */
+  canRevokeDeadlineWaiver: boolean;
   canMatch: boolean;
   canDelete: boolean;
   /** Whether any call-to-action is offered, which demotes "Redigera" to secondary. */
@@ -76,6 +91,10 @@ export function expenseCapabilities(
   const blocker = submitBlocker({
     ...expense,
     hasReceipt: Boolean(expense.receiptId),
+    // A dispens is the one thing that lets a late claim through, and it is a
+    // fact about the row rather than about this viewer: the submitter sees the
+    // block lift at the same moment everybody else does.
+    deadlineWaived: Boolean(expense.deadlineWaiver),
     // A milersättning is asked for its journey rather than a receipt, and
     // without this it was asked for neither: `mileageBlocker` came through
     // undefined, the check passed, and the detail page offered "Skicka in" on
@@ -102,6 +121,14 @@ export function expenseCapabilities(
   });
 
   const canSubmit = submittable && mayAct && !blocker;
+  // The dispens, and the two halves of when it is on offer. `submittable` is
+  // what "before it goes for attest" means here: the same set of statuses the
+  // transition route holds the grant to.
+  const mayWaive =
+    canWaiveFilingDeadline(viewer.capabilities) &&
+    submittable &&
+    isLateReimbursement(expense.purchaseDate, expense.paymentType);
+  const waived = Boolean(expense.deadlineWaiver);
   const canApprove =
     expense.status === "PENDING_APPROVAL" &&
     expense.allocations.some((a) => a.canAttest && !a.approvedById);
@@ -133,7 +160,13 @@ export function expenseCapabilities(
   // Admin may delete any utlägg; a user may delete their own unless it's
   // attested or further.
   const canDelete = admin || (isOwner && !isSigned(expense.status));
-  const hasPrimaryAction = canApprove || canBook || canExport || canSubmit || canReturn;
+  const canWaiveDeadline = mayWaive && !waived;
+  const canRevokeDeadlineWaiver = mayWaive && waived;
+  // Leading, when it is on offer at all. A late utlägg with nobody able to move
+  // it is the one thing on this page anybody is waiting for, and the person who
+  // can move it is not the person whose claim it is.
+  const hasPrimaryAction =
+    canApprove || canBook || canExport || canSubmit || canReturn || canWaiveDeadline;
 
   return {
     canSubmit,
@@ -151,6 +184,8 @@ export function expenseCapabilities(
     canEdit,
     canMatch: expense.paymentType === "CARD" && submittable && mayAct,
     canDelete,
+    canWaiveDeadline,
+    canRevokeDeadlineWaiver,
     hasPrimaryAction,
     hasAnyAction:
       hasPrimaryAction ||
@@ -159,6 +194,7 @@ export function expenseCapabilities(
       canRequestChanges ||
       canEdit ||
       canDelete ||
-      mayUnexport,
+      mayUnexport ||
+      canRevokeDeadlineWaiver,
   };
 }

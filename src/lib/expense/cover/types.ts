@@ -60,6 +60,31 @@ export interface ExpenseCoverJourney {
   rate: string;
 }
 
+/**
+ * The dispens that let a late utlägg be filed, as the page states it.
+ *
+ * On the cover because this page is what is archived beside the voucher. An
+ * utlägg filed after the section's own deadline was paid because somebody with
+ * the authority to decided it should be, and a reader coming to the voucher a
+ * year later has no other way to find that out. Without it the page shows a
+ * receipt dated months before the claim and no explanation at all, which is the
+ * one thing an underlag must not do.
+ *
+ * Null on every utlägg that was in time, which is nearly all of them.
+ */
+export interface ExpenseCoverWaiver {
+  /** Who granted it. */
+  by: string;
+  /** ISO date it was granted. */
+  at: string;
+  /** Why, in their own words. */
+  reason: string;
+  /** "61 dagar efter köpet": how late the claim actually was, worked out in
+   *  document.ts so the page states a fact rather than inviting a subtraction
+   *  across two dates in different places. */
+  lateness: string;
+}
+
 export interface ExpenseCoverData {
   /** "DEK26-0042". An utlägg with no reference yet falls back to its title. */
   reference: string;
@@ -87,6 +112,9 @@ export interface ExpenseCoverData {
   allocations: ExpenseCoverAllocation[];
   /** The journey, for a milersättning. Null for anything else. See above. */
   journey: ExpenseCoverJourney | null;
+  /** The dispens from the filing deadline, where one was given. Null
+   *  otherwise. See above. */
+  waiver: ExpenseCoverWaiver | null;
 }
 
 /**

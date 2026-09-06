@@ -186,6 +186,9 @@ export default function MileageClient({
   // under the field, rather than left for the review step: this is the one
   // blocker nobody can fix by filling something else in, so finding it after
   // the readings and the fördelning is finding it too late.
+  // A warning, not a wall. The journey can be written down and saved; it is
+  // sending it that the deadline stops, which `blocker` below still says. See
+  // the same field in the receipt wizard for why this changed.
   const dateTooLate = isLateReimbursement(journeyDate, "MILEAGE");
 
   const blocker = submitBlocker({
@@ -200,6 +203,11 @@ export default function MileageClient({
     hasReceipt: false,
     mileageBlocker: journeyBlocker,
     submitterHasPayout: Boolean(payoutClearing && payoutAccount),
+    // False, and it cannot be anything else here: a dispens is granted against
+    // an utlägg that already exists, by somebody who is not the person filling
+    // this in. Somebody whose claim is too old sees the deadline here and asks
+    // the skattmästare, and the dispens shows up on the detail page.
+    deadlineWaived: false,
     allocations: allocations.map((a) => ({
       amount: parseSEK(a.amount),
       costCenterCode: a.costCenterCode,
@@ -212,7 +220,6 @@ export default function MileageClient({
   const filledForm =
     !journeyBlocker &&
     !dateInFuture &&
-    !dateTooLate &&
     allocations.length > 0 &&
     allocations.every((a) => a.costCenterCode);
   // A draft may be saved with the readings still missing, since that is what a
@@ -223,7 +230,7 @@ export default function MileageClient({
   // the server), so a save that went ahead would fail with a toast instead of
   // the sentence under the field that already says what is wrong.
   const canPersist =
-    title.trim() !== "" && !dateIncomplete && !dateInFuture && !dateTooLate && !saving;
+    title.trim() !== "" && !dateIncomplete && !dateInFuture && !saving;
   // An attested claim can still be corrected but not re-sent from this form.
   // the same rule the ordinary wizard holds to.
   const submittable = !existing || isSubmittable(existing.status);
@@ -394,9 +401,14 @@ export default function MileageClient({
                   ? tWizard("dateIncomplete")
                   : dateInFuture
                     ? t("dateFuture")
-                    : dateTooLate
-                      ? t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS })
-                      : undefined
+                    : undefined
+              }
+              // A hint, not an error: the day is a real one and the form takes
+              // it. See the same field in the receipt wizard.
+              hint={
+                dateTooLate
+                  ? t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS })
+                  : undefined
               }
             >
               <DateInput

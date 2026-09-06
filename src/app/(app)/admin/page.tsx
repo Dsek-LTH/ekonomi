@@ -23,7 +23,7 @@ import { requirePage } from "@/lib/server/current-user";
 // and "Resultatenheter" are not names that explain themselves to somebody who
 // has not already been told.
 export default async function AdminPage() {
-  await requirePage(canAccessSettings);
+  const user = await requirePage(canAccessSettings);
   const t = await getTranslations("admin.index");
   const tNav = await getTranslations("nav");
 
@@ -33,7 +33,9 @@ export default async function AdminPage() {
           rail and a settings sidebar beside it, three cards in this column are
           narrower than the sentence each one carries. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {SETTINGS_SECTIONS.map((s) => (
+        {/* A section that asks for more than SETTINGS is left out rather than
+            shown as a card that redirects. See SettingsSection.visible. */}
+        {SETTINGS_SECTIONS.filter((s) => !s.visible || s.visible(user.capabilities)).map((s) => (
           <Card key={s.href} className="transition-colors hover:bg-hover">
             {/* The link fills the card, so the whole card is the target rather
                 than the words in it. `block` and padding here rather than on

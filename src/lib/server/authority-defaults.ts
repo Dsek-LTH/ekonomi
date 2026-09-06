@@ -15,8 +15,13 @@
 // a different thing anyway: it is a one-time record of the day the lists
 // stopped being code, and must keep saying what they said that day however
 // these are edited afterwards.
-import "server-only";
-
+//
+// Deliberately NOT `server-only`, despite living in lib/server. It is three
+// arrays of constants with no database, no session and no filesystem behind
+// them, and prisma/seed.ts reads them through tsx, which cannot resolve that
+// module at all: the marker made `pnpm db:seed` fail outright on a fresh
+// checkout. The folder it sits in says who its callers are; the import would
+// have said something untrue about what it needs.
 import type { Capability, Role } from "@/lib/domain/types";
 
 /** Authentik group → role. */
@@ -125,8 +130,29 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTMASTARE", capability: "BUDGET_LOCK" },
   { role: "SKATTMASTARE", capability: "BUDGET_CHANGE_LOCKED" },
 
+  // Dispens från redovisningsfristen, for the same reason and to the same
+  // person: a rule the section set, departed from for one claim, by the one who
+  // answers for the money. The chair is an admin for expense authority and does
+  // not get to hand out dispenser.
+  { role: "SKATTMASTARE", capability: "EXPENSE_DEADLINE_WAIVE" },
+
   { role: "SKATTMASTARE", capability: "ATTEST_VIEW" },
   { role: "ORDFORANDE", capability: "ATTEST_VIEW" },
   { role: "VICE_SKATTMASTARE", capability: "ATTEST_VIEW" },
   { role: "RESULTATANSVARIG", capability: "ATTEST_VIEW" },
+
+  // Avtal. Reading is given to the people who answer for the section's money
+  // and its commitments; writing is narrower still. Deliberately not granted to
+  // ORDINARIE by default, unlike the budget: the archive holds names, contact
+  // details and terms belonging to people who are not members and never chose
+  // to be visible to the whole section. Widen it in Inställningar if the
+  // section decides otherwise.
+  { role: "SKATTMASTARE", capability: "CONTRACT_VIEW" },
+  { role: "ORDFORANDE", capability: "CONTRACT_VIEW" },
+  { role: "VICE_SKATTMASTARE", capability: "CONTRACT_VIEW" },
+  { role: "SKATTFORMAN", capability: "CONTRACT_VIEW" },
+  { role: "RESULTATANSVARIG", capability: "CONTRACT_VIEW" },
+
+  { role: "SKATTMASTARE", capability: "CONTRACT_MANAGE" },
+  { role: "ORDFORANDE", capability: "CONTRACT_MANAGE" },
 ];

@@ -307,7 +307,7 @@ database, and the things you run by hand.
 ```
 src/app/(app)/    Signed-in views. Each route loads its own data in a Server
                   Component and hands it to a *-client.tsx.
-src/app/api/      REST endpoints, 84 of them. Every handler starts with
+src/app/api/      REST endpoints, 96 of them. Every handler starts with
                   gate(). See below.
 src/components/   Shared components. components/ui/ holds the primitives
                   (DataTable, Field, Button …); components/columns/ the column
@@ -334,6 +334,9 @@ src/lib/budget/   The budget engine: formula expressions, grid, comparisons, loc
 src/lib/ledger/   The general ledger: BAS structure, reports, comparison.
 src/lib/fortnox/  Fortnox API, SIE parsing and sync.
 src/lib/expense/  The utlägg document: the Typst cover sheet and the merge.
+src/lib/contract/ Avtal: the archive's rules (tags, derived status, which files
+                  are evidence) and the uthyrningsavtal the app draws, template
+                  and villkor included.
 src/lib/income/   Intäkter: product groups and the report shapes.
 src/lib/stock/    Alkohollager: the entry replay and valuation.
 src/lib/mileage/  Milersättning: rates and the distance calculation.

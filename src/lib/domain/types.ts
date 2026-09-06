@@ -28,6 +28,17 @@ export type Capability = Schema.Capability;
 
 export type PaymentType = Schema.PaymentType;
 
+// ── Avtal ─────────────────────────────────────────────────────────
+
+// What kind of agreement a contract is, where it stands, what one of its files
+// is to it, and which side a party signs for. See the enums in
+// prisma/schema/contract.prisma, which carry what each value means.
+export type ContractKind = Schema.ContractKind;
+export type ContractStatus = Schema.ContractStatus;
+export type ContractFileRole = Schema.ContractFileRole;
+export type ContractPartyRole = Schema.ContractPartyRole;
+export type ContractSignatureMethod = Schema.ContractSignatureMethod;
+
 // ── Alkohollager ──────────────────────────────────────────────────
 
 // How a product's stock is counted: whole units (cans) or sealed bottles plus
@@ -282,6 +293,22 @@ export interface Expense {
   verification?: Verification; // present once booked
   revisions: RevisionEntry[];
   canReturn?: boolean; // viewer may pull this back from APPROVED (bookkeeping)
+  /**
+   * The dispens that let this late utlägg past the filing deadline, if one was
+   * given. Absent on every utlägg that never needed one, which is nearly all of
+   * them.
+   *
+   * The claim is still late; this says the section decided to take it anyway.
+   * See the dispens columns on Expense in the schema, and `isLateReimbursement`.
+   */
+  deadlineWaiver?: DeadlineWaiver;
+}
+
+/** Who allowed one late utlägg in, when, and why. */
+export interface DeadlineWaiver {
+  by: string; // the granter's name
+  at: string; // ISO
+  reason: string;
 }
 
 export interface BankTransaction {

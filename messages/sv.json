@@ -107,7 +107,13 @@
       "FORTNOX_LOGIN": "Fortnox-inloggning",
       "FORTNOX_LOGIN_hint": "Bokföra i Fortnox under sin egen inloggning.",
       "EXPORT_UNDO": "Ångra export",
-      "EXPORT_UNDO_hint": "Markera ett exporterat utlägg som inte längre exporterat."
+      "EXPORT_UNDO_hint": "Markera ett exporterat utlägg som inte längre exporterat.",
+      "CONTRACT_VIEW": "Läsa avtal",
+      "CONTRACT_MANAGE": "Hantera avtal",
+      "CONTRACT_VIEW_hint": "Se avtalsarkivet och öppna dokumenten i det.",
+      "CONTRACT_MANAGE_hint": "Arkivera avtal, skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
+      "EXPENSE_DEADLINE_WAIVE": "Dispens från fristen",
+      "EXPENSE_DEADLINE_WAIVE_hint": "Bevilja ett enskilt sent eget utlägg dispens, så att det får redovisas ändå. Ges innan utlägget skickas för attest, med ett skäl som hamnar på utläggsräkningen."
     }
   },
   "dashboard": {
@@ -179,8 +185,8 @@
       "mileage": "Fyll i mätarställningen före och efter resan innan du kan skicka in.",
       "incomplete": "Komplettera beskrivning, datum, belopp och kostnadsfördelning innan du kan skicka in.",
       "futureDate": "Kvittodatumet ligger i framtiden. Rätta det till dagen köpet gjordes innan du kan skicka in.",
-      "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet. Det här kvittot är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel.",
-      "tooLateMileage": "Milersättning måste redovisas inom {days} dagar från resan. Den här resan är äldre än så och kan inte tas emot. Hör av dig till skattmästaren om du undrar över något eller om datumet blivit fel."
+      "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet, och det här kvittot är äldre än så. Utlägget ligger kvar som utkast. Vill du ansöka om dispens, hör av dig till skattmästaren, som avgör om det tas emot ändå. Har datumet blivit fel går det att rätta.",
+      "tooLateMileage": "Milersättning måste redovisas inom {days} dagar från resan, och den här resan är äldre än så. Resan ligger kvar som utkast. Vill du ansöka om dispens, hör av dig till skattmästaren, som avgör om den tas emot ändå. Har datumet blivit fel går det att rätta."
     },
     "event": {
       "CREATED": "Skapade utlägget",
@@ -196,7 +202,9 @@
       "BOOKED": "Bokförde utlägget",
       "EXPORTED": "Exporterade till Fortnox",
       "EXPORT_REVERTED": "Markerade som ej exporterad",
-      "RECALLED": "Drog tillbaka inlämningen"
+      "RECALLED": "Drog tillbaka inlämningen",
+      "DEADLINE_WAIVED": "Beviljade dispens från fristen",
+      "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen"
     },
     "detail": {
       "missingTitle": "Utlägget hittades inte",
@@ -249,12 +257,23 @@
           "label": "Varför är utlägget inte exporterat längre?",
           "placeholder": "T.ex. verifikationen makulerades i Fortnox…",
           "submit": "Markera som ej exporterad"
+        },
+        "waive_deadline": {
+          "label": "Varför beviljas dispens?",
+          "placeholder": "T.ex. kvittot kom bort och har eftersökts sedan i somras…",
+          "submit": "Bevilja dispens"
         }
       },
       "editedFields": "Ändrade: {fields}",
       "voucherComment": "Verifikat {label}",
       "journeyDate": "Resdag",
-      "recall": "Dra tillbaka"
+      "recall": "Dra tillbaka",
+      "waiveDeadline": "Bevilja dispens",
+      "revokeDeadlineWaiver": "Ta tillbaka dispensen",
+      "revokeWaiverConfirm": "Utlägget är äldre än fristen och kan inte skickas in igen utan en ny dispens.",
+      "deadlineWaiver": "Dispens från redovisningsfristen",
+      "deadlineWaiverGranted": "{name} beviljade dispens {date}.",
+      "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in."
     },
     "mutations": {
       "transition": {
@@ -264,7 +283,9 @@
         "request_changes": "Återsänt med begäran om ändring.",
         "return_approved": "Utlägget återöppnades för ändring.",
         "unexport": "Utlägget är markerat som ej exporterat.",
-        "recall": "Utlägget är tillbaka som utkast"
+        "recall": "Utlägget är tillbaka som utkast",
+        "waive_deadline": "Dispens beviljad. Utlägget går att skicka in.",
+        "revoke_deadline_waiver": "Dispensen är tillbakatagen."
       },
       "withdraw": {
         "title": "Dra tillbaka din attest?",
@@ -325,7 +346,9 @@
       "date": "Datum",
       "dateIncomplete": "Skriv hela datumet (ÅÅÅÅ-MM-DD)",
       "dateFuture": "Datumet ligger i framtiden. Ett köp kan inte ha gjorts senare än i dag",
-      "dateTooLate": "Äldre än {days} dagar. Ett eget utlägg måste redovisas inom {days} dagar från köpet. Var det sektionskortet du använde? Ändra det överst. Var det dina egna pengar, hör av dig till skattmästaren.",
+      "dateTooLate": "Äldre än {days} dagar. Ett eget utlägg måste redovisas inom {days} dagar från köpet.",
+      "dateTooLateCard": "Var det sektionskortet du använde? Ändra betalsätt överst, så gäller ingen frist.",
+      "dateTooLateWaiver": "Du kan ansöka om dispens: skriv klart utlägget, spara det som utkast och hör av dig till skattmästaren, som avgör om det tas emot ändå.",
       "amount": "Belopp",
       "returnMeans": "{amount} kommer tillbaka till sektionen.",
       "distribution": "Kostnadsfördelning",
@@ -397,7 +420,7 @@
     },
     "journeyDate": "Resdag",
     "dateFuture": "Resan ligger i framtiden. Rätta datumet till dagen du körde.",
-    "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan och kan inte tas emot senare. Hör av dig till skattmästaren för ytterligare hjälp",
+    "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan. Du kan ansöka om dispens: skriv klart resan, spara den som utkast och hör av dig till skattmästaren, som avgör om den tas emot ändå.",
     "route": {
       "label": "Resväg",
       "hint": "Varje ställe du stannade på, i tur och ordning. Ort eller namn räcker, t.ex. \"E-huset\" och \"Snabbgross\". Kom du tillbaka dit du startade skriver du det stället sist också, annars beskriver resvägen bara halva sträckan mätaren visar.",
@@ -567,7 +590,13 @@
       "noRecallAccess": "Bara den som skickade in utlägget kan dra tillbaka det.",
       "recallAfterApproved": "Utlägget är redan attesterat och kan inte dras tillbaka. Be en av skattmästarna att öppna det igen.",
       "nothingToRecall": "Utlägget ligger inte för attest ({status}), så det finns inget att dra tillbaka.",
-      "editWhilePendingAttest": "Utlägget ligger för attest och kan inte ändras. Dra tillbaka det först, så blir det ett utkast igen och du kan skicka in det på nytt."
+      "editWhilePendingAttest": "Utlägget ligger för attest och kan inte ändras. Dra tillbaka det först, så blir det ett utkast igen och du kan skicka in det på nytt.",
+      "noWaiveAccess": "Bara skattmästaren kan bevilja dispens från redovisningsfristen.",
+      "waiveOnlyBeforeAttest": "Dispens ges innan utlägget skickas för attest. Det här utlägget är {status}.",
+      "nothingToWaive": "Utlägget är redovisat inom {days} dagar och behöver ingen dispens.",
+      "commentRequiredWaive": "Skriv ett skäl till dispensen. Det hamnar på utläggsräkningen.",
+      "alreadyWaived": "Utlägget har redan dispens.",
+      "noWaiverToRevoke": "Utlägget har ingen dispens att ta tillbaka."
     },
     "receipt": {
       "notFound": "Kvittot hittades inte",
@@ -795,6 +824,27 @@
     "authority": {
       "wouldLockOut": "Ändringen skulle lämna ingen som kan öppna Inställningar. Ge behörigheten till en roll någon faktiskt har först.",
       "groupOutsideSection": "{group} ligger utanför sektionen. Bara grupper under dsek. ger något här."
+    },
+    "contract": {
+      "notFound": "Avtalet hittades inte",
+      "noViewAccess": "Du har inte behörighet att läsa avtalsarkivet",
+      "noManageAccess": "Du har inte behörighet att ändra i avtalsarkivet",
+      "fileNotFound": "Filen hittades inte",
+      "fileMissing": "Avtalets fil saknas i arkivet",
+      "fileImmutable": "Ett signerat dokument kan inte tas bort. Det är beviset på vad parterna kom överens om.",
+      "fileRoleNotUploadable": "Den filtypen kan inte laddas upp här",
+      "fileUnsupportedType": "Filtypen ’{type}’ stöds inte",
+      "fileSizeRange": "Filen måste vara mellan 1 byte och {max} byte",
+      "storageUnavailable": "Avtalsarkivet svarar inte just nu",
+      "hasSignedFiles": "Avtalet har {count, plural, one {1 signerat dokument} other {# signerade dokument}} och kan inte tas bort",
+      "partyNotFound": "Parten hittades inte",
+      "rentalNotFound": "Avtalet är inte ett uthyrningsavtal",
+      "rentalLocked": "Uthyrningen kan inte ändras när avtalet har gått ut för signering",
+      "returnBeforePickup": "Återlämningsdatumet måste vara samma dag som eller efter uthämtningen",
+      "renderFailed": "Avtalsdokumentet kunde inte ritas",
+      "storeFailed": "Avtalsdokumentet kunde inte sparas i arkivet",
+      "itemNotFound": "Uthyrningsobjektet hittades inte",
+      "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’"
     }
   },
   "nav": {
@@ -836,7 +886,9 @@
     "stockStats": "Statistik",
     "groupStock": "Lager",
     "stockEvents": "Tillfällen",
-    "roles": "Roller & behörigheter"
+    "roles": "Roller & behörigheter",
+    "contracts": "Avtal",
+    "rentalItems": "Uthyrningsobjekt"
   },
   "allocation": {
     "pick": "Välj kostnadsställe…",
@@ -1445,7 +1497,8 @@
         "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
         "stockSettings": "Konton och inställningar för lagerbokföringen.",
         "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
-        "users": "Vem som finns och vilka roller de har."
+        "users": "Vem som finns och vilka roller de har.",
+        "rentalItems": "Prylarna sektionen hyr ut, och vad de kostar att ersätta."
       }
     },
     "users": {
@@ -2463,6 +2516,188 @@
       "stateSoon": "Om {days} d",
       "stateLater": "Om {days} d",
       "stateChecked": "Kollad {date}"
+    }
+  },
+  "contracts": {
+    "title": "Avtal",
+    "description": "Sektionens avtal, och uthyrningsavtalen appen ritar själv.",
+    "emptyTitle": "Inga avtal ännu",
+    "emptyDescription": "Ladda upp ett avtal som redan finns, eller skriv ett nytt uthyrningsavtal.",
+    "searchPlaceholder": "Sök titel, motpart eller tagg",
+    "noMatch": "Inga avtal matchar sökningen",
+    "new": "Nytt avtal",
+    "newRental": "Nytt uthyrningsavtal",
+    "upload": "Ladda upp",
+    "scopeLabel": "Visa",
+    "tab": {
+      "": "Alla",
+      "draft": "Utkast",
+      "signed": "Signerade",
+      "ended": "Avslutade"
+    },
+    "kindFilter": {
+      "all": "Alla avtalstyper"
+    },
+    "kind": {
+      "RENTAL": "Uthyrning",
+      "SPONSORSHIP": "Sponsring",
+      "SUPPLIER": "Leverantör",
+      "OTHER": "Övrigt"
+    },
+    "status": {
+      "DRAFT": "Utkast",
+      "OUT_FOR_SIGNATURE": "Ute för signering",
+      "SIGNED": "Signerat",
+      "EXPIRED": "Utgånget",
+      "TERMINATED": "Uppsagt",
+      "CANCELLED": "Makulerat"
+    },
+    "col": {
+      "title": "Avtal",
+      "counterparty": "Motpart",
+      "kind": "Typ",
+      "validity": "Giltigt",
+      "status": "Status",
+      "tags": "Taggar",
+      "files": "Filer"
+    },
+    "validity": {
+      "range": "{from} – {to}",
+      "fromOnly": "Från {from}",
+      "toOnly": "Till och med {to}",
+      "none": "Ingen period angiven"
+    },
+    "fileCount": "{count, plural, =0 {Ingen fil} one {1 fil} other {# filer}}",
+    "form": {
+      "newTitle": "Nytt avtal",
+      "newDescription": "Lägg avtalet i arkivet. Filen kan laddas upp nu eller senare.",
+      "title": "Titel",
+      "titleHint": "Så som någon skulle söka efter det: ”Sponsoravtal med Axis 2026”.",
+      "kind": "Avtalstyp",
+      "counterparty": "Motpart",
+      "counterpartyHint": "Organisationen eller personen avtalet är med.",
+      "counterpartyOrgNo": "Organisationsnummer",
+      "validFrom": "Giltigt från",
+      "validTo": "Giltigt till och med",
+      "status": "Status",
+      "tags": "Taggar",
+      "tagsHint": "Kommaseparerade. Används för att hitta avtalet igen.",
+      "notes": "Anteckningar",
+      "notesHint": "För den som hittar avtalet härnäst. Står inte i något dokument.",
+      "file": "Avtalsfil",
+      "fileHint": "PDF eller en bild av ett påskrivet papper. Max {max} MB.",
+      "save": "Spara avtal",
+      "saved": "Avtalet är sparat",
+      "cancel": "Avbryt"
+    },
+    "detail": {
+      "back": "Avtal",
+      "documents": "Dokument",
+      "noDocuments": "Inget dokument uppladdat ännu.",
+      "addDocument": "Lägg till dokument",
+      "parties": "Parter",
+      "noParties": "Inga parter registrerade.",
+      "addParty": "Lägg till part",
+      "details": "Uppgifter",
+      "notes": "Anteckningar",
+      "filedBy": "Arkiverat av {name}",
+      "termsVersion": "Villkorsversion {version}",
+      "download": "Öppna",
+      "deleteFile": "Ta bort fil",
+      "deleteFileConfirm": "Ta bort {filename} ur arkivet?",
+      "deleteContract": "Ta bort avtal",
+      "deleteContractConfirm": "Ta bort avtalet och alla dess filer? Går inte att ångra.",
+      "edit": "Redigera",
+      "save": "Spara",
+      "saved": "Sparat",
+      "role": {
+        "ORIGINAL": "Original",
+        "GENERATED": "Genererat",
+        "SIGNED": "Signerat",
+        "EVIDENCE": "Signeringsbevis",
+        "ATTACHMENT": "Bilaga"
+      },
+      "partyRole": {
+        "SECTION": "Sektionen",
+        "COUNTERPARTY": "Motpart"
+      },
+      "signedOn": "Signerat {date}",
+      "notSigned": "Inte signerat",
+      "method": {
+        "PAPER": "På papper",
+        "ELECTRONIC": "Elektroniskt"
+      }
+    },
+    "party": {
+      "name": "Namn",
+      "email": "E-post",
+      "phone": "Telefon",
+      "orgName": "Organisation",
+      "orgNo": "Organisationsnummer",
+      "title": "Roll vid signering",
+      "titleHint": "Så som personen skrev under: ”Skattmästare”, ”Ordförande F-sektionen”.",
+      "role": "Part",
+      "signedAt": "Signerat den",
+      "add": "Lägg till",
+      "remove": "Ta bort"
+    },
+    "rental": {
+      "newTitle": "Nytt uthyrningsavtal",
+      "newDescription": "Sektionens prylar, en period, ett pris och en deposition.",
+      "counterparty": "Hyrestagare",
+      "counterpartyHint": "Personen eller föreningen som hyr.",
+      "pickupAt": "Uthämtas",
+      "returnAt": "Återlämnas",
+      "purpose": "Ändamål",
+      "purposeHint": "Vad prylarna ska användas till.",
+      "place": "Plats",
+      "price": "Hyra",
+      "deposit": "Deposition",
+      "lines": "Utrustning",
+      "addLine": "Lägg till rad",
+      "removeLine": "Ta bort rad",
+      "pickItem": "Välj ur katalogen",
+      "description": "Beskrivning",
+      "quantity": "Antal",
+      "unitPrice": "Pris per st",
+      "replacementValue": "Återanskaffningsvärde",
+      "totalReplacement": "Totalt återanskaffningsvärde",
+      "sectionSignatory": "Skriver under för sektionen",
+      "sectionSignatoryTitle": "Din roll",
+      "counterpartySignatory": "Skriver under för hyrestagaren",
+      "create": "Skapa avtal",
+      "created": "Uthyrningsavtalet är skapat",
+      "regenerate": "Rita om dokumentet",
+      "regenerated": "Dokumentet är omritat",
+      "returnedAt": "Återlämnades",
+      "depositReturnedAt": "Deposition återbetald",
+      "settle": "Spara",
+      "settled": "Sparat",
+      "emptyCatalogue": "Katalogen är tom. Lägg till uthyrningsobjekt under Inställningar först.",
+      "noLines": "Lägg till minst en rad utrustning.",
+      "returnBeforePickup": "Återlämningsdatumet måste vara samma dag som eller efter uthämtningen."
+    },
+    "items": {
+      "title": "Uthyrningsobjekt",
+      "description": "Prylarna sektionen hyr ut, med vad de kostar att ersätta.",
+      "name": "Namn",
+      "itemDescription": "Beskrivning",
+      "dailyPrice": "Pris per dag",
+      "dailyPriceHint": "Lämna tomt för objekt som prissätts från gång till gång.",
+      "replacementValue": "Återanskaffningsvärde",
+      "replacementValueHint": "Beloppet ansvarsvillkoret pekar på om prylen inte kommer tillbaka.",
+      "active": "Aktivt",
+      "add": "Lägg till objekt",
+      "added": "Objektet är tillagt",
+      "save": "Spara",
+      "saved": "Sparat",
+      "retire": "Avaktivera",
+      "restore": "Aktivera igen",
+      "remove": "Ta bort",
+      "removeConfirm": "Ta bort {name} ur katalogen?",
+      "empty": "Inga uthyrningsobjekt ännu",
+      "emptyDescription": "Lägg till det sektionen hyr ut, så kan ett uthyrningsavtal välja ur listan.",
+      "inUse": "Används i {count, plural, one {1 avtal} other {# avtal}}"
     }
   }
 }

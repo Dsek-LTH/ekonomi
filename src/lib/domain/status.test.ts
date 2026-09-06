@@ -46,6 +46,7 @@ const ready = {
   matchedTransactionId: "txn_1",
   submitterHasPayout: false,
   hasReceipt: true,
+  deadlineWaived: false,
   allocations: [{ amount: 250, costCenterCode: "SEX01" }],
 };
 
@@ -191,6 +192,25 @@ describe("submitBlocker", () => {
     };
     expect(submitBlocker({ ...drove, purchaseDate: "2026-06-04" })).toBeNull(); // 60 days
     expect(submitBlocker({ ...drove, purchaseDate: "2026-06-03" })).toBe("tooLate"); // 61
+  });
+
+  it("lets a dispens through the deadline, and nothing else", () => {
+    // The dispens is the skattmästare deciding to take one late claim anyway.
+    // It lifts exactly the deadline: an utlägg that is also missing a payout
+    // account is still stopped, for the reason it would have been stopped at 59
+    // days. See the dispens columns on Expense.
+    const late = {
+      ...ready,
+      paymentType: "REIMBURSEMENT" as const,
+      matchedTransactionId: undefined,
+      submitterHasPayout: true,
+      purchaseDate: "2026-01-01",
+    };
+    expect(submitBlocker(late)).toBe("tooLate");
+    expect(submitBlocker({ ...late, deadlineWaived: true })).toBeNull();
+    expect(
+      submitBlocker({ ...late, deadlineWaived: true, submitterHasPayout: false }),
+    ).toBe("payout");
   });
 
   it("holds no deadline over a sektionskort purchase", () => {

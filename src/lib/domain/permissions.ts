@@ -92,6 +92,48 @@ export const canChangeLockedBudget = (caps: readonly Capability[]) =>
  *  whether the view exists. */
 export const hasAttestRole = (caps: readonly Capability[]) => has(caps, "ATTEST_VIEW");
 
+// ── Avtal ─────────────────────────────────────────────────────────
+//
+// Two capabilities rather than one, and the split is not the usual read/write
+// pair. An avtal names people who are not members and terms the section is
+// bound by, so who may *read* the archive is a narrower question than who may
+// read a budget, and it is worth being able to answer it separately from who
+// may put things in.
+
+/** May read the avtal archive and open the documents in it. */
+export const canViewContracts = (caps: readonly Capability[]) => has(caps, "CONTRACT_VIEW");
+
+/** May archive a contract, draw an uthyrningsavtal, and edit the gear
+ *  catalogue.
+ *
+ *  Not a claim that the holder may bind the section. That is firmateckning, and
+ *  it is decided outside this app: the contract records who signed and in what
+ *  capacity (ContractParty.title) rather than this app ruling on it. */
+export const canManageContracts = (caps: readonly Capability[]) =>
+  has(caps, "CONTRACT_MANAGE");
+
+// ── Dispens från redovisningsfristen ──────────────────────────────
+
+/**
+ * May let one late eget utlägg past the 60-day filing deadline.
+ *
+ * A capability rather than a hard-coded role, even though the section means the
+ * skattmästare by it. The question is about the person alone, which is what
+ * makes a row the right shape for it, and the seeded row grants it to
+ * SKATTMASTARE and nobody else. Moving it is possible in Inställningar, and the
+ * only role that can reach Inställningar is that same one, so "the
+ * skattmästare's alone" holds either way.
+ *
+ * Sits beside canLockBudget and canChangeLockedBudget on purpose: all three are
+ * the treasurer departing from, or sealing, a rule the section set for itself.
+ *
+ * What it does NOT grant is the attest. A dispens says a late claim may be
+ * filed at all; whether the section pays it is still signed for per allocation
+ * by whoever answers for the cost centre. See canAttestAllocation.
+ */
+export const canWaiveFilingDeadline = (caps: readonly Capability[]) =>
+  has(caps, "EXPENSE_DEADLINE_WAIVE");
+
 // ── Attest authority ──────────────────────────────────────────────
 //
 // The part that is not a capability and cannot become one.
@@ -190,8 +232,11 @@ const CAPABILITY_ORDER = {
   BUDGET_COMMENT: 7,
   BUDGET_LOCK: 8,
   BUDGET_CHANGE_LOCKED: 9,
-  FORTNOX_LOGIN: 10,
-  EXPORT_UNDO: 11,
+  CONTRACT_VIEW: 10,
+  CONTRACT_MANAGE: 11,
+  FORTNOX_LOGIN: 12,
+  EXPORT_UNDO: 13,
+  EXPENSE_DEADLINE_WAIVE: 14,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

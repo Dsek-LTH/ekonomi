@@ -20,8 +20,13 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { expenseDocumentKey, putObject } from "@/lib/server/storage";
 import { journeyKm, namedStops } from "@/lib/mileage/claim";
+import { daysAgo } from "@/lib/domain/date";
 import { CoverRenderError, renderCover } from "./cover/typst";
-import type { ExpenseCoverData, ExpenseCoverJourney } from "./cover/types";
+import type {
+  ExpenseCoverData,
+  ExpenseCoverJourney,
+  ExpenseCoverWaiver,
+} from "./cover/types";
 
 /**
  * Why an utlägg has no cover page. Each maps to a message key under
@@ -99,6 +104,11 @@ type ExpenseForCover = {
    *  never valued, a draft saved before a rate covered its date. */
   mileageOrePerKm: number | null;
   submitter: { name: string; studentId: string | null };
+  /** The dispens from the filing deadline, where one was given. All three
+   *  columns or none; the route writes and clears them together. */
+  deadlineWaivedAt: Date | null;
+  deadlineWaiverReason: string | null;
+  deadlineWaivedBy: { name: string } | null;
   allocations: {
     amount: number;
     comment: string | null;
@@ -136,6 +146,34 @@ function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
       expense.mileageOrePerKm == null
         ? DASH
         : `${nf(2).format(expense.mileageOrePerKm / 100)} kr/km`,
+  };
+}
+
+/**
+ * The dispens from the filing deadline, or null where there was none.
+ *
+ * How late the claim was is worked out here rather than left to the reader.
+ * The page already carries the purchase date and now carries the day the
+ * dispens was given, and a reader asked to subtract one from the other across
+ * two blocks is a reader who will not. It is counted to the day of the dispens,
+ * not to today: what the skattmästare decided about is how late it was when
+ * they decided, and a document filed beside a voucher must not say something
+ * different next year.
+ *
+ * "Köpet" or "resan", the same distinction the date label above makes. A
+ * milersättning has no purchase.
+ */
+function buildWaiver(expense: ExpenseForCover): ExpenseCoverWaiver | null {
+  const at = isoDate(expense.deadlineWaivedAt);
+  if (!at || !expense.deadlineWaiverReason) return null;
+  const from = isoDate(expense.purchaseDate);
+  const days = from === null ? null : daysAgo(from, at);
+  const what = expense.paymentType === "MILEAGE" ? "resan" : "köpet";
+  return {
+    by: expense.deadlineWaivedBy?.name ?? DASH,
+    at,
+    reason: expense.deadlineWaiverReason,
+    lateness: days === null ? DASH : `${days} dagar efter ${what}`,
   };
 }
 
@@ -182,6 +220,7 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
       approvedAt: isoDate(a.approvedAt),
     })),
     journey: buildJourney(expense),
+    waiver: buildWaiver(expense),
   };
 }
 
@@ -210,6 +249,9 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
       odometerEnd: true,
       journeyStops: true,
       mileageOrePerKm: true,
+      deadlineWaivedAt: true,
+      deadlineWaiverReason: true,
+      deadlineWaivedBy: { select: { name: true } },
       submitter: { select: { name: true, studentId: true } },
       allocations: {
         // By cost-centre code, so two renders of the same utlägg put the rows

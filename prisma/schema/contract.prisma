@@ -1,0 +1,361 @@
+// The section's avtal: the ones that arrive as a PDF somebody signed years ago,
+// and the uthyrningsavtal this app draws itself.
+//
+// Two halves that deliberately share one table. An archived sponsoravtal and a
+// generated uthyrningsavtal are the same kind of object to everyone who has to
+// find one later: a document, with a counterparty, valid between two dates,
+// signed or not. What differs is only where the bytes came from, and that is
+// what ContractFile.role records. So the list, the search and the permissions
+// are written once.
+//
+// Money is öre, like everywhere else. See the note at the top of schema.prisma.
+
+/// What kind of agreement this is. Coarse on purpose: it drives a filter tab
+/// and a template choice, and everything finer is a tag.
+///
+/// RENTAL is the one the app can draw. The rest are things that come in from
+/// outside as a finished PDF, which is why nothing else has a template.
+enum ContractKind {
+  RENTAL
+  SPONSORSHIP
+  SUPPLIER
+  OTHER
+}
+
+/// Where a contract stands.
+///
+/// Not a workflow. An archived contract is uploaded straight into SIGNED and
+/// never passes through the earlier values, and that is the ordinary case
+/// rather than a shortcut: most of what goes in here was signed before this app
+/// existed. The states earn their keep on the rental side, where a contract
+/// really is drafted, sent and returned.
+///
+/// EXPIRED is not stored by anything. It is what `validTo` in the past means,
+/// and deriving it keeps a row from being quietly wrong the morning after
+/// nobody ran a job. See lib/contract/status.ts.
+enum ContractStatus {
+  DRAFT
+  OUT_FOR_SIGNATURE
+  SIGNED
+  TERMINATED
+  CANCELLED
+}
+
+/// What one file is to the contract it hangs off.
+///
+/// The distinction that matters is GENERATED against SIGNED. A generated PDF is
+/// a rendering: draw it again tomorrow from the same row and you get the same
+/// bytes, so replacing one costs nothing. A signed PDF is evidence, it is what
+/// the counterparty actually put their name to, and nothing in this app may
+/// ever overwrite or re-render one. See lib/contract/files.ts, which is the
+/// only place that rule is enforced.
+enum ContractFileRole {
+  /// Uploaded from outside, the archive's ordinary case.
+  ORIGINAL
+  /// Drawn by us from the row (the Typst template). Replaceable.
+  GENERATED
+  /// Signed by the parties. Immutable, and kept for as long as the retention
+  /// rule says.
+  SIGNED
+  /// The signing provider's audit log for a SIGNED file. Phase 3 writes these.
+  EVIDENCE
+  /// Anything else somebody attached: a photo of the gear, an appendix.
+  ATTACHMENT
+}
+
+/// Which side of the agreement a party is on.
+enum ContractPartyRole {
+  /// Signing for D-sektionen. Whoever holds CONTRACT_MANAGE and is authorised
+  /// to bind the section.
+  SECTION
+  /// The other side: a member, a private person, another student organisation.
+  COUNTERPARTY
+}
+
+/// How a signature was produced.
+///
+/// PAPER covers everything that happened away from this app, including a
+/// scanned contract from 2019 whose signing nobody here witnessed. ELECTRONIC
+/// is what the signing provider produces, and the evidence for it is the
+/// EVIDENCE file, not this column.
+enum ContractSignatureMethod {
+  PAPER
+  ELECTRONIC
+}
+
+// ── The contract ──────────────────────────────────────────────────
+
+model Contract {
+  id     String         @id @default(cuid())
+  kind   ContractKind
+  status ContractStatus @default(DRAFT)
+
+  /// What this agreement is, in the words somebody would search for:
+  /// "Uthyrning av ljudanläggning till F-sektionen".
+  title String
+
+  /// Who the agreement is with, as one line for the list and the search.
+  ///
+  /// Not the same thing as the parties below, and the difference is the whole
+  /// reason both exist. This is the organisation or person the section has an
+  /// agreement *with*. A party is a human being who put their name to it. For
+  /// an archived contract there is often no party row at all, because nobody is
+  /// going to retype two signatures off a 2019 scan, and the list still has to
+  /// say who it was with.
+  counterparty String
+
+  /// Organisationsnummer, when the counterparty is an organisation and somebody
+  /// bothered to record it. Free text: another section's number, a company's,
+  /// or nothing.
+  counterpartyOrgNo String?
+
+  /// The period the agreement covers. Both optional, because an archived
+  /// contract often states neither, and a rental states both.
+  ///
+  /// `validTo` is what an expiry filter reads, and the one column here worth an
+  /// index of its own.
+  validFrom DateTime? @db.Date
+  validTo   DateTime? @db.Date
+
+  /// Free tags, for the searching the fixed `kind` cannot do: "ljud", "tält",
+  /// "nollning", "iDét". Lower-cased on the way in so a search does not have to
+  /// care, see lib/contract/tags.ts.
+  ///
+  /// An array rather than a table, because nothing hangs off a tag: it is a
+  /// word, not a thing with a lifecycle. A GIN index makes containment
+  /// searchable, which a btree cannot do at all.
+  tags String[] @default([])
+
+  /// Anything a person wants to say about this contract to whoever finds it
+  /// next. Not rendered into any document.
+  notes String?
+
+  /// Which wording of the villkor a generated rental contract was drawn under.
+  ///
+  /// The signed PDF is the real record and always will be, so this is not
+  /// evidence. It is so somebody reading the list can tell, without opening
+  /// twenty files, which contracts predate a change to the terms. Null for
+  /// everything not drawn by us.
+  termsVersion String?
+
+  files   ContractFile[]
+  parties ContractParty[]
+  rental  RentalDetails?
+
+  /// Who put this in the archive. Not who signed it: see ContractParty.
+  createdBy   User   @relation("ContractCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Filters first, then the expiry sweep, then the tag search. Nothing here
+  // indexes `title` or `counterparty`: those are searched with ILIKE, and at a
+  // section's volume (hundreds of rows, not millions) a scan is faster than
+  // maintaining a trigram index, which would also mean enabling pg_trgm on a
+  // database nothing else needs an extension for. Revisit if the archive ever
+  // gets big enough for that to be false.
+  @@index([status])
+  @@index([kind])
+  @@index([validTo])
+  @@index([tags], type: Gin)
+}
+
+/// One file belonging to a contract. Bytes in MinIO, metadata here, the same
+/// proxy model receipts use: see lib/server/storage.ts.
+model ContractFile {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId String
+
+  role ContractFileRole
+
+  /// The object key in the bucket. Unique, because two rows pointing at the
+  /// same bytes would make deleting either one a way to break the other.
+  objectKey String @unique
+  filename  String
+  mimeType  String
+  byteSize  Int
+
+  /// SHA-256 of the stored bytes, hex.
+  ///
+  /// So that "this is the file that was signed" is a claim anybody can check,
+  /// years later, against a copy somebody kept. Cheap to compute while the
+  /// bytes are already in memory on the way to the bucket, and impossible to
+  /// reconstruct afterwards if it is skipped now.
+  sha256 String
+
+  uploadedBy   User?   @relation("ContractFileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([contractId])
+  @@index([contractId, role])
+}
+
+/// A human being who signed, or is expected to sign.
+///
+/// What is deliberately NOT here is a personnummer column. BankID returns one
+/// with every signature, and it stays in the sealed PDF and the provider's
+/// evidence log where it is needed as proof, rather than becoming a field this
+/// app can be asked to hand over or leak. Nothing in the archive needs to
+/// query by it: finding a person's contracts is what `name` and `email` are
+/// for. See dataskyddslagen 3 kap 10 §.
+model ContractParty {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId String
+
+  role ContractPartyRole
+
+  name  String
+  email String?
+  phone String?
+
+  /// The organisation this person signs for, when they are not signing for
+  /// themselves. Another section, a company. Free text, because the
+  /// counterparty of an uthyrning is usually not in any table we keep.
+  orgName String?
+  orgNo   String?
+
+  /// The member row, when the party happens to be one of ours. Always set for
+  /// a SECTION party, since that is somebody who signed in here to draw the
+  /// contract. Usually null for a counterparty.
+  ///
+  /// SetNull rather than Cascade: a member leaving the section does not unsign
+  /// a contract, and the name recorded above is what the document says anyway.
+  user   User?   @relation("ContractPartyUser", fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+
+  /// What this person was, in their own words, when they signed: "Skattmästare",
+  /// "Ordförande F-sektionen". Recorded rather than derived, because authority
+  /// is a fact about the moment of signing and roles are handed over every year.
+  title String?
+
+  signedAt        DateTime?
+  signatureMethod ContractSignatureMethod?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([userId])
+}
+
+// ── Uthyrning ─────────────────────────────────────────────────────
+
+/// The rental half of a contract, when `kind` is RENTAL.
+///
+/// A separate table rather than nullable columns on Contract, because none of
+/// this means anything for a sponsoravtal and a table full of columns that are
+/// null for most rows is a table nobody can read.
+model RentalDetails {
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId String   @id
+
+  /// When the gear is handed over and when it is due back. The dates the
+  /// contract is actually about, and distinct from Contract.validFrom/validTo,
+  /// which are copied from these so that one expiry query serves every kind.
+  pickupAt DateTime
+  returnAt DateTime
+
+  /// What it is being rented for, in the renter's words. Goes on the document.
+  purpose String?
+
+  /// Where it is picked up and returned, when that is worth stating.
+  place String?
+
+  /// The rent, in öre. Zero is a real answer and a common one: lending gear to
+  /// another section for nothing is still worth a contract, because the point
+  /// of the contract is who pays when it comes back broken.
+  priceOre Int @default(0)
+
+  /// The deposit, in öre. Zero when none is taken.
+  depositOre Int @default(0)
+
+  /// When the deposit went back. Null while it is still held, and null forever
+  /// on a contract that never took one, which `depositOre` distinguishes.
+  depositReturnedAt DateTime?
+
+  /// When the gear actually came back, as against `returnAt`, which is when it
+  /// was due. Both, because the difference is the thing anybody asks about
+  /// afterwards.
+  returnedAt DateTime?
+
+  lines RentalLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One line of gear on a rental contract.
+///
+/// The description and the values are copied from the catalogue rather than
+/// read through it. A contract says what was agreed on the day it was agreed,
+/// and re-pricing last spring's rental because somebody edited a catalogue row
+/// this morning would make the archive lie. Same reason a verification stores
+/// its own amounts.
+model RentalLine {
+  id         String        @id @default(cuid())
+  rental     RentalDetails @relation(fields: [contractId], references: [contractId], onDelete: Cascade)
+  contractId String
+
+  /// The catalogue row this came from, kept only so a later reader can follow
+  /// it back. SetNull, because retiring a catalogue item must not touch a
+  /// contract that already went out.
+  item   RentalItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  itemId String?
+
+  /// As it appears on the document.
+  description String
+
+  quantity Int @default(1)
+
+  /// What one of these was let for, per the whole rental period, in öre.
+  unitPriceOre Int @default(0)
+
+  /// What one of these costs to replace, in öre. The number the liability
+  /// clause points at, and the reason the catalogue exists at all.
+  replacementValueOre Int @default(0)
+
+  sortOrder Int @default(0)
+
+  @@index([contractId])
+  @@index([itemId])
+}
+
+/// The gear the section lets out, as a catalogue.
+///
+/// Maintained in Inställningar → Uthyrningsobjekt. Its job is to stop the same
+/// speaker being written down at three different replacement values by three
+/// different people, which is exactly the disagreement that matters on the one
+/// day the value is read out loud.
+model RentalItem {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  /// What it is let for per day, in öre. Null when it has no standing price and
+  /// somebody prices each rental themselves.
+  dailyPriceOre Int?
+
+  /// What it costs to replace, in öre. Required: an item nobody has valued is
+  /// an item the liability clause cannot name a figure for.
+  replacementValueOre Int
+
+  /// Retired rather than deleted, the same as a cost centre. A catalogue row
+  /// referenced by a contract from 2024 has to stay reachable, and a row
+  /// referenced by nothing is still worth keeping out of the picker without
+  /// losing what it was.
+  active Boolean @default(true)
+
+  sortOrder Int @default(0)
+
+  lines RentalLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}

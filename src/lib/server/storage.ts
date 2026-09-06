@@ -83,6 +83,26 @@ export function expenseDocumentKey(expenseId: string, filename: string): string 
   return `expenses/${expenseId}/${safeName(filename)}`;
 }
 
+// A file belonging to an avtal: an uploaded original, a rendered
+// uthyrningsavtal, a signed PDF, the signing provider's evidence log.
+//
+// One prefix for all four rather than one each, because what a file *is* to its
+// contract is ContractFile.role and belongs in the row, not in the key. A key
+// that encoded it would have to be rewritten the day a GENERATED file becomes
+// the SIGNED one, and rewriting a key means copying the bytes.
+//
+// The fileId (a cuid) carries uniqueness, so re-uploading a file of the same
+// name never collides with the one already there. That matters more here than
+// it does for receipts: a contract holds many files at once, and two of them
+// really are often called scan.pdf.
+export function contractFileKey(
+  contractId: string,
+  fileId: string,
+  filename: string,
+): string {
+  return `contracts/${contractId}/${fileId}-${safeName(filename)}`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

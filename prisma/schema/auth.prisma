@@ -46,6 +46,20 @@ enum Capability {
   /// See the attest queue. Whether any single utlägg in it can actually be
   /// attested is still canAttestAllocation's answer, per row.
   ATTEST_VIEW
+  /// Read the avtal archive and open the documents in it.
+  CONTRACT_VIEW
+  /// Put a contract in the archive, draw an uthyrningsavtal, edit the gear
+  /// catalogue. Not the same as being allowed to bind the section: who may
+  /// sign for it is a question about firmateckning, and the contract records
+  /// the answer rather than this app deciding it. See ContractParty.title.
+  CONTRACT_MANAGE
+  /// Grant one late eget utlägg a dispens, so it may be filed after the
+  /// 60-day deadline has passed. Per claim, with a reason, before it goes for
+  /// attest. Held by the skattmästare alone by default, the way BUDGET_LOCK
+  /// and BUDGET_CHANGE_LOCKED are: departing from a rule the section set is
+  /// the same kind of act as sealing the figures it set. See
+  /// canWaiveFilingDeadline in lib/domain/permissions.ts.
+  EXPENSE_DEADLINE_WAIVE
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -120,6 +134,7 @@ model User {
   allocationApprovals  ExpenseCostAllocation[] @relation("AllocationApprover")
   uploadedReceipts     Receipt[]               @relation("ReceiptUploader")
   events               ExpenseEvent[]          @relation("EventActor")
+  deadlineWaivers      Expense[]               @relation("ExpenseDeadlineWaiver")
   createdVerifications Verification[]          @relation("VerificationCreator")
   heldCards            Card[]                  @relation("CardHolder")
   budgets              Budget[]                @relation("BudgetAuthor")
@@ -135,6 +150,9 @@ model User {
   stockChanges         StockChange[]           @relation("StockChangeActor")
   stockProductChanges  StockProductChange[]    @relation("StockProductChangeActor")
   mileageRates         MileageRate[]           @relation("MileageRateAuthor")
+  contracts            Contract[]              @relation("ContractCreator")
+  contractFiles        ContractFile[]          @relation("ContractFileUploader")
+  contractParties      ContractParty[]         @relation("ContractPartyUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

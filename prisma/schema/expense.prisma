@@ -52,6 +52,12 @@ enum ExpenseEventType {
   BOOKED
   EXPORTED
   EXPORT_REVERTED
+  /// The skattmästare allowed one late eget utlägg past the filing deadline,
+  /// with a reason. See the dispens columns on Expense.
+  DEADLINE_WAIVED
+  /// That dispens taken back, either by hand or because the purchase date or
+  /// payment type it was granted for changed.
+  DEADLINE_WAIVER_REVOKED
 }
 
 model Expense {
@@ -162,6 +168,35 @@ model Expense {
   /// re-value when it does, for the same reason a stock entry carries its own
   /// price. See lib/mileage/rate.ts.
   mileageOrePerKm Int?
+
+  // ── Dispens från redovisningsfristen ─────────────────────────────
+  //
+  // An eget utlägg handed in more than REIMBURSEMENT_DEADLINE_DAYS after the
+  // purchase is not reimbursed (lib/domain/status.ts). This is the section
+  // deciding, for one claim, to pay it anyway.
+  //
+  // Recorded rather than configured. The alternative was moving the deadline
+  // itself, which changes the rule for everybody, retroactively, and leaves
+  // nobody able to say afterwards which decision covered which claim. These
+  // three columns say which claim, who allowed it and why, and the answer keeps
+  // whatever the deadline is later set to.
+  //
+  // Granted before the utlägg goes for attest and only then: the deadline stops
+  // a late claim from entering the queue at all, so a dispens given afterwards
+  // would be permitting something that had already happened. The transition
+  // route holds it to SUBMITTABLE_STATUSES.
+  //
+  // Cleared by PATCH when the purchase date or the payment type changes, since
+  // those two are what the deadline is read from: a dispens given for one claim
+  // must not carry over to a different one. Not cleared by a changed amount.
+  // The dispens says a late claim may be filed; what it is worth is the
+  // attest's question, and every krona still has to be signed for.
+  //
+  // A reason is required. The three are written and cleared together.
+  deadlineWaivedBy     User?     @relation("ExpenseDeadlineWaiver", fields: [deadlineWaivedById], references: [id], onDelete: SetNull)
+  deadlineWaivedById   String?
+  deadlineWaivedAt     DateTime?
+  deadlineWaiverReason String?
 
   allocations  ExpenseCostAllocation[]
   receipts     Receipt[]

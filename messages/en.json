@@ -107,7 +107,13 @@
       "FORTNOX_LOGIN": "Fortnox login",
       "FORTNOX_LOGIN_hint": "Book in Fortnox under their own login.",
       "EXPORT_UNDO": "Undo export",
-      "EXPORT_UNDO_hint": "Mark an exported expense as no longer exported."
+      "EXPORT_UNDO_hint": "Mark an exported expense as no longer exported.",
+      "CONTRACT_VIEW": "Read contracts",
+      "CONTRACT_MANAGE": "Manage contracts",
+      "CONTRACT_VIEW_hint": "See the contract archive and open the documents in it.",
+      "EXPENSE_DEADLINE_WAIVE": "Deadline waiver",
+      "EXPENSE_DEADLINE_WAIVE_hint": "Grant one late out-of-pocket expense a waiver, so it may be filed after all. Given before the expense goes for approval, with a reason that goes on the expense report.",
+      "CONTRACT_MANAGE_hint": "Archive contracts, draw rental contracts and keep the rental item catalogue."
     }
   },
   "dashboard": {
@@ -179,8 +185,8 @@
       "mileage": "Enter the odometer before and after the journey before you can send it.",
       "incomplete": "Fill in the description, date, amount and cost distribution before you can submit.",
       "futureDate": "The purchase date is in the future. Correct it to the day of the purchase before you can submit.",
-      "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase. This receipt is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong.",
-      "tooLateMileage": "A mileage claim must be filed within {days} days of the journey. This journey is older than that and cannot be accepted. Contact the skattmästare if you have questions or if the date is wrong."
+      "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase, and this receipt is older than that. The expense stays a draft. To apply for a waiver, get in touch with the skattmästare, who decides whether it is accepted anyway. If the date is wrong, you can correct it.",
+      "tooLateMileage": "A mileage claim must be filed within {days} days of the journey, and this journey is older than that. The journey stays a draft. To apply for a waiver, get in touch with the skattmästare, who decides whether it is accepted anyway. If the date is wrong, you can correct it."
     },
     "event": {
       "CREATED": "Created the expense",
@@ -196,7 +202,9 @@
       "BOOKED": "Booked the expense",
       "EXPORTED": "Exported to Fortnox",
       "EXPORT_REVERTED": "Marked as not exported",
-      "RECALLED": "Withdrew the submission"
+      "RECALLED": "Withdrew the submission",
+      "DEADLINE_WAIVED": "Granted a waiver from the deadline",
+      "DEADLINE_WAIVER_REVOKED": "Took the waiver back"
     },
     "detail": {
       "missingTitle": "Expense not found",
@@ -249,12 +257,23 @@
           "label": "Why is the expense no longer exported?",
           "placeholder": "E.g. the voucher was voided in Fortnox…",
           "submit": "Mark as not exported"
+        },
+        "waive_deadline": {
+          "label": "Why is the waiver granted?",
+          "placeholder": "E.g. the receipt went missing and has been looked for since the summer…",
+          "submit": "Grant waiver"
         }
       },
       "editedFields": "Changed: {fields}",
       "voucherComment": "Voucher {label}",
       "journeyDate": "Date driven",
-      "recall": "Withdraw"
+      "recall": "Withdraw",
+      "waiveDeadline": "Grant waiver",
+      "revokeDeadlineWaiver": "Take the waiver back",
+      "revokeWaiverConfirm": "The expense is past the deadline and cannot be submitted again without a new waiver.",
+      "deadlineWaiver": "Waiver from the filing deadline",
+      "deadlineWaiverGranted": "{name} granted a waiver on {date}.",
+      "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted."
     },
     "mutations": {
       "transition": {
@@ -264,7 +283,9 @@
         "request_changes": "Sent back with a request for changes.",
         "return_approved": "The expense was reopened for changes.",
         "unexport": "The expense is marked as not exported.",
-        "recall": "The expense is back as a draft"
+        "recall": "The expense is back as a draft",
+        "waive_deadline": "Waiver granted. The expense can be submitted.",
+        "revoke_deadline_waiver": "The waiver was taken back."
       },
       "withdraw": {
         "title": "Withdraw your approval?",
@@ -325,7 +346,9 @@
       "date": "Date",
       "dateIncomplete": "Type the whole date (YYYY-MM-DD)",
       "dateFuture": "The date is in the future. A purchase cannot have been made later than today",
-      "dateTooLate": "Older than {days} days. An out-of-pocket claim has to be filed within {days} days of the purchase. Was it the section card you used? Change that at the top. If it was your own money, talk to the treasurer.",
+      "dateTooLate": "Older than {days} days. An out-of-pocket claim has to be filed within {days} days of the purchase.",
+      "dateTooLateCard": "Was it the section card you used? Change the payment type at the top and no deadline applies.",
+      "dateTooLateWaiver": "You can apply for a waiver: finish the expense, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
       "amount": "Amount",
       "returnMeans": "{amount} comes back to the section.",
       "distribution": "Cost distribution",
@@ -397,7 +420,7 @@
     },
     "journeyDate": "Date driven",
     "dateFuture": "The journey is in the future. Correct the date to the day you drove.",
-    "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey and cannot be accepted later. Contact the skattmästare for further help",
+    "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey. You can apply for a waiver: finish the journey, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
     "route": {
       "label": "Route",
       "hint": "Every place you stopped, in order. A town or a name is enough, e.g. \"E-huset\" and \"Snabbgross\". If you came back to where you started, write that place last as well, or the route describes only half the distance the odometer shows.",
@@ -567,7 +590,13 @@
       "noRecallAccess": "Only the person who submitted the expense can withdraw it.",
       "recallAfterApproved": "The expense is already attested and cannot be withdrawn. Ask one of the treasurers to reopen it.",
       "nothingToRecall": "The expense is not awaiting attest ({status}), so there is nothing to withdraw.",
-      "editWhilePendingAttest": "The expense is out for attest and cannot be changed. Withdraw it first. It becomes a draft again and you can send it in anew."
+      "editWhilePendingAttest": "The expense is out for attest and cannot be changed. Withdraw it first. It becomes a draft again and you can send it in anew.",
+      "noWaiveAccess": "Only the skattmästare can grant a waiver from the filing deadline.",
+      "waiveOnlyBeforeAttest": "A waiver is given before the expense goes for approval. This one is {status}.",
+      "nothingToWaive": "The expense was filed within {days} days and needs no waiver.",
+      "commentRequiredWaive": "Write a reason for the waiver. It goes on the expense report.",
+      "alreadyWaived": "The expense already has a waiver.",
+      "noWaiverToRevoke": "The expense has no waiver to take back."
     },
     "receipt": {
       "notFound": "The receipt was not found",
@@ -795,6 +824,27 @@
     "authority": {
       "wouldLockOut": "That change would leave nobody able to open Settings. Give the permission to a role somebody actually holds first.",
       "groupOutsideSection": "{group} is outside the section. Only groups under dsek. grant anything here."
+    },
+    "contract": {
+      "notFound": "Contract not found",
+      "noViewAccess": "You do not have access to the contract archive",
+      "noManageAccess": "You do not have access to change the contract archive",
+      "fileNotFound": "File not found",
+      "fileMissing": "The contract's file is missing from the archive",
+      "fileImmutable": "A signed document cannot be removed. It is the evidence of what the parties agreed.",
+      "fileRoleNotUploadable": "That kind of file cannot be uploaded here",
+      "fileUnsupportedType": "The file type ’{type}’ is not supported",
+      "fileSizeRange": "The file must be between 1 byte and {max} bytes",
+      "storageUnavailable": "The contract archive is not responding right now",
+      "hasSignedFiles": "The contract has {count, plural, one {1 signed document} other {# signed documents}} and cannot be deleted",
+      "partyNotFound": "Party not found",
+      "rentalNotFound": "That contract is not a rental contract",
+      "rentalLocked": "A rental cannot be changed once the contract has gone out for signature",
+      "returnBeforePickup": "The return date must be on or after the pickup date",
+      "renderFailed": "The contract document could not be drawn",
+      "storeFailed": "The contract document could not be saved to the archive",
+      "itemNotFound": "Rental item not found",
+      "itemExists": "There is already a rental item called ’{name}’"
     }
   },
   "nav": {
@@ -836,7 +886,9 @@
     "stockStats": "Statistics",
     "groupStock": "Stock",
     "stockEvents": "Occasions",
-    "roles": "Roles & permissions"
+    "roles": "Roles & permissions",
+    "contracts": "Contracts",
+    "rentalItems": "Rental items"
   },
   "allocation": {
     "pick": "Pick a cost center…",
@@ -1445,7 +1497,8 @@
         "mileageRates": "What a kilometre is worth, and from which day.",
         "stockSettings": "Accounts and settings for the stock bookkeeping.",
         "roles": "What each role may do. Changed here, not in the code.",
-        "users": "Who exists and which roles they hold."
+        "users": "Who exists and which roles they hold.",
+        "rentalItems": "The gear the section lets out, and what it costs to replace."
       }
     },
     "users": {
@@ -2463,6 +2516,188 @@
       "stateSoon": "In {days} d",
       "stateLater": "In {days} d",
       "stateChecked": "Checked {date}"
+    }
+  },
+  "contracts": {
+    "title": "Contracts",
+    "description": "The section's agreements, and the rental contracts this app draws itself.",
+    "emptyTitle": "No contracts yet",
+    "emptyDescription": "Upload an agreement you already have, or draw a new rental contract.",
+    "searchPlaceholder": "Search title, counterparty or tag",
+    "noMatch": "No contracts match your search",
+    "new": "New contract",
+    "newRental": "New rental contract",
+    "upload": "Upload",
+    "scopeLabel": "Show",
+    "tab": {
+      "": "All",
+      "draft": "Drafts",
+      "signed": "Signed",
+      "ended": "Ended"
+    },
+    "kindFilter": {
+      "all": "All contract types"
+    },
+    "kind": {
+      "RENTAL": "Rental",
+      "SPONSORSHIP": "Sponsorship",
+      "SUPPLIER": "Supplier",
+      "OTHER": "Other"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "OUT_FOR_SIGNATURE": "Out for signature",
+      "SIGNED": "Signed",
+      "EXPIRED": "Expired",
+      "TERMINATED": "Terminated",
+      "CANCELLED": "Cancelled"
+    },
+    "col": {
+      "title": "Contract",
+      "counterparty": "Counterparty",
+      "kind": "Type",
+      "validity": "Valid",
+      "status": "Status",
+      "tags": "Tags",
+      "files": "Files"
+    },
+    "validity": {
+      "range": "{from} – {to}",
+      "fromOnly": "From {from}",
+      "toOnly": "Until {to}",
+      "none": "No period stated"
+    },
+    "fileCount": "{count, plural, =0 {No file} one {1 file} other {# files}}",
+    "form": {
+      "newTitle": "New contract",
+      "newDescription": "File the agreement. The document can be uploaded now or later.",
+      "title": "Title",
+      "titleHint": "The words somebody would search for: “Sponsorship with Axis 2026”.",
+      "kind": "Contract type",
+      "counterparty": "Counterparty",
+      "counterpartyHint": "The organisation or person the agreement is with.",
+      "counterpartyOrgNo": "Organisation number",
+      "validFrom": "Valid from",
+      "validTo": "Valid until",
+      "status": "Status",
+      "tags": "Tags",
+      "tagsHint": "Comma separated. What you will find the contract by later.",
+      "notes": "Notes",
+      "notesHint": "For whoever finds this next. Not printed on any document.",
+      "file": "Contract file",
+      "fileHint": "A PDF, or a photo of a signed piece of paper. Max {max} MB.",
+      "save": "Save contract",
+      "saved": "Contract saved",
+      "cancel": "Cancel"
+    },
+    "detail": {
+      "back": "Contracts",
+      "documents": "Documents",
+      "noDocuments": "No document uploaded yet.",
+      "addDocument": "Add document",
+      "parties": "Parties",
+      "noParties": "No parties recorded.",
+      "addParty": "Add party",
+      "details": "Details",
+      "notes": "Notes",
+      "filedBy": "Filed by {name}",
+      "termsVersion": "Terms version {version}",
+      "download": "Open",
+      "deleteFile": "Remove file",
+      "deleteFileConfirm": "Remove {filename} from the archive?",
+      "deleteContract": "Delete contract",
+      "deleteContractConfirm": "Delete the contract and all its files? This cannot be undone.",
+      "edit": "Edit",
+      "save": "Save",
+      "saved": "Saved",
+      "role": {
+        "ORIGINAL": "Original",
+        "GENERATED": "Generated",
+        "SIGNED": "Signed",
+        "EVIDENCE": "Signing evidence",
+        "ATTACHMENT": "Attachment"
+      },
+      "partyRole": {
+        "SECTION": "The section",
+        "COUNTERPARTY": "Counterparty"
+      },
+      "signedOn": "Signed {date}",
+      "notSigned": "Not signed",
+      "method": {
+        "PAPER": "On paper",
+        "ELECTRONIC": "Electronically"
+      }
+    },
+    "party": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "orgName": "Organisation",
+      "orgNo": "Organisation number",
+      "title": "Capacity when signing",
+      "titleHint": "As the person signed: “Treasurer”, “Chair, F-sektionen”.",
+      "role": "Party",
+      "signedAt": "Signed on",
+      "add": "Add",
+      "remove": "Remove"
+    },
+    "rental": {
+      "newTitle": "New rental contract",
+      "newDescription": "The section's gear, a period, a price and a deposit.",
+      "counterparty": "Renter",
+      "counterpartyHint": "The person or organisation renting.",
+      "pickupAt": "Picked up",
+      "returnAt": "Returned by",
+      "purpose": "Purpose",
+      "purposeHint": "What the gear is for.",
+      "place": "Place",
+      "price": "Rent",
+      "deposit": "Deposit",
+      "lines": "Equipment",
+      "addLine": "Add line",
+      "removeLine": "Remove line",
+      "pickItem": "Pick from the catalogue",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unitPrice": "Price each",
+      "replacementValue": "Replacement value",
+      "totalReplacement": "Total replacement value",
+      "sectionSignatory": "Signing for the section",
+      "sectionSignatoryTitle": "Your capacity",
+      "counterpartySignatory": "Signing for the renter",
+      "create": "Create contract",
+      "created": "Rental contract created",
+      "regenerate": "Redraw the document",
+      "regenerated": "Document redrawn",
+      "returnedAt": "Came back",
+      "depositReturnedAt": "Deposit returned",
+      "settle": "Save",
+      "settled": "Saved",
+      "emptyCatalogue": "The catalogue is empty. Add rental items under Settings first.",
+      "noLines": "Add at least one line of equipment.",
+      "returnBeforePickup": "The return date must be on or after the pickup date."
+    },
+    "items": {
+      "title": "Rental items",
+      "description": "The gear the section lets out, and what it costs to replace.",
+      "name": "Name",
+      "itemDescription": "Description",
+      "dailyPrice": "Price per day",
+      "dailyPriceHint": "Leave empty for items priced case by case.",
+      "replacementValue": "Replacement value",
+      "replacementValueHint": "The figure the liability clause points at if it does not come back.",
+      "active": "Active",
+      "add": "Add item",
+      "added": "Item added",
+      "save": "Save",
+      "saved": "Saved",
+      "retire": "Deactivate",
+      "restore": "Reactivate",
+      "remove": "Remove",
+      "removeConfirm": "Remove {name} from the catalogue?",
+      "empty": "No rental items yet",
+      "emptyDescription": "Add what the section lets out, so a rental contract can pick from the list.",
+      "inUse": "Used in {count, plural, one {1 contract} other {# contracts}}"
     }
   }
 }

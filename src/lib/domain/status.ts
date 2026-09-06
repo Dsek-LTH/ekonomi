@@ -62,6 +62,20 @@ type SubmitCandidate = {
    * worked the answer out to draw the form with it.
    */
   mileageBlocker?: string | null;
+  /**
+   * Whether somebody with the authority to has let this claim past the filing
+   * deadline. See the dispens columns on Expense, and `canWaiveFilingDeadline`.
+   *
+   * Not folded into `isLateReimbursement`, which answers a question about the
+   * claim itself: a waived utlägg is still late, and the utläggsräkning says so.
+   * This says the section decided to take it anyway.
+   *
+   * Required rather than optional, so that every caller says which it is. The
+   * wizard passes false: an utlägg being filled in for the first time has no
+   * dispens, and could not have one, since a dispens is granted against a claim
+   * that already exists.
+   */
+  deadlineWaived: boolean;
   allocations: { amount: number; costCenterCode: string }[];
 };
 
@@ -84,7 +98,14 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
   // deadline there is nothing to fix, and sending them off to fill in a payout
   // account or upload a receipt for a claim that can't be taken is worse than
   // useless. Safe this early, since it wants a whole date and checks for one itself.
-  if (isLateReimbursement(e.purchaseDate, e.paymentType)) return "tooLate";
+  //
+  // Unless the section has said otherwise about this one claim. A dispens is
+  // the skattmästare deciding to take a late utlägg anyway, and the whole of
+  // what it changes is this line: everything below still has to be in order,
+  // and every allocation still has to be attested.
+  if (isLateReimbursement(e.purchaseDate, e.paymentType) && !e.deadlineWaived) {
+    return "tooLate";
+  }
   if (e.paymentType === "CARD" && !e.matchedTransactionId) return "match";
   if (isOutOfPocket(e.paymentType) && !e.submitterHasPayout) return "payout";
   // A milersättning has no receipt to ask for, because the journey it rests on
@@ -220,7 +241,9 @@ export const EXPENSE_STATUSES: readonly ExpenseStatus[] = [
   "EXPORTED",
 ];
 
-type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "danger";
+// Exported so a second family of states can be drawn in the same language;
+// see CONTRACT_STATUS_TONE in lib/contract/status.ts.
+export type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "danger";
 
 // How each status reads visually. The label itself is a translation,
 // `common.status.<STATUS>` in messages/*.json, so this stays language-neutral.

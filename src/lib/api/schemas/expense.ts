@@ -116,6 +116,12 @@ export const TransitionExpense = z.object({
     "withdraw_attest",
     "return_approved",
     "unexport",
+    // Dispens från redovisningsfristen: letting one late eget utlägg be filed
+    // anyway, and taking that back. Neither moves the status, so neither is in
+    // SIMPLE_TRANSITIONS, but both are acts performed on an utlägg by somebody
+    // with the standing to, which is what this endpoint is.
+    "waive_deadline",
+    "revoke_deadline_waiver",
   ]),
   comment: Trimmed.default(""),
 });

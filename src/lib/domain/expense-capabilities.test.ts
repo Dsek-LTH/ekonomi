@@ -238,6 +238,96 @@ describe("submitting a milersättning", () => {
   });
 });
 
+describe("dispens från redovisningsfristen", () => {
+  // The skattmästare letting one late eget utlägg be filed anyway. Three
+  // conditions decide whether it is on offer, and each of them is the rule
+  // rather than a convenience. See the dispens columns on Expense.
+  const late = (over: Partial<Expense> = {}) =>
+    expense({
+      status: "DRAFT",
+      submitterId: "member",
+      paymentType: "REIMBURSEMENT",
+      purchaseDate: "2020-01-01",
+      // The underlag, so these cases are about the deadline rather than about
+      // a missing receipt reported after it.
+      receiptId: "r1",
+      ...over,
+    });
+  const granted = {
+    by: "Nora Lindqvist",
+    at: "2026-03-05T10:00:00.000Z",
+    reason: "Kvittot kom bort i flytten.",
+  };
+
+  it("is the skattmästare's, and nobody else's", () => {
+    // ORDFORANDE is an admin here: full authority over other people's utlägg,
+    // and still not this. The chair attests and edits; departing from a rule
+    // the section set is the treasurer's, the same as locking a budget.
+    expect(expenseCapabilities(late(), viewer(["SKATTMASTARE"])).canWaiveDeadline).toBe(true);
+    expect(expenseCapabilities(late(), viewer(["ORDFORANDE"])).canWaiveDeadline).toBe(false);
+    expect(expenseCapabilities(late(), viewer(["VICE_SKATTMASTARE"])).canWaiveDeadline).toBe(
+      false,
+    );
+    expect(expenseCapabilities(late(), viewer(["ORDINARIE"], "member")).canWaiveDeadline).toBe(
+      false,
+    );
+  });
+
+  it("is offered only before the utlägg goes for attest", () => {
+    // The deadline stops a late claim from *entering* the queue, so a dispens
+    // given afterwards would be permitting what has already happened.
+    const skattm = viewer(["SKATTMASTARE"]);
+    for (const status of ["DRAFT", "PENDING_MATCH", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(true);
+    }
+    for (const status of ["PENDING_APPROVAL", "APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(false);
+    }
+  });
+
+  it("is not offered on a claim that is in time", () => {
+    // A dispens on the record has to mean something. One granted on a claim
+    // nobody was stopping would leave a reason nobody can read back.
+    const skattm = viewer(["SKATTMASTARE"]);
+    expect(expenseCapabilities(late({ purchaseDate: today() }), skattm).canWaiveDeadline).toBe(
+      false,
+    );
+    // Nor on a sektionskort purchase, however old: the money is already the
+    // section's and the deadline was never over it.
+    expect(
+      expenseCapabilities(late({ paymentType: "CARD" }), skattm).canWaiveDeadline,
+    ).toBe(false);
+  });
+
+  it("becomes the offer to take it back, once given", () => {
+    const skattm = viewer(["SKATTMASTARE"]);
+    const can = expenseCapabilities(late({ deadlineWaiver: granted }), skattm);
+    expect(can.canWaiveDeadline).toBe(false);
+    expect(can.canRevokeDeadlineWaiver).toBe(true);
+    // And to nobody else, however senior.
+    expect(
+      expenseCapabilities(late({ deadlineWaiver: granted }), viewer(["ORDFORANDE"]))
+        .canRevokeDeadlineWaiver,
+    ).toBe(false);
+  });
+
+  it("lifts the deadline for the submitter, and lifts nothing else", () => {
+    // The submitter never sees a button of their own here. What they see is the
+    // block lifting, at the same moment everybody else does. Everything below
+    // the deadline still has to be in order.
+    const owner = viewer(["ORDINARIE"], "member");
+    expect(expenseCapabilities(late(), owner).submitBlocker).toBe("tooLate");
+
+    const waived = late({ deadlineWaiver: granted });
+    expect(expenseCapabilities(waived, owner).submitBlocker).toBeNull();
+    expect(expenseCapabilities(waived, owner).canSubmit).toBe(true);
+
+    expect(
+      expenseCapabilities({ ...waived, submitterHasPayout: false }, owner).submitBlocker,
+    ).toBe("payout");
+  });
+});
+
 describe("deleting", () => {
   it("is the submitter's right until the utlägg is signed", () => {
     const draft = expense({ status: "DRAFT" });

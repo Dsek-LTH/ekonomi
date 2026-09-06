@@ -72,6 +72,10 @@ function mapAllocation(
 // timeline and no voucher lines, since those are loaded only on the detail page).
 const summaryInclude = {
   submitter: true,
+  // Only the name, and only so a standing dispens can say whose it is. Nearly
+  // every utlägg has none, so this is a null column on the row and no join at
+  // all for the rows that matter.
+  deadlineWaivedBy: { select: { name: true } },
   allocations: {
     include: { costCenter: true, approvedBy: true },
   },
@@ -155,6 +159,18 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
       e.submitter.bankClearingNumber && e.submitter.bankAccountNumber,
     ),
     verification: e.verification ? mapVerification(e.verification) : undefined,
+    // All three columns or none: the route writes and clears them together, so
+    // a half-set dispens would be a row nobody wrote. Reading it as absent is
+    // the safe way round either way, since it is what lifts the filing
+    // deadline.
+    deadlineWaiver:
+      e.deadlineWaivedAt && e.deadlineWaiverReason
+        ? {
+            by: e.deadlineWaivedBy?.name ?? "–",
+            at: e.deadlineWaivedAt.toISOString(),
+            reason: e.deadlineWaiverReason,
+          }
+        : undefined,
     revisions: [],
   };
 }

@@ -92,8 +92,40 @@ export function DetailsCard({ expense, action }: { expense: Expense; action?: Re
           <p className="mb-1.5 text-[13px] text-muted">{t("paymentType")}</p>
           <PaymentTag type={expense.paymentType} />
         </div>
+        {expense.deadlineWaiver && (
+          <DeadlineWaiverDetail waiver={expense.deadlineWaiver} />
+        )}
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * The dispens that let a late utlägg be filed.
+ *
+ * On the card that *is* the utlägg rather than in the timeline, and shown to
+ * everybody who can see the utlägg at all, not only to whoever granted it. An
+ * attester is being asked to sign a claim that arrived after the section's own
+ * deadline, and the reason it was taken anyway is part of what they are signing
+ * off on. The timeline records the moment; this states the standing fact.
+ *
+ * The reason is the submitter's own words as the skattmästare wrote them down,
+ * so it is set in the same italic the allocation comments are: quoted, not
+ * asserted by the page.
+ */
+function DeadlineWaiverDetail({ waiver }: { waiver: NonNullable<Expense["deadlineWaiver"]> }) {
+  const t = useTranslations("expenses.detail");
+  const { date } = useFormat();
+  return (
+    <div className="min-w-0 sm:col-span-2">
+      <p className="mb-1.5 text-[13px] text-muted">{t("deadlineWaiver")}</p>
+      <div className="rounded-lg bg-surface px-3 py-2 text-sm">
+        <p className="font-medium">
+          {t("deadlineWaiverGranted", { name: waiver.by, date: date(waiver.at) })}
+        </p>
+        <p className="mt-1 text-xs italic text-muted">{waiver.reason}</p>
+      </div>
+    </div>
   );
 }
 

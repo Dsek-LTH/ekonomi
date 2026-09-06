@@ -19,6 +19,9 @@ const base = {
   odometerEnd: null,
   journeyStops: [],
   mileageOrePerKm: null,
+  deadlineWaivedAt: null,
+  deadlineWaiverReason: null,
+  deadlineWaivedBy: null,
   submitter: { name: "Emil Helander", studentId: "em8241he-s" },
   allocations: [
     {
@@ -121,6 +124,55 @@ describe("buildCoverData", () => {
     expect(d.reference).toBe("–");
     expect(d.purchaseDate).toBeNull();
     expect(d.submitter.studentId).toBeNull();
+  });
+});
+
+describe("buildCoverData, the dispens", () => {
+  // A late utlägg the skattmästare took anyway. The page has to say so, because
+  // it is the only place the decision is written down beside the voucher it
+  // belongs to. See ExpenseCoverWaiver.
+  const waived = {
+    ...base,
+    // 19 March, granted on 3 June: 76 days, well past the 60-day frist.
+    deadlineWaivedAt: new Date("2026-06-03T13:20:00Z"),
+    deadlineWaiverReason: "Kvittot kom bort i flytten och har eftersökts sedan i maj.",
+    deadlineWaivedBy: { name: "Nora Lindqvist" },
+  };
+
+  it("is absent from an utlägg that was in time", () => {
+    expect(buildCoverData(base, TODAY).waiver).toBeNull();
+  });
+
+  it("names who allowed it, when, and in whose words", () => {
+    const w = buildCoverData(waived, TODAY).waiver!;
+    expect(w.by).toBe("Nora Lindqvist");
+    expect(w.at).toBe("2026-06-03");
+    expect(w.reason).toBe("Kvittot kom bort i flytten och har eftersökts sedan i maj.");
+  });
+
+  it("counts the lateness to the day of the dispens, not to today", () => {
+    // Both of these are rendered from the same row; the second is drawn months
+    // later. A document filed beside a voucher must not say something different
+    // the next time somebody opens it.
+    expect(buildCoverData(waived, TODAY).waiver!.lateness).toBe("76 dagar efter köpet");
+    expect(
+      buildCoverData(waived, new Date("2027-01-01T00:00:00Z")).waiver!.lateness,
+    ).toBe("76 dagar efter köpet");
+  });
+
+  it("says resan rather than köpet on a milersättning", () => {
+    // The same distinction `dateLabel` makes: nothing was bought.
+    expect(
+      buildCoverData({ ...waived, paymentType: "MILEAGE" }, TODAY).waiver!.lateness,
+    ).toBe("76 dagar efter resan");
+  });
+
+  it("needs both the day and the reason before it states one at all", () => {
+    // The route writes and clears the three columns together, so a half-set
+    // dispens is a row nobody wrote. Reading it as absent is the safe way round.
+    expect(buildCoverData({ ...waived, deadlineWaiverReason: null }, TODAY).waiver)
+      .toBeNull();
+    expect(buildCoverData({ ...waived, deadlineWaivedAt: null }, TODAY).waiver).toBeNull();
   });
 });
 
