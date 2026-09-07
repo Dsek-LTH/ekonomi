@@ -42,6 +42,12 @@ export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
   { group: "dsek.sex.pub.vice_mastare", role: "STOCKARE" },
   { group: "dsek.sex.bar.mstr", role: "STOCKARE" },
   { group: "dsek.sex.bar.vice_mstr", role: "STOCKARE" },
+
+  // Uthyrningen. A guess at the group, and safe to guess: this mapping is a row
+  // the section edits in Inställningar → Roller, and a mapping written against
+  // a group nobody holds grants nothing and is reported there as granting
+  // nothing. Point it at the real group when you know which it is.
+  { group: "dsek.km.uthyrning", role: "UTHYRNINGSANSVARIG" },
 ];
 
 /**
@@ -118,6 +124,7 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTFORMAN", capability: "BUDGET_VIEW" },
   { role: "RESULTATANSVARIG", capability: "BUDGET_VIEW" },
   { role: "STOCKARE", capability: "BUDGET_VIEW" },
+  { role: "UTHYRNINGSANSVARIG", capability: "BUDGET_VIEW" },
   { role: "ORDINARIE", capability: "BUDGET_VIEW" },
 
   { role: "SKATTMASTARE", capability: "BUDGET_COMMENT" },
@@ -155,4 +162,17 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
 
   { role: "SKATTMASTARE", capability: "CONTRACT_MANAGE" },
   { role: "ORDFORANDE", capability: "CONTRACT_MANAGE" },
+
+  // Firmateckning as the section's stadgar have it. These rows do not grant the
+  // authority, they record who holds it, so the rental form offers the right
+  // names. Each of them severally: one signature binds the section. If the
+  // stadgar are ever changed to två i förening, this list is unaffected and the
+  // rental form is what has to start asking for two.
+  { role: "ORDFORANDE", capability: "FIRMATECKNARE" },
+  { role: "SKATTMASTARE", capability: "FIRMATECKNARE" },
+
+  // Uthyrningen: the rentals and the gear, and nothing else in the archive.
+  // Not given CONTRACT_VIEW, which is the whole point of the role existing.
+  { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_VIEW" },
+  { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_MANAGE" },
 ];

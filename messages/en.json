@@ -113,7 +113,9 @@
       "CONTRACT_VIEW_hint": "See the contract archive and open the documents in it.",
       "EXPENSE_DEADLINE_WAIVE": "Deadline waiver",
       "EXPENSE_DEADLINE_WAIVE_hint": "Grant one late out-of-pocket expense a waiver, so it may be filed after all. Given before the expense goes for approval, with a reason that goes on the expense report.",
-      "CONTRACT_MANAGE_hint": "Archive contracts, draw rental contracts and keep the rental item catalogue."
+      "CONTRACT_MANAGE_hint": "Archive contracts, draw rental contracts and keep the rental item catalogue.",
+      "FIRMATECKNARE": "Authorised signatory",
+      "FIRMATECKNARE_hint": "May be named as the section's signatory on a contract. Opens nothing, and is decided by the stadgar rather than here."
     }
   },
   "dashboard": {
@@ -443,7 +445,8 @@
     "km": "{km} km",
     "otherType": "Was it something else?",
     "otherTypeLink": "Make an ordinary expense instead",
-    "deadlineHint": "A mileage claim must be filed within {days} days of the journey. If you drove several times, file one claim per journey.",
+    "deadlineHint": "A mileage claim must be filed within {days} days of the journey.",
+    "perJourneyHint": "If you drove several times, file one claim per journey.",
     "documentName": "Expense report",
     "documentTitle": "The expense report",
     "documentPending": "The expense report is drawn once the claim is saved. The journey is stated on it, and it is what follows the claim into the books.",
@@ -844,7 +847,9 @@
       "renderFailed": "The contract document could not be drawn",
       "storeFailed": "The contract document could not be saved to the archive",
       "itemNotFound": "Rental item not found",
-      "itemExists": "There is already a rental item called ’{name}’"
+      "itemExists": "There is already a rental item called ’{name}’",
+      "itemsUnavailable": "These are not free over that period: {items}",
+      "notASignatory": "That person is not an authorised signatory and cannot sign for the section"
     }
   },
   "nav": {
@@ -888,7 +893,9 @@
     "stockEvents": "Occasions",
     "roles": "Roles & permissions",
     "contracts": "Contracts",
-    "rentalItems": "Rental items"
+    "rentalItems": "Equipment",
+    "groupRental": "Rentals",
+    "rentals": "Rentals"
   },
   "allocation": {
     "pick": "Pick a cost center…",
@@ -965,6 +972,12 @@
     "voucherTextPlaceholder": "add text…",
     "voucherTextAria": "Voucher text (after the prefix)",
     "prefixLocked": "Fixed prefix, cannot be changed",
+    "payoutTitle": "Payout",
+    "payoutHint": "Where the expense is paid back to. Click a number to select all of it.",
+    "payoutRecipient": "Recipient",
+    "payoutClearing": "Clearing number",
+    "payoutAccount": "Account number",
+    "payoutMissing": "{name} has no account details under My profile, so there is nothing to pay to. Get in touch before booking.",
     "lines": "Voucher lines",
     "linesHint": "Debit and credit have to be equal.",
     "colAccount": "Account",
@@ -1007,7 +1020,8 @@
     "tab": {
       "all": "All",
       "matched": "Matched",
-      "unmatched": "Unmatched"
+      "unmatched": "Unmatched",
+      "noCard": "No card"
     },
     "transactions": "Transactions",
     "pickCsv": "Pick a CSV file",
@@ -1048,7 +1062,10 @@
       "all": "All"
     },
     "colCard": "Card",
-    "account": "Account for it"
+    "account": "Account for it",
+    "assignCard": "Pick a card",
+    "changeCard": "Change card",
+    "assignFailed": "Could not put the transaction on that card"
   },
   "bookkeeping": {
     "title": "Bookkeeping",
@@ -1497,8 +1514,7 @@
         "mileageRates": "What a kilometre is worth, and from which day.",
         "stockSettings": "Accounts and settings for the stock bookkeeping.",
         "roles": "What each role may do. Changed here, not in the code.",
-        "users": "Who exists and which roles they hold.",
-        "rentalItems": "The gear the section lets out, and what it costs to replace."
+        "users": "Who exists and which roles they hold."
       }
     },
     "users": {
@@ -2525,8 +2541,8 @@
     "emptyDescription": "Upload an agreement you already have, or draw a new rental contract.",
     "searchPlaceholder": "Search title, counterparty or tag",
     "noMatch": "No contracts match your search",
-    "new": "New contract",
-    "newRental": "New rental contract",
+    "uploadExisting": "Upload contract",
+    "drawRental": "Draw up rental contract",
     "upload": "Upload",
     "scopeLabel": "Show",
     "tab": {
@@ -2569,8 +2585,8 @@
     },
     "fileCount": "{count, plural, =0 {No file} one {1 file} other {# files}}",
     "form": {
-      "newTitle": "New contract",
-      "newDescription": "File the agreement. The document can be uploaded now or later.",
+      "uploadTitle": "Upload contract",
+      "uploadDescription": "An agreement that already exists, into the archive. Nothing is written here, what you upload is what gets stored. The file can come later.",
       "title": "Title",
       "titleHint": "The words somebody would search for: “Sponsorship with Axis 2026”.",
       "kind": "Contract type",
@@ -2584,11 +2600,24 @@
       "tagsHint": "Comma separated. What you will find the contract by later.",
       "notes": "Notes",
       "notesHint": "For whoever finds this next. Not printed on any document.",
-      "file": "Contract file",
       "fileHint": "A PDF, or a photo of a signed piece of paper. Max {max} MB.",
-      "save": "Save contract",
-      "saved": "Contract saved",
-      "cancel": "Cancel"
+      "save": "File the contract",
+      "saved": "Contract filed",
+      "cancel": "Cancel",
+      "sectionAgreement": "The agreement",
+      "sectionAgreementHint": "What it is and who it is with.",
+      "sectionValidity": "Validity",
+      "sectionValidityHint": "How long it runs, and how far along it is.",
+      "sectionArchive": "Filing",
+      "sectionArchiveHint": "So somebody finds the contract again. Not printed on any document.",
+      "titleSuggest": "Suggest",
+      "titleSuggestion": "{kind} – {counterparty} {year}",
+      "incomplete": "A title and a counterparty are required.",
+      "dropzone": "Drag the contract here, or choose a file",
+      "dropzoneShort": "Add the contract file",
+      "pickFile": "Choose file",
+      "otherKind": "Is the section lending something out?",
+      "otherKindLink": "Draw up a rental contract instead"
     },
     "detail": {
       "back": "Contracts",
@@ -2600,8 +2629,6 @@
       "addParty": "Add party",
       "details": "Details",
       "notes": "Notes",
-      "filedBy": "Filed by {name}",
-      "termsVersion": "Terms version {version}",
       "download": "Open",
       "deleteFile": "Remove file",
       "deleteFileConfirm": "Remove {filename} from the archive?",
@@ -2626,7 +2653,14 @@
       "method": {
         "PAPER": "On paper",
         "ELECTRONIC": "Electronically"
-      }
+      },
+      "more": "More",
+      "history": "History",
+      "terminate": "Terminate contract",
+      "terminateConfirm": "Mark the contract as terminated? The document stays in the archive.",
+      "termsVersionLabel": "Terms version",
+      "status": "Status",
+      "filedByLabel": "Filed by"
     },
     "party": {
       "name": "Name",
@@ -2642,17 +2676,16 @@
       "remove": "Remove"
     },
     "rental": {
-      "newTitle": "New rental contract",
-      "newDescription": "The section's gear, a period, a price and a deposit.",
+      "newTitle": "Draw up a rental contract",
+      "newDescription": "The app writes the contract for you: the section's gear, a period, a price and a deposit.",
       "counterparty": "Renter",
       "counterpartyHint": "The person or organisation renting.",
       "pickupAt": "Picked up",
       "returnAt": "Returned by",
       "purpose": "Purpose",
-      "purposeHint": "What the gear is for.",
+      "purposeHint": "What the gear will be used for. The terms say it may only be used as intended, and that clause points at this.",
       "place": "Place",
       "price": "Rent",
-      "deposit": "Deposit",
       "lines": "Equipment",
       "addLine": "Add line",
       "removeLine": "Remove line",
@@ -2662,20 +2695,63 @@
       "unitPrice": "Price each",
       "replacementValue": "Replacement value",
       "totalReplacement": "Total replacement value",
-      "sectionSignatory": "Signing for the section",
-      "sectionSignatoryTitle": "Your capacity",
-      "counterpartySignatory": "Signing for the renter",
       "create": "Create contract",
       "created": "Rental contract created",
       "regenerate": "Redraw the document",
       "regenerated": "Document redrawn",
       "returnedAt": "Came back",
-      "depositReturnedAt": "Deposit returned",
       "settle": "Save",
       "settled": "Saved",
       "emptyCatalogue": "The catalogue is empty. Add rental items under Settings first.",
-      "noLines": "Add at least one line of equipment.",
-      "returnBeforePickup": "The return date must be on or after the pickup date."
+      "returnBeforePickup": "The return date must be on or after the pickup date.",
+      "record": "Handover and return",
+      "conditionOut": "Condition at handover",
+      "conditionOutHint": "What was noted when the gear left. The baseline if something is broken afterwards.",
+      "conditionIn": "Condition at return",
+      "conditionInHint": "Electronics get a functional test, not just a look.",
+      "checkedAt": "Accepted after inspection",
+      "checkedAtHint": "The renter's responsibility ends here, not at handover. The terms allow five working days from the return.",
+      "checkedBy": "Accepted by {name}",
+      "notChecked": "Not inspected yet",
+      "signatoryHint": "Only an authorised signatory can go here. Who that is comes from the stadgar and is set in Settings → Roles.",
+      "noSignatories": "Nobody holds the Authorised signatory capability. Set it in Settings → Roles first.",
+      "pickSignatory": "Pick a signatory",
+      "sectionPeriod": "Period",
+      "sectionEquipment": "Equipment and money",
+      "free": "{free} of {owned} free",
+      "summary": "{items} – {period} – {price}",
+      "pickDatesFirst": "Pick the period first and what is free will show.",
+      "backToRentals": "Rentals",
+      "itemSummary": "{count, plural, one {1 item} other {# items}}",
+      "renterOrg": "Organisation or person",
+      "unitPriceShort": "Price ea.",
+      "replacementShort": "Replace.",
+      "unavailable": "More than is free over the period.",
+      "otherKind": "Is the agreement already signed?",
+      "otherKindLink": "Upload it instead",
+      "renterOrgNo": "Organisation or personal identity number",
+      "renterAddress": "Address",
+      "renterPostalCode": "Postal code",
+      "renterCity": "Town",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "lendFree": "Lend for nothing",
+      "incomplete": "A renter with a representative and an address, a period, equipment and a signatory are required.",
+      "documentName": "Rental contract",
+      "documentTitle": "The contract",
+      "documentPending": "The contract is drawn here as you fill the form in. It is the same document that gets saved when you create it.",
+      "counterpartySignatoryHint": "The person signing for the renter. The name appears on the contract as their representative.",
+      "paymentDue": "Payment due",
+      "paymentDueHint": "Left empty means the rent is paid at pickup, which is what the terms say.",
+      "parties": "The parties",
+      "lessor": "Lessor",
+      "lessorOrgNo": "Org. no.",
+      "lessorFixed": "The section's details as the contract states them. They are changed in the code, not here.",
+      "representedBy": "Represented by",
+      "discountShort": "Disc.",
+      "lineAmount": "Amount",
+      "lineWas": "List price {gross}",
+      "vatExempt": "No VAT is reported. The section is exempt."
     },
     "items": {
       "title": "Rental items",
@@ -2697,7 +2773,57 @@
       "removeConfirm": "Remove {name} from the catalogue?",
       "empty": "No rental items yet",
       "emptyDescription": "Add what the section lets out, so a rental contract can pick from the list.",
-      "inUse": "Used in {count, plural, one {1 contract} other {# contracts}}"
+      "inUse": "Used in {count, plural, one {1 contract} other {# contracts}}",
+      "quantity": "How many we own",
+      "quantityHint": "How many the section has. This is what rentals are counted against.",
+      "free": "{free} of {owned} free",
+      "pickDatesFirst": "Pick the dates to see what is free",
+      "unavailable": "Not free over that period",
+      "edit": "Edit item",
+      "cancel": "Cancel",
+      "retired": "Deactivated",
+      "searchPlaceholder": "Search items",
+      "noMatch": "No items match",
+      "usedByColumn": "In contracts",
+      "editSafe": "Changes here do not reach contracts already drawn. A rental line copies the description and the amounts at the moment it is written.",
+      "blocker": {
+        "name": "The item needs a name.",
+        "replacementValue": "Give a replacement value. It is the figure the liability clause points at.",
+        "quantity": "The quantity must be at least 1."
+      }
+    }
+  },
+  "rentals": {
+    "title": "Rentals",
+    "description": "Where the gear is, and what needs doing.",
+    "emptyTitle": "No rentals yet",
+    "emptyDescription": "Draw a rental contract and it turns up here.",
+    "new": "Draw up rental contract",
+    "searchPlaceholder": "Search contract, renter or equipment",
+    "noMatch": "No rentals match",
+    "notChecked": "not inspected",
+    "period": "{from} – {to}",
+    "itemCount": "{count, plural, one {1 item} other {# items}}",
+    "tab": {
+      "todo": "To do",
+      "active": "Ongoing",
+      "all": "All",
+      "closed": "Finished"
+    },
+    "col": {
+      "what": "Rental",
+      "period": "Period",
+      "returned": "Returned",
+      "items": "Equipment",
+      "state": "Status"
+    },
+    "state": {
+      "UPCOMING": "Upcoming",
+      "OUT": "Out",
+      "OVERDUE": "Overdue",
+      "AWAITING_CHECK": "Awaiting inspection",
+      "CLOSED": "Done",
+      "CANCELLED": "Cancelled"
     }
   }
 }

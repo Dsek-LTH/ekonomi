@@ -100,8 +100,18 @@ export const hasAttestRole = (caps: readonly Capability[]) => has(caps, "ATTEST_
 // read a budget, and it is worth being able to answer it separately from who
 // may put things in.
 
-/** May read the avtal archive and open the documents in it. */
+/** May read the whole avtal archive, every kind of agreement in it. */
 export const canViewContracts = (caps: readonly Capability[]) => has(caps, "CONTRACT_VIEW");
+
+/** May read uthyrningsavtal. Implied by the wider grant above: somebody who
+ *  may read the archive may obviously read the rentals in it. */
+export const canViewRentals = (caps: readonly Capability[]) =>
+  has(caps, "RENTAL_VIEW") || canViewContracts(caps);
+
+/** May draw an uthyrningsavtal and keep the gear catalogue. Implied by the
+ *  wider grant, for the same reason. */
+export const canManageRentals = (caps: readonly Capability[]) =>
+  has(caps, "RENTAL_MANAGE") || has(caps, "CONTRACT_MANAGE");
 
 /** May archive a contract, draw an uthyrningsavtal, and edit the gear
  *  catalogue.
@@ -111,6 +121,17 @@ export const canViewContracts = (caps: readonly Capability[]) => has(caps, "CONT
  *  capacity (ContractParty.title) rather than this app ruling on it. */
 export const canManageContracts = (caps: readonly Capability[]) =>
   has(caps, "CONTRACT_MANAGE");
+
+/**
+ * May be named as the section's signatory on a contract.
+ *
+ * The only helper here that gates nothing. It does not ask whether somebody may
+ * reach a page, it asks whether their name may go on that line, which is what
+ * the rental form asks when it builds its picker. Firmateckning comes from the
+ * stadgar; this only records who holds it.
+ */
+export const canSignForSection = (caps: readonly Capability[]) =>
+  has(caps, "FIRMATECKNARE");
 
 // ── Dispens från redovisningsfristen ──────────────────────────────
 
@@ -206,6 +227,7 @@ export const ROLES: readonly Role[] = [
   "SKATTFORMAN",
   "RESULTATANSVARIG",
   "STOCKARE",
+  "UTHYRNINGSANSVARIG",
   "ORDINARIE",
 ];
 
@@ -237,6 +259,12 @@ const CAPABILITY_ORDER = {
   FORTNOX_LOGIN: 12,
   EXPORT_UNDO: 13,
   EXPENSE_DEADLINE_WAIVE: 14,
+  // Last, and not beside the CONTRACT_* pair it belongs with, because slotting
+  // it there would renumber four capabilities another change is in the middle
+  // of touching. Worth moving next to them once that has settled.
+  RENTAL_VIEW: 15,
+  RENTAL_MANAGE: 16,
+  FIRMATECKNARE: 17,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

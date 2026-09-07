@@ -8,7 +8,8 @@
 // evidence is the signing provider's job (phase 3), and letting a form claim it
 // would make the archive's strongest word its least trustworthy.
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals } from "@/lib/domain/permissions";
+import { canManageKind } from "@/lib/data/contract-scope";
 import { fail, gate } from "@/lib/api/guard";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import { storeContractFile } from "@/lib/contract/files";
@@ -26,14 +27,15 @@ const UPLOADABLE: readonly string[] = ["ORIGINAL", "ATTACHMENT"];
 // optional field "role" (ORIGINAL by default).
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, kind: true },
   });
   if (!contract) return fail(404, "contract.notFound");
+  if (!canManageKind(g.actor, contract.kind)) return fail(403, "contract.noManageAccess");
 
   // Before the body is touched: `req.formData()` reads the whole request into
   // memory, so a size check afterwards would protect the bucket and not the

@@ -37,7 +37,9 @@ import {
   canAccessBookkeeping,
   canAccessBudget,
   canAccessSettings,
+  canManageRentals,
   canViewContracts,
+  canViewRentals,
   canViewStock,
   hasAttestRole,
 } from "@/lib/domain/permissions";
@@ -213,16 +215,41 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "groupRental",
+    items: [
+      // Its own group rather than a corner of Avtal, for the same reason
+      // Alkohollager is not a corner of Bokföring: it is a different job done
+      // by different people. The archive answers "which agreements do we have";
+      // this answers "where is the gear", and somebody with a store room needs
+      // the second question to have a home.
+      {
+        href: "/uthyrning",
+        label: "rentals",
+        icon: IconContract,
+        visible: (u) => canViewRentals(u.capabilities),
+      },
+      // The catalogue lives here rather than in Inställningar, where it started.
+      // /stock holds the products and Inställningar → Lager holds only the
+      // bookkeeping accounts; a list of the section's own things is not
+      // configuration of the app.
+      {
+        href: "/uthyrning/utrustning",
+        label: "rentalItems",
+        icon: IconBox,
+        visible: (u) => canManageRentals(u.capabilities),
+      },
+    ],
+  },
+  {
     label: "groupAdmin",
     items: [
-      // Above Inställningar, because it is somewhere you go to do a job and
-      // Inställningar is where the app is configured. Its own line rather than
-      // a group of one: the archive is a single screen, and a heading over one
-      // link says nothing the link does not already say.
+      // The archive, over every kind of agreement the section has. Distinct
+      // from Uthyrning above, which is the same rows read as a work list. See
+      // lib/data/rentals.ts.
       {
         href: "/contracts",
         label: "contracts",
-        icon: IconContract,
+        icon: IconList,
         visible: (u) => canViewContracts(u.capabilities),
       },
       { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.capabilities) },
@@ -243,9 +270,7 @@ const SETTINGS_NAV: NavGroup[] = [
       href: s.href,
       label: s.label,
       icon: s.icon,
-      // Most sections ask for nothing beyond having got in here, which is what
-      // ALL means in this list. A section that asks for more says so itself.
-      visible: s.visible ? (u: CurrentUser) => s.visible!(u.capabilities) : ALL,
+      visible: ALL,
     })),
   },
 ];
@@ -699,8 +724,19 @@ export function AppShell({
       </div>
 
       {/* Main column, the only scroll container from md up. Below that the
-          document itself scrolls, so the browser chrome can get out of the way. */}
-      <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto print:overflow-visible">
+          document itself scrolls, so the browser chrome can get out of the way.
+
+          `overscroll-contain` is what keeps "the only" true. A nested scroller
+          that reaches its end hands the rest of the gesture to the nearest
+          scrollable ancestor, so carrying on past the bottom of a long page
+          started moving something outside this column and the page appeared to
+          scroll roughly twice its own height. Containing it ends the gesture
+          where the content does.
+
+          Only from md, and deliberately: below md this element does not scroll
+          at all, the document does, and containing the document's own overscroll
+          is what stops a phone browser retracting its address bar. */}
+      <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain print:overflow-visible">
         {/* Mobile top bar: the only way to reach the nav below md. */}
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:hidden print:hidden">
           <button

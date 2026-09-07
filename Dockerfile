@@ -97,22 +97,35 @@ COPY --from=builder --chown=1001:0 /app/.next/standalone ./
 COPY --from=builder --chown=1001:0 /app/.next/static ./.next/static
 COPY --from=builder --chown=1001:0 /app/public ./public
 
-# The utläggsräkning's template and the faces it is set in, read from disk at
-# render time rather than bundled. Next's standalone output traces imports, and
-# neither a .typ nor a .ttf is one, without this the cover renders in
-# `pnpm dev` and finds nothing here. The path mirrors the source tree because
-# that is what cover/typst.ts resolves against process.cwd(), which is also the
-# compile root; the section's mark it draws is already in public/.
+# The templates the app typesets and the faces they are set in, read from disk
+# at render time rather than bundled. Next's standalone output traces imports,
+# and neither a .typ nor an .otf is one, so without this they render in
+# `pnpm dev` and find nothing here. The paths mirror the source tree because
+# that is what lib/server/typst.ts resolves against process.cwd(), which is also
+# the compile root; the section's mark they draw is already in public/.
 #
-# The fonts are not optional dressing. Typst embeds no proportional sans at all,
-# so without them this page comes out in a serif here and in Inter everywhere
-# else. See the note in cover/typst.ts.
+# Three directories, and each is load-bearing:
+#
+#   expense/cover    the utläggsräkning's template, and Inter
+#   contract/rental  the uthyrningsavtal's template
+#   server/fonts     Domitian and TeX Gyre Heros, the guild's own faces
+#
+# The fonts are not optional dressing. Typst embeds no proportional sans at all
+# and neither of the guild's faces, so without them the utläggsräkning comes out
+# in a serif and the uthyrningsavtal in something that is not the house style,
+# here and nowhere else. That is the worst kind of difference: the contract a
+# renter signs would not match the one drawn on the laptop it was checked on.
+# See the note in lib/server/typst.ts.
 #
 # There is no typesetter to install beside them: Typst comes in as an npm
 # dependency with a musl build for this image, so `pnpm install` is the whole
 # of it.
 COPY --from=builder --chown=1001:0 \
      /app/src/lib/expense/cover ./src/lib/expense/cover
+COPY --from=builder --chown=1001:0 \
+     /app/src/lib/contract/rental ./src/lib/contract/rental
+COPY --from=builder --chown=1001:0 \
+     /app/src/lib/server/fonts ./src/lib/server/fonts
 
 # Non-root by default outside OKD. On OKD this is replaced by the namespace's
 # arbitrary UID; neither the app nor the migration stage requires a passwd

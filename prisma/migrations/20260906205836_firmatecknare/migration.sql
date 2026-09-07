@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "Capability" ADD VALUE 'FIRMATECKNARE';

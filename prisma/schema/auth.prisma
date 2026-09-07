@@ -49,9 +49,9 @@ enum Capability {
   /// Read the avtal archive and open the documents in it.
   CONTRACT_VIEW
   /// Put a contract in the archive, draw an uthyrningsavtal, edit the gear
-  /// catalogue. Not the same as being allowed to bind the section: who may
-  /// sign for it is a question about firmateckning, and the contract records
-  /// the answer rather than this app deciding it. See ContractParty.title.
+  /// catalogue. Deliberately not the same as being allowed to bind the
+  /// section: who may sign for it is a question about firmateckning, and the
+  /// answer is FIRMATECKNARE below.
   CONTRACT_MANAGE
   /// Grant one late eget utlägg a dispens, so it may be filed after the
   /// 60-day deadline has passed. Per claim, with a reason, before it goes for
@@ -60,6 +60,32 @@ enum Capability {
   /// the same kind of act as sealing the figures it set. See
   /// canWaiveFilingDeadline in lib/domain/permissions.ts.
   EXPENSE_DEADLINE_WAIVE
+  /// May be named as the section's signatory on a contract.
+  ///
+  /// Firmateckning is a fact about the section's stadgar rather than a
+  /// permission this app grants, and this row does not confer it. What it does
+  /// is record who holds it, so the rental form can offer those people and only
+  /// those people. Held by ordförande and skattmästare, which means a handover
+  /// in Authentik is a handover here with nothing to remember.
+  ///
+  /// It opens nothing. Somebody holding this and nothing else can be named on a
+  /// contract and cannot open the archive it is filed in. That is the whole
+  /// point of it being separate from CONTRACT_MANAGE: the uthyrningsansvarig
+  /// who draws a contract is usually not the person who signs it.
+  FIRMATECKNARE
+  /// Read uthyrningsavtal, and nothing else in the archive.
+  ///
+  /// The narrow half of CONTRACT_VIEW. Somebody running uthyrningen needs to
+  /// find last spring's rental and has no business reading what the section
+  /// pays a sponsor. Which contracts that leaves reachable is one filter in
+  /// lib/data/contract-scope.ts, applied by every query and every route.
+  RENTAL_VIEW
+  /// Draw an uthyrningsavtal and keep the gear catalogue.
+  ///
+  /// The narrow half of CONTRACT_MANAGE, and it can only ever touch a contract
+  /// whose kind is RENTAL. A holder of this cannot file a sponsoravtal, edit
+  /// one, or delete one.
+  RENTAL_MANAGE
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -80,6 +106,11 @@ enum Role {
   // lagerbokföring is not bookkeeping, and the people who do it are not the
   // people who book vouchers. See canManageStock in lib/domain/permissions.ts.
   STOCKARE
+  // Runs uthyrningen. Outside the treasury roles for the same reason STOCKARE
+  // is: letting out the section's gear is not bookkeeping, and what this role
+  // reaches is uthyrningsavtal and the gear catalogue, not the avtal archive.
+  // A sponsoravtal's terms are none of its business. See contract-scope.ts.
+  UTHYRNINGSANSVARIG
   ORDINARIE
 }
 
@@ -153,6 +184,7 @@ model User {
   contracts            Contract[]              @relation("ContractCreator")
   contractFiles        ContractFile[]          @relation("ContractFileUploader")
   contractParties      ContractParty[]         @relation("ContractPartyUser")
+  rentalChecks         RentalDetails[]         @relation("RentalChecker")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

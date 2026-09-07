@@ -14,17 +14,20 @@
 // recoverable from anywhere.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals, canSignForSection } from "@/lib/domain/permissions";
+import { capabilitiesOf } from "@/lib/server/capabilities";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateRental } from "@/lib/api/schemas/contract";
-import { normaliseTags } from "@/lib/contract/tags";
+import { rentalTitle, signatoryTitle } from "@/lib/contract/signatory";
 import { storeContractDocument } from "@/lib/contract/document";
+import { checkAvailability, nameShortfalls } from "@/lib/data/rental-availability";
+import { rentalPricing } from "@/lib/contract/rental/pricing";
 import { isoToDate } from "@/lib/domain/date";
 
 // POST /api/contracts/rental
 export async function POST(req: Request) {
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateRental);
@@ -35,14 +38,21 @@ export async function POST(req: Request) {
   // as ISO days, which sort lexically, so no timezone is involved.
   if (d.returnAt < d.pickupAt) return fail(422, "contract.returnBeforePickup");
 
-  // The section's signatory is whoever is drawing the contract. Their name is
-  // copied onto the party row rather than read through the relation, because
-  // the document states who signed it on the day, and a name can change.
-  const actor = await prisma.user.findUnique({
-    where: { id: g.actor.id },
-    select: { id: true, name: true },
+  // Who signs for the section, checked rather than assumed.
+  //
+  // This used to be the acting user, which was wrong in the ordinary case: the
+  // person running uthyrning is not usually a firmatecknare, and a contract is
+  // only binding if the name on it could bind the section. Their name is copied
+  // onto the party row rather than read back through the relation, because the
+  // document states who signed it on the day and a name can change.
+  const signatory = await prisma.user.findUnique({
+    where: { id: d.sectionSignatoryId },
+    select: { id: true, name: true, roles: true, active: true },
   });
-  if (!actor) return fail(401, "auth.signedOut");
+  if (!signatory || !signatory.active) return fail(422, "user.unknown");
+  if (!canSignForSection(await capabilitiesOf(signatory.roles))) {
+    return fail(422, "contract.notASignatory");
+  }
 
   // Catalogue ids are checked before anything is written. An id that names no
   // item would otherwise be silently dropped by the SetNull relation, and the
@@ -55,16 +65,41 @@ export async function POST(req: Request) {
     if (known !== itemIds.length) return fail(422, "contract.itemNotFound");
   }
 
+  // Is the gear actually free? Checked here rather than only in the form,
+  // because the form's answer is a moment old by the time it is submitted and
+  // two people drawing contracts at once is exactly the case this exists for.
+  //
+  // Not a lock, deliberately. Two simultaneous requests for the last Soundboks
+  // can both pass this and both write, and the cure for that is a transaction
+  // holding a lock on every catalogue row involved, for a section that rents
+  // things out a few times a term. What this prevents is the ordinary mistake,
+  // somebody drawing a second contract for a weekend that is already spoken
+  // for, which is the one that actually happens.
+  const clashes = await checkAvailability({ lines: d.lines, period: { from: d.pickupAt, to: d.returnAt } });
+  if (clashes.length > 0) {
+    const named = await nameShortfalls(clashes);
+    return fail(409, "contract.itemsUnavailable", {
+      values: { items: named.map((n) => `${n.name} (${n.owned - n.booked}/${n.wanted})`).join(", ") },
+    });
+  }
+
+  // The rent, worked out here rather than taken from the request. The form ran
+  // the same function over the same lines to show the figure, so the two agree
+  // by construction rather than by both being careful.
+  const pricing = rentalPricing(d.lines);
+
   const contract = await prisma.contract.create({
     data: {
       kind: "RENTAL",
       status: "DRAFT",
-      title: d.title,
+      // Derived, not typed. See lib/contract/signatory.ts.
+      title: rentalTitle(d.counterparty),
       counterparty: d.counterparty,
-      counterpartyOrgNo: d.counterpartyOrgNo ?? null,
-      tags: normaliseTags(d.tags),
-      notes: d.notes ?? null,
-      createdById: actor.id,
+      counterpartyOrgNo: d.counterpartyOrgNo,
+      counterpartyAddress: d.counterpartyAddress,
+      counterpartyPostalCode: d.counterpartyPostalCode,
+      counterpartyCity: d.counterpartyCity,
+      createdById: g.actor.id,
 
       // Copied from the rental period, so that one expiry query serves every
       // kind of contract in the archive and the list does not have to know
@@ -76,16 +111,19 @@ export async function POST(req: Request) {
         create: {
           pickupAt: isoToDate(d.pickupAt)!,
           returnAt: isoToDate(d.returnAt)!,
-          purpose: d.purpose ?? null,
+          purpose: d.purpose,
           place: d.place ?? null,
-          priceOre: d.priceOre,
-          depositOre: d.depositOre,
+          paymentDueAt: isoToDate(d.paymentDueAt ?? null),
+          subtotalOre: pricing.subtotalOre,
+          discountOre: pricing.discountOre,
+          priceOre: pricing.totalOre,
           lines: {
             create: d.lines.map((l, i) => ({
               itemId: l.itemId ?? null,
               description: l.description,
               quantity: l.quantity,
               unitPriceOre: l.unitPriceOre,
+              discountPercent: l.discountPercent,
               replacementValueOre: l.replacementValueOre,
               // The order they were typed in. Not appended through
               // lib/server/sort-order.ts: these are created together in one
@@ -100,22 +138,22 @@ export async function POST(req: Request) {
         create: [
           {
             role: "SECTION",
-            name: actor.name,
-            title: d.sectionSignatoryTitle ?? null,
-            userId: actor.id,
+            name: signatory.name,
+            // The post they sign under, read from the role that gives them
+            // firmateckning rather than asked for. Written onto the row now
+            // rather than derived on read, because the contract records what
+            // somebody was on the day they signed it.
+            title: signatoryTitle(signatory.roles),
+            userId: signatory.id,
           },
-          ...(d.counterpartySignatory
-            ? [
-                {
-                  role: "COUNTERPARTY" as const,
-                  name: d.counterpartySignatory.name,
-                  email: d.counterpartySignatory.email ?? null,
-                  phone: d.counterpartySignatory.phone ?? null,
-                  title: d.counterpartySignatory.title ?? null,
-                  orgName: d.counterparty,
-                },
-              ]
-            : []),
+          {
+            role: "COUNTERPARTY" as const,
+            name: d.counterpartySignatory.name,
+            email: d.counterpartySignatory.email ?? null,
+            phone: d.counterpartySignatory.phone ?? null,
+            title: d.counterpartySignatory.title ?? null,
+            orgName: d.counterparty,
+          },
         ],
       },
     },
@@ -126,7 +164,7 @@ export async function POST(req: Request) {
   // the contract exists, the screen it lands on offers "rita om dokumentet",
   // and telling somebody their contract was not created when it was is the
   // worse of the two wrong answers.
-  const drawn = await storeContractDocument(contract.id, actor.id);
+  const drawn = await storeContractDocument(contract.id, g.actor.id);
   if (!drawn.ok) {
     console.error(`[contracts] ${contract.id}: drawn document failed`, drawn);
     return NextResponse.json({ id: contract.id, documentDrawn: false }, { status: 201 });

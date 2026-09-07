@@ -123,6 +123,7 @@ const RoleName = z.enum([
   "SKATTFORMAN",
   "RESULTATANSVARIG",
   "STOCKARE",
+  "UTHYRNINGSANSVARIG",
   "ORDINARIE",
 ]);
 
@@ -151,6 +152,9 @@ export const CapabilityName = z.enum([
   "CONTRACT_VIEW",
   "CONTRACT_MANAGE",
   "EXPENSE_DEADLINE_WAIVE",
+  "FIRMATECKNARE",
+  "RENTAL_VIEW",
+  "RENTAL_MANAGE",
 ]);
 
 /**

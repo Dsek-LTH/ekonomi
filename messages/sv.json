@@ -113,7 +113,9 @@
       "CONTRACT_VIEW_hint": "Se avtalsarkivet och öppna dokumenten i det.",
       "CONTRACT_MANAGE_hint": "Arkivera avtal, skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
       "EXPENSE_DEADLINE_WAIVE": "Dispens från fristen",
-      "EXPENSE_DEADLINE_WAIVE_hint": "Bevilja ett enskilt sent eget utlägg dispens, så att det får redovisas ändå. Ges innan utlägget skickas för attest, med ett skäl som hamnar på utläggsräkningen."
+      "EXPENSE_DEADLINE_WAIVE_hint": "Bevilja ett enskilt sent eget utlägg dispens, så att det får redovisas ändå. Ges innan utlägget skickas för attest, med ett skäl som hamnar på utläggsräkningen.",
+      "FIRMATECKNARE": "Firmatecknare",
+      "FIRMATECKNARE_hint": "Får stå som sektionens undertecknare på ett avtal. Ger ingen åtkomst till något, och bestäms av stadgarna, inte här."
     }
   },
   "dashboard": {
@@ -443,7 +445,8 @@
     "km": "{km} km",
     "otherType": "Gällde det något annat?",
     "otherTypeLink": "Gör ett vanligt utlägg i stället",
-    "deadlineHint": "Milersättning redovisas inom {days} dagar från resan. Körde du flera gånger gör du en milersättning per resa.",
+    "deadlineHint": "Milersättning redovisas inom {days} dagar från resan.",
+    "perJourneyHint": "Körde du flera gånger gör du en milersättning per resa.",
     "documentName": "Utläggsräkning",
     "documentTitle": "Utläggsräkningen",
     "documentPending": "Utläggsräkningen ritas när utlägget sparats. Resan står på den, och det är den som följer med till bokföringen.",
@@ -844,7 +847,9 @@
       "renderFailed": "Avtalsdokumentet kunde inte ritas",
       "storeFailed": "Avtalsdokumentet kunde inte sparas i arkivet",
       "itemNotFound": "Uthyrningsobjektet hittades inte",
-      "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’"
+      "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’",
+      "itemsUnavailable": "Följande är inte ledigt under perioden: {items}",
+      "notASignatory": "Personen är inte firmatecknare och kan inte skriva under för sektionen"
     }
   },
   "nav": {
@@ -888,7 +893,9 @@
     "stockEvents": "Tillfällen",
     "roles": "Roller & behörigheter",
     "contracts": "Avtal",
-    "rentalItems": "Uthyrningsobjekt"
+    "rentalItems": "Utrustning",
+    "groupRental": "Uthyrning",
+    "rentals": "Uthyrningar"
   },
   "allocation": {
     "pick": "Välj kostnadsställe…",
@@ -965,6 +972,12 @@
     "voucherTextPlaceholder": "lägg till text…",
     "voucherTextAria": "Verifikationstext (efter prefix)",
     "prefixLocked": "Fast prefix, går inte att ändra",
+    "payoutTitle": "Utbetalning",
+    "payoutHint": "Hit betalas utlägget tillbaka. Klicka på ett nummer för att markera hela.",
+    "payoutRecipient": "Mottagare",
+    "payoutClearing": "Clearingnummer",
+    "payoutAccount": "Kontonummer",
+    "payoutMissing": "{name} har inga kontouppgifter i Min profil, så det går inte att betala ut. Hör av dig innan du bokför.",
     "lines": "Konteringsrader",
     "linesHint": "Debet och kredit måste vara lika stora.",
     "colAccount": "Konto",
@@ -1007,7 +1020,8 @@
     "tab": {
       "all": "Alla",
       "matched": "Matchade",
-      "unmatched": "Ej matchade"
+      "unmatched": "Ej matchade",
+      "noCard": "Utan kort"
     },
     "transactions": "Transaktioner",
     "pickCsv": "Välj CSV-fil",
@@ -1048,7 +1062,10 @@
       "all": "Alla"
     },
     "colCard": "Kort",
-    "account": "Redovisa"
+    "account": "Redovisa",
+    "assignCard": "Välj kort",
+    "changeCard": "Byt kort",
+    "assignFailed": "Kunde inte koppla transaktionen till kortet"
   },
   "bookkeeping": {
     "title": "Bokföring",
@@ -1497,8 +1514,7 @@
         "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
         "stockSettings": "Konton och inställningar för lagerbokföringen.",
         "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
-        "users": "Vem som finns och vilka roller de har.",
-        "rentalItems": "Prylarna sektionen hyr ut, och vad de kostar att ersätta."
+        "users": "Vem som finns och vilka roller de har."
       }
     },
     "users": {
@@ -2525,8 +2541,8 @@
     "emptyDescription": "Ladda upp ett avtal som redan finns, eller skriv ett nytt uthyrningsavtal.",
     "searchPlaceholder": "Sök titel, motpart eller tagg",
     "noMatch": "Inga avtal matchar sökningen",
-    "new": "Nytt avtal",
-    "newRental": "Nytt uthyrningsavtal",
+    "uploadExisting": "Ladda upp avtal",
+    "drawRental": "Skriv uthyrningsavtal",
     "upload": "Ladda upp",
     "scopeLabel": "Visa",
     "tab": {
@@ -2569,8 +2585,8 @@
     },
     "fileCount": "{count, plural, =0 {Ingen fil} one {1 fil} other {# filer}}",
     "form": {
-      "newTitle": "Nytt avtal",
-      "newDescription": "Lägg avtalet i arkivet. Filen kan laddas upp nu eller senare.",
+      "uploadTitle": "Ladda upp avtal",
+      "uploadDescription": "Ett avtal som redan finns, in i arkivet. Appen skriver ingenting här, den sparar det du laddar upp. Filen kan läggas till senare.",
       "title": "Titel",
       "titleHint": "Så som någon skulle söka efter det: ”Sponsoravtal med Axis 2026”.",
       "kind": "Avtalstyp",
@@ -2584,11 +2600,24 @@
       "tagsHint": "Kommaseparerade. Används för att hitta avtalet igen.",
       "notes": "Anteckningar",
       "notesHint": "För den som hittar avtalet härnäst. Står inte i något dokument.",
-      "file": "Avtalsfil",
       "fileHint": "PDF eller en bild av ett påskrivet papper. Max {max} MB.",
-      "save": "Spara avtal",
-      "saved": "Avtalet är sparat",
-      "cancel": "Avbryt"
+      "save": "Arkivera avtalet",
+      "saved": "Avtalet är arkiverat",
+      "cancel": "Avbryt",
+      "sectionAgreement": "Avtalet",
+      "sectionAgreementHint": "Vad det är och vem det är med.",
+      "sectionValidity": "Giltighet",
+      "sectionValidityHint": "Hur länge det gäller, och hur långt det har kommit.",
+      "sectionArchive": "Arkivering",
+      "sectionArchiveHint": "Så att någon hittar avtalet igen. Står inte i något dokument.",
+      "titleSuggest": "Föreslå",
+      "titleSuggestion": "{kind} – {counterparty} {year}",
+      "incomplete": "Titel och motpart krävs.",
+      "dropzone": "Dra hit avtalet eller välj en fil",
+      "dropzoneShort": "Lägg till avtalsfilen",
+      "pickFile": "Välj fil",
+      "otherKind": "Ska sektionen hyra ut något?",
+      "otherKindLink": "Skriv ett uthyrningsavtal i stället"
     },
     "detail": {
       "back": "Avtal",
@@ -2600,8 +2629,6 @@
       "addParty": "Lägg till part",
       "details": "Uppgifter",
       "notes": "Anteckningar",
-      "filedBy": "Arkiverat av {name}",
-      "termsVersion": "Villkorsversion {version}",
       "download": "Öppna",
       "deleteFile": "Ta bort fil",
       "deleteFileConfirm": "Ta bort {filename} ur arkivet?",
@@ -2626,7 +2653,14 @@
       "method": {
         "PAPER": "På papper",
         "ELECTRONIC": "Elektroniskt"
-      }
+      },
+      "more": "Mer",
+      "history": "Historik",
+      "terminate": "Säg upp avtalet",
+      "terminateConfirm": "Markera avtalet som uppsagt? Dokumentet ligger kvar.",
+      "termsVersionLabel": "Villkorsversion",
+      "status": "Status",
+      "filedByLabel": "Arkiverat av"
     },
     "party": {
       "name": "Namn",
@@ -2642,17 +2676,16 @@
       "remove": "Ta bort"
     },
     "rental": {
-      "newTitle": "Nytt uthyrningsavtal",
-      "newDescription": "Sektionens prylar, en period, ett pris och en deposition.",
+      "newTitle": "Skriv uthyrningsavtal",
+      "newDescription": "Appen skriver avtalet åt dig: sektionens prylar, en period, ett pris och en deposition.",
       "counterparty": "Hyrestagare",
       "counterpartyHint": "Personen eller föreningen som hyr.",
       "pickupAt": "Uthämtas",
       "returnAt": "Återlämnas",
       "purpose": "Ändamål",
-      "purposeHint": "Vad prylarna ska användas till.",
+      "purposeHint": "Vad prylarna ska användas till. Villkoren säger att de bara får användas på det sätt de är avsedda för, och den punkten pekar på det här.",
       "place": "Plats",
       "price": "Hyra",
-      "deposit": "Deposition",
       "lines": "Utrustning",
       "addLine": "Lägg till rad",
       "removeLine": "Ta bort rad",
@@ -2662,20 +2695,63 @@
       "unitPrice": "Pris per st",
       "replacementValue": "Återanskaffningsvärde",
       "totalReplacement": "Totalt återanskaffningsvärde",
-      "sectionSignatory": "Skriver under för sektionen",
-      "sectionSignatoryTitle": "Din roll",
-      "counterpartySignatory": "Skriver under för hyrestagaren",
       "create": "Skapa avtal",
       "created": "Uthyrningsavtalet är skapat",
       "regenerate": "Rita om dokumentet",
       "regenerated": "Dokumentet är omritat",
       "returnedAt": "Återlämnades",
-      "depositReturnedAt": "Deposition återbetald",
       "settle": "Spara",
       "settled": "Sparat",
       "emptyCatalogue": "Katalogen är tom. Lägg till uthyrningsobjekt under Inställningar först.",
-      "noLines": "Lägg till minst en rad utrustning.",
-      "returnBeforePickup": "Återlämningsdatumet måste vara samma dag som eller efter uthämtningen."
+      "returnBeforePickup": "Återlämningsdatumet måste vara samma dag som eller efter uthämtningen.",
+      "record": "Uthämtning och återlämning",
+      "conditionOut": "Skick vid uthämtning",
+      "conditionOutHint": "Vad som noterades när prylarna lämnade. Utgångspunkten om något är trasigt sedan.",
+      "conditionIn": "Skick vid återlämning",
+      "conditionInHint": "Elektronik provas i funktion, inte bara okulärt.",
+      "checkedAt": "Godkänd efter kontroll",
+      "checkedAtHint": "Först här slutar hyrestagarens ansvar. Villkoren ger fem arbetsdagar från återlämningen.",
+      "checkedBy": "Godkänd av {name}",
+      "notChecked": "Inte kontrollerad ännu",
+      "signatoryHint": "Bara firmatecknare kan stå här. Vem det är bestäms av stadgarna och sätts i Inställningar → Roller.",
+      "noSignatories": "Ingen har behörigheten Firmatecknare. Sätt den i Inställningar → Roller först.",
+      "pickSignatory": "Välj firmatecknare",
+      "sectionPeriod": "Period",
+      "sectionEquipment": "Utrustning och pengar",
+      "free": "{free} av {owned} lediga",
+      "summary": "{items} – {period} – {price}",
+      "pickDatesFirst": "Välj period först, så visas vad som är ledigt.",
+      "backToRentals": "Uthyrningar",
+      "itemSummary": "{count, plural, one {1 sak} other {# saker}}",
+      "renterOrg": "Organisation eller person",
+      "unitPriceShort": "Pris/st",
+      "replacementShort": "Återansk.",
+      "unavailable": "Fler än vad som är ledigt under perioden.",
+      "otherKind": "Finns avtalet redan påskrivet?",
+      "otherKindLink": "Ladda upp det i stället",
+      "renterOrgNo": "Organisationsnummer eller personnummer",
+      "renterAddress": "Adress",
+      "renterPostalCode": "Postnummer",
+      "renterCity": "Ort",
+      "subtotal": "Delsumma",
+      "discount": "Rabatt",
+      "lendFree": "Hyr ut gratis",
+      "incomplete": "Hyrestagare med företrädare och adress, period, utrustning och firmatecknare krävs.",
+      "documentName": "Uthyrningsavtal",
+      "documentTitle": "Avtalet",
+      "documentPending": "Här ritas avtalet upp medan du fyller i formuläret. Det är samma dokument som sparas när du skapar det.",
+      "counterpartySignatoryHint": "Personen som skriver under för hyrestagaren. Namnet står på avtalet som företrädare.",
+      "paymentDue": "Betalas senast",
+      "paymentDueHint": "Lämnas tomt betyder att hyran betalas vid uthämtningen, vilket är vad villkoren säger.",
+      "parties": "Parterna",
+      "lessor": "Uthyrare",
+      "lessorOrgNo": "Org.nr",
+      "lessorFixed": "Sektionens uppgifter som de står på avtalet. De ändras i koden, inte här.",
+      "representedBy": "Representerad av",
+      "discountShort": "Rabatt",
+      "lineAmount": "Belopp",
+      "lineWas": "Ordinarie {gross}",
+      "vatExempt": "Moms redovisas inte. Sektionen är momsbefriad."
     },
     "items": {
       "title": "Uthyrningsobjekt",
@@ -2697,7 +2773,57 @@
       "removeConfirm": "Ta bort {name} ur katalogen?",
       "empty": "Inga uthyrningsobjekt ännu",
       "emptyDescription": "Lägg till det sektionen hyr ut, så kan ett uthyrningsavtal välja ur listan.",
-      "inUse": "Används i {count, plural, one {1 avtal} other {# avtal}}"
+      "inUse": "Används i {count, plural, one {1 avtal} other {# avtal}}",
+      "quantity": "Antal vi äger",
+      "quantityHint": "Hur många sektionen har. Det är detta uthyrningar räknas mot.",
+      "free": "{free} av {owned} lediga",
+      "pickDatesFirst": "Välj datum för att se vad som är ledigt",
+      "unavailable": "Inte ledig under perioden",
+      "edit": "Redigera objekt",
+      "cancel": "Avbryt",
+      "retired": "Avaktiverat",
+      "searchPlaceholder": "Sök objekt",
+      "noMatch": "Inga objekt matchar",
+      "usedByColumn": "I avtal",
+      "editSafe": "Ändringar här påverkar inte avtal som redan är skrivna. En avtalsrad kopierar beskrivning och belopp när avtalet ritas.",
+      "blocker": {
+        "name": "Objektet behöver ett namn.",
+        "replacementValue": "Ange ett återanskaffningsvärde. Det är beloppet ansvarsvillkoret pekar på.",
+        "quantity": "Antalet måste vara minst 1."
+      }
+    }
+  },
+  "rentals": {
+    "title": "Uthyrning",
+    "description": "Var prylarna är, och vad som behöver göras.",
+    "emptyTitle": "Inga uthyrningar ännu",
+    "emptyDescription": "Skriv ett uthyrningsavtal, så dyker det upp här.",
+    "new": "Skriv uthyrningsavtal",
+    "searchPlaceholder": "Sök avtal, hyrestagare eller utrustning",
+    "noMatch": "Inga uthyrningar matchar",
+    "notChecked": "okontrollerad",
+    "period": "{from} – {to}",
+    "itemCount": "{count, plural, one {1 sak} other {# saker}}",
+    "tab": {
+      "todo": "Att göra",
+      "active": "Pågående",
+      "all": "Alla",
+      "closed": "Avslutade"
+    },
+    "col": {
+      "what": "Uthyrning",
+      "period": "Period",
+      "returned": "Återlämnad",
+      "items": "Utrustning",
+      "state": "Status"
+    },
+    "state": {
+      "UPCOMING": "Kommande",
+      "OUT": "Utlånad",
+      "OVERDUE": "Försenad",
+      "AWAITING_CHECK": "Väntar på kontroll",
+      "CLOSED": "Klar",
+      "CANCELLED": "Avbruten"
     }
   }
 }

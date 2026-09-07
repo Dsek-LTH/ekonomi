@@ -664,8 +664,21 @@ export default function MileageClient({
                 className="text-xs text-warning"
               />
             )}
+            {/* The standing reminder, minus whatever the note above has just
+                said at greater length. Both used to be drawn unconditionally,
+                so a late claim was told the deadline twice in a row, the second
+                time as advice about a rule it had already missed. What survives
+                either way is the part the deadline has nothing to do with:
+                three journeys are three claims. */}
             <p className="text-xs text-muted">
-              {t("deadlineHint", { days: REIMBURSEMENT_DEADLINE_DAYS })}
+              {[
+                submittable && blocker === "tooLate"
+                  ? null
+                  : t("deadlineHint", { days: REIMBURSEMENT_DEADLINE_DAYS }),
+                t("perJourneyHint"),
+              ]
+                .filter(Boolean)
+                .join(" ")}
             </p>
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">

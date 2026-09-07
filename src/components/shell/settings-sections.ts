@@ -16,14 +16,11 @@ import {
   IconCar,
   IconCard,
   IconChart,
-  IconContract,
   IconHierarchy,
   IconIncome,
   IconShield,
   IconUsers,
 } from "@/components/ui/icons";
-import { canManageContracts } from "@/lib/domain/permissions";
-import type { Capability } from "@/lib/domain/types";
 import { IconFortnox } from "./fortnox-mark";
 
 export interface SettingsSection {
@@ -34,18 +31,6 @@ export interface SettingsSection {
    *  is for. The sidebar has no room for it and does not show it. */
   blurb: string;
   icon: (p: { className?: string }) => React.ReactElement;
-  /**
-   * Who this section is for, when reaching Inställningar is not the whole
-   * answer.
-   *
-   * Absent for every section that is genuinely about configuring the app:
-   * SETTINGS is what those ask for and there is nothing finer to say. Present
-   * for Uthyrningsobjekt, which is a list of the section's own things rather
-   * than configuration, and is gated on CONTRACT_MANAGE by both the page and
-   * the API behind it. Without this, a SETTINGS holder who cannot manage
-   * contracts was offered a card that redirected them straight back out.
-   */
-  visible?: (caps: readonly Capability[]) => boolean;
 }
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
@@ -60,13 +45,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   // is, but a list of the section's own things. It is here because there is
   // nowhere better: the archive itself is a screen for reading contracts, and
   // the catalogue is maintained rather than read. See the page's own note.
-  {
-    href: "/admin/rental-items",
-    label: "rentalItems",
-    blurb: "rentalItems",
-    icon: IconContract,
-    visible: (caps) => canManageContracts(caps),
-  },
   { href: "/admin/roles", label: "roles", blurb: "roles", icon: IconShield },
   { href: "/admin/users", label: "users", blurb: "users", icon: IconUsers },
 ];

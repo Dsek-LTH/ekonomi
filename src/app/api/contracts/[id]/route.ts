@@ -6,7 +6,8 @@
 // file and this is a row, and the file is what the parties actually agreed to.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals } from "@/lib/domain/permissions";
+import { canManageKind } from "@/lib/data/contract-scope";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateContract } from "@/lib/api/schemas/contract";
@@ -19,8 +20,18 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 // PATCH /api/contracts/:id
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  // The wide grant is not required to reach this route, because a rental-only
+  // holder may amend their own rentals. What they may touch is settled per
+  // contract below, once its kind is known.
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
+
+  const existing = await prisma.contract.findUnique({
+    where: { id },
+    select: { kind: true },
+  });
+  if (!existing) return fail(404, "contract.notFound");
+  if (!canManageKind(g.actor, existing.kind)) return fail(403, "contract.noManageAccess");
 
   const parsed = await parseBody(req, UpdateContract);
   if (!parsed.ok) return parsed.res;
@@ -53,14 +64,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 // DELETE /api/contracts/:id
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true, files: { select: { id: true, role: true, objectKey: true } } },
+    select: { id: true, kind: true, files: { select: { id: true, role: true, objectKey: true } } },
   });
   if (!contract) return fail(404, "contract.notFound");
+  if (!canManageKind(g.actor, contract.kind)) return fail(403, "contract.noManageAccess");
 
   // A contract holding evidence is not deletable from a screen. The rule is the
   // same one lib/contract/files.ts enforces per file, applied to the whole row:

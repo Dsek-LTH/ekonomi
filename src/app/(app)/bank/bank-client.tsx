@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -17,6 +17,7 @@ import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import {
+  BankCardHolder,
   bankAmountColumn,
   bankCardColumn,
   bankDateColumn,
@@ -24,6 +25,8 @@ import {
   bankHolderColumn,
   bankMatchedColumn,
 } from "@/components/columns/bank-columns";
+import { Combobox } from "@/components/ui/combobox";
+import type { PatchBankTransaction } from "@/lib/api/schemas/bank";
 import { useFormat } from "@/lib/ui/use-format";
 import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
@@ -36,6 +39,7 @@ export default function BankClient({
   scope,
   canPickScope,
   cards,
+  allCards,
   viewerId,
 }: {
   page: RowPage<BankTransaction>;
@@ -44,6 +48,13 @@ export default function BankClient({
   canPickScope: boolean;
   /** The reader's own cards, to decide whether the card column earns its width. */
   cards: SectionCard[];
+  /**
+   * The whole card register, for the picker in the card column. Empty for
+   * anybody the server does not let assign one, which is what decides whether
+   * the picker is drawn at all: an empty list here is not a short menu, it is
+   * "not yours to change".
+   */
+  allCards: SectionCard[];
   viewerId: string;
 }) {
   const t = useTranslations("bank");
@@ -59,6 +70,9 @@ export default function BankClient({
 
   const controls = useUrlTableControls(page.total, scope === "mine" ? "UNMATCHED" : "ALL");
   const canImport = canBookkeep(user.capabilities);
+  // The register is only sent to somebody the server would let write it, so
+  // having one is the permission (see page.tsx).
+  const canAssign = allCards.length > 0;
   const importing = pending === "import";
 
   // In the URL, like every other filter on a list: which purchases you were
@@ -85,6 +99,11 @@ export default function BankClient({
     // getBankTransactionPage), so the rows arrive already narrowed to it.
     { value: "UNMATCHED", label: t("tab.unmatched") },
     { value: "MATCHED", label: t("tab.matched") },
+    // The purchases the export named no card on. They are only reachable from
+    // the section's feed (a row on no card is on nobody's own list), and only
+    // worth a tab for the reader who can put them on one. Nothing on the row
+    // itself says what it is missing, so this is how they are found at all.
+    ...(canAssign ? [{ value: "NOCARD", label: t("tab.noCard") }] : []),
     { value: "ALL", label: t("tab.all") },
   ];
 
@@ -127,13 +146,41 @@ export default function BankClient({
     });
   }
 
+  // An empty pick means "off every card", which is a real answer: a row put on
+  // the wrong card has to be able to come off it again.
+  //
+  // Answers whether it took, because the cell shows the picked holder before
+  // the server has confirmed it and has to put that back if it did not.
+  async function assignCard(txId: string, cardId: string): Promise<boolean> {
+    const body: PatchBankTransaction = { cardId: cardId || null };
+    const res = await mutate(`/api/bank/${txId}`, {
+      key: `card-${txId}`,
+      method: "PATCH",
+      body,
+      error: t("assignFailed"),
+    });
+    return res !== null;
+  }
+
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
     // Whose card it sat on, or (when they are all yours) which of your cards.
     // The second only earns its width once somebody holds more than one.
     scope === "all"
-      ? bankHolderColumn(t("colHolder"))
+      ? bankHolderColumn(
+          t("colHolder"),
+          canAssign
+            ? (tx) => (
+                <CardCell
+                  tx={tx}
+                  cards={allCards}
+                  busy={pending === `card-${tx.id}`}
+                  onPick={(cardId) => assignCard(tx.id, cardId)}
+                />
+              )
+            : undefined,
+        )
       : bankCardColumn(t("colCard"), cards.length <= 1),
     // Was a status pill saying "Matchad – DEK26-0039". It said the same thing
     // this does, in more words and without going anywhere, and the tabs above
@@ -244,5 +291,95 @@ export default function BankClient({
         />
       </Card>
     </PageShell>
+  );
+}
+
+/**
+ * Which card a purchase sat on, as something bookkeeping can set.
+ *
+ * The import only places a row on a card when the Referens ended in a K####
+ * token. The rest arrive on no card at all, which means they never reach the
+ * feed of the person who made the purchase, so nobody accounts for them. This
+ * is where somebody says whose they were.
+ */
+function CardCell({
+  tx,
+  cards,
+  busy,
+  onPick,
+}: {
+  tx: BankTransaction;
+  cards: SectionCard[];
+  busy: boolean;
+  /** Whether the write took. See `assignCard`. */
+  onPick: (cardId: string) => Promise<boolean>;
+}) {
+  const t = useTranslations("bank");
+  // A row with no card opens as the picker: that is the work, and it is what
+  // makes the gaps visible in a list that is mostly not gaps. A row that has a
+  // card reads as text until it is clicked, so the section's feed stays a feed
+  // rather than a wall of dropdowns.
+  const [picking, setPicking] = useState(false);
+  // The card just picked, which is who the row belongs to from the moment it
+  // was chosen. The write and the re-render behind it are two round trips, and
+  // leaving a dropdown on screen for that stretch reads as a pick that did not
+  // land. Dropped again if the server refuses it.
+  const [picked, setPicked] = useState<string | null>(null);
+
+  async function pick(cardId: string) {
+    setPicked(cardId);
+    // Clearing puts the row back on no card, which is the state the picker is
+    // the display for, so that one stays open.
+    setPicking(cardId === "");
+    if (await onPick(cardId)) return;
+    setPicked(null);
+    setPicking(true);
+  }
+
+  // The row as the pick leaves it, until the refreshed one carries the same
+  // thing. Same shape either way, so the cell has one thing to draw.
+  const card = picked ? cards.find((c) => c.id === picked) : undefined;
+  const row: BankTransaction =
+    card ? { ...tx, cardId: card.id, cardLast4: card.last4, cardHolderId: card.holderId, cardHolderName: card.holderName }
+    : picked === "" ? { ...tx, cardId: undefined, cardLast4: undefined, cardHolderId: undefined, cardHolderName: undefined }
+    : tx;
+
+  // The server refuses to move the card under a matched purchase: a match is
+  // only allowed between an utlägg and its submitter's own card, so the match
+  // has to come off first. Better not to offer it than to offer it and refuse.
+  if (tx.matchedExpenseId) return <BankCardHolder tx={tx} />;
+
+  if (row.cardLast4 && !picking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        title={t("changeCard")}
+        className="text-left hover:text-accent"
+      >
+        <BankCardHolder tx={row} />
+      </button>
+    );
+  }
+
+  return (
+    <Combobox
+      size="sm"
+      className="w-44"
+      allowClear
+      disabled={busy}
+      value={row.cardId ?? ""}
+      onChange={pick}
+      placeholder={t("assignCard")}
+      aria-label={t("assignCard")}
+      // The number is what the bank wrote and the holder is who it means, so
+      // the option carries both. Collapsed to the number alone on a trigger too
+      // narrow for the name, which is the cell in most tables.
+      options={cards.map((c) => ({
+        value: c.id,
+        label: c.holderName ? `····${c.last4} – ${c.holderName}` : `····${c.last4}`,
+        short: `····${c.last4}`,
+      }))}
+    />
   );
 }

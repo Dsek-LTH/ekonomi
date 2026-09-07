@@ -253,40 +253,50 @@ export const CARDS: SeedCard[] = [
 // points at, so a catalogue whose values were all 100 kr would make the whole
 // feature look harmless in a way it is not.
 //
+// The quantity is what availability is measured against: one mixer and one
+// projector are the things a second contract for the same weekend has to be
+// refused, and ten beer tables are the thing it does not.
+//
 // Öre, like every other amount in this app.
 export const RENTAL_ITEMS = [
   {
     name: "Högtalare, aktiv 12 tum",
+    quantity: 2,
     description: "Med stativ och kabel. Ett par räcker till en sittning.",
     dailyPriceOre: 25_000,
     replacementValueOre: 650_000,
   },
   {
     name: "Mixerbord, 8 kanaler",
+    quantity: 1,
     description: null,
     dailyPriceOre: 15_000,
     replacementValueOre: 420_000,
   },
   {
     name: "Mikrofon, trådlös",
+    quantity: 4,
     description: "Handhållen, med mottagare.",
     dailyPriceOre: 7_500,
     replacementValueOre: 180_000,
   },
   {
     name: "Mikrofonstativ",
+    quantity: 6,
     description: null,
     dailyPriceOre: 2_500,
     replacementValueOre: 45_000,
   },
   {
     name: "Partytält 3×6 m",
+    quantity: 2,
     description: "Väger en del. Kräver bil.",
     dailyPriceOre: 40_000,
     replacementValueOre: 900_000,
   },
   {
     name: "Ölbord med bänkar",
+    quantity: 10,
     description: null,
     dailyPriceOre: 5_000,
     replacementValueOre: 120_000,
@@ -296,6 +306,7 @@ export const RENTAL_ITEMS = [
     // is priced per rental. Null rather than zero, which would print
     // "0,00 kr per dag" on a contract.
     name: "Projektor",
+    quantity: 1,
     description: "Med HDMI-kabel och duk.",
     dailyPriceOre: null,
     replacementValueOre: 550_000,

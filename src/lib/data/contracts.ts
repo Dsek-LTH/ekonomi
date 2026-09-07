@@ -4,10 +4,11 @@
 // the sorting and the cut happen in Postgres rather than in the browser, so the
 // page a Server Component renders is the page it asked for.
 //
-// What it does not do is decide who may read any of this. That is one
-// capability (CONTRACT_VIEW) checked by the page and the route, not a per-row
-// scope like an utlägg's, because an avtal is the section's rather than any
-// member's. There is no `viewer` argument here and there should not be one.
+// Who may read what IS decided here, through a scope, and that changed once the
+// uthyrningsansvarig existed. CONTRACT_VIEW is the whole archive; RENTAL_VIEW is
+// the uthyrningsavtal in it and nothing else. Every query below intersects with
+// `contractScopeWhere`, so a narrowed viewer cannot reach a sponsoravtal by
+// paging, searching or guessing an id.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/data/list-query";
 import { normaliseTag } from "@/lib/contract/tags";
 import { CONTRACT_STATUS_TAB } from "@/lib/contract/status";
+import { contractScopeWhere, type ContractScope } from "@/lib/data/contract-scope";
 import type {
   ContractFileRole,
   ContractKind,
@@ -76,6 +78,8 @@ export interface RentalLineRow {
   description: string;
   quantity: number;
   unitPriceOre: number;
+  /** What came off this line, 0 to 100. See lib/contract/rental/pricing.ts. */
+  discountPercent: number;
   replacementValueOre: number;
 }
 
@@ -84,15 +88,31 @@ export interface RentalDetailRow {
   returnAt: string;
   purpose: string | null;
   place: string | null;
+  /** When the rent falls due. Null means at pickup. */
+  paymentDueAt: string | null;
+  /** The lines added up, and what came off them. The rent is the difference;
+   *  see lib/contract/rental/pricing.ts. */
+  subtotalOre: number;
+  discountOre: number;
   priceOre: number;
-  depositOre: number;
-  depositReturnedAt: string | null;
+  /** When it physically came back. */
   returnedAt: string | null;
+  /** When it was inspected and accepted, which is the event the villkor turn
+   *  on. See the RentalDetails model. */
+  checkedAt: string | null;
+  checkedBy: string | null;
+  conditionOut: string | null;
+  conditionIn: string | null;
   lines: RentalLineRow[];
 }
 
 export interface ContractDetail extends ContractSummary {
   counterpartyOrgNo: string | null;
+  /** Where the counterparty is reached on paper. Set by the rental form, which
+   *  insists on it, and null on most of the archive. */
+  counterpartyAddress: string | null;
+  counterpartyPostalCode: string | null;
+  counterpartyCity: string | null;
   notes: string | null;
   termsVersion: string | null;
   createdBy: string | null;
@@ -161,8 +181,15 @@ function listQueryWhere(q: ListQuery): Prisma.ContractWhereInput[] {
 }
 
 /** One page of the archive, and how many rows are behind it. */
-export async function getContractPage(q: ListQuery): Promise<RowPage<ContractSummary>> {
-  const where: Prisma.ContractWhereInput = { AND: listQueryWhere(q) };
+export async function getContractPage(
+  q: ListQuery,
+  scope: ContractScope,
+): Promise<RowPage<ContractSummary>> {
+  // The scope first, then what the reader asked for. Two filters, always both:
+  // a hand-typed query string can widen the second and never the first.
+  const where: Prisma.ContractWhereInput = {
+    AND: [contractScopeWhere(scope), ...listQueryWhere(q)],
+  };
   const { skip, take } = pageBounds(q);
   const order = CONTRACT_ORDER[q.sort];
 
@@ -206,9 +233,15 @@ export async function getContractPage(q: ListQuery): Promise<RowPage<ContractSum
 }
 
 /** One contract, with everything the detail page draws. */
-export async function getContract(id: string): Promise<ContractDetail | null> {
-  const c = await prisma.contract.findUnique({
-    where: { id },
+export async function getContract(
+  id: string,
+  scope: ContractScope,
+): Promise<ContractDetail | null> {
+  // `findFirst` with the scope folded in, rather than `findUnique` and a check
+  // afterwards. Out of scope and not there are the same answer to whoever is
+  // asking, and writing it this way means a caller cannot forget the check.
+  const c = await prisma.contract.findFirst({
+    where: { AND: [{ id }, contractScopeWhere(scope)] },
     include: {
       createdBy: { select: { name: true } },
       files: {
@@ -216,7 +249,12 @@ export async function getContract(id: string): Promise<ContractDetail | null> {
         include: { uploadedBy: { select: { name: true } } },
       },
       parties: { orderBy: [{ role: "asc" }, { createdAt: "asc" }] },
-      rental: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
+      rental: {
+        include: {
+          lines: { orderBy: { sortOrder: "asc" } },
+          checkedBy: { select: { name: true } },
+        },
+      },
     },
   });
   if (!c) return null;
@@ -228,6 +266,9 @@ export async function getContract(id: string): Promise<ContractDetail | null> {
     title: c.title,
     counterparty: c.counterparty,
     counterpartyOrgNo: c.counterpartyOrgNo,
+    counterpartyAddress: c.counterpartyAddress,
+    counterpartyPostalCode: c.counterpartyPostalCode,
+    counterpartyCity: c.counterpartyCity,
     validFrom: isoDay(c.validFrom),
     validTo: isoDay(c.validTo),
     tags: c.tags,
@@ -264,16 +305,22 @@ export async function getContract(id: string): Promise<ContractDetail | null> {
           returnAt: c.rental.returnAt.toISOString(),
           purpose: c.rental.purpose,
           place: c.rental.place,
+          paymentDueAt: c.rental.paymentDueAt?.toISOString() ?? null,
+          subtotalOre: c.rental.subtotalOre,
+          discountOre: c.rental.discountOre,
           priceOre: c.rental.priceOre,
-          depositOre: c.rental.depositOre,
-          depositReturnedAt: c.rental.depositReturnedAt?.toISOString() ?? null,
           returnedAt: c.rental.returnedAt?.toISOString() ?? null,
+          checkedAt: c.rental.checkedAt?.toISOString() ?? null,
+          checkedBy: c.rental.checkedBy?.name ?? null,
+          conditionOut: c.rental.conditionOut,
+          conditionIn: c.rental.conditionIn,
           lines: c.rental.lines.map((l) => ({
             id: l.id,
             itemId: l.itemId,
             description: l.description,
             quantity: l.quantity,
             unitPriceOre: l.unitPriceOre,
+            discountPercent: l.discountPercent,
             replacementValueOre: l.replacementValueOre,
           })),
         }
@@ -289,11 +336,16 @@ export async function getContract(id: string): Promise<ContractDetail | null> {
  * section's vocabulary, not a corpus) and the archive is small, so this reads
  * the column rather than maintaining a table nothing else would want.
  */
-export async function getContractTags(): Promise<string[]> {
-  const rows = await prisma.$queryRaw<{ tag: string }[]>`
-    SELECT DISTINCT unnest("tags") AS tag FROM "Contract" ORDER BY tag ASC
-  `;
-  return rows.map((r) => r.tag);
+export async function getContractTags(scope: ContractScope): Promise<string[]> {
+  // Scoped like everything else. A tag vocabulary drawn from the whole archive
+  // would leak what the section files under, which is exactly the sort of thing
+  // a narrowed viewer is not meant to learn: "axis-sponsring" is a fact about a
+  // contract they may not open.
+  const rows = await prisma.contract.findMany({
+    where: contractScopeWhere(scope),
+    select: { tags: true },
+  });
+  return [...new Set(rows.flatMap((r) => r.tags))].sort();
 }
 
 /** A `@db.Date` column as the ISO day it names, with no timezone in the way. */

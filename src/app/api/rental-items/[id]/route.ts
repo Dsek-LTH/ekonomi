@@ -1,7 +1,7 @@
 // Amend or retire one catalogue item.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals } from "@/lib/domain/permissions";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateRentalItem } from "@/lib/api/schemas/contract";
@@ -10,7 +10,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 // PATCH /api/rental-items/:id
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, UpdateRentalItem);
@@ -48,7 +48,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 // DELETE /api/rental-items/:id
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const item = await prisma.rentalItem.findUnique({

@@ -8,7 +8,7 @@
 // is not evidence, so drawing one to look at costs nothing and archiving one is
 // a deliberate act.
 import { prisma } from "@/lib/server/db";
-import { canManageContracts, canViewContracts } from "@/lib/domain/permissions";
+import { canManageRentals, canViewRentals } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { canEditRental } from "@/lib/contract/status";
 import { renderContractDocument, storeContractDocument } from "@/lib/contract/document";
@@ -31,9 +31,14 @@ const failed = (f: DocumentFailure) => {
 // GET /api/contracts/:id/document
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canViewContracts, "contract.noViewAccess");
+  const g = await gate(canViewRentals, "contract.noViewAccess");
   if (!g.ok) return g.res;
 
+  // No scope filter, and it is worth saying why rather than leaving the next
+  // reader to work it out. RENTAL is the only kind this app draws a document
+  // for, `renderContractDocument` answers `rentalNotFound` for anything else,
+  // and RENTAL is exactly what the narrowest viewer here may see. So the gate
+  // and the renderer between them already close it.
   const drawn = await renderContractDocument(id);
   if (!drawn.ok) return failed(drawn);
 
@@ -51,14 +56,18 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 // POST /api/contracts/:id/document: redraw and archive.
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true, status: true },
+    select: { id: true, status: true, kind: true },
   });
   if (!contract) return fail(404, "contract.notFound");
+  // RENTAL is the only kind this app draws a document for, so the gate above
+  // very nearly settles it. Asked anyway, because "the only kind today" is not
+  // a thing to leave a route depending on.
+  if (contract.kind !== "RENTAL") return fail(422, "contract.rentalNotFound");
 
   // Only while it is a draft. After the contract has gone out, redrawing it
   // would leave two versions in the world with nothing saying which one the

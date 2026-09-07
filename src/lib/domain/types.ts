@@ -318,7 +318,9 @@ export interface BankTransaction {
   amount: number; // negative = money out
   matchedExpenseId?: string; // the utlägg's id, for linking to it
   matchedExpenseRef?: string; // its human reference, once it has one
-  // Section card that made the purchase, if known (from the CSV card number).
+  // Section card that made the purchase, if known (from the CSV card number,
+  // or put there by hand for a row the export named no card on).
+  cardId?: string;
   cardLast4?: string;
   cardHolderId?: string;
   cardHolderName?: string;

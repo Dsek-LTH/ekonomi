@@ -45,6 +45,26 @@ const WORKSPACE = process.cwd();
  */
 const FONT_DIR = path.join(WORKSPACE, "src/lib/expense/cover/fonts");
 
+/**
+ * The faces the section's own documents are set in: Domitian for text and TeX
+ * Gyre Heros for headings.
+ *
+ * These are the two the guild's LaTeX classes name (see dsekdoc.cls in
+ * Dsek-LTH/dsekdocs), and they are here for the same reason Inter is: a
+ * document that names a face the machine does not have comes out in something
+ * else, silently, and a contract that looks different on the server than it did
+ * on the laptop is a contract nobody can check.
+ *
+ * Domitian is a Palatino revival with small capitals and old-style figures,
+ * which is what the class asks for and what the uthyrningsavtal uses. TeX Gyre
+ * Heros is the Helvetica the headings are set in.
+ *
+ * Their own directory rather than beside Inter, whose path is named for the
+ * expense cover. These belong to no one document: they are the section's hand,
+ * and the next thing drawn in it should reach for the same folder.
+ */
+const DSEK_FONT_DIR = path.join(WORKSPACE, "src/lib/server/fonts");
+
 export class TypstError extends Error {}
 
 /**
@@ -65,7 +85,7 @@ const compilerFor = () =>
     // The vendored faces are *added* to whatever the machine has, so a
     // developer's system fonts are still found. The templates name Inter
     // first, and this is what guarantees that name resolves everywhere.
-    fontArgs: [{ fontPaths: [FONT_DIR] }],
+    fontArgs: [{ fontPaths: [FONT_DIR, DSEK_FONT_DIR] }],
   }));
 
 /**

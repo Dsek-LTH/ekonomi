@@ -1,23 +1,26 @@
 import { requirePage } from "@/lib/server/current-user";
-import { canManageContracts } from "@/lib/domain/permissions";
-import { getContractTags } from "@/lib/data/contracts";
+import { canManageRentals } from "@/lib/domain/permissions";
 import { getRentalItemOptions } from "@/lib/data/rental-items";
+import { getSignatories } from "@/lib/data/users";
 import { NewRentalClient } from "./new-rental-client";
 
 export default async function NewRentalPage() {
-  const user = await requirePage(canManageContracts);
+  const user = await requirePage(canManageRentals);
 
-  const [items, knownTags] = await Promise.all([getRentalItemOptions(), getContractTags()]);
+  const [items, signatories] = await Promise.all([getRentalItemOptions(), getSignatories()]);
 
   return (
     <NewRentalClient
       items={items}
-      knownTags={knownTags}
-      // The section's signatory is whoever is drawing the contract, and the
-      // route writes their name onto the party row itself. Shown here so the
-      // form says whose name is about to go on the document rather than
-      // revealing it once the PDF is drawn.
-      signatoryName={user.name}
+      // Who may bind the section, from the FIRMATECKNARE capability. A picker
+      // rather than a default, because the person drawing a rental contract is
+      // usually not one of them.
+      signatories={signatories.map((s) => ({ id: s.id, name: s.name }))}
+      // Pre-selected only when the person drawing it happens to hold it, which
+      // is the common case for the skattmästare and nobody else.
+      defaultSignatoryId={
+        signatories.some((s) => s.id === user.id) ? user.id : ""
+      }
     />
   );
 }

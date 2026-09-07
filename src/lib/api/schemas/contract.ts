@@ -28,6 +28,27 @@ const Title = NonEmpty.max(200);
 const Counterparty = NonEmpty.max(200);
 
 /**
+ * Who the renter is, well enough to reach them.
+ *
+ * Required on a rental and optional everywhere else, which is the difference
+ * between drawing a contract and filing one. A 2019 sponsoravtal arriving as a
+ * scan has whatever the scan says on it. A contract this app draws is one the
+ * section may have to enforce over a broken speaker, and a name with no number
+ * and no address behind it is not somebody who can be pursued.
+ *
+ * `RenterOrgNo` takes an organisationsnummer or a personnummer without caring
+ * which: the renter is a company, another section, or a private person, and the
+ * field is the same question either way. Not validated for shape. A checksum
+ * rule that refuses a foreign organisation's number, or a samordningsnummer,
+ * would block a real rental to save nobody from anything, and what the number
+ * is for is being written on the document.
+ */
+const RenterOrgNo = NonEmpty.max(40);
+const RenterAddress = NonEmpty.max(200);
+const RenterPostalCode = NonEmpty.max(20);
+const RenterCity = NonEmpty.max(100);
+
+/**
  * Tags as they arrive. Validated for shape here and normalised in the route,
  * because normalisation is a rule about the archive rather than about the
  * request, and lib/contract/tags.ts is where the archive's rules live.
@@ -40,6 +61,9 @@ export const CreateContract = z.object({
   title: Title,
   counterparty: Counterparty,
   counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
+  counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
+  counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
+  counterpartyCity: Clearable(Trimmed.max(100)).optional(),
   validFrom: Clearable(IsoDate).optional(),
   validTo: Clearable(IsoDate).optional(),
   tags: Tags.default([]),
@@ -63,6 +87,9 @@ export const UpdateContract = z.object({
   title: Title.optional(),
   counterparty: Counterparty.optional(),
   counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
+  counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
+  counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
+  counterpartyCity: Clearable(Trimmed.max(100)).optional(),
   validFrom: Clearable(IsoDate).optional(),
   validTo: Clearable(IsoDate).optional(),
   tags: Tags.optional(),
@@ -106,6 +133,8 @@ export const RentalLineInput = z.object({
   description: NonEmpty.max(200),
   quantity: z.int().min(1).max(9999),
   unitPriceOre: Ore.min(0),
+  /** What comes off this line, 0 to 100. See rental/pricing.ts. */
+  discountPercent: z.int().min(0).max(100).default(0),
   replacementValueOre: Ore.min(0),
 });
 export type RentalLineInput = z.infer<typeof RentalLineInput>;
@@ -119,33 +148,119 @@ export type RentalLineInput = z.infer<typeof RentalLineInput>;
  * there is no reason to leave half-finished rows behind.
  */
 export const CreateRental = z.object({
-  title: Title,
+  // No title, no tags, no notes.
+  //
+  // The title is derived (lib/contract/signatory.ts): a rental's is the renter
+  // and the fact that it is a rental, both of which the answers below already
+  // give. Tags are archive machinery for filing a sponsoravtal, and you find a
+  // rental by its renter or its gear. Notes are worth having and worth nothing
+  // at the moment of drawing, so they stay editable on the contract itself.
+  // All three were fields somebody filled in to tell the app what it knew.
   counterparty: Counterparty,
-  counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
-  tags: Tags.default([]),
-  notes: Clearable(Trimmed.max(4000)).optional(),
+  counterpartyOrgNo: RenterOrgNo,
+  counterpartyAddress: RenterAddress,
+  counterpartyPostalCode: RenterPostalCode,
+  counterpartyCity: RenterCity,
 
   pickupAt: IsoDate,
   returnAt: IsoDate,
-  purpose: Clearable(Trimmed.max(500)).optional(),
+  /** Required: the villkor say the gear must be used "på det sätt den är
+   *  avsedd för", and that clause needs something on the page to point at. */
+  purpose: NonEmpty.max(500),
   place: Clearable(Trimmed.max(200)).optional(),
-  priceOre: Ore.min(0).default(0),
-  depositOre: Ore.min(0).default(0),
+  /** When the rent falls due. Absent means "at pickup", which is what the
+   *  villkor say when no date is given. */
+  paymentDueAt: Clearable(IsoDate).optional(),
 
+  /**
+   * No money here beyond the lines.
+   *
+   * The rent is the lines less their own discounts, worked out by
+   * lib/contract/rental/pricing.ts on the way in, because a price the client
+   * computes and the server stores is a price the two can disagree about. The
+   * form shows the same figure by calling the same function.
+   */
   lines: z.array(RentalLineInput).min(1).max(100),
 
-  /** Who signs for the section, and who signs for the other side. */
-  sectionSignatoryTitle: Clearable(Trimmed.max(120)).optional(),
-  counterpartySignatory: z
-    .object({
-      name: NonEmpty.max(120),
-      email: Clearable(z.email()).optional(),
-      phone: Clearable(Trimmed.max(40)).optional(),
-      title: Clearable(Trimmed.max(120)).optional(),
-    })
-    .optional(),
+  /**
+   * Who signs for the section.
+   *
+   * Named rather than assumed to be whoever is drawing the contract. The
+   * uthyrningsansvarig running a rental is usually not a firmatecknare, and
+   * defaulting the two to the same person put a name on a signature line that
+   * had no authority to be there. The route checks the id against
+   * FIRMATECKNARE.
+   *
+   * The post they sign under is not asked for. They hold firmateckning through
+   * a role the app already knows, so `signatoryTitle` reads it.
+   */
+  sectionSignatoryId: Id,
+  /**
+   * Who signs for the renter, and required.
+   *
+   * It was optional, on the reasoning that a contract might be drawn before the
+   * renter has said who will sign. That is a real state of a draft and it is
+   * not a state this route should accept: an organisation cannot sign anything,
+   * a person signs on its behalf, and the document names that person in the
+   * party block as well as over the signature line. A rental contract with
+   * nobody on the renter's side is not a contract, it is a form.
+   */
+  counterpartySignatory: z.object({
+    name: NonEmpty.max(120),
+    email: Clearable(z.email()).optional(),
+    phone: Clearable(Trimmed.max(40)).optional(),
+    title: Clearable(Trimmed.max(120)).optional(),
+  }),
 });
 export type CreateRental = z.infer<typeof CreateRental>;
+
+/**
+ * POST /api/contracts/rental/preview: draw the document for a form nobody has
+ * saved yet.
+ *
+ * Deliberately not `CreateRental.partial()`. This is the shape of a form being
+ * filled in, and every rule that makes `CreateRental` refuse an incomplete
+ * request is a rule that would blank the preview at exactly the moment it is
+ * most use. So nothing is required, a line may have no description, and the
+ * period may be half a date. The route writes nothing, so there is no row to
+ * protect; what it still enforces is the caps, because a preview is a render
+ * and a render of ten thousand lines is a way to spend a server.
+ */
+export const PreviewRental = z.object({
+  counterparty: Trimmed.max(200).default(""),
+  counterpartyOrgNo: Trimmed.max(40).default(""),
+  counterpartyAddress: Trimmed.max(200).default(""),
+  counterpartyPostalCode: Trimmed.max(20).default(""),
+  counterpartyCity: Trimmed.max(100).default(""),
+  /** Whole days only. The form holds a mask and sends nothing until it is one. */
+  pickupAt: IsoDate.nullable().default(null),
+  returnAt: IsoDate.nullable().default(null),
+  purpose: Trimmed.max(500).default(""),
+  place: Trimmed.max(200).default(""),
+  paymentDueAt: IsoDate.nullable().default(null),
+  lines: z
+    .array(
+      z.object({
+        description: Trimmed.max(200).default(""),
+        quantity: z.int().min(0).max(9999).default(0),
+        unitPriceOre: Ore.min(0).default(0),
+        discountPercent: z.int().min(0).max(100).default(0),
+        replacementValueOre: Ore.min(0).default(0),
+      }),
+    )
+    .max(100)
+    .default([]),
+  sectionSignatoryId: Id.nullable().default(null),
+  counterpartySignatory: z
+    .object({
+      name: Trimmed.max(120).default(""),
+      email: Trimmed.max(200).default(""),
+      phone: Trimmed.max(40).default(""),
+    })
+    .nullable()
+    .default(null),
+});
+export type PreviewRental = z.infer<typeof PreviewRental>;
 
 /**
  * PATCH /api/contracts/[id]/rental: amend a rental while it is still a draft.
@@ -160,30 +275,42 @@ export const UpdateRental = z.object({
   returnAt: IsoDate.optional(),
   purpose: Clearable(Trimmed.max(500)).optional(),
   place: Clearable(Trimmed.max(200)).optional(),
-  priceOre: Ore.min(0).optional(),
-  depositOre: Ore.min(0).optional(),
+  paymentDueAt: Clearable(IsoDate).optional(),
+  /** See CreateRental. The rent is derived from these. */
   lines: z.array(RentalLineInput).min(1).max(100).optional(),
 });
 export type UpdateRental = z.infer<typeof UpdateRental>;
 
 /**
- * PATCH /api/contracts/[id]/rental/return: the gear came back.
+ * PATCH /api/contracts/[id]/rental/record: what actually happened.
  *
- * Its own call rather than a field on the patch above, because it is the one
- * thing about a rental that stays editable after the contract is signed. Both
- * dates are clearable, since the answer to "has it come back yet" can be
- * corrected to "no" by whoever ticked the wrong row.
+ * Its own call rather than a field on the patch above, because this is the one
+ * part of a rental that stays editable after the contract is signed. What was
+ * agreed is frozen; when the gear went out, came back and was accepted is a
+ * record of events, and a record has to be writable when the events occur.
+ *
+ * Every field is clearable, since each of these is an answer somebody can tick
+ * on the wrong row and have to correct.
  */
-export const SettleRental = z.object({
+export const RecordRental = z.object({
   returnedAt: Clearable(IsoDate).optional(),
-  depositReturnedAt: Clearable(IsoDate).optional(),
+  /** When it was inspected and accepted. The villkor turn on this rather than
+   *  on `returnedAt`; see rental/terms.ts. */
+  checkedAt: Clearable(IsoDate).optional(),
+  /** What state it was in at handover, and at return. A claim is the
+   *  difference between the two. */
+  conditionOut: Clearable(Trimmed.max(2000)).optional(),
+  conditionIn: Clearable(Trimmed.max(2000)).optional(),
 });
-export type SettleRental = z.infer<typeof SettleRental>;
+export type RecordRental = z.infer<typeof RecordRental>;
 
 // ── The gear catalogue ────────────────────────────────────────────
 
 export const CreateRentalItem = z.object({
   name: NonEmpty.max(120),
+  /** How many the section owns. At least one, because a catalogue row for
+   *  nothing is a row that can never be lent. */
+  quantity: z.int().min(1).max(9999).default(1),
   description: Clearable(Trimmed.max(1000)).optional(),
   dailyPriceOre: Clearable(Ore.min(0)).optional(),
   // Required, and not clearable. An item nobody has valued is an item the
@@ -194,6 +321,7 @@ export type CreateRentalItem = z.infer<typeof CreateRentalItem>;
 
 export const UpdateRentalItem = z.object({
   name: NonEmpty.max(120).optional(),
+  quantity: z.int().min(1).max(9999).optional(),
   description: Clearable(Trimmed.max(1000)).optional(),
   dailyPriceOre: Clearable(Ore.min(0)).optional(),
   replacementValueOre: Ore.min(0).optional(),

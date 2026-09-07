@@ -60,6 +60,30 @@ export async function getRoleHolders(): Promise<User[]> {
   return toUsers(users);
 }
 
+/**
+ * The people who may be named as the section's signatory.
+ *
+ * Resolved through the capability matrix rather than by naming roles here, so
+ * that changing who holds firmateckning is an edit in Inställningar → Roller
+ * and not a deploy. See the FIRMATECKNARE enum value.
+ *
+ * Deliberately a list of people rather than a check on one: the rental form
+ * builds a picker from it, because the uthyrningsansvarig drawing a contract is
+ * usually not the person who signs it.
+ */
+export async function getSignatories(): Promise<User[]> {
+  const matrix = await roleCapabilities();
+  const roles = [...matrix].filter(([, caps]) => caps.includes("FIRMATECKNARE")).map(([r]) => r);
+  if (roles.length === 0) return [];
+
+  const users = await prisma.user.findMany({
+    where: { active: true, roles: { hasSome: roles } },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: userSelect,
+  });
+  return toUsers(users);
+}
+
 // Name/email search for the person pickers. Capped, since the point is to find
 // one member, not to page through the section.
 export async function searchUsers(query: string, take = 20): Promise<User[]> {

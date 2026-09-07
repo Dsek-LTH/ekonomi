@@ -16,6 +16,8 @@ export interface RentalItemRow {
   /** Öre, or null for an item priced case by case. */
   dailyPriceOre: number | null;
   replacementValueOre: number;
+  /** How many the section owns. What availability is measured against. */
+  quantity: number;
   active: boolean;
   /** Contract lines pointing at this item. Drives whether it can be deleted. */
   usedBy: number;
@@ -27,6 +29,7 @@ export interface RentalItemOption {
   name: string;
   dailyPriceOre: number | null;
   replacementValueOre: number;
+  quantity: number;
 }
 
 // Name order, not insertion order. A catalogue is read by looking for a thing
@@ -46,6 +49,7 @@ export async function getRentalItemRows(): Promise<RentalItemRow[]> {
     description: r.description,
     dailyPriceOre: r.dailyPriceOre,
     replacementValueOre: r.replacementValueOre,
+    quantity: r.quantity,
     active: r.active,
     usedBy: r._count.lines,
   }));
@@ -55,7 +59,13 @@ export async function getRentalItemOptions(): Promise<RentalItemOption[]> {
   const rows = await prisma.rentalItem.findMany({
     where: { active: true },
     orderBy: BY_NAME,
-    select: { id: true, name: true, dailyPriceOre: true, replacementValueOre: true },
+    select: {
+      id: true,
+      name: true,
+      dailyPriceOre: true,
+      replacementValueOre: true,
+      quantity: true,
+    },
   });
   return rows;
 }

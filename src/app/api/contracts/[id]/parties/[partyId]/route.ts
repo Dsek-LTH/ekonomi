@@ -1,6 +1,7 @@
 // Amend or remove one party on a contract.
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals } from "@/lib/domain/permissions";
+import { canManageKind } from "@/lib/data/contract-scope";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateParty } from "@/lib/api/schemas/contract";
@@ -12,7 +13,12 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 const findParty = (contractId: string, partyId: string) =>
   prisma.contractParty.findFirst({
     where: { id: partyId, contractId },
-    select: { id: true, signedAt: true, signatureMethod: true },
+    select: {
+      id: true,
+      signedAt: true,
+      signatureMethod: true,
+      contract: { select: { kind: true } },
+    },
   });
 
 // PATCH /api/contracts/:id/parties/:partyId
@@ -21,11 +27,14 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string; partyId: string }> },
 ) {
   const { id, partyId } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const party = await findParty(id, partyId);
   if (!party) return fail(404, "contract.partyNotFound");
+  if (!canManageKind(g.actor, party.contract.kind)) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   const parsed = await parseBody(req, UpdateParty);
   if (!parsed.ok) return parsed.res;
@@ -71,11 +80,14 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string; partyId: string }> },
 ) {
   const { id, partyId } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const party = await findParty(id, partyId);
   if (!party) return fail(404, "contract.partyNotFound");
+  if (!canManageKind(g.actor, party.contract.kind)) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   await prisma.contractParty.delete({ where: { id: party.id } });
   return new Response(null, { status: 204 });

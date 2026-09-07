@@ -93,7 +93,33 @@ const PINNED_PURE: Record<string, string[]> = {
   // runs it in the browser. file-roles.ts says which files are evidence, and it
   // is split out from files.ts precisely so the screen can ask without dragging
   // Prisma across the boundary.
-  contract: ["file-roles.ts", "status.ts", "tags.ts"],
+  // availability.ts is the rule that stops one Soundboks being promised twice,
+  // and the form runs it in the browser against what the server last said was
+  // free, so it has to be reachable from a client component.
+  // rental-state.ts derives where the gear is from four columns and today's
+  // date, and the list runs it in the browser, so it has to stay reachable from
+  // a client component.
+  // document-url.ts decides which of a contract's files the reader is shown
+  // and in what order, and the receipt panel that shows them runs in the
+  // browser, so it has to stay reachable from a client component. Its
+  // server-side sibling (document.ts) is the one that draws them.
+  contract: [
+    "availability.ts",
+    "document-url.ts",
+    "file-roles.ts",
+    "rental-state.ts",
+    // section.ts is who the section is, as its own documents name it: the
+    // letterhead of every uthyrningsavtal. Constants, edited by hand and read
+    // in a diff, rather than synced from Fortnox, so that what a contract says
+    // about the section does not depend on an integration being connected.
+    "section.ts",
+    // signatory.ts derives the post a firmatecknare signs under and the title
+    // a rental is filed as, both fixed Swedish. Pure so the wording can be
+    // asserted on without a database behind it.
+    "signatory.ts",
+    "status.ts",
+    "tags.ts",
+  ],
   fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
 };
 

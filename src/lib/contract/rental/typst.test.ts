@@ -14,9 +14,16 @@ import type { RentalContractData } from "./types";
 // which is the failure a template edit actually causes.
 
 const data: RentalContractData = {
-  lessor: { name: "D-sektionen inom TLTH", orgNo: "845001-1234" },
+  lessor: {
+    name: "D-sektionen inom TLTH",
+    orgNo: "845001-1234",
+    address: "Ole Römers väg 3",
+    postalLine: "223 63 Lund",
+  },
   counterparty: "F-sektionen inom TLTH",
   counterpartyOrgNo: "845002-5678",
+  counterpartyAddress: "Ole Römers väg 3",
+  counterpartyPostalLine: "223 63 Lund",
   title: "Uthyrning av ljudanläggning",
   drawn: "2026-09-06",
   pickupAt: "2026-09-18",
@@ -28,6 +35,7 @@ const data: RentalContractData = {
       description: "Högtalare, aktiv 12 tum",
       quantity: "2 st",
       unitPrice: "250,00 kr",
+      discount: null,
       lineTotal: "500,00 kr",
       replacementValue: "6 500,00 kr",
     },
@@ -35,12 +43,16 @@ const data: RentalContractData = {
       description: "Mixerbord 8 kanaler",
       quantity: "1 st",
       unitPrice: "150,00 kr",
+      discount: null,
       lineTotal: "150,00 kr",
       replacementValue: "4 200,00 kr",
     },
   ],
-  price: "650,00 kr",
-  deposit: "1 000,00 kr",
+  anyDiscount: false,
+  subtotal: "650,00 kr",
+  discount: "150,00 kr",
+  price: "500,00 kr",
+  paymentDue: "2026-09-15",
   totalReplacement: "17 200,00 kr",
   sectionParty: {
     name: 'Ludwig "Alphan" Gehlsdorf',
@@ -72,19 +84,31 @@ describe("renderRentalContract", () => {
 
   it("survives everything the data allows to be missing", async () => {
     // A draft drawn before the renter has said who will sign, for a private
-    // person with no organisation number, lent for nothing with no deposit and
-    // no stated place or purpose. Every optional field absent at once, which is
-    // the shape most likely to blow up a template that assumed otherwise.
+    // person with no organisation number and no address, charged the full
+    // subtotal with no discount row, and with no stated place or purpose. Every
+    // optional field absent at once, which is the shape most likely to blow up
+    // a template that assumed otherwise.
     const bytes = await renderRentalContract({
       ...data,
       counterparty: "Anna Andersson",
       counterpartyOrgNo: null,
+      counterpartyAddress: null,
+      counterpartyPostalLine: null,
       purpose: null,
       place: null,
-      price: "0,00 kr",
-      deposit: "0,00 kr",
+      discount: null,
+      price: data.subtotal,
       sectionParty: { ...data.sectionParty!, title: null },
       counterpartyParty: null,
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders a rental lent for nothing, where the whole subtotal comes off", async () => {
+    const bytes = await renderRentalContract({
+      ...data,
+      discount: data.subtotal,
+      price: "0,00 kr",
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
   });

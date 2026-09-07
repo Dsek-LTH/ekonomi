@@ -136,10 +136,10 @@ export function ContractsClient({
   const actions = canManage ? (
     <div className="flex gap-2">
       <ButtonLink href="/contracts/rental/new" variant="accentOutline" size="sm">
-        {t("newRental")}
+        {t("drawRental")}
       </ButtonLink>
-      <ButtonLink href="/contracts/new" variant="accentOutline" size="sm">
-        {t("new")}
+      <ButtonLink href="/contracts/upload" variant="secondary" size="sm">
+        {t("uploadExisting")}
       </ButtonLink>
     </div>
   ) : undefined;
@@ -153,9 +153,9 @@ export function ContractsClient({
           action={
             canManage ? (
               <div className="flex flex-wrap justify-center gap-2">
-                <ButtonLink href="/contracts/rental/new">{t("newRental")}</ButtonLink>
-                <ButtonLink href="/contracts/new" variant="secondary">
-                  {t("new")}
+                <ButtonLink href="/contracts/rental/new">{t("drawRental")}</ButtonLink>
+                <ButtonLink href="/contracts/upload" variant="secondary">
+                  {t("uploadExisting")}
                 </ButtonLink>
               </div>
             ) : undefined

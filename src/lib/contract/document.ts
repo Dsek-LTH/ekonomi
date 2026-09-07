@@ -14,7 +14,9 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { replaceGeneratedFile } from "@/lib/contract/files";
+import { SECTION } from "./section";
 import { RENTAL_TERMS, TERMS_VERSION } from "./rental/terms";
+import { linePricing, rentalPricing } from "./rental/pricing";
 import { renderRentalContract, RentalRenderError } from "./rental/typst";
 import type { RentalContractData, RentalParty } from "./rental/types";
 
@@ -48,32 +50,8 @@ const kr = (ore: number): string => `${nf.format(ore / 100)} kr`;
 /** An ISO day, which is what a Swedish contract states a date as. */
 const day = (d: Date): string => d.toISOString().slice(0, 10);
 
-/**
- * The lessor, as the document names it.
- *
- * Read from the Fortnox connection, which is the one place in this app that
- * already holds the section's registered name and organisation number, kept in
- * step by the sync rather than typed into a settings screen somebody would have
- * to remember to update.
- *
- * The fallback is not a guess at the section's legal name so much as a refusal
- * to leave the field blank on a document two people are about to sign: a
- * contract naming no lessor is worse than one naming the section the way
- * everybody says it out loud. Connect Fortnox and it says the registered name
- * instead.
- */
-const FALLBACK_LESSOR = "D-sektionen inom TLTH";
-
-async function lessor(): Promise<{ name: string; orgNo: string | null }> {
-  const conn = await prisma.fortnoxConnection.findFirst({
-    select: { companyName: true, orgNumber: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return {
-    name: conn?.companyName?.trim() || FALLBACK_LESSOR,
-    orgNo: conn?.orgNumber?.trim() || null,
-  };
-}
+/** The same, for the live preview, where the period may not be chosen yet. */
+const dayOrNull = (d: Date | null): string | null => (d ? day(d) : null);
 
 /**
  * Everything the document needs, and nothing else.
@@ -87,18 +65,22 @@ export type ContractForDocument = {
   title: string;
   counterparty: string;
   counterpartyOrgNo: string | null;
+  counterpartyAddress: string | null;
+  counterpartyPostalCode: string | null;
+  counterpartyCity: string | null;
   createdAt: Date;
   rental: {
-    pickupAt: Date;
-    returnAt: Date;
+    /** Null only from the live preview; see RentalContractData. */
+    pickupAt: Date | null;
+    returnAt: Date | null;
     purpose: string | null;
     place: string | null;
-    priceOre: number;
-    depositOre: number;
+    paymentDueAt: Date | null;
     lines: {
       description: string;
       quantity: number;
       unitPriceOre: number;
+      discountPercent: number;
       replacementValueOre: number;
     }[];
   };
@@ -128,16 +110,16 @@ const asParty = (p: ContractForDocument["parties"][number] | undefined): RentalP
 /**
  * A contract row as the page states it. Pure, and the interesting half.
  *
- * Two decisions live here and are worth naming. The rent printed is the one
- * that was *agreed* (`priceOre`), not the lines added up: a rental can be
- * priced as a whole, and lending gear to another section for nothing is a real
- * and common case that a computed total would print as a lie. The replacement
- * total is the opposite, a genuine sum, because it says what is at stake and
- * nobody negotiates it.
+ * Two decisions live here and are worth naming. The rent is the lines less the
+ * discount, from the same function the form and the routes use, so the document
+ * cannot state a figure that disagrees with the row. The replacement total is a
+ * plain sum, because it says what is at stake and nobody negotiates it.
  */
 export function buildRentalData(
   contract: ContractForDocument,
-  lessorInfo: { name: string; orgNo: string | null },
+  /** Who is letting the gear out. `SECTION` in every real call; a parameter so
+   *  the wording can be asserted on without importing the app's own identity. */
+  lessorInfo: RentalContractData["lessor"],
 ): RentalContractData {
   const { rental } = contract;
 
@@ -145,28 +127,51 @@ export function buildRentalData(
     (sum, l) => sum + l.replacementValueOre * l.quantity,
     0,
   );
+  const pricing = rentalPricing(rental.lines);
+
+  // "223 62 Lund", the way the second line of a Swedish address is set. Either
+  // half alone is still worth printing: a contract naming the town but not the
+  // postal code is more use than one naming neither.
+  const postalLine =
+    [contract.counterpartyPostalCode, contract.counterpartyCity]
+      .map((v) => v?.trim())
+      .filter((v): v is string => Boolean(v))
+      .join(" ") || null;
 
   return {
     lessor: lessorInfo,
     counterparty: contract.counterparty,
     counterpartyOrgNo: contract.counterpartyOrgNo,
+    counterpartyAddress: contract.counterpartyAddress,
+    counterpartyPostalLine: postalLine,
     title: contract.title,
     drawn: day(contract.createdAt),
-    pickupAt: day(rental.pickupAt),
-    returnAt: day(rental.returnAt),
+    pickupAt: dayOrNull(rental.pickupAt),
+    returnAt: dayOrNull(rental.returnAt),
     purpose: rental.purpose,
     place: rental.place,
-    lines: rental.lines.map((l) => ({
-      description: l.description,
-      // With its unit, because a bare number in a column beside three money
-      // columns reads as a fourth price.
-      quantity: `${l.quantity} st`,
-      unitPrice: kr(l.unitPriceOre),
-      lineTotal: kr(l.unitPriceOre * l.quantity),
-      replacementValue: kr(l.replacementValueOre),
-    })),
-    price: kr(rental.priceOre),
-    deposit: kr(rental.depositOre),
+    lines: rental.lines.map((l) => {
+      const priced = linePricing(l);
+      return {
+        description: l.description,
+        // With its unit, because a bare number in a column beside three money
+        // columns reads as a fourth price.
+        quantity: `${l.quantity} st`,
+        unitPrice: kr(l.unitPriceOre),
+        // Null where nothing came off, so the column can say nothing rather
+        // than "0 %" on every row of the ordinary rental.
+        discount: priced.discountPercent > 0 ? `${priced.discountPercent} %` : null,
+        lineTotal: kr(priced.netOre),
+        replacementValue: kr(l.replacementValueOre),
+      };
+    }),
+    subtotal: kr(pricing.subtotalOre),
+    // Left out of the document entirely when nothing came off. See the field.
+    discount: pricing.discountOre > 0 ? kr(pricing.discountOre) : null,
+    // Whether the table needs a discount column at all.
+    anyDiscount: pricing.anyDiscount,
+    price: kr(pricing.totalOre),
+    paymentDue: dayOrNull(rental.paymentDueAt),
     totalReplacement: kr(totalReplacement),
     sectionParty: asParty(contract.parties.find((p) => p.role === "SECTION")),
     counterpartyParty: asParty(contract.parties.find((p) => p.role === "COUNTERPARTY")),
@@ -176,14 +181,18 @@ export function buildRentalData(
 }
 
 /** What the file is called in the archive and on the reader's disk. */
-const filenameFor = (contract: { counterparty: string; rental: { pickupAt: Date } }): string => {
+const filenameFor = (contract: {
+  counterparty: string;
+  rental: { pickupAt: Date | null };
+}): string => {
   const who = contract.counterparty
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^A-Za-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  return `uthyrningsavtal-${day(contract.rental.pickupAt)}${who ? `-${who}` : ""}.pdf`;
+  const when = dayOrNull(contract.rental.pickupAt);
+  return `uthyrningsavtal${when ? `-${when}` : ""}${who ? `-${who}` : ""}.pdf`;
 };
 
 const forDocument = {
@@ -192,6 +201,9 @@ const forDocument = {
     title: true,
     counterparty: true,
     counterpartyOrgNo: true,
+    counterpartyAddress: true,
+    counterpartyPostalCode: true,
+    counterpartyCity: true,
     createdAt: true,
     rental: {
       select: {
@@ -199,14 +211,14 @@ const forDocument = {
         returnAt: true,
         purpose: true,
         place: true,
-        priceOre: true,
-        depositOre: true,
+        paymentDueAt: true,
         lines: {
           orderBy: { sortOrder: "asc" as const },
           select: {
             description: true,
             quantity: true,
             unitPriceOre: true,
+            discountPercent: true,
             replacementValueOre: true,
           },
         },
@@ -226,7 +238,72 @@ const forDocument = {
   },
 } as const;
 
-/** Draw the document without keeping it. What a preview asks for. */
+/**
+ * Draw the document from a form that has not been saved, and may never be.
+ *
+ * The rental form shows this in the panel beside it, redrawn as the answers
+ * change, so somebody filling one in is looking at the contract rather than at
+ * a description of one. There is no row to read: the draft *is* the input.
+ *
+ * It goes through `buildRentalData` like everything else, which is the point.
+ * A preview built by its own path would be a second opinion about what the
+ * document says, and the one thing a preview must never be is wrong about the
+ * thing it is previewing. What differs is only that every field may be missing,
+ * which the data shape already allows for.
+ */
+export async function renderRentalPreview(draft: RentalDraft): Promise<RenderResult> {
+  const contract: ContractForDocument = {
+    title: draft.title,
+    counterparty: draft.counterparty,
+    counterpartyOrgNo: draft.counterpartyOrgNo,
+    counterpartyAddress: draft.counterpartyAddress,
+    counterpartyPostalCode: draft.counterpartyPostalCode,
+    counterpartyCity: draft.counterpartyCity,
+    // The day it would be drawn, which for an unsaved draft is today.
+    createdAt: new Date(),
+    rental: {
+      pickupAt: draft.pickupAt,
+      returnAt: draft.returnAt,
+      purpose: draft.purpose,
+      place: draft.place,
+      paymentDueAt: draft.paymentDueAt,
+      lines: draft.lines,
+    },
+    parties: draft.parties,
+  };
+
+  const data = buildRentalData(contract, SECTION);
+  try {
+    return { ok: true, bytes: await renderRentalContract(data), filename: filenameFor(contract) };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: "renderFailed",
+      detail: e instanceof RentalRenderError ? e.message : String(e),
+    };
+  }
+}
+
+/** What a preview is drawn from: the form, with everything allowed to be
+ *  missing because it is being filled in. */
+export type RentalDraft = {
+  title: string;
+  counterparty: string;
+  counterpartyOrgNo: string | null;
+  counterpartyAddress: string | null;
+  counterpartyPostalCode: string | null;
+  counterpartyCity: string | null;
+  pickupAt: Date | null;
+  returnAt: Date | null;
+  purpose: string | null;
+  place: string | null;
+  paymentDueAt: Date | null;
+  lines: ContractForDocument["rental"]["lines"];
+  parties: ContractForDocument["parties"];
+};
+
+/** Draw the document without keeping it. What a stored contract's preview asks
+ *  for. */
 export async function renderContractDocument(contractId: string): Promise<RenderResult> {
   const contract = await prisma.contract.findUnique({
     where: { id: contractId },
@@ -235,7 +312,7 @@ export async function renderContractDocument(contractId: string): Promise<Render
   if (!contract) return { ok: false, reason: "notFound" };
   if (!contract.rental) return { ok: false, reason: "rentalNotFound" };
 
-  const data = buildRentalData(contract as ContractForDocument, await lessor());
+  const data = buildRentalData(contract as ContractForDocument, SECTION);
   try {
     const bytes = await renderRentalContract(data);
     return { ok: true, bytes, filename: filenameFor(contract as ContractForDocument) };

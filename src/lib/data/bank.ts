@@ -79,6 +79,7 @@ type BankRow = {
   description: string;
   amount: number;
   cardLast4: string | null;
+  cardId: string | null;
   matchedExpense: { id: string; reference: string | null } | null;
   card: { last4: string; holderId: string | null; holder: { name: string } | null } | null;
 };
@@ -91,6 +92,7 @@ function toBankTransaction(t: BankRow): BankTransaction {
     amount: ore(t.amount),
     matchedExpenseId: t.matchedExpense?.id ?? undefined,
     matchedExpenseRef: t.matchedExpense?.reference ?? undefined,
+    cardId: t.cardId ?? undefined,
     cardLast4: t.cardLast4 ?? t.card?.last4 ?? undefined,
     cardHolderId: t.card?.holderId ?? undefined,
     cardHolderName: t.card?.holder?.name ?? undefined,
@@ -136,6 +138,11 @@ export async function getBankTransactionPage(
   // utlägg against it" is asked of the database rather than of a loaded row.
   if (q.tab === "MATCHED" || q.tab === "matched") and.push({ matchedExpense: { isNot: null } });
   if (q.tab === "UNMATCHED" || q.tab === "unmatched") and.push({ matchedExpense: { is: null } });
+  // The rows the import could place on no card: the Referens carried no K####
+  // token, so they sit outside every member's own feed until somebody says
+  // whose they were. A tab rather than a search, because nothing about the row
+  // says what is missing from it.
+  if (q.tab === "NOCARD") and.push({ cardId: null });
 
   const date = dateRangeFilter(q, { dateOnly: true });
   if (date) and.push({ transactionDate: date });

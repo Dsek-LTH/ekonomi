@@ -12,6 +12,7 @@
 // A page picks the columns it wants, in the order it wants, and adds its own
 // (the delete button, the "redovisa" link) alongside them.
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Amount } from "@/components/ui/amount";
 import type { Column } from "@/components/ui/data-table";
@@ -55,21 +56,46 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
   cell: (tx) => (tx.cardLast4 ? <span className="tabular-nums">····{tx.cardLast4}</span> : "–"),
 });
 
-/** Who holds the card, with its number under it, for the section-wide list. */
-export const bankHolderColumn = (header: string): Column<BankTransaction> => ({
+/**
+ * Who holds the card a purchase sat on, with its number under it.
+ *
+ * A component rather than only a cell body, because a screen that lets the card
+ * be changed still has to draw the row as it stands, and a second copy of this
+ * markup is a second place for the two to drift apart.
+ *
+ * The import can only name a card when the Referens carried a trailing K####,
+ * so "no card" is an ordinary state of a row rather than a fault, and it reads
+ * as the dash every other empty cell in the app uses.
+ */
+export function BankCardHolder({ tx }: { tx: BankTransaction }) {
+  if (!tx.cardLast4) return <span className="text-muted">–</span>;
+  // Spans rather than paragraphs: a screen that lets the card be changed wraps
+  // this in a button, and a button may only hold phrasing content.
+  return (
+    <>
+      <span className="block text-sm font-medium">{tx.cardHolderName}</span>
+      <span className="block text-xs tabular-nums text-muted">····{tx.cardLast4}</span>
+    </>
+  );
+}
+
+/**
+ * Who holds the card, with its number under it, for the section-wide list.
+ *
+ * `cell` is passed by a page that offers to change the card. It is still sorted
+ * and searched on the holder's name, because that is what the reader sees
+ * whichever control the cell is drawn as.
+ */
+export const bankHolderColumn = (
+  header: string,
+  cell?: (tx: BankTransaction) => ReactNode,
+): Column<BankTransaction> => ({
   key: "holder",
   header,
   value: (tx) => tx.cardHolderName ?? "",
   sortable: true,
   searchable: true,
-  cell: (tx) => (
-    <>
-      <p className="text-sm font-medium">{tx.cardHolderName}</p>
-      {tx.cardLast4 && (
-        <p className="text-xs tabular-nums text-muted">····{tx.cardLast4}</p>
-      )}
-    </>
-  ),
+  cell: cell ?? ((tx) => <BankCardHolder tx={tx} />),
 });
 
 // Money the way the app sets money everywhere else: `Amount`, not a flat

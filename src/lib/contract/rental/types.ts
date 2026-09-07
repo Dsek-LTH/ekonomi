@@ -13,7 +13,7 @@
 // whoever happens to be looking at it.
 import type { TermsSection } from "./terms";
 
-/** One party, as the signature block names them. */
+/** One party, as the signature block and the party block name them. */
 export interface RentalParty {
   name: string;
   /** "Skattmästare", "Ordförande F-sektionen". Null where none was given. */
@@ -30,9 +30,13 @@ export interface RentalContractLine {
   description: string;
   /** "2 st". A unit, because a bare number in a column reads as a price. */
   quantity: string;
-  /** "250,00 kr", already formatted. */
+  /** "250,00 kr", already formatted. The list price before any discount. */
   unitPrice: string;
-  /** What the whole line is let for: quantity times unit price. */
+  /** "50 %", or null where nothing came off this line. Null on every line is
+   *  how `anyDiscount` comes to be false and the column is left out. */
+  discount: string | null;
+  /** What the line actually costs: quantity times unit price, less its own
+   *  discount. */
   lineTotal: string;
   /** What one of these costs to replace. The figure the liability clause
    *  points at, which is why it is on the page and not only in the catalogue. */
@@ -46,26 +50,64 @@ export interface RentalContractData {
   lessor: {
     name: string;
     orgNo: string | null;
+    /** The section's own postal address, for the letterhead. Set the way the
+     *  renter's is: the street on one line, "223 63 Lund" on the next. */
+    address: string | null;
+    postalLine: string | null;
   };
   /** Who the gear is going to, as one line: the organisation or the person. */
   counterparty: string;
+  /** Organisationsnummer or personnummer, whichever the renter has. */
   counterpartyOrgNo: string | null;
+  /**
+   * Where they can be reached on paper, already set as the document prints it:
+   * the street on one line, then "223 62 Lund" on the next. Null on a contract
+   * drawn before the form asked for it.
+   */
+  counterpartyAddress: string | null;
+  counterpartyPostalLine: string | null;
 
   title: string;
   /** The day the document was drawn, not the day it was signed. */
   drawn: string;
 
-  pickupAt: string;
-  returnAt: string;
+  /**
+   * The period, as ISO days, or null where it has not been chosen yet.
+   *
+   * Nullable only because of the live preview: a stored rental always has both
+   * (the column is not nullable), but the form draws this document while it is
+   * still being filled in, and a preview that refuses to render until a date is
+   * typed is a preview that is blank exactly when it would be most use. The
+   * template rules a dash where a date will go.
+   */
+  pickupAt: string | null;
+  returnAt: string | null;
   purpose: string | null;
   place: string | null;
 
   lines: RentalContractLine[];
-  /** The rent as agreed, which is not necessarily the lines added up: a rental
-   *  can be priced as a whole, and lending to another section for nothing is
-   *  a real and common case. */
+  /** The lines added up, before any discount. */
+  subtotal: string;
+  /** Whether any line was discounted, so the table can leave the column out
+   *  rather than print a zero against every row. */
+  anyDiscount: boolean;
+  /**
+   * What was taken off, or null when nothing was.
+   *
+   * Null rather than "0,00 kr" so the template can leave the row out. A
+   * document that states a discount of nothing invites the question of what it
+   * was meant to say.
+   */
+  discount: string | null;
+  /** The rent: the subtotal less the discount. Zero is a real answer, and how
+   *  a free loan to another section is written. */
   price: string;
-  deposit: string;
+  /**
+   * When the rent falls due, or null for "at pickup", which is what the villkor
+   * say when no date is given. Printed under the rent, because a payment clause
+   * that refers to a date the page does not carry is unenforceable.
+   */
+  paymentDue: string | null;
   /** Every line's replacement value, added up. The number that says what is
    *  actually at stake. */
   totalReplacement: string;

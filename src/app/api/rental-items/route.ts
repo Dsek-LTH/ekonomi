@@ -6,14 +6,14 @@
 // the people who know what a speaker costs to replace.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canManageContracts } from "@/lib/domain/permissions";
+import { canManageRentals } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateRentalItem } from "@/lib/api/schemas/contract";
 
 // POST /api/rental-items
 export async function POST(req: Request) {
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateRentalItem);

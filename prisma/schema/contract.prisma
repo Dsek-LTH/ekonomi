@@ -104,10 +104,32 @@ model Contract {
   /// say who it was with.
   counterparty String
 
-  /// Organisationsnummer, when the counterparty is an organisation and somebody
-  /// bothered to record it. Free text: another section's number, a company's,
+  /// Organisationsnummer or personnummer, depending on which the counterparty
+  /// is. Free text: another section's number, a company's, a private person's,
   /// or nothing.
+  ///
+  /// Nullable here and required by the rental form, which is the difference
+  /// between the two halves of this table. A 2019 sponsoravtal arriving as a
+  /// scan has whatever the scan happens to say on it, and refusing to file one
+  /// without an organisation number would keep the archive from holding the
+  /// documents it exists for. A contract this app draws is signed by somebody
+  /// the section may have to pursue for a broken speaker, and a name with no
+  /// number behind it is not somebody you can pursue. See CreateRental.
   counterpartyOrgNo String?
+
+  /// Where the counterparty can be reached on paper.
+  ///
+  /// Split into three rather than one blob, because they are three different
+  /// facts and a document sets them on two lines: the street, then the postal
+  /// code and the town together. A single free-text field would print back
+  /// however it was typed, which on a document two parties sign is the one
+  /// place that matters.
+  ///
+  /// Nullable for the same reason as the number above, and required by the
+  /// rental form for the same reason too: an address is how a claim is served.
+  counterpartyAddress    String?
+  counterpartyPostalCode String?
+  counterpartyCity       String?
 
   /// The period the agreement covers. Both optional, because an archived
   /// contract often states neither, and a rental states both.
@@ -261,27 +283,77 @@ model RentalDetails {
   returnAt DateTime
 
   /// What it is being rented for, in the renter's words. Goes on the document.
+  ///
+  /// Nullable here and required by the form, the same split as the renter's
+  /// address: rows drawn before it was asked for have none, and the villkor say
+  /// the gear must be used "på det sätt den är avsedd för", which needs
+  /// something on the page to point at.
   purpose String?
 
   /// Where it is picked up and returned, when that is worth stating.
   place String?
 
-  /// The rent, in öre. Zero is a real answer and a common one: lending gear to
-  /// another section for nothing is still worth a contract, because the point
-  /// of the contract is who pays when it comes back broken.
+  /// What the lines come to before anything is taken off, in öre.
+  ///
+  /// Stored rather than summed on read, for the same reason a line keeps its
+  /// own prices: a contract states what was agreed on the day it was agreed,
+  /// and re-adding last spring's rental against a catalogue somebody edited
+  /// this morning would make the archive disagree with the signed PDF.
+  subtotalOre Int @default(0)
+
+  /// What was taken off across every line, in öre.
+  ///
+  /// The sum of the lines' own discounts, stored rather than re-added on read
+  /// for the same reason the subtotal is: the document printed a figure and the
+  /// row has to keep saying what the document said.
+  discountOre Int @default(0)
+
+  /// When the rent falls due.
+  ///
+  /// Null means "at pickup", which is what the villkor say when no date is
+  /// given. Its own column rather than a sentence in `purpose`, because the
+  /// payment clause refers to it and a term that points at nothing is a term
+  /// that cannot be enforced. See rental/terms.ts, punkt 4.
+  paymentDueAt DateTime? @db.Date
+
+  /// The rent, in öre: `subtotalOre` less `discountOre`. Zero is a real answer
+  /// and a common one, because the point of a free loan is still the contract:
+  /// who pays when it comes back broken.
+  ///
+  /// Derived, and stored anyway. It is what the document prints and what the
+  /// list shows, and a figure recomputed on every read is a figure that can
+  /// drift from the one on the signed page. See lib/contract/rental/pricing.ts,
+  /// which is the only place the subtraction is written.
   priceOre Int @default(0)
-
-  /// The deposit, in öre. Zero when none is taken.
-  depositOre Int @default(0)
-
-  /// When the deposit went back. Null while it is still held, and null forever
-  /// on a contract that never took one, which `depositOre` distinguishes.
-  depositReturnedAt DateTime?
 
   /// When the gear actually came back, as against `returnAt`, which is when it
   /// was due. Both, because the difference is the thing anybody asks about
   /// afterwards.
   returnedAt DateTime?
+
+  /// When the returned gear was inspected and accepted.
+  ///
+  /// Deliberately not the same column as `returnedAt`, and the difference is
+  /// the whole of what a damage claim turns on. Handing a Soundboks back is not
+  /// the same event as somebody plugging it in and finding it works, and the
+  /// villkor say the rental is not over until the second one has happened. A
+  /// fault found between the two is the renter's; a fault found long after is
+  /// an argument nobody can win. See rental/terms.ts.
+  checkedAt DateTime?
+
+  /// Who accepted it back. Not derivable from anything else, and the name a
+  /// dispute asks for first.
+  checkedBy   User?   @relation("RentalChecker", fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedById String?
+
+  /// What state the gear was in when it went out, and when it came back.
+  ///
+  /// Free text, written by whoever handed it over. Two notes rather than one,
+  /// because a claim is the difference between them: without the first, "it is
+  /// scratched" is an observation rather than evidence. Photographs go on the
+  /// contract as ATTACHMENT files, which is what that role is for.
+  conditionOut String?
+  conditionIn  String?
 
   lines RentalLine[]
 
@@ -313,7 +385,20 @@ model RentalLine {
   quantity Int @default(1)
 
   /// What one of these was let for, per the whole rental period, in öre.
+  /// Before any discount: this is the list price the line starts from.
   unitPriceOre Int @default(0)
+
+  /// What came off this line, as a percentage of what it would otherwise cost.
+  ///
+  /// Per line rather than one figure for the whole rental, because that is how
+  /// a discount is actually given: the speakers at half price because they are
+  /// going to another section, the mixer at full price because it is not. One
+  /// number for the lot could express the total but never the reason, and the
+  /// reason is what somebody reading the contract next year wants.
+  ///
+  /// A percentage rather than an amount, so it survives the quantity changing.
+  /// 100 is a line lent for nothing, which is how a free loan is written.
+  discountPercent Int @default(0)
 
   /// What one of these costs to replace, in öre. The number the liability
   /// clause points at, and the reason the catalogue exists at all.
@@ -343,6 +428,15 @@ model RentalItem {
   /// What it costs to replace, in öre. Required: an item nobody has valued is
   /// an item the liability clause cannot name a figure for.
   replacementValueOre Int
+
+  /// How many of this the section owns.
+  ///
+  /// The column that makes the catalogue answer "is it free that weekend"
+  /// rather than only "what does it cost". Without it a contract could promise
+  /// the one Soundboks to two people on the same Saturday, and the app would be
+  /// faster at creating that conflict than the paper process it replaced. See
+  /// lib/contract/availability.ts.
+  quantity Int @default(1)
 
   /// Retired rather than deleted, the same as a cost centre. A catalogue row
   /// referenced by a contract from 2024 has to stay reachable, and a row

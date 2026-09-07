@@ -46,11 +46,15 @@ export default async function BankPage({
     defaultTab: scope === "mine" ? "UNMATCHED" : "ALL",
   });
 
-  const [page, cards] = await Promise.all([
+  const [page, cards, allCards] = await Promise.all([
     getBankTransactionPage(scope === "mine" ? { cardHolderId: user.id } : {}, query),
     // Only to decide whether the card column earns its width, so only asked for
     // where it could be shown.
     holdsCard ? getCards({ holderId: user.id }) : Promise.resolve([]),
+    // The register behind the card picker. A purchase the export named no card
+    // on is on nobody's own feed, so putting it on one is bookkeeping's job and
+    // only the section-wide reading shows those rows at all.
+    canSeeAll && scope === "all" ? getCards() : Promise.resolve([]),
   ]);
 
   return (
@@ -62,6 +66,7 @@ export default async function BankPage({
       // a control that reads as broken.
       canPickScope={canSeeAll && holdsCard}
       cards={cards}
+      allCards={allCards}
       viewerId={user.id}
     />
   );

@@ -7,7 +7,8 @@
 // read the agreement their unit is spending against; taking the document out of
 // the archive is somebody else's call.
 import { prisma } from "@/lib/server/db";
-import { canManageContracts, canViewContracts } from "@/lib/domain/permissions";
+import { canManageRentals, canViewRentals } from "@/lib/domain/permissions";
+import { canManageKind, contractScopeOf, contractScopeWhere } from "@/lib/data/contract-scope";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectStream } from "@/lib/server/storage";
 import { deleteContractFile } from "@/lib/contract/files";
@@ -18,14 +19,20 @@ export async function GET(
   ctx: { params: Promise<{ id: string; fileId: string }> },
 ) {
   const { id, fileId } = await ctx.params;
-  const g = await gate(canViewContracts, "contract.noViewAccess");
+  const g = await gate(canViewRentals, "contract.noViewAccess");
   if (!g.ok) return g.res;
 
-  // Both ids, so a file id from one contract cannot be read through another's
-  // URL. The file id alone would be enough to find the row; asking for the pair
-  // is what makes the address mean what it says.
+  // Three conditions, all of them load-bearing. Both ids, so a file id from one
+  // contract cannot be read through another's URL. And the viewer's scope, so a
+  // rental-only holder cannot stream a sponsoravtal by knowing its id: this is
+  // the route that hands over the bytes, and a gate that only guarded the page
+  // would be a lock on the door of an open window.
   const file = await prisma.contractFile.findFirst({
-    where: { id: fileId, contractId: id },
+    where: {
+      id: fileId,
+      contractId: id,
+      contract: contractScopeWhere(contractScopeOf(g.actor)),
+    },
     select: { id: true, objectKey: true, filename: true },
   });
   if (!file) return fail(404, "contract.fileNotFound");
@@ -64,14 +71,17 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string; fileId: string }> },
 ) {
   const { id, fileId } = await ctx.params;
-  const g = await gate(canManageContracts, "contract.noManageAccess");
+  const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
   const file = await prisma.contractFile.findFirst({
     where: { id: fileId, contractId: id },
-    select: { id: true },
+    select: { id: true, contract: { select: { kind: true } } },
   });
   if (!file) return fail(404, "contract.fileNotFound");
+  if (!canManageKind(g.actor, file.contract.kind)) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   const removed = await deleteContractFile(file.id);
   if (!removed.ok) {

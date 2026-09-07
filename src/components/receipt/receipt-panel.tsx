@@ -58,6 +58,28 @@ export const DEFAULT_WIDTH = 520;
 const FLOATING_BTN =
   "flex size-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
 
+/**
+ * What the dropzone calls the thing it is asking for.
+ *
+ * The panel was built for receipts and says so in every string, and "Dra hit
+ * ditt kvitto" is the wrong sentence on the form that files a contract. Each
+ * one falls back to the receipt wording, so the wizard this was written for
+ * passes nothing and reads exactly as it did.
+ *
+ * Only the four the dropzone shows. The upload spinner's wording is not here
+ * because it cannot be reached from a page holding its file locally: a picked
+ * file is a document to show, so the panel is a viewer by then rather than a
+ * dropzone.
+ */
+export interface UploadCopy {
+  /** The line above the button, on a screen wide enough to drag onto. */
+  lead?: string;
+  /** The same line where dragging is not a thing, so it names the act instead. */
+  leadShort?: string;
+  fileTypes?: string;
+  action?: string;
+}
+
 type Source = {
   /**
    * What there is to read, in reading order, most often the utläggsräkning
@@ -74,7 +96,7 @@ type Source = {
    * panel is the dropzone: "where the receipt lives" and "where you put it"
    * are the same place, so neither needs a step of its own.
    */
-  upload?: { onFile: (file: File) => void; uploading: boolean };
+  upload?: { onFile: (file: File) => void; uploading: boolean; copy?: UploadCopy };
   /**
    * Keeps the panel standing when there is no receipt, saying so in place of
    * showing one. A page that reads an utlägg alongside its underlag wants the
@@ -184,6 +206,7 @@ export function ReceiptPanelSource({
   filename,
   onFile,
   uploading = false,
+  uploadCopy,
   emptyTitle,
   emptyDescription,
 }: {
@@ -214,6 +237,9 @@ export function ReceiptPanelSource({
   /** Makes the panel accept a receipt as well as show one. */
   onFile?: (file: File) => void;
   uploading?: boolean;
+  /** What the dropzone should call the file, where it is not a receipt. See
+   *  UploadCopy. Read only while `onFile` is given. */
+  uploadCopy?: UploadCopy;
   /** Given, the panel stays when there is no receipt and says this instead. */
   emptyTitle?: string;
   emptyDescription?: string;
@@ -229,6 +255,15 @@ export function ReceiptPanelSource({
   });
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
+
+  // By value, for the same reason `docs` is: a page writes this object inline,
+  // so it is a new one every render, and registering the source on each would
+  // set state in the provider forever.
+  const copyKey = JSON.stringify(uploadCopy ?? null);
+  const copyRef = useRef(uploadCopy);
+  useEffect(() => {
+    copyRef.current = uploadCopy;
+  });
 
   const shorthand = previewUrl ?? documentUrl ?? (receiptId ? `/api/receipts/${receiptId}` : null);
   const docs: ViewerDocument[] =
@@ -253,11 +288,11 @@ export function ReceiptPanelSource({
     }
     setSource({
       docs: docsRef.current,
-      upload: accepts ? { onFile: stableOnFile, uploading } : undefined,
+      upload: accepts ? { onFile: stableOnFile, uploading, copy: copyRef.current } : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
     });
     return () => setSource(null);
-  }, [docsKey, accepts, uploading, stableOnFile, emptyTitle, emptyDescription, setSource]);
+  }, [docsKey, copyKey, accepts, uploading, stableOnFile, emptyTitle, emptyDescription, setSource]);
 
   return null;
 }
@@ -592,12 +627,16 @@ export function ReceiptPanelColumn() {
           </span>
           {/* Dragging is a desktop idea; on a phone the button is the whole
               interaction, so the wording changes with the screen. */}
-          <p className="mt-4 hidden text-sm font-medium md:block">{t("dropzone")}</p>
-          <p className="mt-4 text-sm font-medium md:hidden">{t("pickReceiptLead")}</p>
-          <p className="mt-1 text-xs text-muted">{t("fileTypes")}</p>
+          <p className="mt-4 hidden text-sm font-medium md:block">
+            {upload?.copy?.lead ?? t("dropzone")}
+          </p>
+          <p className="mt-4 text-sm font-medium md:hidden">
+            {upload?.copy?.leadShort ?? t("pickReceiptLead")}
+          </p>
+          <p className="mt-1 text-xs text-muted">{upload?.copy?.fileTypes ?? t("fileTypes")}</p>
           <Button className="mt-5" onClick={pick}>
             <IconUpload className="size-4" />
-            {t("pickReceipt")}
+            {upload?.copy?.action ?? t("pickReceipt")}
           </Button>
         </>
       )}
