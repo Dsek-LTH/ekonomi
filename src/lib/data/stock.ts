@@ -481,14 +481,6 @@ export interface StockEventDto {
   products: number;
   /** What it sold, in öre, at the average the log carries. */
   soldValueOre: number;
-  /**
-   * Whether anything it took out is still unaccounted for.
-   *
-   * The list's one piece of judgement, and it is deliberately not a status: a
-   * night with stock still out is not "open", it is a night whose sold figure
-   * is counting crates that may yet come back. See `openCaveat` on the page.
-   */
-  unreturned: boolean;
 }
 
 /** What one product did on one event. */
@@ -585,9 +577,9 @@ const soldValue = (
  * last one made. A pub is entered the evening it runs, or the Monday after.
  *
  * Every event's arithmetic is folded here rather than on the row that opens it,
- * so the list can say what a night sold and whether anything is still out. Two
- * queries for the whole page: the movements of every event shown, and the unit
- * cost of every product they touched.
+ * so the list can say what a night sold. Two queries for the whole page: the
+ * movements of every event shown, and the unit cost of every product they
+ * touched.
  */
 export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
   const events = await prisma.stockEvent.findMany({
@@ -620,13 +612,11 @@ export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
   return events.map((event) => {
     const products = byTag.get(event.id) ?? new Map<string, typeof entries>();
     let soldValueOre = 0;
-    let unreturned = false;
     let count = 0;
     for (const rows of products.values()) {
       const product = rows[0].product;
       const totals = tagTotals(product, rows.map(asMovement));
       soldValueOre += soldValue(product, totals.sold, costs.get(product.id) ?? 0);
-      if (totals.out > totals.back + totals.spilled) unreturned = true;
       count += rows.length;
     }
     return {
@@ -636,7 +626,6 @@ export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
       entries: count,
       products: products.size,
       soldValueOre,
-      unreturned,
     };
   });
 }
@@ -713,7 +702,6 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
     entries: entries.length,
     products: byProduct.size,
     soldValueOre: lines.reduce((sum, l) => sum + l.soldValueOre, 0),
-    unreturned: lines.some((l) => l.out > l.back + l.spilled),
     lines,
   };
 }

@@ -908,8 +908,6 @@
     "add": "+ Add cost center"
   },
   "receipt": {
-    "prevDocument": "Previous document",
-    "nextDocument": "Next document",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "reset": "Reset",
@@ -934,7 +932,9 @@
     "uploadingHint": "Saving the image to the receipt archive.",
     "expand": "Show the receipt",
     "tab": "Receipt",
-    "resize": "Resize the receipt panel"
+    "resize": "Resize the receipt panel",
+    "coverLabel": "Expense report",
+    "underlagLabel": "Receipt"
   },
   "fortnox": {
     "auth": {
@@ -2379,7 +2379,6 @@
       "removeFailed": "Could not remove the occasion",
       "removed": "The occasion was removed.",
       "removedWithLog": "The occasion was removed, and {count, plural, =1 {1 movement} other {# movements}} in the log with it.",
-      "stillOut": "Still out",
       "sold": "What was used",
       "nothing": "Nothing has been booked on this occasion yet. Add a product below.",
       "movements": "{count, plural, =1 {1 movement in the log} other {# movements in the log}}",

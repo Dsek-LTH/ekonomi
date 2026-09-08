@@ -908,8 +908,6 @@
     "add": "+ Lägg till kostnadsställe"
   },
   "receipt": {
-    "prevDocument": "Föregående dokument",
-    "nextDocument": "Nästa dokument",
     "zoomIn": "Zooma in",
     "zoomOut": "Zooma ut",
     "reset": "Återställ",
@@ -934,7 +932,9 @@
     "uploadingHint": "Sparar bilden i kvittoarkivet.",
     "expand": "Visa kvittot",
     "tab": "Kvitto",
-    "resize": "Ändra kvittopanelens bredd"
+    "resize": "Ändra kvittopanelens bredd",
+    "coverLabel": "Utläggsräkning",
+    "underlagLabel": "Underlag"
   },
   "fortnox": {
     "auth": {
@@ -2379,7 +2379,6 @@
       "removeFailed": "Kunde inte ta bort tillfället",
       "removed": "Tillfället togs bort.",
       "removedWithLog": "Tillfället togs bort, och med det {count, plural, =1 {1 rörelse} other {# rörelser}} i loggen.",
-      "stillOut": "Kvar ute",
       "sold": "Vad som gick åt",
       "nothing": "Inget är bokfört på det här tillfället ännu. Lägg till en produkt nedan.",
       "movements": "{count, plural, =1 {1 rörelse i loggen} other {# rörelser i loggen}}",

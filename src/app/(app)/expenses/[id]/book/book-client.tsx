@@ -127,7 +127,12 @@ export default function BookExpenseClient({
   const selectOnce = useSelectOnce();
   // `expense` is still nullable here. The not-found case is narrowed further
   // down, and expenseDocuments takes that; the alt text has to as well.
-  const documents = expenseDocuments(expense, `${tReceipt("alt")} – ${expense?.title ?? ""}`);
+  const documents = expenseDocuments(
+    expense,
+    `${tReceipt("alt")} – ${expense?.title ?? ""}`,
+    // The panel stacks the two into one scroll, so each is captioned.
+    { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
+  );
 
   const accountName = (number: string) =>
     accounts.find((a) => a.number === number.trim())?.name ?? "";

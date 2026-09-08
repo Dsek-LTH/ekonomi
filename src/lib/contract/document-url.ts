@@ -7,8 +7,8 @@
 //
 // The order is what a reader wants first, not what the archive holds first. A
 // signed contract is what the parties actually agreed to, so it leads; the
-// rendering that preceded it is behind it, worth keeping in the pager because
-// "what did we send them" is a real question when a signature is disputed.
+// rendering that preceded it is below it, worth keeping because "what did we
+// send them" is a real question when a signature is disputed.
 // Attachments come last: a photograph of the gear is context, not the
 // agreement. The evidence log is deliberately not here at all, because it is a
 // provider's audit file rather than something to read beside the work, and it
@@ -21,6 +21,8 @@ interface PanelDocument {
   src: string;
   mimeType: string;
   filename?: string;
+  /** What the panel captions it, where it stacks more than one. */
+  label?: string;
 }
 
 interface ContractFileLike {
@@ -49,5 +51,9 @@ export function contractDocuments(contract: ContractLike): PanelDocument[] {
       src: `/api/contracts/${contract.id}/files/${f.id}`,
       mimeType: f.mimeType,
       filename: f.filename,
+      // Its own name. A contract's files are already named for what they are
+      // ("uthyrningsavtal-2026-09-18-F-sektionen.pdf"), unlike an utlägg's two,
+      // which are generated and need telling apart by hand.
+      label: f.filename,
     }));
 }

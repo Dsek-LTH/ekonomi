@@ -6,22 +6,39 @@ const submitted = { id: "exp1", status: "APPROVED", receiptId: "rec1" };
 
 describe("expenseDocuments", () => {
   it("puts the cover first and the underlag behind it", () => {
-    // Two documents, not one merged file: the pager moves between them, and
-    // the receipt is shown as it was stored rather than laid on a white sheet.
-    // The order is the one they are stapled in for Fortnox, so paging through
-    // them reads the thing the section will actually file.
+    // Two documents, not one merged file: the panel stacks them into one
+    // scroll, and the receipt is shown as it was stored rather than laid on a
+    // white A4 sheet. The order is the one they are stapled in for Fortnox, so
+    // scrolling through them reads the thing the section will actually file.
     expect(expenseDocuments({ ...submitted, receiptMimeType: "image/png" })).toEqual([
-      { src: "/api/expenses/exp1/document", mimeType: "application/pdf" },
-      { src: "/api/receipts/rec1", mimeType: "image/png", filename: undefined, defaultOpen: true },
+      { src: "/api/expenses/exp1/document", mimeType: "application/pdf", label: undefined },
+      {
+        src: "/api/receipts/rec1",
+        mimeType: "image/png",
+        filename: undefined,
+        label: undefined,
+      },
     ]);
   });
 
-  it("opens on the underlag all the same", () => {
-    // Order and landing page are two different questions. The cover leads the
-    // document; the receipt is what somebody came to look at, so it is marked
-    // rather than moved, and exactly one of them is.
-    const docs = expenseDocuments(submitted);
-    expect(docs.map((d) => Boolean(d.defaultOpen))).toEqual([false, true]);
+  it("captions the two where the caller has words for them", () => {
+    // The panel stacks them, so something has to say where one ends and the
+    // next begins. The words are the caller's: this file is client-safe and
+    // knows nothing about locales.
+    const docs = expenseDocuments(submitted, undefined, {
+      cover: "Utläggsräkning",
+      underlag: "Underlag",
+    });
+    expect(docs.map((d) => d.label)).toEqual(["Utläggsräkning", "Underlag"]);
+  });
+
+  it("leaves a lone document uncaptioned, having nothing to tell it apart from", () => {
+    const docs = expenseDocuments({ ...submitted, paymentType: "MILEAGE" }, undefined, {
+      cover: "Utläggsräkning",
+      underlag: "Underlag",
+    });
+    expect(docs).toHaveLength(1);
+    expect(docs[0].label).toBeUndefined();
   });
 
   it("takes a photo for a receipt whose type the DTO didn't carry", () => {

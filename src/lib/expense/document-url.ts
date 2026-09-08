@@ -1,9 +1,8 @@
 // Which documents an utlägg stands in the receipt panel, and in what order.
 //
-// Two of them, kept apart: the utläggsräkning (the cover page naming who
-// attested what) and the underlag behind it, with the panel's pager moving
-// between them. They are in the order they are stapled in; the panel opens on
-// the second. See `expenseDocuments` for why those are not the same decision.
+// Two of them: the utläggsräkning (the cover page naming who attested what) and
+// the underlag behind it, in the order they are stapled in. The panel stacks
+// them into one scroll, captioned, so the reader meets both.
 //
 // They used to arrive as one merged PDF, and merging is still what goes to
 // Fortnox (lib/server/pdf-merge.ts). But merging is a *printing* operation: a
@@ -48,29 +47,28 @@ interface PanelDocument {
   mimeType: string;
   /** Alt text, for a document that is an image. */
   filename?: string;
-  /** The one the panel opens on, whatever its place in the order. */
-  defaultOpen?: boolean;
+  /** What the panel captions it, where it stacks more than one. */
+  label?: string;
 }
 
 /**
  * The documents to stand in the receipt panel: the utläggsräkning first, then
- * the underlag it fronts, and the panel opens on the underlag. A milersättning
- * is the one utlägg that returns a single document; see below.
- *
- * Order and landing page are two different questions, and this is the case
- * where they part.
+ * the underlag it fronts. A milersättning is the one utlägg that returns a
+ * single document; see below.
  *
  * The order is the one the two are stapled in for Fortnox (lib/server/
  * pdf-merge.ts): the utläggsräkning is the front of the document, and a reader
- * paging through what the section will actually file should meet it the way
- * the section will. This used to be the other way round, with the underlag
- * first, precisely so that the panel would open on it, which conflated the two
- * questions and put the pages in an order nothing else in the app uses.
+ * scrolling through what the section will actually file should meet it the way
+ * the section will.
  *
- * The landing page is the underlag all the same. That is the document nobody
- * else has seen, and the one every screen using this panel is asking a question
- * about; the cover is generated from data already on screen beside it. So it is
- * marked rather than moved.
+ * There is no landing page any more, and that is the point. The panel used to
+ * show one document at a time and open on the underlag, on the reasoning that
+ * the underlag is what nobody else has seen and the cover is generated from
+ * data already on screen. The reasoning was sound and the effect was that the
+ * cover became invisible: it sat behind a pager arrow with nothing saying it
+ * was there, and the people it was written for forgot it existed. Stacked and
+ * captioned, both are simply on the page, and the one you meet first is the one
+ * the section files first.
  *
  * Empty in one case, and deliberately. No receipt: the utlägg still has a
  * cover, but showing it alone would fill the panel with a document and take
@@ -92,7 +90,17 @@ export function expenseDocuments(
   expense: ExpenseDocumentSubject | null | undefined,
   /** What to call the underlag when it is an image and needs alt text. */
   alt?: string,
+  /**
+   * What the panel captions the two, where it shows both.
+   *
+   * Passed in rather than written here: this file is client-safe and knows
+   * nothing about locales, and the two words are the caller's own translations.
+   * Omitted, the stack goes uncaptioned, which is what it did before.
+   */
+  labels?: { cover: string; underlag: string },
 ): PanelDocument[] {
+  const coverLabel = labels?.cover;
+  const underlagLabel = labels?.underlag;
   if (!expense) return [];
 
   // A milersättning has no underlag of its own: there is nothing to photograph
@@ -101,6 +109,7 @@ export function expenseDocuments(
   // kind of utlägg whose cover is shown while it is still a draft. That page
   // is the only place the journey can be read.
   if (expense.paymentType === "MILEAGE") {
+    // One document, so no caption: there is nothing to tell it apart from.
     return [{ src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" }];
   }
 
@@ -117,7 +126,11 @@ export function expenseDocuments(
   // receipt cannot change it. The receipt is addressed by its own id, which is
   // a new URL when it is replaced.
   return [
-    { src: `/api/expenses/${expense.id}/document`, mimeType: "application/pdf" },
-    { ...underlag, defaultOpen: true },
+    {
+      src: `/api/expenses/${expense.id}/document`,
+      mimeType: "application/pdf",
+      label: coverLabel,
+    },
+    { ...underlag, label: underlagLabel },
   ];
 }

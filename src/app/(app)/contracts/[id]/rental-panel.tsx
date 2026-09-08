@@ -10,6 +10,7 @@ import { DetailList, DetailRow } from "@/components/ui/detail-list";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useFormat } from "@/lib/ui/use-format";
 import { oreToSEK } from "@/lib/domain/money";
+import { linePricing } from "@/lib/contract/rental/pricing";
 import { isCompleteDate } from "@/lib/domain/date";
 import type { RentalDetailRow } from "@/lib/data/contracts";
 
@@ -41,6 +42,7 @@ export function RentalPanel({
   const [conditionOut, setConditionOut] = useState(rental.conditionOut ?? "");
   const [conditionIn, setConditionIn] = useState(rental.conditionIn ?? "");
 
+  const anyDiscount = rental.lines.some((l) => l.discountPercent > 0);
   const totalReplacement = rental.lines.reduce(
     (sum, l) => sum + l.replacementValueOre * l.quantity,
     0,
@@ -101,6 +103,14 @@ export function RentalPanel({
           </div>
         )}
 
+        {/* The lines as the contract states them, in the columns the document
+            uses. The discount column is drawn only where something was
+            discounted: a column of dashes on the ordinary rental is a question
+            asked of every reader and answered for none.
+
+            Without the amount column this table showed gross unit prices
+            against a net Hyra above, with nothing on the page explaining the
+            difference. */}
         <div>
           <h3 className="mb-2 text-sm font-medium">{t("rental.lines")}</h3>
           <div className="overflow-x-auto">
@@ -110,28 +120,43 @@ export function RentalPanel({
                   <th className="py-2 pr-3 font-medium">{t("rental.description")}</th>
                   <th className="py-2 pr-3 text-right font-medium">{t("rental.quantity")}</th>
                   <th className="py-2 pr-3 text-right font-medium">{t("rental.unitPrice")}</th>
+                  {anyDiscount && (
+                    <th className="py-2 pr-3 text-right font-medium">{t("rental.discount")}</th>
+                  )}
+                  <th className="py-2 pr-3 text-right font-medium">{t("rental.lineAmount")}</th>
                   <th className="py-2 text-right font-medium">
                     {t("rental.replacementValue")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rental.lines.map((l) => (
-                  <tr key={l.id}>
-                    <td className="py-2 pr-3">{l.description}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{l.quantity}</td>
-                    <td className="py-2 pr-3 text-right">
-                      <Amount value={oreToSEK(l.unitPriceOre)} />
-                    </td>
-                    <td className="py-2 text-right">
-                      <Amount value={oreToSEK(l.replacementValueOre)} />
-                    </td>
-                  </tr>
-                ))}
+                {rental.lines.map((l) => {
+                  const priced = linePricing(l);
+                  return (
+                    <tr key={l.id}>
+                      <td className="py-2 pr-3">{l.description}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{l.quantity}</td>
+                      <td className="py-2 pr-3 text-right">
+                        <Amount value={oreToSEK(l.unitPriceOre)} />
+                      </td>
+                      {anyDiscount && (
+                        <td className="py-2 pr-3 text-right tabular-nums text-muted">
+                          {priced.discountPercent > 0 ? `${priced.discountPercent} %` : "–"}
+                        </td>
+                      )}
+                      <td className="py-2 pr-3 text-right">
+                        <Amount value={oreToSEK(priced.netOre)} />
+                      </td>
+                      <td className="py-2 text-right">
+                        <Amount value={oreToSEK(l.replacementValueOre)} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border font-medium">
-                  <td className="py-2 pr-3" colSpan={3}>
+                  <td className="py-2 pr-3" colSpan={anyDiscount ? 5 : 4}>
                     {t("rental.totalReplacement")}
                   </td>
                   <td className="py-2 text-right">

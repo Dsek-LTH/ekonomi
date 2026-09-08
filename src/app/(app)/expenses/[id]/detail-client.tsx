@@ -77,7 +77,12 @@ function ExpenseDetail({
   const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
-  const documents = expenseDocuments(expense, `${tReceipt("alt")} – ${expense.title}`);
+  const documents = expenseDocuments(
+    expense,
+    `${tReceipt("alt")} – ${expense.title}`,
+    // The panel stacks the two into one scroll, so each is captioned.
+    { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
+  );
 
   return (
     <PageShell

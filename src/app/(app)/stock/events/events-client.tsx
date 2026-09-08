@@ -8,11 +8,12 @@
 // almost always the top row.
 //
 // What it says about a night is its arithmetic, because there is nothing else
-// to say. There is no status: an event is never closed and never finished,
-// and "still out" is not a state it is in but a fact about its figures: what
-// went out that has not come home yet, which is also what its sold figure is
-// currently counting. The row says so plainly rather than dressing it as a
-// workflow step.
+// to say. There is no status: an event is never closed and never finished, and
+// nothing here can say whether a night is done. The row used to carry a "still
+// out" badge that meant to, but its condition was `out > back + spilled`, which
+// is the definition of the sold figure standing beside it, so it lit on every
+// night that sold anything. Telling the two apart needs something the log does
+// not record.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -70,18 +71,6 @@ export default function EventsClient({
         ) : (
           t("counts.products", { count: e.products })
         ),
-    },
-    {
-      key: "state",
-      header: "",
-      align: "right",
-      mobile: "meta",
-      cell: (e) =>
-        e.unreturned ? (
-          <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
-            {t("event.stillOut")}
-          </span>
-        ) : null,
     },
     {
       key: "sold",

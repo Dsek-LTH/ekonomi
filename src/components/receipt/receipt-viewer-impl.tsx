@@ -3,7 +3,7 @@
 // Implementation of the zoomable receipt viewer. Loaded client-only (via the
 // dynamic wrapper in receipt-viewer.tsx) because pdf.js touches browser globals
 // such as DOMMatrix at import time and can't be evaluated during SSR.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
@@ -27,13 +27,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,
 ).toString();
-
-// Two-finger trackpad scrolling should pan the receipt; a mouse wheel should
-// zoom. The platform gives us nothing to tell them apart, since both arrive as
-// a `wheel` event with ctrlKey false (only a pinch sets ctrlKey), so we have to
-// judge by the shape of the deltas.
-const GESTURE_GAP_MS = 200;
-const WHEEL_MIN_DELTA = 40;
 
 // How long the container has to hold still before the PDF is re-rendered at the
 // new width. Long enough that a drag produces one render at the end rather than
@@ -61,19 +54,6 @@ const ZOOM_SETTLE_MS = 300;
  */
 const MAX_CANVAS_WIDTH = 3200;
 
-function looksLikeTrackpad(e: WheelEvent): boolean {
-  // Firefox reports line/page steps, and only ever does so for a real wheel.
-  if (e.deltaMode !== 0) return false;
-  // Chromium and WebKit still expose the legacy wheelDelta, where a physical
-  // wheel always reports whole 120-unit notches. Strongest signal we get.
-  const legacy = (e as WheelEvent & { wheelDeltaY?: number }).wheelDeltaY;
-  if (typeof legacy === "number" && legacy !== 0)
-    return Math.abs(legacy) % 120 !== 0;
-  // Otherwise: a wheel notch is coarse, whole and purely vertical.
-  if (e.deltaX !== 0) return true;
-  return !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < WHEEL_MIN_DELTA;
-}
-
 /** One thing to look at. A PDF is shown whole (every page, stacked) and an
  *  image is shown as it was stored. */
 export interface ViewerDocument {
@@ -84,29 +64,34 @@ export interface ViewerDocument {
   /** Alt text, for a document that is an image. */
   filename?: string;
   /**
-   * Open the panel on this one rather than on the first.
+   * What to call it above its first page, where there is more than one.
    *
-   * Reading order and landing page are two different questions, and an utlägg
-   * is the case where they part: the utläggsräkning is the front of the
-   * document and belongs first, but the receipt behind it is what somebody came
-   * to look at. Whoever builds the list decides both, in one place, rather than
-   * the panel taking an index that could drift out of step with it.
-   *
-   * The first one marked wins; none marked opens on the first, which is what
-   * every other caller means by saying nothing.
+   * A concatenated stack has to say where one document ends and the next
+   * begins, or the utläggsräkning reads as a cover sheet somebody left in the
+   * scan. Omitted on a single document, which needs no caption to tell it apart
+   * from nothing.
    */
-  defaultOpen?: boolean;
+  label?: string;
 }
 
 export interface ReceiptViewerProps {
   /**
    * What there is to read, in reading order: the utläggsräkning and the
-   * underlag behind it, say. One at a time on screen, with the pager in the
-   * toolbar moving between them.
+   * underlag behind it, say. All of it in one scroll, each document captioned,
+   * one after the other.
    *
-   * A list rather than one merged PDF because merging is printing: it lays a
+   * Concatenated here rather than merged into one PDF upstream, and the
+   * difference matters. Merging is a *printing* operation: it lays a
    * photographed receipt onto a white A4 sheet, which is right for the file
-   * Fortnox is sent and wrong for a panel someone is reading in.
+   * Fortnox is sent (lib/server/pdf-merge.ts) and wrong for a panel someone is
+   * reading in, where it framed every photo in paper. Stacking them in the
+   * browser keeps each document at its own size and shape and still lets the
+   * reader scroll from one into the next.
+   *
+   * It used to show one at a time with a pager in the toolbar. Two documents
+   * behind a button is one document and a rumour: the utläggsräkning was
+   * genuinely hard to remember existed, because the panel opened on the receipt
+   * and nothing on screen said there was anything behind it.
    */
   documents: ViewerDocument[];
   /** Sizing/framing for the inline (non-fullscreen) viewer. */
@@ -125,60 +110,48 @@ export default function ReceiptViewerImpl({
   const coarse = useMediaQuery("(pointer: coarse)");
 
   const [fullscreen, setFullscreen] = useState(false);
-  // Which document is open. Clamped rather than trusted: a receipt replaced
-  // while the panel is on it shortens the list under the reader.
-  const opensAt = () => Math.max(0, documents.findIndex((d) => d.defaultOpen));
-  const [index, setIndex] = useState(opensAt);
-  const at = Math.min(index, Math.max(0, documents.length - 1));
-  const doc = documents[at];
-  const src = doc?.src ?? "";
-  const filename = doc?.filename;
-  const isPdf = doc?.mimeType === "application/pdf";
 
-  const [numPages, setNumPages] = useState(0);
-  // The receipt failed to load, and which retry we're on. An outage of the
-  // archive, not of anything else on the page. The counter rides in the URL so
-  // a retry misses the browser's own cache of the failed response; without that
-  // it re-fails without having asked anyone anything.
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  // The cache-busting query only makes sense for a URL that was fetched. A
-  // blob: URL is the browser's own copy. It cannot fail this way, and a query
-  // string appended to one addresses nothing.
-  const fetched = !src.startsWith("blob:");
-  const fileSrc = attempt && fetched ? `${src}?retry=${attempt}` : src;
-  const retry = () => {
-    setFailed(false);
-    setAttempt((n) => n + 1);
-  };
-
-  // A different document is a different everything: its own page count, and
-  // none of the previous one's failure. Keyed on the address rather than the
-  // index, so a receipt replaced in place resets too, and not on `fileSrc`,
-  // which is what a retry changes and must not clear the attempt it just made.
+  // Whether anything in the stack is a PDF, and how many pages there are across
+  // all of them. Both feed `pixelRatio` below, which rations one canvas budget
+  // over everything on screen at once, and everything on screen at once is now
+  // the whole stack rather than one document of it.
   //
-  // During the render rather than in an effect, so the document is never once
-  // painted with the last one's page count: the reset is part of showing this
-  // document, not something that happens to it afterwards.
-  // A different *set* of documents opens where its author says, rather than
-  // wherever the last set was left. The panel lives in the app shell and is
-  // never remounted, so without this the second utlägg you open inherits the
-  // page you had paged to on the first. Keyed on the addresses rather than on
+  // Each sheet reports its own count as it loads. Keyed by address rather than
+  // by position, so a receipt replaced in place replaces its entry instead of
+  // shifting everyone else's.
+  const anyPdf = documents.some((d) => d.mimeType === "application/pdf");
+  const [pageCounts, setPageCounts] = useState<Record<string, number>>({});
+  const reportPages = useCallback((src: string, n: number) => {
+    setPageCounts((prev) => {
+      // Zero is a sheet leaving, not a document with no pages: drop the entry
+      // rather than recording it. Kept, every document ever opened in this
+      // panel would stay in the map for the life of the tab, since the panel
+      // is in the app shell and never unmounts.
+      if (n === 0) {
+        if (!(src in prev)) return prev;
+        const rest = { ...prev };
+        delete rest[src];
+        return rest;
+      }
+      return prev[src] === n ? prev : { ...prev, [src]: n };
+    });
+  }, []);
+
+  // A different *set* of documents starts over. The panel lives in the app
+  // shell and is never remounted, so without this the second utlägg you open
+  // inherits the first one's page counts and rations the canvas budget against
+  // a document that is no longer there. Keyed on the addresses rather than on
   // the array, which a page building the list inline rebuilds every render.
+  //
+  // During the render rather than in an effect, so the stack is never once
+  // measured against the last set's numbers.
   const docsKey = documents.map((d) => d.src).join("\u0000");
   const [openedFor, setOpenedFor] = useState(docsKey);
   if (openedFor !== docsKey) {
     setOpenedFor(docsKey);
-    setIndex(opensAt());
+    setPageCounts({});
   }
-
-  const [shown, setShown] = useState(src);
-  if (shown !== src) {
-    setShown(src);
-    setNumPages(0);
-    setFailed(false);
-    setAttempt(0);
-  }
+  const totalPages = documents.reduce((n, d) => n + (pageCounts[d.src] ?? 0), 0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLDivElement>(null);
@@ -194,10 +167,6 @@ export default function ReceiptViewerImpl({
   // Closing the panel mid-gesture leaves a timer holding a setter for a
   // component that is gone.
   useEffect(() => () => clearTimeout(zoomSettle.current), []);
-  // Which device the wheel events are coming from. Drives `wheel.wheelDisabled`
-  // below, which is what routes an event to the library's zoom or its pan.
-  const [trackpadMode, setTrackpadMode] = useState(false);
-  const gesture = useRef({ at: 0, trackpad: false });
   // Whether the pointer is over the receipt, for the F shortcut below. A ref
   // rather than state: nothing renders differently for it.
   const hovered = useRef(false);
@@ -297,40 +266,7 @@ export default function ReceiptViewerImpl({
     const ro = new ResizeObserver(() => setStackHeight(el.offsetHeight));
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fullscreen, src]);
-
-  // Classify each wheel gesture before react-zoom-pan-pinch sees it (capture
-  // phase, its own listeners sit on the wrapper below and bubble).
-  //
-  // A fast two-finger flick can reach wheel-sized deltas, so the verdict is
-  // latched for the whole gesture: events less than GESTURE_GAP_MS apart keep
-  // the first verdict, and any trackpad-looking event pins the run to trackpad.
-  // A wheel never produces the small fractional deltas a flick ramps up
-  // through, so the latch can only ever be wrong in the harmless direction.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) return; // a pinch: unambiguous, and always zooms
-
-      const g = gesture.current;
-      const continuing = e.timeStamp - g.at < GESTURE_GAP_MS;
-      const trackpad = continuing
-        ? g.trackpad || looksLikeTrackpad(e)
-        : looksLikeTrackpad(e);
-      g.at = e.timeStamp;
-      g.trackpad = trackpad;
-
-      if (trackpad === trackpadMode) return; // already routed correctly
-      // Swallow the single event it takes React to re-render with the new
-      // mode, so a gesture never opens by doing the opposite of what was meant.
-      e.preventDefault();
-      e.stopPropagation();
-      setTrackpadMode(trackpad);
-    };
-    el.addEventListener("wheel", onWheel, { capture: true, passive: false });
-    return () => el.removeEventListener("wheel", onWheel, true);
-  }, [trackpadMode, fullscreen]);
+  }, [fullscreen, docsKey]);
 
   // Tab is held inside the overlay while it is up. Fullscreen covers the page
   // it was opened from, and tabbing out of the last control landed on buttons
@@ -392,7 +328,7 @@ export default function ReceiptViewerImpl({
   // react-pdf defaults this to window.devicePixelRatio and multiplies the
   // viewport by it (its Page/Canvas), so this is the same knob, turned by us.
   const pixelRatio = useMemo(() => {
-    if (!isPdf || !pdfWidth) return undefined;
+    if (!anyPdf || !pdfWidth) return undefined;
     const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
     // The 2 is a floor on a desktop and a ceiling on a phone, and it is the same
     // 2 for the same reason: two device pixels per CSS pixel is where a receipt
@@ -412,26 +348,39 @@ export default function ReceiptViewerImpl({
     // ever costs magnification, never the sharpness of a page sitting still.
     const share = Math.max(
       base,
-      MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, numPages)),
+      MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, totalPages)),
     );
     return Math.max(1, Math.min(base * zoom, share));
-  }, [isPdf, pdfWidth, zoom, numPages, coarse]);
+  }, [anyPdf, pdfWidth, zoom, totalPages, coarse]);
 
   // Nothing to show. The panel decides what an empty list means, a dropzone or
   // a notice that there is no underlag, and only reaches for the viewer when
   // there is something in it; this is here so the hooks above can be
   // unconditional.
-  if (!doc) return null;
+  if (documents.length === 0) return null;
 
   const content = (
-    // wheelDisabled only suppresses zoom for ctrlKey-less events, and the
-    // library routes exactly those to trackPadPanning instead, so this single
-    // flag swaps scroll-to-pan and scroll-to-zoom. A pinch zooms either way.
+    // The wheel scrolls; ctrl and the wheel zoom.
+    //
+    // Which is what every PDF viewer, every browser and every map does, and it
+    // is the convention because it is the only one a reader does not have to be
+    // taught. This viewer used to guess instead: a trackpad's fractional deltas
+    // panned and a mouse wheel's whole 120-unit notches zoomed, on the theory
+    // that a wheel has nothing else to do here. The guess was decent and the
+    // premise was wrong. Scrolling is what a wheel is for, a document three
+    // pages long is mostly scrolled, and somebody who wanted the page to move
+    // got it to change size instead. Fifty lines of device sniffing went with
+    // it.
+    //
+    // `wheelDisabled` only suppresses zoom for ctrlKey-less events, and the
+    // library routes exactly those to trackPadPanning instead, so this one flag
+    // is the whole of it. Ctrl passes through and zooms, and so does a trackpad
+    // pinch, which the platform already reports as ctrl held.
     <TransformWrapper
       minScale={0.5}
       maxScale={10}
       doubleClick={{ mode: "zoomIn" }}
-      wheel={{ step: 0.005, wheelDisabled: trackpadMode }}
+      wheel={{ step: 0.005, wheelDisabled: true }}
       trackPadPanning={{ disabled: false }}
       // The pan, on the compositor instead of the main thread.
       //
@@ -476,40 +425,6 @@ export default function ReceiptViewerImpl({
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
-              {/* The pager steps between documents, not between pages. The
-                  pages of one document are all there to scroll through. So on
-                  an utlägg this is "cover ⇄ underlag", which is the only jump
-                  left worth a button. The transform resets with it: arriving
-                  at a new document zoomed into where the last one's corner was
-                  is nobody's idea of turning a page. */}
-              {documents.length > 1 && (
-                <>
-                  <ToolBtn
-                    label={t("prevDocument")}
-                    disabled={at <= 0}
-                    onClick={() => {
-                      setIndex(Math.max(0, at - 1));
-                      resetTransform();
-                    }}
-                  >
-                    ‹
-                  </ToolBtn>
-                  <span className="px-1 text-xs tabular-nums text-muted">
-                    {at + 1}/{documents.length}
-                  </span>
-                  <ToolBtn
-                    label={t("nextDocument")}
-                    disabled={at >= documents.length - 1}
-                    onClick={() => {
-                      setIndex(Math.min(documents.length - 1, at + 1));
-                      resetTransform();
-                    }}
-                  >
-                    ›
-                  </ToolBtn>
-                  <span className="mx-0.5 h-5 w-px bg-border" />
-                </>
-              )}
               <ToolBtn label={t("zoomOut")} onClick={() => zoomOut()}>
                 −
               </ToolBtn>
@@ -573,52 +488,18 @@ export default function ReceiptViewerImpl({
                   pages, an image, a failure. It is what the observer above
                   watches, and the library's own content element is its parent,
                   so the two grow together. */}
-              <div ref={stackRef} className="flex w-full flex-col items-center">
-                {isPdf ? (
-                  <Document
-                    key={src}
-                    file={fileSrc}
-                    onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-                    loading={<PdfLoading />}
-                    error={<LoadFailed onRetry={retry} pdfHref={src} />}
-                    // Every page at once, stacked, rather than one with buttons
-                    // either side. A receipt that runs to three pages is one
-                    // document and reads as one, so you scroll it. The stack is a
-                    // single child so the library's own flex row still centres
-                    // it, and the content element grows to fit (see contentStyle
-                    // above), which is what makes the pan reach the bottom of it.
-                    className="flex flex-col items-center gap-2"
-                  >
-                    {Array.from({ length: numPages }, (_, i) => (
-                      <Page
-                        key={i}
-                        pageNumber={i + 1}
-                        width={pdfWidth}
-                        devicePixelRatio={pixelRatio}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        // Each page reads as a sheet, which is what tells a
-                        // stack of them apart from one long page.
-                        className="overflow-hidden rounded-sm shadow-[var(--shadow-card)]"
-                        // Nothing per page while it rasterises: the default is
-                        // the words "Loading page", and a column of those is
-                        // worse than a stack that simply fills in.
-                        loading=""
-                      />
-                    ))}
-                  </Document>
-                ) : failed ? (
-                  <LoadFailed onRetry={retry} />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={fileSrc}
-                    alt={filename ?? t("alt")}
-                    draggable={false}
-                    onError={() => setFailed(true)}
-                    className="max-w-full select-none"
+              <div ref={stackRef} className="flex w-full flex-col items-center gap-6">
+                {documents.map((d) => (
+                  <DocumentSheet
+                    key={d.src}
+                    doc={d}
+                    // Captioned only where there is something to tell apart.
+                    captioned={documents.length > 1}
+                    width={pdfWidth}
+                    pixelRatio={pixelRatio}
+                    onPages={reportPages}
                   />
-                )}
+                ))}
               </div>
             </TransformComponent>
           </>
@@ -662,6 +543,113 @@ export default function ReceiptViewerImpl({
       )}
     >
       {content}
+    </div>
+  );
+}
+
+/**
+ * One document in the stack: every page of a PDF, or an image as it was stored.
+ *
+ * Its own component because everything about loading a document is its own:
+ * the page count, whether it failed, which retry it is on. Held in the viewer
+ * as one set of variables, those belonged to whichever document happened to be
+ * showing, and a stack of them would have needed the same three fields per
+ * entry with the viewer keeping the bookkeeping. Here each sheet keeps its own,
+ * and a receipt that will not load says so where the receipt is rather than
+ * taking the utläggsräkning above it down as well.
+ */
+function DocumentSheet({
+  doc,
+  captioned,
+  width,
+  pixelRatio,
+  onPages,
+}: {
+  doc: ViewerDocument;
+  captioned: boolean;
+  width: number;
+  pixelRatio: number | undefined;
+  /** Reports the page count up, so the viewer can ration the canvas budget
+   *  across the whole stack rather than per document. */
+  onPages: (src: string, pages: number) => void;
+}) {
+  const t = useTranslations("receipt");
+  const [numPages, setNumPages] = useState(0);
+  // This document failed to load, and which retry we are on. An outage of the
+  // archive, not of anything else on the page. The counter rides in the URL so
+  // a retry misses the browser's own cache of the failed response; without that
+  // it re-fails without having asked anyone anything.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  // The cache-busting query only makes sense for a URL that was fetched. A
+  // blob: URL is the browser's own copy. It cannot fail this way, and a query
+  // string appended to one addresses nothing.
+  const fetched = !doc.src.startsWith("blob:");
+  const fileSrc = attempt && fetched ? `${doc.src}?retry=${attempt}` : doc.src;
+  const retry = () => {
+    setFailed(false);
+    setAttempt((n) => n + 1);
+  };
+
+  const isPdf = doc.mimeType === "application/pdf";
+
+  // Its own page count leaves with it, so the budget upstairs stops counting
+  // pages that are no longer on screen.
+  useEffect(() => () => onPages(doc.src, 0), [doc.src, onPages]);
+
+  return (
+    <div className="flex w-full flex-col items-center">
+      {/* What this document is, above its first page. Small caps would be
+          prettier and this has to survive being 40% of a dragged panel, so it
+          is a plain quiet line. */}
+      {captioned && doc.label && (
+        <p className="mb-2 text-xs font-medium text-muted">{doc.label}</p>
+      )}
+      {isPdf ? (
+        <Document
+          key={fileSrc}
+          file={fileSrc}
+          onLoadSuccess={({ numPages: n }) => {
+            setNumPages(n);
+            onPages(doc.src, n);
+          }}
+          loading={<PdfLoading />}
+          error={<LoadFailed onRetry={retry} pdfHref={doc.src} />}
+          // Every page at once, stacked, rather than one with buttons either
+          // side. A receipt that runs to three pages is one document and reads
+          // as one, so you scroll it.
+          className="flex flex-col items-center gap-2"
+        >
+          {Array.from({ length: numPages }, (_, i) => (
+            <Page
+              key={i}
+              pageNumber={i + 1}
+              width={width}
+              devicePixelRatio={pixelRatio}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              // Each page reads as a sheet, which is what tells a stack of them
+              // apart from one long page.
+              className="overflow-hidden rounded-sm shadow-[var(--shadow-card)]"
+              // Nothing per page while it rasterises: the default is the words
+              // "Loading page", and a column of those is worse than a stack
+              // that simply fills in.
+              loading=""
+            />
+          ))}
+        </Document>
+      ) : failed ? (
+        <LoadFailed onRetry={retry} />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={fileSrc}
+          alt={doc.filename ?? t("alt")}
+          draggable={false}
+          onError={() => setFailed(true)}
+          className="max-w-full select-none rounded-sm shadow-[var(--shadow-card)]"
+        />
+      )}
     </div>
   );
 }
