@@ -1,0 +1,46 @@
+{
+  "id": "approval",
+  "label": "Attestering",
+  "items": [
+    {
+      "id": "what-is-attest",
+      "q": "Vad innebär det att attestera?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Att attestera innebär att du granskar och godkänner en affärshändelse innan den bokförs. Är du utskottsledare attesterar du utläggen som hör till ditt utskott."
+        },
+        {
+          "t": "action",
+          "v": "Till attesteringen",
+          "href": "/approvals"
+        }
+      ]
+    },
+    {
+      "id": "attest-check",
+      "q": "Vad ska jag kontrollera innan jag godkänner?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Underlaget måste vara tillfredsställande. Ställ dig de här frågorna innan du godkänner affärshändelsen:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Är det ett giltigt kvitto?",
+            "Stämmer angivet datum med kvittots datum?",
+            "Är beskrivningen lämplig med avseende på varorna?",
+            "Är kostnadsstället korrekt?",
+            "Är sektionskort respektive eget utlägg korrekt angivet?",
+            "På en milersättning: är resvägen ifylld, och stämmer sträckan med den? En resa tur och retur ska ha startstället både först och sist."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Du attesterar per kostnadsställe. Är utlägget fördelat på flera godkänner du bara de rader du svarar för, och resten väntar på den som svarar för dem."
+        }
+      ]
+    }
+  ]
+}

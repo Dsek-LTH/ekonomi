@@ -1,0 +1,46 @@
+{
+  "id": "approval",
+  "label": "Attesting",
+  "items": [
+    {
+      "id": "what-is-attest",
+      "q": "What does approving an expense mean?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Approving means reviewing and signing off a transaction before it is booked. If you chair a committee, you approve the expenses belonging to it."
+        },
+        {
+          "t": "action",
+          "v": "Go to approvals",
+          "href": "/approvals"
+        }
+      ]
+    },
+    {
+      "id": "attest-check",
+      "q": "What should I check before approving?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The documentation has to be satisfactory. Ask yourself these before approving:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Is it a valid receipt?",
+            "Does the stated date match the receipt's?",
+            "Is the description appropriate to the goods?",
+            "Is the cost centre right?",
+            "Is section card versus out of pocket stated correctly?",
+            "On a mileage claim: is the route filled in, and does the distance match it? A round trip should have the starting place both first and last."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You attest per cost centre. If the claim is split across several you only approve the rows you answer for, and the rest wait for whoever answers for them."
+        }
+      ]
+    }
+  ]
+}

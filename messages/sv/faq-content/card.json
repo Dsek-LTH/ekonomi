@@ -1,0 +1,107 @@
+{
+  "id": "card",
+  "label": "Sektionskortet",
+  "items": [
+    {
+      "id": "who-gets",
+      "q": "Vem får ett sektionskort?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Har du en post som kräver många och dyra köp får du ett sektionskort. Kortet är kopplat till D-sektionens bankkonto, så att du slipper ligga ute med egna pengar."
+        }
+      ]
+    },
+    {
+      "id": "card-rules",
+      "q": "Får jag köpa vad jag vill med sektionskortet?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej. Ett sektionskort innebär INTE att du får köpa vad du vill. Alla köp med ett sektionskort ska godkännas av din utskottsledare i förväg, och varje köp måste redovisas i efterhand."
+        },
+        {
+          "t": "note",
+          "tone": "danger",
+          "v": "Om olovliga köp genomförs på ditt sektionskort blir du personligen betalningsskyldig."
+        }
+      ]
+    },
+    {
+      "id": "declined",
+      "q": "Betalningen nekas i kassan, vad gör jag?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Då har vi inte flyttat över tillräckligt med pengar till kortkontot. Är det brådskande gör du bäst i att ringa oss direkt:"
+        },
+        {
+          "t": "link",
+          "v": "Skattmästaren (Ludwig): 070-893 55 85",
+          "href": "tel:+46708935585"
+        },
+        {
+          "t": "link",
+          "v": "Vice skattmästare (Edvin): 079-349 06 22",
+          "href": "tel:+46793490622"
+        }
+      ]
+    },
+    {
+      "id": "lend",
+      "q": "Får jag låna ut mitt sektionskort?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej. Ett sektionskort får aldrig lånas ut till någon annan. Det är knutet till dig och till din post."
+        }
+      ]
+    },
+    {
+      "id": "match",
+      "q": "Varför måste ett kortköp matchas mot en banktransaktion?",
+      "a": [
+        {
+          "t": "p",
+          "v": "För att redovisningen ska peka på pengarna. Matchningen säger att just den här raden på kortkontot är pengarna som lämnade sektionen för just det här köpet, och därmed att raden är redovisad och köpet bokfört mot rätt belopp."
+        },
+        {
+          "t": "p",
+          "v": "Utan den vet ingen om två redovisningar beskriver samma köp eller två olika, och kortkontot går inte att stämma av. Därför går ett kortköp inte att skicka in omatchat."
+        },
+        {
+          "t": "p",
+          "v": "Transaktionen måste vara på exakt samma belopp och gå åt rätt håll: ett köp matchas mot en utbetalning, en retur mot en inbetalning."
+        }
+      ]
+    },
+    {
+      "id": "no-match",
+      "q": "Jag hittar inte mitt köp i listan, vad är fel?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Listan visar alla rader på ditt kort, även de du inte kan välja, och skriver ut skälet på varje. Fyra saker gör en rad ovalbar:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Annat belopp. Raden står kvar med hur mycket den skiljer sig, till exempel “6,50 kr mer än utlägget”. Då är det oftast beloppet du skrivit som ska rättas.",
+            "Fel håll. En inbetalning matchar bara en retur, en utbetalning bara ett köp.",
+            "Redan redovisad. Någon annan har tagit köpet på ett eget utlägg. Hör av dig till dem eller till skattmästaren.",
+            "Annans kort. Du ser bara transaktionerna på ditt eget kort."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Står köpet inte där alls är kontoutdraget troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen. Spara som utkast så länge."
+        },
+        {
+          "t": "action",
+          "v": "Till kortköpen",
+          "href": "/bank"
+        }
+      ]
+    }
+  ]
+}

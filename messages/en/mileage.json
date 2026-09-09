@@ -1,0 +1,78 @@
+{
+  "newTitle": "New mileage claim",
+  "newDescription": "Drove your own car on the section's errand? Enter the odometer before and after, and we work out the compensation.",
+  "description": "Errand",
+  "descriptionHint": "What the journey was for, e.g. \"Collect the sponsor package in Malmö\".",
+  "step": {
+    "journey": "The journey"
+  },
+  "journeyDate": "Date driven",
+  "dateFuture": "The journey is in the future. Correct the date to the day you drove.",
+  "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey. You can apply for a waiver: finish the journey, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
+  "route": {
+    "label": "Route",
+    "hint": "Every place you stopped, in order. A town or a name is enough, e.g. \"E-huset\" and \"Snabbgross\". If you came back to where you started, write that place last as well, or the route describes only half the distance the odometer shows.",
+    "stop": "Stop {n}",
+    "firstPlaceholder": "Where you set off from",
+    "nextPlaceholder": "The next place you stopped",
+    "addStop": "Add a stop",
+    "addReturn": "Add the journey back",
+    "removeStop": "Remove the stop"
+  },
+  "odometer": {
+    "label": "Odometer",
+    "hint": "The total odometer, the car's lifetime reading, not the trip meter. What it read when you got into the car and when you got out. The distance is the difference.",
+    "start": "At the start",
+    "end": "At the end"
+  },
+  "total": "Compensation",
+  "sum": "{km} km – {rate} kr/km",
+  "distance": "Distance",
+  "km": "{km} km",
+  "otherType": "Was it something else?",
+  "otherTypeLink": "Make an ordinary expense instead",
+  "deadlineHint": "A mileage claim must be filed within {days} days of the journey.",
+  "perJourneyHint": "If you drove several times, file one claim per journey.",
+  "documentName": "Expense report",
+  "documentTitle": "The expense report",
+  "documentPending": "The expense report is drawn once the claim is saved. The journey is stated on it, and it is what follows the claim into the books.",
+  "editTitle": "Edit mileage claim {id}",
+  "editTitleDraft": "Edit mileage claim",
+  "editDescription": "Correct the journey or the distribution.",
+  "blocker": {
+    "noReadings": "Enter the odometer both before and after the journey.",
+    "notForward": "The reading after the journey must be higher than the one before. Check that the two are the right way round.",
+    "noRate": "No rate per kilometre has been set for the day of the journey. Ask the treasurer.",
+    "noRoute": "Enter at least two places you stopped at. The odometer shows how far the car went, not that the journey was the section's errand."
+  },
+  "rates": {
+    "title": "Mileage rate",
+    "description": "What a kilometre is worth, and from which day. Every journey is valued at the rate in force on the day it was driven. A change here never re-values a claim already filed.",
+    "current": "In force",
+    "col": {
+      "validFrom": "Valid from",
+      "rate": "Rate",
+      "note": "Note",
+      "createdBy": "Added by"
+    },
+    "perKm": "{amount} kr/km",
+    "perMil": "{amount} kr/mil",
+    "new": "New rate",
+    "editTitle": "Edit rate",
+    "newTitle": "New rate",
+    "validFrom": "Valid from",
+    "rate": "Kronor per mil",
+    "rateHint": "Skatteverket's standard rate is 25 kr/mil. Stored as öre per kilometre.",
+    "note": "Note",
+    "notePlaceholder": "e.g. \"Skatteverket's standard rate 2026\"",
+    "save": "Save",
+    "saved": "Rate saved",
+    "saveFailed": "The rate could not be saved",
+    "remove": "Remove",
+    "removed": "Rate removed",
+    "removeFailed": "The rate could not be removed",
+    "removeTitle": "Remove the rate?",
+    "removeDescription": "Journeys already valued at it keep their amount. New journeys on those dates get whichever rate applied before.",
+    "empty": "No rate has been set yet. Without one, no mileage claims can be filed."
+  }
+}

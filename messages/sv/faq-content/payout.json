@@ -1,0 +1,53 @@
+{
+  "id": "payout",
+  "label": "Pengarna tillbaka",
+  "items": [
+    {
+      "id": "payout-account",
+      "q": "Var lägger jag in mitt kontonummer?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Under Profil. Clearingnummer och kontonummer, till kontot du vill ha pengarna på."
+        },
+        {
+          "t": "p",
+          "v": "Utan det går ett eget utlägg och en milersättning inte att skicka in, för då finns ingenstans att betala. Ett kortköp behöver det inte: där har sektionen redan betalat."
+        },
+        {
+          "t": "action",
+          "v": "Till profilen",
+          "href": "/profile"
+        }
+      ]
+    },
+    {
+      "id": "after-submit",
+      "q": "Vad händer efter att jag skickat in?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Redovisningen går igenom fyra lägen, och du ser vilket den står i under Utlägg:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Väntar på attest: din utskottsledare granskar den. Behöver något rättas kommer den tillbaka som Behöver ändras, med en kommentar om vad.",
+            "Attesterat: godkänd, och kön till bokföringen.",
+            "Bokfört: skattmästeriet har konterat den.",
+            "Exporterat: den ligger i Fortnox, och pengarna betalas ut."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Har du lagt ut egna pengar kommer de tillbaka efter att redovisningen bokförts. Går det lång tid utan att något händer, hör av dig till din utskottsledare först, det är där kön oftast står."
+        },
+        {
+          "t": "action",
+          "v": "Till mina utlägg",
+          "href": "/expenses"
+        }
+      ]
+    }
+  ]
+}

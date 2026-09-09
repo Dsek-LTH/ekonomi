@@ -1,0 +1,209 @@
+{
+  "costCentreFailed": "Kunde inte ändra kostnadsstället.",
+  "title": "Intäkter",
+  "description": "Hämta försäljning från Zettle och Swish. Granska och bokför.",
+  "serviceUnavailable": "Intäktstjänsten är inte konfigurerad. Sätt INTAKT_URL och INTAKT_TOKEN för att kunna hämta och rendera rapporter.",
+  "source": {
+    "SWISH": "Swish",
+    "ZETTLE": "Zettle",
+    "ZETTLE_FEE": "Zettleavgifter"
+  },
+  "status": {
+    "DRAFT": "Att bokföra",
+    "BOOKED": "Bokförd",
+    "EXPORTED": "Exporterad"
+  },
+  "fetch": {
+    "source": "Källa",
+    "title": "Hämta period",
+    "description": "Datumen är inklusive, och läses som svenska dygn.",
+    "from": "Från",
+    "to": "Till",
+    "submit": "Hämta",
+    "chooseFile": "Välj Swish-fil"
+  },
+  "fetchDone": "Hämtning klar",
+  "fetchFailed": "Hämtningen misslyckades",
+  "updateFailed": "Kunde inte spara ändringen",
+  "bookDone": "Bokförd",
+  "bookFailed": "Bokföringen misslyckades",
+  "exportDone": "Exporterad till Fortnox",
+  "exportFailed": "Exporten misslyckades",
+  "summary": {
+    "imported": "{count} rapporter importerade",
+    "alreadyBooked": "{count} dagar var redan bokförda och är markerade",
+    "alreadyInFortnox": "{count} dagar finns redan i Fortnox och är markerade",
+    "fortnoxCheckFailed": "Kunde inte kontrolleras mot Fortnox",
+    "superseded": "{count} tidigare rapporter rensades bort"
+  },
+  "counts": {
+    "reports": "{count} rapporter",
+    "toBook": "{count} att bokföra",
+    "toExport": "{count} att exportera"
+  },
+  "empty": {
+    "description": "Hämta en period från Zettle, eller ladda upp en Swish-rapport.",
+    "noMatch": "Inga hämtningar matchar filtret.",
+    "title": "Inga dagar att bokföra"
+  },
+  "batch": {
+    "description": "{count} rapporter, en per verksamhet och dag.",
+    "empty": "Inga rapporter i den här hämtningen."
+  },
+  "table": {
+    "source": "Källa",
+    "period": "Period",
+    "reports": "Rapporter",
+    "imported": "Hämtad",
+    "date": "Datum",
+    "committee": "Verksamhet",
+    "costCenter": "Kostnadsställe",
+    "total": "Summa",
+    "status": "Status",
+    "fees": "Zettleavgifter",
+    "chooseCostCenter": "Välj kostnadsställe",
+    "voucher": "Verifikation"
+  },
+  "lines": {
+    "product": "Vara",
+    "account": "Konto",
+    "quantity": "Antal",
+    "unitPrice": "Styckpris",
+    "discount": "Rabatt",
+    "total": "Belopp",
+    "accountFor": "Konto för {product}",
+    "accountFailed": "Kunde inte byta konto."
+  },
+  "move": {
+    "title": "Flytta försäljning",
+    "subtitle": "{count, plural, one {# vara} other {# varor}} från {from}",
+    "action": "Flytta…",
+    "unitField": "Verksamhet",
+    "mergeTitle": "Slå ihop med {unit}s rapport?",
+    "mergeBody": "{unit} har redan en rapport för {date}. {count, plural, one {# vara} other {# varor}} flyttas dit och de två dagarna blir en. Det går inte att dela upp dem igen.",
+    "mergeConfirm": "Flytta",
+    "dragHint": "Dra till en annan verksamhet samma dag",
+    "picked": "{count, plural, one {# vald} other {# valda}}",
+    "clear": "Avmarkera",
+    "selectAll": "Markera alla varor",
+    "selectLine": "Markera {product}",
+    "destination": "Till verksamhet",
+    "destinationHint": "Varorna hamnar på verksamhetens rapport för samma dag. Finns ingen skapas den.",
+    "destinationPlaceholder": "Välj verksamhet…",
+    "destinationRequired": "Välj vart varorna ska flyttas",
+    "setAll": "Sätt alla till:",
+    "setAllTo": "Sätt alla rader till konto {account}",
+    "noAccounts": "Verksamheten har inga produktprefix. Välj konto för varje rad.",
+    "account": "Nytt konto",
+    "accountFor": "Konto för {product}",
+    "wasAccount": "Bokförs nu på {account}",
+    "unknownAccountName": "okänt konto",
+    "stillOnOldAccount": "{count, plural, one {# rad ligger} other {# rader ligger}} kvar på samma konto som i reservrapporten. Stämmer det?",
+    "movingTotal": "Flyttas:",
+    "cancel": "Avbryt",
+    "confirm": "Flytta {count, plural, one {# vara} other {# varor}}",
+    "done": "{count, plural, one {# vara flyttad} other {# varor flyttade}}",
+    "failed": "Kunde inte flytta varorna."
+  },
+  "newReport": {
+    "action": "Ny rapport",
+    "actionFor": "Ny rapport för {date}",
+    "title": "Ny rapport",
+    "subtitle": "{date} – {source}. En tom rapport att flytta försäljning till.",
+    "unit": "Verksamhet",
+    "unitHint": "Vems intäkter rapporten blir.",
+    "unitPlaceholder": "Välj verksamhet…",
+    "unitRequired": "Välj vems intäkter rapporten blir",
+    "alreadyExists": "Verksamheten har redan en rapport för den dagen, så den öppnas i stället. Två rapporter för samma dag går inte att bokföra båda två.",
+    "footerHint": "Rapporten skapas tom.",
+    "cancel": "Avbryt",
+    "confirm": "Skapa rapport",
+    "open": "Öppna rapporten",
+    "done": "Rapporten skapades.",
+    "opened": "Verksamheten hade redan en rapport för den dagen. Den är öppnad.",
+    "failed": "Kunde inte skapa rapporten.",
+    "emptyTitle": "Tom rapport",
+    "emptyBody": "Rapporten innehåller ingen försäljning än. Dra hit varor från en annan rapport samma dag, eller markera dem där och välj Flytta. Är det fel verksamhet: ta bort rapporten och skapa en ny.",
+    "delete": "Ta bort rapporten",
+    "deleteTitle": "Ta bort rapporten?",
+    "deleteBody": "{unit} {date} innehåller ingen försäljning. Rapporten tas bort.",
+    "deleteConfirm": "Ta bort",
+    "deleteDone": "Rapporten togs bort.",
+    "deleteFailed": "Kunde inte ta bort rapporten."
+  },
+  "undo": {
+    "unexport": "Avmarkera export",
+    "unexportTitle": "Avmarkera exporten?",
+    "unexportBody": "Verifikationen {voucher} ligger kvar i Fortnox. Appen slutar bara räkna dagen som exporterad. Exporterar du igen skapas en andra verifikation, så makulera den första i Fortnox innan dess.",
+    "unexportConfirm": "Avmarkera",
+    "unexportDone": "Exporten avmarkerad.",
+    "reopen": "Ändra",
+    "reopenTitle": "Öppna dagen för ändring?",
+    "reopenBody": "Verifikationen och den bokförda intäktsräkningen tas bort, och dagen hamnar i kön Att bokföra igen. Där ligger den tills du bokför den på nytt, eller tills nästa hämtning rensar kön.",
+    "reopenConfirm": "Öppna",
+    "delete": "Ta bort",
+    "deleteTitle": "Ta bort {date}?",
+    "deleteBody": "{unit}s rapport, dess sålda varor och dess verifikation tas bort. Det går inte att ångra. En ny hämtning av samma period tar tillbaka dagen.",
+    "deleteConfirm": "Ta bort",
+    "deleteDone": "Rapporten togs bort.",
+    "failed": "Åtgärden misslyckades."
+  },
+  "actions": {
+    "book": "Bokför",
+    "export": "Exportera",
+    "viewDocument": "Visa intäktsräkning",
+    "hideDocument": "Dölj intäktsräkning",
+    "bookAndNext": "Bokför & nästa"
+  },
+  "bookAll": {
+    "action": "Bokför alla ({count})",
+    "title": "Bokför alla?",
+    "body": "{count} rapporter bokförs, en i taget. Varje rapport får en intäktsräkning och en verifikation.",
+    "confirm": "Bokför",
+    "done": "{count} av {total} bokförda"
+  },
+  "searchPlaceholder": "Sök källa, fil eller period…",
+  "tab": {
+    "all": "Alla"
+  },
+  "batches": {
+    "title": "Hämtningar",
+    "count": "{count} hämtningar"
+  },
+  "nav": {
+    "label": "Avsnitt",
+    "review": "Att bokföra",
+    "booked": "Bokfört / exporterat"
+  },
+  "review": {
+    "viewLabel": "Visning",
+    "description": "Gå igenom dagarna en och en. Intäktsräkningen står bredvid, verifikationen är förifylld.",
+    "lines": "Sålda varor",
+    "noCostCenter": "Kostnadsställe saknas",
+    "edited": "Ändrad",
+    "modeReview": "Granska",
+    "modeTable": "Rapporter",
+    "open": "Öppna",
+    "alreadyBooked": "{count} dagar i perioden är redan bokförda och kan inte bokföras igen.",
+    "inFortnox": "Finns i Fortnox ({voucher})",
+    "inFortnoxWarning": "Det finns redan en verifikation i Fortnox för den här dagen och verksamheten ({voucher}). Bokför bara om det verkligen är två skilda dagsrapporter.",
+    "alreadyBookedShort": "Redan bokförd",
+    "alreadyBookedWarning": "Den här dagen är redan bokförd här och kan inte bokföras igen. Verifikation:"
+  },
+  "book": {
+    "title": "Konteringsrader",
+    "clearingHint": "Likvidkontot följer av hur dagen betalades och kan inte ändras här.",
+    "clearingLocked": "Låst rad",
+    "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Intäkter innan du bokför."
+  },
+  "exportAll": {
+    "action": "Exportera alla ({count})",
+    "done": "{count} av {total} exporterade"
+  },
+  "booked": {
+    "title": "Bokfört och exporterat",
+    "description": "Sektionens register över vad som tagits in. Härifrån exporteras dagarna till Fortnox.",
+    "searchPlaceholder": "Sök verksamhet, kostnadsställe eller verifikation…",
+    "empty": "Inget är bokfört än."
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "title": "Bankhändelser",
+  "tab": {
+    "all": "Alla",
+    "matched": "Matchade",
+    "unmatched": "Ej matchade",
+    "noCard": "Utan kort"
+  },
+  "transactions": "Transaktioner",
+  "pickCsv": "Välj CSV-fil",
+  "importFailed": "Importen misslyckades",
+  "importDone": "Import klar",
+  "summary": {
+    "imported": "{count} importerade",
+    "duplicates": "{count} dubbletter",
+    "newCards": "{count} nya kort",
+    "skippedRows": "{count} rader hoppades över"
+  },
+  "deleteTitle": "Ta bort transaktion?",
+  "deleteMessage": "Banktransaktionen tas bort permanent.",
+  "deleteConfirm": "Ta bort",
+  "deleteFailed": "Kunde inte ta bort transaktionen",
+  "delete": "Ta bort transaktion",
+  "deleteBlocked": "Matchad, ta bort matchningen först",
+  "colDate": "Datum",
+  "colTransaction": "Transaktion",
+  "colHolder": "Korthållare / Kort",
+  "colExpense": "Utlägg",
+  "colAmount": "Belopp",
+  "matched": "Matchad",
+  "searchPlaceholder": "Sök bankutdrag...",
+  "noMatch": "Inga transaktioner matchar filtret.",
+  "csvHelp": {
+    "label": "Om CSV-filen",
+    "title": "Transaktionsrapport från banken",
+    "source": "Exportera en Transaktionsrapport som CSV från 1931 i Swedbank/Sparbanken.",
+    "format": "Ladda upp filen precis som den är. Kolumnerna läses efter position (Radnr … Belopp), så en fil som sorterats om eller sparats om i Excel läses fel.",
+    "cards": "Kortköp knyts till rätt kort via ett avslutande K#### i Referens. Nya kortnummer läggs upp automatiskt under Sektionskort.",
+    "duplicates": "Rader som redan importerats hoppas över. Ladda upp samma fil igen och det blir inga dubbletter.",
+    "limits": "Max 5 MB."
+  },
+  "scopeLabel": "Omfattning",
+  "scope": {
+    "mine": "Mina",
+    "all": "Alla"
+  },
+  "colCard": "Kort",
+  "account": "Redovisa",
+  "assignCard": "Välj kort",
+  "changeCard": "Byt kort",
+  "assignFailed": "Kunde inte koppla transaktionen till kortet"
+}

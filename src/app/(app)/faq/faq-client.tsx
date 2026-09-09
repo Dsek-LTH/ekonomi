@@ -2,8 +2,9 @@
 
 // Frågor & svar, the guild's "HOW TO UTLÄGG" turned into something you can
 // search at the register with your phone in one hand, instead of a PDF you have
-// to remember you were sent. The text itself lives in messages/faq/<locale>.json
-// (see faq-content.ts); this file is only how it reads and how you find it.
+// to remember you were sent. The text itself lives in
+// messages/<locale>/faq-content/<category>.json (see faq-content.ts); this file
+// is only how it reads and how you find it.
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

@@ -1,0 +1,17 @@
+{
+  "title": "Bookkeeping",
+  "description": "Enter the voucher lines for approved expenses and export them to Fortnox.",
+  "tab": {
+    "all": "All",
+    "toBook": "To book",
+    "toExport": "To export",
+    "exported": "Exported"
+  },
+  "book": "Book",
+  "export": "Export",
+  "connectFirst": "Connect Fortnox first",
+  "loginFirst": "Log in to Fortnox to export",
+  "exportFailed": "{id}: the export failed",
+  "exportDone": "{id}: exported to Fortnox ({label})",
+  "voucherLabel": "Voucher {label}"
+}

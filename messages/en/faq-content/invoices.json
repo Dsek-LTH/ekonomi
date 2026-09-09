@@ -1,0 +1,35 @@
+{
+  "id": "invoices",
+  "label": "Invoices",
+  "items": [
+    {
+      "id": "can-invoice",
+      "q": "Can I put a purchase on an invoice?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Yes, if you are offered the option of paying by invoice you may take it."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "ALWAYS check with your committee chair before putting anything on an invoice. If the requirements are not met, you risk having to pay for it yourself."
+        }
+      ]
+    },
+    {
+      "id": "invoice-recipient",
+      "q": "Who should the invoice be addressed to?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The guild. Make sure the supplier invoices D-sektionen and not you as a private person."
+        },
+        {
+          "t": "p",
+          "v": "The guild will NEVER pay invoices that are not addressed to the guild. If you have been invoiced privately, you have to pay the invoice yourself and then file it as an expense claim."
+        }
+      ]
+    }
+  ]
+}

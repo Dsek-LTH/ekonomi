@@ -1,0 +1,11 @@
+{
+  "auth": {
+    "connected": "Fortnox connected.",
+    "loggedIn": "Signed in to Fortnox.",
+    "failed": "The Fortnox sign-in failed{reason}.",
+    "no_service_connection": "The guild's Fortnox connection is missing. It has to be set up under Settings → Fortnox before anyone can sign in personally.",
+    "wrong_company": "That Fortnox login belongs to a different company than the guild's. Sign in to the D-Guild's Fortnox.",
+    "forbidden": "You are not allowed to do that.",
+    "invalid_state": "The sign-in expired or was cancelled. Try again."
+  }
+}

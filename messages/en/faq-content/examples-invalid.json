@@ -1,0 +1,66 @@
+{
+  "id": "examples-invalid",
+  "label": "Invalid receipts",
+  "items": [
+    {
+      "id": "ex-order-confirmation",
+      "q": "Order confirmation",
+      "a": [
+        {
+          "t": "p",
+          "v": "Confirms that an order was placed, not that it was paid. It carries no verification number and rarely states VAT. Ask for a receipt once the goods ship."
+        },
+        {
+          "t": "image",
+          "file": "invalid-order-confirmation",
+          "alt": "Order confirmation from an online shop, without a verification number or VAT."
+        }
+      ]
+    },
+    {
+      "id": "ex-no-seller",
+      "q": "Receipt without seller details",
+      "a": [
+        {
+          "t": "p",
+          "v": "Without the seller's company name, address and organisation number the counterparty cannot be established, and the receipt does not work as a verification."
+        },
+        {
+          "t": "image",
+          "file": "invalid-no-seller",
+          "alt": "Receipt missing the seller's name, address and organisation number."
+        }
+      ]
+    },
+    {
+      "id": "ex-no-vat",
+      "q": "Receipt without VAT",
+      "a": [
+        {
+          "t": "p",
+          "v": "The tax rates have to be visible. Documentation showing only the total cannot be booked. The card terminal slip is the most common example."
+        },
+        {
+          "t": "image",
+          "file": "invalid-no-vat",
+          "alt": "Card terminal slip showing only the total amount."
+        }
+      ]
+    },
+    {
+      "id": "ex-unreadable",
+      "q": "Blurry or cropped photo",
+      "a": [
+        {
+          "t": "p",
+          "v": "If the text cannot be made out CLEARLY, or part of the receipt is outside the frame, the approval is rejected. Shoot straight down, in good light, with the whole receipt in view."
+        },
+        {
+          "t": "image",
+          "file": "invalid-unreadable",
+          "alt": "Blurry photo of a receipt with the bottom edge cut off."
+        }
+      ]
+    }
+  ]
+}

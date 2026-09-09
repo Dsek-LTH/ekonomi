@@ -1,0 +1,12 @@
+{
+  "title": "D-sektionens ekonomi",
+  "description": "Logga in med ditt D-sektionskonto för att komma vidare",
+  "loginPrompt": "Fortsätt med ditt D-sektionskonto",
+  "dev": {
+    "heading": "Dev-inloggning (endast lokalt)",
+    "member": "Medlem",
+    "approver": "Attestant",
+    "treasurer": "Kassör",
+    "admin": "Administratör"
+  }
+}

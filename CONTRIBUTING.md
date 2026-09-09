@@ -51,11 +51,13 @@ header carries `aria-sort`.
 
 ## Adding a user-facing string
 
-Both `messages/sv.json` and `messages/en.json`, always. `sv` is the source
-language and `en` is the translation. `src/i18n/messages.test.ts` fails if a key
-exists in one file and not the other, or if nothing in `src/` calls it. Without
-that test a missing key renders as `expenses.wizard.paymentType` in the middle
-of a sentence, in production, for whoever is reading in the other language.
+Both `messages/sv/<namespace>.json` and `messages/en/<namespace>.json`, always,
+where `<namespace>` is the top-level key a page's strings live under (see
+`MESSAGE_NAMESPACES` in `src/i18n/request.ts`). `sv` is the source language and
+`en` is the translation. `src/i18n/messages.test.ts` fails if a key exists in
+one file and not the other, or if nothing in `src/` calls it. Without that test
+a missing key renders as `expenses.wizard.paymentType` in the middle of a
+sentence, in production, for whoever is reading in the other language.
 
 ## Changing the database
 

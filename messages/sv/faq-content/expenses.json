@@ -1,0 +1,57 @@
+{
+  "id": "expenses",
+  "label": "Innan du handlar",
+  "items": [
+    {
+      "id": "what-is",
+      "q": "Vad är ett utlägg?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ett utlägg är en utgift som du betalar för någon annans räkning. Du lägger ut egna pengar för något som sektionen ska stå för, och ersätts i efterhand."
+        }
+      ]
+    },
+    {
+      "id": "reimbursement",
+      "q": "Får jag alltid tillbaka mina pengar?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej, du har inte automatisk rätt till ersättning. Du har rätt till ersättning när båda de här kraven är uppfyllda:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Att du fått godkänt från din utskottsordförande.",
+            "Att du kan styrka köpet med ett giltigt kvitto."
+          ]
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Kolla ALLTID med din utskottsledare innan du genomför ett köp. Är kraven inte uppfyllda riskerar du att själv bli betalningsskyldig."
+        }
+      ]
+    },
+    {
+      "id": "before-buying",
+      "q": "Vad ska jag göra innan jag handlar?",
+      "a": [
+        {
+          "t": "ol",
+          "v": [
+            "Stäm av köpet med din utskottsordförande och få ett godkännande.",
+            "Se till att du får ett giltigt kvitto i kassan, inte bara en orderbekräftelse eller ett kortkvitto.",
+            "Redovisa köpet här på sidan så fort du är hemma."
+          ]
+        },
+        {
+          "t": "action",
+          "v": "Redovisa ett köp",
+          "href": "/expenses/new"
+        }
+      ]
+    }
+  ]
+}

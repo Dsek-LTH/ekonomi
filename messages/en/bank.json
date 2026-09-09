@@ -1,0 +1,52 @@
+{
+  "title": "Bank transactions",
+  "tab": {
+    "all": "All",
+    "matched": "Matched",
+    "unmatched": "Unmatched",
+    "noCard": "No card"
+  },
+  "transactions": "Transactions",
+  "pickCsv": "Pick a CSV file",
+  "importFailed": "The import failed",
+  "importDone": "Import complete",
+  "summary": {
+    "imported": "{count} imported",
+    "duplicates": "{count} duplicates",
+    "newCards": "{count} new cards",
+    "skippedRows": "{count} rows skipped"
+  },
+  "deleteTitle": "Delete the transaction?",
+  "deleteMessage": "The bank transaction is permanently deleted.",
+  "deleteConfirm": "Delete",
+  "deleteFailed": "Could not delete the transaction",
+  "delete": "Delete transaction",
+  "deleteBlocked": "Matched, remove the match first",
+  "colDate": "Date",
+  "colTransaction": "Transaction",
+  "colHolder": "Card holder / Card",
+  "colExpense": "Expense",
+  "colAmount": "Amount",
+  "matched": "Matched",
+  "searchPlaceholder": "Search the statement...",
+  "noMatch": "No transactions match the filter.",
+  "csvHelp": {
+    "label": "About the CSV file",
+    "title": "Transaction report from the bank",
+    "source": "Export a Transaktionsrapport as CSV from the section's business account in Swedbank/Sparbanken.",
+    "format": "Upload the file exactly as it comes. Columns are read by position (Radnr … Belopp), so a file reordered or re-saved in Excel is read wrongly.",
+    "cards": "A card purchase is tied to its card by a trailing K#### in Referens. Card numbers not seen before are added under Sektionskort automatically.",
+    "duplicates": "Rows already imported are skipped. Upload the same file again and you get no duplicates.",
+    "limits": "Maximum 5 MB. The character encoding (Windows-1252) is handled for you."
+  },
+  "scopeLabel": "Scope",
+  "scope": {
+    "mine": "Mine",
+    "all": "All"
+  },
+  "colCard": "Card",
+  "account": "Account for it",
+  "assignCard": "Pick a card",
+  "changeCard": "Change card",
+  "assignFailed": "Could not put the transaction on that card"
+}

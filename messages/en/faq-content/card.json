@@ -1,0 +1,107 @@
+{
+  "id": "card",
+  "label": "The section card",
+  "items": [
+    {
+      "id": "who-gets",
+      "q": "Who gets a guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "If your post involves many or expensive purchases, you get a guild card. It is tied to D-sektionen's bank account, so you don't have to spend your own money up front."
+        }
+      ]
+    },
+    {
+      "id": "card-rules",
+      "q": "Can I buy whatever I want with the guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. A guild card does NOT mean you may buy whatever you like. Every purchase on a guild card must be approved by your committee chair in advance, and every purchase must be reported afterwards."
+        },
+        {
+          "t": "note",
+          "tone": "danger",
+          "v": "If unauthorised purchases are made on your guild card, you become personally liable for them."
+        }
+      ]
+    },
+    {
+      "id": "declined",
+      "q": "My card was declined at the register, what do I do?",
+      "a": [
+        {
+          "t": "p",
+          "v": "That means we haven't moved enough money over to the card account. If it is urgent, your best move is to call us straight away:"
+        },
+        {
+          "t": "link",
+          "v": "Treasurer (Ludwig): 070-893 55 85",
+          "href": "tel:+46708935585"
+        },
+        {
+          "t": "link",
+          "v": "Vice treasurer (Edvin): 079-349 06 22",
+          "href": "tel:+46793490622"
+        }
+      ]
+    },
+    {
+      "id": "lend",
+      "q": "Can I lend out my guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. A guild card must never be lent to anyone else. It belongs to you and to your post."
+        }
+      ]
+    },
+    {
+      "id": "match",
+      "q": "Why does a card purchase have to be matched to a bank transaction?",
+      "a": [
+        {
+          "t": "p",
+          "v": "So the claim points at the money. The match says that this particular row on the card account is the money that left the section for this particular purchase, and so that the row is accounted for and the purchase booked against the right amount."
+        },
+        {
+          "t": "p",
+          "v": "Without it nobody can tell whether two claims describe one purchase or two, and the card account cannot be reconciled. That is why a card purchase cannot be sent unmatched."
+        },
+        {
+          "t": "p",
+          "v": "The transaction has to be for exactly the same amount and go the right way: a purchase settles against money out, a refund against money in."
+        }
+      ]
+    },
+    {
+      "id": "no-match",
+      "q": "I can't find my purchase in the list, what is wrong?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The list shows every row on your card, the ones you cannot pick included, and writes the reason on each. Four things make a row unpickable:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "A different amount. The row stays, saying how far off it is, “6,50 kr more than the claim” for instance. Usually it is the amount you typed that needs correcting.",
+            "The wrong way. Money in only settles a refund, money out only settles a purchase.",
+            "Already claimed. Somebody else has taken the purchase on a claim of their own. Talk to them or to the treasurer.",
+            "Somebody else's card. You only see transactions on your own."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "If the purchase is not listed at all, the statement has probably not been imported yet. Ask the treasurer to import the latest bank file. Save a draft in the meantime."
+        },
+        {
+          "t": "action",
+          "v": "To card purchases",
+          "href": "/bank"
+        }
+      ]
+    }
+  ]
+}

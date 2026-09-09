@@ -1,0 +1,66 @@
+{
+  "id": "receipts",
+  "label": "Receipts",
+  "items": [
+    {
+      "id": "valid",
+      "q": "What counts as a valid receipt?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Under the Accounting Act (chapter 5, section 7), the verification must state when it was compiled, when the transaction took place, what it concerns, the amount, the counterparty, and a verification number or other identification."
+        },
+        {
+          "t": "p",
+          "v": "In practice the receipt must show:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "The date.",
+            "Which products the receipt covers.",
+            "The cost of those products.",
+            "The tax rates (VAT).",
+            "The seller's organisation number.",
+            "The seller's company name.",
+            "The seller's address.",
+            "A verification number."
+          ]
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "If any of the above is missing, or cannot be made out CLEARLY, the approval will be rejected. You then have to request a valid receipt from the supplier."
+        }
+      ]
+    },
+    {
+      "id": "one-receipt",
+      "q": "Can I put several receipts on one claim?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. A claim carries one receipt. Uploading a new one replaces the previous."
+        },
+        {
+          "t": "p",
+          "v": "Two receipts are two business events, and they are booked separately even when they happened on the same day for the same event. If you shopped in two places you file two claims."
+        },
+        {
+          "t": "p",
+          "v": "A receipt that ran to several pages is one event, though: merge the pages into one PDF and upload that."
+        }
+      ]
+    },
+    {
+      "id": "order-confirmation",
+      "q": "Is an order confirmation enough?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. An order confirmation is by default not a receipt. Ask the seller for a proper one."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Approval",
+  "scopeLabel": "Scope",
+  "description": "Expenses waiting to be approved. Check that the details are right and sign off.",
+  "scope": {
+    "mine": "Mine",
+    "all": "All"
+  },
+  "tab": {
+    "pending": "Waiting",
+    "approved": "Approved"
+  }
+}

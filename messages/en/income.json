@@ -1,0 +1,209 @@
+{
+  "costCentreFailed": "The cost centre could not be changed.",
+  "title": "Income",
+  "description": "Fetch sales from Zettle and Swish. Look them over and book them.",
+  "serviceUnavailable": "The income service is not configured. Set INTAKT_URL and INTAKT_TOKEN to fetch and render reports.",
+  "source": {
+    "SWISH": "Swish",
+    "ZETTLE": "Zettle",
+    "ZETTLE_FEE": "Zettle fees"
+  },
+  "status": {
+    "DRAFT": "To book",
+    "BOOKED": "Booked",
+    "EXPORTED": "Exported"
+  },
+  "fetch": {
+    "source": "Source",
+    "title": "Fetch a period",
+    "description": "Dates are inclusive, and read as Swedish days.",
+    "from": "From",
+    "to": "To",
+    "submit": "Fetch",
+    "chooseFile": "Choose Swish file"
+  },
+  "fetchDone": "Fetch complete",
+  "fetchFailed": "The fetch failed",
+  "updateFailed": "Could not save the change",
+  "bookDone": "Booked",
+  "bookFailed": "Booking failed",
+  "exportDone": "Exported to Fortnox",
+  "exportFailed": "The export failed",
+  "summary": {
+    "imported": "{count} reports imported",
+    "alreadyBooked": "{count} days were already booked and are flagged",
+    "alreadyInFortnox": "{count} days are already in Fortnox and are flagged",
+    "fortnoxCheckFailed": "Could not be checked against Fortnox",
+    "superseded": "{count} earlier reports were cleared out"
+  },
+  "counts": {
+    "reports": "{count} reports",
+    "toBook": "{count} to book",
+    "toExport": "{count} to export"
+  },
+  "empty": {
+    "description": "Fetch a period from Zettle, or upload a Swish report.",
+    "noMatch": "No fetches match the filter.",
+    "title": "No days to book"
+  },
+  "batch": {
+    "description": "{count} reports, one per committee per day.",
+    "empty": "No reports in this fetch."
+  },
+  "table": {
+    "source": "Source",
+    "period": "Period",
+    "reports": "Reports",
+    "imported": "Fetched",
+    "date": "Date",
+    "committee": "Committee",
+    "costCenter": "Cost centre",
+    "total": "Total",
+    "status": "Status",
+    "fees": "Zettle fees",
+    "chooseCostCenter": "Choose a cost centre",
+    "voucher": "Voucher"
+  },
+  "lines": {
+    "product": "Item",
+    "account": "Account",
+    "quantity": "Qty",
+    "unitPrice": "Unit price",
+    "discount": "Discount",
+    "total": "Amount",
+    "accountFor": "Account for {product}",
+    "accountFailed": "The account could not be changed."
+  },
+  "move": {
+    "title": "Move sales",
+    "subtitle": "{count, plural, one {# item} other {# items}} from {from}",
+    "action": "Move…",
+    "unitField": "Committee",
+    "mergeTitle": "Merge into {unit}'s report?",
+    "mergeBody": "{unit} already has a report for {date}. {count, plural, one {# item moves} other {# items move}} into it and the two days become one. You cannot split them again.",
+    "mergeConfirm": "Move",
+    "dragHint": "Drag onto another committee's report for the same day",
+    "picked": "{count, plural, one {# selected} other {# selected}}",
+    "clear": "Clear",
+    "selectAll": "Select every item",
+    "selectLine": "Select {product}",
+    "destination": "To committee",
+    "destinationHint": "The items join that committee's report for the same day. If it has none, one is created.",
+    "destinationPlaceholder": "Pick a committee…",
+    "destinationRequired": "Pick where the items are moving to",
+    "setAll": "Set all to:",
+    "setAllTo": "Set every row to account {account}",
+    "noAccounts": "This committee has no product prefixes. Pick an account for each row.",
+    "account": "New account",
+    "accountFor": "Account for {product}",
+    "wasAccount": "Currently books to {account}",
+    "unknownAccountName": "unknown account",
+    "stillOnOldAccount": "{count, plural, one {# row is} other {# rows are}} still on the account they had in the fallback report. Is that right?",
+    "movingTotal": "Moving:",
+    "cancel": "Cancel",
+    "confirm": "Move {count, plural, one {# item} other {# items}}",
+    "done": "{count, plural, one {# item moved} other {# items moved}}",
+    "failed": "The items could not be moved."
+  },
+  "newReport": {
+    "action": "New report",
+    "actionFor": "New report for {date}",
+    "title": "New report",
+    "subtitle": "{date} – {source}. An empty report to move sales onto.",
+    "unit": "Committee",
+    "unitHint": "Whose takings the report becomes.",
+    "unitPlaceholder": "Pick a committee…",
+    "unitRequired": "Pick whose takings the report becomes",
+    "alreadyExists": "That committee already has a report for the day, so that one opens instead. Two reports for one day could not both be booked.",
+    "footerHint": "The report is created empty.",
+    "cancel": "Cancel",
+    "confirm": "Create report",
+    "open": "Open the report",
+    "done": "The report was created.",
+    "opened": "That committee already had a report for the day. It is open now.",
+    "failed": "The report could not be created.",
+    "emptyTitle": "Empty report",
+    "emptyBody": "This report holds no sales yet. Drag items onto it from another report for the same day, or select them there and choose Move. Wrong committee: delete this report and make another.",
+    "delete": "Delete the report",
+    "deleteTitle": "Delete the report?",
+    "deleteBody": "{unit} {date} holds no sales. The report will be removed.",
+    "deleteConfirm": "Delete",
+    "deleteDone": "The report was deleted.",
+    "deleteFailed": "The report could not be deleted."
+  },
+  "undo": {
+    "unexport": "Undo export",
+    "unexportTitle": "Undo the export?",
+    "unexportBody": "Voucher {voucher} stays in Fortnox. All this does is stop the app counting the day as exported. Export again and you get a second voucher, so reverse the first one in Fortnox before you do.",
+    "unexportConfirm": "Undo export",
+    "unexportDone": "The export was undone.",
+    "reopen": "Edit",
+    "reopenTitle": "Open the day for editing?",
+    "reopenBody": "The voucher and the booked income statement are deleted, and the day rejoins the To book queue. It waits there until you book it again, or until the next fetch clears the queue.",
+    "reopenConfirm": "Open",
+    "delete": "Delete",
+    "deleteTitle": "Delete {date}?",
+    "deleteBody": "{unit}'s report, its sold items and its voucher are removed. You cannot undo that. Fetching the same period again does bring the day back.",
+    "deleteConfirm": "Delete",
+    "deleteDone": "The report was deleted.",
+    "failed": "That did not work."
+  },
+  "actions": {
+    "book": "Book",
+    "export": "Export",
+    "viewDocument": "View report",
+    "hideDocument": "Hide income statement",
+    "bookAndNext": "Book & next"
+  },
+  "bookAll": {
+    "action": "Book all ({count})",
+    "title": "Book all?",
+    "body": "{count} reports will be booked, one at a time. Each gets an intäktsräkning and a verifikation.",
+    "confirm": "Book",
+    "done": "{count} of {total} booked"
+  },
+  "searchPlaceholder": "Search source, file or period…",
+  "tab": {
+    "all": "All"
+  },
+  "batches": {
+    "title": "Fetches",
+    "count": "{count} fetches"
+  },
+  "nav": {
+    "label": "Section",
+    "review": "To book",
+    "booked": "Booked / exported"
+  },
+  "review": {
+    "viewLabel": "View",
+    "description": "Work through the days one at a time. The income statement stands beside it, the voucher is pre-filled.",
+    "lines": "Items sold",
+    "noCostCenter": "No cost centre",
+    "edited": "Edited",
+    "modeReview": "Review",
+    "modeTable": "Reports",
+    "open": "Open",
+    "alreadyBooked": "{count} days in the period are already booked and cannot be booked again.",
+    "inFortnox": "In Fortnox ({voucher})",
+    "inFortnoxWarning": "Fortnox already holds a voucher for this day and verksamhet ({voucher}). Only book this if they really are two separate reports.",
+    "alreadyBookedShort": "Already booked",
+    "alreadyBookedWarning": "This day is already booked here and cannot be booked again. Voucher:"
+  },
+  "book": {
+    "title": "Voucher lines",
+    "clearingHint": "The clearing account follows from how the day was paid and cannot be changed here.",
+    "clearingLocked": "Locked row",
+    "unknownClearingAccount": "The clearing account {account} is not in the chart of accounts. Fix it under Settings → Income before booking."
+  },
+  "exportAll": {
+    "action": "Export all ({count})",
+    "done": "{count} of {total} exported"
+  },
+  "booked": {
+    "title": "Booked and exported",
+    "description": "The section's record of what it took in. This is where days go to Fortnox.",
+    "searchPlaceholder": "Search committee, cost centre or voucher…",
+    "empty": "Nothing is booked yet."
+  }
+}

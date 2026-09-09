@@ -1,0 +1,57 @@
+{
+  "id": "basics",
+  "label": "The basics",
+  "items": [
+    {
+      "id": "why-rules",
+      "q": "Why is the guild so strict about reporting?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Bookkeeping is required by law in Sweden. The Accounting Act applies to everyone running a business activity, and D-sektionen is one, so we have to comply with it."
+        },
+        {
+          "t": "p",
+          "v": "The act contains the guidelines and requirements the Swedish Tax Agency places on us as an organisation. Breaking it can have serious consequences both for the guild and for the treasurer as a private person. The rules on this page are not here to make life difficult. They are here to keep us on the right side of the law."
+        }
+      ]
+    },
+    {
+      "id": "who",
+      "q": "Who does this apply to?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Everyone who buys something on behalf of the guild. If you hold a post, you will almost certainly need to make an expense claim for D-sektionen at some point during the year."
+        },
+        {
+          "t": "p",
+          "v": "If you chair a committee, approval applies to you as well: you review and approve the expenses belonging to your committee before they are booked."
+        }
+      ]
+    },
+    {
+      "id": "three-kinds",
+      "q": "What kinds of claim are there?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Three. The first thing you choose when filing is which one this is, and the choice governs the rest of the form."
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Section card: the section's money has already left the account, and you are accounting for what it went to.",
+            "Section card, refund: money coming back to the card, a return for instance.",
+            "Out of pocket: you paid yourself and get the money back.",
+            "Mileage: you drove your own car on the section's errand and are paid per kilometre."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "A card purchase has to be matched to the bank transaction that paid for it. An out-of-pocket claim needs a payout account on file. A mileage claim has no receipt at all, because there is nothing to photograph about driving your own car."
+        }
+      ]
+    }
+  ]
+}

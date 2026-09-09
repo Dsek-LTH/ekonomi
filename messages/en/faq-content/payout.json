@@ -1,0 +1,53 @@
+{
+  "id": "payout",
+  "label": "Getting paid",
+  "items": [
+    {
+      "id": "payout-account",
+      "q": "Where do I enter my account number?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Under Profile. Clearing number and account number, for the account you want the money in."
+        },
+        {
+          "t": "p",
+          "v": "Without it an out-of-pocket claim and a mileage claim cannot be sent, because there is nowhere to pay. A card purchase does not need it: there the section has already paid."
+        },
+        {
+          "t": "action",
+          "v": "To your profile",
+          "href": "/profile"
+        }
+      ]
+    },
+    {
+      "id": "after-submit",
+      "q": "What happens after I send it in?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The claim goes through four states, and you can see which one it is in under Expenses:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Pending approval: your committee head is reviewing it. If something needs correcting it comes back as Needs changes, with a comment saying what.",
+            "Approved: cleared, and queued for the books.",
+            "Booked: the treasury has entered it.",
+            "Exported: it is in Fortnox, and the money is paid out."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "If you paid out of your own pocket, the money comes back after the claim is booked. If a long time passes with nothing happening, ask your committee head first: that is usually where the queue is."
+        },
+        {
+          "t": "action",
+          "v": "To my expenses",
+          "href": "/expenses"
+        }
+      ]
+    }
+  ]
+}

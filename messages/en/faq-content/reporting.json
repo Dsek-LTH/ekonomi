@@ -1,0 +1,187 @@
+{
+  "id": "reporting",
+  "label": "Filing a claim",
+  "items": [
+    {
+      "id": "how",
+      "q": "How do I file a purchase?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Every purchase has to be filed. It is the condition for getting your money back on an out-of-pocket claim, and for not becoming personally liable for a purchase on the section card."
+        },
+        {
+          "t": "ol",
+          "v": [
+            "Choose what it is: section card, section card refund, or out of pocket.",
+            "Describe what happened, enter the date from the receipt and the amount.",
+            "Split the amount across cost centres. The rows have to add up to the receipt's total.",
+            "Drop the receipt into the panel beside the form.",
+            "For a card purchase: pick the bank transaction that paid for it.",
+            "Send it in."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You can save a draft at any point and come back to it."
+        },
+        {
+          "t": "action",
+          "v": "File a purchase",
+          "href": "/expenses/new"
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "q": "Can I finish this later?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Yes. Save a draft at any point and it sits under Expenses until you send it in."
+        },
+        {
+          "t": "p",
+          "v": "What you have typed also survives a reload before you got that far, the receipt you picked included. Switch device or clear site data and it is gone, so save a draft if you are going to be a while."
+        }
+      ]
+    },
+    {
+      "id": "split",
+      "q": "The receipt has to hit several cost centres, how do I split it?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Add one row per cost centre and report the costs separately there, with a comment explaining what the row covers. The rows must add up to the total on the receipt."
+        }
+      ]
+    },
+    {
+      "id": "alcohol",
+      "q": "How do I report alcohol?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Alcohol comes with additional laws to comply with. One of the requirements is that alcoholic drinks and alcohol-like preparations must be reported separately by category:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Beer: lager, sour beer.",
+            "Wine: up to 22 ‰, port, sherry, vermouth.",
+            "Other fermented drinks: cider, fruit wines, mead.",
+            "Spirits: Halmstad Crush, vodka, liqueurs.",
+            "Alcohol-like preparations: alcoholic ice cream."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "In practice that means splitting the alcohol you bought across one row per category: add up everything in the same category and put it on its own row, deposit (pant) included."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "If you are unsure which category a drink belongs to, always ask your committee chair. The most common mistake is filing spirits as another fermented drink: Halmstad Crush is a spirit, not a cider."
+        }
+      ]
+    },
+    {
+      "id": "alcohol-example",
+      "q": "Example: how do I split a Systembolaget purchase?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Say you bought the following for a sittning:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Norrlands Guld (beer): 2 × 13.90 kr + 2 × 1 kr deposit.",
+            "Pistonhead Haze Lager (beer): 2 × 11.90 kr + 2 × 1 kr deposit.",
+            "Crazy Cat (wine): 209 kr.",
+            "Explorer Vodka (spirits): 189 kr + 1 kr deposit.",
+            "Halmstad Crush (spirits): 16.90 kr + 1 kr deposit.",
+            "Briska Fläder (other fermented drink): 16.90 kr + 1 kr deposit."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You then report four rows, one per category:"
+        },
+        {
+          "t": "table",
+          "head": [
+            "Cost centre",
+            "Amount",
+            "Comment"
+          ],
+          "rows": [
+            [
+              "ALKO",
+              "55.60 kr",
+              "Beer (deposit included)"
+            ],
+            [
+              "ALKO",
+              "207.90 kr",
+              "Spirits (deposit included)"
+            ],
+            [
+              "ALKO",
+              "209.00 kr",
+              "Wine"
+            ],
+            [
+              "ALKO",
+              "17.90 kr",
+              "Other fermented drink (deposit included)"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deadline",
+      "q": "How quickly do I have to file?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Under the section's finance policy the treasurer may hold you personally liable if a purchase, out of pocket or on the section card, is not filed within 60 days of the purchase being made."
+        },
+        {
+          "t": "p",
+          "v": "The app refuses an out-of-pocket claim or a mileage claim older than 60 days: they cannot be sent, because that is your money the section would be paying back and the claim is too old to accept. A card purchase can still be filed after that, because the section's money is already gone and the purchase has to be booked however late it arrives. That does not mean the deadline is not yours."
+        },
+        {
+          "t": "note",
+          "tone": "danger",
+          "v": "The treasury does not have time to chase you for filing on time. File your purchases straight away."
+        }
+      ]
+    },
+    {
+      "id": "returns",
+      "q": "I returned something, does that have to be filed?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Yes. A return is filed as a section card claim with refund chosen, and the amount is negative. Like a purchase it is matched against the bank transaction, but against the money coming back rather than money going out."
+        },
+        {
+          "t": "p",
+          "v": "Returns only exist on the section card. Money comes back to where it was paid from, and a member does not hand the section money through a claim. If you paid yourself and were refunded privately, the original claim is corrected or deleted instead."
+        }
+      ]
+    },
+    {
+      "id": "foreign",
+      "q": "I'm buying from abroad, is there anything special to keep in mind?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Pay through Klarna if you can. Other countries are not bound by Swedish rules and are therefore not obliged to give you a receipt the way a Swedish seller is. But if the purchase goes through Klarna, Klarna always gives you a valid receipt."
+        }
+      ]
+    }
+  ]
+}

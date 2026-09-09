@@ -1,0 +1,264 @@
+{
+  "title": "Utlägg",
+  "scopeLabel": "Omfattning",
+  "description": "Följ utlägget hela vägen, från kvitto till bokföring.",
+  "new": "Nytt utlägg",
+  "searchPlaceholder": "Sök utlägg...",
+  "noMatch": "Inga utlägg matchar filtret.",
+  "emptyTitle": "Inga utlägg här",
+  "emptyDescription": "Skapa ditt första utlägg genom att ladda upp ett kvitto.",
+  "statusFilter": {
+    "all": "Alla statusar"
+  },
+  "scope": {
+    "mine": "Mina",
+    "all": "Alla"
+  },
+  "col": {
+    "date": "Datum",
+    "title": "Utlägg",
+    "type": "Typ",
+    "submitter": "Inlämnad av",
+    "status": "Status",
+    "attest": "Attest",
+    "verification": "Verifikat",
+    "amount": "Belopp"
+  },
+  "attest": {
+    "waiting": "Väntar på attest",
+    "attestedBy": "Attesterad av {name}{date}",
+    "waitingResultUnit": "Väntar på attest – {resultUnit}",
+    "noResultUnit": "utan resultatenhet"
+  },
+  "submitBlocker": {
+    "match": "Matcha mot en banktransaktion innan du kan skicka in.",
+    "payout": "Lägg till clearing- och kontonummer i Min profil innan du kan skicka in.",
+    "receipt": "Ladda upp kvittot innan du kan skicka in.",
+    "mileage": "Fyll i mätarställningen före och efter resan innan du kan skicka in.",
+    "incomplete": "Komplettera beskrivning, datum, belopp och kostnadsfördelning innan du kan skicka in.",
+    "futureDate": "Kvittodatumet ligger i framtiden. Rätta det till dagen köpet gjordes innan du kan skicka in.",
+    "tooLate": "Eget utlägg måste redovisas inom {days} dagar från köpet, och det här kvittot är äldre än så. Utlägget ligger kvar som utkast. Vill du ansöka om dispens, hör av dig till skattmästaren, som avgör om det tas emot ändå. Har datumet blivit fel går det att rätta.",
+    "tooLateMileage": "Milersättning måste redovisas inom {days} dagar från resan, och den här resan är äldre än så. Resan ligger kvar som utkast. Vill du ansöka om dispens, hör av dig till skattmästaren, som avgör om den tas emot ändå. Har datumet blivit fel går det att rätta."
+  },
+  "event": {
+    "CREATED": "Skapade utlägget",
+    "EDITED": "Uppdaterade uppgifter",
+    "RECEIPT_UPLOADED": "Laddade upp kvitto",
+    "MATCHED": "Matchade mot banktransaktion",
+    "UNMATCHED": "Tog bort matchningen",
+    "SUBMITTED": "Skickade in för attest",
+    "CHANGES_REQUESTED": "Begärde ändring",
+    "COST_CENTER_APPROVED": "Attesterade kostnadsställe",
+    "ATTEST_WITHDRAWN": "Drog tillbaka sin attest",
+    "APPROVED": "Attesterade utlägget",
+    "BOOKED": "Bokförde utlägget",
+    "EXPORTED": "Exporterade till Fortnox",
+    "EXPORT_REVERTED": "Markerade som ej exporterad",
+    "RECALLED": "Drog tillbaka inlämningen",
+    "DEADLINE_WAIVED": "Beviljade dispens från fristen",
+    "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen"
+  },
+  "detail": {
+    "missingTitle": "Utlägget hittades inte",
+    "missingDescription": "Det kan ha tagits bort eller så är länken fel.",
+    "missingAction": "Till alla utlägg",
+    "details": "Uppgifter",
+    "purchaseDate": "Kvittodatum",
+    "amount": "Belopp",
+    "distribution": "Kostnadsfördelning",
+    "awaitingApproval": "Väntar på attest",
+    "paymentType": "Betalsätt",
+    "verification": "Verifikation",
+    "amend": "Ändra",
+    "account": "Konto",
+    "debit": "Debet",
+    "credit": "Kredit",
+    "exportedToFortnox": "Exporterad till Fortnox – verifikat",
+    "history": "Historik",
+    "receipt": "Kvitto",
+    "noReceipt": "Inget kvitto uppladdat.",
+    "bankTransaction": "Banktransaktion",
+    "removeMatch": "Ta bort matchning",
+    "noMatch": "Ingen matchning.",
+    "more": "Mer",
+    "book": "Bokför",
+    "export": "Exportera till Fortnox",
+    "fortnoxNotConnected": "Fortnox är inte anslutet. Anslut det under Bokföring först.",
+    "fortnoxNotSignedIn": "Du är inte inloggad mot Fortnox. Logga in via din profil, så går det att exportera.",
+    "submit": "Skicka in för attest",
+    "approve": "Attestera",
+    "withdrawAttest": "Dra tillbaka min attest",
+    "requestChanges": "Begär ändring",
+    "reopen": "Återöppna för ändring",
+    "unexport": "Markera som ej exporterad",
+    "unexportWarning": "Verifikationen ligger kvar i Fortnox. Ta bort eller makulera den där, annars blir det en dubblett nästa gång du exporterar.",
+    "edit": "Redigera",
+    "delete": "Ta bort utlägg",
+    "comment": {
+      "request_changes": {
+        "label": "Vad behöver ändras?",
+        "placeholder": "Skriv en kommentar till den som lagt utlägget…",
+        "submit": "Skicka tillbaka"
+      },
+      "return_approved": {
+        "label": "Varför återöppnas utlägget?",
+        "placeholder": "Skriv en kommentar till den som lagt utlägget…",
+        "submit": "Skicka tillbaka"
+      },
+      "unexport": {
+        "label": "Varför är utlägget inte exporterat längre?",
+        "placeholder": "T.ex. verifikationen makulerades i Fortnox…",
+        "submit": "Markera som ej exporterad"
+      },
+      "waive_deadline": {
+        "label": "Varför beviljas dispens?",
+        "placeholder": "T.ex. kvittot kom bort och har eftersökts sedan i somras…",
+        "submit": "Bevilja dispens"
+      }
+    },
+    "editedFields": "Ändrade: {fields}",
+    "voucherComment": "Verifikat {label}",
+    "journeyDate": "Resdag",
+    "recall": "Dra tillbaka",
+    "waiveDeadline": "Bevilja dispens",
+    "revokeDeadlineWaiver": "Ta tillbaka dispensen",
+    "revokeWaiverConfirm": "Utlägget är äldre än fristen och kan inte skickas in igen utan en ny dispens.",
+    "deadlineWaiver": "Dispens från redovisningsfristen",
+    "deadlineWaiverGranted": "{name} beviljade dispens {date}.",
+    "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in."
+  },
+  "mutations": {
+    "transition": {
+      "submit": "Inskickat för attest.",
+      "approve": "Utlägget attesterades.",
+      "withdraw_attest": "Din attest drogs tillbaka.",
+      "request_changes": "Återsänt med begäran om ändring.",
+      "return_approved": "Utlägget återöppnades för ändring.",
+      "unexport": "Utlägget är markerat som ej exporterat.",
+      "recall": "Utlägget är tillbaka som utkast",
+      "waive_deadline": "Dispens beviljad. Utlägget går att skicka in.",
+      "revoke_deadline_waiver": "Dispensen är tillbakatagen."
+    },
+    "withdraw": {
+      "title": "Dra tillbaka din attest?",
+      "message": "Dina attesterade kostnadsställen blir oattesterade igen och utlägget går tillbaka till att vänta på attest.",
+      "confirm": "Dra tillbaka"
+    },
+    "export": {
+      "failed": "Exporten misslyckades",
+      "done": "Exporterat till Fortnox (verifikat {label})",
+      "attachWarning": "Kvittot laddades upp men kunde inte kopplas till verifikationen: {detail}"
+    },
+    "match": {
+      "failed": "Matchningen misslyckades",
+      "matched": "Transaktion matchad.",
+      "removed": "Matchning borttagen."
+    },
+    "delete": {
+      "title": "Ta bort utlägget?",
+      "message": "Utlägget och dess kvitto tas bort permanent.",
+      "confirm": "Ta bort",
+      "failed": "Kunde inte ta bort",
+      "done": "Utlägget togs bort."
+    },
+    "recall": {
+      "title": "Dra tillbaka utlägget?",
+      "message": "Utlägget går tillbaka till utkast och försvinner ur attestkön. Du kan sedan ändra det (till exempel från eget utlägg till sektionskort) och skicka in det igen. Referensnumret behålls.",
+      "messageAttested": "Utlägget går tillbaka till utkast och försvinner ur attestkön. {count, plural, =1 {En attest} other {# attester}} tas bort, eftersom de gäller utlägget så som det såg ut. Du kan sedan ändra det och skicka in det igen; referensnumret behålls.",
+      "confirm": "Dra tillbaka"
+    }
+  },
+  "wizard": {
+    "step": {
+      "review": "Granska",
+      "match": "Matcha",
+      "submit": "Skicka in"
+    },
+    "newTitle": "Nytt utlägg",
+    "newDescription": "Ladda upp kvittot och fyll i uppgifterna.",
+    "editTitle": "Redigera {id}",
+    "editTitleDraft": "Redigera utkast",
+    "draftLabel": "Utkast",
+    "editDescription": "Ändra uppgifterna och spara. Ändringen loggas i historiken.",
+    "save": "Spara",
+    "saveDraft": "Spara utkast",
+    "back": "Tillbaka",
+    "continue": "Fortsätt",
+    "createFailed": "Kunde inte skapa utlägg",
+    "uploadFailed": "Uppladdningen misslyckades",
+    "saveFailed": "Kunde inte spara utlägget",
+    "matchSaveFailed": "Kunde inte spara matchningen",
+    "submitFailed": "Sparat, men kunde inte skickas in",
+    "savedChanges": "Ändringarna sparades.",
+    "savedDraft": "Utkast sparat.",
+    "submitted": "Utlägget skickades in för attest.",
+    "receiptRequired": "Ladda upp kvittot i panelen bredvid innan du går vidare",
+    "description": "Beskrivning",
+    "purchaseDate": "Kvittodatum",
+    "date": "Datum",
+    "dateIncomplete": "Skriv hela datumet (ÅÅÅÅ-MM-DD)",
+    "dateFuture": "Datumet ligger i framtiden. Ett köp kan inte ha gjorts senare än i dag",
+    "dateTooLate": "Äldre än {days} dagar. Ett eget utlägg måste redovisas inom {days} dagar från köpet.",
+    "dateTooLateCard": "Var det sektionskortet du använde? Ändra betalsätt överst, så gäller ingen frist.",
+    "dateTooLateWaiver": "Du kan ansöka om dispens: skriv klart utlägget, spara det som utkast och hör av dig till skattmästaren, som avgör om det tas emot ändå.",
+    "amount": "Belopp",
+    "returnMeans": "{amount} kommer tillbaka till sektionen.",
+    "distribution": "Kostnadsfördelning",
+    "paymentTypeFixed": "Utlägget redovisar ett köp på ditt sektionskort, så betalsättet är låst. Vill du i stället få tillbaka egna pengar skapar du ett nytt utlägg utan att utgå från transaktionen.",
+    "matchTitle": "Matcha mot banktransaktion",
+    "reviewTitle": "Granska och skicka in",
+    "match": "Matchning",
+    "paymentType": "Betalsätt",
+    "payoutTo": "Utbetalas till",
+    "payoutMissing": "Lägg till konto i Min profil",
+    "goesTo": "Skickas till {resultUnits} för attest.",
+    "resultUnitConcerned": "berörd resultatenhet",
+    "resubmit": "Skicka in igen",
+    "submit": "Skicka in för attest",
+    "claim": "Vad gäller det?",
+    "claimOption": {
+      "card": "Sektionskort",
+      "cardReturn": "Sektionskort, retur",
+      "own": "Eget utlägg"
+    },
+    "claimHint": {
+      "card": "Köp gjort med sektionens kort.",
+      "cardReturn": "Pengar tillbaka till kortet, till exempel ett återköp.",
+      "own": "Du betalade själv och får tillbaka pengarna."
+    }
+  },
+  "field": {
+    "title": "Beskrivning",
+    "purchaseDate": "Kvittodatum",
+    "grossAmount": "Belopp",
+    "allocations": "Kostnadsfördelning",
+    "paymentType": "Betalsätt",
+    "odometerStart": "Mätarställning vid start",
+    "odometerEnd": "Mätarställning vid slut",
+    "journeyStops": "Resväg"
+  },
+  "newMenu": {
+    "label": "Nytt utlägg",
+    "ordinary": "Vanligt utlägg",
+    "ordinaryHint": "Du har ett kvitto: kort eller eget",
+    "mileage": "Milersättning",
+    "mileageHint": "Du körde egen bil på sektionens ärende"
+  },
+  "match": {
+    "lead": "Välj transaktionen från sektionskortet som betalade köpet. Den måste vara på exakt {amount} och gå åt rätt håll. Övriga står kvar med skälet, så du ser vad som finns.",
+    "search": "Sök på text eller belopp",
+    "suggested": "Föreslagen",
+    "overBy": "{amount} kr mer än utlägget",
+    "underBy": "{amount} kr mindre än utlägget",
+    "isIncoming": "en inbetalning, matchar bara en återbetalning",
+    "isOutgoing": "en utbetalning, matchar bara ett köp",
+    "taken": "redan redovisad på ett annat utlägg",
+    "takenBy": "redan redovisad på {reference}",
+    "noneAtAll": "Det finns inga transaktioner på ditt sektionskort ännu.",
+    "noneMatchSearch": "Ingen transaktion matchar sökningen.",
+    "stuckTitle": "Hittar du inte köpet?",
+    "stuckWithRows": "Ingen av raderna ovan går att välja. Står köpet där med \"annat belopp\" är det beloppet du skrivit som behöver rättas. Står det som redan redovisat har någon annan redan tagit det, hör av dig till dem eller till skattmästaren.",
+    "stuckNoRows": "Kontoutdraget är troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen under Bank & matchning.",
+    "stuckDraft": "Ett kortköp går inte att skicka in utan matchning. Spara som utkast så länge och kom tillbaka när transaktionen finns."
+  }
+}

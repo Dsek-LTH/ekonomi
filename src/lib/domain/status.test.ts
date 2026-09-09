@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import sv from "../../../messages/sv.json";
-import en from "../../../messages/en.json";
+import svCommon from "../../../messages/sv/common.json";
+import svExpenses from "../../../messages/sv/expenses.json";
+import enCommon from "../../../messages/en/common.json";
+import enExpenses from "../../../messages/en/expenses.json";
+
+const sv = { common: svCommon, expenses: svExpenses };
+const en = { common: enCommon, expenses: enExpenses };
 import {
   EDITABLE_STATUSES,
   EXPENSE_STATUSES,

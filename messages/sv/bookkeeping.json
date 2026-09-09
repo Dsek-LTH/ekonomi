@@ -1,0 +1,17 @@
+{
+  "title": "Bokföring",
+  "description": "Kontera attesterade utlägg och exportera till Fortnox.",
+  "tab": {
+    "all": "Alla",
+    "toBook": "Att bokföra",
+    "toExport": "Att exportera",
+    "exported": "Exporterat"
+  },
+  "book": "Bokför",
+  "export": "Exportera",
+  "connectFirst": "Anslut Fortnox först",
+  "loginFirst": "Logga in mot Fortnox för att exportera",
+  "exportFailed": "{id}: export misslyckades",
+  "exportDone": "{id}: exporterad till Fortnox ({label})",
+  "voucherLabel": "Verifikat {label}"
+}

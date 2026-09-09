@@ -1,0 +1,57 @@
+{
+  "id": "expenses",
+  "label": "Before you buy",
+  "items": [
+    {
+      "id": "what-is",
+      "q": "What is an expense claim?",
+      "a": [
+        {
+          "t": "p",
+          "v": "An expense claim covers a cost you pay on someone else's behalf. You spend your own money on something the guild is going to pay for, and you are reimbursed afterwards."
+        }
+      ]
+    },
+    {
+      "id": "reimbursement",
+      "q": "Do I always get my money back?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No, reimbursement is not automatic. You are entitled to it when both of these are true:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Your committee chair approved the purchase.",
+            "You can support the purchase with a valid receipt."
+          ]
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "ALWAYS check with your committee chair before making a purchase. If the requirements are not met, you risk having to pay for it yourself."
+        }
+      ]
+    },
+    {
+      "id": "before-buying",
+      "q": "What should I do before I buy anything?",
+      "a": [
+        {
+          "t": "ol",
+          "v": [
+            "Clear the purchase with your committee chair and get an approval.",
+            "Make sure you get a valid receipt at the register, not just an order confirmation or a card slip.",
+            "Report the purchase here on the site as soon as you get home."
+          ]
+        },
+        {
+          "t": "action",
+          "v": "Report a purchase",
+          "href": "/expenses/new"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "examples-valid",
+  "label": "Valid receipts",
+  "items": [
+    {
+      "id": "ex-store",
+      "q": "Till receipt from a shop",
+      "a": [
+        {
+          "t": "p",
+          "v": "Date, every item with its price, the VAT rates, the seller's company name, address and organisation number, and a receipt number, all present and all legible."
+        },
+        {
+          "t": "image",
+          "file": "valid-store",
+          "alt": "Till receipt showing the date, items, VAT and the seller's organisation number."
+        }
+      ]
+    },
+    {
+      "id": "ex-webshop",
+      "q": "Receipt from an online shop",
+      "a": [
+        {
+          "t": "p",
+          "v": "A real receipt, or an invoice addressed to the guild, carrying the same details as a till receipt. The email you got when you placed the order is not this."
+        },
+        {
+          "t": "image",
+          "file": "valid-webshop",
+          "alt": "Online shop receipt with seller details, VAT and a verification number."
+        }
+      ]
+    }
+  ]
+}

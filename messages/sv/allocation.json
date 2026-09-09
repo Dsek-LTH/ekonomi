@@ -1,0 +1,10 @@
+{
+  "pick": "Välj kostnadsställe…",
+  "search": "Sök kostnadsställe…",
+  "costCenter": "Kostnadsställe",
+  "commentPlaceholder": "Kommentar (valfri)…",
+  "amountPlaceholder": "Belopp",
+  "unit": "kr",
+  "removeRow": "Ta bort rad",
+  "add": "+ Lägg till kostnadsställe"
+}

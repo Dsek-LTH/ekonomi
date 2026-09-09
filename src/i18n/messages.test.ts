@@ -10,10 +10,22 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import en from "../../messages/en.json";
-import sv from "../../messages/sv.json";
+import { MESSAGE_NAMESPACES } from "./request";
 
 type Tree = { [k: string]: string | Tree };
+
+/** The namespace files for one locale, merged the same way request.ts does. */
+function loadLocale(locale: string): Tree {
+  return Object.fromEntries(
+    MESSAGE_NAMESPACES.map((ns) => [
+      ns,
+      JSON.parse(readFileSync(join(process.cwd(), "messages", locale, `${ns}.json`), "utf8")),
+    ]),
+  );
+}
+
+const en = loadLocale("en");
+const sv = loadLocale("sv");
 
 /** Every leaf, as its full dotted path. */
 function flatten(node: Tree, prefix = ""): string[] {
