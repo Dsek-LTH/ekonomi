@@ -73,6 +73,10 @@ export function ContractClient({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasSignedFiles = contract.files.some((f) => isImmutable(f.role));
+  // CONTRACT is the one kind that is an agreement with somebody: has a
+  // status, a validity period and parties. PROTOCOL/OTHER carry none of
+  // that. See prisma/schema/contract.prisma.
+  const isAgreement = contract.kind === "CONTRACT";
 
   async function uploadFile(file: File) {
     const form = new FormData();
@@ -176,27 +180,33 @@ export function ContractClient({
       />
 
       <div className="space-y-5">
-        <StatusStrip
-          contract={contract}
-          today={today}
-          canManage={canManage}
-          action={
-            <ContractActions
-              state={{
-                status: contract.status,
-                isRental: contract.rental !== null,
-                canManage,
-                hasSignedFiles,
-              }}
-              busy={pending !== null}
-              onEdit={() => setEditing((v) => !v)}
-              onUpload={() => fileRef.current?.click()}
-              onRegenerate={regenerate}
-              onTerminate={terminate}
-              onDelete={removeContract}
-            />
-          }
-        />
+        {/* The status pill, the parties and the action menu, all one card:
+            only CONTRACT has any of the first two to show. A lean document
+            (PROTOCOL, OTHER) is filed or it doesn't exist, with nobody to
+            sign it, so its actions ride the details card below instead. */}
+        {isAgreement && (
+          <StatusStrip
+            contract={contract}
+            today={today}
+            canManage={canManage}
+            action={
+              <ContractActions
+                state={{
+                  status: contract.status,
+                  isRental: contract.rental !== null,
+                  canManage,
+                  hasSignedFiles,
+                }}
+                busy={pending !== null}
+                onEdit={() => setEditing((v) => !v)}
+                onUpload={() => fileRef.current?.click()}
+                onRegenerate={regenerate}
+                onTerminate={terminate}
+                onDelete={removeContract}
+              />
+            }
+          />
+        )}
 
         {editing && canManage && (
           <Card>
@@ -224,21 +234,47 @@ export function ContractClient({
 
             A contract that is not a rental still needs them, because for one of
             those the kind and the counterparty are not obvious from anything
-            else on the page. */}
+            else on the page. A lean document needs them too, and carries the
+            action menu here since it has no StatusStrip to carry it above. */}
         {!contract.rental && (
           <Card>
-            <CardHeader title={t("detail.details")} />
+            <CardHeader
+              title={t("detail.details")}
+              action={
+                !isAgreement ? (
+                  <ContractActions
+                    state={{ status: null, isRental: false, canManage, hasSignedFiles }}
+                    busy={pending !== null}
+                    onEdit={() => setEditing((v) => !v)}
+                    onUpload={() => fileRef.current?.click()}
+                    onRegenerate={regenerate}
+                    onTerminate={terminate}
+                    onDelete={removeContract}
+                  />
+                ) : undefined
+              }
+            />
             <CardBody>
               <DetailList>
                 <DetailRow label={t("col.kind")} value={t(`kind.${contract.kind}`)} />
-                <DetailRow label={t("col.counterparty")} value={contract.counterparty} />
+                {/* Counterparty is data-driven rather than kind-driven here:
+                    null for PROTOCOL always, and for an OTHER that named
+                    none. Validity and status still only ever apply to
+                    CONTRACT. */}
+                {contract.counterparty && (
+                  <DetailRow label={t("col.counterparty")} value={contract.counterparty} />
+                )}
                 {contract.counterpartyOrgNo && (
+                  <DetailRow label={t("form.counterpartyOrgNo")} value={contract.counterpartyOrgNo} />
+                )}
+                {isAgreement ? (
+                  <DetailRow label={t("col.validity")} value={validity} />
+                ) : (
                   <DetailRow
-                    label={t("form.counterpartyOrgNo")}
-                    value={contract.counterpartyOrgNo}
+                    label={t("form.date")}
+                    value={contract.date ? date(contract.date) : t("validity.none")}
                   />
                 )}
-                <DetailRow label={t("col.validity")} value={validity} />
               </DetailList>
             </CardBody>
           </Card>
@@ -349,14 +385,22 @@ function EditFields({
   const { mutate, pending } = useMutation();
 
   const [title, setTitle] = useState(contract.title);
-  const [counterparty, setCounterparty] = useState(contract.counterparty);
+  // CONTRACT is the one kind with a period and a status; see Contract.agreement.
+  const isAgreement = contract.kind === "CONTRACT";
+  // Everything but a meeting's minutes may name who it is with, required for
+  // CONTRACT and optional for OTHER; see AgreementDetails.counterparty.
+  const showCounterparty = contract.kind !== "PROTOCOL";
+  const [counterparty, setCounterparty] = useState(contract.counterparty ?? "");
   const [orgNo, setOrgNo] = useState(contract.counterpartyOrgNo ?? "");
   const [address, setAddress] = useState(contract.counterpartyAddress ?? "");
   const [postalCode, setPostalCode] = useState(contract.counterpartyPostalCode ?? "");
   const [city, setCity] = useState(contract.counterpartyCity ?? "");
   const [validFrom, setValidFrom] = useState(contract.validFrom ?? "");
   const [validTo, setValidTo] = useState(contract.validTo ?? "");
-  const [status, setStatus] = useState<ContractStatus>(contract.status);
+  const [status, setStatus] = useState<ContractStatus>(contract.status ?? "SIGNED");
+  // The one date a lean document (PROTOCOL, OTHER) carries in place of the
+  // period above.
+  const [date, setDate] = useState(contract.date ?? "");
   const [tags, setTags] = useState(contract.tags.join(", "));
   const [notes, setNotes] = useState(contract.notes ?? "");
 
@@ -369,14 +413,24 @@ function EditFields({
       method: "PATCH",
       body: {
         title: title.trim(),
-        counterparty: counterparty.trim(),
-        counterpartyOrgNo: orgNo.trim() || null,
-        counterpartyAddress: address.trim() || null,
-        counterpartyPostalCode: postalCode.trim() || null,
-        counterpartyCity: city.trim() || null,
-        validFrom: dateField(validFrom),
-        validTo: dateField(validTo),
-        status,
+        // Omitted rather than sent empty for OTHER: the field is optional
+        // there, and the patch schema's `counterparty` cannot be blanked
+        // (see UpdateContract), so an untouched empty field must mean
+        // "leave it" rather than "clear it".
+        ...(showCounterparty && counterparty.trim() !== ""
+          ? { counterparty: counterparty.trim() }
+          : {}),
+        ...(showCounterparty ? { counterpartyOrgNo: orgNo.trim() || null } : {}),
+        ...(isAgreement
+          ? {
+              counterpartyAddress: address.trim() || null,
+              counterpartyPostalCode: postalCode.trim() || null,
+              counterpartyCity: city.trim() || null,
+              validFrom: dateField(validFrom),
+              validTo: dateField(validTo),
+              status,
+            }
+          : { date: dateField(date) }),
         tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
         notes: notes.trim() || null,
       },
@@ -390,59 +444,75 @@ function EditFields({
       <Field label={t("form.title")} requirement="required">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
       </Field>
-      <Field label={t("form.counterparty")} requirement="required">
-        <Input
-          value={counterparty}
-          onChange={(e) => setCounterparty(e.target.value)}
-          maxLength={200}
-        />
-      </Field>
-      <Field label={t("form.counterpartyOrgNo")} requirement="optional">
-        <Input value={orgNo} onChange={(e) => setOrgNo(e.target.value)} maxLength={40} />
-      </Field>
-      <Field label={t("rental.renterAddress")} requirement="optional">
-        <Input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          autoComplete="street-address"
-          maxLength={200}
-        />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-        <Field label={t("rental.renterPostalCode")} requirement="optional">
+      {showCounterparty && (
+        <Field
+          label={t("form.counterparty")}
+          requirement={isAgreement ? "required" : "optional"}
+        >
           <Input
-            value={postalCode}
-            onChange={(e) => setPostalCode(e.target.value)}
-            autoComplete="postal-code"
-            inputMode="numeric"
-            maxLength={20}
+            value={counterparty}
+            onChange={(e) => setCounterparty(e.target.value)}
+            maxLength={200}
           />
         </Field>
-        <Field label={t("rental.renterCity")} requirement="optional">
-          <Input
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            autoComplete="address-level2"
-            maxLength={100}
-          />
+      )}
+      {showCounterparty && (
+        <Field label={t("form.counterpartyOrgNo")} requirement="optional">
+          <Input value={orgNo} onChange={(e) => setOrgNo(e.target.value)} maxLength={40} />
         </Field>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("form.validFrom")} requirement="optional">
-          <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+      )}
+      {isAgreement && (
+        <>
+          <Field label={t("rental.renterAddress")} requirement="optional">
+            <Input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              autoComplete="street-address"
+              maxLength={200}
+            />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+            <Field label={t("rental.renterPostalCode")} requirement="optional">
+              <Input
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                autoComplete="postal-code"
+                inputMode="numeric"
+                maxLength={20}
+              />
+            </Field>
+            <Field label={t("rental.renterCity")} requirement="optional">
+              <Input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                autoComplete="address-level2"
+                maxLength={100}
+              />
+            </Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t("form.validFrom")} requirement="optional">
+              <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+            </Field>
+            <Field label={t("form.validTo")} requirement="optional">
+              <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+            </Field>
+          </div>
+          <FieldGroup label={t("form.status")} requirement="required">
+            <SegmentedControl
+              options={STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))}
+              value={status}
+              onChange={setStatus}
+              size="sm"
+            />
+          </FieldGroup>
+        </>
+      )}
+      {!isAgreement && (
+        <Field label={t("form.date")} requirement={contract.kind === "PROTOCOL" ? "required" : "optional"}>
+          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
-        <Field label={t("form.validTo")} requirement="optional">
-          <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
-        </Field>
-      </div>
-      <FieldGroup label={t("form.status")} requirement="required">
-        <SegmentedControl
-          options={STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))}
-          value={status}
-          onChange={setStatus}
-          size="sm"
-        />
-      </FieldGroup>
+      )}
       <Field label={t("form.tags")} hint={t("form.tagsHint")} requirement="optional">
         <Input value={tags} onChange={(e) => setTags(e.target.value)} />
       </Field>

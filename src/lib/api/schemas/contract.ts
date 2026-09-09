@@ -7,7 +7,7 @@ import { z } from "zod";
 import { MAX_TAG_LENGTH, MAX_TAGS } from "@/lib/contract/tags";
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 
-const ContractKind = z.enum(["RENTAL", "SPONSORSHIP", "SUPPLIER", "OTHER"]);
+const ContractKind = z.enum(["CONTRACT", "PROTOCOL", "OTHER"]);
 const ContractStatus = z.enum([
   "DRAFT",
   "OUT_FOR_SIGNATURE",
@@ -55,24 +55,67 @@ const RenterCity = NonEmpty.max(100);
  */
 const Tags = z.array(Trimmed.max(MAX_TAG_LENGTH)).max(MAX_TAGS);
 
-/** POST /api/contracts: file a contract, with or without a document yet. */
-export const CreateContract = z.object({
-  kind: ContractKind,
-  title: Title,
-  counterparty: Counterparty,
-  counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
-  counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
-  counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
-  counterpartyCity: Clearable(Trimmed.max(100)).optional(),
-  validFrom: Clearable(IsoDate).optional(),
-  validTo: Clearable(IsoDate).optional(),
-  tags: Tags.default([]),
-  notes: Clearable(Trimmed.max(4000)).optional(),
-  // An archived contract is normally uploaded as already signed, and that is
-  // the ordinary case rather than a shortcut: most of what goes in here was
-  // signed years ago. A rental drawn by the app starts as a DRAFT instead.
-  status: ContractStatus.default("SIGNED"),
-});
+/**
+ * POST /api/contracts: file a document, with or without a file yet.
+ *
+ * `counterparty` and `date` are both trimmed/optional at the field level and
+ * enforced by the refine below instead: which of them applies depends on
+ * `kind` (an agreement needs a counterparty and states a period; a lean
+ * document needs a date and nothing else), and a rule that can see `kind`
+ * is not something a single field's own type can express.
+ */
+export const CreateContract = z
+  .object({
+    kind: ContractKind,
+    title: Title,
+    counterparty: Trimmed.max(200),
+    counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
+    counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
+    counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
+    counterpartyCity: Clearable(Trimmed.max(100)).optional(),
+    /** The directory row the fields above were copied from, if any. See
+     *  Counterparty and CreateCounterparty below. */
+    counterpartyId: Clearable(Id).optional(),
+    validFrom: Clearable(IsoDate).optional(),
+    validTo: Clearable(IsoDate).optional(),
+    /** The one date a lean document (PROTOCOL, OTHER) needs. Ignored for
+     *  CONTRACT, which states a period instead. */
+    date: Clearable(IsoDate).optional(),
+    tags: Tags.default([]),
+    notes: Clearable(Trimmed.max(4000)).optional(),
+    // An archived contract is normally uploaded as already signed, and that is
+    // the ordinary case rather than a shortcut: most of what goes in here was
+    // signed years ago. A rental drawn by the app starts as a DRAFT instead.
+    // Ignored for PROTOCOL/OTHER, which carry no status at all: see the route,
+    // which never writes this field for either.
+    status: ContractStatus.default("SIGNED"),
+  })
+  .superRefine((d, ctx) => {
+    if (d.kind === "CONTRACT" && d.counterparty === "") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["counterparty"],
+        message: "Counterparty is required for this kind",
+      });
+    }
+    // A meeting's minutes is never with anybody. OTHER may optionally name
+    // one; see AgreementDetails.counterparty.
+    if (d.kind === "PROTOCOL" && d.counterparty !== "") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["counterparty"],
+        message: "A meeting's minutes cannot name a counterparty",
+      });
+    }
+    // Left to the filer for OTHER, but a protocol is pretty much just a date.
+    if (d.kind === "PROTOCOL" && !d.date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["date"],
+        message: "A date is required for this kind",
+      });
+    }
+  });
 export type CreateContract = z.infer<typeof CreateContract>;
 
 /**
@@ -90,8 +133,10 @@ export const UpdateContract = z.object({
   counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
   counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
   counterpartyCity: Clearable(Trimmed.max(100)).optional(),
+  counterpartyId: Clearable(Id).optional(),
   validFrom: Clearable(IsoDate).optional(),
   validTo: Clearable(IsoDate).optional(),
+  date: Clearable(IsoDate).optional(),
   tags: Tags.optional(),
   notes: Clearable(Trimmed.max(4000)).optional(),
   status: ContractStatus.optional(),
@@ -161,6 +206,8 @@ export const CreateRental = z.object({
   counterpartyAddress: RenterAddress,
   counterpartyPostalCode: RenterPostalCode,
   counterpartyCity: RenterCity,
+  /** The directory row the fields above were copied from, if any. */
+  counterpartyId: Clearable(Id).optional(),
 
   pickupAt: IsoDate,
   returnAt: IsoDate,
@@ -328,3 +375,26 @@ export const UpdateRentalItem = z.object({
   active: z.boolean().optional(),
 });
 export type UpdateRentalItem = z.infer<typeof UpdateRentalItem>;
+
+// ── The counterparty directory ─────────────────────────────────────
+
+export const CreateCounterparty = z.object({
+  name: NonEmpty.max(200),
+  orgNo: Clearable(Trimmed.max(40)).optional(),
+  address: Clearable(Trimmed.max(200)).optional(),
+  postalCode: Clearable(Trimmed.max(20)).optional(),
+  city: Clearable(Trimmed.max(100)).optional(),
+  notes: Clearable(Trimmed.max(1000)).optional(),
+});
+export type CreateCounterparty = z.infer<typeof CreateCounterparty>;
+
+export const UpdateCounterparty = z.object({
+  name: NonEmpty.max(200).optional(),
+  orgNo: Clearable(Trimmed.max(40)).optional(),
+  address: Clearable(Trimmed.max(200)).optional(),
+  postalCode: Clearable(Trimmed.max(20)).optional(),
+  city: Clearable(Trimmed.max(100)).optional(),
+  notes: Clearable(Trimmed.max(1000)).optional(),
+  active: z.boolean().optional(),
+});
+export type UpdateCounterparty = z.infer<typeof UpdateCounterparty>;

@@ -1,28 +1,42 @@
-// The section's avtal: the ones that arrive as a PDF somebody signed years ago,
-// and the uthyrningsavtal this app draws itself.
+// The section's documents: the ones that arrive as a PDF somebody signed years
+// ago, mötesprotokoll, and the uthyrningsavtal this app draws itself.
 //
-// Two halves that deliberately share one table. An archived sponsoravtal and a
-// generated uthyrningsavtal are the same kind of object to everyone who has to
-// find one later: a document, with a counterparty, valid between two dates,
-// signed or not. What differs is only where the bytes came from, and that is
-// what ContractFile.role records. So the list, the search and the permissions
-// are written once.
+// Three kinds share one table, Contract, because a reader looking for one
+// later starts from the same place regardless of kind: a document, filed on a
+// date, findable by title and tag. What differs by kind is how much more
+// there is to say. A CONTRACT is an agreement, so it gets its own extension
+// table, AgreementDetails, for the counterparty, the period it covers and
+// whether it is signed. PROTOCOL and OTHER are leaner than that: neither
+// needs a validity period or a signature, so both keep to Contract's own
+// columns plus one date. OTHER alone may still name who it is with, because
+// unlike a meeting's minutes some of what is filed as "other" (correspondence,
+// a permit application) really is with somebody, just not a signed agreement.
+// See AgreementDetails below for why that split is a second table rather than
+// a pile of columns left null on every protocol.
 //
 // Money is öre, like everywhere else. See the note at the top of schema.prisma.
 
-/// What kind of agreement this is. Coarse on purpose: it drives a filter tab
-/// and a template choice, and everything finer is a tag.
+/// What kind of document this is. Coarse on purpose: it drives a filter tab
+/// and, for CONTRACT, whether AgreementDetails exists at all.
 ///
-/// RENTAL is the one the app can draw. The rest are things that come in from
-/// outside as a finished PDF, which is why nothing else has a template.
+/// CONTRACT covers every agreement the section is party to: sponsoravtal,
+/// leverantörsavtal, tillståndsansökningar, and the uthyrningsavtal this app
+/// drafts itself. A rental is identified among CONTRACT rows by whether
+/// RentalDetails is attached, not by a kind of its own — see RentalDetails.
+/// PROTOCOL is a meeting's minutes: never a counterparty, never a status.
+/// OTHER is anything that is neither: filed the same lean way as a protocol,
+/// for whatever doesn't fit the other two, except that it may optionally name
+/// who it is with (AgreementDetails.counterparty is nullable for exactly this
+/// case; a status and a period still do not apply).
 enum ContractKind {
-  RENTAL
-  SPONSORSHIP
-  SUPPLIER
+  CONTRACT
+  PROTOCOL
   OTHER
 }
 
-/// Where a contract stands.
+/// Where an agreement stands. Only ever set on AgreementDetails: a PROTOCOL
+/// or OTHER document is filed or it does not exist, with no draft/signed
+/// workflow to track.
 ///
 /// Not a workflow. An archived contract is uploaded straight into SIGNED and
 /// never passes through the earlier values, and that is the ordinary case
@@ -83,61 +97,69 @@ enum ContractSignatureMethod {
   ELECTRONIC
 }
 
-// ── The contract ──────────────────────────────────────────────────
+// ── The counterparty directory ───────────────────────────────────
+
+/// An organisation or person the section has agreed with before, kept so the
+/// next contract with them can pick this row instead of having its
+/// counterparty fields typed in again. Maintained at
+/// Dokument → Motparter.
+///
+/// What is deliberately NOT here is anybody's name, email or phone. Those
+/// belong to whoever happens to be signing on a given day, not to the
+/// organisation, and are typed fresh on every contract for exactly that
+/// reason: see ContractParty and CreateRental.counterpartySignatory.
+model Counterparty {
+  id   String @id @default(cuid())
+  name String
+
+  /// Organisationsnummer or personnummer, free text, the same as
+  /// AgreementDetails.counterpartyOrgNo: see the note there on why it is
+  /// not validated for shape.
+  orgNo String?
+
+  address    String?
+  postalCode String?
+  city       String?
+
+  /// Anything worth knowing before writing another contract with them:
+  /// how the last one went, a special condition, who usually signs.
+  notes String?
+
+  /// Retired rather than deleted where an agreement still points at it, the
+  /// same rule RentalItem follows and for the same reason: the trail from an
+  /// agreement back to the directory row it was drawn from is worth keeping,
+  /// and a row nobody can pick any more is what "gone" needs to mean here.
+  active Boolean @default(true)
+
+  createdBy   User?   @relation("CounterpartyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  agreements AgreementDetails[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([active])
+}
+
+// ── The document ──────────────────────────────────────────────────
 
 model Contract {
-  id     String         @id @default(cuid())
-  kind   ContractKind
-  status ContractStatus @default(DRAFT)
+  id   String       @id @default(cuid())
+  kind ContractKind
 
-  /// What this agreement is, in the words somebody would search for:
-  /// "Uthyrning av ljudanläggning till F-sektionen".
+  /// What this document is, in the words somebody would search for:
+  /// "Uthyrning av ljudanläggning till F-sektionen", "Styrelsemöte 4".
   title String
 
-  /// Who the agreement is with, as one line for the list and the search.
+  /// The one date a lean document needs: a meeting's date for PROTOCOL,
+  /// whatever's relevant for OTHER. Not used by CONTRACT, which states a
+  /// period instead — see AgreementDetails.validFrom/validTo.
   ///
-  /// Not the same thing as the parties below, and the difference is the whole
-  /// reason both exist. This is the organisation or person the section has an
-  /// agreement *with*. A party is a human being who put their name to it. For
-  /// an archived contract there is often no party row at all, because nobody is
-  /// going to retype two signatures off a 2019 scan, and the list still has to
-  /// say who it was with.
-  counterparty String
-
-  /// Organisationsnummer or personnummer, depending on which the counterparty
-  /// is. Free text: another section's number, a company's, a private person's,
-  /// or nothing.
-  ///
-  /// Nullable here and required by the rental form, which is the difference
-  /// between the two halves of this table. A 2019 sponsoravtal arriving as a
-  /// scan has whatever the scan happens to say on it, and refusing to file one
-  /// without an organisation number would keep the archive from holding the
-  /// documents it exists for. A contract this app draws is signed by somebody
-  /// the section may have to pursue for a broken speaker, and a name with no
-  /// number behind it is not somebody you can pursue. See CreateRental.
-  counterpartyOrgNo String?
-
-  /// Where the counterparty can be reached on paper.
-  ///
-  /// Split into three rather than one blob, because they are three different
-  /// facts and a document sets them on two lines: the street, then the postal
-  /// code and the town together. A single free-text field would print back
-  /// however it was typed, which on a document two parties sign is the one
-  /// place that matters.
-  ///
-  /// Nullable for the same reason as the number above, and required by the
-  /// rental form for the same reason too: an address is how a claim is served.
-  counterpartyAddress    String?
-  counterpartyPostalCode String?
-  counterpartyCity       String?
-
-  /// The period the agreement covers. Both optional, because an archived
-  /// contract often states neither, and a rental states both.
-  ///
-  /// `validTo` is what an expiry filter reads, and the one column here worth an
-  /// index of its own.
-  validFrom DateTime? @db.Date
-  validTo   DateTime? @db.Date
+  /// Required in practice for PROTOCOL, left to the filer for OTHER; see
+  /// CreateContract's refine, which is where that rule actually lives.
+  date DateTime? @db.Date
 
   /// Free tags, for the searching the fixed `kind` cannot do: "ljud", "tält",
   /// "nollning", "iDét". Lower-cased on the way in so a search does not have to
@@ -148,21 +170,22 @@ model Contract {
   /// searchable, which a btree cannot do at all.
   tags String[] @default([])
 
-  /// Anything a person wants to say about this contract to whoever finds it
+  /// Anything a person wants to say about this document to whoever finds it
   /// next. Not rendered into any document.
   notes String?
-
-  /// Which wording of the villkor a generated rental contract was drawn under.
-  ///
-  /// The signed PDF is the real record and always will be, so this is not
-  /// evidence. It is so somebody reading the list can tell, without opening
-  /// twenty files, which contracts predate a change to the terms. Null for
-  /// everything not drawn by us.
-  termsVersion String?
 
   files   ContractFile[]
   parties ContractParty[]
   rental  RentalDetails?
+
+  /// The agreement-specific facts: counterparty, period, status. Always
+  /// present for CONTRACT. Present for OTHER only when a counterparty was
+  /// given, with `validFrom`/`validTo`/`status` left null: naming who a
+  /// document is with does not make it an agreement with a period and a
+  /// workflow. Never present for PROTOCOL. Not enforced by Postgres (a
+  /// cross-table check needs a trigger this app doesn't write), the same
+  /// trust boundary RentalDetails already relies on. See AgreementDetails.
+  agreement AgreementDetails?
 
   /// Who put this in the archive. Not who signed it: see ContractParty.
   createdBy   User   @relation("ContractCreator", fields: [createdById], references: [id], onDelete: Restrict)
@@ -171,16 +194,110 @@ model Contract {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Filters first, then the expiry sweep, then the tag search. Nothing here
-  // indexes `title` or `counterparty`: those are searched with ILIKE, and at a
-  // section's volume (hundreds of rows, not millions) a scan is faster than
-  // maintaining a trigram index, which would also mean enabling pg_trgm on a
-  // database nothing else needs an extension for. Revisit if the archive ever
-  // gets big enough for that to be false.
-  @@index([status])
+  // Filters first, then the tag search. Nothing here indexes `title`: it is
+  // searched with ILIKE, and at a section's volume (hundreds of rows, not
+  // millions) a scan is faster than maintaining a trigram index, which would
+  // also mean enabling pg_trgm on a database nothing else needs an extension
+  // for. Revisit if the archive ever gets big enough for that to be false.
   @@index([kind])
-  @@index([validTo])
   @@index([tags], type: Gin)
+}
+
+/// The agreement-specific half of a document: who it's with, how long it
+/// runs, and whether it's signed. A separate table rather than nullable
+/// columns on Contract, the same reasoning RentalDetails already follows one
+/// level further in: none of this means anything for a mötesprotokoll, and a
+/// table full of columns that are null for two kinds out of three is a table
+/// nobody can read. See Contract.agreement.
+model AgreementDetails {
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId String   @id
+
+  /// Who the agreement is with, as one line for the list and the search.
+  ///
+  /// Not the same thing as the parties on Contract, and the difference is
+  /// the whole reason both exist. This is the organisation or person the
+  /// section has an agreement *with*. A party is a human being who put
+  /// their name to it. For an archived contract there is often no party row
+  /// at all, because nobody is going to retype two signatures off a 2019
+  /// scan, and the list still has to say who it was with.
+  ///
+  /// Nullable, even though this row otherwise always has one for CONTRACT
+  /// (CreateContract's refine guarantees it there): an OTHER document can
+  /// carry this table too, purely to say who it is with, and for that one
+  /// kind a counterparty is optional rather than the whole reason the row
+  /// exists.
+  counterparty String?
+
+  /// Organisationsnummer or personnummer, depending on which the
+  /// counterparty is. Free text: another section's number, a company's, a
+  /// private person's, or nothing.
+  ///
+  /// Nullable here and required by the rental form, which is the difference
+  /// between an archived contract and one this app draws. A 2019
+  /// sponsoravtal arriving as a scan has whatever the scan happens to say
+  /// on it, and refusing to file one without an organisation number would
+  /// keep the archive from holding the documents it exists for. A contract
+  /// this app draws is signed by somebody the section may have to pursue
+  /// for a broken speaker, and a name with no number behind it is not
+  /// somebody you can pursue. See CreateRental.
+  counterpartyOrgNo String?
+
+  /// Where the counterparty can be reached on paper.
+  ///
+  /// Split into three rather than one blob, because they are three
+  /// different facts and a document sets them on two lines: the street,
+  /// then the postal code and the town together. A single free-text field
+  /// would print back however it was typed, which on a document two
+  /// parties sign is the one place that matters.
+  ///
+  /// Nullable for the same reason as the number above, and required by the
+  /// rental form for the same reason too: an address is how a claim is
+  /// served.
+  counterpartyAddress    String?
+  counterpartyPostalCode String?
+  counterpartyCity       String?
+
+  /// The directory row the fields above were copied from, when one was
+  /// picked rather than typed fresh. SetNull, not Cascade: the fields above
+  /// are copies made at the moment this document was filed, the same as a
+  /// RentalLine's copy of its RentalItem, so retiring or deleting the
+  /// directory entry later must not reach back and change what an existing
+  /// agreement says. Kept purely so a later agreement with the same
+  /// counterparty can be offered this row again, and so the directory
+  /// screen can count how many agreements point at it. See Counterparty.
+  counterpartyRef Counterparty? @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  counterpartyId  String?
+
+  /// The period the agreement covers. Both optional, because an archived
+  /// contract often states neither, and a rental states both.
+  ///
+  /// `validTo` is what an expiry filter reads, and the one column here
+  /// worth an index of its own.
+  validFrom DateTime? @db.Date
+  validTo   DateTime? @db.Date
+
+  /// Null for the one case this table exists without being an agreement: an
+  /// OTHER document that only names a counterparty. There is no default to
+  /// fall back to there, because a status implies a draft/signed workflow
+  /// that a lean document never has; CONTRACT rows always get one written
+  /// explicitly at creation instead (CreateContract, CreateRental). See
+  /// lib/contract/status.ts, which already treats a null status as "none",
+  /// not as DRAFT.
+  status ContractStatus?
+
+  /// Which wording of the villkor a generated rental contract was drawn
+  /// under.
+  ///
+  /// The signed PDF is the real record and always will be, so this is not
+  /// evidence. It is so somebody reading the list can tell, without opening
+  /// twenty files, which contracts predate a change to the terms. Null for
+  /// everything not drawn by us.
+  termsVersion String?
+
+  @@index([status])
+  @@index([validTo])
+  @@index([counterpartyId])
 }
 
 /// One file belonging to a contract. Bytes in MinIO, metadata here, the same
@@ -267,7 +384,9 @@ model ContractParty {
 
 // ── Uthyrning ─────────────────────────────────────────────────────
 
-/// The rental half of a contract, when `kind` is RENTAL.
+/// The rental half of a document, when a CONTRACT is specifically a rental.
+/// Identified by this relation's presence, not by a `kind` of its own — see
+/// ContractKind.
 ///
 /// A separate table rather than nullable columns on Contract, because none of
 /// this means anything for a sponsoravtal and a table full of columns that are
@@ -277,8 +396,9 @@ model RentalDetails {
   contractId String   @id
 
   /// When the gear is handed over and when it is due back. The dates the
-  /// contract is actually about, and distinct from Contract.validFrom/validTo,
-  /// which are copied from these so that one expiry query serves every kind.
+  /// contract is actually about, and distinct from
+  /// AgreementDetails.validFrom/validTo, which are copied from these so that
+  /// one expiry query serves every agreement.
   pickupAt DateTime
   returnAt DateTime
 

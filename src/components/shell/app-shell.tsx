@@ -32,6 +32,7 @@ import {
   IconList,
   IconMenu,
   IconReceipt,
+  IconUsers,
 } from "../ui/icons";
 import {
   canAccessBookkeeping,
@@ -251,6 +252,15 @@ const NAV_GROUPS: NavGroup[] = [
         label: "contracts",
         icon: IconList,
         visible: (u) => canViewContracts(u.capabilities),
+      },
+      // Next to the archive it feeds rather than under Inställningar, the same
+      // choice /uthyrning/utrustning makes for the gear catalogue: a list of
+      // who the section has agreed with is not configuration of the app.
+      {
+        href: "/contracts/counterparties",
+        label: "counterparties",
+        icon: IconUsers,
+        visible: (u) => canManageRentals(u.capabilities),
       },
       { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.capabilities) },
     ],
@@ -677,7 +687,9 @@ export function AppShell({
             // `overflow-y-auto` and nothing horizontal: the labels overflowing
             // the rail are meant to be clipped, and a scrollbar offering to
             // reach them would be offering to scroll the frame sideways.
-            className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 py-2"
+            // `overscroll-contain`, or scrolling past the end of a short nav
+            // list chains into scrolling the main column behind the rail.
+            className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-2"
           >
             {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
             {groups.map((group) => (

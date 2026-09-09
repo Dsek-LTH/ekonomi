@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, FieldGroup, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { IconPlus } from "@/components/ui/icons";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useFormat } from "@/lib/ui/use-format";
 import { parseSEK } from "@/lib/domain/money";
@@ -45,9 +46,17 @@ import { Amount } from "@/components/ui/amount";
 import { oreToSEK } from "@/lib/domain/money";
 import { rentalPricing } from "@/lib/contract/rental/pricing";
 import { SECTION } from "@/lib/contract/section";
-import { RentalLines, makeLine, type LineRow } from "./rental-lines";
+import {
+  RentalLines,
+  makeLine,
+  isBlankLineRow,
+  effectiveDiscountPercent,
+  type LineRow,
+} from "./rental-lines";
+import { CounterpartyDialog } from "../../counterparties/counterparty-dialog";
 import type { RentalItemOption } from "@/lib/data/rental-items";
 import type { Availability } from "@/lib/data/rental-availability";
+import type { CounterpartyOption } from "@/lib/data/counterparties";
 
 const toOre = (input: string) => (input.trim() === "" ? 0 : Math.round(parseSEK(input) * 100));
 const kr = (ore: number) => (ore / 100).toFixed(2);
@@ -56,18 +65,25 @@ export function NewRentalClient({
   items,
   signatories,
   defaultSignatoryId,
+  counterparties,
 }: {
   items: RentalItemOption[];
   signatories: { id: string; name: string }[];
   defaultSignatoryId: string;
+  counterparties: CounterpartyOption[];
 }) {
   const t = useTranslations("contracts");
+  const tc = useTranslations("contracts.counterparties");
   const router = useRouter();
   const { mutate, pending } = useMutation();
   const { date } = useFormat();
 
-  // Hyrestagaren
-  const [counterparty, setCounterparty] = useState("");
+  // Hyrestagaren, picked from the directory rather than typed. See
+  // upload-client.tsx, which does the same thing for the archive form.
+  const [counterpartyOptions, setCounterpartyOptions] = useState(counterparties);
+  const [counterpartyId, setCounterpartyId] = useState<string | null>(null);
+  const [newCounterpartyName, setNewCounterpartyName] = useState<string | null>(null);
+  const counterparty = counterpartyOptions.find((c) => c.id === counterpartyId)?.name ?? "";
   const [orgNo, setOrgNo] = useState("");
   const [address, setAddress] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -75,6 +91,25 @@ export function NewRentalClient({
   const [renterName, setRenterName] = useState("");
   const [renterEmail, setRenterEmail] = useState("");
   const [renterPhone, setRenterPhone] = useState("");
+
+  function pickCounterparty(id: string) {
+    setCounterpartyId(id || null);
+    const picked = counterpartyOptions.find((c) => c.id === id);
+    setOrgNo(picked?.orgNo ?? "");
+    setAddress(picked?.address ?? "");
+    setPostalCode(picked?.postalCode ?? "");
+    setCity(picked?.city ?? "");
+  }
+
+  function counterpartyCreated(created: CounterpartyOption) {
+    setCounterpartyOptions((prev) => [...prev, created]);
+    setCounterpartyId(created.id);
+    setOrgNo(created.orgNo ?? "");
+    setAddress(created.address ?? "");
+    setPostalCode(created.postalCode ?? "");
+    setCity(created.city ?? "");
+    setNewCounterpartyName(null);
+  }
 
   // Perioden
   const [pickupAt, setPickupAt] = useState("");
@@ -85,7 +120,6 @@ export function NewRentalClient({
   // Utrustning och pengar. No money field here: every figure below the lines
   // is worked out from them, discounts included. See rental/pricing.ts.
   const [lines, setLines] = useState<LineRow[]>([makeLine()]);
-  const [paymentDue, setPaymentDue] = useState("");
 
   // Underskrift
   const [signatoryId, setSignatoryId] = useState(defaultSignatoryId);
@@ -138,7 +172,7 @@ export function NewRentalClient({
     return Math.max(0, a.free - claimed);
   };
 
-  const filled = lines.filter((l) => l.description.trim() !== "" || l.itemId);
+  const filled = lines.filter((l) => !isBlankLineRow(l));
   const totalReplacementOre = filled.reduce(
     (s, l) => s + toOre(l.replacementValue) * (Number(l.quantity) || 0),
     0,
@@ -150,12 +184,15 @@ export function NewRentalClient({
     filled.map((l) => ({
       quantity: Number(l.quantity) || 0,
       unitPriceOre: toOre(l.unitPrice),
-      discountPercent: Number(l.discountPercent) || 0,
+      discountPercent: effectiveDiscountPercent(l, toOre),
     })),
   );
-  /** Every line off at 100 per cent, which is how a free loan is written. */
+  /** Every line off at 100 per cent, which is how a free loan is written.
+   *  Always percent, regardless of what a line's discount is typed as: "off
+   *  by however much this happens to cost" is a percentage, not a kr figure
+   *  to work out first. */
   const lendFree = () =>
-    setLines(lines.map((l) => ({ ...l, discountPercent: "100" })));
+    setLines(lines.map((l) => ({ ...l, discount: "100", discountUnit: "percent" })));
 
   const datesOrdered =
     !isCompleteDate(pickupAt) || !isCompleteDate(returnAt) || returnAt >= pickupAt;
@@ -211,12 +248,11 @@ export function NewRentalClient({
     returnAt: isCompleteDate(returnAt) ? returnAt : null,
     purpose: purpose.trim(),
     place: place.trim(),
-    paymentDueAt: isCompleteDate(paymentDue) ? paymentDue : null,
     lines: filled.map((l) => ({
       description: l.description.trim(),
       quantity: Number(l.quantity) || 0,
       unitPriceOre: toOre(l.unitPrice),
-      discountPercent: Number(l.discountPercent) || 0,
+      discountPercent: effectiveDiscountPercent(l, toOre),
       replacementValueOre: toOre(l.replacementValue),
     })),
     sectionSignatoryId: signatoryId || null,
@@ -269,11 +305,14 @@ export function NewRentalClient({
         counterpartyAddress: draft.counterpartyAddress,
         counterpartyPostalCode: draft.counterpartyPostalCode,
         counterpartyCity: draft.counterpartyCity,
+        counterpartyId,
         pickupAt,
         returnAt,
         purpose: purpose.trim(),
         place: place.trim() || null,
-        paymentDueAt: draft.paymentDueAt,
+        // No due date is sent either: absent is what the villkor already
+        // read as "vid uthämtningen", the ordinary case, and there is no
+        // field here to have typed one into.
         // No rent is sent. The route runs the same pricing over the lines it is
         // given, so there is one place the subtraction happens.
         lines: filled.map((l) => ({
@@ -281,7 +320,7 @@ export function NewRentalClient({
           description: l.description.trim(),
           quantity: Number(l.quantity) || 1,
           unitPriceOre: toOre(l.unitPrice),
-          discountPercent: Number(l.discountPercent) || 0,
+          discountPercent: effectiveDiscountPercent(l, toOre),
           replacementValueOre: toOre(l.replacementValue),
         })),
         sectionSignatoryId: signatoryId,
@@ -392,13 +431,32 @@ export function NewRentalClient({
                 </h3>
 
                 <div className="grid gap-4 @md:grid-cols-[2fr_1fr]">
-                  <Field label={t("rental.renterOrg")} requirement="required">
-                    <Input
-                      value={counterparty}
-                      onChange={(e) => setCounterparty(e.target.value)}
-                      maxLength={200}
+                  <FieldGroup
+                    label={t("rental.renterOrg")}
+                    requirement="required"
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => setNewCounterpartyName("")}
+                        className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                      >
+                        <IconPlus className="size-3.5" />
+                        {tc("add")}
+                      </button>
+                    }
+                  >
+                    <Combobox
+                      options={counterpartyOptions.map((c) => ({ value: c.id, label: c.name }))}
+                      value={counterpartyId ?? ""}
+                      onChange={pickCounterparty}
+                      allowClear
+                      placeholder={tc("pick")}
+                      searchPlaceholder={tc("pick")}
+                      onCreate={(text) => setNewCounterpartyName(text)}
+                      createLabel={(text) => tc("createNew", { text })}
+                      aria-label={t("rental.renterOrg")}
                     />
-                  </Field>
+                  </FieldGroup>
                   {/* One field for both, because the renter is a company,
                       another section or a private person and the question is
                       the same either way. Required here and optional in the
@@ -516,18 +574,23 @@ export function NewRentalClient({
             title={t("rental.sectionEquipment")}
             subtitle={free === undefined ? t("rental.pickDatesFirst") : undefined}
           />
-          <CardBody className="@container space-y-5">
-            <FieldGroup label={t("rental.lines")} requirement="required">
-              <RentalLines
-                items={items}
-                value={lines}
-                onChange={setLines}
-                freeFor={freeFor}
-                toOre={toOre}
-                totalReplacementOre={totalReplacementOre}
-              />
-            </FieldGroup>
-
+          {/* Flush against the card's own border, the same way the voucher
+              sheet sits in its card (components/voucher-editor.tsx, used from
+              book-client.tsx): a table reads as a sheet, not as a field, and
+              padding around it would say it was one. */}
+          <RentalLines
+            items={items}
+            value={lines}
+            onChange={setLines}
+            freeFor={freeFor}
+            toOre={toOre}
+            // One spare row kept ready, same as the form started with. A
+            // rental is rarely more than a handful of lines, so three (the
+            // voucher sheet's count, for an account/cost-centre grid written
+            // line by line) would sit mostly empty.
+            blankRows={1}
+          />
+          <CardBody className="@container space-y-5 border-t border-border">
             {/* What it comes to, set like the foot of an invoice: the lines,
                 what comes off them, and the rent, read down one column.
                 
@@ -569,9 +632,17 @@ export function NewRentalClient({
                   </span>
                 </div>
 
-                {/* Said out loud, because a contract with no VAT on it and no
-                    word about why looks like one where somebody forgot. */}
-                <p className="text-right text-xs text-muted">{t("rental.vatExempt")}</p>
+                {/* What is at stake, which is not a price and is the one
+                    figure the liability clause points at. In the same
+                    footer as what is owed rather than on the table itself:
+                    it used to sit under the lines as a total of its own,
+                    which made two footers for one card. */}
+                {totalReplacementOre > 0 && (
+                  <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
+                    <span>{t("rental.totalReplacement")}</span>
+                    <Amount value={oreToSEK(totalReplacementOre)} />
+                  </div>
+                )}
 
                 {/* The common case in one press. Most of what this section
                     lends goes to another section for nothing, and setting every
@@ -591,21 +662,6 @@ export function NewRentalClient({
               </div>
             </div>
 
-            {/* Only where there is something to pay. A due date on a free loan
-                is a question with no answer, and the villkor read a missing one
-                as "vid uthämtningen" rather than as an omission. */}
-            {pricing.totalOre > 0 && (
-              <Field
-                label={t("rental.paymentDue")}
-                hint={t("rental.paymentDueHint")}
-                requirement="optional"
-              >
-                <DateInput
-                  value={paymentDue}
-                  onChange={(e) => setPaymentDue(e.target.value)}
-                />
-              </Field>
-            )}
           </CardBody>
         </Card>
 
@@ -622,21 +678,16 @@ export function NewRentalClient({
             </Button>
           </div>
         </div>
-
-        {/* The other door. This form draws a document; somebody holding one
-            that is already signed wants the archive instead, and finding that
-            out at the foot of an empty form costs nothing. */}
-        <p className="text-xs text-muted">
-          {t("rental.otherKind")}{" "}
-          <button
-            type="button"
-            onClick={() => router.push("/contracts/upload")}
-            className="font-medium text-accent hover:underline"
-          >
-            {t("rental.otherKindLink")}
-          </button>
-        </p>
       </div>
+
+      {newCounterpartyName !== null && (
+        <CounterpartyDialog
+          counterparty={null}
+          initialName={newCounterpartyName}
+          onSaved={counterpartyCreated}
+          onClose={() => setNewCounterpartyName(null)}
+        />
+      )}
     </PageShell>
   );
 }

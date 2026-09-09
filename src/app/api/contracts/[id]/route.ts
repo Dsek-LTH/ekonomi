@@ -28,10 +28,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const existing = await prisma.contract.findUnique({
     where: { id },
-    select: { kind: true },
+    select: { kind: true, rental: { select: { contractId: true } } },
   });
   if (!existing) return fail(404, "contract.notFound");
-  if (!canManageKind(g.actor, existing.kind)) return fail(403, "contract.noManageAccess");
+  if (!canManageKind(g.actor, { hasRental: existing.rental !== null })) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   const parsed = await parseBody(req, UpdateContract);
   if (!parsed.ok) return parsed.res;
@@ -44,13 +46,76 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data: Prisma.ContractUpdateInput = {};
   if (d.kind !== undefined) data.kind = d.kind;
   if (d.title !== undefined) data.title = d.title;
-  if (d.counterparty !== undefined) data.counterparty = d.counterparty;
-  if (d.counterpartyOrgNo !== undefined) data.counterpartyOrgNo = d.counterpartyOrgNo;
-  if (d.validFrom !== undefined) data.validFrom = isoToDate(d.validFrom);
-  if (d.validTo !== undefined) data.validTo = isoToDate(d.validTo);
+  if (d.date !== undefined) data.date = isoToDate(d.date);
   if (d.tags !== undefined) data.tags = normaliseTags(d.tags);
   if (d.notes !== undefined) data.notes = d.notes;
-  if (d.status !== undefined) data.status = d.status;
+
+  // The agreement-specific fields, on their own table now (see
+  // AgreementDetails). Sent for a CONTRACT row, which always already has the
+  // AgreementDetails these fields update, or for an OTHER row naming a
+  // counterparty for the first time, which does not: see the upsert below.
+  // A meeting's minutes is never with anybody, so it never gets this table.
+  const agreement: Prisma.AgreementDetailsUpdateInput = {};
+  let touchesAgreement = false;
+  if (d.counterparty !== undefined) {
+    agreement.counterparty = d.counterparty;
+    touchesAgreement = true;
+  }
+  if (d.counterpartyOrgNo !== undefined) {
+    agreement.counterpartyOrgNo = d.counterpartyOrgNo;
+    touchesAgreement = true;
+  }
+  if (d.counterpartyAddress !== undefined) {
+    agreement.counterpartyAddress = d.counterpartyAddress;
+    touchesAgreement = true;
+  }
+  if (d.counterpartyPostalCode !== undefined) {
+    agreement.counterpartyPostalCode = d.counterpartyPostalCode;
+    touchesAgreement = true;
+  }
+  if (d.counterpartyCity !== undefined) {
+    agreement.counterpartyCity = d.counterpartyCity;
+    touchesAgreement = true;
+  }
+  if (d.counterpartyId !== undefined) {
+    agreement.counterpartyRef = d.counterpartyId
+      ? { connect: { id: d.counterpartyId } }
+      : { disconnect: true };
+    touchesAgreement = true;
+  }
+  if (d.validFrom !== undefined) {
+    agreement.validFrom = isoToDate(d.validFrom);
+    touchesAgreement = true;
+  }
+  if (d.validTo !== undefined) {
+    agreement.validTo = isoToDate(d.validTo);
+    touchesAgreement = true;
+  }
+  if (d.status !== undefined) {
+    agreement.status = d.status;
+    touchesAgreement = true;
+  }
+  if (touchesAgreement) {
+    if (existing.kind === "PROTOCOL") return fail(400, "contract.counterpartyNotAllowed");
+    // upsert, not update: a CONTRACT row already has this table, but an
+    // OTHER row being given a counterparty for the first time does not.
+    // The create side never sets validFrom/validTo/status, which only apply
+    // to CONTRACT, and the edit form only ever sends those for CONTRACT
+    // rows, which always take the update branch instead.
+    data.agreement = {
+      upsert: {
+        update: agreement,
+        create: {
+          counterparty: d.counterparty ?? null,
+          counterpartyOrgNo: d.counterpartyOrgNo ?? null,
+          counterpartyAddress: d.counterpartyAddress ?? null,
+          counterpartyPostalCode: d.counterpartyPostalCode ?? null,
+          counterpartyCity: d.counterpartyCity ?? null,
+          counterpartyRef: d.counterpartyId ? { connect: { id: d.counterpartyId } } : undefined,
+        },
+      },
+    };
+  }
 
   const updated = await orNotFound(
     () => prisma.contract.update({ where: { id }, data, select: { id: true } }),
@@ -69,10 +134,16 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true, kind: true, files: { select: { id: true, role: true, objectKey: true } } },
+    select: {
+      id: true,
+      rental: { select: { contractId: true } },
+      files: { select: { id: true, role: true, objectKey: true } },
+    },
   });
   if (!contract) return fail(404, "contract.notFound");
-  if (!canManageKind(g.actor, contract.kind)) return fail(403, "contract.noManageAccess");
+  if (!canManageKind(g.actor, { hasRental: contract.rental !== null })) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   // A contract holding evidence is not deletable from a screen. The rule is the
   // same one lib/contract/files.ts enforces per file, applied to the whole row:

@@ -432,7 +432,7 @@ function ComboboxBase({
             }
             tabIndex={-1}
             onKeyDown={searchable ? undefined : onSearchKey}
-            className="min-h-0 flex-1 overflow-y-auto p-1"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
           >
             {onClear && picked.length > 0 && (
               <li>

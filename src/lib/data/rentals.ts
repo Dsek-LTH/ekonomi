@@ -19,7 +19,6 @@ import {
   rentalState,
   type RentalState,
 } from "@/lib/contract/rental-state";
-import type { ContractStatus } from "@/lib/domain/types";
 
 export interface RentalRow {
   id: string;
@@ -55,13 +54,15 @@ export interface RentalRow {
  * copy of the rule.
  */
 export async function getRentalPage(q: ListQuery, today: string): Promise<RowPage<RentalRow>> {
-  const and: Prisma.ContractWhereInput[] = [{ kind: "RENTAL" }, { rental: { isNot: null } }];
+  // A rental is a CONTRACT row with a RentalDetails relation attached — not
+  // its own `kind` any more; see prisma/schema/contract.prisma.
+  const and: Prisma.ContractWhereInput[] = [{ rental: { isNot: null } }];
 
   if (q.q) {
     and.push({
       OR: [
         { title: { contains: q.q, mode: "insensitive" } },
-        { counterparty: { contains: q.q, mode: "insensitive" } },
+        { agreement: { counterparty: { contains: q.q, mode: "insensitive" } } },
         { rental: { lines: { some: { description: { contains: q.q, mode: "insensitive" } } } } },
       ],
     });
@@ -76,8 +77,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
     select: {
       id: true,
       title: true,
-      counterparty: true,
-      status: true,
+      agreement: { select: { counterparty: true, status: true } },
       rental: {
         select: {
           pickupAt: true,
@@ -98,7 +98,12 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
     .filter((c): c is typeof c & { rental: NonNullable<typeof c.rental> } => c.rental !== null)
     .map((c) => {
       const facts = {
-        status: c.status as ContractStatus,
+        // A CONTRACT row always has an `agreement`, and CreateRental always
+        // writes it a status and a counterparty; unlike the rest of the
+        // archive, a rental is never the OTHER-with-counterparty case that
+        // leaves status null or the plain OTHER case that leaves
+        // counterparty null.
+        status: c.agreement!.status!,
         pickupAt: day(c.rental.pickupAt),
         returnAt: day(c.rental.returnAt),
         returnedAt: c.rental.returnedAt ? day(c.rental.returnedAt) : null,
@@ -107,7 +112,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
       return {
         id: c.id,
         title: c.title,
-        counterparty: c.counterparty,
+        counterparty: c.agreement!.counterparty!,
         ...facts,
         state: rentalState(facts, today),
         priceOre: c.rental.priceOre,
@@ -137,7 +142,7 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
       returnAt: true,
       returnedAt: true,
       checkedAt: true,
-      contract: { select: { status: true } },
+      contract: { select: { agreement: { select: { status: true } } } },
     },
   });
 
@@ -153,7 +158,9 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
   for (const r of rows) {
     const state = rentalState(
       {
-        status: r.contract.status,
+        // A CONTRACT row always has an `agreement` with a status; see
+        // getRentalPage above.
+        status: r.contract.agreement!.status!,
         pickupAt: day(r.pickupAt),
         returnAt: day(r.returnAt),
         returnedAt: r.returnedAt ? day(r.returnedAt) : null,

@@ -31,7 +31,7 @@ export type ContractDisplayStatus = ContractStatus | "EXPIRED";
  * an instant to compare is how a contract expires an evening early in Sweden.
  */
 export function isExpired(
-  contract: { status: ContractStatus; validTo: string | null },
+  contract: { status: ContractStatus | null; validTo: string | null },
   today: string,
 ): boolean {
   if (contract.status !== "SIGNED") return false;
@@ -39,11 +39,17 @@ export function isExpired(
   return contract.validTo < today;
 }
 
-/** The status to show, expiry included. */
+/**
+ * The status to show, expiry included. Null for PROTOCOL/OTHER, which carry
+ * no status at all: a lean document is filed or it doesn't exist, and a
+ * screen reading this renders that the same way it renders any other absent
+ * fact, a dash rather than a pill.
+ */
 export function displayStatus(
-  contract: { status: ContractStatus; validTo: string | null },
+  contract: { status: ContractStatus | null; validTo: string | null },
   today: string,
-): ContractDisplayStatus {
+): ContractDisplayStatus | null {
+  if (contract.status === null) return null;
   return isExpired(contract, today) ? "EXPIRED" : contract.status;
 }
 

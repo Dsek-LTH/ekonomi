@@ -26,13 +26,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     where: { id },
     select: {
       id: true,
-      status: true,
+      agreement: { select: { status: true } },
       rental: { select: { contractId: true, pickupAt: true, returnAt: true } },
     },
   });
   if (!contract) return fail(404, "contract.notFound");
-  if (!contract.rental) return fail(422, "contract.rentalNotFound");
-  if (!canEditRental(contract.status)) return fail(409, "contract.rentalLocked");
+  // `status` is null only for the OTHER-with-counterparty case that
+  // AgreementDetails now also allows, which a rental can never be, so this
+  // doubles as the check that narrows it for the compiler below.
+  if (!contract.rental || !contract.agreement || contract.agreement.status === null) {
+    return fail(422, "contract.rentalNotFound");
+  }
+  if (!canEditRental(contract.agreement.status)) return fail(409, "contract.rentalLocked");
 
   const parsed = await parseBody(req, UpdateRental);
   if (!parsed.ok) return parsed.res;
@@ -113,7 +118,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (d.pickupAt !== undefined || d.returnAt !== undefined) {
       await tx.contract.update({
         where: { id: contract.id },
-        data: { validFrom: isoToDate(pickup), validTo: isoToDate(back) },
+        data: { agreement: { update: { validFrom: isoToDate(pickup), validTo: isoToDate(back) } } },
       });
     }
   });

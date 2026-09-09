@@ -1,4 +1,5 @@
-// Reading the avtal archive: one page of the list, and one contract in full.
+// Reading the document archive: one page of the list, and one document in
+// full.
 //
 // Shaped after lib/data/expenses.ts, and for the same reason: the filtering,
 // the sorting and the cut happen in Postgres rather than in the browser, so the
@@ -9,6 +10,14 @@
 // the uthyrningsavtal in it and nothing else. Every query below intersects with
 // `contractScopeWhere`, so a narrowed viewer cannot reach a sponsoravtal by
 // paging, searching or guessing an id.
+//
+// The counterparty, the period and the status all live on AgreementDetails
+// now, not on Contract itself — see the schema file. `ContractSummary` and
+// `ContractDetail` keep the flattened shape they always had (`counterparty:
+// string | null`, and so on), computed here from the joined relation, so
+// every reader of these types stays exactly as it was: a PROTOCOL row simply
+// has no `agreement` to join, and its fields read null the same way they
+// already had to once PROTOCOL existed at all.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -35,14 +44,23 @@ import type {
 export interface ContractSummary {
   id: string;
   kind: ContractKind;
-  status: ContractStatus;
+  /** Null for PROTOCOL and OTHER: a lean document is filed or it doesn't
+   *  exist, with no draft/signed workflow to track, even for an OTHER that
+   *  names a counterparty. Only ever set for CONTRACT. */
+  status: ContractStatus | null;
   title: string;
-  counterparty: string;
-  /** ISO days, or null where the contract states none. */
+  /** Null for PROTOCOL, and for an OTHER that names no counterparty; neither
+   *  is an agreement with anybody. */
+  counterparty: string | null;
+  /** ISO days, or null where the agreement states none. Only ever set for
+   *  CONTRACT, which states a period; see `date` for the other two kinds. */
   validFrom: string | null;
   validTo: string | null;
+  /** The one date a lean document carries. Null for CONTRACT, which states
+   *  a period instead. */
+  date: string | null;
   tags: string[];
-  /** Whether there is anything to open. A filed contract with no document yet
+  /** Whether there is anything to open. A filed document with no file yet
    *  is a real state, and the list says so rather than offering a dead link. */
   fileCount: number;
   createdAt: string;
@@ -128,10 +146,10 @@ const CONTRACT_ORDER: Record<
   ((dir: SortDir) => Prisma.ContractOrderByWithRelationInput) | undefined
 > = {
   title: (dir) => ({ title: dir }),
-  counterparty: (dir) => ({ counterparty: dir }),
+  counterparty: (dir) => ({ agreement: { counterparty: dir } }),
   // Nulls last in both directions: a contract with no end date has not got a
   // late one, and Postgres would otherwise sort it as though it had.
-  validTo: (dir) => ({ validTo: { sort: dir, nulls: "last" } }),
+  validTo: (dir) => ({ agreement: { validTo: { sort: dir, nulls: "last" } } }),
   createdAt: (dir) => ({ createdAt: dir }),
 };
 
@@ -146,27 +164,32 @@ const CONTRACT_DEFAULT_ORDER: Prisma.ContractOrderByWithRelationInput[] = [
 function listQueryWhere(q: ListQuery): Prisma.ContractWhereInput[] {
   const and: Prisma.ContractWhereInput[] = [];
 
+  // Only ever matches CONTRACT rows: PROTOCOL/OTHER have no `agreement` to
+  // hold a status, so a status tab naturally shows only agreements, and a
+  // lean document only ever appears under "Alla".
   const statuses = CONTRACT_STATUS_TAB[q.tab];
-  if (statuses?.length) and.push({ status: { in: statuses } });
+  if (statuses?.length) and.push({ agreement: { status: { in: statuses } } });
 
   // The dropdown picks kinds, OR-ed. Picking none narrows nothing.
   const kinds = q.picks.filter((p): p is ContractKind =>
-    ["RENTAL", "SPONSORSHIP", "SUPPLIER", "OTHER"].includes(p),
+    ["CONTRACT", "PROTOCOL", "OTHER"].includes(p),
   );
   if (kinds.length) and.push({ kind: { in: kinds } });
 
-  // The range is asked of `validFrom`: "which contracts started in this
-  // period". Asking it of both ends would mean a contract only matched when it
-  // began *and* ended inside the window, which is not what anyone means by it.
+  // The range is asked of whichever date a row actually has: an agreement's
+  // `validFrom` ("which agreements started in this period"), or a lean
+  // document's own `date`. Asking it of a period's both ends would mean a
+  // contract only matched when it began *and* ended inside the window,
+  // which is not what anyone means by it.
   const date = dateRangeFilter(q, { dateOnly: true });
-  if (date) and.push({ validFrom: date });
+  if (date) and.push({ OR: [{ agreement: { validFrom: date } }, { date }] });
 
   if (q.q) {
     and.push({
       OR: [
         { title: { contains: q.q, mode: "insensitive" } },
-        { counterparty: { contains: q.q, mode: "insensitive" } },
-        { counterpartyOrgNo: { contains: q.q, mode: "insensitive" } },
+        { agreement: { counterparty: { contains: q.q, mode: "insensitive" } } },
+        { agreement: { counterpartyOrgNo: { contains: q.q, mode: "insensitive" } } },
         // Tags match exactly, where the two above match on substring. A tag is
         // one chosen word rather than prose, so "ljud" finding the "ljud" tag
         // is the whole of what anybody expects, and the same normalisation the
@@ -202,13 +225,13 @@ export async function getContractPage(
       select: {
         id: true,
         kind: true,
-        status: true,
         title: true,
-        counterparty: true,
-        validFrom: true,
-        validTo: true,
+        date: true,
         tags: true,
         createdAt: true,
+        agreement: {
+          select: { counterparty: true, validFrom: true, validTo: true, status: true },
+        },
         _count: { select: { files: true } },
       },
     }),
@@ -219,11 +242,12 @@ export async function getContractPage(
     rows: rows.map((c) => ({
       id: c.id,
       kind: c.kind,
-      status: c.status,
+      status: c.agreement?.status ?? null,
       title: c.title,
-      counterparty: c.counterparty,
-      validFrom: isoDay(c.validFrom),
-      validTo: isoDay(c.validTo),
+      counterparty: c.agreement?.counterparty ?? null,
+      validFrom: isoDay(c.agreement?.validFrom ?? null),
+      validTo: isoDay(c.agreement?.validTo ?? null),
+      date: isoDay(c.date),
       tags: c.tags,
       fileCount: c._count.files,
       createdAt: c.createdAt.toISOString(),
@@ -243,6 +267,7 @@ export async function getContract(
   const c = await prisma.contract.findFirst({
     where: { AND: [{ id }, contractScopeWhere(scope)] },
     include: {
+      agreement: true,
       createdBy: { select: { name: true } },
       files: {
         orderBy: { createdAt: "desc" },
@@ -262,18 +287,19 @@ export async function getContract(
   return {
     id: c.id,
     kind: c.kind,
-    status: c.status,
+    status: c.agreement?.status ?? null,
     title: c.title,
-    counterparty: c.counterparty,
-    counterpartyOrgNo: c.counterpartyOrgNo,
-    counterpartyAddress: c.counterpartyAddress,
-    counterpartyPostalCode: c.counterpartyPostalCode,
-    counterpartyCity: c.counterpartyCity,
-    validFrom: isoDay(c.validFrom),
-    validTo: isoDay(c.validTo),
+    counterparty: c.agreement?.counterparty ?? null,
+    counterpartyOrgNo: c.agreement?.counterpartyOrgNo ?? null,
+    counterpartyAddress: c.agreement?.counterpartyAddress ?? null,
+    counterpartyPostalCode: c.agreement?.counterpartyPostalCode ?? null,
+    counterpartyCity: c.agreement?.counterpartyCity ?? null,
+    validFrom: isoDay(c.agreement?.validFrom ?? null),
+    validTo: isoDay(c.agreement?.validTo ?? null),
+    date: isoDay(c.date),
     tags: c.tags,
     notes: c.notes,
-    termsVersion: c.termsVersion,
+    termsVersion: c.agreement?.termsVersion ?? null,
     createdBy: c.createdBy?.name ?? null,
     fileCount: c.files.length,
     createdAt: c.createdAt.toISOString(),

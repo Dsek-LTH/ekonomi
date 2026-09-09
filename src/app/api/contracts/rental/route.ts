@@ -65,6 +65,16 @@ export async function POST(req: Request) {
     if (known !== itemIds.length) return fail(422, "contract.itemNotFound");
   }
 
+  // Same check, same reason, for the directory row the counterparty fields
+  // may have been picked from.
+  if (d.counterpartyId) {
+    const known = await prisma.counterparty.findUnique({
+      where: { id: d.counterpartyId },
+      select: { id: true },
+    });
+    if (!known) return fail(422, "contract.counterpartyNotFound");
+  }
+
   // Is the gear actually free? Checked here rather than only in the form,
   // because the form's answer is a moment old by the time it is submitted and
   // two people drawing contracts at once is exactly the case this exists for.
@@ -90,22 +100,30 @@ export async function POST(req: Request) {
 
   const contract = await prisma.contract.create({
     data: {
-      kind: "RENTAL",
-      status: "DRAFT",
+      // A rental is a CONTRACT row with a RentalDetails relation attached,
+      // not its own kind; see prisma/schema/contract.prisma.
+      kind: "CONTRACT",
       // Derived, not typed. See lib/contract/signatory.ts.
       title: rentalTitle(d.counterparty),
-      counterparty: d.counterparty,
-      counterpartyOrgNo: d.counterpartyOrgNo,
-      counterpartyAddress: d.counterpartyAddress,
-      counterpartyPostalCode: d.counterpartyPostalCode,
-      counterpartyCity: d.counterpartyCity,
       createdById: g.actor.id,
 
-      // Copied from the rental period, so that one expiry query serves every
-      // kind of contract in the archive and the list does not have to know
-      // which of them keep their dates somewhere else.
-      validFrom: isoToDate(d.pickupAt),
-      validTo: isoToDate(d.returnAt),
+      agreement: {
+        create: {
+          status: "DRAFT",
+          counterparty: d.counterparty,
+          counterpartyOrgNo: d.counterpartyOrgNo,
+          counterpartyAddress: d.counterpartyAddress,
+          counterpartyPostalCode: d.counterpartyPostalCode,
+          counterpartyCity: d.counterpartyCity,
+          counterpartyId: d.counterpartyId ?? null,
+
+          // Copied from the rental period, so that one expiry query serves
+          // every document in the archive and the list does not have to
+          // know which of them keep their dates somewhere else.
+          validFrom: isoToDate(d.pickupAt),
+          validTo: isoToDate(d.returnAt),
+        },
+      },
 
       rental: {
         create: {

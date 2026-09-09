@@ -35,10 +35,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!g.ok) return g.res;
 
   // No scope filter, and it is worth saying why rather than leaving the next
-  // reader to work it out. RENTAL is the only kind this app draws a document
-  // for, `renderContractDocument` answers `rentalNotFound` for anything else,
-  // and RENTAL is exactly what the narrowest viewer here may see. So the gate
-  // and the renderer between them already close it.
+  // reader to work it out. A rental (a RentalDetails relation, not a kind of
+  // its own — see prisma/schema/contract.prisma) is the only thing this app
+  // draws a document for, `renderContractDocument` answers `rentalNotFound`
+  // for anything else, and a rental is exactly what the narrowest viewer
+  // here may see. So the gate and the renderer between them already close it.
   const drawn = await renderContractDocument(id);
   if (!drawn.ok) return failed(drawn);
 
@@ -61,20 +62,29 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true, status: true, kind: true },
+    select: {
+      id: true,
+      rental: { select: { contractId: true } },
+      agreement: { select: { status: true } },
+    },
   });
   if (!contract) return fail(404, "contract.notFound");
-  // RENTAL is the only kind this app draws a document for, so the gate above
-  // very nearly settles it. Asked anyway, because "the only kind today" is not
-  // a thing to leave a route depending on.
-  if (contract.kind !== "RENTAL") return fail(422, "contract.rentalNotFound");
+  // A rental is the only thing this app draws a document for, so the gate
+  // above very nearly settles it. Asked anyway, because "the only thing
+  // today" is not a thing to leave a route depending on. `status` is null
+  // only for the OTHER-with-counterparty case that AgreementDetails now also
+  // allows, which a rental can never be, so this doubles as the check that
+  // narrows it for the compiler below.
+  if (!contract.rental || !contract.agreement || contract.agreement.status === null) {
+    return fail(422, "contract.rentalNotFound");
+  }
 
   // Only while it is a draft. After the contract has gone out, redrawing it
   // would leave two versions in the world with nothing saying which one the
   // counterparty put their name to. `replaceGeneratedFile` could not touch a
   // SIGNED file even if it were called, so this is the second lock rather than
   // the only one.
-  if (!canEditRental(contract.status)) return fail(409, "contract.rentalLocked");
+  if (!canEditRental(contract.agreement.status)) return fail(409, "contract.rentalLocked");
 
   const drawn = await storeContractDocument(contract.id, g.actor.id);
   if (!drawn.ok) return failed(drawn);

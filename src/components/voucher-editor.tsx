@@ -24,6 +24,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Notice } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
 import { TableScroll } from "@/components/ui/table-scroll";
+import { withBlankRows } from "@/lib/ui/blank-rows";
 import { isAmountInput } from "@/lib/domain/money";
 import { amountFieldProps } from "@/components/ui/amount-input";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
@@ -69,38 +70,11 @@ export const filledVoucherRows = (rows: VoucherEditorRow[]) => rows.filter((r) =
 // How many spare rows the table holds. Three is enough that the common voucher,
 // a cost row with its VAT and a rounding, is written without ever asking for
 // another, and the editor tops them back up as they are used, so there is no
-// "add row" button to reach for at all.
+// "add row" button to reach for at all. See lib/ui/blank-rows.ts, which is
+// where the topping-up itself is written: the rental sheet wants the same
+// behaviour at its own count, and a second sheet wanting it is what pulled it
+// out of here.
 const BLANK_ROWS = 3;
-
-/**
- * The rows with exactly BLANK_ROWS empty ones among them, or null when they
- * already are that.
- *
- * Three empty rows, not three empty rows *at the bottom*: a spare row can be
- * dragged up between two filled ones and left there, to be written in next, and
- * counting only the trailing ones would answer that by adding a fourth.
- *
- * New ones go on the end, where the next line is usually written. Extra ones are
- * taken from the end too, so a row someone is standing in, the one they have
- * just emptied, is never the one that disappears from under them.
- */
-function withBlankRows(rows: VoucherEditorRow[]): VoucherEditorRow[] | null {
-  const blanks = rows.length - filledVoucherRows(rows).length;
-  if (blanks === BLANK_ROWS) return null;
-  if (blanks < BLANK_ROWS) {
-    return [...rows, ...Array.from({ length: BLANK_ROWS - blanks }, () => makeVoucherRow())];
-  }
-  let extra = blanks - BLANK_ROWS;
-  const kept: VoucherEditorRow[] = [];
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (extra > 0 && isBlankVoucherRow(rows[i])) {
-      extra--;
-      continue;
-    }
-    kept.unshift(rows[i]);
-  }
-  return kept;
-}
 
 /**
  * A row the bookkeeper may read but not touch: the payment side of an utlägg,
@@ -231,7 +205,7 @@ export function VoucherEditor({
   // the next move, and the table would flicker between the two lengths for as
   // long as the pointer was down. Whatever the drag leaves behind is tidied the
   // moment it ends.
-  const stocked = withBlankRows(rows);
+  const stocked = withBlankRows(rows, BLANK_ROWS, isBlankVoucherRow, makeVoucherRow);
   useEffect(() => {
     if (readOnly || draggingId || !stocked) return;
     onChange(stocked);

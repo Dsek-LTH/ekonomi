@@ -17,7 +17,8 @@ import { canEditRental } from "@/lib/contract/status";
 import type { ContractStatus } from "@/lib/domain/types";
 
 export interface ContractActionState {
-  status: ContractStatus;
+  /** Null for PROTOCOL/OTHER, which carry no status at all. */
+  status: ContractStatus | null;
   isRental: boolean;
   canManage: boolean;
   /** Whether removing it is possible at all: a contract holding signed
@@ -54,7 +55,7 @@ export function ContractActions({
   // this from the status rather than always showing the same verb is what makes
   // the header say something instead of offering a fixed row of options.
   const primary =
-    isRental && canEditRental(status)
+    isRental && status !== null && canEditRental(status)
       ? { label: t("rental.regenerate"), onClick: onRegenerate }
       : null;
 
@@ -83,8 +84,9 @@ export function ContractActions({
         {/* Redrawing is deliberately absent once the contract has gone out,
             rather than present and disabled: it would leave two versions in the
             world with nothing saying which was signed, and an option that can
-            never be taken is furniture. */}
-        {status !== "TERMINATED" && status !== "CANCELLED" && (
+            never be taken is furniture. Absent entirely for PROTOCOL/OTHER,
+            which have no status to terminate. */}
+        {status !== null && status !== "TERMINATED" && status !== "CANCELLED" && (
           <>
             <MenuSeparator />
             <MenuItem onClick={onTerminate}>{t("detail.terminate")}</MenuItem>

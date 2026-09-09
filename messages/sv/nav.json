@@ -38,8 +38,9 @@
   "groupStock": "Lager",
   "stockEvents": "Tillfällen",
   "roles": "Roller & behörigheter",
-  "contracts": "Avtal",
+  "contracts": "Dokument",
   "rentalItems": "Utrustning",
   "groupRental": "Uthyrning",
-  "rentals": "Uthyrningar"
+  "rentals": "Uthyrningar",
+  "counterparties": "Motparter"
 }

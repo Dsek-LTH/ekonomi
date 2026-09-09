@@ -32,10 +32,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { id: true, kind: true },
+    select: { id: true, rental: { select: { contractId: true } } },
   });
   if (!contract) return fail(404, "contract.notFound");
-  if (!canManageKind(g.actor, contract.kind)) return fail(403, "contract.noManageAccess");
+  if (!canManageKind(g.actor, { hasRental: contract.rental !== null })) {
+    return fail(403, "contract.noManageAccess");
+  }
 
   // Before the body is touched: `req.formData()` reads the whole request into
   // memory, so a size check afterwards would protect the bucket and not the

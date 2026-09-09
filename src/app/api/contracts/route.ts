@@ -22,23 +22,42 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
+  // CONTRACT always gets the table; OTHER only when a counterparty was
+  // actually given, which the refine on CreateContract has already ruled out
+  // for PROTOCOL. Either way `validFrom`/`validTo`/`status` stay null: naming
+  // who an OTHER document is with does not give it a period or a workflow.
+  const isContract = d.kind === "CONTRACT";
+  const wantsAgreement = isContract || d.counterparty !== "";
+
   const contract = await prisma.contract.create({
     data: {
       kind: d.kind,
       title: d.title,
-      counterparty: d.counterparty,
-      counterpartyOrgNo: d.counterpartyOrgNo ?? null,
       // A DATE column: the day is the value, so it is built at midnight UTC
       // rather than from the server's own timezone, which would file a contract
-      // signed on the 1st under the 31st for half the year.
-      validFrom: isoToDate(d.validFrom),
-      validTo: isoToDate(d.validTo),
+      // signed on the 1st under the 31st for half the year. Only PROTOCOL/OTHER
+      // use this; the refine on CreateContract guarantees PROTOCOL sent one.
+      date: d.kind !== "CONTRACT" ? isoToDate(d.date) : null,
       // Normalised here rather than in the schema, because it is a rule about
       // the archive rather than about the request. See lib/contract/tags.ts.
       tags: normaliseTags(d.tags),
       notes: d.notes ?? null,
-      status: d.status,
       createdById: g.actor.id,
+      agreement: wantsAgreement
+        ? {
+            create: {
+              counterparty: d.counterparty,
+              counterpartyOrgNo: d.counterpartyOrgNo ?? null,
+              counterpartyAddress: d.counterpartyAddress ?? null,
+              counterpartyPostalCode: d.counterpartyPostalCode ?? null,
+              counterpartyCity: d.counterpartyCity ?? null,
+              counterpartyId: d.counterpartyId ?? null,
+              validFrom: isContract ? isoToDate(d.validFrom) : null,
+              validTo: isContract ? isoToDate(d.validTo) : null,
+              status: isContract ? d.status : null,
+            },
+          }
+        : undefined,
     },
     select: { id: true },
   });

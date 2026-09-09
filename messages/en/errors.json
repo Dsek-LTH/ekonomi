@@ -326,8 +326,9 @@
   },
   "contract": {
     "notFound": "Contract not found",
-    "noViewAccess": "You do not have access to the contract archive",
-    "noManageAccess": "You do not have access to change the contract archive",
+    "counterpartyNotAllowed": "Meeting minutes cannot name a counterparty",
+    "noViewAccess": "You do not have access to the document archive",
+    "noManageAccess": "You do not have access to change the document archive",
     "fileNotFound": "File not found",
     "fileMissing": "The contract's file is missing from the archive",
     "fileImmutable": "A signed document cannot be removed. It is the evidence of what the parties agreed.",
@@ -345,6 +346,7 @@
     "itemNotFound": "Rental item not found",
     "itemExists": "There is already a rental item called ’{name}’",
     "itemsUnavailable": "These are not free over that period: {items}",
-    "notASignatory": "That person is not an authorised signatory and cannot sign for the section"
+    "notASignatory": "That person is not an authorised signatory and cannot sign for the section",
+    "counterpartyNotFound": "Counterparty not found"
   }
 }

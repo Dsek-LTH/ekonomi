@@ -38,7 +38,7 @@ async function bookingsOver(
       itemId: { not: null },
       rental: {
         contract: {
-          status: { in: HOLDING },
+          agreement: { status: { in: HOLDING } },
           ...(exclude ? { id: { not: exclude } } : {}),
         },
         // Cheap pre-filter in Postgres. The exact overlap, including the early

@@ -76,10 +76,10 @@ export async function DELETE(
 
   const file = await prisma.contractFile.findFirst({
     where: { id: fileId, contractId: id },
-    select: { id: true, contract: { select: { kind: true } } },
+    select: { id: true, contract: { select: { rental: { select: { contractId: true } } } } },
   });
   if (!file) return fail(404, "contract.fileNotFound");
-  if (!canManageKind(g.actor, file.contract.kind)) {
+  if (!canManageKind(g.actor, { hasRental: file.contract.rental !== null })) {
     return fail(403, "contract.noManageAccess");
   }
 

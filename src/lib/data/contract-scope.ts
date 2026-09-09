@@ -1,4 +1,4 @@
-// What one viewer may see of the avtal archive, and what they may change.
+// What one viewer may see of the document archive, and what they may change.
 //
 // Shaped after lib/data/expense-scope.ts, which does the same job for utlägg,
 // and for the same reason: a scope written at each call site is a scope that
@@ -10,6 +10,12 @@
 // find last spring's rental, and they have no business reading what the section
 // pays a sponsor. Before this, CONTRACT_VIEW was all or nothing and they had
 // the lot.
+//
+// A rental is no longer its own `kind` (see prisma/schema/contract.prisma):
+// it is a CONTRACT row with a RentalDetails relation attached, the same as
+// every other agreement. So "rentals only" can no longer be expressed as a
+// list of kinds, which is why this scope is a plain three-state answer
+// rather than `{ kinds: ContractKind[] }`.
 import "server-only";
 
 import { Prisma } from "@/lib/generated/prisma/client";
@@ -19,40 +25,31 @@ import {
   canViewContracts,
   canViewRentals,
 } from "@/lib/domain/permissions";
-import type { Capability, ContractKind, Role } from "@/lib/domain/types";
+import type { Capability, Role } from "@/lib/domain/types";
 
 /** Who is asking. Both a page's session user and an API `Actor` fit this. */
 export type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
-/**
- * What one viewer may reach.
- *
- * Two answers rather than a list of kinds, because there are only two, and a
- * list would invite call sites to intersect it themselves. If the section ever
- * wants "sponsring only" for näringslivsutskottet, this becomes
- * `{ kinds: ContractKind[] }` and every `where` below keeps working.
- */
+/** What one viewer may reach. */
 export type ContractScope =
   /** The whole archive, every kind. */
-  | { everything: true }
-  /**
-   * Only these kinds. An empty list is a real value and means nothing at all,
-   * which is what a viewer with neither capability gets: a page redirects them
-   * and a route answers 403, and any query that reaches here anyway returns no
-   * rows rather than all of them.
-   */
-  | { everything: false; kinds: ContractKind[] };
+  | { kind: "everything" }
+  /** Rentals only: CONTRACT rows with a RentalDetails relation attached. */
+  | { kind: "rentalsOnly" }
+  /** Nothing at all. What a viewer with neither capability gets: a page
+   *  redirects them and a route answers 403, and any query that reaches
+   *  here anyway returns no rows rather than all of them. */
+  | { kind: "none" };
 
 /** Resolve `viewer` to their scope. The only place this policy lives. */
 export function contractScopeOf(viewer: Viewer): ContractScope {
-  if (canViewContracts(viewer.capabilities)) return { everything: true };
-  if (canViewRentals(viewer.capabilities)) return { everything: false, kinds: ["RENTAL"] };
-  return { everything: false, kinds: [] };
+  if (canViewContracts(viewer.capabilities)) return { kind: "everything" };
+  if (canViewRentals(viewer.capabilities)) return { kind: "rentalsOnly" };
+  return { kind: "none" };
 }
 
 /** Whether the viewer may see anything at all. What a page gate asks. */
-export const scopeIsEmpty = (scope: ContractScope): boolean =>
-  !scope.everything && scope.kinds.length === 0;
+export const scopeIsEmpty = (scope: ContractScope): boolean => scope.kind === "none";
 
 /**
  * The scope as a Prisma filter.
@@ -63,29 +60,39 @@ export const scopeIsEmpty = (scope: ContractScope): boolean =>
  * that reached here with no capability returns no rows rather than all of them.
  */
 export function contractScopeWhere(scope: ContractScope): Prisma.ContractWhereInput {
-  if (scope.everything) return {};
-  if (scope.kinds.length === 0) return { id: { in: [] } };
-  return { kind: { in: scope.kinds } };
+  switch (scope.kind) {
+    case "everything":
+      return {};
+    case "rentalsOnly":
+      return { rental: { isNot: null } };
+    case "none":
+      return { id: { in: [] } };
+  }
 }
 
 /** Whether one already-fetched contract falls inside the scope. */
-export function scopeIncludes(scope: ContractScope, contract: { kind: ContractKind }): boolean {
-  if (scope.everything) return true;
-  return scope.kinds.includes(contract.kind);
+export function scopeIncludes(
+  scope: ContractScope,
+  contract: { rental: unknown | null },
+): boolean {
+  if (scope.kind === "everything") return true;
+  if (scope.kind === "rentalsOnly") return contract.rental != null;
+  return false;
 }
 
 /**
- * Whether the viewer may change this contract.
+ * Whether the viewer may change this document.
  *
  * Read and write are asked separately because they are not the same question,
  * and the rental case is where that shows: RENTAL_MANAGE can draw and amend an
  * uthyrningsavtal, and cannot touch a sponsoravtal even to fix a typo in its
  * title.
  *
- * Takes the kind rather than the row, so a route can ask before fetching one,
- * and so a *new* contract can be asked about, where there is no row yet.
+ * Takes whether the row is a rental rather than the row itself, so the caller
+ * decides how cheaply that's answered (a `select: { rental: { select: {
+ * contractId: true } } }` alongside whatever else it already fetches).
  */
-export function canManageKind(viewer: Viewer, kind: ContractKind): boolean {
+export function canManageKind(viewer: Viewer, contract: { hasRental: boolean }): boolean {
   if (canManageContracts(viewer.capabilities)) return true;
-  return kind === "RENTAL" && canManageRentals(viewer.capabilities);
+  return contract.hasRental && canManageRentals(viewer.capabilities);
 }

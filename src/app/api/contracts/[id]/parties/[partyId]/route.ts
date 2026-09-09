@@ -17,7 +17,7 @@ const findParty = (contractId: string, partyId: string) =>
       id: true,
       signedAt: true,
       signatureMethod: true,
-      contract: { select: { kind: true } },
+      contract: { select: { rental: { select: { contractId: true } } } },
     },
   });
 
@@ -32,7 +32,7 @@ export async function PATCH(
 
   const party = await findParty(id, partyId);
   if (!party) return fail(404, "contract.partyNotFound");
-  if (!canManageKind(g.actor, party.contract.kind)) {
+  if (!canManageKind(g.actor, { hasRental: party.contract.rental !== null })) {
     return fail(403, "contract.noManageAccess");
   }
 
@@ -85,7 +85,7 @@ export async function DELETE(
 
   const party = await findParty(id, partyId);
   if (!party) return fail(404, "contract.partyNotFound");
-  if (!canManageKind(g.actor, party.contract.kind)) {
+  if (!canManageKind(g.actor, { hasRental: party.contract.rental !== null })) {
     return fail(403, "contract.noManageAccess");
   }
 

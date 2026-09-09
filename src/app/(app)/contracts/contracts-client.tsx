@@ -15,7 +15,7 @@ import type { ContractSummary } from "@/lib/data/contracts";
 import type { RowPage } from "@/lib/data/list-query";
 import type { ContractKind } from "@/lib/domain/types";
 
-const KINDS: readonly ContractKind[] = ["RENTAL", "SPONSORSHIP", "SUPPLIER", "OTHER"];
+const KINDS: readonly ContractKind[] = ["CONTRACT", "PROTOCOL", "OTHER"];
 
 export function ContractsClient({
   page,
@@ -54,8 +54,13 @@ export function ContractsClient({
   // with dashes standing in for the missing halves: an archived contract often
   // states one end or neither, and "– 2027-06-30" makes a reader work out which
   // end is missing.
+  //
+  // A lean document (PROTOCOL/OTHER) has no period to state, only the one
+  // date it was filed under, so the same cell reads that instead: it is the
+  // same question, "when is this", the column already asks.
   const validity = useCallback(
     (c: ContractSummary): string => {
+      if (c.kind !== "CONTRACT") return c.date ? date(c.date) : t("validity.none");
       if (c.validFrom && c.validTo) {
         return t("validity.range", { from: date(c.validFrom), to: date(c.validTo) });
       }
@@ -77,7 +82,7 @@ export function ContractsClient({
       {
         key: "counterparty",
         header: t("col.counterparty"),
-        cell: (c) => c.counterparty,
+        cell: (c) => c.counterparty ?? <span className="text-muted">–</span>,
       },
       {
         key: "kind",
@@ -115,8 +120,10 @@ export function ContractsClient({
         mobile: "trailing",
         cell: (c) => {
           // Derived against the page's one `today`, so every row on the screen
-          // is judged on the same day.
+          // is judged on the same day. Null for PROTOCOL/OTHER, which carry
+          // no status at all: filed or it doesn't exist.
           const status = displayStatus(c, today);
+          if (status === null) return <span className="text-muted">–</span>;
           return <Tag tone={CONTRACT_STATUS_TONE[status]}>{t(`status.${status}`)}</Tag>;
         },
       },

@@ -199,12 +199,16 @@ const forDocument = {
   select: {
     id: true,
     title: true,
-    counterparty: true,
-    counterpartyOrgNo: true,
-    counterpartyAddress: true,
-    counterpartyPostalCode: true,
-    counterpartyCity: true,
     createdAt: true,
+    agreement: {
+      select: {
+        counterparty: true,
+        counterpartyOrgNo: true,
+        counterpartyAddress: true,
+        counterpartyPostalCode: true,
+        counterpartyCity: true,
+      },
+    },
     rental: {
       select: {
         pickupAt: true,
@@ -305,17 +309,36 @@ export type RentalDraft = {
 /** Draw the document without keeping it. What a stored contract's preview asks
  *  for. */
 export async function renderContractDocument(contractId: string): Promise<RenderResult> {
-  const contract = await prisma.contract.findUnique({
+  const row = await prisma.contract.findUnique({
     where: { id: contractId },
     ...forDocument,
   });
-  if (!contract) return { ok: false, reason: "notFound" };
-  if (!contract.rental) return { ok: false, reason: "rentalNotFound" };
+  if (!row) return { ok: false, reason: "notFound" };
+  if (!row.rental) return { ok: false, reason: "rentalNotFound" };
+  // A rental is a CONTRACT row, so it always has an `agreement` with a
+  // counterparty; CreateRental requires it. `counterparty` is nullable on
+  // the model only for the OTHER-with-counterparty case, which a rental can
+  // never be, so this doubles as the check that narrows it below.
+  if (!row.agreement || row.agreement.counterparty === null) {
+    return { ok: false, reason: "rentalNotFound" };
+  }
 
-  const data = buildRentalData(contract as ContractForDocument, SECTION);
+  const contract: ContractForDocument = {
+    title: row.title,
+    counterparty: row.agreement.counterparty,
+    counterpartyOrgNo: row.agreement.counterpartyOrgNo,
+    counterpartyAddress: row.agreement.counterpartyAddress,
+    counterpartyPostalCode: row.agreement.counterpartyPostalCode,
+    counterpartyCity: row.agreement.counterpartyCity,
+    createdAt: row.createdAt,
+    rental: row.rental,
+    parties: row.parties,
+  };
+
+  const data = buildRentalData(contract, SECTION);
   try {
     const bytes = await renderRentalContract(data);
-    return { ok: true, bytes, filename: filenameFor(contract as ContractForDocument) };
+    return { ok: true, bytes, filename: filenameFor(contract) };
   } catch (e) {
     return {
       ok: false,
@@ -348,10 +371,11 @@ export async function storeContractDocument(
       uploadedById: actorId,
     });
     // The version the bytes were drawn under, so a list can say which contracts
-    // predate a change to the terms without opening each one.
+    // predate a change to the terms without opening each one. On AgreementDetails
+    // now, not Contract; a rental always has one.
     await prisma.contract.update({
       where: { id: contractId },
-      data: { termsVersion: TERMS_VERSION },
+      data: { agreement: { update: { termsVersion: TERMS_VERSION } } },
     });
     return { ok: true, fileId: stored.id, filename: stored.filename };
   } catch (e) {

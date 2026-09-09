@@ -326,8 +326,9 @@
   },
   "contract": {
     "notFound": "Avtalet hittades inte",
-    "noViewAccess": "Du har inte behörighet att läsa avtalsarkivet",
-    "noManageAccess": "Du har inte behörighet att ändra i avtalsarkivet",
+    "counterpartyNotAllowed": "Mötesprotokoll kan inte ha en motpart",
+    "noViewAccess": "Du har inte behörighet att läsa dokumentarkivet",
+    "noManageAccess": "Du har inte behörighet att ändra i dokumentarkivet",
     "fileNotFound": "Filen hittades inte",
     "fileMissing": "Avtalets fil saknas i arkivet",
     "fileImmutable": "Ett signerat dokument kan inte tas bort. Det är beviset på vad parterna kom överens om.",
@@ -345,6 +346,7 @@
     "itemNotFound": "Uthyrningsobjektet hittades inte",
     "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’",
     "itemsUnavailable": "Följande är inte ledigt under perioden: {items}",
-    "notASignatory": "Personen är inte firmatecknare och kan inte skriva under för sektionen"
+    "notASignatory": "Personen är inte firmatecknare och kan inte skriva under för sektionen",
+    "counterpartyNotFound": "Motparten hittades inte"
   }
 }

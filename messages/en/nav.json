@@ -38,8 +38,9 @@
   "groupStock": "Stock",
   "stockEvents": "Occasions",
   "roles": "Roles & permissions",
-  "contracts": "Contracts",
+  "contracts": "Documents",
   "rentalItems": "Equipment",
   "groupRental": "Rentals",
-  "rentals": "Rentals"
+  "rentals": "Rentals",
+  "counterparties": "Counterparties"
 }

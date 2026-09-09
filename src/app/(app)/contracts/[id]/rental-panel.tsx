@@ -72,7 +72,7 @@ export function RentalPanel({
           this card's, and it lives in the one group on the status card with
           everything else you can do to the contract. It was in both places,
           which is the scattering that group exists to end. */}
-      <CardHeader title={t("kind.RENTAL")} />
+      <CardHeader title={t("rental.panelTitle")} />
       <CardBody className="space-y-5">
         <DetailList>
           <DetailRow label={t("rental.pickupAt")} value={date(rental.pickupAt)} />

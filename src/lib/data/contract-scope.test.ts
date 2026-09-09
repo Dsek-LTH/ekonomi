@@ -26,11 +26,11 @@ const NOBODY = viewer();
 
 describe("contractScopeOf", () => {
   it("gives the whole archive to CONTRACT_VIEW", () => {
-    expect(contractScopeOf(ARCHIVE)).toEqual({ everything: true });
+    expect(contractScopeOf(ARCHIVE)).toEqual({ kind: "everything" });
   });
 
   it("gives rentals only to RENTAL_VIEW", () => {
-    expect(contractScopeOf(RENTAL)).toEqual({ everything: false, kinds: ["RENTAL"] });
+    expect(contractScopeOf(RENTAL)).toEqual({ kind: "rentalsOnly" });
   });
 
   it("gives nothing to somebody holding neither", () => {
@@ -38,25 +38,25 @@ describe("contractScopeOf", () => {
   });
 
   it("prefers the wider grant when somebody holds both", () => {
-    expect(contractScopeOf(viewer("CONTRACT_VIEW", "RENTAL_VIEW"))).toEqual({ everything: true });
+    expect(contractScopeOf(viewer("CONTRACT_VIEW", "RENTAL_VIEW"))).toEqual({ kind: "everything" });
   });
 });
 
 describe("contractScopeWhere", () => {
   it("is the empty filter for the whole archive, so it composes", () => {
-    expect(contractScopeWhere({ everything: true })).toEqual({});
+    expect(contractScopeWhere({ kind: "everything" })).toEqual({});
   });
 
-  it("narrows to the kinds in scope", () => {
-    expect(contractScopeWhere({ everything: false, kinds: ["RENTAL"] })).toEqual({
-      kind: { in: ["RENTAL"] },
+  it("narrows to rows with a RentalDetails relation", () => {
+    expect(contractScopeWhere({ kind: "rentalsOnly" })).toEqual({
+      rental: { isNot: null },
     });
   });
 
   it("matches nothing for an empty scope, rather than everything", () => {
     // The failure mode this guards: a filter that came out `{}` for a viewer
     // with no capability would hand them the archive.
-    const where = contractScopeWhere({ everything: false, kinds: [] });
+    const where = contractScopeWhere({ kind: "none" });
     expect(where).toEqual({ id: { in: [] } });
     expect(where).not.toEqual({});
   });
@@ -65,37 +65,35 @@ describe("contractScopeWhere", () => {
 describe("scopeIncludes", () => {
   it("lets an archive viewer open anything", () => {
     const scope = contractScopeOf(ARCHIVE);
-    expect(scopeIncludes(scope, { kind: "SPONSORSHIP" })).toBe(true);
-    expect(scopeIncludes(scope, { kind: "RENTAL" })).toBe(true);
+    expect(scopeIncludes(scope, { rental: null })).toBe(true);
+    expect(scopeIncludes(scope, { rental: {} })).toBe(true);
   });
 
   it("lets a rental viewer open a rental and nothing else", () => {
     const scope = contractScopeOf(RENTAL);
-    expect(scopeIncludes(scope, { kind: "RENTAL" })).toBe(true);
-    expect(scopeIncludes(scope, { kind: "SPONSORSHIP" })).toBe(false);
-    expect(scopeIncludes(scope, { kind: "SUPPLIER" })).toBe(false);
-    expect(scopeIncludes(scope, { kind: "OTHER" })).toBe(false);
+    expect(scopeIncludes(scope, { rental: {} })).toBe(true);
+    expect(scopeIncludes(scope, { rental: null })).toBe(false);
   });
 });
 
 describe("canManageKind", () => {
-  it("lets the wide grant change any kind", () => {
-    expect(canManageKind(ARCHIVE, "SPONSORSHIP")).toBe(true);
-    expect(canManageKind(ARCHIVE, "RENTAL")).toBe(true);
+  it("lets the wide grant change any document", () => {
+    expect(canManageKind(ARCHIVE, { hasRental: false })).toBe(true);
+    expect(canManageKind(ARCHIVE, { hasRental: true })).toBe(true);
   });
 
   it("lets the rental grant change a rental only", () => {
     // Not even to fix a typo in a sponsoravtal's title.
-    expect(canManageKind(RENTAL, "RENTAL")).toBe(true);
-    expect(canManageKind(RENTAL, "SPONSORSHIP")).toBe(false);
+    expect(canManageKind(RENTAL, { hasRental: true })).toBe(true);
+    expect(canManageKind(RENTAL, { hasRental: false })).toBe(false);
   });
 
   it("refuses somebody who may only read", () => {
-    expect(canManageKind(viewer("RENTAL_VIEW"), "RENTAL")).toBe(false);
-    expect(canManageKind(viewer("CONTRACT_VIEW"), "SPONSORSHIP")).toBe(false);
+    expect(canManageKind(viewer("RENTAL_VIEW"), { hasRental: true })).toBe(false);
+    expect(canManageKind(viewer("CONTRACT_VIEW"), { hasRental: false })).toBe(false);
   });
 
   it("refuses somebody holding nothing", () => {
-    expect(canManageKind(NOBODY, "RENTAL")).toBe(false);
+    expect(canManageKind(NOBODY, { hasRental: true })).toBe(false);
   });
 });

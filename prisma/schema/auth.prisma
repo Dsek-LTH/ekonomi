@@ -185,6 +185,7 @@ model User {
   contractFiles        ContractFile[]          @relation("ContractFileUploader")
   contractParties      ContractParty[]         @relation("ContractPartyUser")
   rentalChecks         RentalDetails[]         @relation("RentalChecker")
+  counterparties       Counterparty[]          @relation("CounterpartyCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

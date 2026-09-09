@@ -2,16 +2,22 @@ import { requirePage } from "@/lib/server/current-user";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { getRentalItemOptions } from "@/lib/data/rental-items";
 import { getSignatories } from "@/lib/data/users";
+import { getCounterpartyOptions } from "@/lib/data/counterparties";
 import { NewRentalClient } from "./new-rental-client";
 
 export default async function NewRentalPage() {
   const user = await requirePage(canManageRentals);
 
-  const [items, signatories] = await Promise.all([getRentalItemOptions(), getSignatories()]);
+  const [items, signatories, counterparties] = await Promise.all([
+    getRentalItemOptions(),
+    getSignatories(),
+    getCounterpartyOptions(),
+  ]);
 
   return (
     <NewRentalClient
       items={items}
+      counterparties={counterparties}
       // Who may bind the section, from the FIRMATECKNARE capability. A picker
       // rather than a default, because the person drawing a rental contract is
       // usually not one of them.

@@ -53,7 +53,9 @@ export function StatusStrip({
     await mutate(`/api/contracts/${contract.id}/parties/${id}`, { method: "DELETE", key: id });
   }
 
-  const status = displayStatus(contract, today);
+  // Only ever rendered for a CONTRACT (see contract-client.tsx), which
+  // always has an AgreementDetails row and so always has a status.
+  const status = displayStatus(contract, today)!;
 
   // A rental carries two states that are not the same question: where the
   // agreement stands, and where the gear is. Both, side by side, because a
@@ -62,7 +64,7 @@ export function StatusStrip({
   const gear = contract.rental
     ? rentalState(
         {
-          status: contract.status,
+          status: contract.status!,
           pickupAt: contract.rental.pickupAt.slice(0, 10),
           returnAt: contract.rental.returnAt.slice(0, 10),
           returnedAt: contract.rental.returnedAt?.slice(0, 10) ?? null,
