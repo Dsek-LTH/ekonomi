@@ -12,6 +12,7 @@ import { Avatar } from "../ui/avatar";
 import { IconFortnox } from "./fortnox-mark";
 import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
 import { MobileNav } from "./mobile-nav";
+import { CommandPalette, useCommandPaletteHotkey, type CommandItem } from "./command-palette";
 import {
   IconBox,
   IconCalendar,
@@ -32,6 +33,7 @@ import {
   IconList,
   IconMenu,
   IconReceipt,
+  IconSearch,
   IconUsers,
 } from "../ui/icons";
 import {
@@ -69,6 +71,11 @@ export type NavItem = {
 
 export type NavGroup = {
   label: string;
+  /** What the collapsed header row shows instead of one of its items' own
+   *  icons: a group is a category, not a page, and reusing the first item's
+   *  icon for it would be an accident of list order rather than a choice
+   *  about what the category is. */
+  icon: (p: { className?: string }) => React.ReactNode;
   items: NavItem[];
 };
 
@@ -129,6 +136,7 @@ const HELP: NavItem = { href: "/faq", label: "faq", icon: IconHelp, visible: ALL
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "groupExpenses",
+    icon: IconReceipt,
     items: [
       { href: "/expenses", label: "expenses", icon: IconReceipt, visible: ALL },
       // The bank feed, which used to be two links: "Kortköp" here for a card
@@ -147,6 +155,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupBudget",
+    icon: IconBudget,
     items: [
       {
         href: "/budget",
@@ -168,6 +177,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupBookkeeping",
+    icon: IconBook,
     items: [
       {
         href: "/bookkeeping",
@@ -185,6 +195,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupStock",
+    icon: IconBox,
     items: [
       // Its own group rather than a line under Bokföring: keeping the
       // lagerbokföring is a different job, done by different people, and the
@@ -217,6 +228,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupRental",
+    icon: IconContract,
     items: [
       // Its own group rather than a corner of Avtal, for the same reason
       // Alkohollager is not a corner of Bokföring: it is a different job done
@@ -243,6 +255,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupAdmin",
+    icon: IconGear,
     items: [
       // The archive, over every kind of agreement the section has. Distinct
       // from Uthyrning above, which is the same rows read as a work list. See
@@ -276,6 +289,7 @@ const NAV_GROUPS: NavGroup[] = [
 const SETTINGS_NAV: NavGroup[] = [
   {
     label: "settings",
+    icon: IconGear,
     items: SETTINGS_SECTIONS.map((s) => ({
       href: s.href,
       label: s.label,
@@ -351,6 +365,27 @@ export function AppShell({
   // a frame that does not exist below md.
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Which groups the reader has opened or closed by hand, against the
+  // default of "whichever one owns the page you're on is open, the rest
+  // aren't" (see `owning` below). A group with no entry here follows that
+  // default; one that does follows the reader instead, which is what lets
+  // the active group be folded too rather than being the one row that can't
+  // be. Keyed by an explicit true/false rather than a set of "opened", since
+  // the default it is overriding is not the same for every group.
+  //
+  // Starts empty rather than seeded from a cookie: with seven groups and the
+  // active one already shown, there is no first-paint flash to avoid the way
+  // there is for `pinned`, and which ones somebody last folded or opened is a
+  // browsing habit, not a standing preference about the shape of the frame.
+  const [groupOverride, setGroupOverride] = useState<Record<string, boolean>>({});
+  const toggleGroup = (label: string, currentlyOpen: boolean) =>
+    setGroupOverride((prev) => ({ ...prev, [label]: !currentlyOpen }));
+
+  // Cmd/Ctrl+K, wherever the reader is: a collapsed group or a folded phone
+  // menu should not cost this its own way in. See command-palette.tsx.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteHotkey(() => setPaletteOpen(true));
+
   const togglePin = () => {
     setPinned((v) => {
       const next = !v;
@@ -400,13 +435,6 @@ export function AppShell({
   const labelFade = pinned
     ? ""
     : "md:opacity-0 md:nav-open:opacity-100";
-
-  // A group heading is a word, and a word in a 64px rail is nothing but noise,
-  // so on the rail the headings become the rules they would have been sitting
-  // above, and swap back to their labels as the panel opens.
-  const groupRule = pinned
-    ? "opacity-0"
-    : "opacity-0 transition-opacity md:opacity-100 md:nav-open:opacity-0";
 
   // Sits in the header row past the rail's edge, so while collapsed it is both
   // invisible and out of reach rather than an invisible click target hanging
@@ -514,6 +542,31 @@ export function AppShell({
 
   const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
   const receiptTab = useReceiptTabShowing();
+
+  // Every destination the palette can jump to, regardless of which nav (app
+  // or settings) is standing in the sidebar right now and regardless of which
+  // groups are collapsed there: typing is a way past both of those, not
+  // another view of whichever one is currently open. Settings' own pages are
+  // included whenever the reader may reach /admin at all, the same gate the
+  // "Inställningar" row itself is behind, so a page that is not a link
+  // anywhere for this reader is not a search result either.
+  const paletteItems: CommandItem[] = [
+    { href: OVERVIEW.href, label: t(OVERVIEW.label), group: "", icon: OVERVIEW.icon },
+    ...NAV_GROUPS.flatMap((group) =>
+      group.items
+        .filter((i) => i.visible(user))
+        .map((i) => ({ href: i.href, label: t(i.label), group: t(group.label), icon: i.icon })),
+    ),
+    ...(canAccessSettings(user.capabilities)
+      ? SETTINGS_NAV[0].items.map((i) => ({
+          href: i.href,
+          label: t(i.label),
+          group: t(SETTINGS_NAV[0].label),
+          icon: i.icon,
+        }))
+      : []),
+    { href: HELP.href, label: t(HELP.label), group: "", icon: HELP.icon },
+  ];
 
   return (
     // From md up this is a fixed-height app shell: the frame never moves and the
@@ -691,32 +744,128 @@ export function AppShell({
             // list chains into scrolling the main column behind the rail.
             className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-2"
           >
+            {/* First in the list, above Översikt: a search is where a reader
+                who already knows where they're going looks first, not
+                something to find at the bottom of the thing it replaces the
+                need to scan. Shown in both navs, settings included, since
+                typing three letters beats opening a group to find one page
+                whichever list is standing here right now. */}
+            <div className="flex flex-col gap-0.5">
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="flex items-center rounded-xl px-[11px] py-2 text-sm font-medium text-foreground transition-colors hover:bg-hover"
+              >
+                <IconSearch className="size-[18px] shrink-0 text-muted" />
+                <span className={cn("ms-3 min-w-0 flex-1 truncate transition-opacity", labelFade)}>
+                  {t("search")}
+                </span>
+                {/* The shortcut, not a repeat of the label: once the panel is
+                    wide enough to read either, the word beside the icon
+                    already says what the button does, and this says how to
+                    reach it without one. */}
+                <kbd
+                  aria-hidden
+                  className={cn(
+                    "ms-2 shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-faint transition-opacity",
+                    labelFade,
+                  )}
+                >
+                  ⌘K
+                </kbd>
+              </button>
+            </div>
             {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
-            {groups.map((group) => (
-              <div key={group.label} className="flex flex-col gap-0.5">
-                {/* Heading and rule occupy the same fixed-height row, one fading
-                    out as the other fades in, so the list does not jump by a
-                    line-height every time the panel opens.
+            {groups.map((group) => {
+              // The group the current page belongs to defaults to open, so
+              // arriving on a page never buries it, but it is still only a
+              // default: a reader who wants the sidebar out of the way while
+              // they work can fold it like any other, and `groupOverride`
+              // remembers that they did.
+              const owning = group.items.some((i) => isActive(i.href));
+              const open = groupOverride[group.label] ?? owning;
+              const GroupIcon = group.icon;
+              return (
+                <div key={group.label} className="flex flex-col gap-0.5">
+                  {/* A disclosure button now, not a decoration: with seven
+                      groups and a couple dozen items between them, listing
+                      every row of every group at once was the sidebar this
+                      exists to shorten. Only the one the current page owns
+                      (and whichever others were opened by hand) still lists
+                      its pages; the rest collapse to this one row.
 
-                    No padding on the row itself: the rule wants the full 40px
-                    the nav's own `px-3` leaves, so that on the rail it is
-                    exactly as wide as the pills it separates. The heading takes
-                    the inset instead, which puts it back at the x the labels
-                    below it start from. */}
-                <div className="relative flex h-5 items-center">
-                  <span aria-hidden className={cn("h-px w-full bg-border", groupRule)} />
-                  <p
+                      Carries the group's own icon rather than one borrowed
+                      from whichever item happens to be listed first: a
+                      category is its own thing, not an accident of list
+                      order, and a folded group otherwise has nothing on it
+                      but a bare arrow, indistinguishable from every other
+                      folded group at a glance. Same size and the same
+                      `px-[11px]` inset as an item row below it, so the icon
+                      column lines up whether the row it lands on is a group
+                      or a page.
+
+                      The chevron moves to the trailing edge and fades in
+                      with the label: at rail width there is no room to read
+                      either, and the icon alone is what identifies the row
+                      there, the same as it does for every item. Wide, the
+                      chevron is what says the icon's row is a disclosure and
+                      not a link. */}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.label, open)}
+                    aria-expanded={open}
+                    className="flex items-center rounded-xl px-[11px] py-2 text-left transition-colors hover:bg-hover"
+                  >
+                    <GroupIcon className="size-[18px] shrink-0 text-muted" />
+                    <span
+                      className={cn(
+                        "ms-3 min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wider text-muted transition-opacity",
+                        labelFade,
+                      )}
+                    >
+                      {t(group.label)}
+                    </span>
+                    <IconChevronRight
+                      aria-hidden
+                      className={cn(
+                        "ms-2 size-3.5 shrink-0 text-muted transition-[transform,opacity] duration-200",
+                        open && "rotate-90",
+                        labelFade,
+                      )}
+                    />
+                  </button>
+                  {/* Animated open the same way the profile footer's own
+                      switches are (see `switchReveal`): a grid whose one row
+                      tweens between 0fr and 1fr, clipped by the child that
+                      holds the overflow while it does. `grid-template-rows`
+                      rather than `height`, because these rows do not have a
+                      fixed height to animate to or from; `0fr → 1fr` reaches
+                      whatever that height turns out to be without measuring
+                      it in JS first.
+
+                      Unlike the footer's switches, this collapse has nothing
+                      to do with the rail's own width, so there is no
+                      `:focus-visible` rule anywhere that would widen the
+                      panel and reveal a hidden row the instant Tab reached
+                      it. `inert` is what stands in for that here: a collapsed
+                      group's links leave the tab order and the accessibility
+                      tree entirely, rather than sitting invisibly in either
+                      of them. */}
+                  <div
                     className={cn(
-                      "absolute inset-x-3 truncate text-[11px] font-semibold uppercase tracking-wider text-muted transition-opacity",
-                      labelFade,
+                      "grid transition-[grid-template-rows] duration-200 ease-out",
+                      open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                     )}
                   >
-                    {t(group.label)}
-                  </p>
+                    <div className="overflow-hidden">
+                      <div inert={!open} className="flex flex-col gap-0.5">
+                        {group.items.map(navLink)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                {group.items.map(navLink)}
-              </div>
-            ))}
+              );
+            })}
             {/* `mt-auto` so it sits against the profile footer however few groups
                 this user's roles leave above it. */}
             <div className="mt-auto flex flex-col gap-0.5 pt-4">{navLink(HELP)}</div>
@@ -765,7 +914,18 @@ export function AppShell({
               answers the second question, and it is the same answer on every
               screen; this is the line a phone's own nav bar spends on the
               screen you are actually looking at. */}
-          <p className="min-w-0 truncate text-sm font-semibold">{section ?? "D-sektionen"}</p>
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{section ?? "D-sektionen"}</p>
+          {/* No keyboard to press Cmd/Ctrl+K on down here, so the palette
+              needs a tap target of its own rather than only the sidebar row
+              that opens it on a wider screen. */}
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            aria-label={t("search")}
+            className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-hover"
+          >
+            <IconSearch className="size-5" />
+          </button>
         </header>
 
         <main
@@ -805,6 +965,10 @@ export function AppShell({
           rather than something inside it: that's what lets it stand the full
           height of the frame and stay put while the page scrolls. */}
       <ReceiptPanelColumn />
+
+      {paletteOpen && (
+        <CommandPalette items={paletteItems} onClose={() => setPaletteOpen(false)} />
+      )}
     </div>
   );
 }

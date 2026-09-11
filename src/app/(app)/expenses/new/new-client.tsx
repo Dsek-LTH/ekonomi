@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReturnTo } from "@/components/shell/route-history";
 import { useTranslations } from "next-intl";
@@ -16,7 +16,7 @@ import { DetailList, DetailRow } from "@/components/ui/detail-list";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { Stepper } from "@/components/ui/stepper";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
-import { IconCheck } from "@/components/ui/icons";
+import { IconCheck, IconX } from "@/components/ui/icons";
 import {
   REIMBURSEMENT_DEADLINE_DAYS,
   isLateReimbursement,
@@ -31,11 +31,19 @@ import { formatSEK } from "@/lib/ui/format";
 import { parseSEK, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable, matchCandidates } from "@/lib/domain/matching";
-import type { BankTransaction, CostCenter, Expense, PaymentType } from "@/lib/domain/types";
+import type {
+  BankTransaction,
+  CostCenter,
+  Expense,
+  PaymentType,
+  ReceiptSummary,
+} from "@/lib/domain/types";
 import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
 import { MatchStep } from "./match-step";
 import { optionCard, StepFooter } from "./step-chrome";
-import { dropKeptFile, keepFile, readKeptFile } from "@/lib/ui/kept-file";
+import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
+import { uid } from "@/lib/ui/utils";
+import { underlagCaption } from "@/lib/expense/document-url";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
@@ -228,11 +236,14 @@ export default function NewExpenseClient({
   // away and back. On the current answer alone, switching to "eget utlägg"
   // would close the door behind them.
   const cardAllowed = holdsCard || paymentType === "CARD" || existing?.paymentType === "CARD";
-  const claimOptions: Claim[] = presetTxn
-    ? [claim]
-    : cardAllowed
-      ? (["card", "cardReturn", "own"] as Claim[])
-      : (["own"] as Claim[]);
+  // Opened from one purchase there is no choice to make, but all three still
+  // show: seeing which of them this is beats being told only that it's fixed.
+  // `presetTxn` always holds a card (it came from that card's own bank feed),
+  // so this never disagrees with `cardAllowed` about there being three to show.
+  const claimOptions: Claim[] = presetTxn || cardAllowed
+    ? (["card", "cardReturn", "own"] as Claim[])
+    : (["own"] as Claim[]);
+  const locked = Boolean(presetTxn);
 
   const chooseClaim = (next: Claim) =>
     setDraft((d) => ({
@@ -278,107 +289,131 @@ export default function NewExpenseClient({
   // reference: an utlägg has no reference until it is submitted (see
   // lib/domain/reference.ts), and every route this page calls is keyed on the id.
   const [draftId, setDraftId] = useState<string | null>(existing?.id ?? null);
-  // The receipt already in the archive, if any. Only an utlägg being edited
-  // starts with one.
-  const [receiptId, setReceiptId] = useState<string | null>(existing?.receiptId ?? null);
-  const [uploadedMime, setUploadedMime] = useState<string>(existing?.receiptMimeType ?? "");
-  const [uploadedName, setUploadedName] = useState<string>(existing?.receiptId ? tReceipt("alt") : "");
+  // The documents already in the archive, oldest first. Only an utlägg being
+  // edited starts with any. Removing one calls the server right away (see
+  // `removeUploadedReceipt`): it is already stored, so "remove" is a real act
+  // rather than a change waiting to be saved, the same as pulling a match off.
+  const [uploadedReceipts, setUploadedReceipts] = useState<ReceiptSummary[]>(
+    existing?.receipts ?? [],
+  );
 
-  // The receipt as picked, before it is anywhere but this browser. Dropping a
+  // Documents as picked, before any is anywhere but this browser. Dropping a
   // file used to create the utlägg and upload on the spot, which meant walking
   // away from a half-filled wizard left a bare row and a stored file behind,
   // and every abandoned attempt was something a bookkeeper later had to look at
-  // and dismiss. Now the file waits here and goes up with the save, so leaving
-  // the page leaves nothing.
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  // A local URL to show it by, since there is no /api/receipts/:id to read it
-  // from yet. Revoked when it is replaced and when the page goes, because otherwise
-  // the browser holds the file for as long as the tab lives.
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // One cleanup covers both ways a preview ends, a second file replacing the
-  // first and the page going away, because either is this value changing.
+  // and dismiss. Now each one waits here and goes up with the save, so leaving
+  // the page leaves nothing. Several rather than one: some receipts only
+  // substantiate a purchase alongside a second, complementary document.
+  const [pendingFiles, setPendingFiles] = useState<
+    { id: string; file: File; previewUrl: string }[]
+  >([]);
+  // Kept current without being a dependency, so the unmount cleanup below
+  // sees every preview URL ever created under this draft rather than only
+  // the ones present when the effect last ran.
+  const pendingFilesRef = useRef(pendingFiles);
   useEffect(() => {
-    if (!previewUrl) return;
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+    pendingFilesRef.current = pendingFiles;
+  });
+  // Every preview URL still outstanding when the page goes, or this draft is
+  // abandoned for another; each is otherwise revoked the moment it stops
+  // being shown (`removePendingFile`, `writeReceipts`).
+  useEffect(() => {
+    return () => {
+      for (const p of pendingFilesRef.current) URL.revokeObjectURL(p.previewUrl);
+    };
+  }, [draftKey]);
 
-  function handleFile(file: File) {
-    setPendingFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setUploadedMime(file.type);
-    setUploadedName(file.name);
+  function addFile(file: File) {
+    const id = uid();
+    const previewUrl = URL.createObjectURL(file);
+    setPendingFiles((files) => [...files, { id, file, previewUrl }]);
     // Kept for a reload, on the same terms as what is typed: only for a new
     // claim, since an utlägg being edited is the server's and a local copy
     // outliving somebody else's change is the thing `useLocalDraft` refuses to
-    // do. Not awaited; a receipt that failed to be kept is one that has to be
+    // do. Not awaited; a file that failed to be kept is one that has to be
     // picked again after a reload, which is where this started.
-    if (!existing) void keepFile(draftKey, file);
+    if (!existing) void keepFile(draftKey, id, file);
+  }
+
+  function removePendingFile(id: string) {
+    setPendingFiles((files) => {
+      const dropped = files.find((f) => f.id === id);
+      if (dropped) URL.revokeObjectURL(dropped.previewUrl);
+      return files.filter((f) => f.id !== id);
+    });
+    if (!existing) void dropKeptFile(draftKey, id);
+  }
+
+  // Already in the archive: removing it is immediate, not deferred to the
+  // next save, the same as `removeMatch` elsewhere on this page.
+  async function removeUploadedReceipt(id: string) {
+    const ok = await mutate(`/api/receipts/${id}`, {
+      key: "save",
+      method: "DELETE",
+      error: t("removeDocumentFailed"),
+      refresh: false,
+    });
+    if (ok === null) return;
+    setUploadedReceipts((rs) => rs.filter((r) => r.id !== id));
   }
 
   /**
-   * The receipt picked before the last reload, put back.
+   * The files picked before the last reload, put back.
    *
-   * Once, on mount, and only over an empty hand: a file already picked in this
-   * session is newer than anything stored, and the panel is showing it.
-   *
-   * The preview URL is made here rather than by `handleFile` so that the stored
-   * file does not count as a fresh pick; everything else about it is the same.
+   * Once, on mount, and merged rather than replacing whatever a fast reader
+   * has already picked again in the meantime: a file already picked in this
+   * session is newer than anything stored, and the panel is already showing
+   * it.
    */
   useEffect(() => {
     if (existing) return;
     let live = true;
-    void readKeptFile(draftKey).then((file) => {
-      if (!live || !file) return;
-      setPendingFile((held) => {
-        if (held) return held;
-        setPreviewUrl(URL.createObjectURL(file));
-        setUploadedMime(file.type);
-        setUploadedName(file.name);
-        return file;
+    void readKeptFiles(draftKey).then((kept) => {
+      if (!live || kept.length === 0) return;
+      setPendingFiles((files) => {
+        const have = new Set(files.map((f) => f.id));
+        const restored = kept
+          .filter((k) => !have.has(k.id))
+          .map((k) => ({ id: k.id, file: k.file, previewUrl: URL.createObjectURL(k.file) }));
+        return restored.length > 0 ? [...files, ...restored] : files;
       });
     });
     return () => {
       live = false;
     };
-    // Once per key. `pendingFile` is read through the setter rather than taken
-    // as a dependency, so a pick landing between the read starting and
-    // finishing wins without the read re-running every time one does.
   }, [draftKey, existing]);
 
-  // Whether there is a receipt, which is the only form of the question this
-  // page ever asks. Every gate here (continue, save, submit) wants "has the
-  // reader produced one", not "is one in the archive". Those were the same
-  // thing while the upload happened on drop; they aren't now, and asking for
-  // `receiptId` gets a "no" while the receipt is on screen.
-  const hasReceipt = Boolean(receiptId || pendingFile);
+  // Whether there is at least one document, which is the only form of the
+  // question this page ever asks. Every gate here (continue, save, submit)
+  // wants "has the reader produced one", not "is one in the archive". Those
+  // were the same thing while the upload happened on drop; they aren't now.
+  const hasReceipt = uploadedReceipts.length > 0 || pendingFiles.length > 0;
 
-  // Put the waiting receipt in the archive, if there is one. Part of saving
-  // now, so it can fail the save: an utlägg whose receipt didn't make it is not
-  // saved but half saved, and the next attempt tries the upload again against
-  // the row that by then already exists.
-  async function writeReceipt(id: string): Promise<boolean> {
-    if (!pendingFile) return true;
-    const fd = new FormData();
-    fd.append("file", pendingFile);
-    // The Receipt row the route answers with, named rather than cast field by
-    // field at each use.
-    const receipt = await mutate<{ id: string; mimeType?: string; filename?: string }>(
-      `/api/expenses/${id}/receipts`,
-      { key: "save", body: fd, error: t("uploadFailed"), refresh: false },
-    );
-    if (!receipt) return false;
-    setReceiptId(receipt.id);
-    setUploadedMime(receipt.mimeType ?? pendingFile.type);
-    setUploadedName(receipt.filename ?? pendingFile.name);
-    // It is in the archive now, so the panel reads it from there. Dropping the
-    // preview is what makes that happen. Kept, it would go on pointing at a
-    // local copy that the effect above is about to revoke.
-    setPendingFile(null);
-    setPreviewUrl(null);
-    // And the browser's copy is spent: the file is somewhere it can be read
-    // back from, and restoring it over a later claim would attach the wrong
-    // receipt to it.
-    void dropKeptFile(draftKey);
+  // Put every waiting document in the archive. Part of saving now, so it can
+  // fail the save: an utlägg whose document didn't make it is not saved but
+  // half saved, and the next attempt tries the upload again against the row
+  // that by then already exists. Stops at the first failure, the same as a
+  // single-file upload used to: the ones before it are already stored (and
+  // dropped from `pendingFiles`), and a retry only has to send the rest.
+  async function writeReceipts(id: string): Promise<boolean> {
+    for (const pending of pendingFiles) {
+      const fd = new FormData();
+      fd.append("file", pending.file);
+      const receipt = await mutate<ReceiptSummary>(`/api/expenses/${id}/receipts`, {
+        key: "save",
+        body: fd,
+        error: t("uploadFailed"),
+        refresh: false,
+      });
+      if (!receipt) return false;
+      setUploadedReceipts((rs) => [...rs, receipt]);
+      URL.revokeObjectURL(pending.previewUrl);
+      setPendingFiles((files) => files.filter((f) => f.id !== pending.id));
+      // And the browser's copy is spent: the file is somewhere it can be read
+      // back from, and restoring it over a later claim would attach the wrong
+      // document to it.
+      void dropKeptFile(draftKey, pending.id);
+    }
     return true;
   }
 
@@ -537,7 +572,7 @@ export default function NewExpenseClient({
       id = created.id;
       setDraftId(id);
     }
-    if (!(await writeReceipt(id))) return null;
+    if (!(await writeReceipts(id))) return null;
     // Öre, both of them. The gross and the rows that have to sum to it cross
     // the wire in the same unit as each other and as the columns they land in.
     // The rows used to go as kronor, which made a figure a hundred times too
@@ -577,10 +612,10 @@ export default function NewExpenseClient({
     // `forget` rather than `clear`: the form is still on the screen for the
     // frame before the page changes, and blanking it there reads as work lost.
     forgetDraft();
-    // The receipt half of the same copy. `writeReceipt` has usually dropped it
-    // already; this covers the exits where there was nothing to upload, an
-    // utlägg saved with its receipt still to come.
-    void dropKeptFile(draftKey);
+    // The receipt half of the same copy. `writeReceipts` has usually dropped
+    // every file it uploaded already; this covers the exits where there was
+    // nothing to upload, an utlägg saved with its documents still to come.
+    void dropKeptFiles(draftKey);
     // Replaces the wizard's history entry rather than pushing past it: the
     // form has been submitted, and Back leading into a spent one is not a way
     // back to anything. See useReturnTo.
@@ -625,6 +660,30 @@ export default function NewExpenseClient({
     listLabel: tNav("expenses"),
   });
 
+  // Every document the panel has to show, stored first (oldest first, the
+  // upload order) and whatever is still only in this browser after them: a
+  // reader who has just added a second document expects to find it behind
+  // the first, not in front of it. Captioned the same way a saved utlägg's
+  // are (see underlagCaption): a submitter should not learn a new word for
+  // the same thing between filling this in and reading it back on the
+  // detail page, and the merged PDF Fortnox gets uses the same numbering.
+  const receiptFiles = [
+    ...uploadedReceipts.map((r) => ({
+      src: `/api/receipts/${r.id}`,
+      mimeType: r.mimeType,
+      filename: r.filename,
+    })),
+    ...pendingFiles.map((p) => ({
+      src: p.previewUrl,
+      mimeType: p.file.type,
+      filename: p.file.name,
+    })),
+  ];
+  const documents = receiptFiles.map((d, i) => ({
+    ...d,
+    label: underlagCaption(tReceipt("underlagLabel"), i, receiptFiles.length, d.filename),
+  }));
+
   return (
     <PageShell
       title={chrome.title}
@@ -634,16 +693,17 @@ export default function NewExpenseClient({
     >
       <Stepper steps={stepLabels} current={step} />
 
-      {/* The panel takes the receipt as well as showing it: with none uploaded
-          yet it stands open beside the form as the dropzone, which is why this
-          wizard has no upload step of its own. */}
+      {/* The panel takes documents as well as showing them: with none
+          uploaded yet it stands open beside the form as the dropzone, which
+          is why this wizard has no upload step of its own. Once one is
+          showing, the floating button adds another rather than replacing it
+          (`addLabel`): some receipts only substantiate a purchase alongside a
+          second, complementary document, and the wording says so. */}
       <ReceiptPanelSource
-        receiptId={receiptId}
-        previewUrl={previewUrl}
-        mimeType={uploadedMime}
-        filename={uploadedName || tReceipt("alt")}
-        onFile={handleFile}
+        documents={documents}
+        onFile={addFile}
         uploading={saving}
+        uploadCopy={{ addLabel: tReceipt("addDocument") }}
       />
 
       {/* Step 1: the details, beside the receipt */}
@@ -673,7 +733,7 @@ export default function NewExpenseClient({
                 card can only be laying out their own money, and a lone card
                 nobody chose reads as a group that is broken. */}
             {claimOptions.length > 1 && (
-              <FieldGroup label={t("claim")} requirement="required">
+              <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
                 {/* A container query, not a viewport one, because the width
                     these three have is not the window's. The receipt panel is
                     ~520px of it and the nav rail another 64, so at 941px with
@@ -691,43 +751,57 @@ export default function NewExpenseClient({
                     The same trick the fördelning below already uses. */}
                 <div className="@container">
                   <div className="grid gap-3 @2xl:grid-cols-3">
-                    {claimOptions.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => chooseClaim(c)}
-                        className={optionCard(claim === c)}
-                        aria-pressed={claim === c}
-                      >
-                        {/* The icon in its own colour, which is the same mark
-                            the list will show this claim with afterwards.
-                            Learning it here is the point: choosing is the one
-                            moment they are side by side with their meanings
-                            spelled out.
-
-                            `min-w-0` on the label, so a long one wraps inside
-                            the card rather than pushing the icon out of it. */}
-                        <span className="flex items-start gap-2">
-                          <PaymentIcon
-                            type={CLAIMS[c].paymentType}
-                            className="mt-0.5 size-4 shrink-0"
-                          />
-                          <span className="min-w-0 text-sm font-medium">
-                            {t(`claimOption.${c}`)}
+                    {claimOptions.map((c) => {
+                      // The icon in its own colour, which is the same mark the
+                      // list will show this claim with afterwards. Learning it
+                      // here is the point: choosing (or, locked, simply seeing)
+                      // is the one moment they are side by side with their
+                      // meanings spelled out.
+                      //
+                      // `min-w-0` on the label, so a long one wraps inside the
+                      // card rather than pushing the icon out of it.
+                      const content = (
+                        <>
+                          <span className="flex items-start gap-2">
+                            <PaymentIcon
+                              type={CLAIMS[c].paymentType}
+                              className="mt-0.5 size-4 shrink-0"
+                            />
+                            <span className="min-w-0 text-sm font-medium">
+                              {t(`claimOption.${c}`)}
+                            </span>
                           </span>
-                        </span>
-                        <span className="mt-0.5 block text-xs text-muted">
-                          {t(`claimHint.${c}`)}
-                        </span>
-                      </button>
-                    ))}
+                          <span className="mt-0.5 block text-xs text-muted">
+                            {t(`claimHint.${c}`)}
+                          </span>
+                        </>
+                      );
+                      // Opened from one purchase there is nothing to press:
+                      // the money already left that way, and the other two
+                      // cards are shown, muted, only so the reader can see
+                      // what this one wasn't.
+                      return locked ? (
+                        <div key={c} className={optionCard(claim === c, true)}>
+                          {content}
+                        </div>
+                      ) : (
+                        <button
+                          key={c}
+                          onClick={() => chooseClaim(c)}
+                          className={optionCard(claim === c)}
+                          aria-pressed={claim === c}
+                        >
+                          {content}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+                {locked && (
+                  <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
+                )}
               </FieldGroup>
             )}
-
-            {/* Opened from one purchase on the card: there is no choice, and
-                saying why beats showing a single card nobody picked. */}
-            {presetTxn && <p className="text-xs text-muted">{t("paymentTypeFixed")}</p>}
 
             <Field label={t("description")} requirement="required">
               <Input
@@ -818,6 +892,51 @@ export default function NewExpenseClient({
                 button with its reason off at the edge of the screen. */}
             {!hasReceipt && (
               <p className="text-xs text-warning">{t("receiptRequired")}</p>
+            )}
+            {/* The panel pages through every document but has nowhere to
+                remove one from; this is that. Only where there is more than
+                a single document, since a lone one is the panel's own
+                "replace" (now "add another") button to swap, and a list of
+                one with an X beside it says nothing a submitter doesn't
+                already know. */}
+            {uploadedReceipts.length + pendingFiles.length > 1 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted">{t("documents")}</p>
+                <ul className="space-y-1">
+                  {uploadedReceipts.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm"
+                    >
+                      <span className="min-w-0 truncate">{r.filename}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeUploadedReceipt(r.id)}
+                        aria-label={t("removeDocument")}
+                        className="shrink-0 text-muted hover:text-foreground"
+                      >
+                        <IconX className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                  {pendingFiles.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm"
+                    >
+                      <span className="min-w-0 truncate">{p.file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(p.id)}
+                        aria-label={t("removeDocument")}
+                        className="shrink-0 text-muted hover:text-foreground"
+                      >
+                        <IconX className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {/* No back: this is the first step now. */}
             <StepFooter onSave={saveDraft} saveLabel={saveLabel} saveDisabled={!canPersist} saving={exit === "draft"}>

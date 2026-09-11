@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObject } from "@/lib/server/storage";
-import { isEditable, isRecallable } from "@/lib/domain/status";
+import { isEditable, isQuietDraftEdit, isRecallable } from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
 import { isMatchable } from "@/lib/domain/matching";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -325,7 +325,10 @@ export async function PATCH(
 
       // Its own event, not a line in the diff: the timeline already has a word
       // for a match coming off, and this is that, whoever pressed what.
-      if (dropMatch) {
+      //
+      // Quiet before the first submission, same as the EDITED event below: see
+      // isQuietDraftEdit.
+      if (dropMatch && !isQuietDraftEdit(expense, g.actor.id)) {
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "UNMATCHED", actorId: g.actor.id },
         });
@@ -348,7 +351,12 @@ export async function PATCH(
         }
       }
 
-      if (changedFields.length > 0) {
+      // Quiet before the first submission (see isQuietDraftEdit): a save made
+      // while filling in a draft nobody else has seen yet is not an edit to an
+      // utlägg, it is the utlägg still being written, and the timeline says so
+      // with the CREATED event alone. The change is still made; only the extra
+      // line about it is skipped.
+      if (changedFields.length > 0 && !isQuietDraftEdit(expense, g.actor.id)) {
         // The field names, not a sentence: the timeline reads them back
         // through `expenses.field.<name>` in the reader's own language.
         await tx.expenseEvent.create({

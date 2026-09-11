@@ -37,6 +37,11 @@ enum ExpenseEventType {
   CREATED
   EDITED
   RECEIPT_UPLOADED
+  /// A document taken back off the utlägg. Its own type rather than folding
+  /// into EDITED: an utlägg can hold several (some receipts only make sense as
+  /// a pair), and this says which act happened to which of them, the same way
+  /// RECEIPT_UPLOADED does for adding one.
+  RECEIPT_REMOVED
   MATCHED
   UNMATCHED
   SUBMITTED
@@ -274,12 +279,13 @@ model ExpenseCostAllocation {
 
 // An uploaded receipt image/PDF (stored in MinIO) plus its OCR result.
 //
-// One per utlägg. The relation is a list because that is how Prisma spells the
-// other side of a foreign key, not because there is ever more than one: uploading
-// is a replace, and the previous receipt's object and row go in the same
-// transaction the new one arrives in (api/expenses/[id]/receipts/route.ts). So
-// "the utlägg's receipt" and "its newest receipt" are the same thing, and code
-// that takes the newest is reading the only one.
+// Zero or more per utlägg. Uploading appends rather than replacing
+// (api/expenses/[id]/receipts/route.ts): some receipts only substantiate a
+// purchase alongside a second, complementary document, and a submitter who
+// tried to attach both used to lose the first the moment the second went up.
+// Each may be removed on its own (api/receipts/[id]/route.ts, DELETE), which
+// is the RECEIPT_REMOVED event. At export every one still attached is stapled
+// behind the cover, in the order they were uploaded (lib/server/pdf-merge.ts).
 model Receipt {
   id        String  @id @default(cuid())
   expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)

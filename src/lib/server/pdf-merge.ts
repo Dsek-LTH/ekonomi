@@ -1,23 +1,23 @@
-// Stapling an underlag onto a cover page.
+// Stapling the underlag onto a cover page.
 //
-// The cover and the receipt are stored apart and joined here, on the way out to
-// Fortnox, the one place that needs the two of them as a single file. Two
+// The cover and the receipts are stored apart and joined here, on the way out
+// to Fortnox, the one place that needs all of them as a single file. Two
 // things fall out of that, and both are the reason it is done this way:
 //
-// The receipt's bytes are held once. A merged document archived beside the
-// receipt it contains is the same file twice; on the sample utlägg that is
-// 175KB of the 212KB.
+// Every receipt's bytes are held once. A merged document archived beside the
+// receipts it contains is the same files twice; on the sample utlägg that is
+// 175KB of the 212KB for one alone.
 //
-// And the result stays reproducible without being archived. Both inputs are
-// immutable. A receipt upload replaces its predecessor's object and row in one
-// transaction (api/expenses/[id]/receipts/route.ts), and a cover is written
-// once when the utlägg is booked, so exporting the same utlägg twice uploads
-// the same document without one ever having been stored.
+// And the result stays reproducible without being archived. Every input is
+// immutable: a receipt is never edited in place, only added or removed
+// (api/expenses/[id]/receipts/route.ts, api/receipts/[id]/route.ts), and a
+// cover is written once when the utlägg is booked, so exporting the same
+// utlägg twice uploads the same document without one ever having been stored.
 //
 // Nobody reads the result on screen. Stapling a photographed receipt behind a
 // cover means laying it on an A4 sheet to make it a page, and that sheet is
 // white, right for a file being filed, wrong for a panel. The viewer is given
-// the two documents as they are (lib/expense/document-url.ts).
+// the documents as they are (lib/expense/document-url.ts).
 //
 // Deliberately not Typst's job, though it can include PDF pages. Receipts are
 // whatever a supplier's till printed: an embedded PDF's version may not exceed
@@ -77,47 +77,83 @@ export function fitCentred(
 }
 
 /**
- * Cover first, then the underlag.
+ * Cover first, then every underlag behind it, in the order they were
+ * uploaded (some receipts only substantiate a purchase alongside a second,
+ * complementary one, and this is the order Fortnox files them in).
  *
  * Either half may be absent, and neither is an error.
  *
- * A null receipt is an utlägg with no underlag, which is a bookkeeping
+ * An empty `receipts` is an utlägg with no underlag, which is a bookkeeping
  * judgement made when it was booked. The cover alone is still the document
  * that substantiates the voucher.
  *
  * A null cover is the typesetter having failed: the underlag comes back as a
  * PDF on its own, so the answer is `application/pdf` either way. No caller
  * asks for it today. The export refuses to file a voucher without its attest
- * trail (see its note), and the viewer is handed the two documents unmerged,
- * but a merge that drops half its input on the floor is the wrong shape for
- * one that is reached for whenever these two have to become one file.
+ * trail (see its note), and the viewer is handed the documents unmerged, but a
+ * merge that drops half its input on the floor is the wrong shape for one that
+ * is reached for whenever several documents have to become one file.
  *
- * Both null is nothing, and that the caller does have to handle.
+ * Both absent is nothing, and that the caller does have to handle.
+ *
+ * Unlabelled, on purpose: which page is which is a screen question, answered
+ * on screen (lib/expense/document-url.ts, and the wizard beside it) by a
+ * caption over each one's own viewer, not by a page filed inside the
+ * document itself. Fortnox gets exactly what a human reading it on paper
+ * would, receipt after receipt, with nothing in it that only exists to be
+ * read on a monitor.
+ *
+ * One receipt refusing to merge does not cost the ones that would have: each
+ * is attempted on its own, and `failed` counts how many were left out, for
+ * the caller to warn about. Only when *every* underlag fails and there is no
+ * cover either is there truly nothing to hand back, which is the same
+ * "nothing to show" the empty-input case refuses, discovered a step later.
  */
-export async function mergeCoverAndReceipt(
+export async function mergeCoverAndReceipts(
   cover: Uint8Array | null,
-  receipt: { bytes: Uint8Array; mimeType: string } | null,
-): Promise<Uint8Array> {
-  if (!cover && !receipt) {
+  receipts: { bytes: Uint8Array; mimeType: string }[],
+): Promise<{ bytes: Uint8Array; failed: number }> {
+  if (!cover && receipts.length === 0) {
     throw new PdfMergeError("there is neither a cover page nor an underlag to show");
-  }
-  if (!receipt) return cover!;
-  if (!isMergeableReceipt(receipt.mimeType)) {
-    throw new PdfMergeError(`cannot append a receipt of type ${receipt.mimeType}`);
   }
 
   let out: PDFDocument;
   try {
     // No cover means starting from an empty document rather than from one, so
-    // the append below is the same code in both cases.
+    // the appends below are the same code in both cases.
     out = cover ? await PDFDocument.load(cover) : await PDFDocument.create();
   } catch (e) {
     // The cover is ours and was made moments ago, so this is a bug rather than
     // bad input, but it still must not throw something untyped at a caller
-    // that is catching for the receipt's sake.
+    // that is catching for the receipts' sake.
     throw new PdfMergeError(`the cover page could not be reopened: ${message(e)}`);
   }
 
+  let failed = 0;
+  for (const receipt of receipts) {
+    try {
+      await appendReceiptPages(out, receipt);
+    } catch (e) {
+      failed++;
+      console.error(`[pdf-merge] an underlag could not be appended: ${message(e)}`);
+    }
+  }
+
+  if (!cover && failed === receipts.length) {
+    throw new PdfMergeError("no underlag could be appended and there is no cover");
+  }
+
+  return { bytes: await out.save(), failed };
+}
+
+/** One receipt's bytes, drawn onto its own page(s) at the end of `out`. */
+async function appendReceiptPages(
+  out: PDFDocument,
+  receipt: { bytes: Uint8Array; mimeType: string },
+): Promise<void> {
+  if (!isMergeableReceipt(receipt.mimeType)) {
+    throw new PdfMergeError(`cannot append a receipt of type ${receipt.mimeType}`);
+  }
   try {
     if (receipt.mimeType === "application/pdf") {
       // `ignoreEncryption` gets us through the common case: a PDF marked
@@ -140,8 +176,6 @@ export async function mergeCoverAndReceipt(
     if (e instanceof PdfMergeError) throw e;
     throw new PdfMergeError(`the underlag could not be appended: ${message(e)}`);
   }
-
-  return out.save();
 }
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));

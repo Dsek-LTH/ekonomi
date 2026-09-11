@@ -4,20 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import {
-  deleteObject,
-  deleteObjectBestEffort,
-  putObject,
-  receiptKey,
-} from "@/lib/server/storage";
+import { deleteObjectBestEffort, putObject, receiptKey } from "@/lib/server/storage";
 import {
   isNormalisableImage,
   normaliseImage,
   normalisedName,
 } from "@/lib/server/images";
-import { isEditable, isRecallable } from "@/lib/domain/status";
+import { isEditable, isQuietDraftEdit, isRecallable } from "@/lib/domain/status";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
-import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 
@@ -96,20 +90,6 @@ export async function POST(
   const receiptId = randomUUID();
   const original = Buffer.from(await file.arrayBuffer());
 
-  // An utlägg has one receipt, so uploading is a replace: the panel offers this
-  // as a button precisely when a receipt is already there. Everything reading an
-  // utlägg takes the newest receipt and only that one (lib/data/expenses.ts), so
-  // a previous receipt left in place is unreachable from every page in the app
-  // while its file sits in the bucket forever, and unreachable is worse than
-  // orphaned, because the row keeps the sweeper from ever noticing it.
-  //
-  // Nothing attested is discarded this way: uploading at all requires the
-  // utlägg to still be editable, which the status check above has established.
-  const replaced = await prisma.receipt.findMany({
-    where: { expenseId: expense.id },
-    select: { id: true, objectKey: true },
-  });
-
   // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled, but PNG when
   // the image is see-through); PDFs are stored as-is. Work out the object to
   // write plus the row's metadata, then persist atomically (object first, row
@@ -145,29 +125,7 @@ export async function POST(
   try {
     await putObject(objectKey, body, mimeType);
 
-    // The replaced receipt's files go before its row, and before anything is
-    // committed, the same rule as an outright delete, applied at the only
-    // other point a receipt stops being current. Failing here changes nothing
-    // at all: the new object is rolled back below and the old receipt is
-    // still the utlägg's, so trying again once storage is back is safe.
-    const staleKeys = replaced.map((r) => r.objectKey);
-    const swept = await Promise.allSettled(staleKeys.map((k) => deleteObject(k)));
-    const stuck = swept.filter((s) => s.status === "rejected");
-    if (stuck.length > 0) {
-      console.error(
-        `[receipts] ${expenseLabel(expense)}: ${stuck.length}/${staleKeys.length} replaced objects could not be deleted, keeping previous receipt`,
-        stuck.map((s) => s.reason),
-      );
-      await deleteObjectBestEffort(objectKey);
-      return fail(503, "receipt.replaceStorageFailed");
-    }
-
     const receipt = await prisma.$transaction(async (tx) => {
-      // In with the new and out with the old together, so the utlägg is never
-      // momentarily without a receipt and never briefly holding two.
-      if (replaced.length > 0) {
-        await tx.receipt.deleteMany({ where: { id: { in: replaced.map((r) => r.id) } } });
-      }
       const created = await tx.receipt.create({
         data: {
           id: receiptId,
@@ -179,13 +137,16 @@ export async function POST(
           uploadedById: uploaderId,
         },
       });
-      await tx.expenseEvent.create({
-        data: {
-          expenseId: expense.id,
-          type: "RECEIPT_UPLOADED",
-          actorId: uploaderId,
-        },
-      });
+      // Quiet before the first submission; see isQuietDraftEdit.
+      if (!isQuietDraftEdit(expense, uploaderId)) {
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "RECEIPT_UPLOADED",
+            actorId: uploaderId,
+          },
+        });
+      }
       return created;
     });
     return NextResponse.json(receipt, { status: 201 });

@@ -261,6 +261,14 @@ interface MileageJourney {
   orePerKm: number | null;
 }
 
+/** One attached document, as far as anything outside lib/data/expenses.ts
+ *  needs to know about it: enough to show it, name it and offer to remove it. */
+export interface ReceiptSummary {
+  id: string;
+  filename: string;
+  mimeType: string; // image/jpeg, image/png or application/pdf
+}
+
 export interface Expense {
   id: string; // the row's own id, what pages and API routes are keyed on
   // The human reference, e.g. "DEK26-0042". Absent until the utlägg is submitted
@@ -277,8 +285,12 @@ export interface Expense {
   grossAmount: number; // SEK, the database stores öre, see lib/domain/money.ts
   currency: string;
   matchedTransactionId?: string;
-  receiptId?: string; // newest uploaded receipt, if any
-  receiptMimeType?: string; // its stored type (image/jpeg or application/pdf)
+  /**
+   * Every document attached, oldest first: the order they were uploaded in,
+   * which is the order they are stapled behind the cover for Fortnox (see
+   * lib/server/pdf-merge.ts). Empty rather than absent where there are none.
+   */
+  receipts: ReceiptSummary[];
   /**
    * The journey, for a MILEAGE utlägg. Absent for every other payment type,
    * which has none.

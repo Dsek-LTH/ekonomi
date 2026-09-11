@@ -6,6 +6,7 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateExpense } from "@/lib/api/schemas/expense";
 import { isMatchable } from "@/lib/domain/matching";
+import { isQuietDraftEdit } from "@/lib/domain/status";
 
 // POST /api/expenses: body: { paymentType?, title?, matchedTransactionId? }
 export async function POST(req: Request) {
@@ -59,7 +60,12 @@ export async function POST(req: Request) {
     await tx.expenseEvent.create({
       data: { expenseId: created.id, type: "CREATED", actorId: submitterId },
     });
-    if (matchedTransactionId) {
+    // A pre-match from the deep-link is part of the same act as creating the
+    // row, not a separate thing that happened to it afterwards; see
+    // isQuietDraftEdit. A brand-new draft always qualifies, since it has no
+    // reference yet and the submitter is the one creating it, but the check is
+    // spelled out anyway so this stays true if that ever stops being obvious.
+    if (matchedTransactionId && !isQuietDraftEdit(created, submitterId)) {
       await tx.expenseEvent.create({
         data: { expenseId: created.id, type: "MATCHED", actorId: submitterId },
       });

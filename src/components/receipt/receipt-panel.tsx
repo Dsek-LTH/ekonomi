@@ -66,10 +66,11 @@ const FLOATING_BTN =
  * one falls back to the receipt wording, so the wizard this was written for
  * passes nothing and reads exactly as it did.
  *
- * Only the four the dropzone shows. The upload spinner's wording is not here
- * because it cannot be reached from a page holding its file locally: a picked
- * file is a document to show, so the panel is a viewer by then rather than a
- * dropzone.
+ * Mostly the four the dropzone shows; the upload spinner's wording is not
+ * among them because it cannot be reached from a page holding its file
+ * locally: a picked file is a document to show, so the panel is a viewer by
+ * then rather than a dropzone. `addLabel` is the one exception, read once
+ * there is already something to show.
  */
 export interface UploadCopy {
   /** The line above the button, on a screen wide enough to drag onto. */
@@ -78,6 +79,15 @@ export interface UploadCopy {
   leadShort?: string;
   fileTypes?: string;
   action?: string;
+  /**
+   * The floating button's title once a document is already showing.
+   *
+   * Defaults to "Ersätt": most callers offer exactly one document and picking
+   * another swaps it. An utlägg's receipts are additive instead, and a button
+   * that adds while still saying it replaces would tell the submitter the
+   * wrong thing about to happen to the document they can already see.
+   */
+  addLabel?: string;
 }
 
 type Source = {
@@ -564,8 +574,8 @@ export function ReceiptPanelColumn() {
           type="button"
           onClick={pick}
           disabled={upload.uploading}
-          title={t("replace")}
-          aria-label={t("replace")}
+          title={upload.copy?.addLabel ?? t("replace")}
+          aria-label={upload.copy?.addLabel ?? t("replace")}
           className={cn(FLOATING_BTN, "disabled:opacity-40")}
         >
           {upload.uploading ? <Spinner size="sm" /> : <IconUpload className="size-4" />}

@@ -8,7 +8,7 @@ import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
-import { mergeCoverAndReceipt, PdfMergeError } from "@/lib/server/pdf-merge";
+import { mergeCoverAndReceipts, PdfMergeError } from "@/lib/server/pdf-merge";
 import {
   createVoucher,
   getConnection,
@@ -35,9 +35,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     where: { id },
     include: {
       verification: VOUCHER_INCLUDE,
-      receipts: { orderBy: { createdAt: "desc" }, take: 1 },
-      // No odometer readings loaded here: a milersättning's journey is printed
-      // on the cover, and the cover reads them itself.
+      // Every one still attached, in the order they were uploaded, which is
+      // the order they are stapled behind the cover. No odometer readings
+      // loaded here: a milersättning's journey is printed on the cover, and
+      // the cover reads them itself.
+      receipts: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!expense) return fail(404, "expense.notFound");
@@ -87,7 +89,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   // without it puts a voucher in Fortnox with no attest trail, which is the
   // exact condition this whole document exists to remove. A failure here is
   // also actionable. Somebody pressed a button and can press it again.
-  const receipt = expense.receipts[0];
   let fileId: string | null = null;
   let coverWarning: string | null = null;
   {
@@ -103,25 +104,33 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       }
       step = "readReceipt";
       const cover = new Uint8Array((await getObjectBuffer(stored.key)).bytes);
-      // What goes behind the cover: the receipt, where there is one. A
-      // milersättning has none and needs none. Its journey is a section of the
-      // cover, so the one file uploaded here is already the whole utläggsräkning
-      // and its underlag together.
-      const underlag = receipt
-        ? {
-            bytes: new Uint8Array((await getObjectBuffer(receipt.objectKey)).bytes),
-            mimeType: receipt.mimeType,
-          }
-        : null;
+      // What goes behind the cover: every underlag still attached, in the
+      // order they were uploaded. A milersättning has none and needs none.
+      // Its journey is a section of the cover, so the one file uploaded here
+      // is already the whole utläggsräkning and its underlag together.
+      const underlag = await Promise.all(
+        expense.receipts.map(async (r) => ({
+          bytes: new Uint8Array((await getObjectBuffer(r.objectKey)).bytes),
+          mimeType: r.mimeType,
+        })),
+      );
 
       // A receipt that will not merge must not stop the utlägg being booked:
       // the file came from a supplier and we do not get to choose its shape.
-      // The cover goes up alone and the bookkeeper is told, which leaves the
-      // receipt to be attached by hand, the same shape as `attachWarning`
-      // below, and far better than an export that cannot run.
+      // It is left out and the bookkeeper is told, which leaves that one
+      // document to be attached by hand, the same shape as `attachWarning`
+      // below, and far better than an export that cannot run. The rest of
+      // the underlag, and the cover, still go up.
       let bytes: Uint8Array;
       try {
-        bytes = await mergeCoverAndReceipt(cover, underlag);
+        const merged = await mergeCoverAndReceipts(cover, underlag);
+        bytes = merged.bytes;
+        if (merged.failed > 0) {
+          coverWarning = `${merged.failed} of ${underlag.length} underlag could not be attached`;
+          console.error(
+            `[fortnox] ${id}: exporting without ${merged.failed} of ${underlag.length} underlag`,
+          );
+        }
       } catch (e) {
         if (!(e instanceof PdfMergeError)) throw e;
         coverWarning = e.message;

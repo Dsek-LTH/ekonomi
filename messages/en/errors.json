@@ -102,7 +102,6 @@
     "fileMissing": "The receipt's file is missing from the archive",
     "storageUnavailable": "The receipt archive is not responding right now",
     "deleteStorageFailed": "The receipt's file could not be removed from the archive. The receipt was kept. Please try again.",
-    "replaceStorageFailed": "The previous receipt's file could not be removed from the archive. The receipt was not replaced. Please try again.",
     "unreadable": "Could not read the image file",
     "unsupportedType": "The file type ’{type}’ is not supported",
     "sizeRange": "The file has to be between 1 byte and {max} bytes"

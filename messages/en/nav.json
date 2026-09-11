@@ -42,5 +42,11 @@
   "rentalItems": "Equipment",
   "groupRental": "Rentals",
   "rentals": "Rentals",
-  "counterparties": "Counterparties"
+  "counterparties": "Counterparties",
+  "search": "Search",
+  "palette": {
+    "title": "Search the app",
+    "placeholder": "Search for a page…",
+    "empty": "No pages match."
+  }
 }

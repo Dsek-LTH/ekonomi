@@ -79,14 +79,16 @@ const summaryInclude = {
   allocations: {
     include: { costCenter: true, approvedBy: true },
   },
-  // take: 1 makes the tiebreaker matter twice over. Two receipts stored in the
-  // same instant would otherwise pick an arbitrary one as "newest". The
-  // annotation keeps this array mutable despite the `as const` below, which is
-  // what Prisma's argument types require.
+  // Every receipt, oldest first: the order they were uploaded in, which is
+  // the order they are stapled behind the cover for Fortnox (see
+  // lib/server/pdf-merge.ts) and the order they page through in the panel.
+  // The tiebreaker matters for the same reason a single "newest" used to need
+  // one: two stored in the same instant must still come back in a fixed
+  // order. The annotation keeps this array mutable despite the `as const`
+  // below, which is what Prisma's argument types require.
   receipts: {
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }] as Prisma.ReceiptOrderByWithRelationInput[],
-    take: 1,
-    select: { id: true, mimeType: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }] as Prisma.ReceiptOrderByWithRelationInput[],
+    select: { id: true, filename: true, mimeType: true },
   },
   verification: { include: { createdBy: true } },
 } as const;
@@ -137,8 +139,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     grossAmount: ore(e.grossAmount),
     currency: e.currency,
     matchedTransactionId: e.matchedTransactionId ?? undefined,
-    receiptId: e.receipts[0]?.id,
-    receiptMimeType: e.receipts[0]?.mimeType,
+    receipts: e.receipts.map((r) => ({ id: r.id, filename: r.filename, mimeType: r.mimeType })),
     // Absent, not empty, for anything that is not a milersättning. See the
     // field on the Expense interface. The readings live on the utlägg itself,
     // so this costs no join.

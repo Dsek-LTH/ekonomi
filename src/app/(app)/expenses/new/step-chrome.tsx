@@ -14,10 +14,19 @@ import { cn } from "@/lib/ui/utils";
 // Three of the wizard's questions are answered by picking one of a few: which
 // way the money goes, how it was paid, and which bank transaction to match.
 // Both are a bordered card that fills with accent once chosen.
-export const optionCard = (selected: boolean) =>
+//
+// `locked` draws the same three cards where there is nothing left to press:
+// opened from one bank transaction, the claim is the transaction's own and
+// showing all three, muted, says which of them this is without offering the
+// other two as a choice that isn't there.
+export const optionCard = (selected: boolean, locked = false) =>
   cn(
     "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-    selected ? "border-accent bg-accent-soft" : "border-border hover:bg-hover",
+    selected
+      ? "border-accent bg-accent-soft"
+      : locked
+        ? "border-border opacity-50"
+        : "border-border hover:bg-hover",
   );
 
 // Every wizard step ends the same way: back on the left, "save draft" and the

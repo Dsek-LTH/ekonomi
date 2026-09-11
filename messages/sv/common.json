@@ -32,7 +32,8 @@
     "SKATTFORMAN": "Skattförman",
     "RESULTATANSVARIG": "Resultatansvarig",
     "ORDINARIE": "Medlem",
-    "STOCKARE": "Stockare"
+    "STOCKARE": "Stockare",
+    "UTHYRNINGSANSVARIG": "Uthyrningsansvarig"
   },
   "table": {
     "show": "Visa",
@@ -114,6 +115,10 @@
     "EXPENSE_DEADLINE_WAIVE": "Dispens från fristen",
     "EXPENSE_DEADLINE_WAIVE_hint": "Bevilja ett enskilt sent eget utlägg dispens, så att det får redovisas ändå. Ges innan utlägget skickas för attest, med ett skäl som hamnar på utläggsräkningen.",
     "FIRMATECKNARE": "Firmatecknare",
-    "FIRMATECKNARE_hint": "Får stå som sektionens undertecknare på ett avtal. Ger ingen åtkomst till något, och bestäms av stadgarna, inte här."
+    "FIRMATECKNARE_hint": "Får stå som sektionens undertecknare på ett avtal. Ger ingen åtkomst till något, och bestäms av stadgarna, inte här.",
+    "RENTAL_VIEW": "Läsa uthyrningsavtal",
+    "RENTAL_VIEW_hint": "Se uthyrningsavtal i arkivet, och inget annat där. Den smala halvan av att läsa avtal.",
+    "RENTAL_MANAGE": "Hantera uthyrning",
+    "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt."
   }
 }

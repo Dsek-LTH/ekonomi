@@ -90,7 +90,7 @@ export function expenseCapabilities(
   const mayAct = isOwner || admin;
   const blocker = submitBlocker({
     ...expense,
-    hasReceipt: Boolean(expense.receiptId),
+    hasReceipt: expense.receipts.length > 0,
     // A dispens is the one thing that lets a late claim through, and it is a
     // fact about the row rather than about this viewer: the submitter sees the
     // block lift at the same moment everybody else does.

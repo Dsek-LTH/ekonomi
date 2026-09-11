@@ -42,5 +42,11 @@
   "rentalItems": "Utrustning",
   "groupRental": "Uthyrning",
   "rentals": "Uthyrningar",
-  "counterparties": "Motparter"
+  "counterparties": "Motparter",
+  "search": "Sök",
+  "palette": {
+    "title": "Sök i appen",
+    "placeholder": "Sök en sida…",
+    "empty": "Inga sidor matchar."
+  }
 }

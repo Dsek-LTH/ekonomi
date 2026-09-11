@@ -33,6 +33,7 @@ const expense = (over: Partial<Expense> = {}): Expense => ({
   currency: "SEK",
   submitterHasPayout: true,
   revisions: [],
+  receipts: [],
   ...over,
 });
 
@@ -250,7 +251,7 @@ describe("dispens från redovisningsfristen", () => {
       purchaseDate: "2020-01-01",
       // The underlag, so these cases are about the deadline rather than about
       // a missing receipt reported after it.
-      receiptId: "r1",
+      receipts: [{ id: "r1", filename: "kvitto.jpg", mimeType: "image/jpeg" }],
       ...over,
     });
   const granted = {
@@ -353,7 +354,7 @@ describe("the panel as a whole", () => {
   });
 
   it("says so when the only thing on offer is a secondary action", () => {
-    const draft = expense({ status: "DRAFT", grossAmount: 0, receiptId: undefined });
+    const draft = expense({ status: "DRAFT", grossAmount: 0, receipts: [] });
     const can = expenseCapabilities(draft, viewer(["ORDINARIE"], "member"));
     // Nothing to submit yet (no receipt, no amount) but it is still theirs
     // to edit and to throw away.

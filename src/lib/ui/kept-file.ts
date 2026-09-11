@@ -1,9 +1,9 @@
 "use client";
 
-// A picked file that survives a reload.
+// Picked files that survive a reload.
 //
 // The other half of `useLocalDraft`. That one keeps what was typed, so the
-// utlägg wizard already survives a phone locking itself mid-form; the receipt
+// utlägg wizard already survives a phone locking itself mid-form; a receipt
 // did not, and re-finding a photo is the one part of filling in an utlägg that
 // is genuinely annoying to do twice.
 //
@@ -15,6 +15,15 @@
 // common case and work on the rare one. IndexedDB takes a Blob as it is and its
 // quota is a share of the disk.
 //
+// Several files under one draft, not one: a submitter filling in a claim that
+// needs two complementing documents picks them one after another, and the
+// second used to bump the first out of the browser's own memory of the
+// draft. Each is keyed `${draftKey}::${fileId}`, and the draft key alone
+// (never containing "::" itself, see keepFile) bounds an IndexedDB range that
+// lists every file still kept for it without the caller enumerating their ids
+// first, which matters after a reload: the wizard's own state is gone, and
+// this store is the only place that still knows which files were picked.
+//
 // Everything here fails quietly. A private window, a browser told to block site
 // data, a full disk: the cost is one file that has to be picked again, which is
 // exactly where the wizard was before this existed, and none of it is worth an
@@ -23,6 +32,14 @@
 const DB_NAME = "utlagg";
 const DB_VERSION = 1;
 const STORE = "kept-files";
+
+/** Joins a draft key and a file id into the store's primary key. Files keyed
+ *  under `key` are found again by ranging over every row starting with
+ *  `${key}${SEP}`, which is why `key` itself must never contain `SEP`: every
+ *  draft key in this app is a fixed literal or a plain id, neither of which
+ *  does. */
+const SEP = "::";
+const rowKey = (key: string, fileId: string) => `${key}${SEP}${fileId}`;
 
 /**
  * How long a kept file is worth restoring.
@@ -35,7 +52,7 @@ const STORE = "kept-files";
 const KEEP_MS = 24 * 60 * 60 * 1000;
 
 interface KeptRow {
-  key: string;
+  key: string; // `${draftKey}::${fileId}`, this store's primary key
   blob: Blob;
   name: string;
   type: string;
@@ -90,10 +107,13 @@ function run<T>(
   );
 }
 
-/** Keep a picked file under `key`, replacing whatever was there. */
-export async function keepFile(key: string, file: File): Promise<void> {
+/** Keep a picked file under `key` and `fileId`, replacing whatever was kept
+ *  under that same pair. Several files can share a `key`; each needs its own
+ *  `fileId` (the caller's choice, e.g. `crypto.randomUUID()`) or one replaces
+ *  another instead of standing beside it. */
+export async function keepFile(key: string, fileId: string, file: File): Promise<void> {
   const row: KeptRow = {
-    key,
+    key: rowKey(key, fileId),
     // The Blob, not the File: a File is a Blob with a name, and the name and
     // type are stored beside it because Safari has historically returned a
     // plain Blob from IndexedDB even when a File went in.
@@ -105,19 +125,10 @@ export async function keepFile(key: string, file: File): Promise<void> {
   await run("readwrite", (s) => s.put(row));
 }
 
-/**
- * The file kept under `key`, or null: none kept, too old, or no store at all.
- *
- * An expired row is deleted as it is passed over, so the store tidies itself
- * without anything having to sweep it on a schedule.
- */
-export async function readKeptFile(key: string): Promise<File | null> {
-  const row = (await run<KeptRow | undefined>("readonly", (s) => s.get(key))) ?? null;
-  if (!row?.blob) return null;
-  if (Date.now() - row.savedAt > KEEP_MS) {
-    await dropKeptFile(key);
-    return null;
-  }
+/** One row read back as the File it was kept from, or null for a row too old
+ *  to restore (see KEEP_MS) or too damaged a Blob to rebuild one from. */
+function toFile(row: KeptRow): File | null {
+  if (Date.now() - row.savedAt > KEEP_MS) return null;
   try {
     return new File([row.blob], row.name, { type: row.type });
   } catch {
@@ -125,7 +136,35 @@ export async function readKeptFile(key: string): Promise<File | null> {
   }
 }
 
-/** Forget the file kept under `key`. Called once it is somewhere safer. */
-export async function dropKeptFile(key: string): Promise<void> {
-  await run("readwrite", (s) => s.delete(key));
+/**
+ * Every file still kept under `key`, oldest first: what a reload has to work
+ * with, since the wizard's own memory of which ones it picked did not survive
+ * it. A row too old to restore is dropped as it is found, so the store tidies
+ * itself without anything having to sweep it on a schedule.
+ */
+export async function readKeptFiles(key: string): Promise<{ id: string; file: File }[]> {
+  const range = IDBKeyRange.bound(rowKey(key, ""), rowKey(key, "￿"));
+  const rows = (await run<KeptRow[]>("readonly", (s) => s.getAll(range))) ?? [];
+  const out: { id: string; file: File }[] = [];
+  for (const row of rows.sort((a, b) => a.savedAt - b.savedAt)) {
+    const file = toFile(row);
+    if (file) {
+      out.push({ id: row.key.slice(key.length + SEP.length), file });
+    } else {
+      await run("readwrite", (s) => s.delete(row.key));
+    }
+  }
+  return out;
+}
+
+/** Forget the one file kept under `key` and `fileId`. Called once it is
+ *  somewhere safer, or once the reader no longer wants it. */
+export async function dropKeptFile(key: string, fileId: string): Promise<void> {
+  await run("readwrite", (s) => s.delete(rowKey(key, fileId)));
+}
+
+/** Forget every file kept under `key`. Called once the draft itself is spent. */
+export async function dropKeptFiles(key: string): Promise<void> {
+  const range = IDBKeyRange.bound(rowKey(key, ""), rowKey(key, "￿"));
+  await run("readwrite", (s) => s.delete(range));
 }

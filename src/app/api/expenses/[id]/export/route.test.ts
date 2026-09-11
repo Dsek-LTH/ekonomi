@@ -128,7 +128,7 @@ vi.mock("@/lib/server/storage", () => ({
   getObjectBuffer: async () => ({ bytes: new Uint8Array([1, 2, 3]) }),
 }));
 vi.mock("@/lib/server/pdf-merge", () => ({
-  mergeCoverAndReceipt: async (cover: Uint8Array) => cover,
+  mergeCoverAndReceipts: async (cover: Uint8Array) => ({ bytes: cover, failed: 0 }),
   PdfMergeError: class extends Error {},
 }));
 

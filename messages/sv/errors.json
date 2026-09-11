@@ -102,7 +102,6 @@
     "fileMissing": "Kvittots fil saknas i arkivet",
     "storageUnavailable": "Kvittoarkivet svarar inte just nu",
     "deleteStorageFailed": "Kvittofilen kunde inte tas bort ur arkivet. Kvittot är kvar. Försök igen.",
-    "replaceStorageFailed": "Det tidigare kvittots fil kunde inte tas bort ur arkivet. Kvittot byttes inte ut. Försök igen.",
     "unreadable": "Kunde inte läsa bildfilen",
     "unsupportedType": "Filtypen ’{type}’ stöds inte",
     "sizeRange": "Filen måste vara mellan 1 byte och {max} byte"

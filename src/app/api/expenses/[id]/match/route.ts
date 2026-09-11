@@ -2,7 +2,7 @@
 // while the expense is still pre-submission (DRAFT / PENDING_MATCH /
 // CHANGES_REQUESTED). The [id] param is the expense id.
 import { prisma } from "@/lib/server/db";
-import { isSubmittable } from "@/lib/domain/status";
+import { isQuietDraftEdit, isSubmittable } from "@/lib/domain/status";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { MatchExpense } from "@/lib/api/schemas/expense";
@@ -47,6 +47,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // its own 422) cannot arrive.
   const transactionId = body.transactionId;
 
+  // Already the answer: the wizard sends the match it already holds on every
+  // save, whether or not this step is the one that changed it, and re-writing
+  // the same id was logging a MATCHED nobody caused, right beside the one the
+  // create step (or an earlier save) had already written.
+  if (transactionId === expense.matchedTransactionId) {
+    return new Response(null, { status: 204 });
+  }
+
   if (transactionId !== null) {
     // Validate the transaction exists, belongs to the submitter's own section
     // card, and isn't already taken by another expense.
@@ -87,9 +95,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       where: { id: expense.id },
       data: { matchedTransactionId: transactionId },
     });
-    await tx.expenseEvent.create({
-      data: { expenseId: expense.id, type: eventType, actorId: g.actor.id },
-    });
+    // Quiet before the first submission; see isQuietDraftEdit.
+    if (!isQuietDraftEdit(expense, g.actor.id)) {
+      await tx.expenseEvent.create({
+        data: { expenseId: expense.id, type: eventType, actorId: g.actor.id },
+      });
+    }
   });
 
   return new Response(null, { status: 204 });

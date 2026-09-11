@@ -217,6 +217,33 @@ export const isAttestWithdrawable = (status: string): boolean =>
 export const isRecallable = (status: string): boolean =>
   (status as ExpenseStatus) === "PENDING_APPROVAL";
 
+/**
+ * Whether an EDITED / RECEIPT_UPLOADED / RECEIPT_REMOVED / MATCHED / UNMATCHED
+ * event belongs on the timeline, or is still the submitter putting their own
+ * utlägg together and not yet history.
+ *
+ * `reference` is the boundary: null until the first submission and never
+ * cleared after (see the column's own comment on Expense), so an utlägg that
+ * has been recalled or sent back with CHANGES_REQUESTED still counts as
+ * "already submitted" here, and every edit from that point on logs again,
+ * because an attester may be watching for what changed.
+ *
+ * Before that first submission the create-receipt-edit-match calls a save
+ * fires off in one sitting are one act, not several, and a timeline that read
+ * them back separately was reporting the submitter's own draft to themselves.
+ *
+ * Scoped to the submitter's own edits, not an admin's: somebody else touching
+ * a draft that was never theirs is a different actor doing something to
+ * somebody's utlägg, which stays on the record whatever stage the utlägg is
+ * at.
+ */
+export function isQuietDraftEdit(
+  expense: { reference: string | null; submitterId: string },
+  actorId: string,
+): boolean {
+  return expense.reference === null && actorId === expense.submitterId;
+}
+
 const isPendingApproval = (status: string): boolean => status as ExpenseStatus === "PENDING_APPROVAL";
 
 // An utlägg that has left the submitter's hands: waiting for attest, or

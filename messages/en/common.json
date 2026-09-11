@@ -32,7 +32,8 @@
     "SKATTFORMAN": "Assistant treasurer",
     "RESULTATANSVARIG": "Result unit owner",
     "ORDINARIE": "Member",
-    "STOCKARE": "Stockare"
+    "STOCKARE": "Stockare",
+    "UTHYRNINGSANSVARIG": "Rental manager"
   },
   "table": {
     "show": "Show",
@@ -114,6 +115,10 @@
     "EXPENSE_DEADLINE_WAIVE_hint": "Grant one late out-of-pocket expense a waiver, so it may be filed after all. Given before the expense goes for approval, with a reason that goes on the expense report.",
     "CONTRACT_MANAGE_hint": "Archive contracts, draw rental contracts and keep the rental item catalogue.",
     "FIRMATECKNARE": "Authorised signatory",
-    "FIRMATECKNARE_hint": "May be named as the section's signatory on a contract. Opens nothing, and is decided by the stadgar rather than here."
+    "FIRMATECKNARE_hint": "May be named as the section's signatory on a contract. Opens nothing, and is decided by the stadgar rather than here.",
+    "RENTAL_VIEW": "Read rental contracts",
+    "RENTAL_VIEW_hint": "See rental contracts in the archive, and nothing else in it. The narrow half of reading contracts.",
+    "RENTAL_MANAGE": "Manage rentals",
+    "RENTAL_MANAGE_hint": "Draw rental contracts and keep the rental item catalogue."
   }
 }

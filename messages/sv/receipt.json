@@ -15,6 +15,7 @@
   "collapse": "Fäll ihop kvittot",
   "close": "Stäng kvittot",
   "replace": "Byt kvitto",
+  "addDocument": "Lägg till ett dokument till",
   "dropzone": "Dra hit ditt kvitto eller välj en fil",
   "pickReceiptLead": "Lägg till kvittot",
   "pickReceipt": "Välj kvitto",

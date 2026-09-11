@@ -15,6 +15,7 @@
   "collapse": "Collapse the receipt",
   "close": "Close the receipt",
   "replace": "Replace the receipt",
+  "addDocument": "Add another document",
   "dropzone": "Drag your receipt here, or pick a file",
   "pickReceiptLead": "Add the receipt",
   "pickReceipt": "Pick a receipt",
