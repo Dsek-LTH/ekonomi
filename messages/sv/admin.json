@@ -39,7 +39,13 @@
     "unitMissing": "Resultatenheten finns inte",
     "pending": "Vid nästa inloggning tillkommer: {items}. Personens grupper i Authentik har ändrats sedan raden skrevs.",
     "groupsTitle": "Grupper vid senaste inloggningen",
-    "groupsHint": "Dämpade grupper ger ingenting här. Kopplingen mellan grupp och roll ändras under Roller."
+    "groupsHint": "Dämpade grupper ger ingenting här. Kopplingen mellan grupp och roll ändras under Roller.",
+    "payoutTitle": "Kontouppgifter",
+    "payoutLoading": "Hämtar kontouppgifter…",
+    "payoutFailed": "Kunde inte hämta kontouppgifter.",
+    "payoutClearing": "Clearingnummer",
+    "payoutAccount": "Kontonummer",
+    "payoutMissing": "Inga kontouppgifter sparade."
   },
   "cards": {
     "title": "Sektionskort",

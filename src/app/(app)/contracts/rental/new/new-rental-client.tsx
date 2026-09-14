@@ -12,16 +12,18 @@
 // two parties are, when, and what for how much.
 //
 // The parties share a row, in the shape the document draws them, with our side
-// already answered and only the signatory to choose. Ours used to be a fourth
-// card at the foot, so the form asked who represents the renter, then the
-// period, then the gear, and then who represents us: one subject split in half
-// by three others. That is the same fault this form was reorganised to fix once
-// before, when it asked for the renter's organisation, then our own signatory,
-// then the person signing for the renter. And it asked for four things the app already knew: a title (the
-// renter, plus the fact that it is a rental), tags (archive machinery for
-// filing a sponsoravtal), notes (worth having, worth nothing at this moment)
-// and the post the signatory signs under (they hold firmateckning through a
-// role that can be read). All four are gone. See lib/contract/signatory.ts.
+// already answered and nothing to choose: the section does not sign its own
+// rentals (only the renter does, see rental-contract.typ), so there is no
+// signatory to pick here any more. Ours used to be a fourth card at the foot,
+// so the form asked who represents the renter, then the period, then the
+// gear, and then who represents us: one subject split in half by three
+// others. That is the same fault this form was reorganised to fix once
+// before, when it asked for the renter's organisation, then our own
+// signatory, then the person signing for the renter. And it asked for three
+// things the app already knew: a title (the renter, plus the fact that it is
+// a rental), tags (archive machinery for filing a sponsoravtal) and notes
+// (worth having, worth nothing at this moment). All three are gone. See
+// lib/contract/signatory.ts.
 //
 // Widths are container queries throughout, not viewport breakpoints. This form
 // sits beside a panel you can drag, so its width changes while the viewport
@@ -63,13 +65,9 @@ const kr = (ore: number) => (ore / 100).toFixed(2);
 
 export function NewRentalClient({
   items,
-  signatories,
-  defaultSignatoryId,
   counterparties,
 }: {
   items: RentalItemOption[];
-  signatories: { id: string; name: string }[];
-  defaultSignatoryId: string;
   counterparties: CounterpartyOption[];
 }) {
   const t = useTranslations("contracts");
@@ -120,9 +118,6 @@ export function NewRentalClient({
   // Utrustning och pengar. No money field here: every figure below the lines
   // is worked out from them, discounts included. See rental/pricing.ts.
   const [lines, setLines] = useState<LineRow[]>([makeLine()]);
-
-  // Underskrift
-  const [signatoryId, setSignatoryId] = useState(defaultSignatoryId);
 
   // What is free over the chosen period, stamped with the dates it was fetched
   // for and read back only while those still match the fields, so a stale
@@ -212,7 +207,6 @@ export function NewRentalClient({
     purpose.trim() !== "" &&
     periodReady &&
     filled.length > 0 &&
-    signatoryId !== "" &&
     !anyShort;
 
   // One line saying what is about to be made, beside the button that makes it.
@@ -255,7 +249,6 @@ export function NewRentalClient({
       discountPercent: effectiveDiscountPercent(l, toOre),
       replacementValueOre: toOre(l.replacementValue),
     })),
-    sectionSignatoryId: signatoryId || null,
     counterpartySignatory: renterName.trim()
       ? { name: renterName.trim(), email: renterEmail.trim(), phone: renterPhone.trim() }
       : null,
@@ -323,7 +316,6 @@ export function NewRentalClient({
           discountPercent: effectiveDiscountPercent(l, toOre),
           replacementValueOre: toOre(l.replacementValue),
         })),
-        sectionSignatoryId: signatoryId,
         counterpartySignatory: renterName.trim()
           ? {
               name: renterName.trim(),
@@ -367,16 +359,16 @@ export function NewRentalClient({
             form and a form whose blocks do not correspond to the page it draws
             makes the reader do the mapping.
 
-            It also puts the two "Representerad av" questions on the same line.
-            They were two cards apart, which is exactly the fault this file's
-            header comment says the form was reorganised to fix: one subject
-            split in half by another. The renter's representative was asked
-            first, then the period, then the gear, then ours.
+            It also puts the renter's "Representerad av" question on the same
+            line as ours, which used to be a card apart, exactly the fault
+            this file's header comment says the form was reorganised to fix:
+            one subject split in half by another. The renter's representative
+            was asked first, then the period, then the gear, then ours.
 
             Our side is answered already and cannot be typed over. It is shown
-            rather than hidden because it is printed on the contract, and a form
-            that never mentions the section produces a document that suddenly
-            does. The one thing on that side anybody chooses is who signs.
+            rather than hidden because it is printed on the contract, and a
+            form that never mentions the section produces a document that
+            suddenly does.
         */}
         <Card>
           <CardHeader title={t("rental.parties")} subtitle={t("rental.counterpartyHint")} />
@@ -401,24 +393,6 @@ export function NewRentalClient({
                   {SECTION.postalLine && <p className="text-muted">{SECTION.postalLine}</p>}
                 </div>
                 <p className="text-xs text-muted">{t("rental.lessorFixed")}</p>
-
-                <FieldGroup
-                  label={t("rental.representedBy")}
-                  hint={
-                    signatories.length === 0
-                      ? t("rental.noSignatories")
-                      : t("rental.signatoryHint")
-                  }
-                  requirement="required"
-                >
-                  <Combobox
-                    options={signatories.map((sig) => ({ value: sig.id, label: sig.name }))}
-                    value={signatoryId}
-                    onChange={setSignatoryId}
-                    placeholder={t("rental.pickSignatory")}
-                    aria-label={t("rental.representedBy")}
-                  />
-                </FieldGroup>
               </div>
 
               {/* ── Hyrestagaren ────────────────────────────────── */}

@@ -156,6 +156,31 @@ export function backTarget(
 }
 
 /**
+ * Where "back to app" should go: the nearest entry behind you that is not
+ * itself inside the given area, so leaving it always leaves it rather than
+ * stopping at another page inside. Every settings page is a "section" in its
+ * own right (see SECTION_LABELS), which is exactly why `backTarget` above is
+ * the wrong function for this: asked for `/dashboard`'s nearest section, it
+ * would happily stop at the settings page you were just on.
+ *
+ * Null when nothing behind you (within BACK_SCAN_LIMIT) qualifies: a link that
+ * opened straight into the area, or a reload of a trip that started before
+ * this tab did. The caller's own fallback is the right answer then, pushed
+ * rather than popped.
+ */
+export function exitTarget(
+  stack: NavStack,
+  isInside: (path: string) => boolean,
+): { url: string; delta: number } | null {
+  const stop = Math.max(0, stack.index - BACK_SCAN_LIMIT);
+  for (let i = stack.index - 1; i >= stop; i--) {
+    const entry = stack.entries[i];
+    if (!isInside(routePath(entry))) return { url: entry, delta: stack.index - i };
+  }
+  return null;
+}
+
+/**
  * Where a finished mutation should return to: the same route, if it is close
  * enough behind that returning is what popping means. Null when it is not, and
  * the caller replaces the entry it is standing on instead.

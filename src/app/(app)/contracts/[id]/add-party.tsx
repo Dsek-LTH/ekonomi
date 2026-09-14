@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { InsetPanel } from "@/components/ui/card";
 import { DateInput, Field, FieldGroup, Input } from "@/components/ui/field";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -50,7 +51,7 @@ export function AddParty({ contractId, onDone }: { contractId: string; onDone: (
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
+    <InsetPanel dashed className="space-y-4 p-4">
       <FieldGroup label={t("party.role")} requirement="required">
         <SegmentedControl
           options={ROLES.map((r) => ({ value: r, label: t(`detail.partyRole.${r}`) }))}
@@ -92,6 +93,6 @@ export function AddParty({ contractId, onDone }: { contractId: string; onDone: (
           {t("party.add")}
         </Button>
       </div>
-    </div>
+    </InsetPanel>
   );
 }

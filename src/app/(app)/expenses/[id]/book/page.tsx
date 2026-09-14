@@ -3,8 +3,6 @@ import { canBookkeep } from "@/lib/domain/permissions";
 import { getActiveAccounts, getBookkeepingSettings } from "@/lib/data/accounts";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { getExpense } from "@/lib/data/expenses";
-import { getPayoutAccount } from "@/lib/data/users";
-import { isOutOfPocket } from "@/lib/domain/status";
 import BookExpenseClient from "./book-client";
 
 export default async function BookExpensePage({
@@ -28,22 +26,6 @@ export default async function BookExpensePage({
     getBookkeepingSettings(),
   ]);
 
-  // Where the money is going, for the person who is about to send it.
-  //
-  // Read here rather than carried on the Expense shape, and that is the whole
-  // point: a clearing and account number is the one thing on an utlägg that is
-  // nobody's business but the submitter's and the treasury's. Every other screen
-  // gets `submitterHasPayout`, a boolean, and this page gets the digits, behind
-  // the `canBookkeep` gate above.
-  //
-  // Only where there is a payout to make. A sektionskort purchase was already
-  // paid out of the section's own account, so there is nobody to pay and no
-  // reason to put somebody's bank details on the screen.
-  const payout =
-    expense && isOutOfPocket(expense.paymentType)
-      ? await getPayoutAccount(expense.submitterId)
-      : null;
-
   const lines = expense?.verification?.lines ?? [];
   const [costCenters, accounts] = await Promise.all([
     getActiveCostCenters([
@@ -63,7 +45,6 @@ export default async function BookExpensePage({
       costCenters={costCenters}
       accounts={accounts}
       settings={settings}
-      payout={payout}
     />
   );
 }

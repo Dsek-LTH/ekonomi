@@ -28,7 +28,7 @@ import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { expenseLabel } from "@/lib/domain/reference";
 import { DateInput, Field } from "@/components/ui/field";
-import { cn, uid } from "@/lib/ui/utils";
+import { uid } from "@/lib/ui/utils";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
 import { useReturnTo } from "@/components/shell/route-history";
@@ -99,23 +99,11 @@ export default function BookExpenseClient({
   costCenters,
   accounts,
   settings,
-  payout,
 }: {
   expense: Expense | null;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
   settings: BookkeepingSettings;
-  /**
-   * Where to send the money, on an utlägg the section owes somebody. Null on a
-   * sektionskort purchase, which is already paid, and on an utlägg that is not
-   * here at all.
-   *
-   * Either field can be empty: a member who has cleared their profile since the
-   * utlägg was attested leaves a claim with nowhere to pay it to. The card says
-   * so rather than drawing a blank line, because the bookkeeper is otherwise
-   * left looking for digits that are not coming.
-   */
-  payout: { clearing: string; account: string } | null;
 }) {
   const returnTo = useReturnTo();
   const t = useTranslations("book");
@@ -375,10 +363,6 @@ export default function BookExpenseClient({
         </CardBody>
       </Card>
 
-      {payout && (
-        <PayoutCard name={expense.submitterName} payout={payout} />
-      )}
-
       <Card>
         <CardHeader title={t("lines")} subtitle={t("linesHint")} />
         <VoucherEditor
@@ -430,80 +414,5 @@ export default function BookExpenseClient({
         </div>
       </div>
     </PageShell>
-  );
-}
-
-/**
- * Where the money goes, on the screen where somebody is about to send it.
- *
- * Booking an eget utlägg is two acts a bookkeeper performs one after the other:
- * writing the verifikat, and paying the member back. The second one needs a
- * clearing and account number, and until now this page had neither, so it meant
- * leaving the voucher half-written to go and find them somewhere else.
- *
- * Only here. Every other screen is given `submitterHasPayout`, a yes or no, and
- * that is deliberate: somebody's bank details are theirs and the treasury's, and
- * a resultatansvarig attesting a cost centre has no business reading them. The
- * page gate (`canBookkeep`) is what makes this the one screen that may.
- *
- * `select-all` on each number, so one click takes the whole thing rather than
- * the word the cursor landed in. These get typed into a bank, and a clearing
- * number half-copied is a payment to somebody else.
- */
-function PayoutCard({
-  name,
-  payout,
-}: {
-  name: string;
-  payout: { clearing: string; account: string };
-}) {
-  const t = useTranslations("book");
-  const missing = !payout.clearing || !payout.account;
-
-  return (
-    <Card>
-      <CardHeader title={t("payoutTitle")} subtitle={t("payoutHint")} />
-      <CardBody>
-        {missing ? (
-          // Not a blank line. An utlägg cannot be submitted without payout
-          // details, so this is somebody who cleared their profile after it was
-          // attested, and the bookkeeper would otherwise sit waiting for digits
-          // that are not coming.
-          <Notice>{t("payoutMissing", { name })}</Notice>
-        ) : (
-          <dl className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-4 sm:grid-cols-3">
-            <PayoutField label={t("payoutRecipient")} value={name} />
-            <PayoutField label={t("payoutClearing")} value={payout.clearing} figures />
-            <PayoutField label={t("payoutAccount")} value={payout.account} figures />
-          </dl>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-/** One label over one value. `figures` is for the two that are numbers to be
- *  read off and copied, rather than a name to be read. */
-function PayoutField({
-  label,
-  value,
-  figures,
-}: {
-  label: string;
-  value: string;
-  figures?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-[13px] text-muted">{label}</dt>
-      <dd
-        className={cn(
-          "mt-0.5 truncate text-sm font-medium",
-          figures && "select-all tabular-nums",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
   );
 }

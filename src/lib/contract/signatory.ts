@@ -1,41 +1,12 @@
-// What a contract calls its signatory, and what it calls itself.
+// What a rental calls itself in the archive.
 //
-// Both were fields on the rental form and neither had to be. The person signing
-// for the section holds FIRMATECKNARE through a post the app already knows, so
-// asking them to type "Skattmästare" was asking for something it could read;
-// and a rental's title is the renter and the fact that it is a rental, which is
-// exactly what the form's other answers already say.
+// Not a field on the form. A rental's title is the renter and the fact that it
+// is a rental, which is exactly what the form's other answers already say.
 //
-// Swedish, fixed, and not a translation lookup. Both of these end up on a
-// document two parties are bound by, and a contract that renamed its signatory
-// because a reader had switched the interface to English would be two
-// agreements. Same reason lib/expense/document.ts spells its payment types out.
-import type { Role } from "@/lib/domain/types";
-
-/**
- * The post a signatory signs under, in the order it is preferred.
- *
- * Ordered rather than a plain lookup because somebody can hold several. A
- * skattmästare who is also acting ordförande signs as ordförande, which is the
- * senior post and the one a counterparty would expect to see.
- *
- * Only the posts that can plausibly carry firmateckning. The rest return null
- * and the document leaves the line under the name empty, which is honest: the
- * capability is editable, so the section can grant it to a post this list has
- * never heard of, and inventing a title for them would be worse than printing
- * none.
- */
-const SIGNATORY_TITLE: readonly { role: Role; title: string }[] = [
-  { role: "ORDFORANDE", title: "Ordförande" },
-  { role: "SKATTMASTARE", title: "Skattmästare" },
-  { role: "VICE_SKATTMASTARE", title: "Vice skattmästare" },
-  { role: "SKATTFORMAN", title: "Skattförman" },
-];
-
-/** What this person signs as, or null when their post has no standard name. */
-export function signatoryTitle(roles: readonly Role[]): string | null {
-  return SIGNATORY_TITLE.find((s) => roles.includes(s.role))?.title ?? null;
-}
+// Swedish, fixed, and not a translation lookup. It ends up on a document two
+// parties are bound by, and a contract that renamed itself because a reader
+// had switched the interface to English would be two agreements. Same reason
+// lib/expense/document.ts spells its payment types out.
 
 /**
  * What a rental is called in the archive.

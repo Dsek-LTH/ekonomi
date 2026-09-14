@@ -106,17 +106,28 @@ export function Modal({
   onClose,
   /** The card's width, above all. The rest of its shape is set here. */
   className,
+  /**
+   * "dialog" (default): a card centred on the scrim, up to `className`'s
+   * max-width, a bottom sheet on phone. "large": most of the viewport rather
+   * than all of it, with a visible margin of scrim (and page) around it, so
+   * whatever it was opened over still reads as still there rather than
+   * replaced. Settings is the one thing here big enough (multi-panel tables,
+   * not a few fields) to want it; everything else stays a dialog.
+   */
+  variant = "dialog",
   children,
 }: {
   label: string;
   onClose: () => void;
   className?: string;
+  variant?: "dialog" | "large";
   children: React.ReactNode;
 }) {
+  const large = variant === "large";
   return (
     <DialogLayer
       onDismiss={onClose}
-      className="sm:flex sm:items-center sm:justify-center sm:p-6"
+      className={large ? undefined : "sm:flex sm:items-center sm:justify-center sm:p-6"}
     >
       <Card
         role="dialog"
@@ -124,26 +135,30 @@ export function Modal({
         aria-label={label}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          // On a phone this is a sheet that comes up from the bottom, and it is
-          // placed by its own insets rather than by the scrim's centring: with
-          // an equal `left` and `right` there is no arithmetic left to get
-          // wrong, and a `max-w-` from the call site is centred inside them by
-          // the auto margins (an over-constrained absolute box splits the slack
-          // evenly). 12px of it, so the card reads as a card standing on the
-          // page rather than as the screen having changed. A rounded corner
-          // needs somewhere to be round against.
-          //
-          // The bottom offset is that same 12px or the home indicator's strip,
-          // whichever is taller: on a phone that has one, 12px would put the
-          // buttons under it, and on a phone that hasn't, adding the two would
-          // leave the sheet floating.
-          "absolute inset-x-3 mx-auto flex flex-col overflow-hidden",
-          "bottom-[max(0.75rem,env(safe-area-inset-bottom))] max-h-[88dvh]",
-          // dvh, not vh: on iOS `vh` is the toolbars-hidden height, so a cap in
-          // `vh` lets the dialog run under the toolbar that is actually there.
-          //
-          // From sm it goes back into the scrim's flow and is centred by it.
-          "sm:static sm:w-full sm:max-h-[92dvh]",
+          large
+            ? "fixed inset-3 flex flex-col overflow-hidden sm:inset-8 lg:inset-12"
+            : cn(
+                // On a phone this is a sheet that comes up from the bottom, and it is
+                // placed by its own insets rather than by the scrim's centring: with
+                // an equal `left` and `right` there is no arithmetic left to get
+                // wrong, and a `max-w-` from the call site is centred inside them by
+                // the auto margins (an over-constrained absolute box splits the slack
+                // evenly). 12px of it, so the card reads as a card standing on the
+                // page rather than as the screen having changed. A rounded corner
+                // needs somewhere to be round against.
+                //
+                // The bottom offset is that same 12px or the home indicator's strip,
+                // whichever is taller: on a phone that has one, 12px would put the
+                // buttons under it, and on a phone that hasn't, adding the two would
+                // leave the sheet floating.
+                "absolute inset-x-3 mx-auto flex flex-col overflow-hidden",
+                "bottom-[max(0.75rem,env(safe-area-inset-bottom))] max-h-[88dvh]",
+                // dvh, not vh: on iOS `vh` is the toolbars-hidden height, so a cap in
+                // `vh` lets the dialog run under the toolbar that is actually there.
+                //
+                // From sm it goes back into the scrim's flow and is centred by it.
+                "sm:static sm:w-full sm:max-h-[92dvh]",
+              ),
           className,
         )}
       >

@@ -24,7 +24,7 @@
 // including the case that prompted all this: a role nothing grants any more.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody, CardHeader, InsetPanel } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconX } from "@/components/ui/icons";
@@ -32,7 +32,8 @@ import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { Tag } from "@/components/ui/status-pill";
 import { cn } from "@/lib/ui/utils";
-import { ASSIGNABLE_ROLES } from "@/lib/domain/permissions";
+import { ASSIGNABLE_ROLES, canBookkeep } from "@/lib/domain/permissions";
+import { useRole } from "@/components/shell/role-context";
 import type { UserAuthority } from "@/lib/data/authority";
 import type { User } from "@/lib/domain/types";
 import { useQuery } from "@/components/shell/use-query";
@@ -42,6 +43,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
   const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
   const tRole = useTranslations("common.role");
+  const { user } = useRole();
 
   // A member looked up by the top search, shown so their whole role set is
   // visible in one place, including for someone who holds nothing more than
@@ -62,7 +64,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
           <PersonSearch onSelect={setInspecting} className="max-w-md" />
 
           {live && (
-            <div className="rounded-xl border border-border p-4">
+            <InsetPanel className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3.5">
                   <Avatar initials={live.initials} />
@@ -106,7 +108,15 @@ export function UsersClient({ holders }: { holders: User[] }) {
                   one person's reasons from being read under another's name
                   while the next request is still in flight. */}
               <WhyPanel key={live.id} userId={live.id} />
-            </div>
+
+              {/* Bank details: same capability that already shows them on the
+                  booking screen, reached from a different door. A
+                  resultatansvarig with SETTINGS access to this page but not
+                  BOOKKEEPING still sees nothing here. */}
+              {canBookkeep(user.capabilities) && (
+                <PayoutPanel key={live.id} userId={live.id} />
+              )}
+            </InsetPanel>
           )}
         </CardBody>
       </Card>
@@ -291,6 +301,50 @@ function WhyPanel({ userId }: { userId: string }) {
           <p className="text-xs text-muted">{t("groupsHint")}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A member's bank details, fetched rather than passed down for the same
+ * reason `WhyPanel` is: a thousand-row list carries nothing worth this until
+ * one row is asked about. The caller only mounts this for a viewer who holds
+ * `BOOKKEEPING`, so the fetch itself is the same lookup the booking screen
+ * already makes, not a new way to reach the digits.
+ */
+function PayoutPanel({ userId }: { userId: string }) {
+  const t = useTranslations("admin.users");
+  const { data, error } = useQuery<{ clearing: string; account: string }>(
+    `/api/users/${userId}/payout`,
+  );
+
+  return (
+    <div className="mt-4 space-y-2 border-t border-border pt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {t("payoutTitle")}
+      </p>
+      {error && <p className="text-xs text-muted">{t("payoutFailed")}</p>}
+      {!error && !data && (
+        <p className="flex items-center gap-2 text-xs text-muted">
+          <Spinner size="sm" />
+          {t("payoutLoading")}
+        </p>
+      )}
+      {data &&
+        (!data.clearing || !data.account ? (
+          <p className="text-sm text-muted">{t("payoutMissing")}</p>
+        ) : (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
+            <div>
+              <dt className="text-[13px] text-muted">{t("payoutClearing")}</dt>
+              <dd className="select-all text-sm font-medium tabular-nums">{data.clearing}</dd>
+            </div>
+            <div>
+              <dt className="text-[13px] text-muted">{t("payoutAccount")}</dt>
+              <dd className="select-all text-sm font-medium tabular-nums">{data.account}</dd>
+            </div>
+          </dl>
+        ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyNav, backTarget, EMPTY_STACK, returnTarget, type NavStack } from "./history-stack";
+import { applyNav, backTarget, EMPTY_STACK, exitTarget, returnTarget, type NavStack } from "./history-stack";
 
 // The nav, as far as these tests are concerned: three sections and nothing
 // else. The real one is derived from app-shell's SECTION_LABELS.
@@ -152,6 +152,34 @@ describe("backTarget", () => {
     // Standing on the list after a Back press, with the utlägg still in front.
     const stack = applyNav(walk("/expenses", "/expenses/1"), "/expenses", "pop");
     expect(backTarget(stack, "/expenses", sectionLabel)).toBeNull();
+  });
+});
+
+describe("exitTarget", () => {
+  const inSettings = (path: string) => path === "/admin" || path.startsWith("/admin/");
+
+  it("skips past every settings page to the one before them", () => {
+    // Not backTarget's job: /admin/roles is a section in its own right, and
+    // backTarget would happily stop there. Leaving settings means leaving all
+    // of it, however many settings pages were visited along the way.
+    const stack = walk("/expenses/1", "/admin/roles", "/admin/users");
+    expect(exitTarget(stack, inSettings)).toEqual({ url: "/expenses/1", delta: 2 });
+  });
+
+  it("reaches straight past a single settings page", () => {
+    const stack = walk("/budget/1", "/admin/cards");
+    expect(exitTarget(stack, inSettings)).toEqual({ url: "/budget/1", delta: 1 });
+  });
+
+  it("gives nothing when there is nothing behind but settings itself", () => {
+    // A settings link opened in a fresh tab: the caller's own fallback,
+    // pushed, is the only way out.
+    expect(exitTarget(walk("/admin/roles"), inSettings)).toBeNull();
+  });
+
+  it("gives nothing when the trip never left settings within the scan limit", () => {
+    const wander = Array.from({ length: 12 }, (_, i) => `/admin/roles#${i}`);
+    expect(exitTarget(walk("/expenses", ...wander), inSettings)).toBeNull();
   });
 });
 

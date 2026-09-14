@@ -9,7 +9,7 @@
 // all are the last entry in that list rather than a section of their own, so a
 // long tail of unclaimed codes stays out of the way until it's asked for.
 import { useMemo, useState } from "react";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody, CardHeader, InsetPanel } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
@@ -573,7 +573,7 @@ export function ResultUnitsClient({
                     runs without intakt has no use for any of it, and the
                     result-unit screen must not depend on income existing. */}
                 {incomeEnabled && (
-                  <div className="space-y-4 rounded-xl border border-border p-4">
+                  <InsetPanel className="space-y-4 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-xs font-medium text-muted">{tIncome("section")}</p>
                       {selected.income ? (
@@ -737,7 +737,7 @@ export function ResultUnitsClient({
                     ) : (
                       <p className="text-sm text-muted">{tIncome("disabledHint")}</p>
                     )}
-                  </div>
+                  </InsetPanel>
                 )}
 
                 {/* Resultatansvariga, read-only: both halves come from

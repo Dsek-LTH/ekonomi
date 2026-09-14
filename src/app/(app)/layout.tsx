@@ -24,8 +24,13 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  /** The `@modal` parallel slot: settings, intercepted. Null on every route
+   *  that isn't a client-side navigation into /admin. See @modal/default.tsx
+   *  and @modal/(.)admin. */
+  modal: React.ReactNode;
 }) {
   const currentUser = await requireUser();
 
@@ -84,6 +89,11 @@ export default async function AppLayout({
             >
               {children}
             </AppShell>
+            {/* Settings, floating over whichever of the above is underneath
+                it. A sibling of AppShell rather than something rendered
+                inside it: the app's own sidebar is exactly what this must
+                not touch. */}
+            {modal}
           </ReceiptPanelProvider>
         </ConfirmProvider>
       </NotificationsProvider>

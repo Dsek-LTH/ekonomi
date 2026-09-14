@@ -39,7 +39,13 @@
     "unitMissing": "No such result unit",
     "pending": "Their next sign-in adds: {items}. Their Authentik groups have changed since the row was written.",
     "groupsTitle": "Groups at their last sign-in",
-    "groupsHint": "Dimmed groups grant nothing here. Which group confers which role is edited under Roles."
+    "groupsHint": "Dimmed groups grant nothing here. Which group confers which role is edited under Roles.",
+    "payoutTitle": "Account details",
+    "payoutLoading": "Looking up account details…",
+    "payoutFailed": "Could not look up account details.",
+    "payoutClearing": "Clearing number",
+    "payoutAccount": "Account number",
+    "payoutMissing": "No account details saved."
   },
   "cards": {
     "title": "Guild cards",

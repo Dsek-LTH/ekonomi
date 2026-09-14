@@ -94,15 +94,19 @@
   header: context {
     set text(size: small-size)
     set par(first-line-indent: 0pt, justify: false, leading: 0.5em, spacing: 0.5em)
-    // `\setheadrule{0pt}`: nothing is drawn under the class's head.
+    // `\setheadrule{0pt}`: nothing is drawn under the class's head. The three
+    // boxes are the class's own widths (`\parbox{18mm}`, `\parbox{80mm}`,
+    // `\parbox{60mm}`), not a layout that stretches to fill the line: the
+    // guild's own documents leave the gap between the short title and the
+    // date rather than closing it, and this follows suit.
     grid(
-      columns: (auto, 1fr, auto),
-      column-gutter: 6mm,
+      columns: (18mm, 80mm, 1fr),
+      column-gutter: 0pt,
       align: (left + top, left + top, right + top),
-      image("/public/symbol_real.svg", height: 16mm),
+      image("/public/bw.svg", height: 16mm),
       [
         #smallcaps[D-sektionen inom TLTH] \
-        #text(size: foot-size)[#smallcaps[#data.title]]
+        #text(size: small-size)[#smallcaps[#data.title]]
       ],
       [
         Uthyrningsavtal \
@@ -207,7 +211,10 @@
     data.lessor.address,
     data.lessor.postalLine,
     none,
-    data.sectionParty,
+    // The section is identified by name and org.nr above; nobody signs for it
+    // on this document (see Underskrifter), so naming who represented it would
+    // be a name with no function on the page.
+    none,
   ),
   partyBlock(
     "Hyrestagare",
@@ -420,23 +427,28 @@
 
 // ── Underskrifter ─────────────────────────────────────────────────────
 //
+// Only the renter signs. What binds them to the villkor, replacement value
+// included, is their own acceptance, not a countersignature from whoever at
+// the section drew the contract up: avtalslagen asks for an accept, not a
+// counterpart's signature, and the section's side of the deal is already
+// evidenced by the document it issued. One signature is also one less person
+// who has to be physically reachable before the gear can go out the door.
+//
 // The class's own signature block (`\signature` in dsek.sty): the capacity on
 // top, then 15mm of nothing to sign in, then the name, then what they are. No
 // rule under the space, which is the detail that makes it look like the
 // section's protokoll rather than like a form downloaded from somewhere.
 //
-// Kept off a page of its own where the contract will allow it, and never split
-// down the middle. A signature block landing alone on the last page reads as an
-// afterthought, and one whose two halves fall on different pages is a document
-// somebody can sign without having seen the other party's name.
+// Kept off a page of its own where the contract will allow it. A signature
+// block landing alone on the last page reads as an afterthought.
 #block(above: 8mm, breakable: false)[
   #text(font: sans, size: section-size, weight: "bold")[Underskrifter]
   #v(3mm)
   #block[
     #set par(first-line-indent: 0pt)
     Avtalet upprättas i två exemplar, ett till vardera parten. Genom att
-    underteckna bekräftar parterna att de har tagit del av och accepterar
-    villkoren ovan.
+    underteckna bekräftar hyrestagaren att denne har tagit del av och
+    accepterar villkoren ovan.
   ]
   #v(6mm)
 
@@ -454,11 +466,5 @@
     #text(size: foot-size, fill: absent)[Ort och datum]
   ]
 
-  #grid(
-    columns: (1fr, 1fr),
-    column-gutter: 8mm,
-    align: (left + top, left + top),
-    signature("För uthyraren", data.sectionParty),
-    signature("För hyrestagaren", data.counterpartyParty),
-  )
+  #signature("För hyrestagaren", data.counterpartyParty)
 ]

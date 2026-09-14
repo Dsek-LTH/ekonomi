@@ -7,6 +7,7 @@
     "adminCreateCostCenter": "Endast administratörer kan skapa kostnadsställen",
     "adminEditCostCenter": "Endast administratörer kan ändra kostnadsställen",
     "bookkeeperBook": "Endast bokförare kan bokföra utlägg",
+    "bookkeeperViewPayout": "Endast bokförare kan se kontouppgifter",
     "bookkeeperExport": "Endast bokförare kan exportera till Fortnox",
     "bookkeeperSync": "Endast bokförare kan synka från Fortnox",
     "treasurerLockBudget": "Endast skattmästaren kan låsa en budget",
@@ -345,7 +346,6 @@
     "itemNotFound": "Uthyrningsobjektet hittades inte",
     "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’",
     "itemsUnavailable": "Följande är inte ledigt under perioden: {items}",
-    "notASignatory": "Personen är inte firmatecknare och kan inte skriva under för sektionen",
     "counterpartyNotFound": "Motparten hittades inte"
   }
 }

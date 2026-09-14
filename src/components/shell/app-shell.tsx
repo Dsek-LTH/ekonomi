@@ -14,6 +14,7 @@ import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-pan
 import { MobileNav } from "./mobile-nav";
 import { CommandPalette, useCommandPaletteHotkey, type CommandItem } from "./command-palette";
 import {
+  IconArchive,
   IconBox,
   IconCalendar,
   IconIncome,
@@ -22,19 +23,23 @@ import {
   IconCard,
   IconChart,
   IconCheck,
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconCompare,
   IconContract,
   IconExternal,
   IconGear,
   IconGrid,
   IconHelp,
+  IconKey,
+  IconLedger,
   IconList,
   IconMenu,
   IconReceipt,
   IconSearch,
+  IconUpload,
   IconUsers,
+  IconWarehouse,
 } from "../ui/icons";
 import {
   canAccessBookkeeping,
@@ -47,7 +52,7 @@ import {
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
-import { SETTINGS_SECTIONS } from "./settings-sections";
+import { SETTINGS_ROOT, SETTINGS_SECTIONS } from "./settings-sections";
 
 import { owningRoute } from "@/lib/ui/routes";
 import { cn } from "@/lib/ui/utils";
@@ -114,9 +119,6 @@ const CONTENT_MAX = {
  */
 export const NAV_PINNED_COOKIE = "nav_pinned";
 
-// Where settings lands, and the prefix that switches the sidebar over to the
-// settings nav.
-const SETTINGS_ROOT = "/admin";
 // The landing page, not the first section. It used to point straight at
 // /admin/fortnox, on the reasoning that the sidebar lists the sections so there
 // was nothing for an index to add. True at this width and false on a phone,
@@ -133,10 +135,25 @@ const OVERVIEW: NavItem = { href: "/dashboard", label: "overview", icon: IconGri
 // open when a purchase is in front of you and you're not sure of the rules.
 const HELP: NavItem = { href: "/faq", label: "faq", icon: IconHelp, visible: ALL };
 
+// Pinned beside it for the same reason: it used to sit inside groupAdmin,
+// under "Dokument" and "Motparter", two records the section keeps rather than
+// app configuration, which buried the one link that opens a whole overlay
+// under a group about neither. It isn't a job either, so it gets Help's
+// treatment instead of a group's.
+const SETTINGS: NavItem = {
+  href: SETTINGS_HOME,
+  label: "settings",
+  icon: IconGear,
+  visible: (u) => canAccessSettings(u.capabilities),
+};
+
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "groupExpenses",
-    icon: IconReceipt,
+    // Not IconReceipt: that is the group's own first link, and a folded
+    // group showing the same glyph as the row it opens onto is one icon
+    // doing two jobs. This one says "hand something in" instead.
+    icon: IconUpload,
     items: [
       { href: "/expenses", label: "expenses", icon: IconReceipt, visible: ALL },
       // The bank feed, which used to be two links: "Kortköp" here for a card
@@ -155,7 +172,11 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupBudget",
-    icon: IconBudget,
+    // Not IconBudget, for the same reason groupExpenses is not IconReceipt.
+    // The group is the comparison itself, planned against utfall, which is
+    // exactly what this icon already means on the budget page's own compare
+    // button.
+    icon: IconCompare,
     items: [
       {
         href: "/budget",
@@ -177,7 +198,9 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupBookkeeping",
-    icon: IconBook,
+    // Not IconBook: that is Bokföring's own link below. IconLedger instead,
+    // for the category rather than the one ledger.
+    icon: IconLedger,
     items: [
       {
         href: "/bookkeeping",
@@ -195,7 +218,9 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupStock",
-    icon: IconBox,
+    // Not IconBox: that is Lager's own link below, one crate rather than the
+    // stockroom. IconWarehouse for the group.
+    icon: IconWarehouse,
     items: [
       // Its own group rather than a line under Bokföring: keeping the
       // lagerbokföring is a different job, done by different people, and the
@@ -228,7 +253,9 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupRental",
-    icon: IconContract,
+    // Not IconContract: that is "Uthyrningar" below, the paperwork. A key is
+    // what actually changes hands when the gear goes out the door.
+    icon: IconKey,
     items: [
       // Its own group rather than a corner of Avtal, for the same reason
       // Alkohollager is not a corner of Bokföring: it is a different job done
@@ -255,7 +282,13 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupAdmin",
-    icon: IconGear,
+    // Was IconGear, back when Settings lived in this group and lent it the
+    // icon. Now that Settings is pinned on its own (see SETTINGS below), a
+    // gear here would read as a second way to the same place. Then IconList,
+    // borrowed from Avtal below, until that made the group and its own first
+    // link indistinguishable. IconArchive instead: the group is the record
+    // kept, not the list it happens to be read as.
+    icon: IconArchive,
     items: [
       // The archive, over every kind of agreement the section has. Distinct
       // from Uthyrning above, which is the same rows read as a work list. See
@@ -275,27 +308,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconUsers,
         visible: (u) => canManageRentals(u.capabilities),
       },
-      { href: SETTINGS_HOME, label: "settings", icon: IconGear, visible: (u) => canAccessSettings(u.capabilities) },
     ],
-  },
-];
-
-// Settings replace the app nav rather than nesting inside it. A settings
-// section may need its own list-and-detail layout, and with the app nav still
-// in place that would be a third column, so while the path is under /admin the
-// sidebar shows these instead, with a way back at the top.
-// Built from the same list the landing page lays out as cards, so a section
-// cannot be added to one and forgotten in the other. See ./settings-sections.
-const SETTINGS_NAV: NavGroup[] = [
-  {
-    label: "settings",
-    icon: IconGear,
-    items: SETTINGS_SECTIONS.map((s) => ({
-      href: s.href,
-      label: s.label,
-      icon: s.icon,
-      visible: ALL,
-    })),
   },
 ];
 
@@ -307,14 +320,15 @@ const SETTINGS_NAV: NavGroup[] = [
  * Attest, from Bokföring and from Översikt, and "← Utlägg" is the wrong answer
  * on three of those. Derived from the nav itself so a section cannot be added
  * in one place and forgotten in the other. See components/back-link.tsx.
+ *
+ * Settings' own sections are included too (from ./settings-sections, the same
+ * list the overlay's internal nav and the landing page's cards use), since a
+ * page reached through one of them wants the same treatment as any other.
  */
 export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
-  [
-    OVERVIEW,
-    HELP,
-    ...NAV_GROUPS.flatMap((g) => g.items),
-    ...SETTINGS_NAV.flatMap((g) => g.items),
-  ].map((item) => [item.href, item.label]),
+  [OVERVIEW, HELP, SETTINGS, ...NAV_GROUPS.flatMap((g) => g.items), ...SETTINGS_SECTIONS].map(
+    (item) => [item.href, item.label],
+  ),
 );
 
 /**
@@ -491,14 +505,19 @@ export function AppShell({
   const activeSection = sectionHref(pathname);
   const isActive = (href: string) => href === activeSection;
 
-  const navLink = (item: NavItem) => {
+  const navLink = (item: NavItem, groupLabel?: string) => {
     const Icon = item.icon;
     const label = t(item.label);
     return (
       <Link
         key={item.href}
         href={item.href}
-        onClick={closeNav}
+        onClick={() => {
+          closeNav();
+          // Only for a row inside a group: OVERVIEW and HELP stand outside
+          // every group already and have nothing to fold on the way to.
+          if (groupLabel) foldOtherGroups(groupLabel);
+        }}
         // `px-[11px]`, not `px-3`: the nav's own `px-3` leaves a 40px row on the
         // rail, and 11 + the 18px icon + 11 is exactly that, so the icon sits
         // on the rail's centre line and stays on it, to the pixel, as the panel
@@ -525,15 +544,22 @@ export function AppShell({
     );
   };
 
-  // Under /admin the sidebar belongs to settings. See SETTINGS_NAV.
-  const inSettings = pathname.startsWith(SETTINGS_ROOT);
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((i) => i.visible(user)),
+  })).filter((group) => group.items.length > 0);
 
-  const groups = (inSettings ? SETTINGS_NAV : NAV_GROUPS)
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((i) => i.visible(user)),
-    }))
-    .filter((group) => group.items.length > 0);
+  // Opening a page settles the question every other group's disclosure is
+  // asking: not this one. Folding the rest on the way there is what keeps a
+  // handful of groups opened out of curiosity from just accumulating, one
+  // click at a time, until the rail is the flat list the disclosures exist to
+  // avoid.
+  const foldOtherGroups = (label: string) =>
+    setGroupOverride((prev) => {
+      const next = { ...prev };
+      for (const g of groups) next[g.label] = g.label === label;
+      return next;
+    });
 
   // The same answer the sidebar highlights with, spelled out. The top bar and
   // the lit row cannot disagree if they are the one lookup.
@@ -543,13 +569,11 @@ export function AppShell({
   const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
   const receiptTab = useReceiptTabShowing();
 
-  // Every destination the palette can jump to, regardless of which nav (app
-  // or settings) is standing in the sidebar right now and regardless of which
-  // groups are collapsed there: typing is a way past both of those, not
-  // another view of whichever one is currently open. Settings' own pages are
-  // included whenever the reader may reach /admin at all, the same gate the
-  // "Inställningar" row itself is behind, so a page that is not a link
-  // anywhere for this reader is not a search result either.
+  // Every destination the palette can jump to, regardless of which groups are
+  // collapsed in the sidebar: typing is a way past that, not another view of
+  // it. Settings' own pages are included whenever the reader may reach /admin
+  // at all, the same gate the "Inställningar" row itself is behind, so a page
+  // that is not a link anywhere for this reader is not a search result either.
   const paletteItems: CommandItem[] = [
     { href: OVERVIEW.href, label: t(OVERVIEW.label), group: "", icon: OVERVIEW.icon },
     ...NAV_GROUPS.flatMap((group) =>
@@ -558,12 +582,15 @@ export function AppShell({
         .map((i) => ({ href: i.href, label: t(i.label), group: t(group.label), icon: i.icon })),
     ),
     ...(canAccessSettings(user.capabilities)
-      ? SETTINGS_NAV[0].items.map((i) => ({
-          href: i.href,
-          label: t(i.label),
-          group: t(SETTINGS_NAV[0].label),
-          icon: i.icon,
-        }))
+      ? [
+          { href: SETTINGS.href, label: t(SETTINGS.label), group: "", icon: SETTINGS.icon },
+          ...SETTINGS_SECTIONS.map((s) => ({
+            href: s.href,
+            label: t(s.label),
+            group: t("settings"),
+            icon: s.icon,
+          })),
+        ]
       : []),
     { href: HELP.href, label: t(HELP.label), group: "", icon: HELP.icon },
   ];
@@ -595,10 +622,10 @@ export function AppShell({
       <MobileNav
         open={menuOpen}
         onClose={closeNav}
-        overview={inSettings ? null : OVERVIEW}
+        overview={OVERVIEW}
         groups={groups}
         help={HELP}
-        inSettings={inSettings}
+        settings={SETTINGS.visible(user) ? SETTINGS : null}
         isActive={isActive}
         user={user}
         fortnox={fortnox}
@@ -658,62 +685,50 @@ export function AppShell({
               40px slot on the rail's centre line that is always visible, and
               text after it that arrives with the width. */}
           <div className="flex h-16 shrink-0 items-center px-3">
-            {inSettings ? (
-              <Link
-                href="/dashboard"
-                onClick={closeNav}
-                className="flex min-w-0 flex-1 items-center rounded-xl py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
-              >
-                <span className="flex size-10 shrink-0 items-center justify-center">
-                  <IconChevronDown className="size-4 rotate-90" />
-                </span>
-                <span className={cn("ms-1 min-w-0 flex-1 truncate transition-opacity", labelFade)}>
-                  {t("backToApp")}
-                </span>
-              </Link>
-            ) : (
-              /* The brand is the way back to the section's own site. It is
-                 the oldest convention there is (the mark in the corner goes
-                 home) and here home is not this app: this app is one thing the
-                 section runs, and dsek.se is the section. A new tab, because
-                 leaving takes somebody out of a form they may be halfway
-                 through, and `rel` because a tab we opened must not be handed
-                 a way to steer the one it came from. */
-              <a
-                href={DSEK_URL}
-                target="_blank"
-                rel="noreferrer noopener"
-                title={t("toDsek")}
-                className="group/brand flex min-w-0 flex-1 items-center rounded-xl transition-colors hover:text-foreground"
-              >
-                <span className="flex size-10 shrink-0 items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/symbol_rosa.svg" alt="" className="h-8" />
-                </span>
-                <div className={cn("ms-1 min-w-0 flex-1 leading-tight transition-opacity", labelFade)}>
-                  {/* Underlined on hover, because nothing else here says the
-                      mark is a link. The logo alone is a convention people
-                      follow without being told, and only after they have tried
-                      it once. */}
-                  <p className="truncate text-sm font-semibold group-hover/brand:underline">
-                    D-sektionen
-                    {/* The mark that says this one leaves the app. On the
-                        collapsed rail there is no room for it and no label for
-                        it to belong to, so it arrives with the width, like
-                        every other label here. */}
-                    <IconExternal
-                      aria-hidden
-                      className="ms-1 inline size-3 align-baseline text-muted transition-opacity group-hover/brand:text-foreground"
-                    />
-                  </p>
-                  <p className="truncate text-xs text-muted">{t("brandTagline")}</p>
-                </div>
-                {/* The name of the destination, for a reader who cannot see
-                    the mark or the logo. The visible text says "D-sektionen",
-                    which is where it goes but not that it goes anywhere. */}
-                <span className="sr-only">{t("toDsek")}</span>
-              </a>
-            )}
+            {/* The brand is the way back to the section's own site. It is the
+                oldest convention there is (the mark in the corner goes home)
+                and here home is not this app: this app is one thing the
+                section runs, and dsek.se is the section. A new tab, because
+                leaving takes somebody out of a form they may be halfway
+                through, and `rel` because a tab we opened must not be handed
+                a way to steer the one it came from. Shown always now, settings
+                included: the overlay floats over this rail rather than
+                replacing it, so there is no second identity for this corner
+                to carry any more. See @modal/(.)admin. */}
+            <a
+              href={DSEK_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              title={t("toDsek")}
+              className="group/brand flex min-w-0 flex-1 items-center rounded-xl transition-colors hover:text-foreground"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/symbol_rosa.svg" alt="" className="h-8" />
+              </span>
+              <div className={cn("ms-1 min-w-0 flex-1 leading-tight transition-opacity", labelFade)}>
+                {/* Underlined on hover, because nothing else here says the
+                    mark is a link. The logo alone is a convention people
+                    follow without being told, and only after they have tried
+                    it once. */}
+                <p className="truncate text-sm font-semibold group-hover/brand:underline">
+                  D-sektionen
+                  {/* The mark that says this one leaves the app. On the
+                      collapsed rail there is no room for it and no label for
+                      it to belong to, so it arrives with the width, like
+                      every other label here. */}
+                  <IconExternal
+                    aria-hidden
+                    className="ms-1 inline size-3 align-baseline text-muted transition-opacity group-hover/brand:text-foreground"
+                  />
+                </p>
+                <p className="truncate text-xs text-muted">{t("brandTagline")}</p>
+              </div>
+              {/* The name of the destination, for a reader who cannot see
+                  the mark or the logo. The visible text says "D-sektionen",
+                  which is where it goes but not that it goes anywhere. */}
+              <span className="sr-only">{t("toDsek")}</span>
+            </a>
 
             {/* Turns a hover into a decision. Without it the wide layout is only
                 ever borrowed, because every trip to the nav costs the page 192px
@@ -775,7 +790,7 @@ export function AppShell({
                 </kbd>
               </button>
             </div>
-            {!inSettings && <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>}
+            <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>
             {groups.map((group) => {
               // The group the current page belongs to defaults to open, so
               // arriving on a page never buries it, but it is still only a
@@ -859,7 +874,7 @@ export function AppShell({
                   >
                     <div className="overflow-hidden">
                       <div inert={!open} className="flex flex-col gap-0.5">
-                        {group.items.map(navLink)}
+                        {group.items.map((item) => navLink(item, group.label))}
                       </div>
                     </div>
                   </div>
@@ -867,8 +882,13 @@ export function AppShell({
               );
             })}
             {/* `mt-auto` so it sits against the profile footer however few groups
-                this user's roles leave above it. */}
-            <div className="mt-auto flex flex-col gap-0.5 pt-4">{navLink(HELP)}</div>
+                this user's roles leave above it. Settings pinned beside Help
+                rather than buried in groupAdmin: neither is a job you go do,
+                both are always there. */}
+            <div className="mt-auto flex flex-col gap-0.5 pt-4">
+              {SETTINGS.visible(user) && navLink(SETTINGS)}
+              {navLink(HELP)}
+            </div>
           </nav>
 
           {/* Sticky profile footer */}

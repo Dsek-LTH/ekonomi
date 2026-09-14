@@ -2,20 +2,18 @@
 //
 // The rental form shows this in the panel beside it and redraws as the answers
 // change, so the person filling one in is looking at the contract itself rather
-// than at a form that promises one. It writes nothing and reads one row, the
-// signatory's, so there is no draft left behind by opening the page and walking
-// away.
+// than at a form that promises one. It writes nothing, so there is no draft
+// left behind by opening the page and walking away.
 //
 // POST rather than GET, because the whole form is the input and a half-filled
 // contract does not belong in a URL, a proxy log or a browser's history. The
 // bytes come back uncached for the same reason the stored document's do: this
 // page names people who are not members.
-import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PreviewRental } from "@/lib/api/schemas/contract";
-import { rentalTitle, signatoryTitle } from "@/lib/contract/signatory";
+import { rentalTitle } from "@/lib/contract/signatory";
 import { renderRentalPreview } from "@/lib/contract/document";
 import { isoToDate } from "@/lib/domain/date";
 import type { RentalDraft } from "@/lib/contract/document";
@@ -31,23 +29,6 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, PreviewRental);
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
-
-  // The signatory's name and the post they sign under, exactly as the create
-  // route reads them, so the preview's signature block is the one the contract
-  // will carry rather than a guess at it. Unknown or unnamed leaves the block
-  // ruled with a dash under it, which is also what a real draft looks like
-  // before anybody has been picked.
-  //
-  // No capability check here, unlike the create route. This draws a picture; it
-  // does not bind the section to anything, and refusing to *show* somebody what
-  // a contract would look like with the wrong name on it would be a rule
-  // enforced against a preview instead of against the act.
-  const signatory = d.sectionSignatoryId
-    ? await prisma.user.findUnique({
-        where: { id: d.sectionSignatoryId },
-        select: { name: true, roles: true },
-      })
-    : null;
 
   const renter = d.counterpartySignatory;
   const draft: RentalDraft = {
@@ -76,19 +57,6 @@ export async function POST(req: Request) {
         replacementValueOre: l.replacementValueOre,
       })),
     parties: [
-      ...(signatory
-        ? [
-            {
-              role: "SECTION" as const,
-              name: signatory.name,
-              title: signatoryTitle(signatory.roles),
-              orgName: null,
-              orgNo: null,
-              email: null,
-              phone: null,
-            },
-          ]
-        : []),
       ...(renter && renter.name.trim() !== ""
         ? [
             {

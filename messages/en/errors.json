@@ -7,6 +7,7 @@
     "adminCreateCostCenter": "Only administrators can create cost centers",
     "adminEditCostCenter": "Only administrators can change cost centers",
     "bookkeeperBook": "Only bookkeepers can book expenses",
+    "bookkeeperViewPayout": "Only bookkeepers can view account details",
     "bookkeeperExport": "Only bookkeepers can export to Fortnox",
     "bookkeeperSync": "Only bookkeepers can sync from Fortnox",
     "treasurerLockBudget": "Only the treasurer can lock a budget",
@@ -345,7 +346,6 @@
     "itemNotFound": "Rental item not found",
     "itemExists": "There is already a rental item called ’{name}’",
     "itemsUnavailable": "These are not free over that period: {items}",
-    "notASignatory": "That person is not an authorised signatory and cannot sign for the section",
     "counterpartyNotFound": "Counterparty not found"
   }
 }

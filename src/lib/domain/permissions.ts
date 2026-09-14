@@ -122,17 +122,6 @@ export const canManageRentals = (caps: readonly Capability[]) =>
 export const canManageContracts = (caps: readonly Capability[]) =>
   has(caps, "CONTRACT_MANAGE");
 
-/**
- * May be named as the section's signatory on a contract.
- *
- * The only helper here that gates nothing. It does not ask whether somebody may
- * reach a page, it asks whether their name may go on that line, which is what
- * the rental form asks when it builds its picker. Firmateckning comes from the
- * stadgar; this only records who holds it.
- */
-export const canSignForSection = (caps: readonly Capability[]) =>
-  has(caps, "FIRMATECKNARE");
-
 // ── Dispens från redovisningsfristen ──────────────────────────────
 
 /**

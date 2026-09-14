@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody, CardHeader, InsetPanel } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Amount } from "@/components/ui/amount";
 import { DateInput, Field, Textarea } from "@/components/ui/field";
@@ -175,7 +175,7 @@ export function RentalPanel({
             claim. Without the first one, "it is broken" is an observation; with
             it, it is a difference. See the villkor in rental/terms.ts. */}
         {canManage ? (
-          <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
+          <InsetPanel dashed className="space-y-4 p-4">
             <h3 className="text-sm font-medium">{t("rental.record")}</h3>
             <Field
               label={t("rental.conditionOut")}
@@ -223,7 +223,7 @@ export function RentalPanel({
                 {t("rental.settle")}
               </Button>
             </div>
-          </div>
+          </InsetPanel>
         ) : (
           <div className="space-y-4">
             {/* Prose, not label/value rows. Each note runs to 2000 characters,

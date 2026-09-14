@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, InsetPanel } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Field, FieldGroup, Input, Textarea } from "@/components/ui/field";
@@ -301,7 +301,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
               {/* The running verdict: what this would do to the frame budget,
                   and, when it can't be saved, the one reason why not, in the
                   same words the API would answer with. */}
-              <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+              <InsetPanel className="px-4 py-3 text-sm">
                 <p>
                   {t("effectOnFrame")}{" "}
                   <span className={cn("font-semibold tabular-nums", net !== 0 && (net > 0 ? "text-success" : "text-danger"))}>
@@ -314,7 +314,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                 {check.ok && reason.trim() === "" && (
                   <p className="mt-1 text-xs text-muted">{t("reasonRequired")}</p>
                 )}
-              </div>
+              </InsetPanel>
 
               <div className="flex flex-wrap gap-2">
                 <Button onClick={save} loading={saving} disabled={!canSave}>

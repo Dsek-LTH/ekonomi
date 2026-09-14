@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { SECTION_LABELS } from "./app-shell";
+import { SETTINGS_ROOT } from "./settings-sections";
 import { useHistoryGo, useProgressRouter } from "./route-progress";
 import {
   applyNav,
   backTarget,
   EMPTY_STACK,
+  exitTarget,
   returnTarget,
   type BackTarget,
   type NavStack,
@@ -150,6 +153,59 @@ export function RouteHistoryRecorder() {
 export function useBackTarget(href: string): BackTarget | null {
   const stack = useNavStack();
   return useMemo(() => backTarget(stack, href, sectionLabel), [stack, href]);
+}
+
+/**
+ * The settings sidebar's "← back to app" link: the nearest page behind this
+ * trip that is not itself under Inställningar, so leaving it always leaves it
+ * rather than stopping on the last settings page you happened to pass
+ * through. `fallback` (`/dashboard`) is what a plain click already does on its
+ * own when nothing behind you qualifies, so this only overrides the href when
+ * there is somewhere real to pop to, restoring its scroll position along with
+ * it exactly as a nested page's own back link does. See BackLink.
+ */
+export function useBackToApp(fallback: string): {
+  href: string;
+  onClick: (e: ReactMouseEvent<HTMLAnchorElement>) => void;
+  /**
+   * The same destination, for a caller with no click event to read: Escape
+   * dismissing the settings overlay, say. Unconditional, since there is no
+   * modifier key to defer to when nothing was clicked.
+   */
+  close: () => void;
+} {
+  const stack = useNavStack();
+  const go = useHistoryGo();
+  const router = useProgressRouter();
+
+  const target = useMemo(
+    () =>
+      exitTarget(
+        stack,
+        (path) => path === SETTINGS_ROOT || path.startsWith(`${SETTINGS_ROOT}/`),
+      ),
+    [stack],
+  );
+
+  const close = () => {
+    if (target) go(target.delta);
+    else router.push(fallback);
+  };
+
+  return {
+    href: target?.url ?? fallback,
+    onClick: (e) => {
+      if (!target) return;
+      // Anything but a plain left click is opening this elsewhere, and the
+      // href above is what should be opened.
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      e.preventDefault();
+      go(target.delta);
+    },
+    close,
+  };
 }
 
 /**

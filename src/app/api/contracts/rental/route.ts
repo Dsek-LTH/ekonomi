@@ -14,12 +14,11 @@
 // recoverable from anywhere.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canManageRentals, canSignForSection } from "@/lib/domain/permissions";
-import { capabilitiesOf } from "@/lib/server/capabilities";
+import { canManageRentals } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateRental } from "@/lib/api/schemas/contract";
-import { rentalTitle, signatoryTitle } from "@/lib/contract/signatory";
+import { rentalTitle } from "@/lib/contract/signatory";
 import { storeContractDocument } from "@/lib/contract/document";
 import { checkAvailability, nameShortfalls } from "@/lib/data/rental-availability";
 import { rentalPricing } from "@/lib/contract/rental/pricing";
@@ -37,22 +36,6 @@ export async function POST(req: Request) {
   // A period that ends before it starts is not a rental anybody meant. Checked
   // as ISO days, which sort lexically, so no timezone is involved.
   if (d.returnAt < d.pickupAt) return fail(422, "contract.returnBeforePickup");
-
-  // Who signs for the section, checked rather than assumed.
-  //
-  // This used to be the acting user, which was wrong in the ordinary case: the
-  // person running uthyrning is not usually a firmatecknare, and a contract is
-  // only binding if the name on it could bind the section. Their name is copied
-  // onto the party row rather than read back through the relation, because the
-  // document states who signed it on the day and a name can change.
-  const signatory = await prisma.user.findUnique({
-    where: { id: d.sectionSignatoryId },
-    select: { id: true, name: true, roles: true, active: true },
-  });
-  if (!signatory || !signatory.active) return fail(422, "user.unknown");
-  if (!canSignForSection(await capabilitiesOf(signatory.roles))) {
-    return fail(422, "contract.notASignatory");
-  }
 
   // Catalogue ids are checked before anything is written. An id that names no
   // item would otherwise be silently dropped by the SetNull relation, and the
@@ -152,18 +135,14 @@ export async function POST(req: Request) {
         },
       },
 
+      // Only the renter's side. The section does not sign its own rentals: an
+      // accept from the renter is what avtalslagen asks for and what the
+      // liability clause turns on, and the section's side of the deal is
+      // already evidenced by the document it issued (see rental-contract.typ,
+      // Underskrifter). Who drew this contract up is still on the row, as
+      // `createdById` above.
       parties: {
         create: [
-          {
-            role: "SECTION",
-            name: signatory.name,
-            // The post they sign under, read from the role that gives them
-            // firmateckning rather than asked for. Written onto the row now
-            // rather than derived on read, because the contract records what
-            // somebody was on the day they signed it.
-            title: signatoryTitle(signatory.roles),
-            userId: signatory.id,
-          },
           {
             role: "COUNTERPARTY" as const,
             name: d.counterpartySignatory.name,

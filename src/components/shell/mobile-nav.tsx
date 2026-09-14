@@ -34,7 +34,7 @@ import { Avatar } from "../ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { IconFortnox } from "./fortnox-mark";
-import { IconCheck, IconChevronLeft, IconChevronRight } from "../ui/icons";
+import { IconCheck, IconChevronRight } from "../ui/icons";
 import type { NavGroup, NavItem } from "./app-shell";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
@@ -55,18 +55,19 @@ export function MobileNav({
   overview,
   groups,
   help,
-  inSettings,
+  settings,
   isActive,
   user,
   fortnox,
 }: {
   open: boolean;
   onClose: () => void;
-  /** The standalone link above the groups. Absent inside settings. */
-  overview: NavItem | null;
+  overview: NavItem;
   groups: NavGroup[];
   help: NavItem;
-  inSettings: boolean;
+  /** Absent for a reader without SETTINGS. Pinned beside Help rather than
+   *  sorted into a group; see the same choice in app-shell.tsx. */
+  settings: NavItem | null;
   isActive: (href: string) => boolean;
   user: CurrentUser;
   fortnox?: { session: FortnoxStatus["session"] | null };
@@ -133,9 +134,7 @@ export function MobileNav({
         <img src="/symbol_rosa.svg" alt="" className="h-7" />
         {/* The brand, which the top bar gave up when it started naming the
             section you are on instead. This is where it still fits. */}
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {inSettings ? t("settings") : "D-sektionen"}
-        </p>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold">D-sektionen</p>
         {/* The only way out, now that there is no page showing beside the menu
             to tap on. Escape closes it too, from a keyboard. See AppShell. */}
         <button
@@ -156,35 +155,25 @@ export function MobileNav({
           "pb-[calc(env(safe-area-inset-bottom)+1.5rem)]",
         )}
       >
-        {inSettings ? (
-          // Settings replace the app's nav rather than nesting inside it, so
-          // the way back is a row of its own at the top, the same place the
-          // rail keeps it.
-          <Link href="/dashboard" onClick={onClose} className={cn(CARD, ROW, "active:bg-surface")}>
-            <IconChevronLeft aria-hidden className="size-5 shrink-0 text-muted" />
-            <span className="min-w-0 flex-1 truncate font-medium">{t("backToApp")}</span>
-          </Link>
-        ) : (
-          // Whose session this is, at the top, where a phone puts an account.
-          // The rail keeps it at the foot because that is where a 64px column
-          // has room for an avatar; here there is a whole screen and the first
-          // thing worth saying is who you are signed in as.
-          <Link
-            href="/profile"
-            onClick={onClose}
-            aria-current={pathname === "/profile" ? "page" : undefined}
-            className={cn(CARD, "flex items-center gap-3 px-4 py-3 active:bg-surface")}
-          >
-            <Avatar initials={user.initials} />
-            <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-sm font-medium">{user.name}</span>
-              <span className="block truncate text-xs text-muted">{user.email}</span>
-            </span>
-            <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
-          </Link>
-        )}
+        {/* Whose session this is, at the top, where a phone puts an account.
+            The rail keeps it at the foot because that is where a 64px column
+            has room for an avatar; here there is a whole screen and the first
+            thing worth saying is who you are signed in as. */}
+        <Link
+          href="/profile"
+          onClick={onClose}
+          aria-current={pathname === "/profile" ? "page" : undefined}
+          className={cn(CARD, "flex items-center gap-3 px-4 py-3 active:bg-surface")}
+        >
+          <Avatar initials={user.initials} />
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-sm font-medium">{user.name}</span>
+            <span className="block truncate text-xs text-muted">{user.email}</span>
+          </span>
+          <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
+        </Link>
 
-        {overview && <div className={CARD}>{navRow(overview)}</div>}
+        <div className={CARD}>{navRow(overview)}</div>
 
         {groups.map((group) => (
           <div key={group.label}>
@@ -198,7 +187,12 @@ export function MobileNav({
           </div>
         ))}
 
-        <div className={CARD}>{navRow(help)}</div>
+        {/* Settings paired with Help here for the same reason the rail pins
+            them together: neither is a job, both are always there. */}
+        <div className={CARD}>
+          {settings && navRow(settings)}
+          {navRow(help)}
+        </div>
 
         {/* The account block: what a page load would be too much for, and the
             one warning that cannot wait for one. */}

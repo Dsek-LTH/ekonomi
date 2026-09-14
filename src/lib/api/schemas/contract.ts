@@ -230,19 +230,6 @@ export const CreateRental = z.object({
   lines: z.array(RentalLineInput).min(1).max(100),
 
   /**
-   * Who signs for the section.
-   *
-   * Named rather than assumed to be whoever is drawing the contract. The
-   * uthyrningsansvarig running a rental is usually not a firmatecknare, and
-   * defaulting the two to the same person put a name on a signature line that
-   * had no authority to be there. The route checks the id against
-   * FIRMATECKNARE.
-   *
-   * The post they sign under is not asked for. They hold firmateckning through
-   * a role the app already knows, so `signatoryTitle` reads it.
-   */
-  sectionSignatoryId: Id,
-  /**
    * Who signs for the renter, and required.
    *
    * It was optional, on the reasoning that a contract might be drawn before the
@@ -297,7 +284,6 @@ export const PreviewRental = z.object({
     )
     .max(100)
     .default([]),
-  sectionSignatoryId: Id.nullable().default(null),
   counterpartySignatory: z
     .object({
       name: Trimmed.max(120).default(""),

@@ -129,6 +129,17 @@ export const IconBook = (p: P) => (
   </Svg>
 );
 
+// Bookkeeping as a category rather than the ledger itself: two columns of
+// entries either side of a centre rule, the shape debit and kredit share
+// before either has a word on it. Distinct from IconBook, which is the one
+// ledger the group's first link opens.
+export const IconLedger = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M12 3v18M7 9h2M7 14h2M15 9h2M15 14h2" />
+  </Svg>
+);
+
 // Income: a coin with an arrow coming in. The counterpart to IconReceipt,
 // which is money going the other way.
 export const IconIncome = (p: P) => (
@@ -145,6 +156,16 @@ export const IconBox = (p: P) => (
   <Svg {...p}>
     <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />
     <path d="M3 7.5 12 12l9-4.5M12 12v9" />
+  </Svg>
+);
+
+// The stockroom rather than one crate in it: a roofline over a door, the
+// silhouette a single IconBox does not have. For the group; the crate stays
+// on the item that is actually about one thing on a shelf.
+export const IconWarehouse = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 10 12 4l9 6v10H3V10Z" />
+    <path d="M8 20v-6h8v6" />
   </Svg>
 );
 
@@ -187,6 +208,16 @@ export const IconList = (p: P) => (
   </Svg>
 );
 
+// The admin group: a box put away rather than a row on a log. IconList stays
+// on Avtal, the list actually inside it.
+export const IconArchive = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="18" height="5" rx="1.5" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 13h4" />
+  </Svg>
+);
+
 // A sheet with a signature on it: the avtal archive, and the one icon in the
 // set that has to say "document somebody put their name to" rather than merely
 // "document". The squiggle is what distinguishes it from IconList.
@@ -195,6 +226,15 @@ export const IconContract = (p: P) => (
     <path d="M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
     <path d="M13 3v5h5" />
     <path d="M8.5 17c1-1.5 1.8-2.2 2.4-2.1.7.1.3 1.8 1 2 .6.2 1.2-.7 3.6-.9" />
+  </Svg>
+);
+
+// A key, for the rental group: what actually changes hands when gear goes out
+// the door, rather than the paperwork (IconContract) that says it may.
+export const IconKey = (p: P) => (
+  <Svg {...p}>
+    <circle cx="7" cy="12" r="4" />
+    <path d="M11 12h10M16 12v3.5M19.5 12v3.5" />
   </Svg>
 );
 

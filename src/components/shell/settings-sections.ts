@@ -23,6 +23,12 @@ import {
 } from "@/components/ui/icons";
 import { IconFortnox } from "./fortnox-mark";
 
+// Where settings lands, and the prefix that switches the sidebar over to the
+// settings nav. Its own export for the same reason the list above is: the back
+// link (route-history) needs to know what counts as "still in settings"
+// without pulling in the shell.
+export const SETTINGS_ROOT = "/admin";
+
 export interface SettingsSection {
   href: string;
   /** Key under `nav`, the same one the sidebar names it by. */

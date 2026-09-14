@@ -73,3 +73,43 @@ export function CardBody({
 }) {
   return <div className={cn("px-inset py-5", className)}>{children}</div>;
 }
+
+/**
+ * A lighter section within a `Card`: a tint one step off the card's own
+ * background, no border, no shadow. For content that belongs to the card
+ * around it and only needs to be told apart from it, not boxed separately.
+ *
+ * Replaces the ad hoc `rounded-xl border border-border p-4` a few screens
+ * had each grown on their own: a bordered box the same shape as `Card` but
+ * smaller reads as a second card stacked inside the first rather than as one
+ * card with a part of it set off, which is the thing a reader notices before
+ * they can say why a page looks busy. No padding baked in, on purpose: unlike
+ * `CardBody`'s fixed `px-inset py-5`, what sits inside one of these varies
+ * enough (a short callout, a form, a table) that a caller's own `className`
+ * has to be free to set it, and a default here would either be wrong for most
+ * of them or fight a caller's own value for the same property.
+ *
+ * `dashed` is the one genuinely different case: a form that is not yet part
+ * of the record (adding a contract party, recording a rental's return)
+ * rather than a settled fact about one that already is. A dashed edge is the
+ * same "nothing here yet" signal a draft or an empty dropzone already
+ * carries elsewhere in the app, and is worth keeping distinct from the tint
+ * every settled section uses.
+ */
+export function InsetPanel({
+  dashed = false,
+  className,
+  children,
+  ...rest
+}: {
+  dashed?: boolean;
+} & React.ComponentProps<"div">) {
+  return (
+    <div
+      {...rest}
+      className={cn("rounded-xl", dashed ? "border border-dashed border-border" : "bg-surface", className)}
+    >
+      {children}
+    </div>
+  );
+}
