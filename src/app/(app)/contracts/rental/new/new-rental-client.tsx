@@ -29,7 +29,13 @@
 // sits beside a panel you can drag, so its width changes while the viewport
 // does not move at all, which is the same reason AllocationEditor is written
 // that way and the reason `sm:` was the wrong question here.
-import { useEffect, useState } from "react";
+//
+// It is also the edit screen. contracts/[id]/edit hands it the contract as
+// `existing`, the way an utlägg's edit page hands the wizard its utlägg, and
+// until somebody has signed, a rental is changed by filling in the form it was
+// drawn on again. One form means the new contract and the edited one cannot
+// disagree about what a rental is made of.
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -41,13 +47,14 @@ import { DateInput, Field, FieldGroup, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { IconPlus } from "@/components/ui/icons";
 import { useMutation } from "@/components/shell/use-mutation";
-import { useFormat } from "@/lib/ui/use-format";
+import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { parseSEK } from "@/lib/domain/money";
 import { isCompleteDate } from "@/lib/domain/date";
 import { Amount } from "@/components/ui/amount";
 import { oreToSEK } from "@/lib/domain/money";
 import { rentalPricing } from "@/lib/contract/rental/pricing";
 import { SECTION } from "@/lib/contract/section";
+import { MAX_SIGNATURES } from "@/lib/api/schemas/contract";
 import {
   RentalLines,
   makeLine,
@@ -59,65 +66,166 @@ import { CounterpartyDialog } from "../../counterparties/counterparty-dialog";
 import type { RentalItemOption } from "@/lib/data/rental-items";
 import type { Availability } from "@/lib/data/rental-availability";
 import type { CounterpartyOption } from "@/lib/data/counterparties";
+import type { ContractDetail, RentalLineRow } from "@/lib/data/contracts";
 
 const toOre = (input: string) => (input.trim() === "" ? 0 : Math.round(parseSEK(input) * 100));
 const kr = (ore: number) => (ore / 100).toFixed(2);
 
+/** A stored line as the sheet holds it: strings, as if it had been typed. */
+const lineFromRow = (l: RentalLineRow): LineRow => ({
+  ...makeLine(),
+  itemId: l.itemId,
+  description: l.description,
+  quantity: String(l.quantity),
+  unitPrice: kr(l.unitPriceOre),
+  discount: l.discountPercent > 0 ? String(l.discountPercent) : "",
+  replacementValue: kr(l.replacementValueOre),
+});
+
+/** Everything typed into the form, as one value, so it can be kept as a draft. */
+type RentalForm = {
+  counterpartyId: string | null;
+  statedCounterparty: string;
+  orgNo: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  email: string;
+  phone: string;
+  /** As typed, so a half-cleared field survives a reload as it was. */
+  signatureCount: string;
+  pickupAt: string;
+  returnAt: string;
+  purpose: string;
+  lines: LineRow[];
+};
+
+/** Its own key, so a draft cannot be read back onto a different screen. */
+const DRAFT_KEY = "contracts:rental:new:draft";
+
 export function NewRentalClient({
   items,
   counterparties,
+  existing,
 }: {
   items: RentalItemOption[];
   counterparties: CounterpartyOption[];
+  /** The rental being edited. Absent when drawing a new one. */
+  existing?: ContractDetail;
 }) {
   const t = useTranslations("contracts");
   const tc = useTranslations("contracts.counterparties");
   const router = useRouter();
   const { mutate, pending } = useMutation();
-  const { date } = useFormat();
+
+  // Everything typed, kept in localStorage while a new rental is being drawn,
+  // so a reload does not empty the form. See lib/ui/use-local-draft.ts.
+  //
+  // Editing an existing rental keeps plain state instead: the server already
+  // holds that one, and a local copy outliving somebody else's change would put
+  // stale terms back on the screen. The utlägg wizard makes the same split.
+  const [form, setForm, , forgetDraft] = useLocalDraft<RentalForm>(
+    DRAFT_KEY,
+    {
+      counterpartyId: existing?.counterpartyId ?? null,
+      // The renter's name as an edited contract already states it, when there
+      // is no directory row to pick: one drawn before the directory existed, or
+      // picked from a row since deleted. Kept until somebody picks another.
+      statedCounterparty:
+        existing && !counterparties.some((c) => c.id === existing.counterpartyId)
+          ? (existing.counterparty ?? "")
+          : "",
+      orgNo: existing?.counterpartyOrgNo ?? "",
+      address: existing?.counterpartyAddress ?? "",
+      postalCode: existing?.counterpartyPostalCode ?? "",
+      city: existing?.counterpartyCity ?? "",
+      email: existing?.counterpartyEmail ?? "",
+      phone: existing?.counterpartyPhone ?? "",
+      signatureCount: String(existing?.rental?.signatureCount ?? 1),
+      pickupAt: existing?.rental?.pickupAt.slice(0, 10) ?? "",
+      returnAt: existing?.rental?.returnAt.slice(0, 10) ?? "",
+      purpose: existing?.rental?.purpose ?? "",
+      // Utrustning och pengar. No money field here: every figure below the
+      // lines is worked out from them, discounts included. See
+      // rental/pricing.ts.
+      lines: existing?.rental ? existing.rental.lines.map(lineFromRow) : [makeLine()],
+    },
+    !existing,
+  );
+  const {
+    counterpartyId,
+    statedCounterparty,
+    orgNo,
+    address,
+    postalCode,
+    city,
+    email,
+    phone,
+    signatureCount,
+    pickupAt,
+    returnAt,
+    purpose,
+    lines,
+  } = form;
+  // One setter per field, named as the separate states they replace, so the
+  // markup below reads the same as before.
+  const field =
+    <K extends keyof RentalForm>(key: K) =>
+    (value: RentalForm[K]) =>
+      setForm((f) => ({ ...f, [key]: value }));
+  const setCounterpartyId = field("counterpartyId");
+  const setStatedCounterparty = field("statedCounterparty");
+  const setOrgNo = field("orgNo");
+  const setAddress = field("address");
+  const setPostalCode = field("postalCode");
+  const setCity = field("city");
+  const setEmail = field("email");
+  const setPhone = field("phone");
+  const setSignatureCount = field("signatureCount");
+  const setPickupAt = field("pickupAt");
+  const setReturnAt = field("returnAt");
+  const setPurpose = field("purpose");
+  // Stable, because the sheet tops up its spare rows from an effect that lists
+  // its `onChange` as a dependency.
+  const setLines = useCallback(
+    (rows: LineRow[]) => setForm((f) => ({ ...f, lines: rows })),
+    [setForm],
+  );
 
   // Hyrestagaren, picked from the directory rather than typed. See
   // upload-client.tsx, which does the same thing for the archive form.
   const [counterpartyOptions, setCounterpartyOptions] = useState(counterparties);
-  const [counterpartyId, setCounterpartyId] = useState<string | null>(null);
   const [newCounterpartyName, setNewCounterpartyName] = useState<string | null>(null);
-  const counterparty = counterpartyOptions.find((c) => c.id === counterpartyId)?.name ?? "";
-  const [orgNo, setOrgNo] = useState("");
-  const [address, setAddress] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [renterName, setRenterName] = useState("");
-  const [renterEmail, setRenterEmail] = useState("");
-  const [renterPhone, setRenterPhone] = useState("");
+  const counterparty =
+    counterpartyOptions.find((c) => c.id === counterpartyId)?.name ?? statedCounterparty;
+  const signatures = Number(signatureCount);
+  const signaturesValid =
+    Number.isInteger(signatures) && signatures >= 1 && signatures <= MAX_SIGNATURES;
 
   function pickCounterparty(id: string) {
+    setStatedCounterparty("");
     setCounterpartyId(id || null);
     const picked = counterpartyOptions.find((c) => c.id === id);
     setOrgNo(picked?.orgNo ?? "");
     setAddress(picked?.address ?? "");
     setPostalCode(picked?.postalCode ?? "");
     setCity(picked?.city ?? "");
+    setEmail(picked?.email ?? "");
+    setPhone(picked?.phone ?? "");
   }
 
   function counterpartyCreated(created: CounterpartyOption) {
     setCounterpartyOptions((prev) => [...prev, created]);
+    setStatedCounterparty("");
     setCounterpartyId(created.id);
     setOrgNo(created.orgNo ?? "");
     setAddress(created.address ?? "");
     setPostalCode(created.postalCode ?? "");
     setCity(created.city ?? "");
+    setEmail(created.email ?? "");
+    setPhone(created.phone ?? "");
     setNewCounterpartyName(null);
   }
-
-  // Perioden
-  const [pickupAt, setPickupAt] = useState("");
-  const [returnAt, setReturnAt] = useState("");
-  const [place, setPlace] = useState("");
-  const [purpose, setPurpose] = useState("");
-
-  // Utrustning och pengar. No money field here: every figure below the lines
-  // is worked out from them, discounts included. See rental/pricing.ts.
-  const [lines, setLines] = useState<LineRow[]>([makeLine()]);
 
   // What is free over the chosen period, stamped with the dates it was fetched
   // for and read back only while those still match the fields, so a stale
@@ -137,7 +245,9 @@ export function NewRentalClient({
   useEffect(() => {
     if (!periodReady) return;
     const abort = new AbortController();
-    fetch(`/api/rental-items/availability?from=${pickupAt}&to=${returnAt}`, {
+    // An edited rental's own lines would otherwise count against it.
+    const exclude = existing ? `&exclude=${existing.id}` : "";
+    fetch(`/api/rental-items/availability?from=${pickupAt}&to=${returnAt}${exclude}`, {
       signal: abort.signal,
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -153,7 +263,7 @@ export function NewRentalClient({
       // worst case is a refusal at submit rather than a double booking.
       .catch(() => undefined);
     return () => abort.abort();
-  }, [pickupAt, returnAt, periodReady]);
+  }, [pickupAt, returnAt, periodReady, existing]);
 
   /** What is left of an item, counting what this form has already claimed on
    *  its other lines. Without that, a form listing the Soundboks twice would
@@ -199,7 +309,7 @@ export function NewRentalClient({
 
   const ready =
     counterparty.trim() !== "" &&
-    renterName.trim() !== "" &&
+    signaturesValid &&
     orgNo.trim() !== "" &&
     address.trim() !== "" &&
     postalCode.trim() !== "" &&
@@ -208,18 +318,6 @@ export function NewRentalClient({
     periodReady &&
     filled.length > 0 &&
     !anyShort;
-
-  // One line saying what is about to be made, beside the button that makes it.
-  const summary =
-    filled.length === 0 || !periodReady
-      ? null
-      : t("rental.summary", {
-          items: t("rental.itemSummary", {
-            count: filled.reduce((n, l) => n + (Number(l.quantity) || 0), 0),
-          }),
-          period: `${date(pickupAt)} – ${date(returnAt)}`,
-          price: `${kr(pricing.totalOre)} kr`,
-        });
 
   // ── The document, drawn as it is described ─────────────────────
   //
@@ -241,7 +339,6 @@ export function NewRentalClient({
     pickupAt: isCompleteDate(pickupAt) ? pickupAt : null,
     returnAt: isCompleteDate(returnAt) ? returnAt : null,
     purpose: purpose.trim(),
-    place: place.trim(),
     lines: filled.map((l) => ({
       description: l.description.trim(),
       quantity: Number(l.quantity) || 0,
@@ -249,9 +346,10 @@ export function NewRentalClient({
       discountPercent: effectiveDiscountPercent(l, toOre),
       replacementValueOre: toOre(l.replacementValue),
     })),
-    counterpartySignatory: renterName.trim()
-      ? { name: renterName.trim(), email: renterEmail.trim(), phone: renterPhone.trim() }
-      : null,
+    counterpartyEmail: email.trim(),
+    counterpartyPhone: phone.trim(),
+    // One block while the field is half typed, rather than no preview at all.
+    signatureCount: signaturesValid ? signatures : 1,
   };
   const draftKey = JSON.stringify(draft);
 
@@ -290,52 +388,68 @@ export function NewRentalClient({
     // redraw the document forever.
   }, [draftKey]);
 
-  async function create() {
+  async function save() {
+    const body = {
+      counterparty: draft.counterparty,
+      counterpartyOrgNo: draft.counterpartyOrgNo,
+      counterpartyAddress: draft.counterpartyAddress,
+      counterpartyPostalCode: draft.counterpartyPostalCode,
+      counterpartyCity: draft.counterpartyCity,
+      counterpartyId,
+      pickupAt,
+      returnAt,
+      purpose: purpose.trim(),
+      // No rent is sent. The route runs the same pricing over the lines it is
+      // given, so there is one place the subtraction happens.
+      lines: filled.map((l) => ({
+        itemId: l.itemId,
+        description: l.description.trim(),
+        quantity: Number(l.quantity) || 1,
+        unitPriceOre: toOre(l.unitPrice),
+        discountPercent: effectiveDiscountPercent(l, toOre),
+        replacementValueOre: toOre(l.replacementValue),
+      })),
+      counterpartyEmail: email.trim() || null,
+      counterpartyPhone: phone.trim() || null,
+      signatureCount: signatures,
+    };
+
+    // The same body either way. An edit sends the whole form again, and the
+    // route replaces what the contract said and redraws the document.
+    if (existing) {
+      const saved = await mutate(`/api/contracts/${existing.id}/rental`, {
+        method: "PUT",
+        body,
+        success: t("rental.saved"),
+        refresh: false,
+      });
+      if (saved !== null) router.push(`/contracts/${existing.id}`);
+      return;
+    }
+
     const created = await mutate<{ id: string }>("/api/contracts/rental", {
-      body: {
-        counterparty: draft.counterparty,
-        counterpartyOrgNo: draft.counterpartyOrgNo,
-        counterpartyAddress: draft.counterpartyAddress,
-        counterpartyPostalCode: draft.counterpartyPostalCode,
-        counterpartyCity: draft.counterpartyCity,
-        counterpartyId,
-        pickupAt,
-        returnAt,
-        purpose: purpose.trim(),
-        place: place.trim() || null,
-        // No due date is sent either: absent is what the villkor already
-        // read as "vid uthämtningen", the ordinary case, and there is no
-        // field here to have typed one into.
-        // No rent is sent. The route runs the same pricing over the lines it is
-        // given, so there is one place the subtraction happens.
-        lines: filled.map((l) => ({
-          itemId: l.itemId,
-          description: l.description.trim(),
-          quantity: Number(l.quantity) || 1,
-          unitPriceOre: toOre(l.unitPrice),
-          discountPercent: effectiveDiscountPercent(l, toOre),
-          replacementValueOre: toOre(l.replacementValue),
-        })),
-        counterpartySignatory: renterName.trim()
-          ? {
-              name: renterName.trim(),
-              email: renterEmail.trim() || null,
-              phone: renterPhone.trim() || null,
-            }
-          : undefined,
-      },
+      body,
       success: t("rental.created"),
       refresh: false,
     });
-    if (created) router.push(`/contracts/${created.id}`);
+    if (created) {
+      // Spent: the contract exists now. Only the stored copy goes, so the form
+      // does not blank itself in the frame before the page changes.
+      forgetDraft();
+      router.push(`/contracts/${created.id}`);
+    }
   }
 
   return (
     <PageShell
-      title={t("rental.newTitle")}
-      description={t("rental.newDescription")}
+      title={existing ? t("rental.editTitle") : t("rental.newTitle")}
+      description={existing ? t("rental.editDescription") : t("rental.newDescription")}
       width="content"
-      back={{ href: "/uthyrning", label: t("rental.backToRentals") }}
+      back={
+        existing
+          ? { href: `/contracts/${existing.id}`, label: existing.title }
+          : { href: "/uthyrning", label: t("rental.backToRentals") }
+      }
     >
       {/* The contract, beside the form that describes it. No `onFile`: there is
           nothing to upload here, the document is drawn rather than attached,
@@ -358,12 +472,6 @@ export function NewRentalClient({
             puts them in, because the document is open in the panel beside this
             form and a form whose blocks do not correspond to the page it draws
             makes the reader do the mapping.
-
-            It also puts the renter's "Representerad av" question on the same
-            line as ours, which used to be a card apart, exactly the fault
-            this file's header comment says the form was reorganised to fix:
-            one subject split in half by another. The renter's representative
-            was asked first, then the period, then the gear, then ours.
 
             Our side is answered already and cannot be typed over. It is shown
             rather than hidden because it is printed on the contract, and a
@@ -424,7 +532,7 @@ export function NewRentalClient({
                       value={counterpartyId ?? ""}
                       onChange={pickCounterparty}
                       allowClear
-                      placeholder={tc("pick")}
+                      placeholder={statedCounterparty || tc("pick")}
                       searchPlaceholder={tc("pick")}
                       onCreate={(text) => setNewCounterpartyName(text)}
                       createLabel={(text) => tc("createNew", { text })}
@@ -474,41 +582,51 @@ export function NewRentalClient({
                   </Field>
                 </div>
 
-                <FieldGroup
-                  label={t("rental.representedBy")}
-                  hint={t("rental.counterpartySignatoryHint")}
-                  requirement="required"
-                >
-                  {/* Stacked rather than three across: this column is half a
-                      card wide, and an email address does not fit a third of
-                      that. */}
-                  <div className="space-y-2">
+                {/* How to reach them other than by post. Optional, filled in
+                    from the directory when a counterparty is picked, and
+                    printed under the address when given. */}
+                <div className="grid gap-4 @md:grid-cols-2">
+                  <Field label={t("party.email")} requirement="optional">
                     <Input
-                      value={renterName}
-                      onChange={(e) => setRenterName(e.target.value)}
-                      placeholder={t("party.name")}
-                      aria-label={t("party.name")}
-                      maxLength={120}
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      maxLength={200}
                     />
-                    <div className="grid gap-2 @md:grid-cols-2">
-                      <Input
-                        type="email"
-                        value={renterEmail}
-                        onChange={(e) => setRenterEmail(e.target.value)}
-                        placeholder={t("party.email")}
-                        aria-label={t("party.email")}
-                        maxLength={200}
-                      />
-                      <Input
-                        value={renterPhone}
-                        onChange={(e) => setRenterPhone(e.target.value)}
-                        placeholder={t("party.phone")}
-                        aria-label={t("party.phone")}
-                        maxLength={40}
-                      />
-                    </div>
+                  </Field>
+                  <Field label={t("party.phone")} requirement="optional">
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      autoComplete="tel"
+                      inputMode="tel"
+                      maxLength={40}
+                    />
+                  </Field>
+                </div>
+
+                <Field
+                  label={t("rental.signatureCount")}
+                  hint={t("rental.signatureCountHint")}
+                  requirement="required"
+                  error={
+                    signatureCount === "" || signaturesValid
+                      ? undefined
+                      : t("rental.signatureCountInvalid", { max: MAX_SIGNATURES })
+                  }
+                >
+                  <div className="max-w-24">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={MAX_SIGNATURES}
+                      value={signatureCount}
+                      onChange={(e) => setSignatureCount(e.target.value)}
+                      inputMode="numeric"
+                    />
                   </div>
-                </FieldGroup>
+                </Field>
               </div>
             </div>
           </CardBody>
@@ -518,7 +636,7 @@ export function NewRentalClient({
         <Card>
           <CardHeader title={t("rental.sectionPeriod")} />
           <CardBody className="@container space-y-4">
-            <div className="grid gap-4 @xl:grid-cols-3">
+            <div className="grid gap-4 @xl:grid-cols-2">
               <Field label={t("rental.pickupAt")} requirement="required">
                 <DateInput value={pickupAt} onChange={(e) => setPickupAt(e.target.value)} />
               </Field>
@@ -528,9 +646,6 @@ export function NewRentalClient({
                 error={datesOrdered ? undefined : t("rental.returnBeforePickup")}
               >
                 <DateInput value={returnAt} onChange={(e) => setReturnAt(e.target.value)} />
-              </Field>
-              <Field label={t("rental.place")} requirement="optional">
-                <Input value={place} onChange={(e) => setPlace(e.target.value)} maxLength={200} />
               </Field>
             </div>
             {/* Kept, and optional. The villkor say the gear must be used "på
@@ -640,15 +755,22 @@ export function NewRentalClient({
         </Card>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className={ready ? "text-sm text-muted" : "text-xs text-warning"}>
-            {ready ? summary : t("rental.incomplete")}
-          </p>
+          <p className="text-xs text-warning">{ready ? null : t("rental.incomplete")}</p>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push("/uthyrning")}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                // Cancelling a new rental throws its draft away, which is what
+                // the word says. An edit has no draft, and the key it would
+                // remove belongs to a new rental somebody may be drawing.
+                if (!existing) forgetDraft();
+                router.push(existing ? `/contracts/${existing.id}` : "/uthyrning");
+              }}
+            >
               {t("form.cancel")}
             </Button>
-            <Button onClick={create} loading={pending !== null} disabled={!ready}>
-              {t("rental.create")}
+            <Button onClick={save} loading={pending !== null} disabled={!ready}>
+              {existing ? t("rental.save") : t("rental.create")}
             </Button>
           </div>
         </div>

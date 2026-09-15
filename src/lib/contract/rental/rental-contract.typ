@@ -18,7 +18,7 @@
 //   Headings        TeX Gyre Heros bold                   \c_dsek_section_format_tl
 //   Text block      160mm wide, 230mm tall on A4          geometry
 //   Paragraphs      no indent, 3mm between                \parindent, \parskip
-//   Running head    sigil, guild name in small caps       \newpagestyle{main}
+//   Running head    sigil, guild name in bold capitals    \newpagestyle{main}
 //   Footer          a hairline, then "2 (4)" centred      \setfootrule, \setfoot
 //   Signatures      capacity, blank space, name, title    \signature in dsek.sty
 //
@@ -29,9 +29,11 @@
 // at "looks like a contract" and the wrong answer to the actual question. The
 // section has a house style; it is published; this is it.
 //
-// What is deliberately not taken from the class is the spacing inside the
-// villkor. 3mm is its setting for running prose, and these are numbered terms
-// each read on its own by somebody deciding whether to accept them.
+// The villkor are the one place the layout departs from the section's
+// paragraphed documents (stadgar, reglemente). Those set "§ 1 Namn" in a
+// column of its own beside the text, which at 160mm leaves the text about
+// 100mm wide. Here the heading sits above its clause instead, with the
+// spacing the class gives a \section, so the terms keep the full measure.
 
 #let data = json(bytes(sys.inputs.at("data")))
 
@@ -75,7 +77,13 @@
 // No indent, a clear gap between, straight from the class (`\parindent{0mm}`,
 // `\parskip{3mm}`). It is also what makes a numbered term read as a stop rather
 // than as one more step in an argument.
-#set par(justify: true, leading: 0.75em, spacing: 3mm)
+//
+// The 3mm goes on top of the leading, not in place of it. LaTeX adds \parskip
+// to the ordinary line pitch, while Typst's `spacing` replaces `leading`
+// between two paragraphs. Set to 3mm on its own it came out 0.3pt wider than a
+// line break, and the paragraphs ran together.
+#let par-gap = 0.75em + 3mm
+#set par(justify: true, leading: 0.75em, spacing: par-gap)
 
 // Lining, tabular figures: what a column of numbers wants, and what the class
 // switches to inside its own tables (`Numbers={Monospaced,Lining}`). The
@@ -99,13 +107,17 @@
     // `\parbox{60mm}`), not a layout that stretches to fill the line: the
     // guild's own documents leave the gap between the short title and the
     // date rather than closing it, and this follows suit.
+    //
+    // Centred against the sigil, not hung from its top. A `\parbox` with no
+    // position argument is centred on its line, so the class's three boxes sit
+    // level with the middle of the 16mm sigil, and so do these.
     grid(
       columns: (18mm, 80mm, 1fr),
       column-gutter: 0pt,
-      align: (left + top, left + top, right + top),
+      align: (left + horizon, left + horizon, right + horizon),
       image("/public/bw.svg", height: 16mm),
       [
-        #smallcaps[D-sektionen inom TLTH] \
+        #text(weight: "bold")[#upper[D-sektionen inom TLTH]] \
         #text(size: small-size)[#smallcaps[#data.title]]
       ],
       [
@@ -128,8 +140,9 @@
 
 #let orDash(v) = if v == none or v == "" { text(fill: absent)[--] } else { v }
 
-// `\section`: \Large, sans, bold. Never orphaned at the foot of a page.
-#let section(title) = block(above: 8mm, below: 3mm, breakable: false)[
+// `\section`: \Large, sans, bold. Never orphaned at the foot of a page: sticky
+// keeps it on the same page as whatever follows it.
+#let section(title) = block(above: 8mm, below: 3mm, breakable: false, sticky: true)[
   #text(font: sans, size: section-size, weight: "bold")[#title]
 ]
 
@@ -148,8 +161,6 @@
 #text(font: sans, size: title-size, weight: "bold")[Uthyrningsavtal]
 #v(0.75em)
 
-#text(style: "italic")[#orDash(data.title)]
-
 // ── Parterna ──────────────────────────────────────────────────────────
 //
 // Side by side and level with each other, because a contract's first question
@@ -162,7 +173,7 @@
 // line longer does not push the section's down.
 #section[Parterna]
 
-#let partyBlock(role, name, orgNoLabel, orgNo, address, postalLine, contact, party) = [
+#let partyBlock(role, name, orgNoLabel, orgNo, address, postalLine, contact) = [
   #set par(first-line-indent: 0pt, justify: false, leading: 0.55em, spacing: 0.55em)
   #text(size: small-size)[#smallcaps(role)] \
   #text(weight: "bold")[#orDash(name)] \
@@ -182,20 +193,10 @@
   #if postalLine != none and postalLine != "" [
     #postalLine \
   ]
+  // How to reach them other than by post, on one line. Only the renter has
+  // one: the section is reached through the address above.
   #if contact != none and contact != "" [
     #contact \
-  ]
-  // Who signs for this party, named here rather than only over the signature
-  // line at the foot. An organisation cannot sign anything; a person signs on
-  // its behalf, and a contract naming the organisation on page one and the
-  // human being on page four has separated two facts that belong together.
-  #if party != none [
-    #v(1.5mm)
-    #text(size: small-size)[#smallcaps("Representerad av")] \
-    #if party.name != none and party.name != "" { party.name } else { text(fill: absent)[--] }
-    #if party.title != none and party.title != "" [
-      \ #text(style: "italic")[#party.title]
-    ]
   ]
 ]
 
@@ -211,10 +212,6 @@
     data.lessor.address,
     data.lessor.postalLine,
     none,
-    // The section is identified by name and org.nr above; nobody signs for it
-    // on this document (see Underskrifter), so naming who represented it would
-    // be a name with no function on the page.
-    none,
   ),
   partyBlock(
     "Hyrestagare",
@@ -223,15 +220,9 @@
     data.counterpartyOrgNo,
     data.counterpartyAddress,
     data.counterpartyPostalLine,
-    // The renter's own contact details, where a signatory was named. This is
-    // the one place on the page they appear, and they are here rather than in
-    // the signature block because a party is identified once.
-    if data.counterpartyParty != none {
-      (data.counterpartyParty.email, data.counterpartyParty.phone)
-        .filter(v => v != none and v != "")
-        .join(" · ")
-    } else { none },
-    data.counterpartyParty,
+    (data.counterpartyEmail, data.counterpartyPhone)
+      .filter(v => v != none and v != "")
+      .join(" – "),
   ),
 )
 
@@ -239,11 +230,10 @@
 #section[Hyresperiod]
 
 #grid(
-  columns: (1fr, 1fr, 1fr),
+  columns: (1fr, 1fr),
   column-gutter: 8mm,
   inlineField("Uthämtas", orDash(figures[#data.pickupAt])),
   inlineField("Återlämnas", orDash(figures[#data.returnAt])),
-  inlineField("Plats", orDash(data.place)),
 )
 
 #if data.purpose != none and data.purpose != "" [
@@ -301,7 +291,8 @@
     [À-pris],
     ..if data.anyDiscount { ([Rabatt],) } else { () },
     [Belopp],
-    [Återanskaffning],
+    // Per unit, like the à-pris, since § 5 charges what one costs to replace.
+    [Återanskaffningsvärde à st],
   ),
   table.hline(stroke: midrule),
   ..data.lines
@@ -316,16 +307,9 @@
       figures[#l.replacementValue],
     ))
     .flatten(),
-  table.hline(stroke: midrule),
-  // The totals row. Only two of the columns carry one: what the lines come to
-  // and what is at stake. A sum under "Antal" would be a number nobody has a
-  // use for, and what is actually owed is worked out below, where the discount
-  // can be shown coming off.
-  [Totalt],
-  [], [],
-  ..if data.anyDiscount { ([],) } else { () },
-  figures[#data.subtotal],
-  figures[#data.totalReplacement],
+  // No totals row. What is owed is worked out under the table, where the
+  // discount is shown coming off, and a sum here as well would be one more
+  // figure for the same lines to disagree with.
   table.hline(stroke: bottomrule),
 )
 ]
@@ -353,15 +337,14 @@
       } else { () },
       text(weight: "bold")[Hyra],
       figures(text(weight: "bold")[#data.price]),
-      // Under the figure it is the date for. Left off when there is none, which
-      // the villkor read as "at pickup" rather than as an omission.
-      ..if data.paymentDue != none {
-        ([Betalas senast], figures[#data.paymentDue])
-      } else { () },
-      grid.cell(colspan: 2, line(length: 100%, stroke: hairline)),
-      grid.cell(colspan: 2, text(size: foot-size, fill: absent)[
-        Moms redovisas inte. Uthyraren är momsbefriad.
-      ]),
+    )
+    // What is at stake, apart from what is owed. The renter pays it only under
+    // § 6, never as rent, so it stands under the rent rather than in the sum.
+    #v(5mm)
+    #grid(
+      columns: (1fr, auto),
+      column-gutter: 8mm,
+      [Återanskaffningsvärde totalt], figures[#data.totalReplacement],
     )
   ]
 ]
@@ -370,14 +353,18 @@
 
 // ── Villkor ───────────────────────────────────────────────────────────
 //
-// Numbered, because the clauses are what a dispute points at and "punkt 5" has
-// to mean something. The numbering is drawn from the order of the clauses
-// rather than written into the text, so inserting one renumbers the rest.
+// Numbered, because the clauses are what a dispute points at and "§ 5" has to
+// mean something. The numbering is drawn from the order of the clauses rather
+// than written into the text, so inserting one renumbers the rest. The space
+// after § is non-breaking, so the sign never ends a line without its number.
 
 // A term's table. Two columns, booktabs rules, a step down from the body, and
 // indented from the left margin so it reads as evidence inside the numbered
 // term above it rather than as a new section.
-#let termsTable(head, rows) = block(above: 3mm, below: 3mm, breakable: false)[
+//
+// `lead` is a layout mark for the first header cell (see `mark` below), inline
+// so it adds no line of its own.
+#let termsTable(head, rows, lead: none) = block(above: 3mm, below: 3mm, breakable: false)[
   #pad(left: 6mm)[
     #set text(size: small-size)
     #set par(justify: false, first-line-indent: 0pt, leading: 0.55em, spacing: 0.55em)
@@ -388,7 +375,7 @@
       inset: (x: 0pt, y: 4pt),
       column-gutter: 8mm,
       table.hline(stroke: toprule),
-      table.header(..head.map(h => text(weight: "bold")[#h])),
+      table.header(..head.enumerate().map(((k, h)) => text(weight: "bold")[#h#if k == 0 { lead }])),
       table.hline(stroke: midrule),
       ..rows.flatten(),
       table.hline(stroke: bottomrule),
@@ -399,14 +386,16 @@
 // A term's list. For examples rather than steps, so the marker is a plain
 // bullet and nothing is numbered: numbering inside a clause would compete with
 // the clause numbers themselves.
-#let termsList(items) = block(above: 2.5mm, below: 2.5mm)[
+//
+// `lead` is a layout mark for the first item, the same as `termsTable`'s.
+#let termsList(items, lead: none) = block(above: 2.5mm, below: 2.5mm)[
   #pad(left: 6mm)[
     #set par(justify: false, first-line-indent: 0pt, leading: 0.6em, spacing: 1.5mm)
-    #for item in items [
+    #for (k, item) in items.enumerate() [
       #grid(
         columns: (auto, 1fr),
         column-gutter: 0.7em,
-        [#sym.bullet], [#item],
+        [#sym.bullet], [#item#if k == 0 { lead }],
       )
     ]
   ]
@@ -414,14 +403,59 @@
 
 #section[Villkor]
 
+// Where a clause heading, a clause's first line, the last line of the villkor,
+// a sentence introducing a table or a list, that table or list, and the
+// signatures land, for page-layout.test.ts to ask Typst about. Invisible, and
+// read by nothing else. Marks go inline, in a paragraph or a cell that is
+// already there, because a mark on its own would be a paragraph of its own; the
+// test knows which clauses to expect them on. `part` is the index of the text
+// part a table or list is introduced by, so the two marks can be paired.
+#let mark(kind, clause, part: none) = context [#metadata((kind: kind, clause: clause, part: part, page: here().page())) <layout>]
+
 #for (i, clause) in data.terms.enumerate() [
-  #block(above: 5mm, below: 2mm, breakable: false)[
-    #text(font: sans, weight: "bold")[#(i + 1).#h(0.6em)#clause.heading]
+  // More air above the heading than below it, so it reads as the start of the
+  // clause under it rather than the end of the one before. dsekparagraphed.cls
+  // does it the other way round for \section (about 5mm above, 7.6mm below
+  // once \parskip and \baselineskip are counted), and on a page of numbered
+  // clauses that left each heading looking attached to the wrong one.
+  //
+  // Sticky, so a heading is never left at the foot of a page with its clause
+  // starting on the next.
+  #block(above: 7.6mm, below: 5mm, breakable: false, sticky: true)[
+    #text(font: sans, weight: "bold")[§~#(i + 1)#h(0.6em)#clause.heading]#mark("head", i)
   ]
-  #for part in clause.body {
-    if part.kind == "text" { par(part.text) }
-    else if part.kind == "table" { termsTable(part.head, part.rows) }
-    else if part.kind == "list" { termsList(part.items) }
+  #for (j, part) in clause.body.enumerate() {
+    let closing = i == data.terms.len() - 1 and j == clause.body.len() - 1
+    let next = clause.body.at(j + 1, default: none)
+    // A sentence that introduces a table or a list ("Ersättningen beräknas så
+    // här:") says nothing on its own, and left at the foot of a page it points
+    // at a table the reader has to turn over to find.
+    let leads = part.kind == "text" and next != none and next.kind != "text"
+    let content = if part.kind == "text" {
+      par({
+        if j == 0 { mark("body", i) }
+        part.text
+        if closing { mark("end", i) }
+        if leads { mark("lead", i, part: j) }
+      })
+    } else if part.kind == "table" { termsTable(part.head, part.rows, lead: mark("follows", i, part: j - 1)) }
+    else if part.kind == "list" { termsList(part.items, lead: mark("follows", i, part: j - 1)) }
+    // Two things are held to what follows them. The last part of the last
+    // clause is held to the signatures below, so when they do not fit on the
+    // page this part goes over with them and the signatures never stand on a
+    // page with no villkor on it. And a sentence introducing a table or a list
+    // is held to it. Wrapped rather than marked, because a paragraph cannot be
+    // sticky and a block can.
+    //
+    // The gaps are the ones the part would have had unwrapped: its own above,
+    // and below it the one the table or list after it asks for. Between two
+    // blocks Typst keeps the larger gap, so the paragraph's own spacing below
+    // the wrapper pushed an introduced table 8pt further off than it sat before.
+    if closing or leads {
+      let gap(kind) = if kind == "text" { par-gap } else if kind == "table" { 3mm } else { 2.5mm }
+      let below = if leads { gap(next.kind) } else { gap(part.kind) }
+      block(above: gap(part.kind), below: below, breakable: false, sticky: true, content)
+    } else { content }
   }
 ]
 
@@ -431,18 +465,53 @@
 // included, is their own acceptance, not a countersignature from whoever at
 // the section drew the contract up: avtalslagen asks for an accept, not a
 // counterpart's signature, and the section's side of the deal is already
-// evidenced by the document it issued. One signature is also one less person
-// who has to be physically reachable before the gear can go out the door.
+// evidenced by the document it issued.
 //
-// The class's own signature block (`\signature` in dsek.sty): the capacity on
-// top, then 15mm of nothing to sign in, then the name, then what they are. No
-// rule under the space, which is the detail that makes it look like the
-// section's protokoll rather than like a form downloaded from somewhere.
+// As many blocks as the contract asks for, two to a row. No names are
+// printed: who signs for an organisation is rarely known when the contract is
+// drawn, so each block has a line to write the name out on.
 //
-// Kept off a page of its own where the contract will allow it. A signature
-// block landing alone on the last page reads as an afterthought.
+// The class's own signature block (`\signature` in dsek.sty) is the capacity
+// on top and then 15mm of nothing to sign in. Under that come two ruled lines,
+// for the name written out and for the place and date, since neither is known
+// when the document is drawn.
+//
+// Never on a page of its own. A signature page with no villkor on it reads as
+// an afterthought, and it is a page that could be swapped out without anybody
+// noticing. The last part of the last clause is sticky (see the loop above), so
+// when this block does not fit, that part goes over to the next page with it,
+// however long the equipment table made the pages before. page-layout.test.ts
+// holds this for every table length up to thirty lines.
+#let signature-count = calc.max(1, data.signatureCount)
+
+#let signature = block(breakable: false)[
+  #set par(first-line-indent: 0pt, justify: false, leading: 0.55em, spacing: 0.55em)
+  #text(size: small-size)[#smallcaps("För hyrestagaren")]
+  // The space they sign in. 15mm, from `\g_dsek_sign_space_height`.
+  #v(15mm)
+  #line(length: 100%, stroke: hairline)
+  #text(size: foot-size, fill: absent)[Namnförtydligande]
+  #v(8mm)
+  #line(length: 100%, stroke: hairline)
+  #text(size: foot-size, fill: absent)[Ort och datum]
+]
+
+#let signature-rows(n) = grid(
+  columns: (1fr, 1fr),
+  column-gutter: 12mm,
+  row-gutter: 10mm,
+  ..range(n).map(_ => signature),
+)
+
+// In two parts, because sticky only holds to a block that cannot break. The
+// first part never breaks: the heading, the sentence and the signatures, all of
+// them up to four, or the first row of two when there are more. Anything past
+// that follows as rows that may run onto the next page, which a long list of
+// signatories has to be allowed to do.
+#let kept = if signature-count <= 4 { signature-count } else { 2 }
+
 #block(above: 8mm, breakable: false)[
-  #text(font: sans, size: section-size, weight: "bold")[Underskrifter]
+  #text(font: sans, size: section-size, weight: "bold")[Underskrifter]#mark("signatures", none)
   #v(3mm)
   #block[
     #set par(first-line-indent: 0pt)
@@ -451,20 +520,9 @@
     accepterar villkoren ovan.
   ]
   #v(6mm)
-
-  #let signature(role, party) = [
-    #set par(first-line-indent: 0pt, justify: false, leading: 0.55em, spacing: 0.55em)
-    #text(size: small-size)[#smallcaps(role)] \
-    // The space they sign in. 15mm, from `\g_dsek_sign_space_height`.
-    #v(15mm)
-    #if party != none and party.name != none and party.name != "" {
-      party.name
-    } else { text(fill: absent)[--] } \
-    #if party != none and party.title != none and party.title != "" [
-      #text(size: small-size, style: "italic")[#party.title] \
-    ]
-    #text(size: foot-size, fill: absent)[Ort och datum]
-  ]
-
-  #signature("För hyrestagaren", data.counterpartyParty)
+  #signature-rows(kept)
 ]
+
+#if signature-count > kept {
+  block(above: 10mm, signature-rows(signature-count - kept))
+}

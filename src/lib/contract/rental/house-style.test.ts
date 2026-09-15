@@ -17,15 +17,6 @@ import type { RentalContractData } from "./types";
 // Read off the PDF's own font table rather than trusted from the template,
 // because the template only *asks* for a family.
 
-const party = (name: string, title: string | null) => ({
-  name,
-  title,
-  orgName: null,
-  orgNo: null,
-  email: null,
-  phone: null,
-});
-
 const data: RentalContractData = {
   lessor: {
     name: "D-sektionen inom TLTH",
@@ -37,12 +28,13 @@ const data: RentalContractData = {
   counterpartyOrgNo: "845002-5678",
   counterpartyAddress: "Ole Römers väg 3",
   counterpartyPostalLine: "223 63 Lund",
+  counterpartyEmail: null,
+  counterpartyPhone: null,
   title: "Uthyrning av ljudanläggning",
   drawn: "2026-09-07",
   pickupAt: "2026-09-18",
   returnAt: "2026-09-21",
   purpose: "Sittning i iDét",
-  place: "Kårhuset, Lund",
   lines: [
     {
       description: "Högtalare, aktiv 12 tum",
@@ -57,10 +49,8 @@ const data: RentalContractData = {
   subtotal: "500,00 kr",
   discount: "150,00 kr",
   price: "350,00 kr",
-  paymentDue: "2026-09-15",
   totalReplacement: "13 000,00 kr",
-  sectionParty: party("Maja Holm", "Skattmästare"),
-  counterpartyParty: party("Emil Helander", null),
+  signatureCount: 1,
   terms: RENTAL_TERMS,
   termsVersion: TERMS_VERSION,
 };

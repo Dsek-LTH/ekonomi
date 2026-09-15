@@ -1,10 +1,9 @@
 // The gear catalogue, as the settings screen and the rental form read it.
 //
 // Two callers with two different needs, so two functions rather than one with a
-// flag. The settings screen wants everything, retired rows included, with a
-// count of how many contracts point at each so that "remove" can say what it
-// would break. The rental form wants only what can still be let out, and has no
-// use for the counts.
+// flag. The settings screen wants a count of how many contracts point at each
+// item, so the dialog can say where it is used. The rental form only picks
+// from the list, and has no use for the counts.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -18,7 +17,6 @@ export interface RentalItemRow {
   replacementValueOre: number;
   /** How many the section owns. What availability is measured against. */
   quantity: number;
-  active: boolean;
   /** Contract lines pointing at this item. Drives whether it can be deleted. */
   usedBy: number;
 }
@@ -50,14 +48,12 @@ export async function getRentalItemRows(): Promise<RentalItemRow[]> {
     dailyPriceOre: r.dailyPriceOre,
     replacementValueOre: r.replacementValueOre,
     quantity: r.quantity,
-    active: r.active,
     usedBy: r._count.lines,
   }));
 }
 
 export async function getRentalItemOptions(): Promise<RentalItemOption[]> {
   const rows = await prisma.rentalItem.findMany({
-    where: { active: true },
     orderBy: BY_NAME,
     select: {
       id: true,

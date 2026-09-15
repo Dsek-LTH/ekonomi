@@ -34,27 +34,6 @@ enum ContractKind {
   OTHER
 }
 
-/// Where an agreement stands. Only ever set on AgreementDetails: a PROTOCOL
-/// or OTHER document is filed or it does not exist, with no draft/signed
-/// workflow to track.
-///
-/// Not a workflow. An archived contract is uploaded straight into SIGNED and
-/// never passes through the earlier values, and that is the ordinary case
-/// rather than a shortcut: most of what goes in here was signed before this app
-/// existed. The states earn their keep on the rental side, where a contract
-/// really is drafted, sent and returned.
-///
-/// EXPIRED is not stored by anything. It is what `validTo` in the past means,
-/// and deriving it keeps a row from being quietly wrong the morning after
-/// nobody ran a job. See lib/contract/status.ts.
-enum ContractStatus {
-  DRAFT
-  OUT_FOR_SIGNATURE
-  SIGNED
-  TERMINATED
-  CANCELLED
-}
-
 /// What one file is to the contract it hangs off.
 ///
 /// The distinction that matters is GENERATED against SIGNED. A generated PDF is
@@ -68,33 +47,13 @@ enum ContractFileRole {
   ORIGINAL
   /// Drawn by us from the row (the Typst template). Replaceable.
   GENERATED
-  /// Signed by the parties. Immutable, and kept for as long as the retention
-  /// rule says.
+  /// The signed copy, uploaded by a person. Its presence is what makes an
+  /// agreement Signerat: see lib/contract/status.ts.
   SIGNED
   /// The signing provider's audit log for a SIGNED file. Phase 3 writes these.
   EVIDENCE
   /// Anything else somebody attached: a photo of the gear, an appendix.
   ATTACHMENT
-}
-
-/// Which side of the agreement a party is on.
-enum ContractPartyRole {
-  /// Signing for D-sektionen. Whoever holds CONTRACT_MANAGE and is authorised
-  /// to bind the section.
-  SECTION
-  /// The other side: a member, a private person, another student organisation.
-  COUNTERPARTY
-}
-
-/// How a signature was produced.
-///
-/// PAPER covers everything that happened away from this app, including a
-/// scanned contract from 2019 whose signing nobody here witnessed. ELECTRONIC
-/// is what the signing provider produces, and the evidence for it is the
-/// EVIDENCE file, not this column.
-enum ContractSignatureMethod {
-  PAPER
-  ELECTRONIC
 }
 
 // ── The counterparty directory ───────────────────────────────────
@@ -104,10 +63,9 @@ enum ContractSignatureMethod {
 /// counterparty fields typed in again. Maintained at
 /// Dokument → Motparter.
 ///
-/// What is deliberately NOT here is anybody's name, email or phone. Those
-/// belong to whoever happens to be signing on a given day, not to the
-/// organisation, and are typed fresh on every contract for exactly that
-/// reason: see ContractParty and CreateRental.counterpartySignatory.
+/// What is deliberately NOT here is the name of whoever signs for them. That
+/// changes from one contract to the next, which is why a rental asks for a
+/// number of signatures rather than names.
 model Counterparty {
   id   String @id @default(cuid())
   name String
@@ -121,15 +79,14 @@ model Counterparty {
   postalCode String?
   city       String?
 
+  /// How to reach them other than by post. Both optional, and copied onto a
+  /// contract when this row is picked, the same as the address.
+  email String?
+  phone String?
+
   /// Anything worth knowing before writing another contract with them:
   /// how the last one went, a special condition, who usually signs.
   notes String?
-
-  /// Retired rather than deleted where an agreement still points at it, the
-  /// same rule RentalItem follows and for the same reason: the trail from an
-  /// agreement back to the directory row it was drawn from is worth keeping,
-  /// and a row nobody can pick any more is what "gone" needs to mean here.
-  active Boolean @default(true)
 
   createdBy   User?   @relation("CounterpartyCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdById String?
@@ -140,7 +97,6 @@ model Counterparty {
   updatedAt DateTime @updatedAt
 
   @@index([name])
-  @@index([active])
 }
 
 // ── The document ──────────────────────────────────────────────────
@@ -175,19 +131,18 @@ model Contract {
   notes String?
 
   files   ContractFile[]
-  parties ContractParty[]
   rental  RentalDetails?
 
   /// The agreement-specific facts: counterparty, period, status. Always
   /// present for CONTRACT. Present for OTHER only when a counterparty was
-  /// given, with `validFrom`/`validTo`/`status` left null: naming who a
+  /// given, with `validFrom`/`validTo` left null: naming who a
   /// document is with does not make it an agreement with a period and a
   /// workflow. Never present for PROTOCOL. Not enforced by Postgres (a
   /// cross-table check needs a trigger this app doesn't write), the same
   /// trust boundary RentalDetails already relies on. See AgreementDetails.
   agreement AgreementDetails?
 
-  /// Who put this in the archive. Not who signed it: see ContractParty.
+  /// Who put this in the archive. Not who signed it: that is on the signed document.
   createdBy   User   @relation("ContractCreator", fields: [createdById], references: [id], onDelete: Restrict)
   createdById String
 
@@ -204,7 +159,7 @@ model Contract {
 }
 
 /// The agreement-specific half of a document: who it's with, how long it
-/// runs, and whether it's signed. A separate table rather than nullable
+/// runs. A separate table rather than nullable
 /// columns on Contract, the same reasoning RentalDetails already follows one
 /// level further in: none of this means anything for a mötesprotokoll, and a
 /// table full of columns that are null for two kinds out of three is a table
@@ -214,13 +169,6 @@ model AgreementDetails {
   contractId String   @id
 
   /// Who the agreement is with, as one line for the list and the search.
-  ///
-  /// Not the same thing as the parties on Contract, and the difference is
-  /// the whole reason both exist. This is the organisation or person the
-  /// section has an agreement *with*. A party is a human being who put
-  /// their name to it. For an archived contract there is often no party row
-  /// at all, because nobody is going to retype two signatures off a 2019
-  /// scan, and the list still has to say who it was with.
   ///
   /// Nullable, even though this row otherwise always has one for CONTRACT
   /// (CreateContract's refine guarantees it there): an OTHER document can
@@ -258,6 +206,14 @@ model AgreementDetails {
   counterpartyPostalCode String?
   counterpartyCity       String?
 
+  /// How to reach the counterparty other than by post. Optional everywhere,
+  /// and asked for by the rental form, which prints them in the renter's
+  /// party block. Copied from the directory row when one is picked, the same
+  /// as the address, so a later edit in the directory does not change what an
+  /// existing contract says.
+  counterpartyEmail String?
+  counterpartyPhone String?
+
   /// The directory row the fields above were copied from, when one was
   /// picked rather than typed fresh. SetNull, not Cascade: the fields above
   /// are copies made at the moment this document was filed, the same as a
@@ -277,15 +233,6 @@ model AgreementDetails {
   validFrom DateTime? @db.Date
   validTo   DateTime? @db.Date
 
-  /// Null for the one case this table exists without being an agreement: an
-  /// OTHER document that only names a counterparty. There is no default to
-  /// fall back to there, because a status implies a draft/signed workflow
-  /// that a lean document never has; CONTRACT rows always get one written
-  /// explicitly at creation instead (CreateContract, CreateRental). See
-  /// lib/contract/status.ts, which already treats a null status as "none",
-  /// not as DRAFT.
-  status ContractStatus?
-
   /// Which wording of the villkor a generated rental contract was drawn
   /// under.
   ///
@@ -295,7 +242,6 @@ model AgreementDetails {
   /// everything not drawn by us.
   termsVersion String?
 
-  @@index([status])
   @@index([validTo])
   @@index([counterpartyId])
 }
@@ -333,55 +279,6 @@ model ContractFile {
   @@index([contractId, role])
 }
 
-/// A human being who signed, or is expected to sign.
-///
-/// What is deliberately NOT here is a personnummer column. BankID returns one
-/// with every signature, and it stays in the sealed PDF and the provider's
-/// evidence log where it is needed as proof, rather than becoming a field this
-/// app can be asked to hand over or leak. Nothing in the archive needs to
-/// query by it: finding a person's contracts is what `name` and `email` are
-/// for. See dataskyddslagen 3 kap 10 §.
-model ContractParty {
-  id         String   @id @default(cuid())
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  contractId String
-
-  role ContractPartyRole
-
-  name  String
-  email String?
-  phone String?
-
-  /// The organisation this person signs for, when they are not signing for
-  /// themselves. Another section, a company. Free text, because the
-  /// counterparty of an uthyrning is usually not in any table we keep.
-  orgName String?
-  orgNo   String?
-
-  /// The member row, when the party happens to be one of ours. Always set for
-  /// a SECTION party, since that is somebody who signed in here to draw the
-  /// contract. Usually null for a counterparty.
-  ///
-  /// SetNull rather than Cascade: a member leaving the section does not unsign
-  /// a contract, and the name recorded above is what the document says anyway.
-  user   User?   @relation("ContractPartyUser", fields: [userId], references: [id], onDelete: SetNull)
-  userId String?
-
-  /// What this person was, in their own words, when they signed: "Skattmästare",
-  /// "Ordförande F-sektionen". Recorded rather than derived, because authority
-  /// is a fact about the moment of signing and roles are handed over every year.
-  title String?
-
-  signedAt        DateTime?
-  signatureMethod ContractSignatureMethod?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([contractId])
-  @@index([userId])
-}
-
 // ── Uthyrning ─────────────────────────────────────────────────────
 
 /// The rental half of a document, when a CONTRACT is specifically a rental.
@@ -405,13 +302,10 @@ model RentalDetails {
   /// What it is being rented for, in the renter's words. Goes on the document.
   ///
   /// Nullable here and required by the form, the same split as the renter's
-  /// address: rows drawn before it was asked for have none, and the villkor say
-  /// the gear must be used "på det sätt den är avsedd för", which needs
-  /// something on the page to point at.
+  /// address: rows drawn before it was asked for have none, and § 1 of the
+  /// villkor forbids using the gear "för annat ändamål än det som anges ovan",
+  /// which needs something on the page to point at.
   purpose String?
-
-  /// Where it is picked up and returned, when that is worth stating.
-  place String?
 
   /// What the lines come to before anything is taken off, in öre.
   ///
@@ -428,13 +322,13 @@ model RentalDetails {
   /// row has to keep saying what the document said.
   discountOre Int @default(0)
 
-  /// When the rent falls due.
+  /// How many signature blocks the document draws for the renter.
   ///
-  /// Null means "at pickup", which is what the villkor say when no date is
-  /// given. Its own column rather than a sentence in `purpose`, because the
-  /// payment clause refers to it and a term that points at nothing is a term
-  /// that cannot be enforced. See rental/terms.ts, punkt 4.
-  paymentDueAt DateTime? @db.Date
+  /// A number rather than names, because who will sign for an organisation is
+  /// rarely known when the contract is drawn, and a private person is already
+  /// named as the renter. Each block has room for the signature, the name
+  /// written out, and the place and date.
+  signatureCount Int @default(1)
 
   /// The rent, in öre: `subtotalOre` less `discountOre`. Zero is a real answer
   /// and a common one, because the point of a free loan is still the contract:
@@ -455,10 +349,10 @@ model RentalDetails {
   ///
   /// Deliberately not the same column as `returnedAt`, and the difference is
   /// the whole of what a damage claim turns on. Handing a Soundboks back is not
-  /// the same event as somebody plugging it in and finding it works, and the
-  /// villkor say the rental is not over until the second one has happened. A
-  /// fault found between the two is the renter's; a fault found long after is
-  /// an argument nobody can win. See rental/terms.ts.
+  /// the same event as somebody plugging it in and finding it works. Damage the
+  /// section reports within five working days of the return is presumed to be
+  /// the renter's; damage found later is the section's to prove. See § 3 in
+  /// rental/terms.ts.
   checkedAt DateTime?
 
   /// Who accepted it back. Not derivable from anything else, and the name a
@@ -558,18 +452,10 @@ model RentalItem {
   /// lib/contract/availability.ts.
   quantity Int @default(1)
 
-  /// Retired rather than deleted, the same as a cost centre. A catalogue row
-  /// referenced by a contract from 2024 has to stay reachable, and a row
-  /// referenced by nothing is still worth keeping out of the picker without
-  /// losing what it was.
-  active Boolean @default(true)
-
   sortOrder Int @default(0)
 
   lines RentalLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([active])
 }

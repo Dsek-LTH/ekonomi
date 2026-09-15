@@ -1,7 +1,7 @@
 // Where a rental has got to, as the person running uthyrning sees it.
 //
 // Deliberately not ContractStatus. That says where the *agreement* stands
-// (drafted, signed, terminated), which is what the archive is about. This says
+// (drafted or signed), which is what the archive is about. This says
 // where the *gear* is, which is what somebody with a store room is about, and
 // the two answer different questions on the same row: a signed contract can be
 // upcoming, out, overdue or finished, and calling all four "Signerat" is what
@@ -11,7 +11,6 @@
 // is a fact about today, and a column would be quietly wrong every morning
 // nobody ran a job.
 import type { Tone } from "@/lib/domain/status";
-import type { ContractStatus } from "@/lib/domain/types";
 
 export type RentalState =
   /** Agreed but not handed over yet. */
@@ -24,12 +23,9 @@ export type RentalState =
    *  window is running. */
   | "AWAITING_CHECK"
   /** Back and accepted. Nothing left to do. */
-  | "CLOSED"
-  /** The agreement never happened, or was ended. No gear is anywhere. */
-  | "CANCELLED";
+  | "CLOSED";
 
 export interface RentalFacts {
-  status: ContractStatus;
   /** ISO days. */
   pickupAt: string;
   returnAt: string;
@@ -41,18 +37,16 @@ export interface RentalFacts {
  * Where the gear is, as of `today`.
  *
  * Order matters here, and it is the order somebody would ask the questions in.
- * Cancelled first, because nothing else is true of a cancelled rental. Then
- * whether it has come back at all, because that decides between the two halves
+ * First whether it has come back at all, because that decides between the two halves
  * of the list. Only then the dates.
  *
  * A returned-but-unchecked rental is its own state rather than "closed",
  * because that is exactly the gap the villkor turn on: the section has the gear
- * back and has not yet said whether it is undamaged, and the renter's liability
- * has not ended. See rental/terms.ts, punkt 2.
+ * back and has not yet said whether it is undamaged, and damage it reports
+ * within five working days of the return is still presumed to be the renter's.
+ * See rental/terms.ts, § 3.
  */
 export function rentalState(r: RentalFacts, today: string): RentalState {
-  if (r.status === "CANCELLED" || r.status === "TERMINATED") return "CANCELLED";
-
   if (r.returnedAt !== null) {
     if (r.checkedAt === null) return "AWAITING_CHECK";
     return "CLOSED";
@@ -77,7 +71,6 @@ export const RENTAL_STATE_TONE: Record<RentalState, Tone> = {
   OVERDUE: "danger",
   AWAITING_CHECK: "warning",
   CLOSED: "success",
-  CANCELLED: "neutral",
 };
 
 /** The states, in the order a filter draws them. */
@@ -87,7 +80,6 @@ export const RENTAL_STATES: readonly RentalState[] = [
   "OVERDUE",
   "AWAITING_CHECK",
   "CLOSED",
-  "CANCELLED",
 ];
 
 /**
@@ -101,7 +93,7 @@ export const RENTAL_TAB: Record<string, RentalState[] | undefined> = {
   todo: ["OVERDUE", "AWAITING_CHECK"],
   active: ["UPCOMING", "OUT", "OVERDUE"],
   "": undefined,
-  closed: ["CLOSED", "CANCELLED"],
+  closed: ["CLOSED"],
 };
 
 /** In the order the list draws them, "Att göra" first. */

@@ -18,7 +18,7 @@ import { SECTION } from "./section";
 import { RENTAL_TERMS, TERMS_VERSION } from "./rental/terms";
 import { linePricing, rentalPricing } from "./rental/pricing";
 import { renderRentalContract, RentalRenderError } from "./rental/typst";
-import type { RentalContractData, RentalParty } from "./rental/types";
+import type { RentalContractData } from "./rental/types";
 
 /**
  * Why a contract has no document. Each maps to a message key under
@@ -68,14 +68,15 @@ export type ContractForDocument = {
   counterpartyAddress: string | null;
   counterpartyPostalCode: string | null;
   counterpartyCity: string | null;
+  counterpartyEmail: string | null;
+  counterpartyPhone: string | null;
   createdAt: Date;
   rental: {
     /** Null only from the live preview; see RentalContractData. */
     pickupAt: Date | null;
     returnAt: Date | null;
     purpose: string | null;
-    place: string | null;
-    paymentDueAt: Date | null;
+    signatureCount: number;
     lines: {
       description: string;
       quantity: number;
@@ -84,28 +85,7 @@ export type ContractForDocument = {
       replacementValueOre: number;
     }[];
   };
-  parties: {
-    role: "SECTION" | "COUNTERPARTY";
-    name: string;
-    title: string | null;
-    orgName: string | null;
-    orgNo: string | null;
-    email: string | null;
-    phone: string | null;
-  }[];
 };
-
-const asParty = (p: ContractForDocument["parties"][number] | undefined): RentalParty | null =>
-  p
-    ? {
-        name: p.name,
-        title: p.title,
-        orgName: p.orgName,
-        orgNo: p.orgNo,
-        email: p.email,
-        phone: p.phone,
-      }
-    : null;
 
 /**
  * A contract row as the page states it. Pure, and the interesting half.
@@ -144,12 +124,13 @@ export function buildRentalData(
     counterpartyOrgNo: contract.counterpartyOrgNo,
     counterpartyAddress: contract.counterpartyAddress,
     counterpartyPostalLine: postalLine,
+    counterpartyEmail: contract.counterpartyEmail,
+    counterpartyPhone: contract.counterpartyPhone,
     title: contract.title,
     drawn: day(contract.createdAt),
     pickupAt: dayOrNull(rental.pickupAt),
     returnAt: dayOrNull(rental.returnAt),
     purpose: rental.purpose,
-    place: rental.place,
     lines: rental.lines.map((l) => {
       const priced = linePricing(l);
       return {
@@ -171,10 +152,8 @@ export function buildRentalData(
     // Whether the table needs a discount column at all.
     anyDiscount: pricing.anyDiscount,
     price: kr(pricing.totalOre),
-    paymentDue: dayOrNull(rental.paymentDueAt),
     totalReplacement: kr(totalReplacement),
-    sectionParty: asParty(contract.parties.find((p) => p.role === "SECTION")),
-    counterpartyParty: asParty(contract.parties.find((p) => p.role === "COUNTERPARTY")),
+    signatureCount: rental.signatureCount,
     terms: RENTAL_TERMS,
     termsVersion: TERMS_VERSION,
   };
@@ -207,6 +186,8 @@ const forDocument = {
         counterpartyAddress: true,
         counterpartyPostalCode: true,
         counterpartyCity: true,
+        counterpartyEmail: true,
+        counterpartyPhone: true,
       },
     },
     rental: {
@@ -214,8 +195,7 @@ const forDocument = {
         pickupAt: true,
         returnAt: true,
         purpose: true,
-        place: true,
-        paymentDueAt: true,
+        signatureCount: true,
         lines: {
           orderBy: { sortOrder: "asc" as const },
           select: {
@@ -226,17 +206,6 @@ const forDocument = {
             replacementValueOre: true,
           },
         },
-      },
-    },
-    parties: {
-      select: {
-        role: true,
-        name: true,
-        title: true,
-        orgName: true,
-        orgNo: true,
-        email: true,
-        phone: true,
       },
     },
   },
@@ -263,17 +232,17 @@ export async function renderRentalPreview(draft: RentalDraft): Promise<RenderRes
     counterpartyAddress: draft.counterpartyAddress,
     counterpartyPostalCode: draft.counterpartyPostalCode,
     counterpartyCity: draft.counterpartyCity,
+    counterpartyEmail: draft.counterpartyEmail,
+    counterpartyPhone: draft.counterpartyPhone,
     // The day it would be drawn, which for an unsaved draft is today.
     createdAt: new Date(),
     rental: {
       pickupAt: draft.pickupAt,
       returnAt: draft.returnAt,
       purpose: draft.purpose,
-      place: draft.place,
-      paymentDueAt: draft.paymentDueAt,
+      signatureCount: draft.signatureCount,
       lines: draft.lines,
     },
-    parties: draft.parties,
   };
 
   const data = buildRentalData(contract, SECTION);
@@ -297,13 +266,13 @@ export type RentalDraft = {
   counterpartyAddress: string | null;
   counterpartyPostalCode: string | null;
   counterpartyCity: string | null;
+  counterpartyEmail: string | null;
+  counterpartyPhone: string | null;
   pickupAt: Date | null;
   returnAt: Date | null;
   purpose: string | null;
-  place: string | null;
-  paymentDueAt: Date | null;
+  signatureCount: number;
   lines: ContractForDocument["rental"]["lines"];
-  parties: ContractForDocument["parties"];
 };
 
 /** Draw the document without keeping it. What a stored contract's preview asks
@@ -330,9 +299,10 @@ export async function renderContractDocument(contractId: string): Promise<Render
     counterpartyAddress: row.agreement.counterpartyAddress,
     counterpartyPostalCode: row.agreement.counterpartyPostalCode,
     counterpartyCity: row.agreement.counterpartyCity,
+    counterpartyEmail: row.agreement.counterpartyEmail,
+    counterpartyPhone: row.agreement.counterpartyPhone,
     createdAt: row.createdAt,
     rental: row.rental,
-    parties: row.parties,
   };
 
   const data = buildRentalData(contract, SECTION);

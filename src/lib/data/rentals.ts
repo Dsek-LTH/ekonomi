@@ -77,7 +77,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
     select: {
       id: true,
       title: true,
-      agreement: { select: { counterparty: true, status: true } },
+      agreement: { select: { counterparty: true } },
       rental: {
         select: {
           pickupAt: true,
@@ -98,12 +98,6 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
     .filter((c): c is typeof c & { rental: NonNullable<typeof c.rental> } => c.rental !== null)
     .map((c) => {
       const facts = {
-        // A CONTRACT row always has an `agreement`, and CreateRental always
-        // writes it a status and a counterparty; unlike the rest of the
-        // archive, a rental is never the OTHER-with-counterparty case that
-        // leaves status null or the plain OTHER case that leaves
-        // counterparty null.
-        status: c.agreement!.status!,
         pickupAt: day(c.rental.pickupAt),
         returnAt: day(c.rental.returnAt),
         returnedAt: c.rental.returnedAt ? day(c.rental.returnedAt) : null,
@@ -112,6 +106,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
       return {
         id: c.id,
         title: c.title,
+        // A rental always has an agreement naming its renter; see CreateRental.
         counterparty: c.agreement!.counterparty!,
         ...facts,
         state: rentalState(facts, today),
@@ -142,7 +137,6 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
       returnAt: true,
       returnedAt: true,
       checkedAt: true,
-      contract: { select: { agreement: { select: { status: true } } } },
     },
   });
 
@@ -152,15 +146,11 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
     OVERDUE: 0,
     AWAITING_CHECK: 0,
     CLOSED: 0,
-    CANCELLED: 0,
   } satisfies Record<RentalState, number>;
 
   for (const r of rows) {
     const state = rentalState(
       {
-        // A CONTRACT row always has an `agreement` with a status; see
-        // getRentalPage above.
-        status: r.contract.agreement!.status!,
         pickupAt: day(r.pickupAt),
         returnAt: day(r.returnAt),
         returnedAt: r.returnedAt ? day(r.returnedAt) : null,

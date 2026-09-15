@@ -183,7 +183,6 @@ model User {
   mileageRates         MileageRate[]           @relation("MileageRateAuthor")
   contracts            Contract[]              @relation("ContractCreator")
   contractFiles        ContractFile[]          @relation("ContractFileUploader")
-  contractParties      ContractParty[]         @relation("ContractPartyUser")
   rentalChecks         RentalDetails[]         @relation("RentalChecker")
   counterparties       Counterparty[]          @relation("CounterpartyCreator")
 

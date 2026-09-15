@@ -32,16 +32,18 @@ export interface SectionIdentity {
   orgNo: string | null;
   /** The street line of the postal address. */
   address: string | null;
-  /** "223 63 Lund": postal code and town on one line, as an address is set. */
+  /** "221 00 Lund": postal code and town on one line, as an address is set. */
   postalLine: string | null;
 }
 
-const POSTAL_CODE = "223 63";
+// The section's postal address, which is a box rather than the street the
+// kårhus stands on. Post sent to the building does not reach the section.
+const POSTAL_CODE = "221 00";
 const CITY = "Lund";
 
 export const SECTION: SectionIdentity = {
   name: "D-sektionen inom TLTH",
   orgNo: "845003-2878",
-  address: "Ole Römers väg 3",
+  address: "Box 118",
   postalLine: `${POSTAL_CODE} ${CITY}`,
 };

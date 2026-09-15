@@ -3,7 +3,7 @@
 // The upload route could do this inline, the way the receipt one does, and for
 // a while it should have. It is here instead because of one rule that has to
 // hold in every caller and would otherwise be re-stated in each: a SIGNED file
-// is evidence and nothing in this app may overwrite or delete it.
+// is never overwritten, and signing evidence is never deleted.
 //
 // That rule is cheap to write and easy to forget, and the place it gets
 // forgotten is the second caller. Phase 3 adds two more (the webhook that

@@ -19,13 +19,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/ui/amount";
-import { Tag } from "@/components/ui/status-pill";
 import { IconPlus } from "@/components/ui/icons";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { oreToSEK } from "@/lib/domain/money";
-import { cn } from "@/lib/ui/utils";
 import { ItemDialog } from "./item-dialog";
 import type { RentalItemRow } from "@/lib/data/rental-items";
 
@@ -61,16 +59,10 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
               <button
                 type="button"
                 onClick={() => setEditing(i)}
-                className={cn(
-                  "text-left font-medium text-accent hover:underline",
-                  !i.active && "text-muted",
-                )}
+                className="text-left font-medium text-accent hover:underline"
               >
                 {i.name}
               </button>
-              {/* Only the exceptional state gets a tag. A row marked "aktiv" on
-                  every line says nothing. */}
-              {!i.active && <Tag>{t("retired")}</Tag>}
             </span>
             {i.description && (
               <span className="block truncate text-xs text-muted">{i.description}</span>

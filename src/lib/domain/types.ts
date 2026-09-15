@@ -34,10 +34,10 @@ export type PaymentType = Schema.PaymentType;
 // is to it, and which side a party signs for. See the enums in
 // prisma/schema/contract.prisma, which carry what each value means.
 export type ContractKind = Schema.ContractKind;
-export type ContractStatus = Schema.ContractStatus;
+/** Where an agreement stands. Derived from its files rather than stored: see
+ *  lib/contract/status.ts. */
+export type ContractStatus = "DRAFT" | "SIGNED";
 export type ContractFileRole = Schema.ContractFileRole;
-export type ContractPartyRole = Schema.ContractPartyRole;
-export type ContractSignatureMethod = Schema.ContractSignatureMethod;
 
 // ── Alkohollager ──────────────────────────────────────────────────
 

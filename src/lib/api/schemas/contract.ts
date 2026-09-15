@@ -8,15 +8,6 @@ import { MAX_TAG_LENGTH, MAX_TAGS } from "@/lib/contract/tags";
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 
 const ContractKind = z.enum(["CONTRACT", "PROTOCOL", "OTHER"]);
-const ContractStatus = z.enum([
-  "DRAFT",
-  "OUT_FOR_SIGNATURE",
-  "SIGNED",
-  "TERMINATED",
-  "CANCELLED",
-]);
-const PartyRole = z.enum(["SECTION", "COUNTERPARTY"]);
-const SignatureMethod = z.enum(["PAPER", "ELECTRONIC"]);
 
 /**
  * Long enough for a real title, short enough that a pasted contract body is
@@ -83,12 +74,6 @@ export const CreateContract = z
     date: Clearable(IsoDate).optional(),
     tags: Tags.default([]),
     notes: Clearable(Trimmed.max(4000)).optional(),
-    // An archived contract is normally uploaded as already signed, and that is
-    // the ordinary case rather than a shortcut: most of what goes in here was
-    // signed years ago. A rental drawn by the app starts as a DRAFT instead.
-    // Ignored for PROTOCOL/OTHER, which carry no status at all: see the route,
-    // which never writes this field for either.
-    status: ContractStatus.default("SIGNED"),
   })
   .superRefine((d, ctx) => {
     if (d.kind === "CONTRACT" && d.counterparty === "") {
@@ -121,9 +106,8 @@ export type CreateContract = z.infer<typeof CreateContract>;
 /**
  * PATCH /api/contracts/[id]. Every field optional: absent means "leave it".
  *
- * `status` is here too, so the archive can record that a contract was
- * terminated. What it cannot do is change what a signed document says, because
- * the document is a file and this patches the row around it.
+ * No status. Whether a contract is signed is whether its signed copy is in the
+ * archive, which is a file rather than a field. See lib/contract/status.ts.
  */
 export const UpdateContract = z.object({
   kind: ContractKind.optional(),
@@ -139,29 +123,8 @@ export const UpdateContract = z.object({
   date: Clearable(IsoDate).optional(),
   tags: Tags.optional(),
   notes: Clearable(Trimmed.max(4000)).optional(),
-  status: ContractStatus.optional(),
 });
 export type UpdateContract = z.infer<typeof UpdateContract>;
-
-/** POST /api/contracts/[id]/parties. */
-export const CreateParty = z.object({
-  role: PartyRole,
-  name: NonEmpty.max(120),
-  email: Clearable(z.email()).optional(),
-  phone: Clearable(Trimmed.max(40)).optional(),
-  orgName: Clearable(Trimmed.max(200)).optional(),
-  orgNo: Clearable(Trimmed.max(40)).optional(),
-  title: Clearable(Trimmed.max(120)).optional(),
-  userId: Clearable(Id).optional(),
-  // Recording a signature that already happened, which is what filing a scanned
-  // contract is. A party added to a draft has neither.
-  signedAt: Clearable(IsoDate).optional(),
-  signatureMethod: Clearable(SignatureMethod).optional(),
-});
-export type CreateParty = z.infer<typeof CreateParty>;
-
-export const UpdateParty = CreateParty.partial();
-export type UpdateParty = z.infer<typeof UpdateParty>;
 
 // ── Uthyrning ─────────────────────────────────────────────────────
 
@@ -185,7 +148,16 @@ export const RentalLineInput = z.object({
 export type RentalLineInput = z.infer<typeof RentalLineInput>;
 
 /**
- * POST /api/contracts/rental: draw an uthyrningsavtal.
+ * How many signature blocks one rental may ask for. A board signing jointly is
+ * a handful, and the cap is what keeps a typo from drawing a page of blank
+ * signature blocks.
+ */
+export const MAX_SIGNATURES = 10;
+
+/**
+ * POST /api/contracts/rental: draw an uthyrningsavtal. Also the body of
+ * PUT /api/contracts/[id]/rental, which amends one by sending the whole form
+ * again.
  *
  * One call rather than a draft-then-fill wizard like the expense one. An
  * expense has to exist before a receipt can be attached to it, which is what
@@ -206,18 +178,18 @@ export const CreateRental = z.object({
   counterpartyAddress: RenterAddress,
   counterpartyPostalCode: RenterPostalCode,
   counterpartyCity: RenterCity,
+  /** How to reach the renter other than by post. Optional, and printed in the
+   *  renter's party block when given. */
+  counterpartyEmail: Clearable(z.email()).optional(),
+  counterpartyPhone: Clearable(Trimmed.max(40)).optional(),
   /** The directory row the fields above were copied from, if any. */
   counterpartyId: Clearable(Id).optional(),
 
   pickupAt: IsoDate,
   returnAt: IsoDate,
-  /** Required: the villkor say the gear must be used "på det sätt den är
-   *  avsedd för", and that clause needs something on the page to point at. */
+  /** Required: the villkor forbid using the gear for any other purpose than
+   *  the one stated, and that clause needs something on the page to point at. */
   purpose: NonEmpty.max(500),
-  place: Clearable(Trimmed.max(200)).optional(),
-  /** When the rent falls due. Absent means "at pickup", which is what the
-   *  villkor say when no date is given. */
-  paymentDueAt: Clearable(IsoDate).optional(),
 
   /**
    * No money here beyond the lines.
@@ -230,21 +202,11 @@ export const CreateRental = z.object({
   lines: z.array(RentalLineInput).min(1).max(100),
 
   /**
-   * Who signs for the renter, and required.
-   *
-   * It was optional, on the reasoning that a contract might be drawn before the
-   * renter has said who will sign. That is a real state of a draft and it is
-   * not a state this route should accept: an organisation cannot sign anything,
-   * a person signs on its behalf, and the document names that person in the
-   * party block as well as over the signature line. A rental contract with
-   * nobody on the renter's side is not a contract, it is a form.
+   * How many signature blocks the document draws for the renter. A number
+   * rather than names: who signs for an organisation is rarely known when the
+   * contract is drawn, and a private person is already named as the renter.
    */
-  counterpartySignatory: z.object({
-    name: NonEmpty.max(120),
-    email: Clearable(z.email()).optional(),
-    phone: Clearable(Trimmed.max(40)).optional(),
-    title: Clearable(Trimmed.max(120)).optional(),
-  }),
+  signatureCount: z.int().min(1).max(MAX_SIGNATURES),
 });
 export type CreateRental = z.infer<typeof CreateRental>;
 
@@ -266,12 +228,12 @@ export const PreviewRental = z.object({
   counterpartyAddress: Trimmed.max(200).default(""),
   counterpartyPostalCode: Trimmed.max(20).default(""),
   counterpartyCity: Trimmed.max(100).default(""),
+  counterpartyEmail: Trimmed.max(200).default(""),
+  counterpartyPhone: Trimmed.max(40).default(""),
   /** Whole days only. The form holds a mask and sends nothing until it is one. */
   pickupAt: IsoDate.nullable().default(null),
   returnAt: IsoDate.nullable().default(null),
   purpose: Trimmed.max(500).default(""),
-  place: Trimmed.max(200).default(""),
-  paymentDueAt: IsoDate.nullable().default(null),
   lines: z
     .array(
       z.object({
@@ -284,35 +246,9 @@ export const PreviewRental = z.object({
     )
     .max(100)
     .default([]),
-  counterpartySignatory: z
-    .object({
-      name: Trimmed.max(120).default(""),
-      email: Trimmed.max(200).default(""),
-      phone: Trimmed.max(40).default(""),
-    })
-    .nullable()
-    .default(null),
+  signatureCount: z.int().min(1).max(MAX_SIGNATURES).default(1),
 });
 export type PreviewRental = z.infer<typeof PreviewRental>;
-
-/**
- * PATCH /api/contracts/[id]/rental: amend a rental while it is still a draft.
- *
- * The route refuses it after that (see canEditRental). Not because a signed
- * contract is sacred as a row, but because the counterparty is reading a
- * document by then, and changing what it says underneath them is the one edit
- * that must not be possible.
- */
-export const UpdateRental = z.object({
-  pickupAt: IsoDate.optional(),
-  returnAt: IsoDate.optional(),
-  purpose: Clearable(Trimmed.max(500)).optional(),
-  place: Clearable(Trimmed.max(200)).optional(),
-  paymentDueAt: Clearable(IsoDate).optional(),
-  /** See CreateRental. The rent is derived from these. */
-  lines: z.array(RentalLineInput).min(1).max(100).optional(),
-});
-export type UpdateRental = z.infer<typeof UpdateRental>;
 
 /**
  * PATCH /api/contracts/[id]/rental/record: what actually happened.
@@ -358,7 +294,6 @@ export const UpdateRentalItem = z.object({
   description: Clearable(Trimmed.max(1000)).optional(),
   dailyPriceOre: Clearable(Ore.min(0)).optional(),
   replacementValueOre: Ore.min(0).optional(),
-  active: z.boolean().optional(),
 });
 export type UpdateRentalItem = z.infer<typeof UpdateRentalItem>;
 
@@ -370,6 +305,8 @@ export const CreateCounterparty = z.object({
   address: Clearable(Trimmed.max(200)).optional(),
   postalCode: Clearable(Trimmed.max(20)).optional(),
   city: Clearable(Trimmed.max(100)).optional(),
+  email: Clearable(z.email()).optional(),
+  phone: Clearable(Trimmed.max(40)).optional(),
   notes: Clearable(Trimmed.max(1000)).optional(),
 });
 export type CreateCounterparty = z.infer<typeof CreateCounterparty>;
@@ -380,7 +317,8 @@ export const UpdateCounterparty = z.object({
   address: Clearable(Trimmed.max(200)).optional(),
   postalCode: Clearable(Trimmed.max(20)).optional(),
   city: Clearable(Trimmed.max(100)).optional(),
+  email: Clearable(z.email()).optional(),
+  phone: Clearable(Trimmed.max(40)).optional(),
   notes: Clearable(Trimmed.max(1000)).optional(),
-  active: z.boolean().optional(),
 });
 export type UpdateCounterparty = z.infer<typeof UpdateCounterparty>;

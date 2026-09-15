@@ -20,13 +20,14 @@ const contract: ContractForDocument = {
   counterpartyAddress: "Ole Römers väg 3",
   counterpartyPostalCode: "223 63",
   counterpartyCity: "Lund",
+  counterpartyEmail: "ordf@fsektionen.se",
+  counterpartyPhone: null,
   createdAt: new Date("2026-09-06T14:12:00.000Z"),
   rental: {
     pickupAt: new Date("2026-09-18T00:00:00.000Z"),
     returnAt: new Date("2026-09-21T00:00:00.000Z"),
     purpose: "Sittning i iDét",
-    place: "Kårhuset, Lund",
-    paymentDueAt: new Date("2026-09-15T00:00:00.000Z"),
+    signatureCount: 2,
     lines: [
       {
         description: "Högtalare, aktiv 12 tum",
@@ -44,26 +45,6 @@ const contract: ContractForDocument = {
       },
     ],
   },
-  parties: [
-    {
-      role: "SECTION",
-      name: "Ludwig Gehlsdorf",
-      title: "Skattmästare",
-      orgName: null,
-      orgNo: null,
-      email: null,
-      phone: null,
-    },
-    {
-      role: "COUNTERPARTY",
-      name: "Emil Helander",
-      title: "Ordförande F-sektionen",
-      orgName: "F-sektionen inom TLTH",
-      orgNo: "845002-5678",
-      email: "ordf@fsektionen.se",
-      phone: null,
-    },
-  ],
 };
 
 describe("buildRentalData", () => {
@@ -163,22 +144,14 @@ describe("buildRentalData", () => {
     expect(d.drawn).toBe("2026-09-06");
   });
 
-  it("puts each party in its own signature block", () => {
-    const d = buildRentalData(contract, LESSOR);
-    expect(d.sectionParty?.name).toBe("Ludwig Gehlsdorf");
-    expect(d.sectionParty?.title).toBe("Skattmästare");
-    expect(d.counterpartyParty?.name).toBe("Emil Helander");
+  it("asks for as many signature blocks as the rental says", () => {
+    expect(buildRentalData(contract, LESSOR).signatureCount).toBe(2);
   });
 
-  it("leaves a signature block empty rather than inventing one", () => {
-    // A contract drawn before the renter has said who will sign. The document
-    // still has to be signable by hand, so the block is ruled and left blank.
-    const d = buildRentalData(
-      { ...contract, parties: contract.parties.filter((p) => p.role === "SECTION") },
-      LESSOR,
-    );
-    expect(d.counterpartyParty).toBeNull();
-    expect(d.sectionParty).not.toBeNull();
+  it("carries the renter's contact details beside the address", () => {
+    const d = buildRentalData(contract, LESSOR);
+    expect(d.counterpartyEmail).toBe("ordf@fsektionen.se");
+    expect(d.counterpartyPhone).toBeNull();
   });
 
   it("carries the terms and the version they were drawn under", () => {
@@ -186,7 +159,7 @@ describe("buildRentalData", () => {
     expect(d.termsVersion).toBe(TERMS_VERSION);
     expect(d.terms.length).toBeGreaterThan(0);
     // The clauses are numbered by the template from this order, so the order
-    // itself is part of what a contract refers to when it says "punkt 5".
+    // itself is part of what a contract refers to when it says "§ 5".
     expect(d.terms[0].heading).toBe("Vad avtalet gäller");
   });
 });

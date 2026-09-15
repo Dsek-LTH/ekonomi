@@ -30,13 +30,11 @@ import {
   type SortDir,
 } from "@/lib/data/list-query";
 import { normaliseTag } from "@/lib/contract/tags";
-import { CONTRACT_STATUS_TAB } from "@/lib/contract/status";
+import { contractStatus } from "@/lib/contract/status";
 import { contractScopeWhere, type ContractScope } from "@/lib/data/contract-scope";
 import type {
   ContractFileRole,
   ContractKind,
-  ContractPartyRole,
-  ContractSignatureMethod,
   ContractStatus,
 } from "@/lib/domain/types";
 
@@ -77,19 +75,6 @@ export interface ContractFileRow {
   createdAt: string;
 }
 
-export interface ContractPartyRow {
-  id: string;
-  role: ContractPartyRole;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  orgName: string | null;
-  orgNo: string | null;
-  title: string | null;
-  signedAt: string | null;
-  signatureMethod: ContractSignatureMethod | null;
-}
-
 export interface RentalLineRow {
   id: string;
   itemId: string | null;
@@ -105,9 +90,8 @@ export interface RentalDetailRow {
   pickupAt: string;
   returnAt: string;
   purpose: string | null;
-  place: string | null;
-  /** When the rent falls due. Null means at pickup. */
-  paymentDueAt: string | null;
+  /** How many signature blocks the document draws for the renter. */
+  signatureCount: number;
   /** The lines added up, and what came off them. The rent is the difference;
    *  see lib/contract/rental/pricing.ts. */
   subtotalOre: number;
@@ -125,17 +109,21 @@ export interface RentalDetailRow {
 }
 
 export interface ContractDetail extends ContractSummary {
+  /** The directory row the counterparty was picked from, if any. The rental
+   *  form needs it to show the same pick again when a draft is edited. */
+  counterpartyId: string | null;
   counterpartyOrgNo: string | null;
   /** Where the counterparty is reached on paper. Set by the rental form, which
    *  insists on it, and null on most of the archive. */
   counterpartyAddress: string | null;
   counterpartyPostalCode: string | null;
   counterpartyCity: string | null;
+  counterpartyEmail: string | null;
+  counterpartyPhone: string | null;
   notes: string | null;
   termsVersion: string | null;
   createdBy: string | null;
   files: ContractFileRow[];
-  parties: ContractPartyRow[];
   rental: RentalDetailRow | null;
 }
 
@@ -164,11 +152,12 @@ const CONTRACT_DEFAULT_ORDER: Prisma.ContractOrderByWithRelationInput[] = [
 function listQueryWhere(q: ListQuery): Prisma.ContractWhereInput[] {
   const and: Prisma.ContractWhereInput[] = [];
 
-  // Only ever matches CONTRACT rows: PROTOCOL/OTHER have no `agreement` to
-  // hold a status, so a status tab naturally shows only agreements, and a
-  // lean document only ever appears under "Alla".
-  const statuses = CONTRACT_STATUS_TAB[q.tab];
-  if (statuses?.length) and.push({ agreement: { status: { in: statuses } } });
+  // A status is whether the signed copy is in the archive (see
+  // lib/contract/status.ts), so a tab is a question about the files. Only ever
+  // CONTRACT rows: a lean document has no status and appears under "Alla".
+  const signed: Prisma.ContractWhereInput = { files: { some: { role: "SIGNED" } } };
+  if (q.tab === "draft") and.push({ kind: "CONTRACT", NOT: signed });
+  if (q.tab === "signed") and.push({ kind: "CONTRACT", ...signed });
 
   // The dropdown picks kinds, OR-ed. Picking none narrows nothing.
   const kinds = q.picks.filter((p): p is ContractKind =>
@@ -230,8 +219,9 @@ export async function getContractPage(
         tags: true,
         createdAt: true,
         agreement: {
-          select: { counterparty: true, validFrom: true, validTo: true, status: true },
+          select: { counterparty: true, validFrom: true, validTo: true },
         },
+        files: { select: { role: true } },
         _count: { select: { files: true } },
       },
     }),
@@ -242,7 +232,7 @@ export async function getContractPage(
     rows: rows.map((c) => ({
       id: c.id,
       kind: c.kind,
-      status: c.agreement?.status ?? null,
+      status: contractStatus(c),
       title: c.title,
       counterparty: c.agreement?.counterparty ?? null,
       validFrom: isoDay(c.agreement?.validFrom ?? null),
@@ -273,7 +263,6 @@ export async function getContract(
         orderBy: { createdAt: "desc" },
         include: { uploadedBy: { select: { name: true } } },
       },
-      parties: { orderBy: [{ role: "asc" }, { createdAt: "asc" }] },
       rental: {
         include: {
           lines: { orderBy: { sortOrder: "asc" } },
@@ -287,13 +276,16 @@ export async function getContract(
   return {
     id: c.id,
     kind: c.kind,
-    status: c.agreement?.status ?? null,
+    status: contractStatus(c),
     title: c.title,
     counterparty: c.agreement?.counterparty ?? null,
+    counterpartyId: c.agreement?.counterpartyId ?? null,
     counterpartyOrgNo: c.agreement?.counterpartyOrgNo ?? null,
     counterpartyAddress: c.agreement?.counterpartyAddress ?? null,
     counterpartyPostalCode: c.agreement?.counterpartyPostalCode ?? null,
     counterpartyCity: c.agreement?.counterpartyCity ?? null,
+    counterpartyEmail: c.agreement?.counterpartyEmail ?? null,
+    counterpartyPhone: c.agreement?.counterpartyPhone ?? null,
     validFrom: isoDay(c.agreement?.validFrom ?? null),
     validTo: isoDay(c.agreement?.validTo ?? null),
     date: isoDay(c.date),
@@ -313,25 +305,12 @@ export async function getContract(
       uploadedBy: f.uploadedBy?.name ?? null,
       createdAt: f.createdAt.toISOString(),
     })),
-    parties: c.parties.map((p) => ({
-      id: p.id,
-      role: p.role,
-      name: p.name,
-      email: p.email,
-      phone: p.phone,
-      orgName: p.orgName,
-      orgNo: p.orgNo,
-      title: p.title,
-      signedAt: p.signedAt?.toISOString() ?? null,
-      signatureMethod: p.signatureMethod,
-    })),
     rental: c.rental
       ? {
           pickupAt: c.rental.pickupAt.toISOString(),
           returnAt: c.rental.returnAt.toISOString(),
           purpose: c.rental.purpose,
-          place: c.rental.place,
-          paymentDueAt: c.rental.paymentDueAt?.toISOString() ?? null,
+          signatureCount: c.rental.signatureCount,
           subtotalOre: c.rental.subtotalOre,
           discountOre: c.rental.discountOre,
           priceOre: c.rental.priceOre,

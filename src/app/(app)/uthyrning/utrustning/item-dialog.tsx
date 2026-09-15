@@ -84,17 +84,6 @@ export function ItemDialog({
     if (saved !== null) onClose();
   }
 
-  async function toggleActive() {
-    if (!item) return;
-    const saved = await mutate(`/api/rental-items/${item.id}`, {
-      method: "PATCH",
-      body: { active: !item.active },
-      key: "active",
-      success: t("saved"),
-    });
-    if (saved !== null) onClose();
-  }
-
   async function remove() {
     if (!item) return;
     const ok = await confirm({
@@ -103,8 +92,6 @@ export function ItemDialog({
       tone: "danger",
     });
     if (!ok) return;
-    // An item a contract points at comes back retired rather than deleted. The
-    // route decides that, not this dialog.
     const gone = await mutate(`/api/rental-items/${item.id}`, {
       method: "DELETE",
       key: "remove",
@@ -125,7 +112,7 @@ export function ItemDialog({
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t("quantity")} hint={t("quantityHint")}>
+            <Field label={t("quantity")}>
               <Input
                 type="number"
                 min={1}
@@ -133,7 +120,7 @@ export function ItemDialog({
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </Field>
-            <Field label={t("dailyPrice")} hint={t("dailyPriceHint")}>
+            <Field label={t("dailyPrice")}>
               <AmountInput value={dailyPrice} onChange={setDailyPrice} suffix="kr" />
             </Field>
           </div>
@@ -170,14 +157,6 @@ export function ItemDialog({
               onClick={remove}
             >
               {t("remove")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={pending === "active"}
-              onClick={toggleActive}
-            >
-              {item.active ? t("retire") : t("restore")}
             </Button>
           </div>
         ) : (

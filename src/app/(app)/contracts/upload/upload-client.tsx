@@ -39,16 +39,16 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, FieldGroup, Input, Textarea } from "@/components/ui/field";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IconPlus } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useMutation } from "@/components/shell/use-mutation";
 import { isCompleteDate } from "@/lib/domain/date";
 import { CounterpartyDialog } from "../counterparties/counterparty-dialog";
 import type { CounterpartyOption } from "@/lib/data/counterparties";
-import type { ContractKind, ContractStatus } from "@/lib/domain/types";
+import type { ContractKind } from "@/lib/domain/types";
 
 const KINDS: readonly ContractKind[] = ["CONTRACT", "PROTOCOL", "OTHER"];
-const STATUSES: readonly ContractStatus[] = ["SIGNED", "DRAFT", "OUT_FOR_SIGNATURE"];
 
 /** Kept in step with MAX_BYTES in the upload route, for the hint only. */
 const MAX_MB = 50;
@@ -66,7 +66,10 @@ export function UploadContractClient({
   const { mutate, pending } = useMutation();
 
   const [kind, setKind] = useState<ContractKind>("CONTRACT");
-  const [status, setStatus] = useState<ContractStatus>("SIGNED");
+  // Whether the file is the signed copy, which is what makes an agreement
+  // Signerat (see lib/contract/status.ts). Yes by default: what is filed here
+  // was signed somewhere else far more often than not.
+  const [fileIsSigned, setFileIsSigned] = useState(true);
   const [title, setTitle] = useState("");
 
   // The directory, picked from rather than typed. New rows made on the fly
@@ -99,17 +102,6 @@ export function UploadContractClient({
   const [date, setDate] = useState("");
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
-
-  // Who signed, if it's known already. Optional and typed once here rather
-  // than forcing a second trip to "Lägg till part" on the contract's own
-  // page afterward — that page still exists for adding more later, or for
-  // when nobody filling this in knows who signed yet.
-  const [sectionSignerName, setSectionSignerName] = useState("");
-  const [sectionSignerTitle, setSectionSignerTitle] = useState("");
-  const [sectionSignerSignedAt, setSectionSignerSignedAt] = useState("");
-  const [counterpartySignerName, setCounterpartySignerName] = useState("");
-  const [counterpartySignerTitle, setCounterpartySignerTitle] = useState("");
-  const [counterpartySignerSignedAt, setCounterpartySignerSignedAt] = useState("");
 
   // The document, held here until the contract it belongs to exists. There is
   // nothing to attach it to before the save, which is also why the panel shows
@@ -147,58 +139,10 @@ export function UploadContractClient({
       ? counterparty.trim() !== ""
       : kind !== "PROTOCOL" || isCompleteDate(date));
 
-  /**
-   * The title this contract would be called, from the answers already given.
-   *
-   * The hint under the field has always spelled out the pattern, and then left
-   * you to type it: a title is the kind of agreement, who it is with, and the
-   * year, all three of which are on this form already. The year is the one the
-   * contract starts in where that is known, because a 2025 agreement filed in
-   * January should not be called the 2026 one.
-   *
-   * Offered rather than applied. It is a starting point for a name somebody
-   * will search by, and the ones worth keeping are often edited afterwards.
-   */
-  const suggestion =
-    counterparty.trim() === ""
-      ? null
-      : t("form.titleSuggestion", {
-          kind: t(`kind.${kind}`),
-          counterparty: counterparty.trim(),
-          year: (isCompleteDate(validFrom)
-            ? validFrom.slice(0, 4)
-            : String(new Date().getFullYear())),
-        });
-
-  /** Records one side's signature, and does nothing if it was left blank:
-   *  the name is what makes this a party worth recording rather than an
-   *  empty row. */
-  async function addParty(
-    contractId: string,
-    role: "SECTION" | "COUNTERPARTY",
-    name: string,
-    title: string,
-    signedAt: string,
-    orgName: string | null = null,
-  ) {
-    if (name.trim() === "") return;
-    await mutate(`/api/contracts/${contractId}/parties`, {
-      body: {
-        role,
-        name: name.trim(),
-        title: title.trim() || null,
-        orgName,
-        signedAt: isCompleteDate(signedAt) ? signedAt : null,
-      },
-      refresh: false,
-    });
-  }
-
   async function save() {
     const created = await mutate<{ id: string }>("/api/contracts", {
       body: {
         kind,
-        status,
         title: title.trim(),
         counterparty: counterparty.trim(),
         counterpartyOrgNo: orgNo.trim() || null,
@@ -217,28 +161,12 @@ export function UploadContractClient({
     });
     if (!created) return;
 
-    // Best-effort, the same as the file below: the contract exists either
-    // way, and a party that failed to save can still be added from its own
-    // page. Skipped silently when a side's name was left blank, which is
-    // most of the time this form is used for a decades-old scan.
-    if (isAgreement) {
-      await Promise.all([
-        addParty(created.id, "SECTION", sectionSignerName, sectionSignerTitle, sectionSignerSignedAt),
-        addParty(
-          created.id,
-          "COUNTERPARTY",
-          counterpartySignerName,
-          counterpartySignerTitle,
-          counterpartySignerSignedAt,
-          counterparty.trim() || null,
-        ),
-      ]);
-    }
-
     if (file) {
       const form = new FormData();
       form.append("file", file);
-      form.append("role", "ORIGINAL");
+      // The signed copy only for an agreement, since a lean document has no
+      // status for it to settle.
+      form.append("role", isAgreement && fileIsSigned ? "SIGNED" : "ORIGINAL");
       const uploaded = await mutate(`/api/contracts/${created.id}/files`, {
         body: form,
         refresh: false,
@@ -346,29 +274,23 @@ export function UploadContractClient({
               </div>
             )}
 
-            {/* FieldGroup for the action slot's sake: the button rides the
-                label's line, and inside a <label> it would be the first
-                labelable element, so clicking the word "Titel" would press it.
-                Shown only while it would change something, the same rule the
-                rental form's "Använd summan" follows. */}
-            <FieldGroup
-              label={t("form.title")}
-              hint={t("form.titleHint")}
-              requirement="required"
-              action={
-                suggestion && suggestion !== title ? (
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-accent hover:underline"
-                    onClick={() => setTitle(suggestion)}
-                  >
-                    {t("form.titleSuggest")}
-                  </button>
-                ) : undefined
-              }
-            >
+            <Field label={t("form.title")} hint={t("form.titleHint")} requirement="required">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
-            </FieldGroup>
+            </Field>
+
+            {/* Asked only once there is a file to say it about. Without one the
+                agreement is filed as a draft, and its signed copy can be
+                uploaded from its own page later. */}
+            {isAgreement && file && (
+              <div className="space-y-1">
+                <Checkbox
+                  checked={fileIsSigned}
+                  onChange={() => setFileIsSigned((v) => !v)}
+                  label={t("form.fileIsSigned")}
+                />
+                <p className="text-xs text-muted">{t("form.fileIsSignedHint")}</p>
+              </div>
+            )}
           </CardBody>
         </Card>
 
@@ -404,83 +326,6 @@ export function UploadContractClient({
               >
                 <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
               </Field>
-            </CardBody>
-          </Card>
-        )}
-
-        {/* ── Undertecknat ─────────────────────────────────────── */}
-        {/* Optional, and typed once here instead of on a second trip to
-            "Lägg till part" afterward. Skipped entirely for a lean document,
-            which has nobody to sign it. */}
-        {isAgreement && (
-          <Card>
-            <CardHeader title={t("form.sectionSigned")} subtitle={t("form.sectionSignedHint")} />
-            <CardBody className="@container space-y-5">
-              {/* Status first: whether this is signed at all is the question
-                  the fields below only make sense in light of. What is filed
-                  through this page was signed years ago far more often than
-                  not, which is why the schema defaults it to SIGNED, and a
-                  question whose answer is nearly always the default has no
-                  business being the first thing on the page. */}
-              <FieldGroup label={t("form.status")} requirement="required">
-                <SegmentedControl
-                  options={STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))}
-                  value={status}
-                  onChange={setStatus}
-                />
-              </FieldGroup>
-              <div className="grid gap-x-8 gap-y-5 @xl:grid-cols-2">
-                <div className="space-y-4">
-                  <h3 className="text-[13px] font-medium text-foreground">
-                    {t("detail.partyRole.SECTION")}
-                  </h3>
-                  <Field label={t("party.name")} requirement="optional">
-                    <Input
-                      value={sectionSignerName}
-                      onChange={(e) => setSectionSignerName(e.target.value)}
-                      maxLength={120}
-                    />
-                  </Field>
-                  <Field label={t("party.title")} hint={t("party.titleHint")} requirement="optional">
-                    <Input
-                      value={sectionSignerTitle}
-                      onChange={(e) => setSectionSignerTitle(e.target.value)}
-                      maxLength={120}
-                    />
-                  </Field>
-                  <Field label={t("party.signedAt")} requirement="optional">
-                    <DateInput
-                      value={sectionSignerSignedAt}
-                      onChange={(e) => setSectionSignerSignedAt(e.target.value)}
-                    />
-                  </Field>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-[13px] font-medium text-foreground">
-                    {t("detail.partyRole.COUNTERPARTY")}
-                  </h3>
-                  <Field label={t("party.name")} requirement="optional">
-                    <Input
-                      value={counterpartySignerName}
-                      onChange={(e) => setCounterpartySignerName(e.target.value)}
-                      maxLength={120}
-                    />
-                  </Field>
-                  <Field label={t("party.title")} hint={t("party.titleHint")} requirement="optional">
-                    <Input
-                      value={counterpartySignerTitle}
-                      onChange={(e) => setCounterpartySignerTitle(e.target.value)}
-                      maxLength={120}
-                    />
-                  </Field>
-                  <Field label={t("party.signedAt")} requirement="optional">
-                    <DateInput
-                      value={counterpartySignerSignedAt}
-                      onChange={(e) => setCounterpartySignerSignedAt(e.target.value)}
-                    />
-                  </Field>
-                </div>
-              </div>
             </CardBody>
           </Card>
         )}

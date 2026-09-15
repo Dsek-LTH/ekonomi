@@ -12,7 +12,7 @@ import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateContract } from "@/lib/api/schemas/contract";
 import { normaliseTags } from "@/lib/contract/tags";
-import { isImmutable } from "@/lib/contract/file-roles";
+import { isImmutable, isSigned } from "@/lib/contract/file-roles";
 import { deleteObjectBestEffort } from "@/lib/server/storage";
 import { isoToDate } from "@/lib/domain/date";
 import type { Prisma } from "@/lib/generated/prisma/client";
@@ -91,15 +91,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     agreement.validTo = isoToDate(d.validTo);
     touchesAgreement = true;
   }
-  if (d.status !== undefined) {
-    agreement.status = d.status;
-    touchesAgreement = true;
-  }
   if (touchesAgreement) {
     if (existing.kind === "PROTOCOL") return fail(400, "contract.counterpartyNotAllowed");
     // upsert, not update: a CONTRACT row already has this table, but an
     // OTHER row being given a counterparty for the first time does not.
-    // The create side never sets validFrom/validTo/status, which only apply
+    // The create side never sets validFrom/validTo, which only apply
     // to CONTRACT, and the edit form only ever sends those for CONTRACT
     // rows, which always take the update branch instead.
     data.agreement = {
@@ -145,12 +141,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return fail(403, "contract.noManageAccess");
   }
 
-  // A contract holding evidence is not deletable from a screen. The rule is the
-  // same one lib/contract/files.ts enforces per file, applied to the whole row:
-  // a cascade would take the signed PDF with it, which is the one thing this
-  // app must never do by accident. Somebody who genuinely has to remove one
-  // does it in the database, having read the retention rule first.
-  const evidence = contract.files.filter((f) => isImmutable(f.role));
+  // A contract holding its signed copy is not deletable whole. The signed file
+  // has to be removed on its own first, behind its own warning, so a cascade
+  // can never take it by accident.
+  const evidence = contract.files.filter((f) => isSigned(f.role) || isImmutable(f.role));
   if (evidence.length > 0) {
     return fail(409, "contract.hasSignedFiles", { values: { count: evidence.length } });
   }

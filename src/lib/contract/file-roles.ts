@@ -11,15 +11,19 @@
 import type { ContractFileRole } from "@/lib/domain/types";
 
 /**
- * Roles whose bytes are evidence: what somebody actually signed, and the
- * provider's log saying they did.
+ * Roles no screen may delete: the signing provider's log saying a signature
+ * happened. Removing one is a database job done by somebody who has read the
+ * retention rule first (bokföringslagen 7 kap keeps a contract that underlies
+ * an invoice for seven years).
  *
- * Deleting one is not an edit, it is destroying the proof, and no screen in
- * this app offers it. Removing one is a database job done by somebody who has
- * read the retention rule first (bokföringslagen 7 kap keeps a contract that
- * underlies an invoice for seven years).
+ * Not SIGNED. The signed copy is what makes a contract Signerat, and one
+ * uploaded by mistake has to be removable, so the contract page offers that
+ * behind a warning instead.
  */
-const IMMUTABLE_ROLES: readonly ContractFileRole[] = ["SIGNED", "EVIDENCE"];
+const IMMUTABLE_ROLES: readonly ContractFileRole[] = ["EVIDENCE"];
 
 export const isImmutable = (role: ContractFileRole): boolean =>
   IMMUTABLE_ROLES.includes(role);
+
+/** Whether a file is the signed copy of the agreement. See contractStatus. */
+export const isSigned = (role: ContractFileRole): boolean => role === "SIGNED";

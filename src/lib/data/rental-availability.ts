@@ -7,18 +7,6 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { freeOver, shortfalls, type Booking, type Shortfall } from "@/lib/contract/availability";
-import type { ContractStatus } from "@/lib/domain/types";
-
-/**
- * Contract states that hold gear.
- *
- * A draft counts. That is the point of counting at all: the clash to prevent is
- * two people drawing contracts for the same Saturday, and by the time both are
- * signed it is too late to prevent anything. A terminated or cancelled contract
- * releases what it held, which is most of what those states are for.
- */
-const HOLDING: ContractStatus[] = ["DRAFT", "OUT_FOR_SIGNATURE", "SIGNED"];
-
 /**
  * Every catalogue line held over a period, as bookings the rule can read.
  *
@@ -38,7 +26,9 @@ async function bookingsOver(
       itemId: { not: null },
       rental: {
         contract: {
-          agreement: { status: { in: HOLDING } },
+          // Every rental holds its gear, a draft included. The clash to prevent
+          // is two people drawing contracts for the same Saturday, and by the
+          // time both are signed it is too late to prevent anything.
           ...(exclude ? { id: { not: exclude } } : {}),
         },
         // Cheap pre-filter in Postgres. The exact overlap, including the early
@@ -66,10 +56,9 @@ async function bookingsOver(
   }));
 }
 
-/** How many of each catalogue item the section owns and can still let out. */
-async function ownedActive(): Promise<Map<string, number>> {
+/** How many of each catalogue item the section owns. */
+async function ownedCounts(): Promise<Map<string, number>> {
   const items = await prisma.rentalItem.findMany({
-    where: { active: true },
     select: { id: true, quantity: true },
   });
   return new Map(items.map((i) => [i.id, i.quantity]));
@@ -87,7 +76,7 @@ export async function getAvailability(
   period: { from: string; to: string },
   exclude?: string,
 ): Promise<Availability[]> {
-  const [owned, bookings] = await Promise.all([ownedActive(), bookingsOver(period, exclude)]);
+  const [owned, bookings] = await Promise.all([ownedCounts(), bookingsOver(period, exclude)]);
   const free = freeOver({ owned, bookings, period });
   return [...owned].map(([itemId, count]) => ({
     itemId,
@@ -117,7 +106,7 @@ export async function checkAvailability(args: {
   if (requests.length === 0) return [];
 
   const [owned, bookings] = await Promise.all([
-    ownedActive(),
+    ownedCounts(),
     bookingsOver(args.period, args.exclude),
   ]);
   return shortfalls({ requests, owned, bookings, period: args.period });

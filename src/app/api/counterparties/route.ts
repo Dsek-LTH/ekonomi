@@ -27,6 +27,8 @@ export async function POST(req: Request) {
       address: d.address ?? null,
       postalCode: d.postalCode ?? null,
       city: d.city ?? null,
+      email: d.email ?? null,
+      phone: d.phone ?? null,
       notes: d.notes ?? null,
       createdById: g.actor.id,
     },
@@ -37,6 +39,8 @@ export async function POST(req: Request) {
       address: true,
       postalCode: true,
       city: true,
+      email: true,
+      phone: true,
     },
   });
 

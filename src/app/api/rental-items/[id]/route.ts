@@ -1,4 +1,4 @@
-// Amend or retire one catalogue item.
+// Amend or delete one catalogue item.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
@@ -28,9 +28,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data: Prisma.RentalItemUpdateInput = {};
   if (d.name !== undefined) data.name = d.name;
   if (d.description !== undefined) data.description = d.description;
+  if (d.quantity !== undefined) data.quantity = d.quantity;
   if (d.dailyPriceOre !== undefined) data.dailyPriceOre = d.dailyPriceOre;
   if (d.replacementValueOre !== undefined) data.replacementValueOre = d.replacementValueOre;
-  if (d.active !== undefined) data.active = d.active;
 
   // Nothing here reaches a contract that already quotes this item. A rental
   // line copies the description and the values at the moment it is drawn (see
@@ -53,23 +53,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const item = await prisma.rentalItem.findUnique({
     where: { id },
-    select: { id: true, active: true, _count: { select: { lines: true } } },
+    select: { id: true },
   });
   if (!item) return fail(404, "contract.itemNotFound");
 
-  // Retired rather than deleted where a contract still points at it, the same
-  // answer a cost centre in use gives. The line would survive either way (the
-  // relation is SetNull, and the line carries its own description and values),
-  // but the trail from a contract back to the catalogue row it was drawn from
-  // is worth keeping, and an item nobody can pick is what "gone" needs to mean
-  // here.
-  if (item._count.lines > 0) {
-    if (item.active) {
-      await prisma.rentalItem.update({ where: { id: item.id }, data: { active: false } });
-    }
-    return NextResponse.json({ retired: true, usedBy: item._count.lines });
-  }
-
+  // Deleted even when a contract quoted it. A rental line copies the
+  // description and the values at the moment it is drawn, so the contract still
+  // says what it said, and the relation is SetNull, so all the line loses is
+  // the link back to this row.
   await prisma.rentalItem.delete({ where: { id: item.id } });
   return new Response(null, { status: 204 });
 }

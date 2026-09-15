@@ -11,7 +11,6 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Tag } from "@/components/ui/status-pill";
 import { IconPlus } from "@/components/ui/icons";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -43,12 +42,10 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
                 onClick={() => setEditing(c)}
                 className={cn(
                   "text-left font-medium text-accent hover:underline",
-                  !c.active && "text-muted",
                 )}
               >
                 {c.name}
               </button>
-              {!c.active && <Tag>{t("retired")}</Tag>}
             </span>
             {c.city && <span className="block truncate text-xs text-muted">{c.city}</span>}
           </span>

@@ -24,12 +24,13 @@ const data: RentalContractData = {
   counterpartyOrgNo: "845002-5678",
   counterpartyAddress: "Ole Römers väg 3",
   counterpartyPostalLine: "223 63 Lund",
+  counterpartyEmail: "ordf@fsektionen.se",
+  counterpartyPhone: "070-123 45 67",
   title: "Uthyrning av ljudanläggning",
   drawn: "2026-09-06",
   pickupAt: "2026-09-18",
   returnAt: "2026-09-21",
   purpose: "Sittning i iDét",
-  place: "Kårhuset, Lund",
   lines: [
     {
       description: "Högtalare, aktiv 12 tum",
@@ -52,24 +53,8 @@ const data: RentalContractData = {
   subtotal: "650,00 kr",
   discount: "150,00 kr",
   price: "500,00 kr",
-  paymentDue: "2026-09-15",
   totalReplacement: "17 200,00 kr",
-  sectionParty: {
-    name: 'Ludwig "Alphan" Gehlsdorf',
-    title: "Skattmästare",
-    orgName: null,
-    orgNo: null,
-    email: null,
-    phone: null,
-  },
-  counterpartyParty: {
-    name: "Emil Helander",
-    title: "Ordförande F-sektionen",
-    orgName: "F-sektionen inom TLTH",
-    orgNo: "845002-5678",
-    email: "ordf@fsektionen.se",
-    phone: "070-123 45 67",
-  },
+  signatureCount: 1,
   terms: RENTAL_TERMS,
   termsVersion: TERMS_VERSION,
 };
@@ -83,7 +68,7 @@ describe("renderRentalContract", () => {
   });
 
   it("survives everything the data allows to be missing", async () => {
-    // A draft drawn before the renter has said who will sign, for a private
+    // A draft with no contact details at all, for a private
     // person with no organisation number and no address, charged the full
     // subtotal with no discount row, and with no stated place or purpose. Every
     // optional field absent at once, which is the shape most likely to blow up
@@ -95,11 +80,10 @@ describe("renderRentalContract", () => {
       counterpartyAddress: null,
       counterpartyPostalLine: null,
       purpose: null,
-      place: null,
       discount: null,
       price: data.subtotal,
-      sectionParty: { ...data.sectionParty!, title: null },
-      counterpartyParty: null,
+      counterpartyEmail: null,
+      counterpartyPhone: null,
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
   });
@@ -113,12 +97,16 @@ describe("renderRentalContract", () => {
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders a contract with one line and no signatories at all", async () => {
+  it("renders several signature blocks, over more than one row", async () => {
+    const bytes = await renderRentalContract({ ...data, signatureCount: 5 });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders one line and a signature count of zero, which still draws a block", async () => {
     const bytes = await renderRentalContract({
       ...data,
       lines: [data.lines[0]],
-      sectionParty: null,
-      counterpartyParty: null,
+      signatureCount: 0,
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
   });

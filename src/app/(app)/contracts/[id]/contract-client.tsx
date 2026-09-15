@@ -4,7 +4,7 @@
 //
 // The shape is the one every contract platform converges on, and the page did
 // none of it before: the document takes the panel on the right and the column
-// on the left describes it, status and signatures first, then the facts, then
+// on the left describes it, status first, then the facts, then
 // the rental record, then the filing and the history. Actions are one group on
 // the status card rather than one per card.
 //
@@ -28,31 +28,22 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DetailList, DetailRow } from "@/components/ui/detail-list";
-import { DateInput, Field, FieldGroup, Input, Textarea } from "@/components/ui/field";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { DateInput, Field, Input, Textarea } from "@/components/ui/field";
 import { Tag } from "@/components/ui/status-pill";
 import { IconTrash } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useFormat } from "@/lib/ui/use-format";
-import { isImmutable } from "@/lib/contract/file-roles";
+import { isImmutable, isSigned } from "@/lib/contract/file-roles";
 import { isCompleteDate } from "@/lib/domain/date";
 import { contractDocuments } from "@/lib/contract/document-url";
+import { canEditRental } from "@/lib/contract/status";
 import type { ContractDetail } from "@/lib/data/contracts";
-import type { ContractStatus } from "@/lib/domain/types";
-import { RentalPanel } from "./rental-panel";
+import { RentalLinesCard, RentalRecordCard } from "./rental-panel";
+import { Fact, Facts } from "./facts";
 import { StatusStrip } from "./status-strip";
 import { ContractActions } from "./contract-actions";
-
-const STATUSES: readonly ContractStatus[] = [
-  "DRAFT",
-  "OUT_FOR_SIGNATURE",
-  "SIGNED",
-  "TERMINATED",
-  "CANCELLED",
-];
 
 export function ContractClient({
   contract,
@@ -72,43 +63,46 @@ export function ContractClient({
   const [editing, setEditing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const hasSignedFiles = contract.files.some((f) => isImmutable(f.role));
+  const hasSignedFiles = contract.files.some((f) => isSigned(f.role) || isImmutable(f.role));
   // CONTRACT is the one kind that is an agreement with somebody: has a
-  // status, a validity period and parties. PROTOCOL/OTHER carry none of
+  // status and a validity period. PROTOCOL/OTHER carry none of
   // that. See prisma/schema/contract.prisma.
   const isAgreement = contract.kind === "CONTRACT";
+  // Until somebody signs, a rental is changed on the form it was drawn on
+  // (contracts/[id]/edit), which redraws the document. See canEditRental.
+  const rentalEditable = contract.rental !== null && canEditRental(contract);
+
+  // Which kind of file the picker was opened for. A ref rather than state: it
+  // is set the moment before the picker opens and read when it closes, and
+  // nothing on screen depends on it.
+  const uploadRole = useRef<"SIGNED" | "ORIGINAL">("ORIGINAL");
+
+  function pick(role: "SIGNED" | "ORIGINAL") {
+    uploadRole.current = role;
+    fileRef.current?.click();
+  }
 
   async function uploadFile(file: File) {
     const form = new FormData();
     form.append("file", file);
-    form.append("role", "ORIGINAL");
+    form.append("role", uploadRole.current);
     await mutate(`/api/contracts/${contract.id}/files`, { body: form, key: "upload" });
   }
 
-  async function removeFile(fileId: string, filename: string) {
+  async function removeFile(fileId: string, filename: string, signed: boolean) {
     const ok = await confirm({
       title: t("detail.deleteFile"),
-      message: t("detail.deleteFileConfirm", { filename }),
+      // Removing the signed copy is allowed, since a wrong upload has to be
+      // fixable, but it changes what the contract is, so it says so.
+      message: signed
+        ? t("detail.deleteSignedFileConfirm", { filename })
+        : t("detail.deleteFileConfirm", { filename }),
       tone: "danger",
     });
     if (!ok) return;
     await mutate(`/api/contracts/${contract.id}/files/${fileId}`, {
       method: "DELETE",
       key: fileId,
-    });
-  }
-
-  async function terminate() {
-    const ok = await confirm({
-      title: t("detail.terminate"),
-      message: t("detail.terminateConfirm"),
-    });
-    if (!ok) return;
-    await mutate(`/api/contracts/${contract.id}`, {
-      method: "PATCH",
-      body: { status: "TERMINATED" },
-      key: "terminate",
-      success: t("detail.saved"),
     });
   }
 
@@ -133,15 +127,6 @@ export function ContractClient({
     });
     if (gone !== null) router.push(contract.rental ? "/uthyrning" : "/contracts");
   }
-
-  const validity =
-    contract.validFrom && contract.validTo
-      ? t("validity.range", { from: date(contract.validFrom), to: date(contract.validTo) })
-      : contract.validFrom
-        ? t("validity.fromOnly", { from: date(contract.validFrom) })
-        : contract.validTo
-          ? t("validity.toOnly", { to: date(contract.validTo) })
-          : t("validity.none");
 
   return (
     <PageShell
@@ -180,28 +165,29 @@ export function ContractClient({
       />
 
       <div className="space-y-5">
-        {/* The status pill, the parties and the action menu, all one card:
-            only CONTRACT has any of the first two to show. A lean document
+        {/* The status pill and the action menu, one card: only CONTRACT has
+            a status to show. A lean document
             (PROTOCOL, OTHER) is filed or it doesn't exist, with nobody to
             sign it, so its actions ride the details card below instead. */}
         {isAgreement && (
           <StatusStrip
             contract={contract}
             today={today}
-            canManage={canManage}
             action={
               <ContractActions
                 state={{
                   status: contract.status,
                   isRental: contract.rental !== null,
+                  editable: rentalEditable,
+                  editHref: `/contracts/${contract.id}/edit`,
                   canManage,
                   hasSignedFiles,
                 }}
                 busy={pending !== null}
                 onEdit={() => setEditing((v) => !v)}
-                onUpload={() => fileRef.current?.click()}
+                onUpload={() => pick("ORIGINAL")}
                 onRegenerate={regenerate}
-                onTerminate={terminate}
+                onUploadSigned={() => pick("SIGNED")}
                 onDelete={removeContract}
               />
             }
@@ -210,7 +196,7 @@ export function ContractClient({
 
         {editing && canManage && (
           <Card>
-            <CardHeader title={t("detail.edit")} />
+            <CardHeader title={contract.rental ? t("detail.editRecord") : t("detail.edit")} />
             <CardBody>
               <EditFields contract={contract} onDone={() => setEditing(false)} />
             </CardBody>
@@ -218,64 +204,53 @@ export function ContractClient({
         )}
 
         {contract.rental && (
-          <RentalPanel
-            contractId={contract.id}
-            rental={contract.rental}
-            canManage={canManage}
-          />
+          <>
+            <RentalLinesCard rental={contract.rental} />
+            <RentalRecordCard
+              contractId={contract.id}
+              rental={contract.rental}
+              canManage={canManage}
+            />
+          </>
         )}
 
-        {/* Uppgifter and Parter are gone for a rental, and it is worth saying
-            what they held rather than leaving a reader to wonder. Uppgifter was
-            Typ (obviously a rental), Motpart (the page's own subtitle), Giltigt
-            (the status strip's period) and Taggar (empty). Parter repeated the
-            strip's list with buttons on it. Both were the same facts a second
-            time, which is most of what made this page feel like a pile.
-
-            A contract that is not a rental still needs them, because for one of
-            those the kind and the counterparty are not obvious from anything
-            else on the page. A lean document needs them too, and carries the
-            action menu here since it has no StatusStrip to carry it above. */}
-        {!contract.rental && (
+        {/* Uppgifter, for a lean document (PROTOCOL, OTHER) only. An agreement
+            says who it is with and for when on the status card above, and this
+            card used to say it a second time. A lean document has no status
+            card, so its facts and its action menu are here. */}
+        {!isAgreement && (
           <Card>
             <CardHeader
               title={t("detail.details")}
               action={
-                !isAgreement ? (
-                  <ContractActions
-                    state={{ status: null, isRental: false, canManage, hasSignedFiles }}
-                    busy={pending !== null}
-                    onEdit={() => setEditing((v) => !v)}
-                    onUpload={() => fileRef.current?.click()}
-                    onRegenerate={regenerate}
-                    onTerminate={terminate}
-                    onDelete={removeContract}
-                  />
-                ) : undefined
+                <ContractActions
+                  state={{ status: null, isRental: false, editable: false, canManage, hasSignedFiles }}
+                  busy={pending !== null}
+                  onEdit={() => setEditing((v) => !v)}
+                  onUpload={() => pick("ORIGINAL")}
+                  onRegenerate={regenerate}
+                  onUploadSigned={() => pick("SIGNED")}
+                  onDelete={removeContract}
+                />
               }
             />
             <CardBody>
-              <DetailList>
-                <DetailRow label={t("col.kind")} value={t(`kind.${contract.kind}`)} />
-                {/* Counterparty is data-driven rather than kind-driven here:
-                    null for PROTOCOL always, and for an OTHER that named
-                    none. Validity and status still only ever apply to
-                    CONTRACT. */}
+              <Facts>
+                <Fact label={t("col.kind")}>{t(`kind.${contract.kind}`)}</Fact>
+                <Fact label={t("form.date")}>
+                  {contract.date ? date(contract.date) : t("validity.none")}
+                </Fact>
+                {/* Null for PROTOCOL always, and for an OTHER that named
+                    nobody. */}
                 {contract.counterparty && (
-                  <DetailRow label={t("col.counterparty")} value={contract.counterparty} />
+                  <Fact label={t("col.counterparty")}>
+                    <span className="block">{contract.counterparty}</span>
+                    {contract.counterpartyOrgNo && (
+                      <span className="block text-muted">{contract.counterpartyOrgNo}</span>
+                    )}
+                  </Fact>
                 )}
-                {contract.counterpartyOrgNo && (
-                  <DetailRow label={t("form.counterpartyOrgNo")} value={contract.counterpartyOrgNo} />
-                )}
-                {isAgreement ? (
-                  <DetailRow label={t("col.validity")} value={validity} />
-                ) : (
-                  <DetailRow
-                    label={t("form.date")}
-                    value={contract.date ? date(contract.date) : t("validity.none")}
-                  />
-                )}
-              </DetailList>
+              </Facts>
             </CardBody>
           </Card>
         )}
@@ -305,7 +280,7 @@ export function ContractClient({
                         variant="dangerOutline"
                         size="sm"
                         loading={pending === f.id}
-                        onClick={() => removeFile(f.id, f.filename)}
+                        onClick={() => removeFile(f.id, f.filename, isSigned(f.role))}
                       >
                         <IconTrash className="size-4" />
                         <span className="sr-only">{t("detail.deleteFile")}</span>
@@ -318,54 +293,37 @@ export function ContractClient({
           </CardBody>
         </Card>
 
-        {/* ── Historik ────────────────────────────────────────────── */}
-        {/* The archival trivia, all of it, in the one place somebody goes
-            looking for it. Org.nr, tags and notes used to have a card of their
-            own competing with the contract; here they are what they are, which
-            is small print about the filing rather than about the agreement. */}
-        <Card>
-          <CardHeader title={t("detail.history")} />
-          <CardBody className="space-y-4">
-            <DetailList>
-              {contract.createdBy && (
-                <DetailRow
-                  label={t("detail.filedByLabel")}
-                  value={`${contract.createdBy} – ${date(contract.createdAt)}`}
-                />
-              )}
-              {contract.rental && contract.counterpartyOrgNo && (
-                <DetailRow
-                  label={t("form.counterpartyOrgNo")}
-                  value={contract.counterpartyOrgNo}
-                />
-              )}
-              {contract.tags.length > 0 && (
-                <DetailRow
-                  label={t("col.tags")}
-                  value={
-                    <span className="flex flex-wrap justify-end gap-1">
-                      {contract.tags.map((tag) => (
-                        <Tag key={tag}>{tag}</Tag>
-                      ))}
-                    </span>
-                  }
-                />
-              )}
-              {contract.termsVersion && (
-                <DetailRow
-                  label={t("detail.termsVersionLabel")}
-                  value={contract.termsVersion}
-                />
-              )}
-            </DetailList>
-            {contract.notes && (
-              <div>
-                <p className="text-xs font-medium text-muted">{t("detail.notes")}</p>
-                <p className="mt-1 whitespace-pre-line break-words text-sm">{contract.notes}</p>
-              </div>
-            )}
-          </CardBody>
-        </Card>
+        {/* The filing, as small print under the contract rather than a card
+            competing with it: who put it in the archive and when, which wording
+            of the terms a drawn contract used, and whatever tags and notes
+            somebody left for the next reader. */}
+        <footer className="space-y-3 px-1 text-xs text-muted">
+          <p>
+            {[
+              contract.createdBy &&
+                t("detail.filedBy", { name: contract.createdBy, date: date(contract.createdAt) }),
+              contract.termsVersion &&
+                t("detail.termsVersion", { version: contract.termsVersion }),
+            ]
+              .filter(Boolean)
+              .join(". ")}
+          </p>
+          {contract.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {contract.tags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </div>
+          )}
+          {contract.notes && (
+            <div>
+              <p className="font-medium">{t("detail.notes")}</p>
+              <p className="mt-1 whitespace-pre-line break-words text-sm text-foreground">
+                {contract.notes}
+              </p>
+            </div>
+          )}
+        </footer>
       </div>
     </PageShell>
   );
@@ -389,7 +347,12 @@ function EditFields({
   const isAgreement = contract.kind === "CONTRACT";
   // Everything but a meeting's minutes may name who it is with, required for
   // CONTRACT and optional for OTHER; see AgreementDetails.counterparty.
-  const showCounterparty = contract.kind !== "PROTOCOL";
+  // A rental states who it is with and when on its own form, which redraws the
+  // document. The same fields here as well would let the row and the PDF say
+  // different things, so for a rental this is only the filing: title, tags
+  // and notes.
+  const isRental = contract.rental !== null;
+  const showCounterparty = contract.kind !== "PROTOCOL" && !isRental;
   const [counterparty, setCounterparty] = useState(contract.counterparty ?? "");
   const [orgNo, setOrgNo] = useState(contract.counterpartyOrgNo ?? "");
   const [address, setAddress] = useState(contract.counterpartyAddress ?? "");
@@ -397,7 +360,6 @@ function EditFields({
   const [city, setCity] = useState(contract.counterpartyCity ?? "");
   const [validFrom, setValidFrom] = useState(contract.validFrom ?? "");
   const [validTo, setValidTo] = useState(contract.validTo ?? "");
-  const [status, setStatus] = useState<ContractStatus>(contract.status ?? "SIGNED");
   // The one date a lean document (PROTOCOL, OTHER) carries in place of the
   // period above.
   const [date, setDate] = useState(contract.date ?? "");
@@ -422,14 +384,15 @@ function EditFields({
           : {}),
         ...(showCounterparty ? { counterpartyOrgNo: orgNo.trim() || null } : {}),
         ...(isAgreement
-          ? {
-              counterpartyAddress: address.trim() || null,
-              counterpartyPostalCode: postalCode.trim() || null,
-              counterpartyCity: city.trim() || null,
-              validFrom: dateField(validFrom),
-              validTo: dateField(validTo),
-              status,
-            }
+          ? isRental
+            ? {}
+            : {
+                counterpartyAddress: address.trim() || null,
+                counterpartyPostalCode: postalCode.trim() || null,
+                counterpartyCity: city.trim() || null,
+                validFrom: dateField(validFrom),
+                validTo: dateField(validTo),
+              }
           : { date: dateField(date) }),
         tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
         notes: notes.trim() || null,
@@ -463,49 +426,45 @@ function EditFields({
       )}
       {isAgreement && (
         <>
-          <Field label={t("rental.renterAddress")} requirement="optional">
-            <Input
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              autoComplete="street-address"
-              maxLength={200}
-            />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-            <Field label={t("rental.renterPostalCode")} requirement="optional">
-              <Input
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                autoComplete="postal-code"
-                inputMode="numeric"
-                maxLength={20}
-              />
-            </Field>
-            <Field label={t("rental.renterCity")} requirement="optional">
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                autoComplete="address-level2"
-                maxLength={100}
-              />
-            </Field>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t("form.validFrom")} requirement="optional">
-              <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
-            </Field>
-            <Field label={t("form.validTo")} requirement="optional">
-              <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
-            </Field>
-          </div>
-          <FieldGroup label={t("form.status")} requirement="required">
-            <SegmentedControl
-              options={STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))}
-              value={status}
-              onChange={setStatus}
-              size="sm"
-            />
-          </FieldGroup>
+          {!isRental && (
+            <>
+              <Field label={t("rental.renterAddress")} requirement="optional">
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  autoComplete="street-address"
+                  maxLength={200}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                <Field label={t("rental.renterPostalCode")} requirement="optional">
+                  <Input
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    maxLength={20}
+                  />
+                </Field>
+                <Field label={t("rental.renterCity")} requirement="optional">
+                  <Input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    autoComplete="address-level2"
+                    maxLength={100}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label={t("form.validFrom")} requirement="optional">
+                  <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+                </Field>
+                <Field label={t("form.validTo")} requirement="optional">
+                  <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+                </Field>
+              </div>
+            </>
+          )}
         </>
       )}
       {!isAgreement && (

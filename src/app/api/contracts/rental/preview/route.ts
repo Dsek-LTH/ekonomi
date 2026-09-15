@@ -30,7 +30,6 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
-  const renter = d.counterpartySignatory;
   const draft: RentalDraft = {
     // Derived exactly as the create route derives it, so the title on the
     // preview is the title the contract gets. See lib/contract/signatory.ts.
@@ -40,11 +39,12 @@ export async function POST(req: Request) {
     counterpartyAddress: orNull(d.counterpartyAddress),
     counterpartyPostalCode: orNull(d.counterpartyPostalCode),
     counterpartyCity: orNull(d.counterpartyCity),
+    counterpartyEmail: orNull(d.counterpartyEmail),
+    counterpartyPhone: orNull(d.counterpartyPhone),
     pickupAt: isoToDate(d.pickupAt),
     returnAt: isoToDate(d.returnAt),
     purpose: orNull(d.purpose),
-    place: orNull(d.place),
-    paymentDueAt: isoToDate(d.paymentDueAt),
+    signatureCount: d.signatureCount,
     // Rows that are still empty are left off. A blank line in the table reads
     // as a mistake in the contract rather than as a row not filled in yet.
     lines: d.lines
@@ -56,21 +56,6 @@ export async function POST(req: Request) {
         discountPercent: l.discountPercent,
         replacementValueOre: l.replacementValueOre,
       })),
-    parties: [
-      ...(renter && renter.name.trim() !== ""
-        ? [
-            {
-              role: "COUNTERPARTY" as const,
-              name: renter.name.trim(),
-              title: null,
-              orgName: orNull(d.counterparty),
-              orgNo: null,
-              email: orNull(renter.email),
-              phone: orNull(renter.phone),
-            },
-          ]
-        : []),
-    ],
   };
 
   const drawn = await renderRentalPreview(draft);

@@ -42,6 +42,8 @@ export function CounterpartyDialog({
   const [address, setAddress] = useState(counterparty?.address ?? "");
   const [postalCode, setPostalCode] = useState(counterparty?.postalCode ?? "");
   const [city, setCity] = useState(counterparty?.city ?? "");
+  const [email, setEmail] = useState(counterparty?.email ?? "");
+  const [phone, setPhone] = useState(counterparty?.phone ?? "");
   const [notes, setNotes] = useState(counterparty?.notes ?? "");
 
   const blocker = name.trim() === "" ? t("blocker.name") : null;
@@ -52,6 +54,8 @@ export function CounterpartyDialog({
     address: address.trim() || null,
     postalCode: postalCode.trim() || null,
     city: city.trim() || null,
+    email: email.trim() || null,
+    phone: phone.trim() || null,
     notes: notes.trim() || null,
   };
 
@@ -85,24 +89,11 @@ export function CounterpartyDialog({
       tone: "danger",
     });
     if (!ok) return;
-    // A counterparty a contract points at comes back retired rather than
-    // deleted. The route decides that, not this dialog.
     const gone = await mutate(`/api/counterparties/${counterparty.id}`, {
       method: "DELETE",
       key: "remove",
     });
     if (gone !== null) onClose();
-  }
-
-  async function toggleActive() {
-    if (!counterparty) return;
-    const saved = await mutate(`/api/counterparties/${counterparty.id}`, {
-      method: "PATCH",
-      body: { active: !counterparty.active },
-      key: "active",
-      success: t("saved"),
-    });
-    if (saved !== null) onClose();
   }
 
   return (
@@ -162,6 +153,29 @@ export function CounterpartyDialog({
             </Field>
           </div>
 
+          {/* Both optional. Copied onto a contract when this row is picked,
+              the same as the address. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t("email")}>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                maxLength={200}
+              />
+            </Field>
+            <Field label={t("phone")}>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                autoComplete="tel"
+                inputMode="tel"
+                maxLength={40}
+              />
+            </Field>
+          </div>
+
           <Field label={t("notes")} hint={t("notesHint")}>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} />
           </Field>
@@ -182,14 +196,6 @@ export function CounterpartyDialog({
               onClick={remove}
             >
               {t("remove")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={pending === "active"}
-              onClick={toggleActive}
-            >
-              {counterparty.active ? t("retire") : t("restore")}
             </Button>
           </div>
         ) : (

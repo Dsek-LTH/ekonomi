@@ -10,19 +10,23 @@
 // then only a description of the contract rather than a description with
 // controls scattered through it.
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconDots, IconUpload } from "@/components/ui/icons";
-import { canEditRental } from "@/lib/contract/status";
 import type { ContractStatus } from "@/lib/domain/types";
 
 export interface ContractActionState {
   /** Null for PROTOCOL/OTHER, which carry no status at all. */
   status: ContractStatus | null;
   isRental: boolean;
+  /** Whether the rental can still be changed, which is until the signed copy is uploaded.
+   *  False for anything that is not a rental. See canEditRental. */
+  editable: boolean;
+  /** Where the rental's own form is. Set only for a rental. */
+  editHref?: string;
   canManage: boolean;
-  /** Whether removing it is possible at all: a contract holding signed
-   *  evidence is not deletable from any screen. */
+  /** Whether the signed copy is in the archive. The contract cannot be deleted
+   *  whole until that file has been removed on its own. */
   hasSignedFiles: boolean;
 }
 
@@ -32,7 +36,7 @@ export function ContractActions({
   onEdit,
   onUpload,
   onRegenerate,
-  onTerminate,
+  onUploadSigned,
   onDelete,
 }: {
   state: ContractActionState;
@@ -40,30 +44,39 @@ export function ContractActions({
   onEdit: () => void;
   onUpload: () => void;
   onRegenerate: () => void;
-  onTerminate: () => void;
+  /** Opens the picker for the signed copy, which makes the contract Signerat. */
+  onUploadSigned: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations("contracts");
   if (!state.canManage) return null;
 
-  const { status, isRental, hasSignedFiles } = state;
+  const { status, isRental, editable, editHref, hasSignedFiles } = state;
 
   // What the contract is waiting for, as one labelled button.
   //
-  // A draft is waiting to be redrawn or sent; a signed contract is waiting for
-  // nothing, so it gets no primary and the menu carries everything. Deciding
-  // this from the status rather than always showing the same verb is what makes
-  // the header say something instead of offering a fixed row of options.
-  const primary =
-    isRental && status !== null && canEditRental(status)
-      ? { label: t("rental.regenerate"), onClick: onRegenerate }
-      : null;
+  // A rental nobody has signed is waiting to be finished, so its primary is the
+  // form it was drawn on, which redraws the document on save. A signed contract
+  // is waiting for nothing, so it gets no primary and the menu carries
+  // everything. Deciding this from the state rather than always showing the
+  // same verb is what makes the header say something instead of offering a
+  // fixed row of options.
+  const editsRental = isRental && editable;
+  // An archived agreement that is still a draft is waiting for its signed
+  // copy, and uploading it is what makes it Signerat. A rental waits for the
+  // same thing, but its form comes first, so there the upload is in the menu.
+  const awaitsSignedCopy = status === "DRAFT" && !isRental;
 
   return (
     <div className="flex items-center gap-2">
-      {primary && (
-        <Button size="sm" onClick={primary.onClick} loading={busy}>
-          {primary.label}
+      {editsRental && editHref && (
+        <ButtonLink size="sm" href={editHref}>
+          {t("rental.edit")}
+        </ButtonLink>
+      )}
+      {awaitsSignedCopy && (
+        <Button size="sm" onClick={onUploadSigned} loading={busy}>
+          {t("detail.uploadSigned")}
         </Button>
       )}
       <Menu
@@ -76,22 +89,26 @@ export function ContractActions({
         // Both would be saying the same thing twice.
         icon={<IconDots className="size-4 sm:hidden" />}
       >
-        <MenuItem onClick={onEdit}>{t("detail.edit")}</MenuItem>
+        {/* For a rental the agreement itself is changed on its form, above.
+            What this opens is the filing around it: title, tags and notes. */}
+        <MenuItem onClick={onEdit}>
+          {isRental ? t("detail.editRecord") : t("detail.edit")}
+        </MenuItem>
+        {status === "DRAFT" && isRental && (
+          <MenuItem onClick={onUploadSigned}>
+            <IconUpload className="size-4" />
+            {t("detail.uploadSigned")}
+          </MenuItem>
+        )}
         <MenuItem onClick={onUpload}>
           <IconUpload className="size-4" />
           {t("detail.addDocument")}
         </MenuItem>
-        {/* Redrawing is deliberately absent once the contract has gone out,
-            rather than present and disabled: it would leave two versions in the
-            world with nothing saying which was signed, and an option that can
-            never be taken is furniture. Absent entirely for PROTOCOL/OTHER,
-            which have no status to terminate. */}
-        {status !== null && status !== "TERMINATED" && status !== "CANCELLED" && (
-          <>
-            <MenuSeparator />
-            <MenuItem onClick={onTerminate}>{t("detail.terminate")}</MenuItem>
-          </>
-        )}
+        {/* Redrawing is deliberately absent once the signed copy is in, rather
+            than present and disabled: it would leave two versions in the world
+            with nothing saying which was signed, and an option that can never
+            be taken is furniture. */}
+        {editsRental && <MenuItem onClick={onRegenerate}>{t("rental.regenerate")}</MenuItem>}
         <MenuSeparator />
         <MenuItem
           onClick={onDelete}

@@ -5,7 +5,6 @@ import { rentalState, type RentalFacts } from "./rental-state";
 const TODAY = "2026-09-06";
 
 const rental = (over: Partial<RentalFacts> = {}): RentalFacts => ({
-  status: "SIGNED",
   pickupAt: "2026-09-01",
   returnAt: "2026-09-10",
   returnedAt: null,
@@ -51,21 +50,5 @@ describe("rentalState", () => {
     expect(
       rentalState(rental({ returnedAt: "2026-09-04", checkedAt: "2026-09-05" }), TODAY),
     ).toBe("CLOSED");
-  });
-
-  it("reports a cancelled rental as cancelled however overdue it looks", () => {
-    // Nothing is out, so nothing is late.
-    expect(
-      rentalState(rental({ status: "CANCELLED", returnAt: "2020-01-01" }), TODAY),
-    ).toBe("CANCELLED");
-    expect(
-      rentalState(rental({ status: "TERMINATED", returnAt: "2020-01-01" }), TODAY),
-    ).toBe("CANCELLED");
-  });
-
-  it("treats a draft like any other rental for where the gear is", () => {
-    // A draft still holds the gear as far as availability is concerned, so the
-    // work list has to show it too.
-    expect(rentalState(rental({ status: "DRAFT" }), TODAY)).toBe("OUT");
   });
 });

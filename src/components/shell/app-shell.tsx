@@ -916,8 +916,16 @@ export function AppShell({
 
           Only from md, and deliberately: below md this element does not scroll
           at all, the document does, and containing the document's own overscroll
-          is what stops a phone browser retracting its address bar. */}
-      <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain print:overflow-visible">
+          is what stops a phone browser retracting its address bar.
+
+          `relative` so that this column, and not the document, is the
+          containing block for anything absolutely placed inside a page. An
+          `sr-only` label in a button with no positioned ancestor was placed
+          against the document instead, 1500px down a long page, where the
+          shell's own `overflow-hidden` could not clip it. The document grew to
+          fit it, and scrolling over anything outside this column (the
+          sidebar's profile footer) scrolled the whole frame off the screen. */}
+      <div className="relative flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain print:overflow-visible">
         {/* Mobile top bar: the only way to reach the nav below md. */}
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:hidden print:hidden">
           <button

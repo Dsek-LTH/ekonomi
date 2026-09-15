@@ -27,7 +27,6 @@
     "OUT": "Utlånad",
     "OVERDUE": "Försenad",
     "AWAITING_CHECK": "Väntar på kontroll",
-    "CLOSED": "Klar",
-    "CANCELLED": "Avbruten"
+    "CLOSED": "Klar"
   }
 }

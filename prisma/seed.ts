@@ -70,7 +70,7 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
-  await prisma.contract.deleteMany(); // cascades → files, parties, rental → lines
+  await prisma.contract.deleteMany(); // cascades → files, rental → lines
   await prisma.rentalItem.deleteMany();
   await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows

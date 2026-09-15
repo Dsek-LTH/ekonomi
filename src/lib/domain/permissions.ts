@@ -117,8 +117,8 @@ export const canManageRentals = (caps: readonly Capability[]) =>
  *  catalogue.
  *
  *  Not a claim that the holder may bind the section. That is firmateckning, and
- *  it is decided outside this app: the contract records who signed and in what
- *  capacity (ContractParty.title) rather than this app ruling on it. */
+ *  it is decided outside this app: the signed document shows who signed and in what
+ *  capacity, rather than this app ruling on it. */
 export const canManageContracts = (caps: readonly Capability[]) =>
   has(caps, "CONTRACT_MANAGE");
 

@@ -27,7 +27,6 @@
     "OUT": "Out",
     "OVERDUE": "Overdue",
     "AWAITING_CHECK": "Awaiting inspection",
-    "CLOSED": "Done",
-    "CANCELLED": "Cancelled"
+    "CLOSED": "Done"
   }
 }

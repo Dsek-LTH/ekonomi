@@ -1,39 +1,37 @@
 "use client";
 
-// Where the contract stands, and who has put their name to it.
+// The agreement at a glance: where it stands, and the facts it turns on.
 //
-// The first thing on the page, because it is the first thing anybody opening a
-// contract wants to know, and it used to be the last: whether it was signed sat
-// at the bottom, inside the parties card, under the documents.
+// The first card on the page, because whether it is signed is the first thing
+// anybody opening a contract wants to know, and the facts beside it are the
+// ones read next: who it is with, for when, and for how much.
 //
-// Every contract platform puts these two facts together and at the top, and for
-// the same reason. "Signerat" on its own is a claim; "signerat, by these two
-// people, on these days" is the fact behind it, and separating them means
-// reading one and scrolling for the other.
-import { useState } from "react";
+// Each of them is said once, here. The period used to sit on this card and
+// again as Uthämtas and Återlämnas further down, and the renter's number and
+// contact details were in Historik at the foot of the page, away from the
+// renter they describe.
+//
+// Signerat means the signed copy is in the archive, and nothing else (see
+// lib/contract/status.ts). So a draft says what would change that, beside the
+// pill it would change.
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Tag } from "@/components/ui/status-pill";
-import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
-import { IconCheck, IconTrash } from "@/components/ui/icons";
-import { useConfirm } from "@/components/confirm-dialog";
-import { useMutation } from "@/components/shell/use-mutation";
-import { AddParty } from "./add-party";
+import { Amount } from "@/components/ui/amount";
 import { useFormat } from "@/lib/ui/use-format";
+import { oreToSEK } from "@/lib/domain/money";
 import { CONTRACT_STATUS_TONE, displayStatus } from "@/lib/contract/status";
 import { RENTAL_STATE_TONE, rentalState } from "@/lib/contract/rental-state";
 import type { ContractDetail } from "@/lib/data/contracts";
+import { Fact, Facts } from "./facts";
 
 export function StatusStrip({
   contract,
   today,
-  canManage,
   action,
 }: {
   contract: ContractDetail;
   today: string;
-  canManage: boolean;
   /** The contract's own actions. They ride this header because this is the
    *  card that *is* the contract, which is the rule the utlägg page follows
    *  for the same reason: what you can do to a thing belongs to the thing
@@ -43,121 +41,82 @@ export function StatusStrip({
   const t = useTranslations("contracts");
   const tRentals = useTranslations("rentals");
   const { date } = useFormat();
-  const confirm = useConfirm();
-  const { mutate, pending } = useMutation();
-  const [adding, setAdding] = useState(false);
+  const { rental } = contract;
 
-  async function removeParty(id: string, name: string) {
-    const ok = await confirm({ title: t("party.remove"), message: name, tone: "danger" });
-    if (!ok) return;
-    await mutate(`/api/contracts/${contract.id}/parties/${id}`, { method: "DELETE", key: id });
-  }
-
-  // Only ever rendered for a CONTRACT (see contract-client.tsx), which
-  // always has an AgreementDetails row and so always has a status.
+  // Only ever rendered for a CONTRACT (see contract-client.tsx), which always
+  // has a status.
   const status = displayStatus(contract, today)!;
 
   // A rental carries two states that are not the same question: where the
   // agreement stands, and where the gear is. Both, side by side, because a
   // signed contract whose Soundboks is a week overdue is a row somebody has to
   // act on and "Signerat" alone would not say so.
-  const gear = contract.rental
+  const gear = rental
     ? rentalState(
         {
-          status: contract.status!,
-          pickupAt: contract.rental.pickupAt.slice(0, 10),
-          returnAt: contract.rental.returnAt.slice(0, 10),
-          returnedAt: contract.rental.returnedAt?.slice(0, 10) ?? null,
-          checkedAt: contract.rental.checkedAt?.slice(0, 10) ?? null,
+          pickupAt: rental.pickupAt.slice(0, 10),
+          returnAt: rental.returnAt.slice(0, 10),
+          returnedAt: rental.returnedAt?.slice(0, 10) ?? null,
+          checkedAt: rental.checkedAt?.slice(0, 10) ?? null,
         },
         today,
       )
     : null;
 
+  // A rental's own dates rather than the archive's copy of them, which is what
+  // the contract actually states.
+  const from = rental?.pickupAt ?? contract.validFrom;
+  const to = rental?.returnAt ?? contract.validTo;
   const period =
-    contract.validFrom && contract.validTo
-      ? t("validity.range", { from: date(contract.validFrom), to: date(contract.validTo) })
-      : contract.validFrom
-        ? t("validity.fromOnly", { from: date(contract.validFrom) })
-        : contract.validTo
-          ? t("validity.toOnly", { to: date(contract.validTo) })
-          : null;
+    from && to
+      ? t("validity.range", { from: date(from), to: date(to) })
+      : from
+        ? t("validity.fromOnly", { from: date(from) })
+        : to
+          ? t("validity.toOnly", { to: date(to) })
+          : t("validity.none");
+
+  const contact = [contract.counterpartyEmail, contract.counterpartyPhone]
+    .filter(Boolean)
+    .join(" – ");
 
   return (
     <Card>
       <CardHeader title={t("detail.status")} action={action} />
-      <CardBody className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Tag tone={CONTRACT_STATUS_TONE[status]}>{t(`status.${status}`)}</Tag>
-          {gear && <Tag tone={RENTAL_STATE_TONE[gear]}>{tRentals(`state.${gear}`)}</Tag>}
-          {period && <span className="text-sm text-muted">{period}</span>}
+      <CardBody className="space-y-5">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag tone={CONTRACT_STATUS_TONE[status]}>{t(`status.${status}`)}</Tag>
+            {gear && <Tag tone={RENTAL_STATE_TONE[gear]}>{tRentals(`state.${gear}`)}</Tag>}
+          </div>
+          {contract.status === "DRAFT" && (
+            <p className="text-xs text-muted">{t("detail.draftHint")}</p>
+          )}
         </div>
 
-        {contract.parties.length === 0 ? (
-          <p className="text-sm text-muted">{t("detail.noParties")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {contract.parties.map((p) => {
-              const signed = p.signedAt !== null;
-              return (
-                <li key={p.id} className="flex items-start gap-2.5 text-sm">
-                  {/* A tick or a hollow ring, in the same slot. The shape says
-                      signed or not before the words do, which is what lets this
-                      be read at a glance rather than parsed. */}
-                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-                    {signed ? (
-                      <IconCheck className="size-4 text-success" />
-                    ) : (
-                      <span className="size-2 rounded-full border border-muted/60" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="font-medium">{p.name}</span>
-                      <span className="text-xs text-muted">
-                        {[p.title, p.orgName].filter(Boolean).join(" – ") ||
-                          t(`detail.partyRole.${p.role}`)}
-                      </span>
-                    </span>
-                    <span className={signed ? "text-xs text-muted" : "text-xs text-warning"}>
-                      {signed
-                        ? `${t("detail.signedOn", { date: date(p.signedAt!) })}${
-                            p.signatureMethod
-                              ? ` (${t(`detail.method.${p.signatureMethod}`)})`
-                              : ""
-                          }`
-                        : t("detail.notSigned")}
-                      {p.email && <span className="ms-2">{p.email}</span>}
-                    </span>
-                  </span>
-                  {canManage && (
-                    <IconButton
-                      tone="danger"
-                      label={t("party.remove")}
-                      disabled={pending === p.id}
-                      onClick={() => removeParty(p.id, p.name)}
-                    >
-                      <IconTrash className="size-4" />
-                    </IconButton>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {/* Adding a party lives here too. This is the card that says who has
-            signed, so it is the card where somebody is added; a second card
-            listing the same people with buttons on it was the same facts
-            twice, which is most of what made this page feel like a pile. */}
-        {canManage &&
-          (adding ? (
-            <AddParty contractId={contract.id} onDone={() => setAdding(false)} />
-          ) : (
-            <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
-              {t("detail.addParty")}
-            </Button>
-          ))}
+        <Facts>
+          <Fact label={rental ? t("rental.counterparty") : t("col.counterparty")}>
+            <span className="block font-medium">{contract.counterparty ?? "–"}</span>
+            {contract.counterpartyOrgNo && (
+              <span className="block text-muted">{contract.counterpartyOrgNo}</span>
+            )}
+            {contact && <span className="block text-muted">{contact}</span>}
+          </Fact>
+          <Fact label={rental ? t("rental.sectionPeriod") : t("col.validity")}>{period}</Fact>
+          {rental && (
+            <>
+              <Fact label={t("rental.price")}>
+                <Amount value={oreToSEK(rental.priceOre)} />
+              </Fact>
+              <Fact label={t("rental.signatureCount")}>{rental.signatureCount}</Fact>
+              {rental.purpose && (
+                <Fact label={t("rental.purpose")} wide>
+                  <span className="whitespace-pre-line">{rental.purpose}</span>
+                </Fact>
+              )}
+            </>
+          )}
+        </Facts>
       </CardBody>
     </Card>
   );

@@ -2,10 +2,9 @@
 // contract-creation forms read it.
 //
 // Two callers with two different needs, the same split rental-items.ts makes.
-// The settings screen wants everything, retired rows included, with a count
-// of how many contracts point at each so that "remove" can say what it would
-// break. The creation forms want only what can still be picked, and have no
-// use for the counts.
+// The settings screen wants a count of how many contracts point at each row,
+// so the dialog can say where it is used. The creation forms only pick from
+// the list, and have no use for the counts.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -17,8 +16,9 @@ export interface CounterpartyRow {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  email: string | null;
+  phone: string | null;
   notes: string | null;
-  active: boolean;
   /** Contracts pointing at this row. Drives whether it can be deleted. */
   usedBy: number;
 }
@@ -31,6 +31,8 @@ export interface CounterpartyOption {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 const BY_NAME = [{ name: "asc" as const }];
@@ -47,16 +49,16 @@ export async function getCounterpartyRows(): Promise<CounterpartyRow[]> {
     address: r.address,
     postalCode: r.postalCode,
     city: r.city,
+    email: r.email,
+    phone: r.phone,
     notes: r.notes,
-    active: r.active,
     usedBy: r._count.agreements,
   }));
 }
 
 export async function getCounterpartyOptions(): Promise<CounterpartyOption[]> {
   return prisma.counterparty.findMany({
-    where: { active: true },
     orderBy: BY_NAME,
-    select: { id: true, name: true, orgNo: true, address: true, postalCode: true, city: true },
+    select: { id: true, name: true, orgNo: true, address: true, postalCode: true, city: true, email: true, phone: true },
   });
 }

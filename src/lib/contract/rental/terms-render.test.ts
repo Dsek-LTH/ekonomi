@@ -21,27 +21,19 @@ const compiler = NodeCompiler.create({
   fontArgs: [{ fontPaths: [path.join(process.cwd(), "src/lib/expense/cover/fonts")] }],
 });
 
-const party = (name: string) => ({
-  name,
-  title: null,
-  orgName: null,
-  orgNo: null,
-  email: null,
-  phone: null,
-});
-
 const withTerms = (terms: readonly TermsSection[]): RentalContractData => ({
   lessor: { name: "D-sektionen", orgNo: "845003-2878", address: "Gatan 1", postalLine: "223 63 Lund" },
   counterparty: "F-sektionen",
   counterpartyOrgNo: "845002-5678",
   counterpartyAddress: "Gatan 2",
   counterpartyPostalLine: "223 63 Lund",
+  counterpartyEmail: null,
+  counterpartyPhone: null,
   title: "Uthyrning",
   drawn: "2026-09-07",
   pickupAt: "2026-09-18",
   returnAt: "2026-09-21",
   purpose: null,
-  place: "Kårhuset",
   lines: [
     { description: "Högtalare", quantity: "1 st", unitPrice: "1,00 kr",
       discount: null, lineTotal: "1,00 kr", replacementValue: "1,00 kr" },
@@ -50,10 +42,8 @@ const withTerms = (terms: readonly TermsSection[]): RentalContractData => ({
   subtotal: "1,00 kr",
   discount: null,
   price: "1,00 kr",
-  paymentDue: null,
   totalReplacement: "1,00 kr",
-  sectionParty: party("Maja Holm"),
-  counterpartyParty: party("Emil Helander"),
+  signatureCount: 1,
   terms,
   termsVersion: TERMS_VERSION,
 });
@@ -66,13 +56,30 @@ const glyphs = (terms: readonly TermsSection[]): number => {
   return (svg!.match(/<use /g) ?? []).length;
 };
 
+/**
+ * The real clauses plus one of every kind. The wording is free to stop using a
+ * kind (the villkor have gone without a list before), and the template branch
+ * for it still has to work the day a clause picks it up again.
+ */
+const TERMS: TermsSection[] = [
+  ...RENTAL_TERMS,
+  {
+    heading: "Provpunkt",
+    body: [
+      { kind: "text", text: "Ett stycke som bara finns i testet." },
+      { kind: "table", head: ["Fall", "Svar"], rows: [["Första fallet", "Första svaret"]] },
+      { kind: "list", items: ["första punkten,", "andra punkten."] },
+    ],
+  },
+];
+
 /** The clauses with every block of one kind taken out. */
 const without = (kind: string): TermsSection[] =>
-  RENTAL_TERMS.map((s) => ({ ...s, body: s.body.filter((b) => b.kind !== kind) }));
+  TERMS.map((s) => ({ ...s, body: s.body.filter((b) => b.kind !== kind) }));
 
 /** How many characters the blocks of one kind carry between them. */
 const charsIn = (kind: string): number =>
-  RENTAL_TERMS.flatMap((s) => s.body).reduce((n, b) => {
+  TERMS.flatMap((s) => s.body).reduce((n, b) => {
     if (b.kind !== kind) return n;
     if (b.kind === "table") return n + b.head.join("").length + b.rows.flat().join("").length;
     if (b.kind === "list") return n + b.items.join("").length;
@@ -85,8 +92,8 @@ describe("every kind of clause block reaches the page", () => {
   // a branch the template forgot would cost ~0.
   it.each(["text", "table", "list"])("%s", (kind) => {
     const chars = charsIn(kind);
-    expect(chars, `no ${kind} blocks left in RENTAL_TERMS to test`).toBeGreaterThan(0);
-    const lost = glyphs(RENTAL_TERMS) - glyphs(without(kind));
+    expect(chars).toBeGreaterThan(0);
+    const lost = glyphs(TERMS) - glyphs(without(kind));
     expect(lost).toBeGreaterThan(chars * 0.9);
   });
 });

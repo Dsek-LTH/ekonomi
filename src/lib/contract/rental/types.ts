@@ -13,18 +13,6 @@
 // whoever happens to be looking at it.
 import type { TermsSection } from "./terms";
 
-/** One party, as the signature block and the party block name them. */
-export interface RentalParty {
-  name: string;
-  /** "Skattmästare", "Ordförande F-sektionen". Null where none was given. */
-  title: string | null;
-  /** The organisation they sign for, when they are not signing for themselves. */
-  orgName: string | null;
-  orgNo: string | null;
-  email: string | null;
-  phone: string | null;
-}
-
 /** One line of gear on the document. */
 export interface RentalContractLine {
   description: string;
@@ -66,6 +54,9 @@ export interface RentalContractData {
    */
   counterpartyAddress: string | null;
   counterpartyPostalLine: string | null;
+  /** How to reach the renter other than by post, or null where not given. */
+  counterpartyEmail: string | null;
+  counterpartyPhone: string | null;
 
   title: string;
   /** The day the document was drawn, not the day it was signed. */
@@ -83,7 +74,6 @@ export interface RentalContractData {
   pickupAt: string | null;
   returnAt: string | null;
   purpose: string | null;
-  place: string | null;
 
   lines: RentalContractLine[];
   /** The lines added up, before any discount. */
@@ -102,26 +92,16 @@ export interface RentalContractData {
   /** The rent: the subtotal less the discount. Zero is a real answer, and how
    *  a free loan to another section is written. */
   price: string;
-  /**
-   * When the rent falls due, or null for "at pickup", which is what the villkor
-   * say when no date is given. Printed under the rent, because a payment clause
-   * that refers to a date the page does not carry is unenforceable.
-   */
-  paymentDue: string | null;
   /** Every line's replacement value, added up. The number that says what is
    *  actually at stake. */
   totalReplacement: string;
 
   /**
-   * The signature blocks, in the order they are drawn.
-   *
-   * Both nullable, because both can genuinely be absent: a contract drawn
-   * before the renter has named who will sign for them, or one whose party row
-   * was removed afterwards. The template rules a line with a dash under it
-   * rather than omitting the block, so the document is still signable by hand.
+   * How many signature blocks to draw for the renter, each with room for the
+   * signature, the name written out, and the place and date. At least one is
+   * drawn whatever this says, so the document can always be signed.
    */
-  sectionParty: RentalParty | null;
-  counterpartyParty: RentalParty | null;
+  signatureCount: number;
 
   terms: readonly TermsSection[];
   termsVersion: string;

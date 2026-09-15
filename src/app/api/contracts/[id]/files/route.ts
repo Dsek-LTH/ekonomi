@@ -3,10 +3,10 @@
 // The same proxy model receipts use, and deliberately the same shape of route,
 // down to the order of the checks. What differs is that a contract holds many
 // files rather than one, so an upload adds rather than replaces, and that the
-// role it lands under is decided here rather than sent: everything a person
-// uploads is an ORIGINAL or an ATTACHMENT, never a SIGNED one. Marking bytes as
-// evidence is the signing provider's job (phase 3), and letting a form claim it
-// would make the archive's strongest word its least trustworthy.
+// role it lands under is checked here: a person may upload an ORIGINAL, an
+// ATTACHMENT, or the SIGNED copy that makes a contract Signerat. EVIDENCE is the
+// signing provider's job (phase 3), and letting a form claim it would make the
+// archive's strongest word its least trustworthy.
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { canManageKind } from "@/lib/data/contract-scope";
@@ -21,7 +21,9 @@ const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 const MAX_BODY_BYTES = MAX_BYTES + 1024 * 1024;
 
 /** What a person may file, and nothing else. See the note at the top. */
-const UPLOADABLE: readonly string[] = ["ORIGINAL", "ATTACHMENT"];
+// SIGNED too: uploading the signed copy is what makes a contract Signerat, and a
+// person holding the paper is the only one who can say that is what it is.
+const UPLOADABLE: readonly string[] = ["ORIGINAL", "SIGNED", "ATTACHMENT"];
 
 // POST /api/contracts/:id/files: multipart form-data, field "file",
 // optional field "role" (ORIGINAL by default).

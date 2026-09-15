@@ -1,4 +1,4 @@
-// Amend or retire one counterparty directory entry.
+// Amend or delete one counterparty directory entry.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
@@ -23,8 +23,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (d.address !== undefined) data.address = d.address;
   if (d.postalCode !== undefined) data.postalCode = d.postalCode;
   if (d.city !== undefined) data.city = d.city;
+  if (d.email !== undefined) data.email = d.email;
+  if (d.phone !== undefined) data.phone = d.phone;
   if (d.notes !== undefined) data.notes = d.notes;
-  if (d.active !== undefined) data.active = d.active;
 
   // Nothing here reaches a contract that already points at this row: the
   // fields it printed were copied at the moment it was filed. See
@@ -46,19 +47,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const counterparty = await prisma.counterparty.findUnique({
     where: { id },
-    select: { id: true, active: true, _count: { select: { agreements: true } } },
+    select: { id: true },
   });
   if (!counterparty) return fail(404, "contract.counterpartyNotFound");
 
-  // Retired rather than deleted where a contract still points at it, the same
-  // rule rental-items/[id]/route.ts follows for the gear catalogue.
-  if (counterparty._count.agreements > 0) {
-    if (counterparty.active) {
-      await prisma.counterparty.update({ where: { id: counterparty.id }, data: { active: false } });
-    }
-    return NextResponse.json({ retired: true, usedBy: counterparty._count.agreements });
-  }
-
+  // Deleted even when a contract names it, the same as a rental item. An
+  // agreement copies the counterparty's details at the moment it is filed, so
+  // it still says what it said, and the relation is SetNull, so all it loses is
+  // the link back to this row.
   await prisma.counterparty.delete({ where: { id: counterparty.id } });
   return new Response(null, { status: 204 });
 }

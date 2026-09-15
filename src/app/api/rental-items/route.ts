@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     data: {
       name: d.name,
       description: d.description ?? null,
+      quantity: d.quantity,
       dailyPriceOre: d.dailyPriceOre ?? null,
       replacementValueOre: d.replacementValueOre,
     },

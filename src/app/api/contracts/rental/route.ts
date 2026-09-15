@@ -6,23 +6,26 @@
 // there is no reason to leave half-finished contracts behind every time
 // somebody opens the form and walks away.
 //
-// Everything lands in one transaction: the contract, its rental half, its
-// lines and the two parties. The document is drawn *after* it commits, because
-// a typesetter is not something to hold a database transaction open across, and
+// Everything lands in one transaction: the contract, its rental half and its
+// lines. The document is drawn *after* it commits, because a
+// typesetter is not something to hold a database transaction open across, and
 // a contract whose PDF failed to draw is still a contract that the screen can
 // redraw. The reverse, a PDF in the bucket with no row behind it, is not
 // recoverable from anywhere.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
-import { fail, gate } from "@/lib/api/guard";
+import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateRental } from "@/lib/api/schemas/contract";
 import { rentalTitle } from "@/lib/contract/signatory";
 import { storeContractDocument } from "@/lib/contract/document";
-import { checkAvailability, nameShortfalls } from "@/lib/data/rental-availability";
-import { rentalPricing } from "@/lib/contract/rental/pricing";
-import { isoToDate } from "@/lib/domain/date";
+import {
+  agreementColumns,
+  refuseRental,
+  rentalColumns,
+  rentalLines,
+} from "@/lib/contract/rental/write";
 
 // POST /api/contracts/rental
 export async function POST(req: Request) {
@@ -33,53 +36,10 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
-  // A period that ends before it starts is not a rental anybody meant. Checked
-  // as ISO days, which sort lexically, so no timezone is involved.
-  if (d.returnAt < d.pickupAt) return fail(422, "contract.returnBeforePickup");
-
-  // Catalogue ids are checked before anything is written. An id that names no
-  // item would otherwise be silently dropped by the SetNull relation, and the
-  // line would lose the only trail back to what it was drawn from.
-  const itemIds = [
-    ...new Set(d.lines.map((l) => l.itemId).filter((v): v is string => Boolean(v))),
-  ];
-  if (itemIds.length > 0) {
-    const known = await prisma.rentalItem.count({ where: { id: { in: itemIds } } });
-    if (known !== itemIds.length) return fail(422, "contract.itemNotFound");
-  }
-
-  // Same check, same reason, for the directory row the counterparty fields
-  // may have been picked from.
-  if (d.counterpartyId) {
-    const known = await prisma.counterparty.findUnique({
-      where: { id: d.counterpartyId },
-      select: { id: true },
-    });
-    if (!known) return fail(422, "contract.counterpartyNotFound");
-  }
-
-  // Is the gear actually free? Checked here rather than only in the form,
-  // because the form's answer is a moment old by the time it is submitted and
-  // two people drawing contracts at once is exactly the case this exists for.
-  //
-  // Not a lock, deliberately. Two simultaneous requests for the last Soundboks
-  // can both pass this and both write, and the cure for that is a transaction
-  // holding a lock on every catalogue row involved, for a section that rents
-  // things out a few times a term. What this prevents is the ordinary mistake,
-  // somebody drawing a second contract for a weekend that is already spoken
-  // for, which is the one that actually happens.
-  const clashes = await checkAvailability({ lines: d.lines, period: { from: d.pickupAt, to: d.returnAt } });
-  if (clashes.length > 0) {
-    const named = await nameShortfalls(clashes);
-    return fail(409, "contract.itemsUnavailable", {
-      values: { items: named.map((n) => `${n.name} (${n.owned - n.booked}/${n.wanted})`).join(", ") },
-    });
-  }
-
-  // The rent, worked out here rather than taken from the request. The form ran
-  // the same function over the same lines to show the figure, so the two agree
-  // by construction rather than by both being careful.
-  const pricing = rentalPricing(d.lines);
+  // The period, the catalogue, the directory row and whether the gear is free.
+  // The edit route asks the same questions, so they live in rental/write.ts.
+  const refused = await refuseRental(d);
+  if (refused) return refused;
 
   const contract = await prisma.contract.create({
     data: {
@@ -90,69 +50,13 @@ export async function POST(req: Request) {
       title: rentalTitle(d.counterparty),
       createdById: g.actor.id,
 
-      agreement: {
-        create: {
-          status: "DRAFT",
-          counterparty: d.counterparty,
-          counterpartyOrgNo: d.counterpartyOrgNo,
-          counterpartyAddress: d.counterpartyAddress,
-          counterpartyPostalCode: d.counterpartyPostalCode,
-          counterpartyCity: d.counterpartyCity,
-          counterpartyId: d.counterpartyId ?? null,
+      agreement: { create: agreementColumns(d) },
+      rental: { create: { ...rentalColumns(d), lines: { create: rentalLines(d) } } },
 
-          // Copied from the rental period, so that one expiry query serves
-          // every document in the archive and the list does not have to
-          // know which of them keep their dates somewhere else.
-          validFrom: isoToDate(d.pickupAt),
-          validTo: isoToDate(d.returnAt),
-        },
-      },
-
-      rental: {
-        create: {
-          pickupAt: isoToDate(d.pickupAt)!,
-          returnAt: isoToDate(d.returnAt)!,
-          purpose: d.purpose,
-          place: d.place ?? null,
-          paymentDueAt: isoToDate(d.paymentDueAt ?? null),
-          subtotalOre: pricing.subtotalOre,
-          discountOre: pricing.discountOre,
-          priceOre: pricing.totalOre,
-          lines: {
-            create: d.lines.map((l, i) => ({
-              itemId: l.itemId ?? null,
-              description: l.description,
-              quantity: l.quantity,
-              unitPriceOre: l.unitPriceOre,
-              discountPercent: l.discountPercent,
-              replacementValueOre: l.replacementValueOre,
-              // The order they were typed in. Not appended through
-              // lib/server/sort-order.ts: these are created together in one
-              // statement, so there is no second writer to race with.
-              sortOrder: i,
-            })),
-          },
-        },
-      },
-
-      // Only the renter's side. The section does not sign its own rentals: an
-      // accept from the renter is what avtalslagen asks for and what the
-      // liability clause turns on, and the section's side of the deal is
-      // already evidenced by the document it issued (see rental-contract.typ,
-      // Underskrifter). Who drew this contract up is still on the row, as
-      // `createdById` above.
-      parties: {
-        create: [
-          {
-            role: "COUNTERPARTY" as const,
-            name: d.counterpartySignatory.name,
-            email: d.counterpartySignatory.email ?? null,
-            phone: d.counterpartySignatory.phone ?? null,
-            title: d.counterpartySignatory.title ?? null,
-            orgName: d.counterparty,
-          },
-        ],
-      },
+      // No party rows. Who signs for the renter is rarely known when the
+      // contract is drawn, so the document draws `signatureCount` blocks
+      // instead, and the signed file is the record of who put their name to
+      // it. Who drew this contract up is still on the row, as `createdById`.
     },
     select: { id: true },
   });

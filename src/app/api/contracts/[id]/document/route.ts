@@ -65,26 +65,26 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     select: {
       id: true,
       rental: { select: { contractId: true } },
-      agreement: { select: { status: true } },
+      agreement: { select: { contractId: true } },
+      files: { select: { role: true } },
     },
   });
   if (!contract) return fail(404, "contract.notFound");
   // A rental is the only thing this app draws a document for, so the gate
   // above very nearly settles it. Asked anyway, because "the only thing
-  // today" is not a thing to leave a route depending on. `status` is null
-  // only for the OTHER-with-counterparty case that AgreementDetails now also
-  // allows, which a rental can never be, so this doubles as the check that
-  // narrows it for the compiler below.
-  if (!contract.rental || !contract.agreement || contract.agreement.status === null) {
+  // today" is not a thing to leave a route depending on.
+  if (!contract.rental || !contract.agreement) {
     return fail(422, "contract.rentalNotFound");
   }
 
-  // Only while it is a draft. After the contract has gone out, redrawing it
-  // would leave two versions in the world with nothing saying which one the
-  // counterparty put their name to. `replaceGeneratedFile` could not touch a
+  // Only until the signed copy is uploaded. After that, redrawing it would leave two
+  // versions in the world with nothing saying which one the counterparty put
+  // their name to. `replaceGeneratedFile` could not touch a
   // SIGNED file even if it were called, so this is the second lock rather than
   // the only one.
-  if (!canEditRental(contract.agreement.status)) return fail(409, "contract.rentalLocked");
+  if (!canEditRental(contract)) {
+    return fail(409, "contract.rentalLocked");
+  }
 
   const drawn = await storeContractDocument(contract.id, g.actor.id);
   if (!drawn.ok) return failed(drawn);

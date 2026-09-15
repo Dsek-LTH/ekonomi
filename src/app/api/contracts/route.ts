@@ -24,8 +24,8 @@ export async function POST(req: Request) {
 
   // CONTRACT always gets the table; OTHER only when a counterparty was
   // actually given, which the refine on CreateContract has already ruled out
-  // for PROTOCOL. Either way `validFrom`/`validTo`/`status` stay null: naming
-  // who an OTHER document is with does not give it a period or a workflow.
+  // for PROTOCOL. Either way `validFrom`/`validTo` stay null: naming who an
+  // OTHER document is with does not give it a period.
   const isContract = d.kind === "CONTRACT";
   const wantsAgreement = isContract || d.counterparty !== "";
 
@@ -54,7 +54,6 @@ export async function POST(req: Request) {
               counterpartyId: d.counterpartyId ?? null,
               validFrom: isContract ? isoToDate(d.validFrom) : null,
               validTo: isContract ? isoToDate(d.validTo) : null,
-              status: isContract ? d.status : null,
             },
           }
         : undefined,
