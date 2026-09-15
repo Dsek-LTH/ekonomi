@@ -64,6 +64,7 @@ import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
 import { tagsInUse } from "@/lib/stock/tags";
 import { SheetHeader, SheetSaveBar } from "./sheet-chrome";
+import { EventDialog } from "../event-dialog";
 import {
   CELL_KINDS,
   WHOLE,
@@ -129,7 +130,7 @@ export default function EventClient({
   const [shifted, setShifted] = useState<Record<string, { units: number; open: OpenBottles }>>({});
   const [added, setAdded] = useState<string[]>([]);
   const [column, setColumn] = useState<CellKind>("CHECKOUT");
-  const [occurredAt, setOccurredAt] = useState(event.date);
+  const [editing, setEditing] = useState(false);
   /** A product a scan has just put on the sheet, waiting for the caret. */
   const [seeking, setSeeking] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -403,7 +404,8 @@ export default function EventClient({
     if (cells.length === 0) return;
 
     const body: WriteStockCells = {
-      occurredAt,
+      // The night's own date, the one in the page's subtitle.
+      occurredAt: event.date,
       cells: cells.map((c) => ({
         productId: c.productId,
         kind: c.kind,
@@ -780,17 +782,21 @@ export default function EventClient({
       back={{ href: "/stock/events", label: t("event.title") }}
       width="wide"
     >
+      {editing && (
+        <EventDialog
+          event={{ id: event.id, name: event.name, date: event.date }}
+          onClose={() => setEditing(false)}
+        />
+      )}
       <Card>
         <SheetHeader
           t={t}
-          canManage={canManage}
-          occurredAt={occurredAt}
-          onOccurredAt={setOccurredAt}
           search={search}
           onSearch={setSearch}
           kinds={CELL_KINDS}
           column={column}
           onColumn={setColumn}
+          onEdit={canManage ? () => setEditing(true) : undefined}
           onRemove={canManage ? remove : undefined}
         />
 

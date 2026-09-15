@@ -2,14 +2,13 @@
 
 // The furniture around the stocktake sheet: what narrows it, and what saves it.
 //
-// Neither knows anything about a cell. The header is the night's date and the
-// two controls that decide which rows and which column are on screen; the foot
+// Neither knows anything about a cell. The header is the two controls that
+// decide which rows and which column are on screen; the foot
 // is the count of what is waiting and the two buttons that settle it. They sat
 // at either end of the component that draws the grid between them, which is the
 // one part of that file they have nothing to do with.
 import { Button } from "@/components/ui/button";
 import { CardHeader } from "@/components/ui/card";
-import { DateInput } from "@/components/ui/field";
 import { FilterTabs } from "@/components/ui/filter-tabs";
 import { SearchInput } from "@/components/ui/search-input";
 import type { CellKind } from "@/lib/stock/cells";
@@ -17,41 +16,41 @@ import type { CellKind } from "@/lib/stock/cells";
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
- * The night's date, the search, and, on a phone, which column is showing.
+ * The search and, on a phone, which column is showing.
+ *
+ * No date input. The night's date is the page's subtitle, and it is changed in
+ * the dialog behind "Ändra tillfället", which moves the rows booked on it too. A
+ * date field here looked like that, and only restamped what the sheet wrote.
  *
  * Narrowing the sheet matters more than it sounds: a night can run to thirty
  * products, and scrolling past twenty-nine of them to find the one on the
  * trolley is most of the work.
  *
- * Removing the night rides here too, which is not the same kind of control as
- * the rest and has nowhere better to be. The rule the app keeps is that what
- * you can do to a thing belongs to the card that describes it (see PageShell,
- * which has no action slot on purpose), and this sheet is the only card an
- * event has. So the button says it is removing the night rather than the sheet,
- * and sits apart from the date at the far end of the row.
+ * Editing and removing the night ride here too, which is not the same kind of
+ * control as the rest and has nowhere better to be. The rule the app keeps is
+ * that what you can do to a thing belongs to the card that describes it (see
+ * PageShell, which has no action slot on purpose), and this sheet is the only
+ * card an event has. So the buttons say they act on the night rather than the
+ * sheet, and sit at the far end of the row.
  */
 export function SheetHeader({
   t,
-  canManage,
-  occurredAt,
-  onOccurredAt,
   search,
   onSearch,
   kinds,
   column,
   onColumn,
+  onEdit,
   onRemove,
 }: {
   t: Translator;
-  /** A reader who may not write gets the sheet without its controls. */
-  canManage: boolean;
-  occurredAt: string;
-  onOccurredAt: (value: string) => void;
   search: string;
   onSearch: (value: string) => void;
   kinds: readonly CellKind[];
   column: CellKind;
   onColumn: (kind: CellKind) => void;
+  /** Rename the night or move it to another day. Absent for a reader. */
+  onEdit?: () => void;
   /** Undo the whole night. Absent for a reader, like every other control. */
   onRemove?: () => void;
 }) {
@@ -60,16 +59,13 @@ export function SheetHeader({
       <CardHeader
         title={t("event.sheet.title")}
         action={
-          canManage ? (
+          onEdit || onRemove ? (
             <div className="flex items-center gap-2">
-              <div className="w-36">
-                <DateInput
-                  size="sm"
-                  value={occurredAt}
-                  onChange={(e) => onOccurredAt(e.target.value)}
-                  aria-label={t("field.date")}
-                />
-              </div>
+              {onEdit && (
+                <Button size="sm" variant="ghost" onClick={onEdit}>
+                  {t("event.edit")}
+                </Button>
+              )}
               {onRemove && (
                 <Button
                   size="sm"

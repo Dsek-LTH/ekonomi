@@ -8,6 +8,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
+import { parseBody } from "@/lib/api/parse";
+import { PatchStockEvent } from "@/lib/api/schemas/stock";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockEvent } from "@/lib/data/stock";
 import { assertAllPossible } from "@/lib/server/stock-state";
@@ -22,6 +24,74 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const event = await getStockEvent(id);
   if (!event) return fail(404, "stock.eventNotFound");
   return NextResponse.json(event);
+}
+
+/**
+ * Rename a night, or move it to another day.
+ *
+ * The name is only a label. The date is not: every row booked on the night
+ * carries it as `occurredAt`, and that is the order the log is read in. A night
+ * moved to before an inventering is counted against it differently, and the
+ * moving average it was priced at is a different one. So the rows move with the
+ * night, and every product it touched is replayed, the same as when a night is
+ * removed.
+ *
+ * Rows are moved whenever any of them is not on the night's date, not only when
+ * the date changes. The sheet used to let rows be stamped with a date of their
+ * own, and saving the night is the moment to bring those back in line.
+ */
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const g = await gate(canManageStock, "stock.noAccess");
+  if (!g.ok) return g.res;
+
+  const parsed = await parseBody(req, PatchStockEvent);
+  if (!parsed.ok) return parsed.res;
+
+  const event = await prisma.stockEvent.findUnique({ where: { id }, select: { id: true } });
+  if (!event) return fail(404, "stock.eventNotFound");
+
+  const day = new Date(parsed.data.date);
+
+  const saved = await bulkTransaction(async (tx) => {
+    const updated = await tx.stockEvent.update({
+      where: { id },
+      data: { name: parsed.data.name, date: day },
+      select: { id: true, name: true, date: true },
+    });
+
+    const moved = await tx.stockEntry.updateMany({
+      where: { eventId: id, occurredAt: { not: day } },
+      data: { occurredAt: day },
+    });
+
+    if (moved.count > 0) {
+      const touched = await tx.stockEntry.findMany({
+        where: { eventId: id },
+        select: { productId: true },
+        distinct: ["productId"],
+      });
+      const productIds = touched.map((t) => t.productId);
+      for (const productId of productIds) await replayProduct(tx, productId);
+
+      // Checked for the same reason a removal checks: a replay can land a rung
+      // below zero, and negative stock is always a bookkeeping fault.
+      const products = await tx.stockProduct.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, kind: true, category: true, unitMl: true, nominalMl: true },
+      });
+      await assertAllPossible(tx, products);
+    }
+
+    return updated;
+  }).catch((e: Error) => e.message);
+
+  if (typeof saved === "string") return fail(422, saved);
+  return NextResponse.json({
+    id: saved.id,
+    name: saved.name,
+    date: saved.date.toISOString().slice(0, 10),
+  });
 }
 
 /**

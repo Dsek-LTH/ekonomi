@@ -209,6 +209,10 @@ export const CreateStockEvent = z.object({
 });
 export type CreateStockEvent = z.infer<typeof CreateStockEvent>;
 
+/** PATCH /api/stock/events/[id]: the same two fields, as they should now read. */
+export const PatchStockEvent = CreateStockEvent;
+export type PatchStockEvent = z.infer<typeof PatchStockEvent>;
+
 /**
  * POST /api/stock/events/[id]/cells: cells of an event sheet, as they should read.
  *
