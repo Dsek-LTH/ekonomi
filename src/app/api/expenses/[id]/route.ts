@@ -228,14 +228,20 @@ export async function PATCH(
   note("journeyStops", expense.journeyStops.join(" → "), journeyStops.join(" → "));
   note("paymentType", expense.paymentType, paymentType);
 
+  // Each row compared whole, as a string, and the rows sorted by that string.
+  // Sorting by code alone left two rows on the same cost centre tied, and a
+  // tie could come back in either order and read as a change.
+  const allocRows = (rows: { cc: string; amt: number; comment: string | null }[]) =>
+    rows.map((r) => JSON.stringify(r)).sort().join("\n");
   const allocsChanged =
     newAllocs !== null &&
-    JSON.stringify(
-      expense.allocations
-        .map((a) => ({ cc: a.costCenter.code, amt: a.amount, comment: a.comment ?? null }))
-        .sort((a, b) => a.cc.localeCompare(b.cc)),
-    ) !==
-    JSON.stringify([...newAllocKeys].sort((a, b) => a.cc.localeCompare(b.cc)));
+    allocRows(
+      expense.allocations.map((a) => ({
+        cc: a.costCenter.code,
+        amt: a.amount,
+        comment: a.comment ?? null,
+      })),
+    ) !== allocRows(newAllocKeys);
   if (allocsChanged) diff["allocations"] = { from: null, to: null };
 
   // The filing deadline is not enforced here at all, and that is deliberate.

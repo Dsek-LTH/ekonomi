@@ -268,7 +268,10 @@ model ExpenseCostAllocation {
   approvedById String?
   approvedAt   DateTime?
 
-  @@unique([expenseId, costCenterId])
+  // Not unique per cost centre. One centre may carry several rows on the same
+  // utlägg, each with its own amount and comment, and they are kept apart as
+  // the submitter wrote them. Attest stamps rows by id, so a signature covers
+  // every row of the attester's centres either way.
   @@index([expenseId])
   // The other direction: "every utlägg touching one of these cost centres",
   // which is how a resultatansvarig's scope is resolved (lib/data/expense-scope.ts)
