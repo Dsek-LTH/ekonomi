@@ -870,8 +870,11 @@ export default function NewExpenseClient({
                 {/* What the unusual answer means, in the words somebody would
                     use for it. Only when it is chosen, so the ordinary utlägg
                     carries no extra line. */}
+                {/* `success`, like the figure it describes: the sentence says
+                    money is coming back to the section, which is the one thing
+                    on this form that is not a cost. See ui/amount.tsx. */}
                 {direction === "return" && magnitude > 0 && (
-                  <p className="mt-1 text-xs text-danger">
+                  <p className="mt-1 text-xs text-success">
                     {t("returnMeans", { amount: formatSEK(magnitude) })}
                   </p>
                 )}

@@ -32,7 +32,20 @@ const SIZES = {
 export function Amount({
   value,
   size = "sm",
-  /** Colour a negative figure: a return, or an overspent budget line. */
+  /**
+   * Colour a negative figure. A negative belopp on an utlägg is a return (see
+   * lib/domain/matching.ts), so it is money coming back to the section and it
+   * is coloured `success`. It used to be `danger`, which put the one good
+   * figure in the list in the colour the app otherwise saves for something
+   * being wrong.
+   *
+   * This only knows about the sign, so it belongs on figures where a negative
+   * one is a return and nothing else. A figure where down is bad (an overspent
+   * budget line, a result that has gone under) colours itself through
+   * `className`. Note that the sign and the good news do not line up the same
+   * way everywhere: on a bank statement money comes *in* as a positive and
+   * `bankAmountColumn` greens that instead.
+   */
   signed = false,
   className,
 }: {
@@ -59,7 +72,7 @@ export function Amount({
     <span
       className={cn(
         "tnum inline-flex items-baseline gap-[0.15em] whitespace-nowrap font-semibold",
-        signed && negative && "text-danger",
+        signed && negative && "text-success",
         className,
       )}
     >
