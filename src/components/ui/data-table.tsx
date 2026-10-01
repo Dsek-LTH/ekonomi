@@ -583,9 +583,29 @@ export function DataTable<T>({
                   const open = Boolean(under) && (expandAll || opened.has(key));
                   return (
                   <Fragment key={key}>
+                  {/* `[transform:translate(0)]` next to `relative`, and it is
+                      the whole reason a click anywhere on the page used to open
+                      the last row of the table in Safari.
+
+                      WebKit computes `position: relative` on a table row as
+                      static (bug 240961, fixed only in Safari Technology
+                      Preview 243), so the stretched `before:` overlay below
+                      found no containing block on its row and sized itself
+                      against the initial one: every row's hit area covered the
+                      whole document, and the last one in tree order sat on top
+                      of the rest. An identity transform makes a containing
+                      block in every engine, which is what `relative` was here
+                      for. `relative` stays because it is what Chrome and
+                      Firefox read, and keeping both leaves their behaviour
+                      untouched.
+
+                      Safe because every layer this app floats out of a row
+                      (menus, comboboxes, dialogs, the receipt viewer) is
+                      portalled to <body>, so no `position: fixed` descendant
+                      is left measuring against a transformed row. */}
                   <tr
                     className={cn(
-                      href && "relative cursor-pointer hover:bg-hover",
+                      href && "relative cursor-pointer hover:bg-hover [transform:translate(0)]",
                       rowClassName?.(row),
                     )}
                   >
