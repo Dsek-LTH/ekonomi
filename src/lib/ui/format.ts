@@ -133,6 +133,23 @@ const LITRES_2 = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 });
  */
 export const formatMovementLitres = (ml: number): string => `${LITRES_2.format(ml / 1000)} l`;
 
+const SIGNED = new Intl.NumberFormat("sv-SE", { signDisplay: "exceptZero" });
+
+/** A count with its direction: "+3", "−2", "0". For a column of movements. */
+export const formatSigned = (n: number): string => SIGNED.format(n);
+
+/**
+ * A plain figure with between `min` and `max` decimals: "4 213,5" km, "2,50"
+ * kr/km. For a number that is not money in kronor or a volume, which have
+ * their own formatters above.
+ */
+export function formatNumber(n: number, min: number, max: number): string {
+  return new Intl.NumberFormat("sv-SE", {
+    minimumFractionDigits: min,
+    maximumFractionDigits: max,
+  }).format(n);
+}
+
 /** Centilitres per krona, the cellar's own value-for-money figure. */
 export const formatClPerKrona = (cl: number): string => KR_2.format(cl);
 

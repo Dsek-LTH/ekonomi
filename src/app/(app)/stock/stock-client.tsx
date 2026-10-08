@@ -28,6 +28,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Notice } from "@/components/ui/notice";
+import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
 import type { Check } from "@/lib/stock/expiry";
@@ -36,7 +37,6 @@ import { hasTag, tagsInUse } from "@/lib/stock/tags";
 import { TagChips } from "@/components/stock/tag-chips";
 import { ProductDialog } from "./product-dialog";
 import { CATEGORIES } from "@/lib/domain/categories";
-import { cn } from "@/lib/ui/utils";
 import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
 
 
@@ -317,18 +317,12 @@ export default function StockClient({
         return (
           <div className="flex flex-wrap items-center justify-end gap-1">
             {p.impossible && (
-              <span className="rounded-control bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">
-                {t("flag.impossible")}
-              </span>
+              <Tag tone="danger" size="sm">{t("flag.impossible")}</Tag>
             )}
             {check && (
-              <span
-                className={cn(
-                  "rounded-control px-2 py-0.5 text-[11px] font-medium",
-                  check.state === "over"
-                    ? "bg-warning-soft text-warning"
-                    : "bg-surface text-muted",
-                )}
+              <Tag
+                size="sm"
+                tone={check.state === "over" ? "warning" : "neutral"}
                 title={t("expiry.rowHint", {
                   date: check.bestBefore,
                   delivered: check.occurredAt,
@@ -337,7 +331,7 @@ export default function StockClient({
                 {check.state === "over"
                   ? t("expiry.flagOver")
                   : t("expiry.flagSoon", { days: check.daysLeft })}
-              </span>
+              </Tag>
             )}
           </div>
         );

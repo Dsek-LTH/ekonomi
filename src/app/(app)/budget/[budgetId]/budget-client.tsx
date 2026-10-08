@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
@@ -18,6 +17,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { startRouteProgress } from "@/components/shell/route-progress";
 import { IconLock, IconLockOpen } from "@/components/ui/icons";
+import { Tag } from "@/components/ui/status-pill";
 
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { sheetKey, sheetName } from "@/lib/budget";
@@ -35,6 +35,7 @@ import { ChangesSheet } from "./changes-sheet";
 import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
 import type { Budget, BudgetClip } from "./budget-types";
+import { SearchInput } from "@/components/ui/search-input";
 
 export default function BudgetClient({
   initialBudget,
@@ -182,7 +183,7 @@ export default function BudgetClient({
 
   // A1 grid across all cost-centre sheets, for ↔ token conversion of references.
   const grid = useMemo<BudgetGrid>(() => buildGrid(
-    (budget?.costCenters ?? []).map((cc) => ({
+    budget.costCenters.map((cc) => ({
       code: sheetKey(cc),
       accounts: cc.accounts.map((a) => ({
         id: a.id, accountCode: a.accountCode,
@@ -196,7 +197,7 @@ export default function BudgetClient({
   // affordance below hangs off `canEdit` rather than `isAdmin`. The server
   // refuses the writes too (lib/budget/access.ts); this is what keeps the UI
   // from offering them.
-  const locked = budget?.lockedAt != null;
+  const locked = budget.lockedAt != null;
   const canEdit = isAdmin && !locked;
 
   // The other door: a locked budget is changed by recording a deviation or a
@@ -368,9 +369,7 @@ export default function BudgetClient({
             onSave={saveName}
           />
           {locked && (
-            <span className="rounded-control bg-purple-soft px-2 py-1 text-xs font-medium text-purple">
-              {tList("locked")}
-            </span>
+            <Tag tone="purple">{tList("locked")}</Tag>
           )}
         </span>
       }
@@ -510,11 +509,11 @@ export default function BudgetClient({
             </SidebarItem>
           )}
           <div className="border-t border-border px-3 py-2">
-            <Input
-              size="sm"
+            <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tAlloc("search")}
+              aria-label={tAlloc("search")}
             />
           </div>
           {/* The scrollbar floats over the rows instead of taking a column from

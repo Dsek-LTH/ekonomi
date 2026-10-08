@@ -23,14 +23,10 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { reapplyGrants } from "@/lib/server/authentik-roles";
 import { isSectionGroup } from "@/lib/domain/group-name";
-import { someoneCanReachSettings } from "@/lib/server/capabilities";
-import { serializable } from "@/lib/server/tx";
+import { changeAuthority } from "@/lib/server/authority-change";
 import { DeleteGroupGrant, PutGroupGrant } from "@/lib/api/schemas/admin";
 
 const admin = () => gate(canAccessSettings, "auth.adminOnly");
-
-/** Raised inside the transaction to roll it back with a reason. */
-class Lockout extends Error {}
 
 export async function PUT(req: Request) {
   const g = await admin();
@@ -53,35 +49,27 @@ export async function PUT(req: Request) {
     if (found !== new Set(resultUnitIds).size) return fail(404, "resultUnit.notFound");
   }
 
-  try {
-    // Serializable, not merely transactional, see the note on `serializable`.
-    // Step 3 below checks an outcome, and at READ COMMITTED a concurrent write
-    // to a *different* group's rows is invisible to it: two saves that each
-    // leave somebody able to reach Inställningar can commit into a state where
-    // nobody can.
-    const changed = await serializable(async (tx) => {
-      await tx.groupRole.deleteMany({ where: { group } });
-      await tx.groupResultUnit.deleteMany({ where: { group } });
+  // Refused, and rolled back, if it would leave nobody able to reach
+  // Inställningar. See changeAuthority: a concurrent write to a *different*
+  // group's rows is exactly what it is serializable to catch.
+  const done = await changeAuthority(async (tx) => {
+    await tx.groupRole.deleteMany({ where: { group } });
+    await tx.groupResultUnit.deleteMany({ where: { group } });
 
-      if (roles.length > 0) {
-        await tx.groupRole.createMany({ data: roles.map((role) => ({ group, role })) });
-      }
-      if (resultUnitIds.length > 0) {
-        await tx.groupResultUnit.createMany({
-          data: resultUnitIds.map((resultUnitId) => ({ group, resultUnitId })),
-        });
-      }
+    if (roles.length > 0) {
+      await tx.groupRole.createMany({ data: roles.map((role) => ({ group, role })) });
+    }
+    if (resultUnitIds.length > 0) {
+      await tx.groupResultUnit.createMany({
+        data: resultUnitIds.map((resultUnitId) => ({ group, resultUnitId })),
+      });
+    }
 
-      const affected = await reapplyGrants(tx);
-      if (!(await someoneCanReachSettings(tx))) throw new Lockout();
-      return affected;
-    });
+    return reapplyGrants(tx);
+  });
+  if (!done.ok) return fail(409, "authority.wouldLockOut");
 
-    return NextResponse.json({ affected: changed });
-  } catch (err) {
-    if (err instanceof Lockout) return fail(409, "authority.wouldLockOut");
-    throw err;
-  }
+  return NextResponse.json({ affected: done.value });
 }
 
 export async function DELETE(req: Request) {
@@ -92,19 +80,12 @@ export async function DELETE(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { group } = parsed.data;
 
-  try {
-    const changed = await serializable(async (tx) => {
-      await tx.groupRole.deleteMany({ where: { group } });
-      await tx.groupResultUnit.deleteMany({ where: { group } });
+  const done = await changeAuthority(async (tx) => {
+    await tx.groupRole.deleteMany({ where: { group } });
+    await tx.groupResultUnit.deleteMany({ where: { group } });
+    return reapplyGrants(tx);
+  });
+  if (!done.ok) return fail(409, "authority.wouldLockOut");
 
-      const affected = await reapplyGrants(tx);
-      if (!(await someoneCanReachSettings(tx))) throw new Lockout();
-      return affected;
-    });
-
-    return NextResponse.json({ affected: changed });
-  } catch (err) {
-    if (err instanceof Lockout) return fail(409, "authority.wouldLockOut");
-    throw err;
-  }
+  return NextResponse.json({ affected: done.value });
 }

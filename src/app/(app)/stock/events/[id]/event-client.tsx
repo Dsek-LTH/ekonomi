@@ -22,7 +22,7 @@
 // which is the whole reason the cells hold totals.
 //
 // Written optimistically: apply, tell the server, re-read only if refused (see
-// `commitCell`). A refresh per cell would be a round trip whose entire result
+// `save`). A refresh per cell would be a round trip whose entire result
 // is a figure already on the screen, forty times over while somebody tabs down
 // a column.
 //

@@ -12,6 +12,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconCopy, IconTrash } from "@/components/ui/icons";
+import { Tag } from "@/components/ui/status-pill";
 import { useConfirm } from "@/components/confirm-dialog";
 import { sheetName } from "@/lib/budget";
 import type { CostCenter } from "@/lib/domain/types";
@@ -69,7 +70,7 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
           </>
         ) : (
           <>
-            <span className="rounded-control bg-warning-soft px-2 py-1 text-xs font-medium text-warning">{t("unlinked")}</span>
+            <Tag tone="warning">{t("unlinked")}</Tag>
             <h2 className="min-w-0 text-sm font-semibold">
               <EditableText
                 value={cc.label ?? ""}

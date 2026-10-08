@@ -424,7 +424,7 @@ export default function LedgerClient({
   // the whole point of being able to choose. The year is part of the name here:
   // the budget need not be this year's, and a report that says only "Budget –
   // Ursprunglig" over a 2023 budget is a report that misleads.
-  const compared = data?.budgets?.find((b) => b.id === data.budget);
+  const compared = data?.budgets.find((b) => b.id === data.budget);
   const budgetName = compared && `${compared.year} – ${compared.name}`;
   const comparisonFull =
     data?.comparison === "BUDGET" && budgetName
@@ -581,7 +581,7 @@ export default function LedgerClient({
               onQuery={update}
               years={data.years}
               costCenters={costCenters}
-              budgets={data.budgets ?? []}
+              budgets={data.budgets}
               synced={syncedNote}
               period={period}
             />
@@ -591,7 +591,7 @@ export default function LedgerClient({
               onQuery={update}
               years={data.years}
               costCenters={costCenters}
-              budgets={data.budgets ?? []}
+              budgets={data.budgets}
               diff={view.diff}
               onDiff={(diff) => setView((v) => ({ ...v, diff }))}
               columns={columns}
@@ -605,7 +605,7 @@ export default function LedgerClient({
               through the browser's print dialog, where "Save as PDF" is the
               destination; the printout below is laid out for exactly that. CSV
               is the table's rows, so it is offered with the table only. */}
-          {data?.years.length ? (
+          {data.years.length ? (
             <div className="mt-3 print:hidden">
               <Menu
                 label={t("export")}
@@ -682,14 +682,14 @@ export default function LedgerClient({
               exactly the budget this warns is missing. */}
           {comparisonMissing && (
             <p className="text-sm text-warning">
-              {data?.comparisonRequested === "BUDGET"
+              {data.comparisonRequested === "BUDGET"
                 ? t("noBudgetForYear", { year: selectedYear?.year ?? t("theYear") })
                 : t("priorYearNotSynced")}
             </p>
           )}
           {/* Last year's columns asked for and nothing to fill them with. Said
               outright, or the empty columns read as a year of zeroes. */}
-          {!charting && data?.priorAvailable === false && (
+          {!charting && data.priorAvailable === false && (
             <p className="text-sm text-warning">{t("priorColumnsUnavailable")}</p>
           )}
 
@@ -715,16 +715,16 @@ export default function LedgerClient({
               view={view}
               columns={columns}
               showComparison={showComparison}
-              comparison={data?.comparison ?? "NONE"}
-              companyName={data?.meta?.companyName ?? fortnox.companyName ?? null}
-              orgNumber={data?.meta?.orgNumber ?? null}
-              latestVouchers={data?.meta?.latestVouchers ?? []}
+              comparison={data.comparison}
+              companyName={data.meta?.companyName ?? fortnox.companyName ?? null}
+              orgNumber={data.meta?.orgNumber ?? null}
+              latestVouchers={data.meta?.latestVouchers ?? []}
               financialYear={
                 selectedYear
                   ? { from: selectedYear.fromDate.slice(0, 10), to: selectedYear.toDate.slice(0, 10) }
                   : null
               }
-              period={data?.periodDates ?? null}
+              period={data.periodDates ?? null}
               costCenter={query.costCenters.length === 0 ? null : costCenterLabel}
               comparedWith={showComparison ? comparisonFull : null}
             />

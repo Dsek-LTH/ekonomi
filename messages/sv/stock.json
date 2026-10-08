@@ -64,7 +64,6 @@
     "levelsOnReturnOnly": "Nivån sätts när flaskan kommer tillbaka, inte när den tas ut",
     "purchaseArrivesSealed": "Ett inköp kommer oöppnat",
     "moreThanWentOut": "Fler flaskor än som togs ut. Kontrollera antalet",
-    "nothingReturned": "Säg vad som kom tillbaka",
     "spillMovesNoStock": "Ett spill flyttar inget lager",
     "nothingSpilled": "Ange hur mycket som gick sönder",
     "purchaseNothing": "Skriv hur många som kom in",
@@ -81,7 +80,6 @@
     "description": "Varje rörelse, senast först. Ingen ändrar en rad här. En felaktig rad rättar du med en ny.",
     "empty": "Inga rörelser i det här urvalet.",
     "recorded": "infört {date}",
-    "readings": "vägt: {list} g",
     "expense": "Utlägg",
     "filter": {
       "product": "Produkt",

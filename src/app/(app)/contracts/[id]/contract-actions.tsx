@@ -15,7 +15,7 @@ import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconDots, IconUpload } from "@/components/ui/icons";
 import type { ContractStatus } from "@/lib/domain/types";
 
-export interface ContractActionState {
+interface ContractActionState {
   /** Null for PROTOCOL/OTHER, which carry no status at all. */
   status: ContractStatus | null;
   isRental: boolean;

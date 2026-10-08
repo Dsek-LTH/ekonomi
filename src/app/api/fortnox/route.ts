@@ -14,7 +14,7 @@ export async function GET() {
     connected: Boolean(conn),
     companyName: conn?.companyName ?? null,
     voucherSeries: conn?.voucherSeries ?? null,
-    expiresAt: conn?.expiresAt?.toISOString() ?? null,
+    expiresAt: conn?.expiresAt.toISOString() ?? null,
   });
 }
 

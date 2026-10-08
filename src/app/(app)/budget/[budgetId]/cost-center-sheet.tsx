@@ -64,11 +64,11 @@ export function CostCenterSheet(props: {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [newRow, setNewRow] = useState<Record<string, Draft>>({});
 
-  const badLine = new Set(ev.badLineItems ?? []);
+  const badLine = new Set(ev.badLineItems);
   // Accounts whose total is short a row that didn't resolve. The figure below
   // is still the sum of the rows that did, because a sheet you can't read is no
   // help in finding the row to fix, so this is what says it is a partial one.
-  const badAccount = new Set(ev.badAccounts ?? []);
+  const badAccount = new Set(ev.badAccounts);
   // The left margin: the row's A1 number and the box that picks the row out for
   // a copy, in one cell rather than a column each. A whole column of furniture
   // for a 16px square is a column the figures don't get.
@@ -137,7 +137,7 @@ export function CostCenterSheet(props: {
   // the *other* side has, and its whole content is in those columns. Without
   // them it would be a row with a name and nothing else.
   const ghostAccounts = showCompare
-    ? (compare?.sheet.accounts ?? []).filter((a) => !ownCodes.has(a.code))
+    ? compare.sheet.accounts.filter((a) => !ownCodes.has(a.code))
     : [];
   // Two empty trailing cells to keep non-Summa rows aligned when they show.
   const actualPad = showCompare ? <><td className="border-l border-border/40" /><td /></> : null;

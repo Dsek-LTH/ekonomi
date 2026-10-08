@@ -29,7 +29,7 @@ import { IconFortnox } from "./fortnox-mark";
 // without pulling in the shell.
 export const SETTINGS_ROOT = "/admin";
 
-export interface SettingsSection {
+interface SettingsSection {
   href: string;
   /** Key under `nav`, the same one the sidebar names it by. */
   label: string;

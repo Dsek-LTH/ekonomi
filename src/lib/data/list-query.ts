@@ -9,7 +9,7 @@
 // component state it replaces could do.
 //
 // Nothing here knows about expenses or bank transactions. Each list translates
-// this value into its own query (see `expenseListWhere`, `bankListWhere`),
+// this value into its own query (see `getExpensePage`, `getBankTransactionPage`),
 // because only the list knows what its tabs mean.
 
 /** Rows per page. The set the size picker offers. */

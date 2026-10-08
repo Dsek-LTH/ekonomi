@@ -233,31 +233,6 @@ export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   );
 }
 
-// The master–detail frame: a fixed list column beside the thing it selects
-// into. Mirrors SidebarPanel, including the way it stacks below lg.
-export function SkeletonSidebarLayout({
-  items = 6,
-  children,
-}: {
-  items?: number;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <aside className="w-full shrink-0 lg:w-64">
-        <Card className="divide-y divide-border overflow-hidden">
-          {Array.from({ length: items }, (_, i) => (
-            <div key={i} className="px-3 py-2.5">
-              <Skeleton className={cn("h-4", ROW_WIDTHS[i % ROW_WIDTHS.length])} />
-            </div>
-          ))}
-        </Card>
-      </aside>
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
 // A budget sheet: dense gridlines, a pinned header block, no filter bar. The
 // spreadsheet screens read nothing like the rest of the app, so their
 // placeholder shouldn't either.

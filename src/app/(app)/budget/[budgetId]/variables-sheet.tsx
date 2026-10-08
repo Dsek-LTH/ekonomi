@@ -49,7 +49,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
         <tbody>
           {budget.variables.map((v) => {
             const url = `/api/budget-variables/${v.id}`;
-            const bad = ev.badVariables?.includes(v.name);
+            const bad = ev.badVariables.includes(v.name);
             return (
               <tr key={v.id} className="group border-b border-border/60">
                 <td className="border-r border-border/60 p-0">

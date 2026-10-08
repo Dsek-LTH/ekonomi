@@ -5,9 +5,6 @@
 // One component for the three places they appear (the list's row, the product's
 // own page, and the form where they are set) so a tag looks the same wherever
 // it is read, and so the removable version cannot drift into a second shape.
-// Not components/ui/chip.tsx: that is a toggle, something you press to turn a
-// role on. These say what a product is, and only in the form is one of them
-// pressable at all.
 import { IconX } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 

@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reportToCsv > writes a balance report with its fixed columns, whatever columns are picked 1`] = `
+"﻿[csv.section];[csv.account];[csv.accountName];[csv.opening];[csv.period];[csv.closing];Föregående år;[csv.difference]
+[section.assets];1930;Konto 1930;1000,00;500,00;1500,00;1200,00;300,00
+[section.assets];;[sectionTotal.assets];1000,00;500,00;1500,00;1200,00;300,00
+;;[csv.total];1000,00;500,00;1500,00;1200,00;300,00
+"
+`;
+
+exports[`reportToCsv > writes a comparison without the difference column 1`] = `
+"﻿[csv.section];[csv.account];[csv.accountName];[csv.amount];[csv.priorDiff];Föregående år
+[section.income];3011;Konto 3011;1200,50;300,50;1000,00
+[section.income];;[sectionTotal.income];1200,50;300,50;1000,00
+[section.costs];4010;Konto 4010;-300,25;;
+[section.costs];6990;"Övrigt; ""diverse""";-10,00;;
+[section.costs];;[sectionTotal.costs];-310,25;;
+[section.costs];5010;Konto 5010;-50,00;;
+[section.costs];;[sectionTotal.costs];-50,00;;
+;;[csv.total];840,25;-59,75;1000,00
+"
+`;
+
+exports[`reportToCsv > writes a specified result report with every column and a comparison 1`] = `
+"﻿[csv.costCenter];[csv.costCenterName];[csv.section];[csv.account];[csv.accountName];[csv.amount];[csv.prior];[csv.accumulated];[csv.priorAccumulated];[csv.priorDiff];Budget;[csv.difference]
+SEX01;Sittningar;[section.income];3011;Konto 3011;1200,50;900,00;2400,00;1800,00;300,50;1000,00;200,50
+SEX01;Sittningar;[section.income];;[sectionTotal.income];1200,50;900,00;2400,00;1800,00;300,50;1000,00;200,50
+SEX01;Sittningar;[section.costs];4010;Konto 4010;-300,25;;-600,00;;;;
+SEX01;Sittningar;[section.costs];6990;"Övrigt; ""diverse""";-10,00;;;;;;
+SEX01;Sittningar;[section.costs];;[sectionTotal.costs];-310,25;;;;;;
+[noCostCenter];;[section.costs];5010;Konto 5010;-50,00;;;;;;
+[noCostCenter];;[section.costs];;[sectionTotal.costs];-50,00;;;;;;
+;;;;[csv.total];840,25;900,00;1800,00;1800,00;-59,75;1000,00;-159,75
+"
+`;
+
+exports[`reportToCsv > writes a summed result report with nothing picked (the period alone) 1`] = `
+"﻿[csv.section];[csv.account];[csv.accountName];[csv.amount]
+[section.income];3011;Konto 3011;1200,50
+[section.income];;[sectionTotal.income];1200,50
+[section.costs];4010;Konto 4010;-300,25
+[section.costs];6990;"Övrigt; ""diverse""";-10,00
+[section.costs];;[sectionTotal.costs];-310,25
+[section.costs];5010;Konto 5010;-50,00
+[section.costs];;[sectionTotal.costs];-50,00
+;;[csv.total];840,25
+"
+`;

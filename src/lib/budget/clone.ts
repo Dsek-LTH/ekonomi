@@ -148,7 +148,7 @@ function planAccounts(
         // Spelled out rather than left to the column default: `createMany` writes
         // one statement for the whole batch, so every row must name the same
         // columns or the ones that stayed quiet get the others' values.
-        values: {} as Prisma.InputJsonValue,
+        values: {},
       });
     }
   }
@@ -191,7 +191,7 @@ async function repointCopies(
       if (!changed) continue; // most rows are plain numbers
       await tx.budgetLineItem.update({
         where: { id: idMap.get(li.id)! },
-        data: { ...next, values: next.values as Prisma.InputJsonValue },
+        data: { ...next, values: next.values },
       });
     }
   }

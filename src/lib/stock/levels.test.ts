@@ -1,16 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   bottlesAt,
-  homecomingCount,
   openCount,
   openMl,
   pickFault,
-  returnFault,
   shortfall,
-  shelfFromHomecoming,
-  suggestPick,
   type BottleStock,
-  type Homecoming,
 } from "./levels";
 
 // The shelf in the examples: one bottle three-quarters gone, two half gone, six
@@ -74,81 +69,6 @@ describe("pickFault", () => {
     // ordering rule, and saying so first is more use than "open bottles first"
     // about a bottle nobody has.
     expect(pickFault(shelf, { sealed: 1, open: { 60: 1 } })).toBe("notThatManyOpen");
-  });
-});
-
-describe("suggestPick", () => {
-  it("empties the ladder from the top", () => {
-    // The oldest opening is finished first, so a bottle does not sit at 20 %
-    // forever while fuller ones keep being chosen.
-    expect(suggestPick(shelf, 2)).toEqual({ sealed: 0, open: { 80: 1, 40: 1 } });
-  });
-
-  it("reaches for a sealed bottle only once every open one is coming", () => {
-    expect(suggestPick(shelf, 4)).toEqual({ sealed: 1, open: { 80: 1, 40: 2 } });
-  });
-
-  it("never suggests something pickFault would refuse", () => {
-    // The two are the same rule, one applied and one checked, so they had
-    // better not disagree.
-    for (let wanted = 0; wanted <= 10; wanted++) {
-      expect(pickFault(shelf, suggestPick(shelf, wanted))).toBeNull();
-    }
-  });
-
-  it("gives back what there is when asked for more", () => {
-    expect(suggestPick(shelf, 99)).toEqual({ sealed: 6, open: { 80: 1, 40: 2 } });
-  });
-
-  it("gives back nothing when asked for nothing", () => {
-    expect(suggestPick(shelf, 0)).toEqual({ sealed: 0, open: {} });
-    expect(suggestPick(shelf, -3)).toEqual({ sealed: 0, open: {} });
-  });
-});
-
-describe("returnFault", () => {
-  const home = (h: Partial<Homecoming>): Homecoming => ({
-    sealed: 0,
-    open: {},
-    emptied: 0,
-    ...h,
-  });
-
-  it("accepts what actually went out", () => {
-    expect(returnFault(3, home({ sealed: 1, open: { 40: 1 }, emptied: 1 }))).toBeNull();
-  });
-
-  it("accepts fewer coming home than went out", () => {
-    // Two of the three are still at the pub. The rest can come back later.
-    expect(returnFault(3, home({ open: { 60: 1 } }))).toBeNull();
-  });
-
-  it("refuses more bottles than were ever taken", () => {
-    // The check the old from-dropdown could not make, and the reason it is
-    // gone: nothing was tracking what had left.
-    expect(returnFault(1, home({ sealed: 1, open: { 40: 1 } }))).toBe("moreThanWentOut");
-    expect(returnFault(0, home({ sealed: 1 }))).toBe("moreThanWentOut");
-  });
-
-  it("refuses a return of nothing", () => {
-    expect(returnFault(3, home({}))).toBe("nothingReturned");
-  });
-
-  it("counts an emptied bottle as come home", () => {
-    // It closes the bottle that was out even though it puts nothing back. A
-    // bottle finished at the pub is accounted for, not still outstanding.
-    expect(homecomingCount(home({ emptied: 2 }))).toBe(2);
-    expect(returnFault(2, home({ emptied: 2 }))).toBeNull();
-  });
-});
-
-describe("shelfFromHomecoming", () => {
-  it("puts back only the bottles that still hold something", () => {
-    // The sealed ones are counted separately and the empties put back nothing,
-    // so what lands on the ladder is the part-used ones alone.
-    expect(
-      shelfFromHomecoming({ sealed: 2, open: { 60: 1, 20: 1 }, emptied: 3 }),
-    ).toEqual({ 60: 1, 20: 1 });
   });
 });
 

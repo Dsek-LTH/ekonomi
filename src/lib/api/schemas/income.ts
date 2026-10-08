@@ -73,7 +73,7 @@ export const BookIncomeReport = z.object({
 /**
  * Move sold lines onto another verksamhet's report for the same day: a product
  * rung up without its prefix, which the routing therefore sent to the fallback.
- * See lib/income/move.ts.
+ * See lib/income/lines.ts.
  *
  * The account is per line rather than per move because a day's mis-sales are
  * not all the same thing: beer and food belong to the same verksamhet and to

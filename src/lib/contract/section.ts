@@ -25,7 +25,7 @@
 // database connection to find out who was drawing it, on every render, and the
 // live preview does that every few seconds.
 
-export interface SectionIdentity {
+interface SectionIdentity {
   /** As the document names it, in the section's own spelling. */
   name: string;
   /** Organisationsnummer. Null only if the section genuinely has none. */

@@ -18,7 +18,7 @@ import type { TxClient } from "@/lib/server/tx";
 import { prisma } from "@/lib/server/db";
 
 /** Either the client or a transaction's. Every read here works on both. */
-export type StockReader = TxClient | typeof prisma;
+type StockReader = TxClient | typeof prisma;
 
 /** The four rung columns, as a Prisma `_sum` selection. */
 export const OPEN_SUM = {
@@ -94,7 +94,7 @@ export async function heldOnHand(
     where: { productId: product.id },
     _sum: withValue ? OPEN_SUM_WITH_VALUE : OPEN_SUM,
   });
-  return asHeld(product, sums._sum as Parameters<typeof asHeld>[1]);
+  return asHeld(product, sums._sum);
 }
 
 /**

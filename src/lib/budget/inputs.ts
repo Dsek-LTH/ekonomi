@@ -28,7 +28,7 @@ import type { AdjustmentInput, LineItemInput, VariableInput } from "./eval";
  * the server it arrives as Prisma's `JsonValue` and in the browser as a plain
  * record, and neither side gains anything from the other's name for it.
  */
-export interface EvaluableBudget {
+interface EvaluableBudget {
   variables: readonly { name: string; expression: string }[];
   costCenters: readonly {
     id: string;
@@ -47,7 +47,7 @@ export interface EvaluableBudget {
 }
 
 /** What `evaluate` takes, in the order it takes it. */
-export interface EvaluatorInputs {
+interface EvaluatorInputs {
   variables: VariableInput[];
   lineItems: LineItemInput[];
   /**

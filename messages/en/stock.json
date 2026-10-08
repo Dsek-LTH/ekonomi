@@ -64,7 +64,6 @@
     "levelsOnReturnOnly": "A level is set when the bottle comes back, not when it is taken out",
     "purchaseArrivesSealed": "A purchase arrives sealed",
     "moreThanWentOut": "More bottles than went out. Check the count",
-    "nothingReturned": "Say what came back",
     "spillMovesNoStock": "A spill moves no stock",
     "nothingSpilled": "Say how much was destroyed",
     "purchaseNothing": "Say how many came in",
@@ -81,7 +80,6 @@
     "description": "Every movement, newest first. Nobody edits a row here. You correct a wrong one by booking another.",
     "empty": "No movements in this selection.",
     "recorded": "entered {date}",
-    "readings": "weighed: {list} g",
     "expense": "Expense",
     "filter": {
       "product": "Product",

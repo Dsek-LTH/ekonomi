@@ -14,7 +14,7 @@ import { isImmutable, isSigned } from "@/lib/contract/file-roles";
 import type { ContractFileRole, ContractKind, ContractStatus } from "@/lib/domain/types";
 
 /** The derived states plus expiry. What a status pill renders. */
-export type ContractDisplayStatus = ContractStatus | "EXPIRED";
+type ContractDisplayStatus = ContractStatus | "EXPIRED";
 
 /**
  * Where an agreement stands: SIGNED once its signed copy has been uploaded,

@@ -73,15 +73,6 @@ export const RENTAL_STATE_TONE: Record<RentalState, Tone> = {
   CLOSED: "success",
 };
 
-/** The states, in the order a filter draws them. */
-export const RENTAL_STATES: readonly RentalState[] = [
-  "UPCOMING",
-  "OUT",
-  "OVERDUE",
-  "AWAITING_CHECK",
-  "CLOSED",
-];
-
 /**
  * The tabs the rentals list offers, as sets of states.
  *

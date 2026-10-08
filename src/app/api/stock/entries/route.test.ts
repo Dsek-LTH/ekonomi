@@ -38,6 +38,8 @@ const h = vi.hoisted(() => ({
   createManyAndReturn: vi.fn(),
   createMany: vi.fn(),
   event: vi.fn(),
+  /** What the night has already moved of this product, as stored rows. */
+  booked: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@/lib/server/current-user", () => ({
@@ -53,7 +55,7 @@ vi.mock("@/lib/server/current-user", () => ({
 
 const entryTable = {
   aggregate: async () => ({ _sum: h.sums }),
-  findMany: async () => [],
+  findMany: async () => h.booked,
   findUnique: async () => null,
   create: h.create,
   createManyAndReturn: h.createManyAndReturn,
@@ -122,6 +124,19 @@ beforeEach(() => {
   h.change.mockResolvedValue({});
   h.createManyAndReturn.mockResolvedValue([{ id: "e1" }]);
   h.createMany.mockResolvedValue({ count: 1 });
+  h.booked = [];
+});
+
+/** A night's checkout of `units` sealed cans, as the log stores it. */
+const checkedOut = (units: number) => ({
+  kind: "CHECKOUT",
+  units: -units,
+  open80: 0,
+  open60: 0,
+  open40: 0,
+  open20: 0,
+  spilledQty: 0,
+  level: 0,
 });
 
 describe("POST /api/stock/entries", () => {
@@ -198,6 +213,53 @@ describe("POST /api/stock/entries", () => {
     const res = await post(delivery());
     expect(res.status).toBe(404);
     await expect(res.json()).resolves.toMatchObject({ error: "stock.productNotFound" });
+  });
+
+  describe("a spill", () => {
+    it("records what was dropped and moves no stock", async () => {
+      // Six went out to the pub and two were dropped there. They left the
+      // cellar at checkout, so taking them off the shelf again would remove
+      // them twice.
+      h.booked = [checkedOut(6)];
+      const res = await post(delivery({ kind: "WASTE", units: 0, spilledQty: 2, eventId: "ev1" }));
+      expect(res.status).toBe(201);
+      const data = h.create.mock.calls[0][0].data;
+      expect(data).toMatchObject({ kind: "WASTE", units: 0, spilledQty: 2, open80: 0, open20: 0 });
+      // The feed logs the figure somebody typed, which on a spill is its own.
+      expect(h.change.mock.calls[0][0].data.toQty).toBe(2);
+    });
+
+    it("refuses more than the night still has out", async () => {
+      h.booked = [checkedOut(1)];
+      const res = await post(delivery({ kind: "WASTE", units: 0, spilledQty: 2, eventId: "ev1" }));
+      expect(res.status).toBe(422);
+      await expect(res.json()).resolves.toMatchObject({ error: "stock.moreThanWentOut" });
+      expect(h.create).not.toHaveBeenCalled();
+    });
+
+    it("refuses a spill of nothing", async () => {
+      h.booked = [checkedOut(6)];
+      const res = await post(delivery({ kind: "WASTE", units: 0, spilledQty: 0, eventId: "ev1" }));
+      expect(res.status).toBe(422);
+      await expect(res.json()).resolves.toMatchObject({ error: "stock.nothingSpilled" });
+    });
+  });
+
+  describe("a return", () => {
+    it("brings back what the night still has out", async () => {
+      h.booked = [checkedOut(6)];
+      const res = await post(delivery({ kind: "RETURN", units: 4, eventId: "ev1" }));
+      expect(res.status).toBe(201);
+      expect(h.create.mock.calls[0][0].data).toMatchObject({ kind: "RETURN", units: 4 });
+    });
+
+    it("refuses to bring back more than went out", async () => {
+      h.booked = [checkedOut(6)];
+      const res = await post(delivery({ kind: "RETURN", units: 7, eventId: "ev1" }));
+      expect(res.status).toBe(422);
+      await expect(res.json()).resolves.toMatchObject({ error: "stock.moreThanWentOut" });
+      expect(h.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("a stocktake", () => {

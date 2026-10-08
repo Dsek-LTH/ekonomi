@@ -167,7 +167,7 @@ export default function BookExpenseClient({
   // isoDate in lib/data/shared.ts), and an empty string has to fall through.
   const [date, setDate] = useState(
     () =>
-      expense?.verification?.date?.slice(0, 10) ||
+      expense?.verification?.date.slice(0, 10) ||
       expense?.purchaseDate ||
       new Date().toISOString().slice(0, 10),
   );

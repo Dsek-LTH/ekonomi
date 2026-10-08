@@ -12,9 +12,9 @@
 // was edited and lost it. Adding it is idempotent, so the two never double up.
 
 /** Fortnox's limit on a voucher row's text (TransactionInformation). */
-export const ROW_TEXT_MAX = 100;
+const ROW_TEXT_MAX = 100;
 
-export const costCenterTag = (code: string): string => `(${code})`;
+const costCenterTag = (code: string): string => `(${code})`;
 
 const hasTag = (text: string, code: string) => text.includes(costCenterTag(code));
 

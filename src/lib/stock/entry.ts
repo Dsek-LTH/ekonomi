@@ -25,19 +25,10 @@ type EntryFault =
   | "nothingSpilled"
   | "spillMovesNoStock"
   | "volumeOnUnitProduct"
-  | "readingsOnUnitProduct"
   | "levelsOnReturnOnly"
   | "correctionNeedsTarget";
 
-/**
- * A movement, as the rule needs it.
- *
- * `volumeMl` is already resolved: when the movement came from a weighing, the
- * caller has converted the grams through the product's calibration before
- * asking. So a body that states *both* readings and a volume never reaches
- * here: that is a malformed request rather than an impossible movement, and
- * the schema refuses it (lib/api/schemas/stock.ts).
- */
+/** A movement, as the rule needs it. */
 export interface ProposedEntry {
   kind: StockEntryKind;
   /** Cans, or sealed bottles. */

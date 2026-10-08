@@ -47,6 +47,28 @@ const RenterCity = NonEmpty.max(100);
 const Tags = z.array(Trimmed.max(MAX_TAG_LENGTH)).max(MAX_TAGS);
 
 /**
+ * The optional details a contract carries, the same on create and on edit:
+ * the counterparty's particulars, the directory row they came from, and its
+ * dates. One object, spread into both, so the two cannot drift on a length or
+ * on whether a field can be cleared.
+ */
+const CONTRACT_DETAILS = {
+  counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
+  counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
+  counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
+  counterpartyCity: Clearable(Trimmed.max(100)).optional(),
+  /** The directory row the fields above were copied from, if any. See
+   *  Counterparty and CreateCounterparty below. */
+  counterpartyId: Clearable(Id).optional(),
+  validFrom: Clearable(IsoDate).optional(),
+  validTo: Clearable(IsoDate).optional(),
+  /** The one date a lean document (PROTOCOL, OTHER) needs. Ignored for
+   *  CONTRACT, which states a period instead. */
+  date: Clearable(IsoDate).optional(),
+  notes: Clearable(Trimmed.max(4000)).optional(),
+};
+
+/**
  * POST /api/contracts: file a document, with or without a file yet.
  *
  * `counterparty` and `date` are both trimmed/optional at the field level and
@@ -60,20 +82,8 @@ export const CreateContract = z
     kind: ContractKind,
     title: Title,
     counterparty: Trimmed.max(200),
-    counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
-    counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
-    counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
-    counterpartyCity: Clearable(Trimmed.max(100)).optional(),
-    /** The directory row the fields above were copied from, if any. See
-     *  Counterparty and CreateCounterparty below. */
-    counterpartyId: Clearable(Id).optional(),
-    validFrom: Clearable(IsoDate).optional(),
-    validTo: Clearable(IsoDate).optional(),
-    /** The one date a lean document (PROTOCOL, OTHER) needs. Ignored for
-     *  CONTRACT, which states a period instead. */
-    date: Clearable(IsoDate).optional(),
+    ...CONTRACT_DETAILS,
     tags: Tags.default([]),
-    notes: Clearable(Trimmed.max(4000)).optional(),
   })
   .superRefine((d, ctx) => {
     if (d.kind === "CONTRACT" && d.counterparty === "") {
@@ -113,16 +123,8 @@ export const UpdateContract = z.object({
   kind: ContractKind.optional(),
   title: Title.optional(),
   counterparty: Counterparty.optional(),
-  counterpartyOrgNo: Clearable(Trimmed.max(40)).optional(),
-  counterpartyAddress: Clearable(Trimmed.max(200)).optional(),
-  counterpartyPostalCode: Clearable(Trimmed.max(20)).optional(),
-  counterpartyCity: Clearable(Trimmed.max(100)).optional(),
-  counterpartyId: Clearable(Id).optional(),
-  validFrom: Clearable(IsoDate).optional(),
-  validTo: Clearable(IsoDate).optional(),
-  date: Clearable(IsoDate).optional(),
+  ...CONTRACT_DETAILS,
   tags: Tags.optional(),
-  notes: Clearable(Trimmed.max(4000)).optional(),
 });
 export type UpdateContract = z.infer<typeof UpdateContract>;
 
@@ -136,7 +138,7 @@ export type UpdateContract = z.infer<typeof UpdateContract>;
  * where the screen gets its suggestion; it is not what the document reads
  * through. See the RentalLine model.
  */
-export const RentalLineInput = z.object({
+const RentalLineInput = z.object({
   itemId: Clearable(Id).optional(),
   description: NonEmpty.max(200),
   quantity: z.int().min(1).max(9999),
@@ -145,7 +147,7 @@ export const RentalLineInput = z.object({
   discountPercent: z.int().min(0).max(100).default(0),
   replacementValueOre: Ore.min(0),
 });
-export type RentalLineInput = z.infer<typeof RentalLineInput>;
+type RentalLineInput = z.infer<typeof RentalLineInput>;
 
 /**
  * How many signature blocks one rental may ask for. A board signing jointly is

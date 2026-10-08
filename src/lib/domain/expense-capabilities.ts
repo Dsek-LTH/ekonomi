@@ -114,8 +114,8 @@ export function expenseCapabilities(
     mileageBlocker:
       expense.paymentType === "MILEAGE" &&
       (expense.mileage?.km == null ||
-        expense.mileage?.orePerKm == null ||
-        namedStops(expense.mileage?.stops ?? []).length < 2)
+        expense.mileage.orePerKm == null ||
+        namedStops(expense.mileage.stops).length < 2)
         ? "incomplete"
         : null,
   });

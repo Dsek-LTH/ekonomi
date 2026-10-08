@@ -34,7 +34,7 @@ export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> 
     connected: Boolean(conn),
     companyName: conn?.companyName ?? undefined,
     voucherSeries: conn?.voucherSeries ?? undefined,
-    expiresAt: conn?.expiresAt?.toISOString() ?? undefined,
+    expiresAt: conn?.expiresAt.toISOString() ?? undefined,
     session: live
       ? {
           fortnoxUserName: live.fortnoxUserName ?? undefined,

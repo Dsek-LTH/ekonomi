@@ -48,9 +48,6 @@ export function contractScopeOf(viewer: Viewer): ContractScope {
   return { kind: "none" };
 }
 
-/** Whether the viewer may see anything at all. What a page gate asks. */
-export const scopeIsEmpty = (scope: ContractScope): boolean => scope.kind === "none";
-
 /**
  * The scope as a Prisma filter.
  *

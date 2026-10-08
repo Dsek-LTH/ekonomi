@@ -119,7 +119,7 @@ function sumNullable(accounts: ReportAccount[], get: (a: ReportAccount) => numbe
     : accounts.reduce((s, a) => s + (get(a) ?? 0), 0);
 }
 
-export function figuresOf(accounts: ReportAccount[]): Figures {
+function figuresOf(accounts: ReportAccount[]): Figures {
   return {
     amount: accounts.reduce((s, a) => s + a.amount, 0),
     opening: sumNullable(accounts, (a) => a.opening),

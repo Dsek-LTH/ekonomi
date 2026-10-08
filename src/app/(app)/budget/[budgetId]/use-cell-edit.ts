@@ -12,7 +12,7 @@
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/ui/utils";
 
-export interface CellEditProps {
+interface CellEditProps {
   className: string;
   onKeyDownCapture: (e: KeyboardEvent) => void;
   onFocusCapture: () => void;
@@ -37,7 +37,7 @@ export function useCellEdit(className?: string): CellEditProps {
 
   function onKeyDownCapture(e: KeyboardEvent) {
     const t = e.target as HTMLElement;
-    if (!t.dataset?.cell) return; // not a gated cell (e.g. an add-row input)
+    if (!t.dataset.cell) return; // not a gated cell (e.g. an add-row input)
     const input = t as HTMLInputElement;
 
     if (editing) {
@@ -64,7 +64,7 @@ export function useCellEdit(className?: string): CellEditProps {
       const t = e.target as HTMLElement;
       // Collapse the browser's word-selection to where it was clicked, so a
       // double-click leaves a blinking caret at that spot rather than a highlight.
-      if (t.dataset?.cell) beginEdit(t as HTMLInputElement, "here");
+      if (t.dataset.cell) beginEdit(t as HTMLInputElement, "here");
     },
   };
 }

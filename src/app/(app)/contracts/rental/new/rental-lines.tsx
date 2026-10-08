@@ -78,7 +78,7 @@ export function effectiveDiscountPercent(r: LineRow, toOre: (s: string) => numbe
 
 /** What a row is worth, from the strings it holds. The same function the create
  *  route and the document use, so the amount shown is the amount charged. */
-export const pricedRow = (r: LineRow, toOre: (s: string) => number) =>
+const pricedRow = (r: LineRow, toOre: (s: string) => number) =>
   linePricing({
     quantity: Number(r.quantity) || 0,
     unitPriceOre: toOre(r.unitPrice),

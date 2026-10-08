@@ -116,7 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const sheet = new Map(booked);
     for (const cell of body.cells) {
       sheet.set(
-        cellKey({ productId: cell.productId, kind: cell.kind as CellKind, level: cell.level }),
+        cellKey({ productId: cell.productId, kind: cell.kind, level: cell.level }),
         cell.qty,
       );
     }
@@ -132,7 +132,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let written = 0;
 
     for (const cell of body.cells) {
-      const ref = { productId: cell.productId, kind: cell.kind as CellKind, level: cell.level };
+      const ref = { productId: cell.productId, kind: cell.kind, level: cell.level };
       const key = cellKey(ref);
       const row = rowFor.get(key);
       const now = row ? cellQty(asRow(row)) : 0;

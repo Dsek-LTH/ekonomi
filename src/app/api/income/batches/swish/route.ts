@@ -10,12 +10,11 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
+import { intaktConfigFor } from "@/lib/api/intakt-route";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { createSalesBatch } from "@/lib/income/batch";
 import { fetchSwishReports, IntaktError, IntaktNotConfiguredError } from "@/lib/income/client";
-import { buildIntaktConfig } from "@/lib/income/config";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
-import { loadUser } from "@/lib/server/current-user";
 
 // A term's export is a couple of hundred kilobytes; this is generous against
 // that and small enough that a mistaken upload cannot exhaust memory.
@@ -39,15 +38,8 @@ export async function POST(req: Request) {
   if (bytes.byteLength === 0) return fail(400, "income.emptyFile");
   if (bytes.byteLength > MAX_BYTES) return fail(413, "income.fileTooLarge");
 
-  const user = await loadUser(g.actor.id);
-  if (!user) return fail(401, "auth.signedOut");
-
-  const cfg = await buildIntaktConfig({ name: user.name, studentId: user.studentId });
-  if (!cfg.ok) {
-    return fail(409, `income.${cfg.blocker}`, {
-      ...(cfg.detail && { values: { detail: cfg.detail } }),
-    });
-  }
+  const cfg = await intaktConfigFor(g.actor.id);
+  if (!cfg.ok) return cfg.res;
 
   // The same fail-safe the Zettle route runs, for the same reason: a day
   // already booked in Fortnox is never imported, so it cannot be booked twice.

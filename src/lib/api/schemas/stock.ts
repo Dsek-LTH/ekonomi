@@ -123,11 +123,6 @@ export type PatchStockProduct = z.infer<typeof PatchStockProduct>;
  * because a kind and a sign that disagree is a row nobody can read later. See
  * `entryFault` in lib/stock/entry.ts, which is the same rule the form applies
  * before offering the button.
- *
- * `readings` are the grams behind a volume figure. They are not an alternative
- * to `volumeMl`. The route derives the millilitres from them and refuses a
- * body that states both, so there is never a stored volume that its own
- * readings disagree with.
  */
 export const CreateStockEntry = z.object({
   productId: Id,

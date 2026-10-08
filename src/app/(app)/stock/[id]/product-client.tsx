@@ -31,6 +31,7 @@ import { EmptyNote } from "@/components/ui/empty-state";
 import { ChangeFeed } from "@/components/stock/change-feed";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
+import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { EntryDialog } from "../entry-dialog";
 import { LEVELS, bottlesAt } from "@/lib/stock/levels";
@@ -41,11 +42,9 @@ import {
   formatLitres,
   formatOreKr,
   formatMovementLitres,
+  formatSigned,
 } from "@/lib/ui/format";
 import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
-
-const signed = (n: number) =>
-  new Intl.NumberFormat("sv-SE", { signDisplay: "exceptZero" }).format(n);
 
 /** A row's effect on the open bottles, as "80 % → 40 %" or "+ 60 %". */
 function levelSummary(open: Record<number, number>): string {
@@ -618,7 +617,7 @@ function CellarTable({
         ) : r.counted?.length ? (
           t("product.countedTo", { qty: r.counted.map((c) => c.qty).join(" / ") })
         ) : r.units ? (
-          signed(r.units)
+          formatSigned(r.units)
         ) : (
           levelSummary(r.open ?? {}) || <span className="text-muted">–</span>
         ),
@@ -747,17 +746,13 @@ function CheckTable({
                     schedule, and a page of amber pills is a page nobody
                     reads. */}
                 {check.quiet ? (
-                  <span className="rounded-control bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
-                    {t("expiry.stateChecked", { date: check.checkedAt ?? "" })}
-                  </span>
+                  <Tag size="sm">{t("expiry.stateChecked", { date: check.checkedAt ?? "" })}</Tag>
                 ) : check.state === "over" ? (
-                  <span className="rounded-control bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
-                    {t("expiry.stateOver", { days: -check.daysLeft })}
-                  </span>
+                  <Tag size="sm" tone="warning">{t("expiry.stateOver", { days: -check.daysLeft })}</Tag>
                 ) : check.state === "soon" ? (
-                  <span className="rounded-control bg-surface px-2 py-0.5 text-[11px] font-medium text-foreground">
+                  <Tag size="sm" className="text-foreground">
                     {t("expiry.stateSoon", { days: check.daysLeft })}
-                  </span>
+                  </Tag>
                 ) : (
                   <span className="text-[11px] text-muted">
                     {t("expiry.stateLater", { days: check.daysLeft })}

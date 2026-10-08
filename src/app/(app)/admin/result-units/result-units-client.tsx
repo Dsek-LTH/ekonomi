@@ -28,10 +28,11 @@ import { type Column } from "@/components/ui/data-table";
 import { EditableText } from "@/components/ui/editable-text";
 import { FieldGroup, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconChevronDown, IconPlus, IconTrash, IconX } from "@/components/ui/icons";
+import { IconPlus, IconTrash, IconX } from "@/components/ui/icons";
 import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
+import { ExpandToggle } from "@/components/ui/expand-toggle";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { cn } from "@/lib/ui/utils";
 import type { CostCenter, ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
@@ -508,18 +509,13 @@ function UnitDialog({
             </p>
           ) : (
             <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-expanded={showCostCenters}
-                onClick={() => setShowCostCenters(!showCostCenters)}
+              <ExpandToggle
+                open={showCostCenters}
+                onToggle={() => setShowCostCenters(!showCostCenters)}
                 className="-ml-2"
               >
                 {t("matches", { count: unit.costCenters.length })}
-                <IconChevronDown
-                  className={cn("size-4 transition-transform", showCostCenters && "rotate-180")}
-                />
-              </Button>
+              </ExpandToggle>
               {showCostCenters && (
                 <div className="mt-2 max-h-64 overflow-y-auto rounded-control border border-border">
                   <CostCenterList list={unit.costCenters} />
@@ -691,7 +687,7 @@ function UnitDialog({
                         size="sm"
                         variant="secondary"
                         loading={pending === "addProduct"}
-                        disabled={!productDraft?.code.trim() || !productDraft?.account.trim()}
+                        disabled={!productDraft?.code.trim() || !productDraft.account.trim()}
                         onClick={addProductPrefix}
                       >
                         <IconPlus className="size-4" />

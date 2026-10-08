@@ -318,7 +318,7 @@ export interface Expense {
 }
 
 /** Who allowed one late utlägg in, when, and why. */
-export interface DeadlineWaiver {
+interface DeadlineWaiver {
   by: string; // the granter's name
   at: string; // ISO
   reason: string;

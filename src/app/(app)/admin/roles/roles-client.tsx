@@ -199,6 +199,13 @@ function GroupsView({
     await put(row.group, row.holders, roles, resultUnitIds);
   }
 
+  // Both writes answer with how many people's roles they re-derived, which is
+  // worth saying: it is what makes a grant you just saved real.
+  function saved(data: unknown) {
+    const affected = (data as { affected?: number }).affected ?? 0;
+    notify.success(affected > 0 ? t("savedAffecting", { count: affected }) : t("saved"));
+  }
+
   async function put(group: string, holders: number, roles: Role[], resultUnitIds: string[]) {
     if (holders >= MANY) {
       const ok = await confirm({
@@ -215,8 +222,7 @@ function GroupsView({
       error: t("saveFailed"),
     });
     if (!data) return false;
-    const affected = (data as { affected?: number }).affected ?? 0;
-    notify.success(affected > 0 ? t("savedAffecting", { count: affected }) : t("saved"));
+    saved(data);
     return true;
   }
 
@@ -253,8 +259,7 @@ function GroupsView({
       error: t("saveFailed"),
     });
     if (!data) return;
-    const affected = (data as { affected?: number }).affected ?? 0;
-    notify.success(affected > 0 ? t("savedAffecting", { count: affected }) : t("saved"));
+    saved(data);
   }
 
   const columns: Column<GroupRow>[] = [

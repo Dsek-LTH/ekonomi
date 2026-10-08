@@ -20,7 +20,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { budgetLabel } from "@/lib/budget/compare";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import type { ReportKind } from "@/lib/ledger/bas";
 import { cn } from "@/lib/ui/utils";
 import type {
   BudgetOption,
@@ -103,7 +102,7 @@ function Row({ children }: { children: React.ReactNode }) {
   );
 }
 
-export interface PeriodChoice {
+interface PeriodChoice {
   options: ComboOption[];
   value: string;
   onPick: (value: string) => void;
@@ -159,44 +158,23 @@ function PeriodDate({
   );
 }
 
-/**
- * How fresh the figures are, at the foot of the parameters. It used to trail
- * the page's description under the title, where it read as part of a sentence
- * about what the page is. It is a fact about the year being reported on, which
- * is what the panel above it chooses, so it sits with that.
- */
-function SyncedNote({ synced }: { synced?: string | null }) {
-  if (!synced) return null;
-  return <p className="border-t border-border px-inset py-2.5 text-xs text-muted">{synced}</p>;
-}
 
-export function ReportParameters({
+/**
+ * The year, the period within it, and the cost centres: what both panels ask
+ * first, in the same order. One component, so the report and the charts cannot
+ * come to ask it differently.
+ */
+function PeriodRows({
   query,
   onQuery,
-  columns,
-  onColumns,
-  diff,
-  onDiff,
   years,
   costCenters,
-  budgets,
-  synced,
   period,
 }: {
   query: QueryState;
   onQuery: (patch: Partial<QueryState>) => void;
-  /** The result report's figure columns. See ResultColumn. */
-  columns: readonly ResultColumn[];
-  onColumns: (columns: ResultColumn[]) => void;
-  /** The difference column beside the comparison. */
-  diff: boolean;
-  onDiff: (diff: boolean) => void;
   years: { id: number; year: number }[];
   costCenters: { code: string; name: string }[];
-  budgets: BudgetOption[];
-  /** When the year was last synced from Fortnox, already worded. */
-  synced?: string | null;
-  /** The Period picker. See `period` in ledger-client.tsx. */
   period?: PeriodChoice;
 }) {
   const t = useTranslations("ledger");
@@ -208,21 +186,7 @@ export function ReportParameters({
   const ccOptions = costCenterOptions(costCenters, t("noCostCenter"), t("withCostCenter"));
 
   return (
-    <Card className="print:hidden">
-      <Row>
-        <Field label={t("report")}>
-          <SegmentedControl
-            className={PILLS}
-            options={[
-              { value: "RESULT", label: t("resultReport") },
-              { value: "BALANCE", label: t("balanceReport") },
-            ]}
-            value={query.kind}
-            onChange={(v) => onQuery({ kind: v as ReportKind })}
-          />
-        </Field>
-      </Row>
-
+    <>
       <Row>
         <Field label={t("year")} className="w-28">
           <Combobox
@@ -296,6 +260,119 @@ export function ReportParameters({
           />
         </Field>
       </Row>
+    </>
+  );
+}
+
+/**
+ * Which budget a comparison is against, for both panels.
+ *
+ * Every budget is offered, not only the ones for the year being reported on.
+ * Holding this year's outcome against what was budgeted two years ago is a
+ * fair question to ask.
+ *
+ * Hidden only when there is nothing to choose: one budget, and it is already
+ * the one being compared against. A lone budget belonging to some other year
+ * is not that case. It is the one you would have to reach for by hand.
+ */
+function BudgetPicker({
+  query,
+  onQuery,
+  budgets,
+}: {
+  query: QueryState;
+  onQuery: (patch: Partial<QueryState>) => void;
+  budgets: BudgetOption[];
+}) {
+  const t = useTranslations("ledger");
+  if (budgets.length === 0 || (budgets.length === 1 && query.budget === budgets[0].id)) return null;
+  return (
+    <Field label={t("budget")} className="w-full sm:w-64">
+      <Combobox
+        size="sm"
+        // Date (or year) first, then the budget's own name, budgetLabel, the
+        // same one the compare pickers use, because three screens spelling a
+        // budget three ways is three things to keep in step. Leading with the
+        // date is what tells two years' "Ursprunglig" apart and what makes
+        // picking one from another year a deliberate act rather than a slip;
+        // typing "2024" narrows to that year, since the search reads the label.
+        options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
+        value={query.budget ?? ""}
+        onChange={(v) => onQuery({ budget: v })}
+        placeholder={t("budgetPlaceholder")}
+        searchPlaceholder={t("budgetSearch")}
+        emptyText={t("noBudgets")}
+        aria-label={t("budgetAria")}
+      />
+    </Field>
+  );
+}
+
+/**
+ * How fresh the figures are, at the foot of the parameters. It used to trail
+ * the page's description under the title, where it read as part of a sentence
+ * about what the page is. It is a fact about the year being reported on, which
+ * is what the panel above it chooses, so it sits with that.
+ */
+function SyncedNote({ synced }: { synced?: string | null }) {
+  if (!synced) return null;
+  return <p className="border-t border-border px-inset py-2.5 text-xs text-muted">{synced}</p>;
+}
+
+export function ReportParameters({
+  query,
+  onQuery,
+  columns,
+  onColumns,
+  diff,
+  onDiff,
+  years,
+  costCenters,
+  budgets,
+  synced,
+  period,
+}: {
+  query: QueryState;
+  onQuery: (patch: Partial<QueryState>) => void;
+  /** The result report's figure columns. See ResultColumn. */
+  columns: readonly ResultColumn[];
+  onColumns: (columns: ResultColumn[]) => void;
+  /** The difference column beside the comparison. */
+  diff: boolean;
+  onDiff: (diff: boolean) => void;
+  years: { id: number; year: number }[];
+  costCenters: { code: string; name: string }[];
+  budgets: BudgetOption[];
+  /** When the year was last synced from Fortnox, already worded. */
+  synced?: string | null;
+  /** The Period picker. See `period` in ledger-client.tsx. */
+  period?: PeriodChoice;
+}) {
+  const t = useTranslations("ledger");
+
+  return (
+    <Card className="print:hidden">
+      <Row>
+        <Field label={t("report")}>
+          <SegmentedControl
+            className={PILLS}
+            options={[
+              { value: "RESULT", label: t("resultReport") },
+              { value: "BALANCE", label: t("balanceReport") },
+            ]}
+            value={query.kind}
+            onChange={(v) => onQuery({ kind: v })}
+          />
+        </Field>
+      </Row>
+
+      <PeriodRows
+        query={query}
+        onQuery={onQuery}
+        years={years}
+        costCenters={costCenters}
+        period={period}
+      />
 
       {/* Which figures stand beside each account. Result report only: the
           balance report's columns are fixed (opening, period, closing). */}
@@ -364,36 +441,8 @@ export function ReportParameters({
           </Checkbox>
         )}
 
-        {/* Which budget you mean is part of choosing "budget", so it sits in
-            the same row. Every budget is offered, not only the ones for the year
-            being reported on. Holding this year's outcome against what was
-            budgeted two years ago is a fair question to ask.
-
-            Hidden only when there is nothing to choose: one budget, and it is
-            already the one being compared against. A lone budget belonging to
-            some other year is not that case. It is the one you would have to
-            reach for by hand. */}
-        {query.compare === "BUDGET"
-          && (budgets.length > 1 || (budgets.length === 1 && query.budget !== budgets[0].id)) && (
-          <Field label={t("budget")} className="w-full sm:w-64">
-            <Combobox
-            size="sm"
-              // Date (or year) first, then the budget's own name, budgetLabel,
-              // the same one the compare pickers use, because three screens
-              // spelling a budget three ways is three things to keep in step.
-              // Leading with the date is what tells two years' "Ursprunglig"
-              // apart and what makes picking one from another year a deliberate
-              // act rather than a slip; typing "2024" narrows to that year,
-              // since the search reads the label.
-              options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
-              value={query.budget ?? ""}
-              onChange={(v) => onQuery({ budget: v })}
-              placeholder={t("budgetPlaceholder")}
-              searchPlaceholder={t("budgetSearch")}
-              emptyText={t("noBudgets")}
-              aria-label={t("budgetAria")}
-            />
-          </Field>
+        {query.compare === "BUDGET" && (
+          <BudgetPicker query={query} onQuery={onQuery} budgets={budgets} />
         )}
       </Row>
       <SyncedNote synced={synced} />
@@ -447,89 +496,17 @@ export function ChartParameters({
   period?: PeriodChoice;
 }) {
   const t = useTranslations("ledger");
-  const tAlloc = useTranslations("allocation");
-  const yearOptions: ComboOption[] = years.map((y) => ({
-    value: String(y.id),
-    label: String(y.year),
-  }));
-  const ccOptions = costCenterOptions(costCenters, t("noCostCenter"), t("withCostCenter"));
   const pacing = query.compare === "BUDGET";
 
   return (
     <Card className="print:hidden">
-      <Row>
-        <Field label={t("year")} className="w-28">
-          <Combobox
-            size="sm"
-            options={yearOptions}
-            value={query.year != null ? String(query.year) : ""}
-            onChange={(v) => onQuery({ year: Number(v) })}
-            placeholder={t("yearPlaceholder")}
-            searchPlaceholder={t("yearSearch")}
-            emptyText={t("noYears")}
-            aria-label={t("year")}
-          />
-        </Field>
-        {/* Above the dates it names. A preset sets them; typing in them makes
-            the range the reader's own, and the picker says so. */}
-        {period && (
-          <Field label={t("period")} className="w-full sm:w-56">
-            <Combobox
-              size="sm"
-              options={period.options}
-              value={period.value}
-              onChange={period.onPick}
-              searchPlaceholder={t("periodSearch")}
-              aria-label={t("period")}
-            />
-          </Field>
-        )}
-        {/* From and To as one range, side by side with a dash between, at
-            every width, including the panel's narrow column from lg, where every
-            other field takes a row of its own. Dates, not months: a report can
-            be taken over any span of days, the way Fortnox takes one. */}
-        <div className="flex min-w-0 items-end gap-2">
-        <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-          <PeriodDate
-            value={query.from}
-            onCommit={(v) => {
-              period?.onManual();
-              onQuery({ from: v });
-            }}
-            aria-label={t("from")}
-          />
-        </Field>
-        {/* The height of a control, so the dash sits level with the two. */}
-        <span aria-hidden className="flex h-11 items-center text-muted sm:h-9">
-          –
-        </span>
-        <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-          <PeriodDate
-            value={query.to}
-            onCommit={(v) => {
-              period?.onManual();
-              onQuery({ to: v });
-            }}
-            aria-label={t("to")}
-          />
-        </Field>
-        </div>
-      </Row>
-
-      <Row>
-        <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
-          <MultiCombobox
-            size="sm"
-            options={ccOptions}
-            values={query.costCenters.map((c) => c || CC_NONE)}
-            onChange={(vs) => onQuery({ costCenters: vs.map((v) => (v === CC_NONE ? "" : v)) })}
-            placeholder={t("allCostCenters")}
-            searchPlaceholder={tAlloc("search")}
-            emptyText={t("noCostCenters")}
-            aria-label={tAlloc("costCenter")}
-          />
-        </Field>
-      </Row>
+      <PeriodRows
+        query={query}
+        onQuery={onQuery}
+        years={years}
+        costCenters={costCenters}
+        period={period}
+      />
 
       <Row>
         {/* Two answers where the report offers three, because a budget is the
@@ -546,28 +523,11 @@ export function ChartParameters({
               { value: "BUDGET", label: t("budget") },
             ]}
             value={pacing ? "BUDGET" : "NONE"}
-            onChange={(v) => onQuery({ compare: v as ComparisonMode })}
+            onChange={(v) => onQuery({ compare: v })}
           />
         </Field>
 
-        {/* The same rule the report panel applies: offered unless there is
-            nothing to choose, meaning one budget that is already the one in
-            use. See the note there. */}
-        {pacing
-          && (budgets.length > 1 || (budgets.length === 1 && query.budget !== budgets[0].id)) && (
-          <Field label={t("budget")} className="w-full sm:w-64">
-            <Combobox
-              size="sm"
-              options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
-              value={query.budget ?? ""}
-              onChange={(v) => onQuery({ budget: v })}
-              placeholder={t("budgetPlaceholder")}
-              searchPlaceholder={t("budgetSearch")}
-              emptyText={t("noBudgets")}
-              aria-label={t("budgetAria")}
-            />
-          </Field>
-        )}
+        {pacing && <BudgetPicker query={query} onQuery={onQuery} budgets={budgets} />}
       </Row>
       <SyncedNote synced={synced} />
     </Card>

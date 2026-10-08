@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Account, BudgetClip, LineItem } from "./budget-types";
 
-export interface SheetSelection {
+interface SheetSelection {
   accounts: string[];
   rows: string[];
 }

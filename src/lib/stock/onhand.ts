@@ -148,14 +148,6 @@ export function purchasedMl(
     .reduce((sum, m) => sum + m.units * per, 0);
 }
 
-/**
- * Whole litres, the way the report asks for them.
- *
- * Rounded rather than truncated: the form wants whole litres, and 4,6 litres is
- * better reported as 5 than as 4. Applied once to a category's total, never per
- * product, so a hundred small purchases do not each lose their fraction.
- */
-export const wholeLitres = (ml: number): number => Math.round(ml / 1000);
 
 /** Litres of pure alcohol: volume × strength. Null when the ABV is unknown. */
 export function pureAlcoholMl(product: StockSubject, ml: number): number | null {

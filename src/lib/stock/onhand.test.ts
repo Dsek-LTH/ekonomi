@@ -6,7 +6,6 @@ import {
   pureAlcoholMl,
   purchasedMl,
   unitVolume,
-  wholeLitres,
   type StockMovement,
   type StockSubject,
 } from "./onhand";
@@ -152,14 +151,6 @@ describe("purchasedMl", () => {
   it("refuses to guess for a product nobody has sized", () => {
     const unsized: StockSubject = { kind: "UNIT", category: "OL" };
     expect(purchasedMl(unsized, year)).toBeNull();
-  });
-});
-
-describe("wholeLitres", () => {
-  it("rounds to the whole litre the form asks for", () => {
-    expect(wholeLitres(23760)).toBe(24);
-    expect(wholeLitres(4600)).toBe(5);
-    expect(wholeLitres(4400)).toBe(4);
   });
 });
 

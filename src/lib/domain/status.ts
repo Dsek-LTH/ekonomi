@@ -242,16 +242,6 @@ export function isQuietDraftEdit(
   return expense.reference === null && actorId === expense.submitterId;
 }
 
-const isPendingApproval = (status: string): boolean => status as ExpenseStatus === "PENDING_APPROVAL";
-
-// An utlägg that has left the submitter's hands: waiting for attest, or
-// attested and beyond. This is exactly the union the two tabs on the attest
-// page show, and so exactly what its "Alla" view means: the whole section's
-// attest queue, rather than everything that happens to exist. A DRAFT nobody
-// has sent yet is not part of anyone's queue.
-export const isInAttestChain = (status: string): boolean =>
-  isPendingApproval(status) || isSigned(status);
-
 // Every status, in the order an utlägg passes through them. The status filter on
 // the utlägg list offers exactly these, so a new status shows up there by being
 // added here rather than by anyone remembering to. Labels are translations
@@ -302,14 +292,6 @@ export const TONE_CLASSES: Record<Tone, string> = {
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
 };
-
-// Payment types in the order they're offered. Labels and descriptions live
-// under `common.payment.<TYPE>` in messages/*.json.
-//
-// Milersättning last, and offered to everyone: it is the least common of the
-// three, and the only one that takes you to a different form rather than
-// changing the shape of this one. See the wizard's first step.
-export const PAYMENT_TYPES: readonly PaymentType[] = ["CARD", "REIMBURSEMENT", "MILEAGE"];
 
 /**
  * How an utlägg was paid, as a class name pair.

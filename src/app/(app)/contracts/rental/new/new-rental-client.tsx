@@ -202,28 +202,27 @@ export function NewRentalClient({
   const signaturesValid =
     Number.isInteger(signatures) && signatures >= 1 && signatures <= MAX_SIGNATURES;
 
-  function pickCounterparty(id: string) {
+  // The renter's particulars, copied from the directory row they were picked
+  // from (or blanked, when the pick is cleared). One place for both the
+  // picker and a renter created on the spot, so the two fill the same fields.
+  function takeCounterparty(c: CounterpartyOption | undefined) {
     setStatedCounterparty("");
-    setCounterpartyId(id || null);
-    const picked = counterpartyOptions.find((c) => c.id === id);
-    setOrgNo(picked?.orgNo ?? "");
-    setAddress(picked?.address ?? "");
-    setPostalCode(picked?.postalCode ?? "");
-    setCity(picked?.city ?? "");
-    setEmail(picked?.email ?? "");
-    setPhone(picked?.phone ?? "");
+    setCounterpartyId(c?.id ?? null);
+    setOrgNo(c?.orgNo ?? "");
+    setAddress(c?.address ?? "");
+    setPostalCode(c?.postalCode ?? "");
+    setCity(c?.city ?? "");
+    setEmail(c?.email ?? "");
+    setPhone(c?.phone ?? "");
+  }
+
+  function pickCounterparty(id: string) {
+    takeCounterparty(counterpartyOptions.find((c) => c.id === id));
   }
 
   function counterpartyCreated(created: CounterpartyOption) {
     setCounterpartyOptions((prev) => [...prev, created]);
-    setStatedCounterparty("");
-    setCounterpartyId(created.id);
-    setOrgNo(created.orgNo ?? "");
-    setAddress(created.address ?? "");
-    setPostalCode(created.postalCode ?? "");
-    setCity(created.city ?? "");
-    setEmail(created.email ?? "");
-    setPhone(created.phone ?? "");
+    takeCounterparty(created);
     setNewCounterpartyName(null);
   }
 
@@ -238,7 +237,7 @@ export function NewRentalClient({
     isCompleteDate(pickupAt) && isCompleteDate(returnAt) && returnAt >= pickupAt;
 
   const free =
-    periodReady && fetched?.from === pickupAt && fetched?.to === returnAt
+    periodReady && fetched?.from === pickupAt && fetched.to === returnAt
       ? fetched.rows
       : undefined;
 

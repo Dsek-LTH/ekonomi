@@ -42,7 +42,7 @@ interface QueryOptions {
   keepPrevious?: boolean;
 }
 
-export interface Query<T> {
+interface Query<T> {
   data: T | null;
   loading: boolean;
   /** The failure, already worded in the reader's language. */

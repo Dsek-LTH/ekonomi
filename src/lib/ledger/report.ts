@@ -168,7 +168,7 @@ async function openingBalances(
   return out;
 }
 
-export interface ReportOptions {
+interface ReportOptions {
   financialYear: number;
   kind: ReportKind;
   from: Date; // period start, inclusive

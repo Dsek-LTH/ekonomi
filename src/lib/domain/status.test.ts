@@ -3,6 +3,7 @@ import svCommon from "../../../messages/sv/common.json";
 import svExpenses from "../../../messages/sv/expenses.json";
 import enCommon from "../../../messages/en/common.json";
 import enExpenses from "../../../messages/en/expenses.json";
+import type { PaymentType } from "@/lib/domain/types";
 
 const sv = { common: svCommon, expenses: svExpenses };
 const en = { common: enCommon, expenses: enExpenses };
@@ -12,12 +13,10 @@ import {
   SIGNED_STATUSES,
   PAYMENT_CLASSES,
   PAYMENT_TEXT,
-  PAYMENT_TYPES,
   STATUS_TONE,
   TONE_CLASSES,
   isAttestWithdrawable,
   isEditable,
-  isInAttestChain,
   isRecallable,
   isSigned,
   isSubmittable,
@@ -315,14 +314,6 @@ describe("status predicates", () => {
     expect(isEditable("EXPORTED")).toBe(false);
   });
 
-  it("keeps editing and attesting disjoint", () => {
-    // The property the whole rule is for, said once: nothing is open for edits
-    // while it is somewhere in the attest chain.
-    for (const status of EDITABLE_STATUSES) {
-      expect(isInAttestChain(status)).toBe(false);
-    }
-  });
-
   it("lets the owner send, and re-send, anything not yet attested", () => {
     expect(isSubmittable("DRAFT")).toBe(true);
     expect(isSubmittable("CHANGES_REQUESTED")).toBe(true);
@@ -335,16 +326,6 @@ describe("status predicates", () => {
     expect(isSigned("BOOKED")).toBe(true);
     expect(isSigned("EXPORTED")).toBe(true);
     expect(isSigned("DRAFT")).toBe(false);
-  });
-
-  it("counts sent-and-beyond as the attest queue, and nothing earlier", () => {
-    // What the attest page's "Alla" view shows. A DRAFT nobody has sent is not
-    // in anyone's queue, and neither is one sent back for changes.
-    expect(isInAttestChain("PENDING_APPROVAL")).toBe(true);
-    expect(isInAttestChain("APPROVED")).toBe(true);
-    expect(isInAttestChain("EXPORTED")).toBe(true);
-    expect(isInAttestChain("DRAFT")).toBe(false);
-    expect(isInAttestChain("CHANGES_REQUESTED")).toBe(false);
   });
 
   it("lets an attester withdraw until the voucher exists", () => {
@@ -369,6 +350,8 @@ describe("status predicates", () => {
     // either record would render as an unstyled chip, and one sharing another's
     // classes would make two kinds look like one. Both are the sort of thing
     // nobody notices until a treasurer sorts by the wrong column.
+    // PAYMENT_CLASSES is a Record over PaymentType, so its keys are the full set.
+    const PAYMENT_TYPES = Object.keys(PAYMENT_CLASSES) as PaymentType[];
     for (const type of PAYMENT_TYPES) {
       expect(PAYMENT_CLASSES[type]).toBeTruthy();
       expect(PAYMENT_TEXT[type]).toBeTruthy();

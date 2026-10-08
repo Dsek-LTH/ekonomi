@@ -96,7 +96,7 @@ export async function allowBudgetWrite(target: BudgetTarget): Promise<Gate> {
 // and it closes when the budget is locked. This is the one that only opens
 // then: a locked budget is changed by recording
 // a BudgetChange beside it (see schema.prisma), which the skattmästare alone may
-// do. Written apart from `denyBudgetWrite` rather than folded into it. The two
+// do. Written apart from `allowBudgetWrite` rather than folded into it. The two
 // want opposite things from the lock, and the caller needs to know who is
 // acting, since the change is signed.
 

@@ -17,6 +17,7 @@ import { Field, FieldGroup, Input, Textarea } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconPlus, IconTrash } from "@/components/ui/icons";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Tag } from "@/components/ui/status-pill";
 import { useConfirm } from "@/components/confirm-dialog";
 import { effectiveKind, sheetName } from "@/lib/budget";
 import {
@@ -374,7 +375,7 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
               {t("label", { kind: change.kind, seq: change.seq })}
             </span>
             {revoked && (
-              <span className="rounded-control bg-surface px-2 py-0.5 text-xs font-medium text-muted">{t("revoked")}</span>
+              <Tag>{t("revoked")}</Tag>
             )}
             <span className="text-xs text-muted">
               {date(change.createdAt)} – {change.createdBy.name}

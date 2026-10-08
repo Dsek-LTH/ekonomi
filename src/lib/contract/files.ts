@@ -22,7 +22,7 @@ import {
 import { isImmutable } from "@/lib/contract/file-roles";
 import type { ContractFileRole } from "@/lib/domain/types";
 
-export interface StoredContractFile {
+interface StoredContractFile {
   id: string;
   role: ContractFileRole;
   filename: string;
@@ -98,7 +98,7 @@ export async function storeContractFile(args: {
 
 /** Why a file could not be removed. Maps to a message key under
  *  `errors.contract`, so a route hands it straight to `fail()`. */
-export type DeleteFailure = "fileNotFound" | "fileImmutable";
+type DeleteFailure = "fileNotFound" | "fileImmutable";
 
 /**
  * Remove a file from a contract: the bytes first, then the row.

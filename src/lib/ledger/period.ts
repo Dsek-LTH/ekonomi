@@ -41,7 +41,7 @@ export function periodEnd(raw: string | null, fallback: Date): Date {
 
 const clamp = (d: Date, lo: Date, hi: Date) => (d < lo ? lo : d > hi ? hi : d);
 
-export interface LedgerPeriod {
+interface LedgerPeriod {
   /** Every synced year, newest first. Both routes send this on for the picker. */
   years: LedgerYear[];
   /** The one being reported on: the year asked for, else the newest. */

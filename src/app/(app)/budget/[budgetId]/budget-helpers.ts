@@ -14,7 +14,7 @@ export const OTHER = "__other__";
 // Sheets with no cost centre behind them yet. Their own group rather than
 // OTHER: that one means "belongs to no result unit", this one means "not decided
 // yet", and the second is a to-do.
-export const UNLINKED = "__unlinked__";
+const UNLINKED = "__unlinked__";
 
 /** A group heading as it reads on screen. `t` is scoped to `budget.group`. */
 export const resultUnitLabel = (resultUnit: string, t: (key: string) => string): string =>
@@ -111,6 +111,31 @@ const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
  * to keep, and the reason the two are named differently rather than one
  * function being used for both.
  */
+/**
+ * What a formula cell shows when nobody is editing it.
+ *
+ * In order: the placeholder for an empty cell; the formula itself on a cell
+ * drawn as one (the Variabler sheet's expression column); "fel" for a formula
+ * that does not evaluate; on a wide screen, the working and its answer
+ * ("2 × TROJA_POLICY = 700") for a formula; and otherwise the answer alone.
+ * `value` is the evaluated figure, already formatted.
+ */
+export function formulaIdleText(cell: {
+  raw: string;
+  pretty: string;
+  value: string;
+  placeholder?: string;
+  asFormula: boolean;
+  bad?: boolean;
+  compact: boolean;
+}): string {
+  if (cell.raw.trim() === "") return cell.placeholder ?? "";
+  if (cell.asFormula) return cell.pretty || cell.raw;
+  if (cell.bad) return "fel";
+  if (cell.raw.trim().startsWith("=") && !cell.compact) return `${cell.pretty} = ${cell.value}`;
+  return cell.value;
+}
+
 export const fmt = (ore: number | undefined) =>
   ore === undefined || Number.isNaN(ore) ? "" : numFmt.format(ore / 100);
 export const fmtSigned = (ore: number | undefined) =>

@@ -175,7 +175,7 @@ function reportRow(r: LoadedReport): IncomeReportRow {
 
 /**
  * A verksamhet a mis-routed sale can be moved to, and the accounts it books
- * revenue to. See lib/income/move.ts and the move dialog.
+ * revenue to. See lib/income/lines.ts and the move dialog.
  *
  * The accounts are the ones its product prefixes point at, which is the closest
  * thing to "where does this unit's money normally go" the routing table holds.

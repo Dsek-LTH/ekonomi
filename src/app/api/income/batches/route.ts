@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
+import { intaktConfigFor } from "@/lib/api/intakt-route";
 import { parseBody } from "@/lib/api/parse";
 import { FetchIncome } from "@/lib/api/schemas/income";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
@@ -16,9 +17,7 @@ import {
   IntaktError,
   IntaktNotConfiguredError,
 } from "@/lib/income/client";
-import { buildIntaktConfig } from "@/lib/income/config";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
-import { loadUser } from "@/lib/server/current-user";
 
 export async function POST(req: Request) {
   const g = await gate(canAccessBookkeeping, "auth.denied");
@@ -30,18 +29,8 @@ export async function POST(req: Request) {
 
   if (to < from) return fail(422, "income.rangeBackwards");
 
-  // The report is attested by whoever asked for it. intakt's config.yaml named
-  // one treasurer, so every report it ever produced carried their name no
-  // matter who ran it; here it is simply the signed-in user.
-  const user = await loadUser(g.actor.id);
-  if (!user) return fail(401, "auth.signedOut");
-
-  const cfg = await buildIntaktConfig({ name: user.name, studentId: user.studentId });
-  if (!cfg.ok) {
-    return fail(409, `income.${cfg.blocker}`, {
-      ...(cfg.detail && { values: { detail: cfg.detail } }),
-    });
-  }
+  const cfg = await intaktConfigFor(g.actor.id);
+  if (!cfg.ok) return cfg.res;
 
   // Asked once for the whole range, before anything is stored: a day Fortnox
   // already holds a voucher for is not imported at all, so there is nothing on

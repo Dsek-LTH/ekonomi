@@ -34,7 +34,7 @@ export type Theme = "light" | "dark";
  * machine set to dark, "I have chosen light" and "I have not chosen" are two
  * different documents and only one of them may follow the OS.
  */
-export type ThemeChoice = Theme | null;
+type ThemeChoice = Theme | null;
 
 /**
  * Read a stored preference. Anything that is neither theme is "has not said",

@@ -43,16 +43,11 @@ export async function GET(req: Request) {
   return NextResponse.json(log);
 }
 
-export async function POST(req: Request) {
-  const g = await gate(canManageStock, "stock.noAccess");
-  if (!g.ok) return g.res;
-
-  const parsed = await parseBody(req, CreateStockEntry);
-  if (!parsed.ok) return parsed.res;
-  const body = parsed.data;
-
-  const product = await prisma.stockProduct.findUnique({
-    where: { id: body.productId },
+// The product as a movement needs it: what it is, how it is measured, and
+// what it costs and keeps today.
+function findProduct(id: string) {
+  return prisma.stockProduct.findUnique({
+    where: { id },
     select: {
       id: true,
       kind: true,
@@ -63,104 +58,99 @@ export async function POST(req: Request) {
       shelfLifeMonths: true,
     },
   });
-  if (!product) return fail(404, "stock.productNotFound");
+}
+type Product = NonNullable<Awaited<ReturnType<typeof findProduct>>>;
 
-  // What the log already says this product holds. Needed twice below: to turn a
-  // weighing into a movement, and to price whatever is leaving, which is what
-  // `withValue` is for.
-  const held = await heldOnHand(prisma, product, { withValue: true });
+// ── A stocktake ──
+//
+// What it states is what is on the shelf, so that is what is stored: a row
+// per rung holding the counted figure. The difference from what the books
+// expected is left to the replay, which works it out again every time
+// anything before the count changes, which is what makes a count a baseline
+// rather than an adjustment that quietly expires. See lib/stock/replay.ts.
+async function recordStocktake(
+  body: CreateStockEntry & { counted: NonNullable<CreateStockEntry["counted"]> },
+  product: Product,
+  actorId: string,
+) {
+  if (body.kind !== "COUNT") return fail(422, "stock.countedOnStocktakeOnly");
+  const wanted = [
+    { level: 0, qty: body.counted.sealed },
+    ...LEVELS.map((level) => ({
+      level,
+      qty: body.counted?.open?.[String(level) as "80"] ?? 0,
+    })),
+  ].filter((w) => product.kind === "VOLUME" || w.level === 0);
 
-  // ── The bottles ──
-  //
-  // A level is never re-estimated on the way out: the body picks bottles that
-  // are already on a rung, and the shelf has to actually have them. `pickFault`
-  // is where the bar's rule lives: the open ones leave before a sealed one
-  // does, and it is the same function the form asks before offering the
-  // button.
-  let units = body.units ?? 0;
-  const open: OpenBottles = {};
-  for (const level of LEVELS) {
-    const n = body.open?.[String(level) as keyof typeof body.open] ?? 0;
-    if (n !== 0) open[level] = n;
-  }
-
-  // ── A stocktake ──
-  //
-  // What it states is what is on the shelf, so that is what is stored: a row
-  // per rung holding the counted figure. The difference from what the books
-  // expected is left to the replay, which works it out again every time
-  // anything before the count changes, which is what makes a count a baseline
-  // rather than an adjustment that quietly expires. See lib/stock/replay.ts.
-  if (body.counted) {
-    if (body.kind !== "COUNT") return fail(422, "stock.countedOnStocktakeOnly");
-    const wanted = [
-      { level: 0, qty: body.counted.sealed },
-      ...LEVELS.map((level) => ({
-        level: level as number,
-        qty: body.counted?.open?.[String(level) as "80"] ?? 0,
+  // Two statements rather than ten. A stocktake of a VOLUME product is five
+  // rungs, each of which was its own entry insert followed by its own change
+  // insert, in sequence, inside the transaction.
+  const made = await bulkTransaction(async (tx) => {
+    const rows = await tx.stockEntry.createManyAndReturn({
+      data: wanted.map((w) => ({
+        productId: product.id,
+        kind: "COUNT" as const,
+        level: w.level,
+        countedQty: w.qty,
+        // What the product costs today, kept on the row. A stocktake that
+        // finds stock the log had lost is worth what that stock cost, and
+        // that has to stay what it was when a price is corrected later.
+        unitCostOre: product.costPriceOre,
+        occurredAt: new Date(body.occurredAt),
+        actorId: actorId,
+        note: body.note ?? null,
       })),
-    ].filter((w) => product.kind === "VOLUME" || w.level === 0);
-
-    // Two statements rather than ten. A stocktake of a VOLUME product is five
-    // rungs, each of which was its own entry insert followed by its own change
-    // insert, in sequence, inside the transaction.
-    const made = await bulkTransaction(async (tx) => {
-      const rows = await tx.stockEntry.createManyAndReturn({
-        data: wanted.map((w) => ({
-          productId: product.id,
-          kind: "COUNT" as const,
-          level: w.level,
-          countedQty: w.qty,
-          // What the product costs today, kept on the row. A stocktake that
-          // finds stock the log had lost is worth what that stock cost, and
-          // that has to stay what it was when a price is corrected later.
-          unitCostOre: product.costPriceOre,
-          occurredAt: new Date(body.occurredAt),
-          actorId: g.actor.id,
-          note: body.note ?? null,
-        })),
-        select: { id: true },
-      });
-      // In the order given, which is what pairs each row with its rung.
-      await tx.stockChange.createMany({
-        data: rows.map((row, i) => ({
-          entryId: row.id,
-          productId: product.id,
-          action: "CREATE" as const,
-          kind: "COUNT" as const,
-          level: wanted[i].level,
-          toQty: wanted[i].qty,
-          actorId: g.actor.id,
-        })),
-      });
-      await replayProduct(tx, product.id);
-      return rows.map((r) => r.id);
+      select: { id: true },
     });
-    return NextResponse.json({ id: made[0] }, { status: 201 });
-  }
+    // In the order given, which is what pairs each row with its rung.
+    await tx.stockChange.createMany({
+      data: rows.map((row, i) => ({
+        entryId: row.id,
+        productId: product.id,
+        action: "CREATE" as const,
+        kind: "COUNT" as const,
+        level: wanted[i].level,
+        toQty: wanted[i].qty,
+        actorId: actorId,
+      })),
+    });
+    await replayProduct(tx, product.id);
+    return rows.map((r) => r.id);
+  });
+  return NextResponse.json({ id: made[0] }, { status: 201 });
+}
 
-  // ── The event ──
-  //
-  // The three kinds that make up a night must name one. A movement of stock to
-  // or from a bar that belongs to no night is a row nothing can ever reconcile:
-  // a pub running past midnight is two dates and a committee may take stock out
-  // twice in an evening, so nothing but an explicit event says which rows go
-  // together.
-  const NEEDS_EVENT: StockEntryKind[] = ["CHECKOUT", "RETURN", "WASTE"];
+// ── The event ──
+//
+// The three kinds that make up a night must name one. A movement of stock to
+// or from a bar that belongs to no night is a row nothing can ever reconcile:
+// a pub running past midnight is two dates and a committee may take stock out
+// twice in an evening, so nothing but an explicit event says which rows go
+// together.
+const NEEDS_EVENT: StockEntryKind[] = ["CHECKOUT", "RETURN", "WASTE"];
+
+/**
+ * Whether this movement names the night it belongs to (or, for the cellar's
+ * own kinds, names none), and what that night still has out of this product.
+ */
+async function nightCeiling(
+  body: CreateStockEntry,
+  product: Product,
+): Promise<{ ok: true; stillOut: number } | { ok: false; res: NextResponse }> {
   if (NEEDS_EVENT.includes(body.kind)) {
-    if (!body.eventId) return fail(422, "stock.eventRequired");
+    if (!body.eventId) return { ok: false, res: fail(422, "stock.eventRequired") };
     const event = await prisma.stockEvent.findUnique({
       where: { id: body.eventId },
       select: { id: true },
     });
-    if (!event) return fail(422, "stock.eventNotFound");
+    if (!event) return { ok: false, res: fail(422, "stock.eventNotFound") };
   } else if (body.eventId) {
     // A delivery, a stocktake and a cellar write-off are about the cellar
     // rather than a night, and letting one carry an event would put stock into
     // a night's arithmetic that never went to it. A SPOILAGE especially: it
     // takes stock off the shelf, and against an event that had already checked
     // that stock out it would take the same bottle away twice.
-    return fail(422, "stock.eventOnNightOnly");
+    return { ok: false, res: fail(422, "stock.eventOnNightOnly") };
   }
 
   // What this event has already moved of this product, which is the ceiling on
@@ -193,6 +183,47 @@ export async function POST(req: Request) {
       ),
     );
   }
+
+  return { ok: true, stillOut };
+}
+
+export async function POST(req: Request) {
+  const g = await gate(canManageStock, "stock.noAccess");
+  if (!g.ok) return g.res;
+
+  const parsed = await parseBody(req, CreateStockEntry);
+  if (!parsed.ok) return parsed.res;
+  const body = parsed.data;
+
+  const product = await findProduct(body.productId);
+  if (!product) return fail(404, "stock.productNotFound");
+
+  // A stocktake states what is on the shelf rather than moving anything, so it
+  // is written its own way. Everything below is a movement.
+  if (body.counted) return recordStocktake({ ...body, counted: body.counted }, product, g.actor.id);
+
+  // What the log already says this product holds. Needed twice below: to check
+  // that the bottles being taken are actually on the shelf, and to price
+  // whatever is leaving, which is what `withValue` is for.
+  const held = await heldOnHand(prisma, product, { withValue: true });
+
+  // ── The bottles ──
+  //
+  // A level is never re-estimated on the way out: the body picks bottles that
+  // are already on a rung, and the shelf has to actually have them. `pickFault`
+  // is where the bar's rule lives: the open ones leave before a sealed one
+  // does, and it is the same function the form asks before offering the
+  // button.
+  let units = body.units ?? 0;
+  const open: OpenBottles = {};
+  for (const level of LEVELS) {
+    const n = body.open?.[String(level) as keyof typeof body.open] ?? 0;
+    if (n !== 0) open[level] = n;
+  }
+
+  const night = await nightCeiling(body, product);
+  if (!night.ok) return night.res;
+  const { stillOut } = night;
 
   // ── A spill moves no stock ──
   //

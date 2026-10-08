@@ -7,7 +7,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useReturnTo } from "@/components/shell/route-history";
 
-export type TransitionAction =
+type TransitionAction =
   | "submit"
   | "approve"
   | "withdraw_attest"

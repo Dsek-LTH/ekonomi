@@ -21,9 +21,10 @@ import { Amount } from "@/components/ui/amount";
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+import { formatNumber } from "@/lib/ui/format";
 
 /** The small capitals every label and column head on the card is set in. */
-export const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted";
+const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted";
 
 /**
  * One part of the card below the strip, ruled off from the part above.
@@ -186,9 +187,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  */
 function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> }) {
   const t = useTranslations("mileage");
-  const nf = (min: number, max: number) =>
-    new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
-  const reading = (km: number | null) => (km == null ? "–" : nf(1, 1).format(km));
+  const reading = (km: number | null) => (km == null ? "–" : formatNumber(km, 1, 1));
   // Only the stops that name a place. A draft saved with a blank row in the
   // middle would otherwise draw an arrow pointing at nothing.
   const stops = namedStops(journey.stops);
@@ -225,10 +224,10 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
       </Fact>
       <Fact label={t("distance")}>
         <span className="tabular-nums">
-          {journey.km == null ? "–" : t("km", { km: nf(0, 1).format(journey.km) })}
+          {journey.km == null ? "–" : t("km", { km: formatNumber(journey.km, 0, 1) })}
           {journey.orePerKm != null && (
             <span className="ml-3 text-xs text-muted">
-              {t("rates.perKm", { amount: nf(2, 2).format(journey.orePerKm / 100) })}
+              {t("rates.perKm", { amount: formatNumber(journey.orePerKm / 100, 2, 2) })}
             </span>
           )}
         </span>

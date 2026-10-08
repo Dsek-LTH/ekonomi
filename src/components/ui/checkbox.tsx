@@ -25,7 +25,16 @@ import { IconCheck } from "./icons";
  * but disappeared. A box's edge is what says there is a box at all, so it owes
  * the 3:1 that `faint` is for, and the fill keeps it a box on a tinted row.
  */
-export function CheckMark({ on, className }: { on: boolean; className?: string }) {
+export function CheckMark({
+  on,
+  mixed = false,
+  className,
+}: {
+  on: boolean;
+  /** Some of a set ticked: drawn as a dash rather than as either state. */
+  mixed?: boolean;
+  className?: string;
+}) {
   return (
     <span
       aria-hidden
@@ -35,11 +44,15 @@ export function CheckMark({ on, className }: { on: boolean; className?: string }
       data-check=""
       className={cn(
         "flex size-4 shrink-0 items-center justify-center rounded-mark border transition-colors",
-        on ? "border-accent bg-accent-soft" : "border-faint bg-background",
+        on || mixed ? "border-accent bg-accent-soft" : "border-faint bg-background",
         className,
       )}
     >
-      {on && <IconCheck className="size-3" />}
+      {mixed ? (
+        <span className="h-0.5 w-2 rounded-full bg-accent" />
+      ) : (
+        on && <IconCheck className="size-3" />
+      )}
     </span>
   );
 }
@@ -55,11 +68,18 @@ export function Checkbox({
   checked,
   onChange,
   label,
+  indeterminate = false,
   className,
   children,
 }: {
   checked: boolean;
   onChange: () => void;
+  /**
+   * A select-all box over a list that is partly ticked. Half a selection is
+   * neither state the box has, and the dash is what says so. Set on the input
+   * too, so a screen reader announces it as mixed.
+   */
+  indeterminate?: boolean;
   /** The accessible name. There is no visible one. These sit in a margin. */
   label: string;
   className?: string;
@@ -87,6 +107,9 @@ export function Checkbox({
         checked={checked}
         onChange={onChange}
         aria-label={label}
+        ref={(el) => {
+          if (el) el.indeterminate = indeterminate;
+        }}
         // Enter as well as space. A checkbox answers only to space natively.
         // Enter belongs to the form it is in, but a box in a table is not in a
         // form, it is one of a column of things being ticked, and Enter is what
@@ -103,6 +126,7 @@ export function Checkbox({
           globals.css. A Tailwind `ring-*` would be a second, thicker idiom. */}
       <CheckMark
         on={checked}
+        mixed={indeterminate}
         className="peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-[var(--color-ring)]"
       />
       {children && <span className="ml-2.5 text-sm">{children}</span>}

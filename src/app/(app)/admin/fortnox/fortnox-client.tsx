@@ -14,9 +14,10 @@ import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { FieldGroup, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconChevronDown, IconSync } from "@/components/ui/icons";
+import { IconSync } from "@/components/ui/icons";
 import { SearchInput } from "@/components/ui/search-input";
 import { Tag } from "@/components/ui/status-pill";
+import { ExpandToggle } from "@/components/ui/expand-toggle";
 import { useConfirm } from "@/components/confirm-dialog";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
 import { useNotify } from "@/components/shell/notifications";
@@ -311,17 +312,9 @@ export function FortnoxClient({
             }
           >
             {accounts.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-expanded={showAccounts}
-                onClick={() => setShowAccounts(!showAccounts)}
-              >
+              <ExpandToggle open={showAccounts} onToggle={() => setShowAccounts(!showAccounts)}>
                 {showAccounts ? t("hideAccounts") : t("showAccounts")}
-                <IconChevronDown
-                  className={cn("size-4 transition-transform", showAccounts && "rotate-180")}
-                />
-              </Button>
+              </ExpandToggle>
             )}
             {syncButton("accounts", t("syncChart"), syncAccounts)}
           </SyncRow>

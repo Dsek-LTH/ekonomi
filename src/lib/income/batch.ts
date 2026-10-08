@@ -7,6 +7,7 @@
 // reload.
 import "server-only";
 
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import type { IncomeSource } from "@/lib/domain/types";
 import { incomeVoucherKey, type FortnoxIncomeVouchers } from "./duplicate";
@@ -53,6 +54,25 @@ interface CommonInput {
   to: string;
   filename?: string | null;
   createdById: string;
+}
+
+/**
+ * The batch row a fetch writes its reports under, after clearing the unbooked
+ * reports from earlier fetches that this one replaces. Both kinds of fetch
+ * start the same way; only what they then write differs.
+ */
+async function openBatch(tx: Prisma.TransactionClient, input: CommonInput, stale: string[]) {
+  const created = await tx.incomeBatch.create({
+    data: {
+      source: input.source,
+      fromDate: new Date(`${input.from}T00:00:00.000Z`),
+      toDate: new Date(`${input.to}T00:00:00.000Z`),
+      filename: input.filename ?? null,
+      createdById: input.createdById,
+    },
+  });
+  if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
+  return created;
 }
 
 /**
@@ -170,19 +190,9 @@ export async function createSalesBatch(
   // One transaction: a half-written batch is worse than none, because the part
   // that landed looks like a complete import of a narrower range.
   const batch = await prisma.$transaction(async (tx) => {
-    const created = await tx.incomeBatch.create({
-      data: {
-        source: input.source,
-        fromDate: new Date(`${input.from}T00:00:00.000Z`),
-        toDate: new Date(`${input.to}T00:00:00.000Z`),
-        filename: input.filename ?? null,
-        createdById: input.createdById,
-      },
-    });
-
     // Inside the transaction, and before the new ones: if this import fails
     // half way, what it was clearing is still there.
-    if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
+    const created = await openBatch(tx, input, stale);
 
     const reportIds: string[] = [];
     for (const { report, resultUnitId, date } of fresh) {
@@ -263,17 +273,8 @@ export async function createFeeBatch(
   const stale = already.unbookedIds;
 
   const batch = await prisma.$transaction(async (tx) => {
-    const created = await tx.incomeBatch.create({
-      data: {
-        source: input.source,
-        fromDate: new Date(`${input.from}T00:00:00.000Z`),
-        toDate: new Date(`${input.to}T00:00:00.000Z`),
-        createdById: input.createdById,
-      },
-    });
-
     // Replaced, not duplicated. See createSalesBatch.
-    if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
+    const created = await openBatch(tx, input, stale);
 
     const reportIds: string[] = [];
     for (const { report, date } of fresh) {

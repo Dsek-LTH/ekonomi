@@ -57,6 +57,7 @@ import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import type { CostCenter, Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
+import { formatNumber } from "@/lib/ui/format";
 
 /**
  * What an odometer field holds. Kept as text for the same reason the amount
@@ -312,10 +313,8 @@ export default function MileageClient({
     done(id);
   }
 
-  const nf = (min: number, max: number) =>
-    new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
-  const money = (sek: number) => nf(2, 2).format(sek);
-  const km = (n: number) => nf(0, 1).format(n);
+  const money = (sek: number) => formatNumber(sek, 2, 2);
+  const km = (n: number) => formatNumber(n, 0, 1);
 
   const odometerField = (
     label: string,

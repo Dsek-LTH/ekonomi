@@ -1,7 +1,7 @@
 // Draws the six example receipts on the FAQ page (see faq-content/examples-*.json)
 // for a made-up shop, and writes them to public/faq/receipts/ as PNGs.
 //
-//   node scripts/faq-receipts.cjs
+//   node scripts/faq-receipts.mjs
 //
 // Drawn rather than photographed: a real receipt is somebody's photo and some
 // real shop's details, and it almost never shows exactly the one defect its
@@ -10,10 +10,12 @@
 //
 // Fonts are Menlo and Helvetica, which macOS has. Elsewhere librsvg falls back
 // to whatever monospace and sans-serif fontconfig finds.
-const path = require("path");
-const sharp = require("sharp");
-const OUT = path.join(__dirname, "..", "public", "faq", "receipts");
-require("fs").mkdirSync(OUT, { recursive: true });
+import fs from "node:fs";
+import path from "node:path";
+import sharp from "sharp";
+
+const OUT = path.join(import.meta.dirname, "..", "public", "faq", "receipts");
+fs.mkdirSync(OUT, { recursive: true });
 
 const W = 900, H = 1200;
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

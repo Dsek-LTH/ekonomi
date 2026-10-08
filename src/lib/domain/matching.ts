@@ -62,7 +62,7 @@ interface MatchableTransaction {
  * claimed it, because saying "already claimed" of a row that would not have
  * fitted anyway is an answer that sends the reader after the wrong thing.
  */
-export type MatchBlock =
+type MatchBlock =
   /** Money out where money in is needed, or the reverse. */
   | "direction"
   /** Points the right way, wrong size. */

@@ -18,15 +18,15 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Field, Input, DateInput } from "@/components/ui/field";
 import { Tag } from "@/components/ui/status-pill";
-import { IconChevronDown, IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconPlus, IconTrash } from "@/components/ui/icons";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { parseSEK } from "@/lib/domain/money";
 import { AmountInput } from "@/components/ui/amount-input";
+import { ExpandToggle } from "@/components/ui/expand-toggle";
 import { rateOn } from "@/lib/mileage/rate";
 import { today } from "@/lib/domain/date";
 import { useFormat } from "@/lib/ui/use-format";
-import { cn } from "@/lib/ui/utils";
 import type { MileageRateRow } from "@/lib/data/mileage";
 import type { MileageRateInput } from "@/lib/api/schemas/admin";
 
@@ -224,16 +224,9 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
       {earlier.length > 0 && (
         <div className="border-t border-border">
           <div className="px-inset py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={showHistory}
-              onClick={() => setShowHistory(!showHistory)}
-              className="-ml-2"
-            >
+            <ExpandToggle open={showHistory} onToggle={() => setShowHistory(!showHistory)} className="-ml-2">
               {showHistory ? t("hideEarlier") : t("showEarlier", { count: earlier.length })}
-              <IconChevronDown className={cn("size-4 transition-transform", showHistory && "rotate-180")} />
-            </Button>
+            </ExpandToggle>
           </div>
           {showHistory && (
             <ul className="border-t border-border">

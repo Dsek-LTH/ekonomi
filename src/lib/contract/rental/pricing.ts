@@ -24,7 +24,7 @@ export interface PricedLine {
   discountPercent: number;
 }
 
-export interface LinePricing {
+interface LinePricing {
   /** Quantity times unit price: what the line would cost undiscounted. */
   grossOre: number;
   /** The percentage actually applied, after clamping. */
@@ -35,7 +35,7 @@ export interface LinePricing {
   netOre: number;
 }
 
-export interface RentalPricing {
+interface RentalPricing {
   /** Every line's gross, added up. What an invoice calls the subtotal. */
   subtotalOre: number;
   /** Every line's discount, added up. */

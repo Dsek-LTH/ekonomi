@@ -102,7 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   let spilledQty = 0;
   if (entry.kind === "WASTE") spilledQty = qty;
   else if (entry.level === 0) units = entry.kind === "COUNT" ? entry.units : sign * qty;
-  else open[entry.level as 80] = entry.kind === "COUNT" ? (entry.open80 ?? 0) : sign * qty;
+  else open[entry.level as 80] = entry.kind === "COUNT" ? entry.open80 : sign * qty;
   if (entry.kind === "COUNT") return fail(422, "stock.recountInstead");
 
   const fault = entryFault({ kind: entry.kind, units, open, spilledQty }, product);

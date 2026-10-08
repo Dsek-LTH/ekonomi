@@ -541,7 +541,7 @@ export async function POST(
   // Whatever is left is one of the two simple transitions. The schema's enum
   // is what says so, and the check that used to answer 400 for an unknown
   // action is gone with it.
-  const rule = SIMPLE_TRANSITIONS[action as SimpleAction];
+  const rule = SIMPLE_TRANSITIONS[action];
   if (!rule.from.includes(expense.status)) {
     return fail(409, "expense.actionNotFromStatus", {
       values: { status: { key: `common.status.${expense.status}` } },
@@ -624,7 +624,7 @@ export async function POST(
     // again here rather than trusted from when it was set.
     if (
       expense.matchedTransaction &&
-      !cancelsOut(expense.matchedTransaction.amount, expense.grossAmount ?? 0)
+      !cancelsOut(expense.matchedTransaction.amount, expense.grossAmount)
     ) {
       return fail(422, "expense.matchStale");
     }

@@ -325,7 +325,7 @@ const NAV_GROUPS: NavGroup[] = [
  * list the overlay's internal nav and the landing page's cards use), since a
  * page reached through one of them wants the same treatment as any other.
  */
-export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
+const SECTION_LABELS: Record<string, string> = Object.fromEntries(
   [OVERVIEW, HELP, SETTINGS, ...NAV_GROUPS.flatMap((g) => g.items), ...SETTINGS_SECTIONS].map(
     (item) => [item.href, item.label],
   ),

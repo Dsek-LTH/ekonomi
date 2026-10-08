@@ -42,6 +42,12 @@ const cell = (v: string | number | null | undefined): string => {
 /** A translator scoped to the `ledger` namespace, see LedgerClient. */
 type Labels = (key: string) => string;
 
+/** The figures every line of the report carries, account and total alike. */
+type Figures = Pick<
+  ReportAccount,
+  "opening" | "closing" | "comparison" | "accumulated" | "prior" | "priorAccumulated"
+>;
+
 export function reportToCsv(
   report: LedgerReport,
   opts: {
@@ -62,29 +68,42 @@ export function reportToCsv(
   // picked, the period, as there.
   const picked = RESULT_COLUMNS.filter((c) => opts.columns.includes(c));
   const resultCols: readonly ResultColumn[] = isBalance ? [] : picked.length ? picked : ["period"];
-  const resultHead = (c: ResultColumn) => (c === "period" ? t("csv.amount") : t(`csv.${c}`));
-  // One line's figures for those columns. The period is passed in because an
+
+  // One result column's figure for a line. The period is passed in because an
   // account calls it `amount` and a total `total`.
-  const resultCells = (
-    x: { accumulated: number | null; prior: number | null; priorAccumulated: number | null },
-    period: number,
-  ) =>
-    resultCols.map((c) =>
-      c === "period"
-        ? period
-        : c === "priorDiff"
-          ? x.prior == null
-            ? null
-            : period - x.prior
-          : x[c],
-    );
+  const resultCell = (c: ResultColumn, x: Figures, period: number) => {
+    switch (c) {
+      case "period":
+        return period;
+      case "priorDiff":
+        return x.prior == null ? null : period - x.prior;
+      default:
+        return x[c];
+    }
+  };
+
+  // Every figure column of one line, in the header's order. The same for an
+  // account, a section's total and the report's, which is the point: the three
+  // kinds of row cannot come to disagree about what a column holds.
+  const figures = (x: Figures, period: number) => {
+    // What a comparison is taken against: the period's movement on a result
+    // report, the closing balance on a balance one. See rowValue.
+    const value = isBalance ? (x.closing ?? 0) : period;
+    return [
+      ...(isBalance ? [x.opening ?? 0, period, x.closing ?? 0] : []),
+      ...resultCols.map((c) => resultCell(c, x, period)),
+      ...(opts.showComparison ? [x.comparison] : []),
+      ...(showDiff ? [x.comparison == null ? null : value - x.comparison] : []),
+    ];
+  };
+
   const head = [
     ...(opts.specified ? [t("csv.costCenter"), t("csv.costCenterName")] : []),
     t("csv.section"),
     t("csv.account"),
     t("csv.accountName"),
     ...(isBalance ? [t("csv.opening"), t("csv.period"), t("csv.closing")] : []),
-    ...resultCols.map(resultHead),
+    ...resultCols.map((c) => (c === "period" ? t("csv.amount") : t(`csv.${c}`))),
     ...(opts.showComparison ? [opts.comparisonLabel] : []),
     ...(showDiff ? [t("csv.difference")] : []),
   ];
@@ -97,50 +116,14 @@ export function reportToCsv(
       ? [g.costCenterCode ?? t("noCostCenter"), g.costCenterName ?? ""]
       : [];
     for (const s of g.sections) {
+      const name = t(`section.${s.key}`);
       for (const a of s.accounts) {
-        const value = rowValue(a, isBalance);
-        push([
-          ...cc,
-          t(`section.${s.key}`),
-          a.account,
-          a.accountName,
-          ...(isBalance ? [a.opening ?? 0, a.amount, a.closing ?? 0] : []),
-          ...resultCells(a, a.amount),
-          ...(opts.showComparison ? [a.comparison] : []),
-          ...(showDiff ? [a.comparison == null ? null : value - a.comparison] : []),
-        ]);
+        push([...cc, name, a.account, a.accountName, ...figures(a, a.amount)]);
       }
-      push([
-        ...cc,
-        t(`section.${s.key}`),
-        "",
-        t(`sectionTotal.${s.key}`),
-        ...(isBalance ? [s.opening ?? 0, s.total, s.closing ?? 0] : []),
-        ...resultCells(s, s.total),
-        ...(opts.showComparison ? [s.comparison] : []),
-        ...(showDiff
-          ? [s.comparison == null ? null : totalValue(s, isBalance) - s.comparison]
-          : []),
-      ]);
+      push([...cc, name, "", t(`sectionTotal.${s.key}`), ...figures(s, s.total)]);
     }
   }
-
-  push([
-    ...(opts.specified ? ["", ""] : []),
-    "",
-    "",
-    t("csv.total"),
-    ...(isBalance ? [report.opening ?? 0, report.total, report.closing ?? 0] : []),
-    ...resultCells(report, report.total),
-    ...(opts.showComparison ? [report.comparison] : []),
-    ...(showDiff
-      ? [
-          report.comparison == null
-            ? null
-            : totalValue(report, isBalance) - report.comparison,
-        ]
-      : []),
-  ]);
+  push([...(opts.specified ? ["", ""] : []), "", "", t("csv.total"), ...figures(report, report.total)]);
 
   return `﻿${lines.join("\r\n")}\r\n`;
 }

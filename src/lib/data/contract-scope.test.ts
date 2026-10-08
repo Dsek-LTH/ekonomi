@@ -4,7 +4,6 @@ import {
   contractScopeOf,
   contractScopeWhere,
   scopeIncludes,
-  scopeIsEmpty,
   type Viewer,
 } from "./contract-scope";
 import type { Capability } from "@/lib/domain/types";
@@ -34,7 +33,7 @@ describe("contractScopeOf", () => {
   });
 
   it("gives nothing to somebody holding neither", () => {
-    expect(scopeIsEmpty(contractScopeOf(NOBODY))).toBe(true);
+    expect(contractScopeOf(NOBODY)).toEqual({ kind: "none" });
   });
 
   it("prefers the wider grant when somebody holds both", () => {

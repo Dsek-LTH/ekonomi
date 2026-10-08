@@ -48,6 +48,7 @@ import { ClientDataTable } from "@/components/ui/client-data-table";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
 import { TableScroll } from "@/components/ui/table-scroll";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { incomeVoucherDescription } from "@/lib/income/voucher";
 import { useFormat } from "@/lib/ui/use-format";
@@ -967,34 +968,23 @@ export default function IncomeReviewClient({
                                     the checkbox. */}
                                 <th className="w-6 pl-3" />
                                 <th className="w-8 py-2 pl-2">
-                                  {/* A checkbox is an inline box, so it sits on the
-                                      cell's text baseline with the line's descender
-                                      space under it, which centring the *cell*
-                                      cannot fix, because the box is where it was
-                                      put inside it. A flex wrapper takes it off the
-                                      baseline, the same way the grip beside it is
-                                      laid out. */}
-                                  <span className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      className="size-4 accent-accent"
-                                      checked={
-                                        picked.length > 0 && picked.length === selected.lines.length
-                                      }
-                                      // Half a selection is neither state the box has,
-                                      // and the dash is what says so.
-                                      ref={(el) => {
-                                        if (el) {
-                                          el.indeterminate =
-                                            picked.length > 0 && picked.length < selected.lines.length;
-                                        }
-                                      }}
-                                      onChange={(e) =>
-                                        pick(e.target.checked ? selected.lines.map((l) => l.id) : [])
-                                      }
-                                      aria-label={t("move.selectAll")}
-                                    />
-                                  </span>
+                                  <Checkbox
+                                    checked={
+                                      picked.length > 0 && picked.length === selected.lines.length
+                                    }
+                                    indeterminate={
+                                      picked.length > 0 && picked.length < selected.lines.length
+                                    }
+                                    // Ticks all from empty or partial, clears from full.
+                                    onChange={() =>
+                                      pick(
+                                        picked.length === selected.lines.length
+                                          ? []
+                                          : selected.lines.map((l) => l.id),
+                                      )
+                                    }
+                                    label={t("move.selectAll")}
+                                  />
                                 </th>
                               </>
                             )}
@@ -1075,11 +1065,7 @@ export default function IncomeReviewClient({
                                     />
                                   </td>
                                   <td className="py-2 pl-2">
-                                    {/* Off the baseline. See the header's box. */}
-                                    <span className="flex items-center">
-                                      <input
-                                        type="checkbox"
-                                        className="size-4 accent-accent"
+                                    <Checkbox
                                         checked={picked.includes(row.line.id)}
                                         onChange={() =>
                                           pick(
@@ -1092,11 +1078,10 @@ export default function IncomeReviewClient({
                                         // out of the table "Ost" is not a
                                         // product, and a checkbox announced on
                                         // its own has no heading above it.
-                                        aria-label={t("move.selectLine", {
+                                        label={t("move.selectLine", {
                                           product: productDisplayName(row.line),
                                         })}
                                       />
-                                    </span>
                                   </td>
                                 </>
                               )}

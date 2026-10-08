@@ -15,6 +15,8 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { PageShell } from "@/components/page-shell";
 import { IconCompare, IconCopy, IconPlus, IconTrash, IconUpload } from "@/components/ui/icons";
+import { Tag } from "@/components/ui/status-pill";
+import { Checkbox } from "@/components/ui/checkbox";
 import { isAdmin } from "@/lib/domain/permissions";
 import { cn } from "@/lib/ui/utils";
 import { useProgressRouter } from "@/components/shell/route-progress";
@@ -165,18 +167,12 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
         // (The action buttons on other lists sit in the last column, after the
         // link, which is why this only ever bit here.)
         //
-        // `flex` rather than a bare span: a checkbox is an inline box and sits
-        // on the cell's text baseline with the line's descender space beneath
-        // it, which is what left it riding high against the two-line name.
-        <span className="relative z-10 flex items-center">
-          <input
-            type="checkbox"
-            checked={picked.includes(b.id)}
-            onChange={() => toggle(b.id)}
-            aria-label={t("compareAria", { year: b.year, name: b.name })}
-            className="size-4 accent-accent"
-          />
-        </span>
+        <Checkbox
+          className="z-10"
+          checked={picked.includes(b.id)}
+          onChange={() => toggle(b.id)}
+          label={t("compareAria", { year: b.year, name: b.name })}
+        />
       ),
     },
     {
@@ -215,7 +211,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
         <p className="flex items-center gap-2 truncate text-sm font-medium">
           {b.name}
           {b.lockedAt && (
-            <span className="rounded-control bg-purple-soft px-1.5 py-0.5 text-[11px] font-medium text-purple">{t("locked")}</span>
+            <Tag tone="purple" size="sm">{t("locked")}</Tag>
           )}
         </p>
       ),

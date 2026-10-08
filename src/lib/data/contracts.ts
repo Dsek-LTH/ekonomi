@@ -64,7 +64,7 @@ export interface ContractSummary {
   createdAt: string;
 }
 
-export interface ContractFileRow {
+interface ContractFileRow {
   id: string;
   role: ContractFileRole;
   filename: string;
@@ -292,7 +292,7 @@ export async function getContract(
     tags: c.tags,
     notes: c.notes,
     termsVersion: c.agreement?.termsVersion ?? null,
-    createdBy: c.createdBy?.name ?? null,
+    createdBy: c.createdBy.name,
     fileCount: c.files.length,
     createdAt: c.createdAt.toISOString(),
     files: c.files.map((f) => ({

@@ -20,13 +20,13 @@ import type { Budget } from "./budget-types";
 
 // The sentinel target for "this year's outcome from Fortnox". Anything else is
 // a budget id; "" is no comparison at all.
-export const ACTUALS = "__actuals__";
+const ACTUALS = "__actuals__";
 
 interface BudgetSummary { id: string; year: number; name: string }
 
 // Flat, and every label leads with its year, the picker searches on the label,
 // so typing "2025" narrows to that year without needing grouped sections.
-export interface CompareOption { value: string; label: string }
+interface CompareOption { value: string; label: string }
 
 export interface Comparison {
   /** This budget, and, when one is picked, what it is being held against. */

@@ -204,7 +204,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
           type="button"
           role="tab"
           aria-selected={o.value === value}
-          onClick={() => onChange?.(o.value)}
+          onClick={() => onChange(o.value)}
           className={item(o.value === value)}
         >
           {o.label}
