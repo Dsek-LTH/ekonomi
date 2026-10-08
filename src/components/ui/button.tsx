@@ -48,15 +48,15 @@ const VARIANTS: Record<Variant, string> = {
 
 // "md" is the button a page's actions are drawn at, and like the compact
 // control register (CONTROL_SIZES in ui/field.tsx) it stands taller on a phone:
-// 40px is a comfortable pointer target and four short of a thumb's.
+// 44px for a thumb, and 36px from sm up, level with the filter bar's fields.
 //
 // "sm" is left alone. It is the button that sits inside a table row or beside a
 // field, where it is measured against what it stands next to rather than
 // against a finger, and growing it would push those rows apart.
 const SIZES: Record<Size, string> = {
   sm: "h-8 px-3.5 text-[13px]",
-  md: "h-11 px-5 text-sm sm:h-10",
-  lg: "h-12 px-7 text-base",
+  md: "h-11 px-4 text-sm sm:h-9",
+  lg: "h-11 px-6 text-base sm:h-10",
 };
 
 // The dimming is applied per-render rather than living here, because a busy
@@ -64,7 +64,7 @@ const SIZES: Record<Size, string> = {
 // only concatenates, so an override class would be settled by Tailwind's
 // emission order instead of by intent, hence one or the other, never both.
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all duration-150 ease-[var(--ease-out-quint)] disabled:pointer-events-none whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 rounded-control font-medium transition-all duration-150 ease-[var(--ease-out-quint)] disabled:pointer-events-none whitespace-nowrap";
 const DIMMED = "disabled:opacity-40";
 
 type CommonProps = {
@@ -105,6 +105,15 @@ export function Button({
       className={cn(BASE, !loading && DIMMED, VARIANTS[variant], SIZES[size], className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      // Firefox restores a button's disabled state when a page is reloaded or
+      // come back to, and it does it to the fresh HTML before React hydrates.
+      // A button that was enabled last time (Exportera, before the Fortnox
+      // login ran out) then comes back enabled whatever the server said, React
+      // reports a hydration mismatch, and it does not patch the attribute, so
+      // the button stays clickable. Off means the server's answer stands.
+      // Spread because React's types only list autoComplete on fields, though
+      // browsers read it on a button too.
+      {...{ autoComplete: "off" }}
       {...props}
     >
       {loading ? (

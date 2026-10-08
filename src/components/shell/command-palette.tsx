@@ -157,7 +157,7 @@ export function CommandPalette({
               aria-expanded
               aria-controls={listId}
               aria-autocomplete="list"
-              className="h-9 w-full rounded-lg border border-border bg-background pl-8 pr-2.5 text-sm"
+              className="h-9 w-full rounded-control border border-border bg-background pl-8 pr-2.5 text-sm"
             />
           </div>
         </div>
@@ -186,8 +186,9 @@ export function CommandPalette({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(item)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                    i === active ? "bg-surface ring-1 ring-accent" : "hover:bg-hover",
+                    "flex w-full items-center gap-3 rounded-control px-3 py-2 text-left text-sm transition-colors",
+                    // The same neutral highlight as a combobox option; see there.
+                    i === active && "bg-hover",
                   )}
                 >
                   <Icon className="size-4 shrink-0 text-muted" />

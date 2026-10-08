@@ -347,7 +347,7 @@ export function AccountBlock({ account }: { account: Account }) {
               aria-label={t("commentsCount", { count: account.comments.length })}
               aria-expanded={open}
               className={cn(
-                "flex items-center gap-1 rounded-lg px-1.5 py-1 tabular-nums transition hover:bg-hover hover:text-foreground",
+                "flex items-center gap-1 rounded-control px-1.5 py-1 tabular-nums transition hover:bg-hover hover:text-foreground",
                 // Accent while the thread is open; a plain (unmuted) icon means
                 // "there is something to read here" without opening it.
                 open ? "text-accent" : account.comments.length > 0 && "text-foreground",
@@ -398,7 +398,7 @@ export function AccountBlock({ account }: { account: Account }) {
                     if (ok) setCommentDraft((m) => ({ ...m, [account.id]: "" }));
                   }}
                   placeholder={t("commentPlaceholder")}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                  className="w-full rounded-control border border-border bg-background px-3 py-1.5 text-sm"
                 />
               )}
             </div>

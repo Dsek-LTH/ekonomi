@@ -16,14 +16,12 @@ import { canChangeLockedBudget, canCommentBudget, canLockBudget, isAdmin as isAd
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
-import { IconButton } from "@/components/ui/icon-button";
 import { startRouteProgress } from "@/components/shell/route-progress";
 import { IconLock, IconLockOpen } from "@/components/ui/icons";
 
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
-import { useFormat } from "@/lib/ui/use-format";
 import { useStickyFollow } from "@/lib/ui/use-sticky-follow";
 import { cn } from "@/lib/ui/utils";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
@@ -50,14 +48,12 @@ export default function BudgetClient({
 }) {
   const { budgetId } = useParams<{ budgetId: string }>();
   const t = useTranslations("budget.sheet");
-  const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const tList = useTranslations("budget.list");
   const tAlloc = useTranslations("allocation");
   const tEval = useTranslations("budget.eval");
   const tGroup = useTranslations("budget.group");
   const { user } = useRole();
-  const { date } = useFormat();
   const notify = useNotify();
   const { mutate } = useMutation();
   const isAdmin = isAdminRole(user.capabilities);
@@ -90,10 +86,10 @@ export default function BudgetClient({
   // The buffered "+ new variable" name (the cost-centre sheet owns its own drafts).
   const [newVar, setNewVar] = useState("");
 
-  // Year and name are edited here, on the budget itself, rather than in the
-  // list. Both are properties of the thing this page is showing, and the list
-  // is for finding a budget, not for editing one. The edit state itself belongs
-  // to each EditableText.
+  // The name is edited here, on the budget itself, rather than in the list.
+  // It is a property of the thing this page is showing, and the list is for
+  // finding a budget, not for editing one. The edit state itself belongs to
+  // the EditableText.
 
   // The year's outcome from the ledger, which the reload below deliberately
   // does not ask for again. Held here rather than read off `budget` so that
@@ -237,17 +233,7 @@ export default function BudgetClient({
 
   const ev = budget.evaluated;
 
-  // Two properties of the same budget, saved separately so each pencil writes
-  // its own row. Returning false keeps the field open on a value we won't write.
-  async function saveYear(raw: string) {
-    const year = Number(raw);
-    if (!Number.isInteger(year) || year < 1900 || year > 2200) {
-      notify.error(tList("invalidYear"));
-      return false;
-    }
-    return api(`/api/budgets/${budgetId}`, "PATCH", { year });
-  }
-
+  // Returning false keeps the field open on a value we won't write.
   async function saveName(raw: string) {
     const name = raw.trim();
     if (!name) { notify.error(t("nameRequired")); return false; }
@@ -257,13 +243,17 @@ export default function BudgetClient({
   // The day the möte adopted it. Cleared by emptying the field, which is the
   // only way back to "this was never adopted". A budget recorded as decided by
   // mistake would otherwise be stuck claiming a meeting that did not happen.
+  // The year follows the date, so there is no second field to keep in step
+  // with it. Clearing the date leaves the year where it was.
   async function saveAdoptedAt(raw: string) {
     const value = raw.trim();
     if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       notify.error(t("invalidAdoptedAt"));
       return false;
     }
-    return api(`/api/budgets/${budgetId}`, "PATCH", { adoptedAt: value || null });
+    return api(`/api/budgets/${budgetId}`, "PATCH", value
+      ? { adoptedAt: value, year: Number(value.slice(0, 4)) }
+      : { adoptedAt: null });
   }
 
   // Sheets with no cost centre hold none, so they never take one out of the
@@ -292,6 +282,19 @@ export default function BudgetClient({
   const cc = selected !== RAMBUDGET && selected !== VARS && selected !== CHANGES
     ? budget.costCenters.find((c) => c.id === selected) ?? null : null;
   const ccCode = cc ? sheetKey(cc) : "";
+
+  // Which of the two views is open, and where the detail view opens. It comes
+  // back to the sheet that was last open there, so a look at the rambudget and
+  // back does not lose your place; the first cost centre the first time.
+  const view = selected === RAMBUDGET ? "FRAME" : "DETAIL";
+  const [lastDetail, setLastDetail] = useState<string | null>(null);
+  if (selected !== RAMBUDGET && selected !== lastDetail) setLastDetail(selected);
+  const detailTarget =
+    (lastDetail && (lastDetail === VARS || lastDetail === CHANGES || budget.costCenters.some((c) => c.id === lastDetail))
+      ? lastDetail
+      : null) ??
+    groups[0]?.items[0]?.id ??
+    VARS;
 
   // Editorial changes, in the two shapes the views need: the rows to show under
   // each account, and what they have done to each sheet's result. Both count
@@ -326,108 +329,133 @@ export default function BudgetClient({
     if (data.id) setSelected(data.id);
   }
 
+  // The antagen date: the one fact about a budget worth keeping on screen, since
+  // it is a decision (the möte that passed it). Editable in place, and shown
+  // even when unset, because an empty slot invites the date where no slot at
+  // all hides that the budget is missing one. The prefix only where there is a
+  // date for it to introduce: "Antagen inte antagen" is what it said otherwise.
+  const adopted = (
+    <>
+      {budget.adoptedAt && <>{t("adoptedOn")} </>}
+      <EditableText
+        value={budget.adoptedAt ?? ""}
+        type="date"
+        label={t("changeAdoptedAt")}
+        placeholder={t("notAdopted")}
+        disabled={!canEdit}
+        onSave={saveAdoptedAt}
+        pencil={false}
+        // As tall as the lock button beside it, so the two read as one row.
+        inputClassName="h-8"
+      />
+    </>
+  );
+
   return (
-    // PageShell like every other screen. This used to compose PageHeader itself
-    // and wrap the rest in a bare <div>, only because PageShell typed its title
-    // as a string and this page's title is editable in place. The shell takes a
-    // node now, so the exception is gone.
     <PageShell
-      // The year the budget is for, and the name that tells it apart from the
-      // others for the same year, with a line and a pencil each, since they are
-      // two separate saves.
+      // The name is the only thing edited up here. The year is not shown: it
+      // follows the antagen date, which sits by the lock below. The lock chip
+      // in purple, not grey: a lock is not an absence of state, it is the
+      // authority chain saying this is adopted and only the treasurer moves it
+      // now.
       title={
-        <span className="flex flex-wrap items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <EditableText
-            value={String(budget.year)}
-            type="number"
-            label={t("changeYear")}
+            value={budget.name}
+            label={t("changeName")}
+            placeholder={t("namePlaceholder")}
             disabled={!canEdit}
-            onSave={saveYear}
+            onSave={saveName}
           />
-          {/* Purple, not grey: a lock is not an absence of state, it is the
-              authority chain saying this is adopted and only the treasurer
-              moves it now. Same colour the approval queue wears. */}
           {locked && (
-            <span className="rounded-lg bg-purple-soft px-2 py-1 text-xs font-medium text-purple">
+            <span className="rounded-control bg-purple-soft px-2 py-1 text-xs font-medium text-purple">
               {tList("locked")}
             </span>
           )}
         </span>
       }
-      subtitle={
-        <EditableText
-          value={budget.name}
-          label={t("changeName")}
-          placeholder={t("namePlaceholder")}
-          disabled={!canEdit}
-          onSave={saveName}
-        />
-      }
-      description={
-        <>
-          {/* Leads, because it is the one fact about a budget that is a
-              decision: the möte that passed it. Who typed the row in follows.
-              Shown even when unset: an empty slot invites the date, where no
-              slot at all hides that the budget is missing one. */}
-          {/* The prefix only where there is a date for it to introduce: with
-              none, the placeholder is already a whole sentence ("Inte antagen")
-              and "Antagen inte antagen" is what prefixing it unconditionally
-              produced. */}
-          {budget.adoptedAt && <>{t("adoptedOn")} </>}
-          <EditableText
-            value={budget.adoptedAt ?? ""}
-            type="date"
-            label={t("changeAdoptedAt")}
-            placeholder={t("notAdopted")}
-            disabled={!canEdit}
-            onSave={saveAdoptedAt}
-          />
-          <span className="ml-2 text-muted">
-          {t("createdBy", { name: budget.createdBy.name })}
-          </span>
-          {budget.actualsSynced
-            ? <span className="ml-2 text-muted">– {t("actualsSynced", { year: budget.actualsYear ?? budget.year })}</span>
-            : <span className="ml-2 text-muted">– {t("actualsNotSynced", { year: budget.actualsYear ?? budget.year })}</span>}
-          {locked && (
-            <span className="ml-2 text-muted">
-              –{" "}
-              {budget.lockedBy
-                ? t("lockedByOn", { name: budget.lockedBy.name, date: date(budget.lockedAt ?? "") })
-                : t("lockedOn", { date: date(budget.lockedAt ?? "") })}
-            </span>
-          )}
-          {ev.errors.length > 0 && (
-            <span className="ml-2 text-warning">– {tEval(ev.errors[0])}</span>
-          )}
-        </>
-      }
-      back={{ href: "/budget", label: tNav("budget") }}
+      // The budget as a whole, or one sheet of it at a time. Variabler and
+      // Ändringar change the sheets, so they belong to the second.
+      collections={{
+        label: t("view"),
+        value: view,
+        options: [
+          { value: "FRAME", label: t("frameBudget") },
+          { value: "DETAIL", label: t("detailBudget") },
+        ],
+        onChange: (v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget),
+      }}
+      back="/budget"
     >
+      {/* What acts on the budget whichever view is open: what it is held
+          against, and the lock. One row under the header, the same place in
+          both views. */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Nothing is compared until asked for. See use-comparison.tsx. */}
+        <Combobox
+          size="sm"
+          options={[
+            { value: "", label: t("noComparison") },
+            ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+          ]}
+          value={compareTarget}
+          onChange={setCompareTarget}
+          placeholder={t("compareWith")}
+          searchPlaceholder={tList("searchPlaceholder")}
+          emptyText={t("nothingToCompare")}
+          aria-label={t("compareWith")}
+          className="w-full sm:w-72"
+        />
+        {/* A formula that does not evaluate is a problem with the budget, not
+            a fact about it, so it stays on screen where the rest went. */}
+        {ev.errors.length > 0 && <p className="text-sm text-warning">{tEval(ev.errors[0])}</p>}
+        {/* The antagen date beside the lock, since the two are one decision:
+            the möte adopts it, the treasurer locks it. */}
+        <span className="ml-auto inline-flex h-8 items-center text-[13px] text-muted">{adopted}</span>
+        {/* A closed padlock to lock it, a sprung one to unlock. The icon shows
+            the action, and the chip by the name is the state. */}
+        {canLock && (
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={locking}
+            onClick={() => setLocked(!locked)}
+          >
+            {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
+            {locked ? t("unlock") : t("lock")}
+          </Button>
+        )}
+      </div>
+
+      {selected === RAMBUDGET ? (
+        // The whole budget at once, so the whole width: no list of sheets
+        // beside it. Picking a row opens that sheet in the detail view.
+        <div>
+          <Rambudget
+            comparison={comparison}
+            ccIdOf={(key) => ccByCompareKey.get(key)}
+            impactOf={(key) => impactBySheet.get(key)}
+            showImpact={hasChanges}
+            onPick={setSelected}
+          />
+        </div>
+      ) : (
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Sticky from lg, where the list is a column beside a sheet rather
             than a stack above it. A sheet is the long thing on this screen,
-            since a cost centre runs to scores of rows and the rambudget to every
-            sheet at once, and the list scrolling away with it made picking
-            the next cost centre a scroll back to the top every time.
-
-            No `top-*` here: the offset is the hook's, walked up and down as the
-            page scrolls so that a list longer than the screen is reachable in
-            full either way (see lib/ui/use-sticky-follow.ts). `self-start` is
-            what makes it stick at all. The row stretches its items, so the
-            panel was already as tall as the sheet beside it, and a sticky box
-            with no scroll range of its own never moves. */}
+            and the list scrolling away with it made picking the next cost
+            centre a scroll back to the top every time. No `top-*` here: the
+            offset is the hook's (see lib/ui/use-sticky-follow.ts), and
+            `self-start` is what makes it stick at all. */}
         <SidebarPanel
           ref={stickyList}
           className="lg:sticky lg:self-start"
           sheetLabel={t("pickCostCenter")}
-          // What the collapsed bar says: whichever of the four things this pane
-          // is showing. A cost centre brings its result with it, because that is
-          // the figure you came to the sheet for and it is one the bar can carry
-          // for free.
+          // What the collapsed bar says: whichever sheet this pane is showing.
+          // A cost centre brings its result with it, because that is the figure
+          // you came to the sheet for and one the bar can carry for free.
           bar={
-            selected === RAMBUDGET ? (
-              t("frameBudget")
-            ) : selected === VARS ? (
+            selected === VARS ? (
               t("variables")
             ) : selected === CHANGES ? (
               t("changes")
@@ -461,51 +489,10 @@ export default function BudgetClient({
             )
           }
         >
-          {/* The two things that act on the budget as a whole, at the head of
-              the column that lists its sheets. The pane on the right is one
-              sheet at a time, and both of these change every one of them. They
-              were in the page header until that became identity only; the row
-              is shaped like the search and "add cost centre" rows further down
-              this same panel. */}
-          <div className="flex items-center gap-1.5 border-b border-border p-2">
-            {/* Nothing is compared until asked for. See use-comparison.tsx. */}
-            <Combobox
-              size="sm"
-              options={[
-                { value: "", label: t("noComparison") },
-                ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
-              ]}
-              value={compareTarget}
-              onChange={setCompareTarget}
-              placeholder={t("compareWith")}
-              searchPlaceholder={tList("searchPlaceholder")}
-              emptyText={t("nothingToCompare")}
-              aria-label={t("compareWith")}
-              className="min-w-0 flex-1"
-            />
-            {/* A closed padlock to lock it, a sprung one to unlock. The icon
-                shows the action, and the chip by the year is the state. */}
-            {canLock && (
-              <IconButton
-                label={locked ? t("unlock") : t("lock")}
-                loading={locking}
-                onClick={() => setLocked(!locked)}
-              >
-                {locked ? <IconLockOpen className="size-5" /> : <IconLock className="size-5" />}
-              </IconButton>
-            )}
-          </div>
-          <SidebarItem
-            active={selected === RAMBUDGET}
-            onClick={() => setSelected(RAMBUDGET)}
-            className="font-medium"
-          >
-            {t("frameBudget")}
-          </SidebarItem>
           <SidebarItem
             active={selected === VARS}
             onClick={() => setSelected(VARS)}
-            className="flex items-center justify-between border-t border-border font-medium"
+            className="flex items-center justify-between font-medium"
           >
             <span>{t("variables")}</span>
             <span className="text-xs text-muted">{budget.variables.length}</span>
@@ -600,17 +587,8 @@ export default function BudgetClient({
             </div>
           )}
         </SidebarPanel>
-
         <div className="min-w-0 flex-1">
-          {selected === RAMBUDGET ? (
-            <Rambudget
-              comparison={comparison}
-              ccIdOf={(key) => ccByCompareKey.get(key)}
-              impactOf={(key) => impactBySheet.get(key)}
-              showImpact={hasChanges}
-              onPick={setSelected}
-            />
-          ) : selected === VARS ? (
+          {selected === VARS ? (
             <VariablesSheet budget={budget} ev={ev} comparison={comparison}
               isAdmin={canEdit} renderCell={renderCell} renderFormula={renderFormula} api={api}
               newVar={newVar} setNewVar={setNewVar} budgetId={budgetId} />
@@ -647,7 +625,7 @@ export default function BudgetClient({
           )}
         </div>
       </div>
-
+      )}
     </PageShell>
   );
 }

@@ -10,7 +10,7 @@ export default function Loading() {
           {[0, 1, 2].map((i) => (
             <div key={i}>
               <Skeleton className="h-3.5 w-20" />
-              <Skeleton className="mt-1.5 h-10 w-full rounded-xl" />
+              <Skeleton className="mt-1.5 h-10 w-full rounded-control" />
             </div>
           ))}
         </CardBody>

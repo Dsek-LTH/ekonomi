@@ -16,6 +16,33 @@ import {
   type ComparisonMode,
 } from "@/lib/ledger/comparison";
 import type { ReportKind } from "@/lib/ledger/bas";
+import { prisma } from "@/lib/server/db";
+
+/**
+ * What the printed report's header says about where it came from, as Fortnox
+ * prints it: the company, its org number, and the last voucher in each series
+ * of the year ("A495 B123"), which is how a reader tells how far the books had
+ * got when the report was taken.
+ */
+async function reportMeta(financialYear: number) {
+  const [conn, latest] = await Promise.all([
+    prisma.fortnoxConnection.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { companyName: true, orgNumber: true },
+    }),
+    prisma.ledgerVoucher.groupBy({
+      by: ["series"],
+      where: { financialYear },
+      _max: { number: true },
+      orderBy: { series: "asc" },
+    }),
+  ]);
+  return {
+    companyName: conn?.companyName ?? null,
+    orgNumber: conn?.orgNumber ?? null,
+    latestVouchers: latest.map((v) => `${v.series}${v._max.number ?? ""}`),
+  };
+}
 
 export async function GET(req: Request) {
   const g = await gate();
@@ -26,7 +53,7 @@ export async function GET(req: Request) {
   if (!period) {
     return NextResponse.json({ years: [], year: null, report: null, comparison: "NONE" });
   }
-  const { years, selected, yearStart, from, to, costCenterCode } = period;
+  const { years, selected, yearStart, from, to, costCenterCodes } = period;
 
   const kind: ReportKind = url.searchParams.get("kind") === "BALANCE" ? "BALANCE" : "RESULT";
   const group: GroupMode =
@@ -54,26 +81,52 @@ export async function GET(req: Request) {
     else budget = null;
   }
 
-  const report = await getLedgerReport({
-    financialYear: selected.id,
-    kind,
-    from,
-    to,
-    yearStart,
-    costCenterCode,
-    group,
-    comparison,
-  });
+  // Last year's figures as columns of their own (Period föregående år and the
+  // rest), asked for with `prior=1`. Result report only: the balance report's
+  // prior year is its comparison above. Two windows of the prior year: the
+  // period's own days, and its year so far.
+  const wantsPrior = kind === "RESULT" && url.searchParams.get("prior") === "1";
+  const [prior, priorAccumulated] = wantsPrior
+    ? await Promise.all([
+        priorYearComparison(selected.id, from, to, yearStart),
+        priorYearComparison(selected.id, yearStart, to, yearStart),
+      ])
+    : [null, null];
+
+  const [report, meta] = await Promise.all([
+    getLedgerReport({
+      financialYear: selected.id,
+      kind,
+      from,
+      to,
+      yearStart,
+      costCenterCodes,
+      group,
+      comparison,
+      prior,
+      priorAccumulated,
+    }),
+    reportMeta(selected.id),
+  ]);
 
   return NextResponse.json({
     years,
     year: selected,
     period: periodOf(period),
+    // The period as days, for the printed header ("2026-01-01 – 2026-03-31").
+    periodDates: {
+      from: period.from.toISOString().slice(0, 10),
+      to: period.to.toISOString().slice(0, 10),
+    },
+    meta,
     report,
     // What was actually applied: asking for a comparison that has no data
     // (an unsynced prior year, a year with no budget) reports back as NONE.
     comparison: comparisonApplied,
     comparisonRequested: compare,
+    // Whether last year's columns could be filled: false when they were asked
+    // for and the prior year is not synced.
+    priorAvailable: wantsPrior ? prior != null : null,
     budgets,
     budget,
   });

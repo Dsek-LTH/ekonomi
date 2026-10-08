@@ -86,7 +86,7 @@ export interface User {
    *
    * This is what every gate reads. `roles` is still here because a few rules
    * genuinely turn on which role you hold rather than on what it may do (the
-   * attest rule's vice-skattmästare and resultatansvarig clauses) and because
+   * attest rule's resultatansvarig clause) and because
    * the settings screens list people by role.
    */
   capabilities: Capability[];
@@ -128,8 +128,9 @@ export interface ResultUnit {
   // Cost-centre code prefixes that decide membership, e.g. "SKT" → SKT01, SKT02.
   prefixes: { id: string; value: string }[];
   // The Authentik groups that make someone resultatansvarig for this unit, and
-  // who currently holds them. Both are read-only here: the mapping lives in
-  // lib/server/authentik-roles.ts and the membership lives in Authentik.
+  // who currently holds them. Both are read-only on the result-unit screen: the
+  // mapping is edited under Inställningar → Roller and the membership lives in
+  // Authentik.
   ownerGroups: string[];
   owners: { id: string; name: string }[];
   // The cost centres the prefixes currently match, resolved live.

@@ -32,7 +32,6 @@ import { useFormat } from "@/lib/ui/use-format";
 const ACTION_TONE: Record<QueueAction, React.ComponentProps<typeof Tag>["tone"]> = {
   FIX: "danger",
   SUBMIT: "neutral",
-  MATCH: "warning",
   ATTEST: "purple",
   BOOK: "accent",
   EXPORT: "accent",

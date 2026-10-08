@@ -32,6 +32,7 @@ import { uid } from "@/lib/ui/utils";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
 import { useReturnTo } from "@/components/shell/route-history";
+import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 
 // The rows are the shared editor's shape. See components/voucher-editor.tsx.
 type Row = VoucherEditorRow;
@@ -50,17 +51,34 @@ function paymentAccountFor(expense: Expense, settings: BookkeepingSettings): str
   return expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
 }
 
+// The payment row's two sides, in kronor. An ordinary utlägg credits the
+// payment account with the gross. A return (negative gross, see
+// lib/domain/matching.ts) is the same row the other way round: the money comes
+// back in, so it is a debit of the magnitude. A voucher holds no negative
+// amounts. See voucherBlocker.
+function paymentSides(gross: number): { debit: number; credit: number } {
+  return gross < 0 ? { debit: -gross, credit: 0 } : { debit: 0, credit: gross };
+}
+
 // Suggest the debit side from the expense's cost allocations. The credit side
 // is never suggested. It is fixed. VAT is no longer stored on the expense, so
-// split it out manually here if needed.
-function defaultDebitRows(expense: Expense | undefined): Row[] {
+// split it out manually here if needed. A local cost centre's code starts out
+// in the row text, as the editor writes it when one is picked. See
+// lib/domain/cost-center-tag.
+function defaultDebitRows(expense: Expense | undefined, costCenters: CostCenter[]): Row[] {
   if (!expense) return [];
   const gross = expense.grossAmount;
+  // A return has its payment row on the debit side, so the suggestion goes on
+  // the credit side, as the magnitude.
+  const isReturn = gross < 0;
+  const amount = gross ? Math.abs(gross).toFixed(2) : "";
   if (expense.allocations.length > 0) {
+    const isLocal = (code: string) =>
+      costCenters.some((c) => c.code === code && c.source === "LOCAL");
     return expense.allocations.map((a) => ({
       id: uid(),
       account: "",
-      description: "",
+      description: isLocal(a.costCenterCode) ? withCostCenterTag("", a.costCenterCode) : "",
       costCenterCode: a.costCenterCode,
       debit: "",
       credit: "",
@@ -72,18 +90,20 @@ function defaultDebitRows(expense: Expense | undefined): Row[] {
       account: "",
       description: "",
       costCenterCode: "",
-      debit: gross ? gross.toFixed(2) : "",
-      credit: "",
+      debit: isReturn ? "" : amount,
+      credit: isReturn ? amount : "",
     },
   ];
 }
 
 // Existing voucher → editable rows (when amending a booked verification). The
 // payment row is dropped: it isn't editable, and it gets re-added on save. That
-// also normalises any voucher booked before the row was locked.
+// also normalises any voucher booked before the row was locked. Which side it
+// sits on depends on whether the expense is a return.
 function debitRowsFromVerification(expense: Expense, paymentAccount: string): Row[] {
+  const isReturn = expense.grossAmount < 0;
   return (expense.verification?.lines ?? [])
-    .filter((l) => !(l.account === paymentAccount && l.credit > 0))
+    .filter((l) => !(l.account === paymentAccount && (isReturn ? l.debit : l.credit) > 0))
     .map((l) => ({
       id: l.id,
       account: l.account,
@@ -167,13 +187,13 @@ export default function BookExpenseClient({
     return full;
   });
   const voucherText = textSuffix.trim() ? `${textPrefix} ${textSuffix.trim()}` : textPrefix;
-  // `rows` holds the DEBIT side only. The credit row is derived from the
+  // `rows` holds every row but the payment one. That row is derived from the
   // expense and rendered separately, which is what makes it unremovable.
   const paymentAccount = expense ? paymentAccountFor(expense, settings) : "";
   const [rows, setRows] = useState<Row[]>(() =>
     expense?.status === "BOOKED"
       ? debitRowsFromVerification(expense, paymentAccount)
-      : defaultDebitRows(expense ?? undefined),
+      : defaultDebitRows(expense ?? undefined, costCenters),
   );
 
   if (!expense) {
@@ -210,9 +230,9 @@ export default function BookExpenseClient({
     );
   }
 
-  // The locked credit row is always the full gross. The debit side is what has
-  // to be made to match it, never the other way round.
-  const paymentCredit = expense.grossAmount;
+  // The locked payment row is always the full gross. The other rows are what
+  // have to be made to match it, never the other way round.
+  const payment = paymentSides(expense.grossAmount);
   const paymentText = t(expense.paymentType === "CARD" ? "paymentCard" : "paymentPrivate");
 
   // The voucher exactly as it will be posted, built once: the locked payment row
@@ -230,8 +250,8 @@ export default function BookExpenseClient({
       accountName: accountName(paymentAccount),
       description: paymentText,
       costCenterCode: null as string | null,
-      debit: 0,
-      credit: sekToOre(paymentCredit),
+      debit: sekToOre(payment.debit),
+      credit: sekToOre(payment.credit),
     },
     ...typedRows.map((r) => ({
       account: r.account.trim(),
@@ -291,7 +311,7 @@ export default function BookExpenseClient({
     <PageShell
       title={mode === "edit" ? t("editTitle", { id: label }) : t("createTitle", { id: label })}
       description={mode === "edit" ? t("editDescription") : t("createDescription")}
-      back={{ href: `/expenses/${expense.id}`, label }}
+      back={`/expenses/${expense.id}`}
       width="wide"
     >
 
@@ -321,7 +341,7 @@ export default function BookExpenseClient({
       />
 
       <div className="grid gap-6">
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
           <Field label={t("voucherDate")} requirement="required">
@@ -343,7 +363,7 @@ export default function BookExpenseClient({
             {/* Prefix and input are one field, so the ring goes round the pair
                 (focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}
-            <div className="focus-ring-within flex h-11 w-full items-center rounded-lg border border-border bg-background px-2.5 text-sm sm:h-9">
+            <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border bg-background px-2.5 text-sm sm:h-9">
               {/* The prefix comes from the submitter's identity, so its width is
                   out of our hands. Nowrap-and-never-shrink made the box wider
                   than the card body on a long one; it truncates instead, and the
@@ -377,8 +397,8 @@ export default function BookExpenseClient({
             account: paymentAccount,
             accountName: accountName(paymentAccount),
             description: paymentText,
-            debit: 0,
-            credit: paymentCredit,
+            debit: payment.debit,
+            credit: payment.credit,
             hint: t("lockedRowHint"),
             label: t("lockedRow"),
           }}

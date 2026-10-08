@@ -1,17 +1,24 @@
 "use client";
 
-// Settings → Users, organised by role rather than by member.
+// Settings → Users. One table of the people who hold a role, filterable by
+// role, and a search over the whole section for anyone else. A person opens
+// in a dialog over the table, wherever their row was.
 //
 // User.roles defaults to [ORDINARIE], so with a whole section in the table
 // every one of ~1000 members holds it and it says nothing about anyone. What an
 // admin actually manages is the couple of dozen people who hold something more.
-// So this lists the roles and who holds each, and a member without a role
-// simply never appears until you search for them.
+// So the table is those, and a member without a role simply never appears until
+// you search for them.
+//
+// It was a search card with the person opening inside it, above a card with a
+// section per role listing its holders. Somebody near the bottom of that list
+// opened at the top of the page, and anyone holding two roles was listed twice.
 //
 // Read-only, since sign-in moved to Authentik: roles are derived from the
-// Authentik group list at each sign-in (lib/server/authentik-roles.ts), so a
-// role granted here would last until the holder next signed in and then quietly
-// revert. The place to change one is the mandate in Authentik. What this page is for now is answering "who holds
+// Authentik group list at each sign-in, through the mapping under Inställningar
+// → Roller, so a role granted here would last until the holder next signed in
+// and then quietly revert. The place to change one is the mandate in Authentik,
+// or the mapping. What this page is for now is answering "who holds
 // what, right now", and showing when the answer is not what somebody expected,
 // which is the first thing you want to know when a mapping is wrong.
 //
@@ -24,16 +31,20 @@
 // including the case that prompted all this: a role nothing grants any more.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardBody, CardHeader, InsetPanel } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
+import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
+import { type Column } from "@/components/ui/data-table";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconX } from "@/components/ui/icons";
+import { Modal, ModalBody } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { Tag } from "@/components/ui/status-pill";
 import { cn } from "@/lib/ui/utils";
 import { ASSIGNABLE_ROLES, canBookkeep } from "@/lib/domain/permissions";
 import { useRole } from "@/components/shell/role-context";
+import { useTableControls } from "@/lib/data/use-list-query";
 import type { UserAuthority } from "@/lib/data/authority";
 import type { User } from "@/lib/domain/types";
 import { useQuery } from "@/components/shell/use-query";
@@ -41,130 +52,151 @@ import { PersonSearch } from "./person-search";
 
 export function UsersClient({ holders }: { holders: User[] }) {
   const t = useTranslations("admin.users");
+  const tRole = useTranslations("common.role");
+  const controls = useTableControls({ sortKey: "name" });
+
+  // The person open in the dialog: picked from the table, or found by the
+  // search, which reaches the ~980 members the table leaves out.
+  const [inspecting, setInspecting] = useState<User | null>(null);
+  // The looked-up member may have been re-synced since; prefer the live row.
+  const live = inspecting ? holders.find((u) => u.id === inspecting.id) ?? inspecting : null;
+
+  const held = (u: User) => ASSIGNABLE_ROLES.filter((r) => u.roles.includes(r));
+
+  // By role, OR-ed: "who is Kassör or Vice" is one question.
+  const roleFilter: ClientSelectFilter<User> = {
+    label: t("filterRole"),
+    options: ASSIGNABLE_ROLES.map((r) => ({
+      value: r,
+      label: tRole(r),
+      predicate: (u: User) => u.roles.includes(r),
+    })),
+  };
+
+  const columns: Column<User>[] = [
+    {
+      key: "name",
+      header: t("colName"),
+      value: (u) => u.name,
+      sortable: true,
+      mobile: "title",
+      cell: (u) => (
+        <button
+          type="button"
+          onClick={() => setInspecting(u)}
+          aria-label={t("explainFor", { name: u.name })}
+          className="group flex min-w-0 items-center gap-3 text-left"
+        >
+          <Avatar initials={u.initials} />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium group-hover:text-accent group-hover:underline">
+              {u.name}
+            </span>
+            <span className="block truncate text-xs text-muted">{u.email}</span>
+          </span>
+        </button>
+      ),
+    },
+    {
+      key: "roles",
+      header: t("colRoles"),
+      value: (u) => held(u).map((r) => tRole(r)).join(", "),
+      sortable: true,
+      cell: (u) => (
+        <span className="flex flex-wrap gap-1">
+          {held(u).map((r) => (
+            <Tag key={r} tone="accent">{tRole(r)}</Tag>
+          ))}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <Card>
+        <ClientDataTable
+          columns={columns}
+          rows={holders}
+          controls={controls}
+          filter={roleFilter}
+          rowKey={(u) => u.id}
+          empty={holders.length === 0 ? t("nobodyHasRole") : t("noMatch")}
+          // The toolbar's search is over the whole section rather than over
+          // these rows: finding somebody who is not here is the one thing the
+          // table cannot do, and a second box that only narrowed two dozen
+          // names would be a search for the wrong thing.
+          action={
+            <PersonSearch onSelect={setInspecting} className="w-full sm:w-72" />
+          }
+        />
+        <p className="border-t border-border px-inset py-3 text-xs text-muted">
+          {t("rolesSubtitle", { role: tRole("ORDINARIE") })}
+        </p>
+      </Card>
+
+      {live && <PersonDialog key={live.id} person={live} onClose={() => setInspecting(null)} />}
+    </>
+  );
+}
+
+/** One member: the roles they hold, where each came from, and their bank details. */
+function PersonDialog({ person, onClose }: { person: User; onClose: () => void }) {
+  const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
   const tRole = useTranslations("common.role");
   const { user } = useRole();
 
-  // A member looked up by the top search, shown so their whole role set is
-  // visible in one place, including for someone who holds nothing more than
-  // the baseline and therefore appears in no list below.
-  const [inspecting, setInspecting] = useState<User | null>(null);
-
-  // The looked-up member may have been re-synced since; prefer the live row.
-  const live = inspecting
-    ? holders.find((u) => u.id === inspecting.id) ?? inspecting
-    : null;
-
   return (
-    <div className="space-y-5">
-      {/* Look up anyone, including the ~980 with no role at all. */}
-      <Card>
-        <CardHeader title={t("findTitle")} subtitle={t("findSubtitle")} />
-        <CardBody className="space-y-4">
-          <PersonSearch onSelect={setInspecting} className="max-w-md" />
+    <Modal label={person.name} onClose={onClose} className="max-w-xl">
+      <div className="flex shrink-0 items-center gap-3.5 border-b border-border px-inset py-3">
+        <Avatar initials={person.initials} />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-base font-semibold">{person.name}</h2>
+          <p className="truncate text-xs text-muted">{person.email}</p>
+        </div>
+        <IconButton label={tCommon("close")} onClick={onClose}>
+          <IconX className="size-4" />
+        </IconButton>
+      </div>
 
-          {live && (
-            <InsetPanel className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3.5">
-                  <Avatar initials={live.initials} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{live.name}</p>
-                    <p className="truncate text-xs text-muted">{live.email}</p>
-                  </div>
-                </div>
-                <IconButton size="sm" label={tCommon("close")} onClick={() => setInspecting(null)}>
-                  <IconX className="size-4" />
-                </IconButton>
-              </div>
-
-              {/* Every assignable role, held or not, rather than only the held
-                  ones: "does this person have attesträtt" is answered by the
-                  absence as much as by the presence, and a row of four chips
-                  with one lit says it at a glance. Not `Chip`, that is a
-                  toggle, and there is nothing here to toggle. */}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ASSIGNABLE_ROLES.map((r) => (
-                  <span
-                    key={r}
-                    className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium",
-                      live.roles.includes(r)
-                        ? "border-accent bg-accent-soft text-accent"
-                        : "border-border text-muted",
-                    )}
-                  >
-                    {tRole(r)}
-                  </span>
-                ))}
-              </div>
-              {!live.roles.some((r) => r !== "ORDINARIE") && (
-                <p className="mt-2 text-xs text-muted">
-                  {t("onlyBaseRole", { role: tRole("ORDINARIE") })}
-                </p>
-              )}
-
-              {/* Keyed on the member: a fresh mount per person is what keeps
-                  one person's reasons from being read under another's name
-                  while the next request is still in flight. */}
-              <WhyPanel key={live.id} userId={live.id} />
-
-              {/* Bank details: same capability that already shows them on the
-                  booking screen, reached from a different door. A
-                  resultatansvarig with SETTINGS access to this page but not
-                  BOOKKEEPING still sees nothing here. */}
-              {canBookkeep(user.capabilities) && (
-                <PayoutPanel key={live.id} userId={live.id} />
-              )}
-            </InsetPanel>
+      <ModalBody>
+        <div>
+          {/* Every assignable role, held or not, rather than only the held
+              ones: "does this person have attesträtt" is answered by the
+              absence as much as by the presence, and a row of chips with one
+              lit says it at a glance. */}
+          <div className="flex flex-wrap gap-2">
+            {ASSIGNABLE_ROLES.map((r) => (
+              <span
+                key={r}
+                className={cn(
+                  "inline-flex h-7 items-center rounded-control border px-3 text-xs font-medium",
+                  person.roles.includes(r)
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-border text-muted",
+                )}
+              >
+                {tRole(r)}
+              </span>
+            ))}
+          </div>
+          {!person.roles.some((r) => r !== "ORDINARIE") && (
+            <p className="mt-2 text-xs text-muted">
+              {t("onlyBaseRole", { role: tRole("ORDINARIE") })}
+            </p>
           )}
-        </CardBody>
-      </Card>
+        </div>
 
-      {/* One section per role. ORDINARIE is left out: everyone holds it. */}
-      <Card>
-        <CardHeader title={t("rolesTitle")} subtitle={t("rolesSubtitle", { role: tRole("ORDINARIE") })} />
-        {ASSIGNABLE_ROLES.map((role) => {
-          const members = holders.filter((u) => u.roles.includes(role));
-          return (
-            <div key={role} className="border-b border-border last:border-0">
-              <div className="flex items-center justify-between gap-4 px-inset pb-1.5 pt-4">
-                <p className="text-sm font-semibold">{tRole(role)}</p>
-                <span className="text-xs tabular-nums text-muted">{members.length}</span>
-              </div>
+        <WhyPanel userId={person.id} />
 
-              {members.length === 0 ? (
-                <p className="px-inset pb-4 text-sm text-muted">{t("nobodyHasRole")}</p>
-              ) : (
-                <ul className="pb-2">
-                  {members.map((u) => (
-                    <li key={u.id}>
-                      {/* A row is the way into the panel above. Somebody
-                          reading this list found the name they did not expect
-                          here. The next thing they want is why, and making
-                          them retype the name into the search to get it would
-                          be asking for something the screen already knows. */}
-                      <button
-                        type="button"
-                        onClick={() => setInspecting(u)}
-                        aria-label={t("explainFor", { name: u.name })}
-                        className="flex w-full items-center gap-3.5 px-inset py-2 text-left transition-colors hover:bg-hover"
-                      >
-                        <Avatar initials={u.initials} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{u.name}</span>
-                          <span className="block truncate text-xs text-muted">{u.email}</span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-      </Card>
-    </div>
+        {/* Bank details: same capability that already shows them on the
+            booking screen, reached from a different door. A resultatansvarig
+            with SETTINGS access to this page but not BOOKKEEPING still sees
+            nothing here. */}
+        {canBookkeep(user.capabilities) && <PayoutPanel userId={person.id} />}
+      </ModalBody>
+    </Modal>
   );
 }
 
@@ -184,10 +216,10 @@ function WhyPanel({ userId }: { userId: string }) {
   // than reusing the panel, and there is no stale answer to clear.
   const { data, error } = useQuery<UserAuthority>(`/api/users/${userId}/authority`);
 
-  if (error) return <p className="mt-4 text-xs text-muted">{t("whyFailed")}</p>;
+  if (error) return <p className="text-xs text-muted">{t("whyFailed")}</p>;
   if (!data) {
     return (
-      <p className="mt-4 flex items-center gap-2 text-xs text-muted">
+      <p className="flex items-center gap-2 text-xs text-muted">
         <Spinner size="sm" />
         {t("whyLoading")}
       </p>
@@ -197,8 +229,8 @@ function WhyPanel({ userId }: { userId: string }) {
   const granted = data.roles.filter((r) => !r.baseline);
 
   return (
-    <div className="mt-4 space-y-3 border-t border-border pt-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("whyTitle")}</p>
+    <div className="space-y-3 border-t border-border pt-4">
+      <h3 className="text-sm font-semibold">{t("whyTitle")}</h3>
 
       {/* Nothing below can be explained for someone we have never seen a group
           list for, and it matters that the screen says which of the two silences
@@ -286,7 +318,7 @@ function WhyPanel({ userId }: { userId: string }) {
               <li
                 key={g}
                 className={cn(
-                  "rounded-md border border-border px-2 py-0.5 font-mono text-xs",
+                  "rounded-control border border-border px-2 py-0.5 font-mono text-xs",
                   // A group that grants nothing here is most of the list. The
                   // section's Authentik tree is not about this app, so it is
                   // dimmed rather than labelled. What the reader is looking for
@@ -319,10 +351,8 @@ function PayoutPanel({ userId }: { userId: string }) {
   );
 
   return (
-    <div className="mt-4 space-y-2 border-t border-border pt-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-        {t("payoutTitle")}
-      </p>
+    <div className="space-y-2 border-t border-border pt-4">
+      <h3 className="text-sm font-semibold">{t("payoutTitle")}</h3>
       {error && <p className="text-xs text-muted">{t("payoutFailed")}</p>}
       {!error && !data && (
         <p className="flex items-center gap-2 text-xs text-muted">

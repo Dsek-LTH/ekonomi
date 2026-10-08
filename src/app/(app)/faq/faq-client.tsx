@@ -307,7 +307,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
     // Capped rather than full width: a receipt photographed portrait would
     // otherwise stand taller than the screen inside an answer, and you'd scroll
     // past the explanation to reach the picture it belongs to.
-    <div className="relative aspect-[3/4] max-w-xs overflow-hidden rounded-xl border border-border bg-surface">
+    <div className="relative aspect-[3/4] max-w-xs overflow-hidden rounded-panel border border-border bg-surface">
       {block.src ? (
         // The photo is contained, not cropped to fill: a cover crop cuts off the
         // footer, which is half of what these pictures are here to show. Full
@@ -357,7 +357,7 @@ function AnswerTable({ head, rows }: { head: string[]; rows: string[][] }) {
     // The page column is narrow on a phone and a three-column table does not
     // fit in it; the table scrolls inside its own box rather than making the
     // page scroll sideways.
-    <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-border">
+    <div className="overflow-x-auto overscroll-x-contain rounded-panel border border-border">
       <table className="w-full text-sm text-foreground">
         <thead>
           <tr className="border-b border-border text-xs font-medium text-muted">

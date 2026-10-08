@@ -39,7 +39,7 @@ export default async function AdminPage() {
                 than the words in it. `block` and padding here rather than on
                 the Card, which draws the border and nothing else. */}
             <Link href={s.href} className="flex items-start gap-3 p-4">
-              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control bg-surface text-muted">
                 <s.icon className="size-4" />
               </span>
               <span className="min-w-0 flex-1">

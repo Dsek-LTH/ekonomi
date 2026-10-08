@@ -18,38 +18,49 @@
       "a": [
         {
           "t": "p",
-          "v": "No, reimbursement is not automatic. You are entitled to it when both of these are true:"
+          "v": "No, not automatically. You are reimbursed when the purchase is reported with a valid receipt and has been attested by someone with attest rights for it."
         },
         {
-          "t": "ul",
-          "v": [
-            "Your committee chair approved the purchase.",
-            "You can support the purchase with a valid receipt."
-          ]
+          "t": "p",
+          "v": "A purchase without attest is paid for by whoever made it. For an out-of-pocket expense you are not reimbursed, and for a guild card purchase you are invoiced for the amount. The treasurer can decide in an individual case that reimbursement is paid anyway, or that no invoice is sent."
         },
         {
-          "t": "note",
-          "tone": "warn",
-          "v": "ALWAYS check with your committee chair before making a purchase. If the requirements are not met, you risk having to pay for it yourself."
+          "t": "p",
+          "v": "An out-of-pocket expense must also be reported within 60 days, or it can be refused."
         }
       ]
     },
     {
       "id": "before-buying",
-      "q": "What should I do before I buy anything?",
+      "q": "What should I do before I buy something?",
       "a": [
         {
           "t": "ol",
           "v": [
-            "Clear the purchase with your committee chair and get an approval.",
-            "Make sure you get a valid receipt at the register, not just an order confirmation or a card slip.",
-            "Report the purchase here on the site as soon as you get home."
+            "Check the purchase with your result owner if you can. They are the one who attests it afterwards, and a purchase that is not attested is yours to pay for.",
+            "Use the guild card if you have one, so you do not have to lay out your own money.",
+            "Make sure you get a valid receipt at the till, not just an order confirmation or a card terminal slip.",
+            "Report the purchase here in the app as soon as you are home."
           ]
         },
         {
           "t": "action",
           "v": "Report a purchase",
           "href": "/expenses/new"
+        }
+      ]
+    },
+    {
+      "id": "budget-check",
+      "q": "Is there money in the budget for the purchase?",
+      "a": [
+        {
+          "t": "p",
+          "v": "There should be. A cost item in the budget may not be exceeded without the budget being adjusted first. If the item the purchase belongs to does not have enough, a budget change is needed before the purchase is made, and it is approved by the treasurer."
+        },
+        {
+          "t": "p",
+          "v": "More on how that works under Budget."
         }
       ]
     }

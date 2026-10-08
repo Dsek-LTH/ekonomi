@@ -79,6 +79,8 @@ export interface CostCenterSyncResult {
   upserted: number;
   deactivated: number;
   deleted: number;
+  /** Rows Fortnox does not have that are still in use, now marked local. */
+  madeLocal: number;
 }
 
 // Sync the app's CostCenter list from Fortnox: the cost centres that are active
@@ -87,12 +89,17 @@ export interface CostCenterSyncResult {
 //
 // Cost centres Fortnox still lists but has archived (Active: false) are only
 // deactivated, since Fortnox might unarchive them later. Ones Fortnox has dropped
-// from the list entirely (deleted there) are removed here too, but only if
-// nothing local points at them (an expense allocation, a verification line, or
-// a budget sheet); otherwise deleting the row would orphan or destroy that
-// history, so it is deactivated instead. Local (non-Fortnox) cost centres are
-// excluded from all of this: nothing in Fortnox will ever list them, so they
-// would otherwise be retired on every sync.
+// from the list entirely are removed here too, but only if nothing local points
+// at them (an expense allocation, a verification line, or a budget sheet).
+// Otherwise deleting the row would orphan or destroy that history, so it is
+// marked local instead: Fortnox does not have the code, and a voucher naming
+// it would be rejected, so the export must not send it (see
+// lib/fortnox/export). That is how the alko cost centres the budget import
+// created ended up here. They were never in Fortnox, and they were being sent.
+// Its `active` is left as it was. An admin can retire a local cost centre.
+//
+// Local cost centres are excluded from all of this: nothing in Fortnox will
+// ever list them, so they would otherwise be retired on every sync.
 export async function syncCostCenters(token: string): Promise<CostCenterSyncResult> {
   const fortnoxCcs = await listCostCenters(token);
   const seenCodes = new Set(fortnoxCcs.map((c) => c.code));
@@ -138,22 +145,24 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     where: { id: { in: unreferencedIds } },
   });
 
-  // Everything else that should no longer be selectable, archived-in-Fortnox
-  // rows, plus deleted-from-Fortnox rows that are still referenced and so were
-  // kept above, is deactivated rather than deleted.
+  // Not in Fortnox and still referenced, so kept above: local from here on.
+  const { count: madeLocal } = await prisma.costCenter.updateMany({
+    where: { source: "FORTNOX", code: { notIn: [...seenCodes] }, id: { notIn: unreferencedIds } },
+    data: { source: "LOCAL" },
+  });
+
+  // Archived in Fortnox: no longer selectable, but kept, since Fortnox might
+  // unarchive them.
   const { count: deactivated } = await prisma.costCenter.updateMany({
     where: {
       active: true,
       source: "FORTNOX",
-      OR: [
-        { code: { notIn: [...seenCodes] }, id: { notIn: unreferencedIds } },
-        { code: { in: fortnoxCcs.filter((c) => !c.active).map((c) => c.code) } },
-      ],
+      code: { in: fortnoxCcs.filter((c) => !c.active).map((c) => c.code) },
     },
     data: { active: false },
   });
 
-  return { upserted, deactivated, deleted };
+  return { upserted, deactivated, deleted, madeLocal };
 }
 
 export interface AccountSyncResult {

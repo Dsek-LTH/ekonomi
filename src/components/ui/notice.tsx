@@ -43,7 +43,7 @@ export function Notice({
         // Centred against the text, not aligned to its first line: these are
         // one or two short sentences, so an icon pinned to the top edge reads
         // as hanging off the box rather than labelling what is in it.
-        "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-foreground",
+        "flex items-center gap-3 rounded-panel border px-4 py-3 text-sm text-foreground",
         box,
         className,
       )}

@@ -1,0 +1,105 @@
+{
+  "id": "budget",
+  "label": "Budget",
+  "items": [
+    {
+      "id": "budget-what",
+      "q": "Vad är budgeten, och vem bestämmer den?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Budgeten är sektionens ekonomiska styrdokument: en prognos för verksamhetsårets resultat och ett verktyg för att styra verksamheten."
+        },
+        {
+          "t": "p",
+          "v": "Inför varje verksamhetsår beslutar sektionsmötet om rambudgeten och detaljbudgeten för det kommande året. Förslaget tas fram av tillträdande styrelse i samråd med den sittande."
+        },
+        {
+          "t": "action",
+          "v": "Till budgeten",
+          "href": "/budget"
+        }
+      ]
+    },
+    {
+      "id": "budget-terms",
+      "q": "Vad betyder orden i budgeten?",
+      "a": [
+        {
+          "t": "ul",
+          "v": [
+            "Resultatenhet: en del av sektionens verksamhet, till exempel Sexmästeriet. Resultatet av en resultatenhet är summan av dess kostnadsställens resultat.",
+            "Resultatansvarig: den eller de som ansvarar för att resultatenhetens budgeterade resultat följs.",
+            "Kostnadsställe: en del av en resultatenhet, med en kod av prefix och två siffror, till exempel SEX01. Prefixet avgör vilken resultatenhet kostnadsstället tillhör.",
+            "Kontopost: en samling av enbart kostnader (kostnadspost) eller enbart intäkter (intäktspost) inom ett kostnadsställe.",
+            "Kontopostrad: ett exempel på hur budgeten för en kontopost kan fördelas. Raderna är inte bindande, kontoposten är.",
+            "Rambudget: det budgeterade resultatet för varje resultatenhet.",
+            "Detaljbudget: hur budgeten fördelas mellan kontoposterna i ett kostnadsställe, och mellan kostnadsställena i en resultatenhet."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget-exceed",
+      "q": "Får en kostnadspost överskridas?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Inte utan att budgeten först har justerats genom en budgetförändring. Sker ingen justering får kostnaden inte tas."
+        },
+        {
+          "t": "p",
+          "v": "Det finns två undantag:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Intäktsfinansierat överskridande: kostnaden får bli högre om ökningen rimligen motsvaras av högre intäkter inom samma resultatenhet, så att resultatet inte blir sämre. Det kräver skattmästarens godkännande innan kostnaden uppstår.",
+            "Tack: kostnader för tack där beloppet beror på antalet funktionärer får överskridas om funktionärerna blivit fler än budgeterat. Kostnaden per funktionär får dock inte överstiga taket i Policy för tackverksamhet, och den resultatansvarige redovisar överskridandet på nästa styrelsemöte."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget-changes",
+      "q": "Hur ändras en budget som redan är antagen?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Genom en budgetförändring. Den antagna budgeten är låst i appen, och förändringarna förs in under Ändringar, där varje förändring står med sitt skäl och vem som gjorde den."
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Budgetförflyttning: pengar flyttas mellan kontoposter inom samma resultatenhet. Rambudgeten påverkas inte.",
+            "Budgetavsteg: en kostnadspost ökas så att resultatenhetens resultat blir sämre, när pengarna inte går att flytta inom resultatenheten.",
+            "Budgetrevision: ett helt nytt förslag på rambudget och detaljbudget, när förändringarna är för stora för förflyttningar och avsteg. Det beslutar sektionsmötet om."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Förflyttningar och avsteg kräver skattmästarens godkännande och redovisas på nästa styrelse- och sektionsmöte. Ett avslag från skattmästaren får överprövas av styrelsen, och styrelsens beslut av sektionsmötet."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Behöver du mer pengar än kontoposten har, prata med din resultatansvarig och skattmästaren innan köpet, inte efter."
+        }
+      ]
+    },
+    {
+      "id": "budget-overrun",
+      "q": "Vad händer om en post ändå har överskridits?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Då justeras budgeten i efterhand så att den visar det faktiska utfallet. Justeringen är inget beslut utan en redovisning, och den markeras som retroaktiv i budgeten."
+        },
+        {
+          "t": "p",
+          "v": "Den resultatansvarige redovisar överskridandet på nästa styrelsemöte och förklarar varför en budgetförändring inte gjordes innan kostnaden uppstod."
+        }
+      ]
+    }
+  ]
+}

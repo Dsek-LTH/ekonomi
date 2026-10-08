@@ -27,7 +27,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
 }) {
   const t = useTranslations("budget.variables");
   const tRam = useTranslations("budget.rambudget");
-  const cellEdit = useCellEdit("budget-grid overflow-hidden rounded-2xl border border-border bg-background");
+  const cellEdit = useCellEdit("budget-grid overflow-hidden rounded-panel border border-border bg-background");
   const showCompare = comparison.otherLabel !== null;
   const own = new Set(budget.variables.map((v) => v.name));
   const compareValue = new Map(comparison.joined.vars.map((v) => [v.name, v.values[1]]));

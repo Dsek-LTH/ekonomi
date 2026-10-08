@@ -141,7 +141,7 @@ export function SheetSaveBar({
 }) {
   const savable = changed.filter((k) => !faults.has(k)).length;
   return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-border bg-background px-inset py-3">
+    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3">
       <span className="text-sm text-muted">
         {changed.length === 0
           ? t("event.sheet.nothingToSave")

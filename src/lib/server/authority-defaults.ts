@@ -145,7 +145,6 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
 
   { role: "SKATTMASTARE", capability: "ATTEST_VIEW" },
   { role: "ORDFORANDE", capability: "ATTEST_VIEW" },
-  { role: "VICE_SKATTMASTARE", capability: "ATTEST_VIEW" },
   { role: "RESULTATANSVARIG", capability: "ATTEST_VIEW" },
 
   // Avtal. Reading is given to the people who answer for the section's money

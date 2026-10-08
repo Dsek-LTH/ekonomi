@@ -2,20 +2,28 @@
 
 // Settings → Guild cards. Assigning a card to a member is what makes their
 // card purchases show up under Card purchases.
+//
+// The same shape as every other list in settings: one table, its create
+// button on the toolbar, and the form that button opens just under it. It was
+// a list with the "new card" field parked in an empty header and a gap between
+// each card and its holder, with nothing saying what the dropdown was.
+import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
-import { EmptyNote } from "@/components/ui/empty-state";
+import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
+import { Combobox } from "@/components/ui/combobox";
+import { type Column } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/field";
-import { Tag } from "@/components/ui/status-pill";
+import { IconButton } from "@/components/ui/icon-button";
 import { IconPlus, IconTrash } from "@/components/ui/icons";
+import { Tag } from "@/components/ui/status-pill";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useTableControls } from "@/lib/data/use-list-query";
 import type { Card as SectionCard, User } from "@/lib/domain/types";
-import { Combobox } from "@/components/ui/combobox";
 
 export function CardsClient({
   cards,
@@ -25,10 +33,22 @@ export function CardsClient({
   users: User[];
 }) {
   const t = useTranslations("admin.cards");
+  const tCommon = useTranslations("common");
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
+  const controls = useTableControls({ sortKey: "card" });
+  const [adding, setAdding] = useState(false);
   const [newLast4, setNewLast4] = useState("");
+
+  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+
+  // A card on nobody is a card whose purchases reach nobody's own list, so it
+  // is the one worth a tab of its own.
+  const tabs: ClientTabFilter<SectionCard> = [
+    { value: "all", label: t("tab.all") },
+    { value: "noHolder", label: t("tab.noHolder"), predicate: (c) => !c.holderId },
+  ];
 
   async function addCard() {
     const last4 = newLast4.trim();
@@ -44,6 +64,21 @@ export function CardsClient({
     });
     if (!data) return;
     setNewLast4("");
+    setAdding(false);
+  }
+
+  async function assign(card: SectionCard, holderId: string) {
+    const holder = users.find((u) => u.id === holderId);
+    await mutate(`/api/cards/${card.id}`, {
+      key: `holder-${card.id}`,
+      method: "PATCH",
+      // "" clears it. See PatchCard.
+      body: { holderId },
+      error: t("assignFailed"),
+      success: holder
+        ? t("assigned", { last4: card.last4, name: holder.name })
+        : t("unassigned", { last4: card.last4 }),
+    });
   }
 
   async function deleteCard(card: SectionCard) {
@@ -65,75 +100,129 @@ export function CardsClient({
     });
   }
 
+  const columns: Column<SectionCard>[] = [
+    {
+      key: "card",
+      header: t("colCard"),
+      value: (c) => c.last4,
+      sortable: true,
+      searchable: true,
+      mobile: "title",
+      className: "w-32",
+      cell: (c) => <Tag className="font-semibold tabular-nums">····{c.last4}</Tag>,
+    },
+    {
+      key: "holder",
+      header: t("colHolder"),
+      value: (c) => c.holderName ?? "",
+      sortable: true,
+      searchable: true,
+      cell: (c) => (
+        <Combobox
+          size="sm"
+          className="w-full sm:w-64"
+          options={userOptions}
+          value={c.holderId ?? ""}
+          onChange={(v) => assign(c, v)}
+          disabled={pending === `holder-${c.id}`}
+          placeholder={t("noHolder")}
+          allowClear
+          aria-label={t("holderFor", { last4: c.last4 })}
+        />
+      ),
+    },
+    {
+      key: "purchases",
+      header: t("colPurchases"),
+      value: (c) => c.txCount,
+      sortable: true,
+      align: "right",
+      // To the purchases themselves, on the section's feed searched for the
+      // card's number, which is what Bank's search reads.
+      cell: (c) =>
+        c.txCount > 0 ? (
+          <Link
+            href={`/bank?scope=all&q=${c.last4}`}
+            className="tabular-nums text-accent hover:underline"
+          >
+            {c.txCount}
+          </Link>
+        ) : (
+          <span className="tabular-nums text-muted">0</span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      mobile: "actions",
+      className: "w-14",
+      cell: (c) => (
+        <IconButton
+          tone="danger"
+          onClick={() => deleteCard(c)}
+          loading={pending === c.id}
+          label={t("deleteAria", { last4: c.last4 })}
+        >
+          <IconTrash className="size-4" />
+        </IconButton>
+      ),
+    },
+  ];
+
   return (
     <Card>
-      <CardHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
+      <ClientDataTable
+        columns={columns}
+        rows={cards}
+        controls={controls}
+        tabs={tabs}
+        searchPlaceholder={t("searchPlaceholder")}
+        rowKey={(c) => c.id}
+        empty={cards.length === 0 ? t("empty") : t("noMatch")}
         action={
-          <div className="flex items-center gap-2">
-            <div className="w-28">
-              <Input
-                size="sm"
-                value={newLast4}
-                onChange={(e) => setNewLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && pending !== "new-card") addCard();
-                }}
-                inputMode="numeric"
-                placeholder={t("last4")}
-                aria-label={t("last4Aria")}
-                className="tabular-nums"
-              />
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={pending === "new-card"}
-              disabled={newLast4.length !== 4}
-              onClick={addCard}
-            >
+          !adding && (
+            <Button size="sm" onClick={() => setAdding(true)}>
               <IconPlus className="size-4" />
-              {t("add")}
+              {t("new")}
             </Button>
-          </div>
+          )
+        }
+        actionPanel={
+          adding && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-32">
+                <Input
+                  size="sm"
+                  autoFocus
+                  value={newLast4}
+                  onChange={(e) => setNewLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && pending !== "new-card") addCard();
+                    if (e.key === "Escape") setAdding(false);
+                  }}
+                  inputMode="numeric"
+                  placeholder={t("last4")}
+                  aria-label={t("last4Aria")}
+                  className="tabular-nums"
+                />
+              </div>
+              <Button
+                size="sm"
+                loading={pending === "new-card"}
+                disabled={newLast4.length !== 4}
+                onClick={addCard}
+              >
+                {t("add")}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setAdding(false)}>
+                {tCommon("cancel")}
+              </Button>
+              <p className="w-full text-xs text-muted">{t("addHint")}</p>
+            </div>
+          )
         }
       />
-      {cards.length === 0 ? (
-        <EmptyNote>{t("empty")}</EmptyNote>
-      ) : (
-        <ul>
-          {cards.map((c) => (
-            <li
-              key={c.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-inset py-3.5 last:border-0"
-            >
-              <Tag className="font-semibold tabular-nums">···· {c.last4}</Tag>
-              <div className="hidden min-w-0 flex-1 sm:block" />
-              <Combobox
-                className="min-w-0 flex-1 sm:flex-none"
-                options={users.map((u) => ({ value: u.id, label: u.name }))}
-                value={c.holderId ?? ""}
-                onChange={(e) =>
-                  mutate(`/api/cards/${c.id}`, {
-                    key: c.id,
-                    method: "PATCH",
-                    body: { holderId: e },
-                  })
-                }
-              />
-              <IconButton
-                tone="danger"
-                onClick={() => deleteCard(c)}
-                loading={pending === c.id}
-                label={t("deleteAria", { last4: c.last4 })}
-              >
-                <IconTrash className="size-4" />
-              </IconButton>
-            </li>
-          ))}
-        </ul>
-      )}
     </Card>
   );
 }

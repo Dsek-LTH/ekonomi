@@ -41,7 +41,7 @@
         {
           "t": "note",
           "tone": "warn",
-          "v": "A mileage claim has the same deadline as an out-of-pocket one: 60 days from the day you drove. It cannot be sent after that."
+          "v": "Mileage has the same deadline as an out-of-pocket expense: 60 days from the day you drove. After that it can only be submitted if the treasurer has granted an exemption."
         }
       ]
     },

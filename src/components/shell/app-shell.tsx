@@ -523,7 +523,7 @@ export function AppShell({
         // on the rail's centre line and stays on it, to the pixel, as the panel
         // widens around it. Nothing about the row moves; only the label arrives.
         className={cn(
-          "flex items-center rounded-xl px-[11px] py-2 text-sm font-medium transition-colors",
+          "flex items-center rounded-control px-[11px] py-2 text-sm font-medium transition-colors",
           isActive(item.href)
             ? "brand-fill text-on-brand"
             : "text-foreground hover:bg-hover",
@@ -612,7 +612,7 @@ export function AppShell({
           a dozen-odd links, before the content the reader came for. */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:border focus:border-brand-edge focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:brand-fill focus:text-on-brand"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:border focus:border-brand-edge focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:brand-fill focus:text-on-brand"
       >
         {t("skipToContent")}
       </a>
@@ -700,7 +700,7 @@ export function AppShell({
               target="_blank"
               rel="noreferrer noopener"
               title={t("toDsek")}
-              className="group/brand flex min-w-0 flex-1 items-center rounded-xl transition-colors hover:text-foreground"
+              className="group/brand flex min-w-0 flex-1 items-center rounded-control transition-colors hover:text-foreground"
             >
               <span className="flex size-10 shrink-0 items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -742,7 +742,7 @@ export function AppShell({
               title={pinned ? t("collapseMenu") : t("pinMenu")}
               aria-label={pinned ? t("collapseMenu") : t("pinMenu")}
               className={cn(
-                "-me-1 hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-foreground md:flex",
+                "-me-1 hidden size-8 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground md:flex",
                 pinButton,
               )}
             >
@@ -769,7 +769,7 @@ export function AppShell({
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="flex items-center rounded-xl px-[11px] py-2 text-sm font-medium text-foreground transition-colors hover:bg-hover"
+                className="flex items-center rounded-control px-[11px] py-2 text-sm font-medium text-foreground transition-colors hover:bg-hover"
               >
                 <IconSearch className="size-[18px] shrink-0 text-muted" />
                 <span className={cn("ms-3 min-w-0 flex-1 truncate transition-opacity", labelFade)}>
@@ -782,7 +782,7 @@ export function AppShell({
                 <kbd
                   aria-hidden
                   className={cn(
-                    "ms-2 shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-faint transition-opacity",
+                    "ms-2 shrink-0 rounded-mark border border-border px-1.5 py-0.5 text-[10px] font-medium text-faint transition-opacity",
                     labelFade,
                   )}
                 >
@@ -829,7 +829,7 @@ export function AppShell({
                     type="button"
                     onClick={() => toggleGroup(group.label, open)}
                     aria-expanded={open}
-                    className="flex items-center rounded-xl px-[11px] py-2 text-left transition-colors hover:bg-hover"
+                    className="flex items-center rounded-control px-[11px] py-2 text-left transition-colors hover:bg-hover"
                   >
                     <GroupIcon className="size-[18px] shrink-0 text-muted" />
                     <span
@@ -932,7 +932,7 @@ export function AppShell({
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label={t("openMenu")}
-            className="-ml-1 flex size-9 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-hover"
+            className="-ml-1 flex size-9 items-center justify-center rounded-control text-foreground transition-colors hover:bg-hover"
           >
             <IconMenu className="size-5" />
           </button>
@@ -950,7 +950,7 @@ export function AppShell({
             type="button"
             onClick={() => setPaletteOpen(true)}
             aria-label={t("search")}
-            className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-hover"
+            className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-control text-foreground transition-colors hover:bg-hover"
           >
             <IconSearch className="size-5" />
           </button>
@@ -1063,7 +1063,7 @@ function FortnoxLogin({
       // No `overflow-hidden`, deliberately. The dot hangs off the corner while
       // the box is a square, and clipping the box would take it with it.
       className={cn(
-        "relative mx-0.5 mb-2 flex h-9 items-center rounded-lg border border-border transition-[width,background-color] duration-200 ease-out hover:bg-hover",
+        "relative mx-0.5 mb-2 flex h-9 items-center rounded-control border border-border transition-[width,background-color] duration-200 ease-out hover:bg-hover",
         boxExpand,
       )}
     >
@@ -1195,7 +1195,7 @@ function ProfileFooter({
         // `px-0.5` centres the 36px avatar in the 40px the rail's padding
         // leaves, the same way the nav rows centre their icons.
         className={cn(
-          "flex w-full items-center rounded-xl px-0.5 py-2 text-left transition-colors",
+          "flex w-full items-center rounded-control px-0.5 py-2 text-left transition-colors",
           // Deliberately not the nav rows' brand fill. Those mark which section
           // of the app you are in; this is a corner of the frame, and a block of
           // brand colour under the avatar reads as a notification rather than as

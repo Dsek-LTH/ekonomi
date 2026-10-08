@@ -74,10 +74,8 @@ describe("buildCoverData", () => {
     expect(d.allocations[0].amount.replace(/ /g, " ")).toBe("1 069,00 kr");
   });
 
-  it("names each cost centre by code and name", () => {
-    expect(buildCoverData(base, TODAY).allocations[0].costCenter).toBe(
-      "SEKT05 – Sexmästeriet",
-    );
+  it("names each cost centre by its code alone", () => {
+    expect(buildCoverData(base, TODAY).allocations[0].costCenter).toBe("SEKT05");
   });
 
   it("totals the allocations rather than the recorded gross", () => {

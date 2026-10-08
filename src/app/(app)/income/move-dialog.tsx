@@ -167,7 +167,7 @@ export function MoveLinesDialog({
                   setAccountFor(Object.fromEntries(lines.map((l) => [l.id, a.account])))
                 }
                 aria-label={t("setAllTo", { account: a.account })}
-                className="rounded-full border border-border px-3 py-1 font-mono text-xs transition hover:border-accent hover:text-accent"
+                className="rounded-control border border-border px-3 py-1 font-mono text-xs transition hover:border-accent hover:text-accent"
               >
                 {a.account}
                 {a.prefixes.length > 0 && (
@@ -181,7 +181,7 @@ export function MoveLinesDialog({
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-panel border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface text-left text-xs text-muted">
               <tr>

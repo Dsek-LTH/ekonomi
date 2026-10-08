@@ -14,7 +14,7 @@ export interface SeedExpense {
   submitterName: string;
   allocations: { costCenterCode: string; amount: number }[]; // SEK, must sum to grossAmount
   paymentType: "CARD" | "REIMBURSEMENT";
-  status: "DRAFT" | "PENDING_MATCH" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
+  status: "DRAFT" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
   purchaseDate: string;
   grossAmount: number;
   currency: string;
@@ -98,7 +98,7 @@ export const EXPENSES: SeedExpense[] = [
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "INFU", amount: 1290 }],
     paymentType: "CARD",
-    status: "PENDING_MATCH",
+    status: "DRAFT",
     purchaseDate: "2026-06-10",
     grossAmount: 1290,
     currency: "SEK",

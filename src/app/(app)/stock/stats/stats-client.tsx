@@ -267,7 +267,7 @@ export default function StockStatsClient({
                   <div key={h.category} className="flex flex-wrap items-center gap-x-3 text-sm">
                     <span
                       aria-hidden
-                      className="size-2.5 shrink-0 rounded-[3px]"
+                      className="size-2.5 shrink-0 rounded-mark"
                       style={{ background: DRINK_SERIES[h.category] }}
                     />
                     <span className="min-w-[7rem] flex-1 truncate">
@@ -304,7 +304,7 @@ export default function StockStatsClient({
                 <div key={m.id} className="flex flex-wrap items-center gap-x-3 text-sm">
                   <span
                     aria-hidden
-                    className="size-2.5 shrink-0 rounded-[3px]"
+                    className="size-2.5 shrink-0 rounded-mark"
                     style={{ background: DRINK_SERIES[m.category] }}
                   />
                   <Link

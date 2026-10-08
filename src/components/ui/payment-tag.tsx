@@ -66,7 +66,7 @@ export function PaymentTag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-control border text-xs font-medium",
         // No horizontal padding while it is only an icon, or the chip is a
         // lozenge with a dot rattling around in it.
         compact ? "px-1.5 py-1 md:px-2 md:py-0.5" : "px-2 py-0.5",

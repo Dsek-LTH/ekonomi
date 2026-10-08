@@ -8,7 +8,11 @@
       "a": [
         {
           "t": "p",
-          "v": "Har du en post som kräver många och dyra köp får du ett sektionskort. Kortet är kopplat till D-sektionens bankkonto, så att du slipper ligga ute med egna pengar."
+          "v": "Det bestämmer skattmästaren. Sektionskorten är betalkort kopplade till D-sektionens bankkonto, och de finns för att du ska slippa ligga ute med egna pengar när du handlar åt sektionen."
+        },
+        {
+          "t": "p",
+          "v": "Kortet registreras på dig i appen. Då hamnar dess köp under dina kortköp, där du redovisar dem."
         }
       ]
     },
@@ -18,12 +22,16 @@
       "a": [
         {
           "t": "p",
-          "v": "Nej. Ett sektionskort innebär INTE att du får köpa vad du vill. Alla köp med ett sektionskort ska godkännas av din utskottsledare i förväg, och varje köp måste redovisas i efterhand."
+          "v": "Nej. Kortet får bara användas för betalning i sektionens namn, aldrig för privata köp. Varje köp ska redovisas med ett giltigt kvitto och attesteras precis som ett eget utlägg."
+        },
+        {
+          "t": "p",
+          "v": "Stäm gärna av större köp med din resultatansvarig innan. Ett kortköp som inte attesteras faktureras dig."
         },
         {
           "t": "note",
           "tone": "danger",
-          "v": "Om olovliga köp genomförs på ditt sektionskort blir du personligen betalningsskyldig."
+          "v": "Skattmästaren får återkalla ett sektionskort som missköts, till exempel om köp inte redovisas eller om kortet används för privata köp."
         }
       ]
     },

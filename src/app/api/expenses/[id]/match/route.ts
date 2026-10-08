@@ -1,5 +1,5 @@
 // Set or clear the bank-transaction match on a CARD expense. Only allowed
-// while the expense is still pre-submission (DRAFT / PENDING_MATCH /
+// while the expense is still pre-submission (DRAFT /
 // CHANGES_REQUESTED). The [id] param is the expense id.
 import { prisma } from "@/lib/server/db";
 import { isQuietDraftEdit, isSubmittable } from "@/lib/domain/status";

@@ -138,12 +138,6 @@ export async function getBankTransactionPage(
   // utlägg against it" is asked of the database rather than of a loaded row.
   if (q.tab === "MATCHED" || q.tab === "matched") and.push({ matchedExpense: { isNot: null } });
   if (q.tab === "UNMATCHED" || q.tab === "unmatched") and.push({ matchedExpense: { is: null } });
-  // The rows the import could place on no card: the Referens carried no K####
-  // token, so they sit outside every member's own feed until somebody says
-  // whose they were. A tab rather than a search, because nothing about the row
-  // says what is missing from it.
-  if (q.tab === "NOCARD") and.push({ cardId: null });
-
   const date = dateRangeFilter(q, { dateOnly: true });
   if (date) and.push({ transactionDate: date });
 
@@ -174,6 +168,21 @@ export async function getBankTransactionPage(
   ]);
 
   return { rows: txns.map(toBankTransaction), total };
+}
+
+/**
+ * The purchases the import could place on no card: the Referens carried no
+ * K#### token, so they sit outside every member's own feed until somebody says
+ * whose they were. Every one of them, not a page: it is a job that is worked
+ * down to nothing, so the list is short whenever anyone is keeping up with it.
+ */
+export async function getCardlessTransactions(): Promise<BankTransaction[]> {
+  const txns = await prisma.bankTransaction.findMany({
+    where: { cardId: null },
+    orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+    include: { matchedExpense: true, card: { include: { holder: true } } },
+  });
+  return txns.map(toBankTransaction);
 }
 
 export async function getCards(opts: { holderId?: string } = {}): Promise<Card[]> {

@@ -40,7 +40,7 @@ export default function LoginPage() {
 
         <button
           onClick={() => signIn("authentik", { callbackUrl: "/dashboard" })}
-          className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-background text-sm font-medium transition-colors hover:bg-hover"
+          className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-control border border-border bg-background text-sm font-medium transition-colors hover:bg-hover"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="" aria-hidden className="h-5 w-auto" />
@@ -48,7 +48,7 @@ export default function LoginPage() {
         </button>
 
         {isDev && (
-          <div className="mt-8 rounded-2xl border border-dashed border-border p-4 text-left">
+          <div className="mt-8 rounded-panel border border-dashed border-border p-4 text-left">
             <p className="mb-3 text-xs font-medium text-muted">
               {tDev("heading")}
             </p>
@@ -59,7 +59,7 @@ export default function LoginPage() {
                   onClick={() =>
                     signIn("dev", { studentId: u.studentId, callbackUrl: "/dashboard" })
                   }
-                  className="flex h-11 w-full items-center rounded-lg border border-border bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-9"
+                  className="flex h-11 w-full items-center rounded-control border border-border bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-9"
                 >
                   {u.name} – {tDev(u.role)}
                 </button>

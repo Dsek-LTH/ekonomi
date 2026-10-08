@@ -59,17 +59,17 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
     // width it needs under them, and everything that acts on the sheet as a
     // whole is in the menu, where "Ta bort" is below a rule instead of beside
     // a link.
-    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div className="mb-4 flex flex-col gap-3 rounded-panel border border-border bg-background px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {linked ? (
           <>
-            <span className="rounded-lg bg-surface px-2 py-1 font-mono text-xs font-semibold">{linked.code}</span>
+            <span className="rounded-control bg-surface px-2 py-1 font-mono text-xs font-semibold">{linked.code}</span>
             <h2 className="truncate text-sm font-semibold">{linked.name}</h2>
             <span className="text-xs text-muted">{linked.resultUnit ?? t("noResultUnit")}</span>
           </>
         ) : (
           <>
-            <span className="rounded-lg bg-warning-soft px-2 py-1 text-xs font-medium text-warning">{t("unlinked")}</span>
+            <span className="rounded-control bg-warning-soft px-2 py-1 text-xs font-medium text-warning">{t("unlinked")}</span>
             <h2 className="min-w-0 text-sm font-semibold">
               <EditableText
                 value={cc.label ?? ""}

@@ -1,0 +1,105 @@
+{
+  "id": "budget",
+  "label": "Budget",
+  "items": [
+    {
+      "id": "budget-what",
+      "q": "What is the budget, and who decides it?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The budget is the guild's financial governing document: a forecast of the year's result and a tool for steering the activities."
+        },
+        {
+          "t": "p",
+          "v": "Before each financial year the guild meeting decides on the frame budget and the detailed budget for the coming year. The proposal is drawn up by the incoming board together with the sitting one."
+        },
+        {
+          "t": "action",
+          "v": "To the budget",
+          "href": "/budget"
+        }
+      ]
+    },
+    {
+      "id": "budget-terms",
+      "q": "What do the words in the budget mean?",
+      "a": [
+        {
+          "t": "ul",
+          "v": [
+            "Result unit (resultatenhet): one part of the guild's activities, for example Sexmästeriet. Its result is the sum of its cost centers' results.",
+            "Result owner (resultatansvarig): the person or people responsible for the result unit keeping to its budgeted result.",
+            "Cost center (kostnadsställe): one part of a result unit, with a code of a prefix and two digits, for example SEX01. The prefix decides which result unit the cost center belongs to.",
+            "Account item (kontopost): a collection of only costs (cost item) or only income (income item) within a cost center.",
+            "Account item row (kontopostrad): an example of how an account item's budget might be split. The rows are not binding, the account item is.",
+            "Frame budget (rambudget): the budgeted result for each result unit.",
+            "Detailed budget (detaljbudget): how the budget is split between the account items in a cost center, and between the cost centers in a result unit."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget-exceed",
+      "q": "May a cost item be exceeded?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Not without the budget first being adjusted through a budget change. Without an adjustment the cost may not be taken."
+        },
+        {
+          "t": "p",
+          "v": "There are two exceptions:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Income-financed overrun: the cost may be higher if the increase can reasonably be expected to be matched by higher income within the same result unit, so its result does not get worse. It needs the treasurer's approval before the cost arises.",
+            "Thanks: costs for thanks where the amount depends on the number of officials may be exceeded if there are more officials than budgeted. The cost per official may not exceed the cap in Policy för tackverksamhet, and the result owner reports the overrun at the next board meeting."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget-changes",
+      "q": "How is an adopted budget changed?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Through a budget change. The adopted budget is locked in the app, and changes are entered under Changes, where each one stands with its reason and who made it."
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Budget transfer (budgetförflyttning): money is moved between account items within the same result unit. The frame budget is unaffected.",
+            "Budget deviation (budgetavsteg): a cost item is increased so the result unit's result gets worse, when the money cannot be moved within the result unit.",
+            "Budget revision: an entirely new proposal for the frame and detailed budget, when the changes are too large for transfers and deviations. The guild meeting decides on it."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Transfers and deviations need the treasurer's approval and are reported at the next board and guild meeting. A refusal from the treasurer can be appealed to the board, and the board's decision to the guild meeting."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "If you need more money than the account item has, talk to your result owner and the treasurer before the purchase, not after."
+        }
+      ]
+    },
+    {
+      "id": "budget-overrun",
+      "q": "What happens if an item has been exceeded anyway?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Then the budget is adjusted afterwards to show the actual outcome. The adjustment is not a decision but a record, and it is marked as retroactive in the budget."
+        },
+        {
+          "t": "p",
+          "v": "The result owner reports the overrun at the next board meeting and explains why no budget change was made before the cost arose."
+        }
+      ]
+    }
+  ]
+}

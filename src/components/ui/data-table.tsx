@@ -51,7 +51,12 @@ import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState 
 //
 // No predicate: what a tab *means* is the database's business here. The
 // browser-side variant with predicates is ClientTabOption, in client-data-table.
-export type TabOption = { value: string; label: string };
+export type TabOption = {
+  value: string;
+  label: string;
+  /** A count beside the label, drawn by FilterTabs. Left out, none is shown. */
+  badge?: number;
+};
 
 export type TabFilter = TabOption[];
 
@@ -223,6 +228,7 @@ export function DataTable<T>({
   tabs,
   filter,
   action,
+  actionPanel,
   searchPlaceholder,
   rowKey,
   rowClassName,
@@ -256,6 +262,13 @@ export function DataTable<T>({
    * slot that means nothing. Next to the search box, it means "this list".
    */
   action?: React.ReactNode;
+  /**
+   * What `action` opened, when it opens in place: a short form for a new row,
+   * say. Drawn straight under the toolbar, so it appears below the button that
+   * asked for it rather than somewhere above it, and above the rows it will
+   * add to.
+   */
+  actionPanel?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   // Styles the whole row from its data, a retired row dimmed, say. Applies to
@@ -353,7 +366,7 @@ export function DataTable<T>({
       {tabs && tabs.length > 0 && (
         <div className="border-b border-border px-inset">
           <FilterTabs
-            options={tabs.map((o) => ({ value: o.value, label: o.label }))}
+            options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge }))}
             value={activeTab?.value ?? ""}
             onChange={controls.setTab}
             aria-label={t("tabsLabel")}
@@ -394,7 +407,7 @@ export function DataTable<T>({
                 aria-label={t("filters")}
                 title={t("filters")}
                 className={cn(
-                  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors sm:hidden",
+                  "flex h-11 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors sm:hidden",
                   activeFilters > 0
                     ? "border-accent bg-accent-soft text-accent"
                     : "border-border bg-background text-muted",
@@ -460,6 +473,10 @@ export function DataTable<T>({
             </div>
           )}
         </div>
+      )}
+
+      {actionPanel && (
+        <div className="border-b border-border bg-surface px-inset py-4">{actionPanel}</div>
       )}
 
       {/* Set once, then read off the badge. Deliberately the same dialog the
@@ -643,7 +660,7 @@ export function DataTable<T>({
                               type="button"
                               onClick={() => toggle(key)}
                               aria-expanded={open}
-                              className="relative z-10 -ml-1 shrink-0 rounded p-0.5 text-muted hover:bg-hover hover:text-foreground"
+                              className="relative z-10 -ml-1 shrink-0 rounded-control p-0.5 text-muted hover:bg-hover hover:text-foreground"
                             >
                               <IconChevronRight
                                 className={cn("size-3.5 transition-transform", open && "rotate-90")}
@@ -924,7 +941,7 @@ function Pagination({
   const from = totalItems === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
-  const btn = "flex size-8 items-center justify-center rounded-lg border border-border bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
+  const btn = "flex size-8 items-center justify-center rounded-control border border-border bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">

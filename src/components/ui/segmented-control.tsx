@@ -63,7 +63,7 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full font-medium transition-colors",
+              "inline-flex items-center gap-1.5 rounded-control font-medium transition-colors",
               size === "sm" ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm",
               active
                 ? "brand-fill text-on-brand"
@@ -74,7 +74,7 @@ export function SegmentedControl<T extends string>({
             {opt.badge != null && opt.badge > 0 && (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                  "rounded-mark px-1.5 py-0.5 text-xs tabular-nums",
                   // On the pink pill the badge darkens rather than lightens,
                   // a white wash on this fill is nearly invisible.
                   active

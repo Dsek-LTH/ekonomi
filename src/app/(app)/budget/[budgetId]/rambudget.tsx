@@ -56,7 +56,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
     // while the header block stays put at the top, so the page itself barely
     // moves. Below lg it keeps its natural height and flows with the page,
     // a nested vertical scroller on a phone is more trouble than it is worth.
-    <div className="rambudget budget-grid overflow-x-auto rounded-2xl border border-border bg-background lg:max-h-[70vh] lg:overflow-y-auto">
+    <div className="rambudget budget-grid overflow-x-auto rounded-panel border border-border bg-background lg:max-h-[70vh] lg:overflow-y-auto">
       <table className="w-full border-collapse text-sm">
         {/* Column names and the grand total both sit here; the whole block pins
             as one from lg up. See `.rambudget thead` in globals.css. */}

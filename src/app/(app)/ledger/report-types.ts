@@ -15,6 +15,30 @@ export type {
 import type { GroupMode, LedgerReport } from "@/lib/ledger/report-shape";
 export type ComparisonMode = "NONE" | "PRIOR" | "BUDGET";
 
+/**
+ * The figure columns a result report can show, in the order they stand.
+ *
+ *   period            the period itself
+ *   prior             the same days a year earlier
+ *   accumulated       the year so far, up to the period's end
+ *   priorAccumulated  the prior year so far, up to a year before that
+ *   priorDiff         the period against the same days a year earlier
+ *
+ * Picked by the reader in any order and always drawn in this one, so two
+ * readers who picked the same set are looking at the same table.
+ */
+export type ResultColumn = "period" | "prior" | "accumulated" | "priorAccumulated" | "priorDiff";
+export const RESULT_COLUMNS: readonly ResultColumn[] = [
+  "period",
+  "prior",
+  "accumulated",
+  "priorAccumulated",
+  "priorDiff",
+];
+/** Whether any picked column needs last year's figures fetched. */
+export const needsPriorYear = (cols: readonly ResultColumn[]) =>
+  cols.some((c) => c === "prior" || c === "priorAccumulated" || c === "priorDiff");
+
 export interface LedgerYear {
   id: number;
   year: number;
@@ -35,9 +59,15 @@ export interface ReportResponse {
   years: LedgerYear[];
   year: LedgerYear | null;
   period: { from: string; to: string } | null;
+  /** The period as YYYY-MM-DD days. Absent when there is no year to report on. */
+  periodDates?: { from: string; to: string };
+  /** For the printed header. See reportMeta in /api/ledger/report. */
+  meta?: { companyName: string | null; orgNumber: string | null; latestVouchers: string[] };
   report: LedgerReport | null;
   comparison: ComparisonMode;
   comparisonRequested: ComparisonMode;
+  /** Null unless last year's columns were asked for; false when it isn't synced. */
+  priorAvailable?: boolean | null;
   // Every budget of every year, and the one the report was actually compared
   // against (null unless a budget comparison was applied).
   budgets: BudgetOption[];
@@ -60,23 +90,26 @@ export interface RowView {
 export interface QueryState {
   kind: ReportKind;
   year: number | null;
-  from: string | null; // "YYYY-MM"
+  from: string | null; // "YYYY-MM-DD"
   to: string | null;
-  // null = every cost centre, "" = the rows carrying none, otherwise a code.
-  costCenter: string | null;
+  // Which cost centres. Empty = every one; otherwise only these codes, with ""
+  // among them for the rows carrying none. Sent as repeated `costCenter`
+  // params; see lib/ledger/cost-center-filter.ts.
+  costCenters: string[];
   group: GroupMode;
   compare: ComparisonMode;
   // Which budget to compare against, any of them, of any year. Null lets the
   // server pick this year's; only meaningful when compare is BUDGET.
   budget: string | null;
+  // Fetch last year's figures for the prior-year columns. Derived from the
+  // picked columns (see needsPriorYear), and held here because it is a
+  // question for the server; the columns themselves are only presentation.
+  prior: boolean;
 }
 
 // How the fetched report is narrowed and presented on screen. These need no
 // round-trip: the report is already in memory, so they apply instantly.
 export interface ViewOptions {
-  query: string; // account number or name
-  hideZero: boolean; // drop accounts with nothing in the period
-  share: boolean; // show each account's share of its section
   // Show the difference against the comparison column. Off by default: the
   // comparison itself is what most readings need, and the extra column costs
   // width the account names would rather have.
@@ -84,8 +117,5 @@ export interface ViewOptions {
 }
 
 export const EMPTY_VIEW: ViewOptions = {
-  query: "",
-  hideZero: false,
-  share: false,
   diff: false,
 };

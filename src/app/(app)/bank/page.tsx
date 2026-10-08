@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
-import { getBankTransactionPage, getCards } from "@/lib/data/bank";
+import { getBankTransactionPage, getCardlessTransactions, getCards } from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import BankClient, { type BankScope } from "./bank-client";
@@ -35,9 +35,11 @@ export default async function BankPage({
   if (!canSeeAll && !holdsCard) redirect("/dashboard");
 
   const asked = params.scope === "mine" ? "mine" : params.scope === "all" ? "all" : null;
-  // Bookkeeping opens on the whole feed, because that is the job; everybody
-  // else has exactly one scope and it is not a choice.
-  const scope: BankScope = canSeeAll ? (asked ?? "all") : "mine";
+  // Opens on your own purchases when you hold a card, the same as Utlägg opens
+  // on Mina. Bookkeeping without a card has nothing of its own to show and
+  // opens on the whole feed. Everybody else has exactly one scope and it is not
+  // a choice.
+  const scope: BankScope = canSeeAll ? (asked ?? (holdsCard ? "mine" : "all")) : "mine";
 
   const query = parseListQuery(params, {
     // Your own purchases open on the ones not yet accounted for. That is what
@@ -46,7 +48,11 @@ export default async function BankPage({
     defaultTab: scope === "mine" ? "UNMATCHED" : "ALL",
   });
 
-  const [page, cards, allCards] = await Promise.all([
+  // Purchases on no card are bookkeeping's to place, and only on the section's
+  // feed, since they are on nobody's own.
+  const canPlaceCards = canSeeAll && scope === "all";
+
+  const [page, cards, allCards, cardless] = await Promise.all([
     getBankTransactionPage(scope === "mine" ? { cardHolderId: user.id } : {}, query),
     // Only to decide whether the card column earns its width, so only asked for
     // where it could be shown.
@@ -54,7 +60,8 @@ export default async function BankPage({
     // The register behind the card picker. A purchase the export named no card
     // on is on nobody's own feed, so putting it on one is bookkeeping's job and
     // only the section-wide reading shows those rows at all.
-    canSeeAll && scope === "all" ? getCards() : Promise.resolve([]),
+    canPlaceCards ? getCards() : Promise.resolve([]),
+    canPlaceCards ? getCardlessTransactions() : Promise.resolve([]),
   ]);
 
   return (
@@ -67,6 +74,7 @@ export default async function BankPage({
       canPickScope={canSeeAll && holdsCard}
       cards={cards}
       allCards={allCards}
+      cardless={cardless}
       viewerId={user.id}
     />
   );

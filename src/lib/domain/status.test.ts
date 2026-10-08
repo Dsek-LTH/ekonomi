@@ -297,7 +297,6 @@ describe("submitBlocker", () => {
 describe("status predicates", () => {
   it("lets an utlägg be edited while it is the submitter's own", () => {
     expect(isEditable("DRAFT")).toBe(true);
-    expect(isEditable("PENDING_MATCH")).toBe(true);
     expect(isEditable("CHANGES_REQUESTED")).toBe(true);
   });
 
@@ -345,7 +344,6 @@ describe("status predicates", () => {
     expect(isInAttestChain("APPROVED")).toBe(true);
     expect(isInAttestChain("EXPORTED")).toBe(true);
     expect(isInAttestChain("DRAFT")).toBe(false);
-    expect(isInAttestChain("PENDING_MATCH")).toBe(false);
     expect(isInAttestChain("CHANGES_REQUESTED")).toBe(false);
   });
 

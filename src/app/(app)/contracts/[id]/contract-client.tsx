@@ -132,11 +132,7 @@ export function ContractClient({
     <PageShell
       title={contract.title}
       subtitle={contract.counterparty}
-      back={
-        contract.rental
-          ? { href: "/uthyrning", label: t("rental.backToRentals") }
-          : { href: "/contracts", label: t("detail.back") }
-      }
+      back={contract.rental ? "/uthyrning" : "/contracts"}
       width="content"
     >
       {/* The contract itself, in the panel that exists for reading a document

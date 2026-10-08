@@ -12,6 +12,7 @@
 // What stays in each route is what actually differs: which row it is about,
 // what may be exported, what goes up as the attachment, and what the response
 // says.
+import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -44,26 +45,33 @@ interface LineWithCostCenter {
   debit: number;
   credit: number;
   description: string | null;
-  costCenter: { code: string; source: string } | null;
+  costCenter: { code: string; source: string; active: boolean } | null;
 }
 
 /**
  * A stored verification's lines, as Fortnox takes them.
  *
- * Only a cost centre Fortnox itself knows about travels. A local one is an
- * app-side dimension (it drives attest and the budget) that Fortnox has never
- * heard of, and sending its code would have the whole voucher rejected.
+ * Only a cost centre Fortnox itself has, and has active, travels as a cost
+ * centre. Any other code would have the whole voucher rejected. A local one is
+ * an app-side dimension (it drives attest and the budget) that Fortnox has
+ * never heard of. Its code goes into the row text instead, so the row can still
+ * be told apart over there. See lib/domain/cost-center-tag.
  */
 export const voucherRows = (lines: readonly LineWithCostCenter[]): VoucherRowInput[] =>
-  lines.map((l) => ({
-    account: Number(l.account),
-    // Fortnox works in decimal SEK, the database in integer öre. The one pair
-    // of converters, per lib/domain/money.ts.
-    debit: oreToSEK(l.debit),
-    credit: oreToSEK(l.credit),
-    costCenter: l.costCenter?.source === "FORTNOX" ? l.costCenter.code : undefined,
-    description: l.description ?? undefined,
-  }));
+  lines.map((l) => {
+    const cc = l.costCenter;
+    const sendable = cc?.source === "FORTNOX" && cc.active;
+    const text = l.description ?? "";
+    return {
+      account: Number(l.account),
+      // Fortnox works in decimal SEK, the database in integer öre. The one pair
+      // of converters, per lib/domain/money.ts.
+      debit: oreToSEK(l.debit),
+      credit: oreToSEK(l.credit),
+      costCenter: sendable ? cc.code : undefined,
+      description: (cc && !sendable ? withCostCenterTag(text, cc.code) : text) || undefined,
+    };
+  });
 
 /**
  * The bookkeeper's own Fortnox token, or the response to send instead.

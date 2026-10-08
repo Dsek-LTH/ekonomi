@@ -156,20 +156,10 @@ export const canWaiveFilingDeadline = (caps: readonly Capability[]) =>
 //
 // So the roles named here are named in code, on purpose. ADMIN comes through as
 // a capability because "full authority over other people's utlägg" genuinely is
-// one; the vice-skattmästare and resultatansvarig clauses are the rule itself.
-
-// Roles that, when held by an expense's submitter, make it NOT "ordinarie".
-// Exported because the attest *query* (lib/data/attest-scope.ts) has to ask the
-// same question of the database that `isOrdinarie` below asks of a loaded row.
-export const ELEVATED_SUBMITTER_ROLES: readonly Role[] = [
-  "SKATTMASTARE",
-  "ORDFORANDE",
-  "RESULTATANSVARIG",
-];
-
-// A submitter is "ordinarie" when they hold none of the elevated roles.
-const isOrdinarie = (submitterRoles: readonly Role[]) =>
-  submitterRoles.some((r) => ELEVATED_SUBMITTER_ROLES.includes(r)) === false;
+// one (the policy's firmatecknare); the resultatansvarig clause is the rule
+// itself. Policy för ekonomi names those two and nobody else. The vice
+// skattmästare used to attest ordinary members' expenses too, until the policy
+// was changed to take that away.
 
 // Whether `actor` may attest (and thereby also reject / request changes on) one
 // allocation of an expense. All inputs are explicit so this stays a pure
@@ -179,7 +169,6 @@ export function canAttestAllocation(args: {
   actorRoles: readonly Role[];
   actorIsSubmitter: boolean;
   actorOwnedResultUnits: readonly string[];
-  submitterRoles: readonly Role[];
   allocationResultUnit: string | null;
 }): boolean {
   const {
@@ -187,15 +176,11 @@ export function canAttestAllocation(args: {
     actorRoles,
     actorIsSubmitter,
     actorOwnedResultUnits,
-    submitterRoles,
     allocationResultUnit,
   } = args;
 
   if (actorIsSubmitter) return false; // never your own expense
   if (isAdmin(actorCapabilities)) return true; // full authority: any expense
-  if (actorRoles.includes("VICE_SKATTMASTARE") && isOrdinarie(submitterRoles)) {
-    return true; // vice: expenses by ordinarie submitters
-  }
   if (
     actorRoles.includes("RESULTATANSVARIG") &&
     allocationResultUnit !== null &&

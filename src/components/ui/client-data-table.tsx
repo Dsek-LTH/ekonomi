@@ -101,6 +101,7 @@ export function ClientDataTable<T>({
   tabs,
   filter,
   action,
+  actionPanel,
   searchPlaceholder,
   rowKey,
   rowClassName,
@@ -117,6 +118,8 @@ export function ClientDataTable<T>({
   filter?: ClientSelectFilters<T>;
   /** What you can do to this list, see DataTable's own `action`. */
   action?: React.ReactNode;
+  /** What `action` opened in place, see DataTable's own `actionPanel`. */
+  actionPanel?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
@@ -151,7 +154,7 @@ export function ClientDataTable<T>({
   // What DataTable is handed: the page, the count behind it, and tabs stripped
   // of the predicates it has no use for.
   const plainTabs: TabFilter | undefined = useMemo(
-    () => tabs?.map(({ value, label }) => ({ value, label })),
+    () => tabs?.map(({ value, label, badge }) => ({ value, label, badge })),
     [tabs],
   );
   const plainFilter: SelectFilter[] = useMemo(
@@ -171,6 +174,7 @@ export function ClientDataTable<T>({
       tabs={plainTabs}
       filter={plainFilter}
       action={action}
+      actionPanel={actionPanel}
       searchPlaceholder={searchPlaceholder}
       rowKey={rowKey}
       rowClassName={rowClassName}

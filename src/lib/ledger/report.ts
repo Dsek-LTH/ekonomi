@@ -9,6 +9,7 @@
 // Amounts leave this module in SEK, already oriented for display (see lib/bas):
 // income and equity read positive, costs read negative.
 import { prisma } from "@/lib/server/db";
+import { costCenterMatcher } from "./cost-center-filter";
 import { oreToSEK } from "@/lib/domain/money";
 // The wire shapes live in ./report-shape, which the ledger screen imports
 // too. They are the contract between this module and that one, and a
@@ -46,8 +47,18 @@ interface Cell {
   costCenterName: string | null;
   opening: number; // at period start
   movement: number; // during the period
+  accumulated: number; // from the financial year's start to the period's end
   comparison: number | null;
+  prior: number | null; // the same days a year earlier
+  priorAccumulated: number | null; // the prior year's start to a year before `to`
 }
+
+// The figures a cell carries only when somebody asked for them. Each arrives as
+// its own map, and each is null rather than zero where it was not asked for,
+// so "no comparison" and "a comparison of nothing" stay different things.
+const EXTRAS = ["comparison", "prior", "priorAccumulated"] as const;
+type Extra = (typeof EXTRAS)[number];
+const NO_EXTRAS: Record<Extra, null> = { comparison: null, prior: null, priorAccumulated: null };
 
 function inRange(account: string, kind: ReportKind): boolean {
   const n = Number(account);
@@ -81,7 +92,8 @@ async function movements(
       costCenterName: g.costCenterName,
       opening: 0,
       movement: (g._sum.debit ?? 0) - (g._sum.credit ?? 0),
-      comparison: null,
+      accumulated: 0,
+      ...NO_EXTRAS,
     });
   }
   return out;
@@ -119,7 +131,8 @@ async function openingBalances(
         costCenterName: null,
         opening: amount,
         movement: 0,
-        comparison: null,
+        accumulated: 0,
+        ...NO_EXTRAS,
       });
   };
 
@@ -161,11 +174,16 @@ export interface ReportOptions {
   from: Date; // period start, inclusive
   to: Date; // period end, inclusive
   yearStart: Date; // the financial year's own first day
-  costCenterCode?: string; // filter to a single cost centre
+  costCenterCodes?: string[]; // only these cost centres; see cost-center-filter
   group: GroupMode;
   // Raw öre net (debit − credit) per `${account}|${costCenterCode}` to show
   // alongside the period, prior year or budget. See lib/ledger/comparison.
   comparison?: Map<string, number> | null;
+  // The prior year as columns of their own: its matching period, and its year
+  // so far. Separate from `comparison` because a result report can hold both
+  // these and a budget at once.
+  prior?: Map<string, number> | null;
+  priorAccumulated?: Map<string, number> | null;
 }
 
 export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport> {
@@ -173,31 +191,50 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
   const isBalance = kind === "BALANCE";
 
   const cells = new Map<string, Cell>();
-  const merge = (src: Map<string, Cell>, field: "opening" | "movement") => {
+  // Every source writes one field of a cell. A cell first seen in a later
+  // source starts with only that field, the rest at zero.
+  const merge = (
+    src: Map<string, Cell>,
+    field: "opening" | "movement" | "accumulated",
+    read: (c: Cell) => number,
+  ) => {
     for (const [key, c] of src) {
       if (!inRange(c.account, kind)) continue;
       const existing = cells.get(key);
       if (existing) {
-        existing[field] += c[field];
+        existing[field] += read(c);
         existing.costCenterName ??= c.costCenterName;
         existing.accountName ||= c.accountName;
       } else {
-        cells.set(key, { ...c });
+        cells.set(key, { ...c, opening: 0, movement: 0, accumulated: 0, [field]: read(c) });
       }
     }
   };
 
-  merge(await movements(financialYear, from, to), "movement");
+  const period = await movements(financialYear, from, to);
+  merge(period, "movement", (c) => c.movement);
   // Only the balance report carries balances forward; result accounts restart
   // at zero each financial year.
-  if (isBalance) merge(await openingBalances(financialYear, from, yearStart), "opening");
+  if (isBalance) {
+    merge(await openingBalances(financialYear, from, yearStart), "opening", (c) => c.opening);
+  } else {
+    // Ackumulerat: the year so far, up to the period's end. The period itself
+    // when it starts on the year's first day, so that needs no second query.
+    const sinceYearStart =
+      from > yearStart ? await movements(financialYear, yearStart, to) : period;
+    merge(sinceYearStart, "accumulated", (c) => c.movement);
+  }
 
-  if (opts.comparison) {
-    for (const [key, raw] of opts.comparison) {
+  // Each asked-for extra lands on its cell, creating one where only the extra
+  // has something (an account used last year and not this one).
+  for (const field of EXTRAS) {
+    const map = opts[field];
+    if (!map) continue;
+    for (const [key, raw] of map) {
       const [account, cc = NO_CC] = key.split("|");
       if (!inRange(account, kind)) continue;
       const existing = cells.get(key);
-      if (existing) existing.comparison = (existing.comparison ?? 0) + raw;
+      if (existing) existing[field] = (existing[field] ?? 0) + raw;
       else
         cells.set(key, {
           account,
@@ -206,7 +243,9 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
           costCenterName: null,
           opening: 0,
           movement: 0,
-          comparison: raw,
+          accumulated: 0,
+          ...NO_EXTRAS,
+          [field]: raw,
         });
     }
   }
@@ -224,13 +263,18 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
   }
 
   let list = [...cells.values()];
-  if (opts.costCenterCode !== undefined) {
-    list = list.filter((c) => c.costCenterCode === opts.costCenterCode);
+  if (opts.costCenterCodes !== undefined) {
+    const matches = costCenterMatcher(opts.costCenterCodes);
+    list = list.filter((c) => matches(c.costCenterCode));
   }
   // Drop rows that carry nothing at all. An account touched only outside the
   // period would otherwise show up as a row of zeroes.
   list = list.filter(
-    (c) => c.movement !== 0 || c.opening !== 0 || (c.comparison ?? 0) !== 0,
+    (c) =>
+      c.movement !== 0 ||
+      c.opening !== 0 ||
+      c.accumulated !== 0 ||
+      EXTRAS.some((f) => (c[f] ?? 0) !== 0),
   );
 
   const buckets =
@@ -250,6 +294,9 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
     opening: isBalance ? sum((g) => g.opening) : null,
     closing: isBalance ? sum((g) => g.closing) : null,
     comparison: opts.comparison ? sum((g) => g.comparison) : null,
+    accumulated: isBalance ? null : sum((g) => g.accumulated),
+    prior: opts.prior ? sum((g) => g.prior) : null,
+    priorAccumulated: opts.priorAccumulated ? sum((g) => g.priorAccumulated) : null,
   };
 }
 
@@ -281,7 +328,8 @@ function mergeAcrossCostCenters(list: Cell[]): Cell[] {
     if (existing) {
       existing.opening += c.opening;
       existing.movement += c.movement;
-      if (c.comparison != null) existing.comparison = (existing.comparison ?? 0) + c.comparison;
+      existing.accumulated += c.accumulated;
+      for (const f of EXTRAS) if (c[f] != null) existing[f] = (existing[f] ?? 0) + c[f];
       existing.accountName ||= c.accountName;
     } else {
       byAccount.set(c.account, { ...c, costCenterCode: NO_CC, costCenterName: null });
@@ -325,21 +373,26 @@ function buildGroup(
         opening: isBalance ? oreToSEK(orient(c.opening, def.orientation)) : null,
         closing: isBalance ? oreToSEK(orient(c.opening + c.movement, def.orientation)) : null,
         comparison: c.comparison == null ? null : oreToSEK(orient(c.comparison, def.orientation)),
+        accumulated: isBalance ? null : oreToSEK(orient(c.accumulated, def.orientation)),
+        prior: c.prior == null ? null : oreToSEK(orient(c.prior, def.orientation)),
+        priorAccumulated:
+          c.priorAccumulated == null ? null : oreToSEK(orient(c.priorAccumulated, def.orientation)),
       }))
       .sort((a, b) => a.account.localeCompare(b.account));
 
-    const anyComparison = accounts.some((a) => a.comparison != null);
     sections.push({
       key: def.key,
       accounts,
       total: accounts.reduce((s, a) => s + a.amount, 0),
       opening: isBalance ? accounts.reduce((s, a) => s + (a.opening ?? 0), 0) : null,
       closing: isBalance ? accounts.reduce((s, a) => s + (a.closing ?? 0), 0) : null,
-      comparison: anyComparison ? accounts.reduce((s, a) => s + (a.comparison ?? 0), 0) : null,
+      comparison: sumOrNull(accounts, (a) => a.comparison),
+      accumulated: isBalance ? null : accounts.reduce((s, a) => s + (a.accumulated ?? 0), 0),
+      prior: sumOrNull(accounts, (a) => a.prior),
+      priorAccumulated: sumOrNull(accounts, (a) => a.priorAccumulated),
     });
   }
 
-  const anyComparison = sections.some((s) => s.comparison != null);
   return {
     costCenterCode: code,
     costCenterName: name,
@@ -347,6 +400,15 @@ function buildGroup(
     total: sections.reduce((s, x) => s + x.total, 0),
     opening: isBalance ? sections.reduce((s, x) => s + (x.opening ?? 0), 0) : null,
     closing: isBalance ? sections.reduce((s, x) => s + (x.closing ?? 0), 0) : null,
-    comparison: anyComparison ? sections.reduce((s, x) => s + (x.comparison ?? 0), 0) : null,
+    comparison: sumOrNull(sections, (x) => x.comparison),
+    accumulated: isBalance ? null : sections.reduce((s, x) => s + (x.accumulated ?? 0), 0),
+    prior: sumOrNull(sections, (x) => x.prior),
+    priorAccumulated: sumOrNull(sections, (x) => x.priorAccumulated),
   };
+}
+
+// A sum of figures that may be absent: null when none of them is there, so a
+// column nobody asked for stays empty rather than reading as zero.
+function sumOrNull<T>(items: T[], pick: (item: T) => number | null): number | null {
+  return items.some((i) => pick(i) != null) ? items.reduce((s, i) => s + (pick(i) ?? 0), 0) : null;
 }

@@ -753,7 +753,7 @@ export default function IncomeReviewClient({
                         }
                         title={t("newReport.action")}
                         aria-label={t("newReport.actionFor", { date: formatDate(group.date) })}
-                        className="-my-1 flex size-6 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-accent-soft hover:text-accent"
+                        className="-my-1 flex size-6 shrink-0 items-center justify-center rounded-control text-muted transition hover:bg-accent-soft hover:text-accent"
                       >
                         <IconPlus className="size-3.5" />
                       </button>
@@ -819,7 +819,7 @@ export default function IncomeReviewClient({
             // so the detail's width is not a function of the viewport's and a
             // `sm:`/`lg:` breakpoint here is guessing. What the fields inside
             // respond to is this box. See the grid below.
-            <div className="@container min-w-0 flex-1 space-y-6">
+            <div className="@container min-w-0 flex-1 space-y-4">
               {/* What the voucher is: its own card, a gap above the rows that
                   say what it books, exactly as the utlägg booking view has it.
                   Both fields are locked, and not merely disabled-looking: the
@@ -892,13 +892,13 @@ export default function IncomeReviewClient({
                     />
                   </Field>
                   <Field label={tBook("voucherDate")}>
-                    <div className="flex h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
+                    <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
                       <IconLock className="size-3.5 shrink-0" />
                       <span className="tabular-nums">{selected.date}</span>
                     </div>
                   </Field>
                   <Field label={tBook("voucherText")}>
-                    <div className="flex h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
+                    <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
                       <IconLock className="size-3.5 shrink-0" />
                       <span className="truncate">
                         {incomeVoucherDescription(selected.source, selected.unitDescription)}
@@ -938,7 +938,7 @@ export default function IncomeReviewClient({
                     <CardHeader title={t("review.lines")} />
                     {/* A plain div, not a CardBody with its padding turned off:
                         `cn` is a joiner rather than tailwind-merge, so a `p-0`
-                        passed to CardBody does not replace its `px-inset py-5`.
+                        passed to CardBody does not replace its `px-inset py-4`.
                         Both land in the class attribute and Tailwind's own order
                         decides, which it does in favour of the more specific
                         padding. The table is meant to run to the card's edges, so

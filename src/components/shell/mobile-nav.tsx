@@ -42,7 +42,7 @@ import { cn } from "@/lib/ui/utils";
 
 // One card of an inset grouped list. `divide-y` rather than a border per row,
 // so the rules stop short of the rounded corners on their own.
-const CARD = "divide-y divide-border overflow-hidden rounded-2xl border border-border bg-background";
+const CARD = "divide-y divide-border overflow-hidden rounded-panel border border-border bg-background";
 
 // 48px, not the rail's 40. Everything on this screen is hit with a thumb, and
 // `min-h` rather than `h` so a long section name may take a second line rather
@@ -140,7 +140,7 @@ export function MobileNav({
         <button
           type="button"
           onClick={onClose}
-          className="-me-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-accent transition-colors active:bg-accent-soft"
+          className="-me-1 rounded-control px-2 py-1.5 text-sm font-semibold text-accent transition-colors active:bg-accent-soft"
         >
           {t("doneMenu")}
         </button>

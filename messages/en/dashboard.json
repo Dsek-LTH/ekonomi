@@ -9,7 +9,6 @@
   "action": {
     "FIX": "Fix",
     "SUBMIT": "Submit",
-    "MATCH": "Match",
     "ATTEST": "Approve",
     "BOOK": "Book",
     "EXPORT": "Export"

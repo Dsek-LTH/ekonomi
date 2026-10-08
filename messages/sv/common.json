@@ -1,10 +1,10 @@
 {
+  "back": "Tillbaka",
   "theme": "Tema",
   "language": "Språk",
   "signOut": "Logga ut",
   "status": {
     "DRAFT": "Utkast",
-    "PENDING_MATCH": "Väntar på matchning",
     "PENDING_APPROVAL": "Väntar på attest",
     "CHANGES_REQUESTED": "Behöver ändras",
     "APPROVED": "Attesterat",

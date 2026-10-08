@@ -238,6 +238,10 @@ function useUrlDraft(
   return [draft, set];
 }
 
+// Every parameter `listQueryToSearch` can write, so `commit` knows which ones
+// are the list's to rewrite and which belong to the page.
+const LIST_KEYS = ["page", "size", "tab", "picks", "view", "q", "from", "to", "sort", "dir"];
+
 export function useUrlTableControls(
   total: number,
   /**
@@ -268,7 +272,15 @@ export function useUrlTableControls(
         ...parseListQuery(Object.fromEntries(params.entries()), { defaultTab }),
         ...next,
       };
-      const search = listQueryToSearch(merged);
+      // Whatever else the address carries (/bank's `scope`, say) belongs to
+      // the page, not the list, and rides along untouched. Rebuilding from the
+      // list's own keys alone dropped it, so a tab click on the section's feed
+      // put you back on your own.
+      const kept = new URLSearchParams(params.toString());
+      for (const key of LIST_KEYS) kept.delete(key);
+      const own = new URLSearchParams(listQueryToSearch(merged));
+      for (const [k, v] of own) kept.set(k, v);
+      const search = kept.toString();
       // `replace`, not `push`: narrowing a list is adjusting a view, not going
       // somewhere. Pushing would put every keystroke and every tab on the
       // history stack, and Back out of the list would take a dozen presses.

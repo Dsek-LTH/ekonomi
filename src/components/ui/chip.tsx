@@ -30,7 +30,7 @@ export function Chip({
       aria-pressed={active}
       aria-busy={loading || undefined}
       className={cn(
-        "h-7 rounded-full border px-3 text-xs font-medium transition-colors",
+        "h-7 rounded-control border px-3 text-xs font-medium transition-colors",
         loading ? "opacity-100" : "disabled:opacity-50",
         active
           ? "border-accent bg-accent-soft text-accent"

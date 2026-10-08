@@ -1,7 +1,7 @@
 {
   "categories": "Kategorier",
   "title": "Frågor & svar",
-  "description": "Hela \"How to utlägg\" som en sida du kan söka i. Vad du gör när du lagt ut för sektionen, och vad du gör när det hamnar på dig att attestera.",
+  "description": "Det du behöver veta för att handla åt sektionen, redovisa och attestera, enligt Policy för ekonomi. Sök bland frågorna eller välj en kategori.",
   "searchPlaceholder": "Sök bland frågorna…",
   "all": "Alla",
   "matches": "{count, plural, =0 {Inga träffar} =1 {# träff} other {# träffar}}",

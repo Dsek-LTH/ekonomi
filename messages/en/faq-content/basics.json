@@ -13,6 +13,24 @@
         {
           "t": "p",
           "v": "The act contains the guidelines and requirements the Swedish Tax Agency places on us as an organisation. Breaking it can have serious consequences both for the guild and for the treasurer as a private person. The rules on this page are not here to make life difficult. They are here to keep us on the right side of the law."
+        },
+        {
+          "t": "p",
+          "v": "How the guild runs its finances otherwise is set out in Policy för ekonomi. The answers here build on it, but only cover what concerns what you do in the app."
+        }
+      ]
+    },
+    {
+      "id": "own-pocket",
+      "q": "Should I have to spend my own money?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ideally not. D-sektionen is a non-profit association, and no official should have to pay out of their own pocket to carry out their role. That is what the guild cards are for: they are meant to minimise the need for out-of-pocket expenses."
+        },
+        {
+          "t": "p",
+          "v": "If you did pay yourself, you get the money back as long as the purchase is reported and attested as usual. No official should make money from the guild's activities either."
         }
       ]
     },
@@ -26,7 +44,7 @@
         },
         {
           "t": "p",
-          "v": "If you chair a committee, approval applies to you as well: you review and approve the expenses belonging to your committee before they are booked."
+          "v": "If you are a result owner (resultatansvarig), attesting applies to you as well: you review and approve the purchases made under your result unit."
         }
       ]
     },

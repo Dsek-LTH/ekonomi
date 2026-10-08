@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
@@ -18,6 +18,11 @@ export interface ComboOption {
   // the full text. Search still matches on `label`, so the long form stays
   // findable, and only the collapsed display is shortened.
   short?: string;
+  // A hairline above this option, setting off the ones before it as a group of
+  // their own (the ledger's "with / without a cost centre" above the cost
+  // centres themselves). Drawn only on the full list: once a search has
+  // narrowed it, the groups are gone and a rule would divide nothing.
+  dividerBefore?: boolean;
 }
 
 // Everything both variants take. `Combobox` and `MultiCombobox` differ only in
@@ -391,7 +396,7 @@ function ComboboxBase({
           // wrongly cover something else, because a menu only stays open while
           // its own trigger is on top: an outside mousedown closes it, which is
           // how anything above it would have been opened in the first place.
-          className="z-[210] flex flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
+          className="z-[210] flex flex-col overflow-hidden rounded-panel border border-border bg-background shadow-[var(--shadow-pop)]"
         >
           {searchable && (
           <div className="shrink-0 border-b border-border p-2">
@@ -411,7 +416,7 @@ function ComboboxBase({
               onChange={(e) => { setQuery(e.target.value); setActive(0); }}
               onKeyDown={onSearchKey}
               placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-              className="h-8 w-full rounded-lg border border-border bg-background px-2.5 text-sm"
+              className="h-8 w-full rounded-control border border-border bg-background px-2.5 text-sm"
             />
           </div>
           )}
@@ -443,7 +448,7 @@ function ComboboxBase({
                     onClear();
                     if (!multiple) { close(); triggerRef.current?.focus(); }
                   }}
-                  className="flex w-full items-center rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:bg-hover"
+                  className="flex w-full items-center rounded-control px-3 py-1.5 text-left text-sm text-muted hover:bg-hover"
                 >
                   {clearLabel ?? t("clear")}
                 </button>
@@ -464,14 +469,18 @@ function ComboboxBase({
                     close();
                     onCreate?.(query.trim());
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-hover"
+                  className="flex w-full items-center gap-2 rounded-control px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-hover"
                 >
                   {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
                 </button>
               </li>
             )}
             {filtered.map((o, i) => (
-              <li key={o.value}>
+              <Fragment key={o.value}>
+              {o.dividerBefore && !q && i > 0 && (
+                <li role="separator" aria-hidden className="mx-2 my-1 h-px bg-border" />
+              )}
+              <li>
                 <button
                   type="button"
                   id={optionId(i)}
@@ -486,14 +495,19 @@ function ComboboxBase({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => commit(o.value)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors",
-                    // One indicator for "where the keyboard is", carrying the
-                    // focus ring. The options aren't focused themselves, so
-                    // nothing else would draw one. Arrows, Tab and the mouse all
-                    // move this same highlight; when the ring moved on its own
-                    // it left a second, stale one behind at the top of the list.
-                    i === active ? "bg-surface ring-1 ring-accent" : "hover:bg-hover",
-                    isPicked(o.value) && "font-medium text-accent",
+                    "flex w-full items-center justify-between gap-2 rounded-control px-3 py-1.5 text-left text-sm transition-colors",
+                    // One indicator for "where the keyboard is". Arrows, Tab and
+                    // the mouse all move this same highlight; when a ring moved
+                    // on its own it left a second, stale one behind at the top
+                    // of the list. A neutral fill, the same one a Menu row
+                    // takes, rather than a pink ring: the mouse moves it on
+                    // every option it passes, and a ring there made the list
+                    // flash pink under the pointer.
+                    i === active && "bg-hover",
+                    // The checkmark says which one is picked. Pink text as well
+                    // said it twice, and on the active row it was pink inside
+                    // pink.
+                    isPicked(o.value) && "font-medium",
                   )}
                 >
                   {/* Several options can be on at once, so each needs to show
@@ -504,9 +518,10 @@ function ComboboxBase({
                       it went when the budget sheet wanted the same one. */}
                   {multiple && <CheckMark on={isPicked(o.value)} />}
                   <span className="mr-auto truncate">{o.label}</span>
-                  {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0" />}
+                  {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0 text-accent" />}
                 </button>
               </li>
+              </Fragment>
             ))}
           </ul>
         </div>,

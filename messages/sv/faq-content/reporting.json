@@ -8,7 +8,7 @@
       "a": [
         {
           "t": "p",
-          "v": "Alla köp måste redovisas. Det är kravet för att du ska få ersättning för ett eget utlägg, och för att du inte ska bli personligt betalningsskyldig för ett köp med sektionskort."
+          "v": "Alla köp i sektionens namn måste redovisas, oavsett om du betalat själv eller med sektionskortet. Det är redovisningen som attesteras, och utan attest får du stå för köpet själv."
         },
         {
           "t": "ol",
@@ -62,26 +62,51 @@
       "a": [
         {
           "t": "p",
-          "v": "För alkohol finns ytterligare lagar att förhålla sig till. Ett av kraven är att alkoholdrycker och alkoholliknande preparat måste särredovisas efter kategori:"
+          "v": "För alkohol finns ytterligare lagar att förhålla sig till. Ett av kraven är att alkoholdrycker och alkoholliknande preparat måste särredovisas efter kategori, och varje kategori har ett eget kostnadsställe:"
         },
         {
-          "t": "ul",
-          "v": [
-            "Öl: bärs, suröl.",
-            "Vin: högst 22 ‰, portvin, sherry, vermouth.",
-            "Annan jäst dryck: cider, fruktviner, mjöd.",
-            "Spritdryck: Halmstad Crush, vodka, likörer.",
-            "Alkoholdrycksliknande preparat: alkoglass."
+          "t": "table",
+          "head": [
+            "Kostnadsställe",
+            "Kategori",
+            "Till exempel"
+          ],
+          "rows": [
+            [
+              "ALKO01",
+              "Öl",
+              "Bärs, suröl"
+            ],
+            [
+              "ALKO02",
+              "Annan jäst dryck",
+              "Cider, fruktviner, mjöd"
+            ],
+            [
+              "ALKO03",
+              "Vin",
+              "Högst 22 ‰, portvin, sherry, vermouth"
+            ],
+            [
+              "ALKO04",
+              "Spritdryck",
+              "Halmstad Crush, vodka, likörer"
+            ],
+            [
+              "ALKO05",
+              "Alkoholdrycksliknande preparat",
+              "Alkoglass"
+            ]
           ]
         },
         {
           "t": "p",
-          "v": "I praktiken innebär det att du delar upp den inköpta alkoholen på en rad per kategori: summera allt som tillhör samma kategori och skriv ut det på en egen rad, pant inräknad."
+          "v": "I praktiken innebär det att du delar upp den inköpta alkoholen på en rad per kategori: summera allt som tillhör samma kategori och lägg det på kategorins kostnadsställe, pant inräknad."
         },
         {
           "t": "note",
           "tone": "warn",
-          "v": "Är du osäker på vilken kategori en dryck tillhör, fråga alltid din utskottsordförande. Den vanligaste missen är att spritdrycker kategoriseras som annan jäst dryck: Halmstad Crush är en spritdryck, inte cider."
+          "v": "Är du osäker på vilken kategori en dryck tillhör, fråga alltid din resultatansvarig. Den vanligaste missen är att spritdrycker kategoriseras som annan jäst dryck: Halmstad Crush är en spritdryck, inte cider."
         }
       ]
     },
@@ -117,24 +142,24 @@
           ],
           "rows": [
             [
-              "ALKO",
+              "ALKO01",
               "55,60 kr",
               "Öl (inklusive pant)"
             ],
             [
-              "ALKO",
-              "207,90 kr",
-              "Spritdryck (inklusive pant)"
+              "ALKO02",
+              "17,90 kr",
+              "Annan jäst dryck (inklusive pant)"
             ],
             [
-              "ALKO",
+              "ALKO03",
               "209,00 kr",
               "Vin"
             ],
             [
-              "ALKO",
-              "17,90 kr",
-              "Annan jäst dryck (inklusive pant)"
+              "ALKO04",
+              "207,90 kr",
+              "Spritdryck (inklusive pant)"
             ]
           ]
         }
@@ -146,11 +171,15 @@
       "a": [
         {
           "t": "p",
-          "v": "Enligt Policy för ekonomi har skattmästaren rätt att göra dig personligen betalningsskyldig om ett köp, eget utlägg såväl som köp med sektionskort, inte redovisas inom 60 dagar från att köpet genomfördes."
+          "v": "Ett eget utlägg ska vara redovisat inom 60 dagar från att du betalade. Det står i Policy för ekonomi, och samma frist gäller milersättning. Efter det kan skattmästaren neka ersättning, om det inte finns särskilda skäl."
         },
         {
           "t": "p",
-          "v": "Appen stoppar ett eget utlägg och en milersättning som är äldre än 60 dagar: de går inte att skicka in, för det är dina pengar sektionen ska betala tillbaka och kravet är för gammalt att ta emot. Ett kortköp går fortfarande att redovisa efteråt, eftersom sektionens pengar redan är borta och köpet måste bokföras oavsett hur sent det kommer. Det betyder inte att fristen inte gäller dig."
+          "v": "Appen stoppar ett eget utlägg och en milersättning som är äldre än 60 dagar. Finns det särskilda skäl till att det blev sent, hör av dig till skattmästaren: får utlägget dispens går det att skicka in ändå, och skälet står med på utläggsräkningen."
+        },
+        {
+          "t": "p",
+          "v": "Ett kortköp går fortfarande att redovisa efteråt, eftersom sektionens pengar redan är borta och köpet måste bokföras oavsett hur sent det kommer. Redovisa ändå med en gång: skattmästaren får återkalla sektionskortet om köp inte redovisas."
         },
         {
           "t": "note",

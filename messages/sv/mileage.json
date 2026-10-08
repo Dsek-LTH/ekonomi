@@ -73,6 +73,10 @@
     "removeFailed": "Ersättningen kunde inte tas bort",
     "removeTitle": "Ta bort ersättningen?",
     "removeDescription": "Resor som redan räknats med den behåller sitt belopp. Nya resor på de datumen får den ersättning som gällde innan.",
-    "empty": "Ingen ersättning är fastställd ännu. Utan en kan inga milersättningar skickas in."
+    "empty": "Ingen ersättning är fastställd ännu. Utan en kan inga milersättningar skickas in.",
+    "since": "Gäller sedan {date}",
+    "from": "Från {date}",
+    "showEarlier": "Visa tidigare ({count})",
+    "hideEarlier": "Dölj tidigare"
   }
 }

@@ -22,7 +22,6 @@ type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 export type QueueAction =
   | "FIX" // came back to you with changes requested
   | "SUBMIT" // still a draft; nobody knows about it yet
-  | "MATCH" // a card purchase with no bank row against it
   | "ATTEST" // someone else's, and you are the one who may attest it
   | "BOOK" // attested, waiting for a verifikation
   | "EXPORT"; // booked, waiting to go to Fortnox
@@ -43,10 +42,9 @@ export interface QueueItem {
 const URGENCY: Record<QueueAction, number> = {
   FIX: 0,
   SUBMIT: 1,
-  MATCH: 2,
-  ATTEST: 3,
-  BOOK: 4,
-  EXPORT: 5,
+  ATTEST: 2,
+  BOOK: 3,
+  EXPORT: 4,
 };
 
 // The one thing this expense needs from this viewer, or null if it is waiting
@@ -63,9 +61,6 @@ export function queueActionFor(
   if (mine) {
     if (expense.status === "CHANGES_REQUESTED") return "FIX";
     if (expense.status === "DRAFT") return "SUBMIT";
-    // A card purchase cannot be sent for attest until it is matched against the
-    // bank row, the same gate `submitBlocker` enforces on the detail page.
-    if (expense.status === "PENDING_MATCH") return "MATCH";
   }
 
   // Someone else's, and you hold the ownership over one of its kostnadsställen.

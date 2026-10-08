@@ -1,54 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { owningRoute, samePath, urlKey } from "./routes";
-
-describe("samePath", () => {
-  it("ignores the query, which is the whole point", () => {
-    // The case the back link exists for: the list you left carried its scope
-    // and its page in the query, and the link that names the route has neither.
-    expect(samePath("/expenses?view=ALL&page=2", "/expenses")).toBe(true);
-  });
-
-  it("ignores a fragment", () => {
-    expect(samePath("/budget#sheet", "/budget")).toBe(true);
-  });
-
-  it("says no to a different route", () => {
-    expect(samePath("/expenses/abc123", "/expenses")).toBe(false);
-    expect(samePath("/approvals?view=ALL", "/expenses")).toBe(false);
-  });
-
-  it("does not mistake a child route for its parent", () => {
-    // "/expenses/new" starts with "/expenses"; a prefix test would send the
-    // back link on the booking screen to a page nobody asked for.
-    expect(samePath("/expenses/new", "/expenses")).toBe(false);
-  });
-
-  it("treats a trailing slash as the same route", () => {
-    expect(samePath("/expenses/", "/expenses")).toBe(true);
-    expect(samePath("/", "/")).toBe(true);
-  });
-});
-
-describe("urlKey", () => {
-  it("is the same key for the same screen spelled two ways", () => {
-    expect(urlKey("/expenses?view=ALL&q=hotell")).toBe(urlKey("/expenses?q=hotell&view=ALL"));
-  });
-
-  it("keeps two screens of one route apart", () => {
-    expect(urlKey("/expenses?view=ALL")).not.toBe(urlKey("/expenses"));
-    expect(urlKey("/expenses?view=ALL")).not.toBe(urlKey("/expenses?view=MINE"));
-  });
-
-  it("drops the fragment and a trailing slash, which name no screen", () => {
-    expect(urlKey("/budget/#sheet")).toBe("/budget");
-  });
-
-  it("leaves a bare route alone", () => {
-    expect(urlKey("/expenses")).toBe("/expenses");
-    expect(urlKey("/expenses?")).toBe("/expenses");
-  });
-});
+import { owningRoute } from "./routes";
 
 describe("owningRoute", () => {
   // The app's sections, as app-shell derives them from the nav. Only the stock

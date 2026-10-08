@@ -212,7 +212,7 @@
     "unbalanced": "Verifikationen balanserar inte (debet ≠ kredit)",
     "onePaymentLine": "Verifikationen måste ha exakt en rad på betalningskontot {account}",
     "paymentLineNoCostCenter": "Betalningsraden ({account}) kan inte ha ett kostnadsställe",
-    "paymentLineFullAmount": "Betalningsraden ({account}) måste kreditera hela utläggsbeloppet",
+    "paymentLineFullAmount": "Betalningsraden ({account}) måste ha hela utläggsbeloppet, i kredit eller vid retur i debet",
     "unknownCostCenter": "Kostnadsstället {code} finns inte"
   },
   "income": {
@@ -246,6 +246,7 @@
     "unbalanced": "Rapportens summa stämmer inte med kontofördelningen.",
     "noClearingAccount": "Inget likvidkonto är inställt för den här källan.",
     "unknownCostCenter": "Kostnadsstället finns inte.",
+    "costCenterOutsideUnit": "Kostnadsstället {code} hör inte till {name}.",
     "moveFeeReport": "Zettles avgifter tillhör ingen verksamhet och kan inte flyttas.",
     "moveSameUnit": "Varorna ligger redan på den verksamheten.",
     "noLines": "Inga varor är valda.",

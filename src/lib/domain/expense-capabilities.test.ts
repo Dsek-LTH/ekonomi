@@ -278,7 +278,7 @@ describe("dispens från redovisningsfristen", () => {
     // The deadline stops a late claim from *entering* the queue, so a dispens
     // given afterwards would be permitting what has already happened.
     const skattm = viewer(["SKATTMASTARE"]);
-    for (const status of ["DRAFT", "PENDING_MATCH", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
+    for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
       expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(true);
     }
     for (const status of ["PENDING_APPROVAL", "APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
@@ -366,7 +366,6 @@ describe("the panel as a whole", () => {
 describe("statuses are covered, not assumed", () => {
   const all: ExpenseStatus[] = [
     "DRAFT",
-    "PENDING_MATCH",
     "PENDING_APPROVAL",
     "CHANGES_REQUESTED",
     "APPROVED",

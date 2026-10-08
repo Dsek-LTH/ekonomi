@@ -33,18 +33,26 @@ export async function priorYearComparison(
   const prior = await priorFinancialYear(financialYear);
   if (!prior) return null;
 
+  // The same day, as many months into the prior year as this one is into its
+  // own. To the day rather than to the month: the period is a range of days,
+  // and comparing 1–15 March with the whole of last March would be comparing
+  // half a month with a month. A month's last day maps to the prior month's
+  // last day, so a period ending 29 February is held against 28 February and a
+  // whole month stays a whole month.
   const shift = (d: Date) => {
     const months =
       (d.getUTCFullYear() - yearStart.getUTCFullYear()) * 12 +
       (d.getUTCMonth() - yearStart.getUTCMonth());
     const start = new Date(prior.fromDate);
-    return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1));
+    const y = start.getUTCFullYear();
+    const m = start.getUTCMonth() + months;
+    const lastHere = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    const lastThere = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const day = d.getUTCDate() === lastHere ? lastThere : Math.min(d.getUTCDate(), lastThere);
+    return new Date(Date.UTC(y, m, day));
   };
   const priorFrom = shift(from);
-  const priorTo = new Date(shift(to));
-  // Through the end of the offset month.
-  priorTo.setUTCMonth(priorTo.getUTCMonth() + 1);
-  priorTo.setUTCDate(0);
+  const priorTo = shift(to);
 
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "costCenterCode"],

@@ -190,7 +190,7 @@ export function UploadContractClient({
       title={t("form.uploadTitle")}
       description={t("form.uploadDescription")}
       width="content"
-      back={{ href: "/contracts", label: t("detail.back") }}
+      back="/contracts"
     >
       {/* The panel is where the document goes and where it is read, which is
           one place rather than two. Declared with `onFile` and nothing to show,

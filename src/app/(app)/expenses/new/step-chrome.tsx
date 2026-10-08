@@ -21,7 +21,7 @@ import { cn } from "@/lib/ui/utils";
 // other two as a choice that isn't there.
 export const optionCard = (selected: boolean, locked = false) =>
   cn(
-    "w-full rounded-xl border px-4 py-3 text-left transition-colors",
+    "w-full rounded-control border px-4 py-3 text-left transition-colors",
     selected
       ? "border-accent bg-accent-soft"
       : locked

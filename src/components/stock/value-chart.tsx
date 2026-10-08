@@ -182,7 +182,7 @@ export function StockValueChart({
         {hovered && (
           <div
             className={cn(
-              "pointer-events-none absolute top-2 w-44 rounded-xl border border-border bg-background p-2.5 shadow-[var(--shadow-pop)]",
+              "pointer-events-none absolute top-2 w-44 rounded-panel border border-border bg-background p-2.5 shadow-[var(--shadow-pop)]",
               at! > points.length / 2 ? "left-16" : "right-3",
             )}
           >
@@ -192,7 +192,7 @@ export function StockValueChart({
                 <div key={c} className="flex items-center gap-1.5 text-[11px]">
                   <span
                     aria-hidden
-                    className="size-2 shrink-0 rounded-[2px]"
+                    className="size-2 shrink-0 rounded-mark"
                     style={{ background: DRINK_SERIES[c] }}
                   />
                   <dt className="min-w-0 flex-1 truncate text-muted">{t(`category.${c}`)}</dt>
@@ -215,7 +215,7 @@ export function StockValueChart({
           <span key={c} className="flex items-center gap-1.5 text-xs text-muted">
             <span
               aria-hidden
-              className="size-2.5 rounded-[3px]"
+              className="size-2.5 rounded-mark"
               style={{ background: DRINK_SERIES[c] }}
             />
             {t(`category.${c}`)}

@@ -98,7 +98,7 @@ function Readout({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute top-2 w-48 rounded-xl border border-border bg-background p-2.5 shadow-[var(--shadow-pop)]",
+        "pointer-events-none absolute top-2 w-48 rounded-panel border border-border bg-background p-2.5 shadow-[var(--shadow-pop)]",
         side === "left" ? "left-14" : "right-3",
       )}
     >
@@ -115,7 +115,7 @@ function Readout({
             {r.color && (
               <span
                 aria-hidden
-                className="size-2 shrink-0 rounded-[2px]"
+                className="size-2 shrink-0 rounded-mark"
                 style={{ background: r.color }}
               />
             )}
@@ -135,7 +135,7 @@ function Legend({ items }: { items: { key: string; label: string; color: string 
     <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
       {items.map((i) => (
         <span key={i.key} className="flex items-center gap-1.5 text-xs text-muted">
-          <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: i.color }} />
+          <span aria-hidden className="size-2.5 rounded-mark" style={{ background: i.color }} />
           {i.label}
         </span>
       ))}
@@ -549,7 +549,7 @@ function CostCenterRanking({
               />
               <span
                 aria-hidden
-                className="absolute inset-y-1 rounded-[3px]"
+                className="absolute inset-y-1 rounded-mark"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
@@ -787,7 +787,7 @@ function CostComposition({ sections }: { sections: LedgerTrend["sections"] }) {
   return (
     <div className="space-y-3">
       <div
-        className="flex h-3 w-full overflow-hidden rounded-full bg-surface"
+        className="flex h-3 w-full overflow-hidden rounded-mark bg-surface"
         role="img"
         aria-label={t("composition.alt")}
       >
@@ -805,7 +805,7 @@ function CostComposition({ sections }: { sections: LedgerTrend["sections"] }) {
           <div key={r.key} className="flex flex-wrap items-center gap-x-3 text-sm">
             <span
               aria-hidden
-              className="size-2.5 shrink-0 rounded-[3px]"
+              className="size-2.5 shrink-0 rounded-mark"
               style={{ background: r.color }}
             />
             <span className="min-w-[8rem] flex-1 truncate">{tSection(r.key)}</span>

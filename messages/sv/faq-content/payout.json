@@ -32,7 +32,7 @@
         {
           "t": "ul",
           "v": [
-            "Väntar på attest: din utskottsledare granskar den. Behöver något rättas kommer den tillbaka som Behöver ändras, med en kommentar om vad.",
+            "Väntar på attest: den som har attesträtt för köpet granskar det. Behöver något rättas kommer den tillbaka som Behöver ändras, med en kommentar om vad.",
             "Attesterat: godkänd, och kön till bokföringen.",
             "Bokfört: skattmästeriet har konterat den.",
             "Exporterat: den ligger i Fortnox, och pengarna betalas ut."
@@ -40,7 +40,7 @@
         },
         {
           "t": "p",
-          "v": "Har du lagt ut egna pengar kommer de tillbaka efter att redovisningen bokförts. Går det lång tid utan att något händer, hör av dig till din utskottsledare först, det är där kön oftast står."
+          "v": "Har du lagt ut egna pengar kommer de tillbaka efter att redovisningen bokförts. Går det lång tid utan att något händer, hör av dig till din resultatansvarig först, det är där kön oftast står."
         },
         {
           "t": "action",

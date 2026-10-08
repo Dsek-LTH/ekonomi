@@ -170,7 +170,7 @@ export function NotificationBanners() {
               key={n.id}
               role={n.tone === "error" ? "alert" : "status"}
               className={cn(
-                "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-md",
+                "pointer-events-auto flex items-start gap-3 rounded-panel border px-4 py-3 text-sm shadow-lg backdrop-blur-md",
                 t.wrap,
               )}
             >
@@ -188,7 +188,7 @@ export function NotificationBanners() {
                   <Link
                     href={n.action.href}
                     onClick={() => list.dismiss(n.id)}
-                    className="mt-2 inline-flex h-7 items-center rounded-lg border border-current/30 px-2.5 text-xs font-medium transition hover:bg-current/10"
+                    className="mt-2 inline-flex h-7 items-center rounded-control border border-current/30 px-2.5 text-xs font-medium transition hover:bg-current/10"
                   >
                     {n.action.label}
                   </Link>
@@ -198,7 +198,7 @@ export function NotificationBanners() {
                 type="button"
                 onClick={() => list.dismiss(n.id)}
                 aria-label={tCommon("close")}
-                className="-mr-1 -mt-0.5 rounded-md p-1 opacity-70 transition hover:opacity-100"
+                className="-mr-1 -mt-0.5 rounded-control p-1 opacity-70 transition hover:opacity-100"
               >
                 <IconX className="size-4" />
               </button>

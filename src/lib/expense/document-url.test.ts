@@ -112,7 +112,6 @@ describe("expenseDocuments", () => {
 
   it("shows the cover for every status a draft has become", () => {
     for (const status of [
-      "PENDING_MATCH",
       "PENDING_APPROVAL",
       "CHANGES_REQUESTED",
       "APPROVED",

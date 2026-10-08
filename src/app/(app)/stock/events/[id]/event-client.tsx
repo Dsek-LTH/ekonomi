@@ -779,7 +779,7 @@ export default function EventClient({
     <PageShell
       title={event.name}
       subtitle={event.date}
-      back={{ href: "/stock/events", label: t("event.title") }}
+      back="/stock/events"
       width="wide"
     >
       {editing && (

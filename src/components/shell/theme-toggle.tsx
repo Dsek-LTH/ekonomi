@@ -42,7 +42,7 @@ export function ThemeToggle() {
       onClick={toggle}
       title={t("toggle")}
       aria-label={t("toggle")}
-      className="flex size-9 items-center justify-center rounded-full border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground"
+      className="flex size-9 items-center justify-center rounded-control border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground"
     >
       <IconSun aria-hidden className="size-[18px] dark:hidden" />
       <IconMoon aria-hidden className="hidden size-[18px] dark:block" />

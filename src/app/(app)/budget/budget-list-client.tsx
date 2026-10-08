@@ -215,7 +215,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
         <p className="flex items-center gap-2 truncate text-sm font-medium">
           {b.name}
           {b.lockedAt && (
-            <span className="rounded-lg bg-purple-soft px-1.5 py-0.5 text-[11px] font-medium text-purple">{t("locked")}</span>
+            <span className="rounded-control bg-purple-soft px-1.5 py-0.5 text-[11px] font-medium text-purple">{t("locked")}</span>
           )}
         </p>
       ),
@@ -285,7 +285,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
               // bound, and the compare view gives each its own column.
               aria-disabled={picked.length < 2}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
+                "inline-flex size-8 items-center justify-center rounded-control border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
                 picked.length < 2 && "pointer-events-none opacity-40",
               )}
             >

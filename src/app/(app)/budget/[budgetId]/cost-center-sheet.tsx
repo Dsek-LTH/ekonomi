@@ -577,7 +577,7 @@ export function CostCenterSheet(props: {
             showed through them. `bg-canvas` is the page's own colour, so the
             arcs read exactly as they do at rest. */}
         <div className="sticky top-14 z-10 bg-canvas md:hidden">
-          <div className="rounded-2xl border border-border bg-background shadow-[var(--shadow-card)]">
+          <div className="rounded-panel border border-border bg-background shadow-[var(--shadow-card)]">
             <button
               type="button"
               onClick={() => setSummaryOpen((o) => !o)}
@@ -651,7 +651,7 @@ export function CostCenterSheet(props: {
         <div className="hidden md:block">
           <StatRow>
             {summary.map((s) => (
-              <div key={s.label} className="rounded-2xl border border-border bg-background px-4 py-3">
+              <div key={s.label} className="rounded-panel border border-border bg-background px-4 py-3">
                 <p className="text-xs text-muted">{s.label}</p>
                 <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
                   {s.signed ? fmtSigned(s.v) : fmt(s.v)}
@@ -682,7 +682,7 @@ export function CostCenterSheet(props: {
         {/* What is ticked, and what it can be made into. It appears only once
             something is, so the sheet is as quiet as it was until you start. */}
         {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-surface px-4 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-border bg-surface px-4 py-2 text-sm">
             <span className="font-medium">
               {marked.accounts.length > 0
                 ? t("markedAccounts", { count: marked.accounts.length })
@@ -712,7 +712,7 @@ export function CostCenterSheet(props: {
             the only place the shortcut is written down, which is what stops the
             whole feature from being a secret. */}
         {isAdmin && clip && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
             <span className="font-medium">
               {clip.kind === "rows"
                 ? t("copiedRows", { count: clip.ids.length })

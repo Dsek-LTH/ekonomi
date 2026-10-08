@@ -7,6 +7,7 @@ import { parseBody } from "@/lib/api/parse";
 import { UpdateIncomeUnit } from "@/lib/api/schemas/income";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { prisma } from "@/lib/server/db";
+import { getPrefixes, resultUnitForCode } from "@/lib/server/result-units";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -21,6 +22,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (defaultCostCenterId) {
     const cc = await prisma.costCenter.findUnique({ where: { id: defaultCostCenterId } });
     if (!cc) return fail(422, "income.unknownCostCenter");
+    // Only one of the unit's own cost centres: sales booked on another unit's
+    // would be attested by that unit's resultatansvariga, not this one's.
+    const income = await prisma.resultUnitIncome.findUnique({
+      where: { id },
+      select: { resultUnitId: true, resultUnit: { select: { name: true } } },
+    });
+    if (!income) return fail(404, "income.unitNotFound");
+    if (resultUnitForCode(cc.code, await getPrefixes())?.resultUnitId !== income.resultUnitId) {
+      return fail(422, "income.costCenterOutsideUnit", {
+        values: { code: cc.code, name: income.resultUnit.name },
+      });
+    }
   }
 
   const updated = await orNotFound(

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { PageShell } from "@/components/page-shell";
+import { getActiveAccounts } from "@/lib/data/accounts";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { getIncomeConfig } from "@/lib/data/income-config";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -19,11 +20,17 @@ export default async function AdminIncomePage() {
   const assigned = config.units
     .map((u) => u.income?.defaultCostCenterCode)
     .filter((c): c is string => Boolean(c));
-  const costCenters = await getActiveCostCenters(assigned);
+  // Likewise the accounts the settings point at, so a retired one still shows
+  // as what it is rather than as an empty picker.
+  const { zettleClearingAccount, swishClearingAccount, zettleFeeAccount } = config.settings;
+  const [costCenters, accounts] = await Promise.all([
+    getActiveCostCenters(assigned),
+    getActiveAccounts([zettleClearingAccount, swishClearingAccount, zettleFeeAccount]),
+  ]);
 
   return (
     <PageShell title={t("title")} description={t("description")}>
-      <IncomeSettingsClient config={config} costCenters={costCenters} />
+      <IncomeSettingsClient config={config} costCenters={costCenters} accounts={accounts} />
     </PageShell>
   );
 }

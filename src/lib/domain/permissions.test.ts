@@ -83,13 +83,15 @@ describe("the defaults the section starts from", () => {
     for (const role of [
       "SKATTMASTARE",
       "ORDFORANDE",
-      "VICE_SKATTMASTARE",
       "RESULTATANSVARIG",
     ] as Role[]) {
       expect(hasAttestRole(defaults(role))).toBe(true);
     }
-    // The skattförman books rather than attests.
+    // The skattförman books rather than attests, and the vice no longer
+    // attests anything (Policy för ekonomi names nobody but firmatecknare and
+    // resultatansvarig), so neither has a queue to see.
     expect(hasAttestRole(defaults("SKATTFORMAN"))).toBe(false);
+    expect(hasAttestRole(defaults("VICE_SKATTMASTARE"))).toBe(false);
     expect(hasAttestRole(defaults("ORDINARIE"))).toBe(false);
   });
 
@@ -132,14 +134,13 @@ describe("the helpers themselves", () => {
 });
 
 describe("canAttestAllocation", () => {
-  // One allocation, on a cost centre belonging to Sexmästeriet, submitted by an
-  // ordinary member. Each test below changes only what it is about.
+  // One allocation, on a cost centre belonging to Sexmästeriet. Each test below
+  // changes only what it is about.
   const base = {
     actorCapabilities: [] as Capability[],
     actorRoles: ["ORDINARIE"] as Role[],
     actorIsSubmitter: false,
     actorOwnedResultUnits: [] as string[],
-    submitterRoles: ["ORDINARIE"] as Role[],
     allocationResultUnit: "Sexmästeriet" as string | null,
   };
   const admin = { actorCapabilities: ["ADMIN"] as Capability[] };
@@ -171,22 +172,10 @@ describe("canAttestAllocation", () => {
     expect(canAttestAllocation({ ...base, actorRoles: ["SKATTMASTARE"] })).toBe(false);
   });
 
-  it("lets the vice treasurer attest expenses from ordinary members", () => {
-    expect(canAttestAllocation({ ...base, actorRoles: ["VICE_SKATTMASTARE"] })).toBe(true);
-  });
-
-  it("stops the vice treasurer attesting an elevated member's expense", () => {
-    // The point of the rule: the people who run the section get attested by
-    // someone above them, not by the vice.
-    for (const submitter of ["SKATTMASTARE", "ORDFORANDE", "RESULTATANSVARIG"] as Role[]) {
-      expect(
-        canAttestAllocation({
-          ...base,
-          actorRoles: ["VICE_SKATTMASTARE"],
-          submitterRoles: [submitter],
-        }),
-      ).toBe(false);
-    }
+  it("gives the vice treasurer no attest authority of their own", () => {
+    // Policy för ekonomi names firmatecknare and resultatansvarig, and nobody
+    // else. The vice used to attest ordinary members' expenses.
+    expect(canAttestAllocation({ ...base, actorRoles: ["VICE_SKATTMASTARE"] })).toBe(false);
   });
 
   it("lets a resultUnit head attest only their own resultUnit's allocations", () => {

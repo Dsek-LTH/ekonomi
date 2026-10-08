@@ -173,12 +173,11 @@ export function ExpensesClient({
             // On the list's own toolbar rather than in the page header: it adds
             // a row to what is below it, so that is where it lives.
             action={
-              // Outlined rather than filled: it shares this bar with the search
-              // box and the status filter, and the page's subject is the list
-              // below them. See `accentOutline` in components/ui/button.tsx.
-              // The empty state's copy of this button keeps the fill, because
-              // there it is the only thing on the screen to do.
-              <NewExpenseMenu variant="accentOutline" />
+              // Filled: making an utlägg is the main thing this page is for, so
+              // it is drawn as the page's primary action even on a bar it shares
+              // with the search and the status filter. The empty state's copy
+              // is filled too, so the two read as the same button.
+              <NewExpenseMenu variant="primary" />
             }
             searchPlaceholder={t("searchPlaceholder")}
             rowKey={(e) => e.id}

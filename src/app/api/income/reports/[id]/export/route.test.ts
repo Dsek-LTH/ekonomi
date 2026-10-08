@@ -62,7 +62,7 @@ vi.mock("@/lib/server/db", () => ({
               debit: 0,
               credit: 125000,
               description: null,
-              costCenter: { code: "KAL01", source: "FORTNOX" },
+              costCenter: { code: "KAL01", source: "FORTNOX", active: true },
             },
           ],
         },

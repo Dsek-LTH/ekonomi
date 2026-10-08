@@ -4,13 +4,15 @@ import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Notice } from "@/components/ui/notice";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconUpload, IconTrash } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { useUrlTableControls } from "@/lib/data/use-list-query";
+import { ClientDataTable } from "@/components/ui/client-data-table";
+import { useTableControls, useUrlTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { useNotify } from "@/components/shell/notifications";
@@ -40,6 +42,7 @@ export default function BankClient({
   canPickScope,
   cards,
   allCards,
+  cardless,
   viewerId,
 }: {
   page: RowPage<BankTransaction>;
@@ -55,6 +58,8 @@ export default function BankClient({
    * "not yours to change".
    */
   allCards: SectionCard[];
+  /** The purchases on no card. Empty for anybody who cannot place them. */
+  cardless: BankTransaction[];
   viewerId: string;
 }) {
   const t = useTranslations("bank");
@@ -69,6 +74,11 @@ export default function BankClient({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const controls = useUrlTableControls(page.total, scope === "mine" ? "UNMATCHED" : "ALL");
+  // The no-card list is every row it will ever hold, so it narrows in the
+  // browser and keeps its state here rather than in the address, which is the
+  // main list's.
+  const cardlessControls = useTableControls();
+  const [showCardless, setShowCardless] = useState(false);
   const canImport = canBookkeep(user.capabilities);
   // The register is only sent to somebody the server would let write it, so
   // having one is the permission (see page.tsx).
@@ -81,11 +91,15 @@ export default function BankClient({
   function setScope(next: string) {
     const q = new URLSearchParams(params.toString());
     q.set("scope", next);
-    // The tab defaults differ per scope, and a tab carried across from the
-    // other one would leave the address bar describing a filter this scope did
-    // not open on. Paging likewise: page 4 of the section's feed is not page 4
-    // of your own.
-    q.delete("tab");
+    // The tab you were on comes along, so flipping scope compares the same
+    // slice of both. Written out even where it was the old default, since the
+    // defaults differ per scope and leaving it unstated would open the other
+    // one's. Paging is dropped: page 4 of the section's feed is not page 4 of
+    // your own.
+    const tab = controls.tab;
+    const nextDefault = next === "mine" ? "UNMATCHED" : "ALL";
+    if (tab && tab !== nextDefault) q.set("tab", tab);
+    else q.delete("tab");
     q.delete("page");
     router.push(`${pathname}?${q.toString()}`);
   }
@@ -99,13 +113,9 @@ export default function BankClient({
     // getBankTransactionPage), so the rows arrive already narrowed to it.
     { value: "UNMATCHED", label: t("tab.unmatched") },
     { value: "MATCHED", label: t("tab.matched") },
-    // The purchases the export named no card on. They are only reachable from
-    // the section's feed (a row on no card is on nobody's own list), and only
-    // worth a tab for the reader who can put them on one. Nothing on the row
-    // itself says what it is missing, so this is how they are found at all.
-    ...(canAssign ? [{ value: "NOCARD", label: t("tab.noCard") }] : []),
     { value: "ALL", label: t("tab.all") },
   ];
+
 
   async function upload(file: File) {
     // The CSV is posted as-is; only the summary line is ours to build.
@@ -187,26 +197,45 @@ export default function BankClient({
     // already sort matched from unmatched, which is the only part a pill was
     // adding. Same column as on Kortköp, so the two tables answer "which
     // utlägg" the same way.
-    bankMatchedColumn(t("colExpense"), { linked: t("matched") }),
+    //
+    // The same column offers "Redovisa" where there is no utlägg yet and the
+    // purchase is the viewer's own: has this been dealt with is one question,
+    // and the link and the button are its two answers. They were two columns,
+    // one of them empty on every row the other was not. "Redovisa" used to
+    // exist only on Kortköp, which meant a treasurer looking at the section's
+    // feed found their own unaccounted purchase and could not do the one thing
+    // they wanted to it.
+    //
+    // On a phone it rides in the card's action row rather than its line of
+    // details, because a button cannot sit in a line of small text. The
+    // matched utlägg's number goes with it and reads there as the link it is.
+    {
+      ...bankMatchedColumn(t("colExpense"), {
+        linked: t("matched"),
+        unmatched: (tx) =>
+          tx.cardHolderId === viewerId ? (
+            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="sm">
+              <IconUpload className="size-4" />
+              {t("account")}
+            </ButtonLink>
+          ) : (
+            // The table's dash for "nothing here", but not in a phone card's
+            // action row, where a lone dash is a button that is not there.
+            <span className="hidden text-muted md:inline">–</span>
+          ),
+      }),
+      mobile: "actions",
+    },
     bankAmountColumn(t("colAmount")),
     {
       key: "actions",
       header: "",
       align: "right",
       mobile: "actions",
-      // Two actions on one column, and which of them a row offers depends on
-      // the row rather than on the page. "Redovisa" used to exist only on
-      // Kortköp, which meant a treasurer looking at the section's feed found
-      // their own unaccounted purchase and a delete button: the one thing they
-      // could not do to it was the thing they wanted.
+      // Only the delete now, so only for someone who may delete.
+      hidden: !canImport,
       cell: (tx) => (
         <span className="flex items-center justify-end gap-1">
-          {tx.cardHolderId === viewerId && !tx.matchedExpenseId && (
-            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="sm">
-              <IconUpload className="size-4" />
-              {t("account")}
-            </ButtonLink>
-          )}
           {canImport && (
             <IconButton
               tone="danger"
@@ -239,10 +268,50 @@ export default function BankClient({
           : undefined
       }
     >
+      {/* The purchases the export named no card on are a job, not a slice of
+          the feed: a warning while there are any, gone once the last is
+          placed, and their own table under it when asked for. Not a tab, where
+          it read as a fourth match status and sat there empty most of the
+          time, and not a filter on the list below, which narrowed it without
+          the tabs saying so. Same columns, so the card picker is right there
+          on every row. */}
+      {cardless.length > 0 && (
+        <Notice>
+          <p>
+            {t("noCard.count", { count: cardless.length })}{" "}
+            <button
+              type="button"
+              onClick={() => setShowCardless(!showCardless)}
+              aria-expanded={showCardless}
+              className="font-medium text-accent hover:underline"
+            >
+              {showCardless ? t("noCard.hide") : t("noCard.show")}
+            </button>
+          </p>
+        </Notice>
+      )}
+      {cardless.length > 0 && showCardless && (
+        <Card>
+          <ClientDataTable
+            columns={columns}
+            rows={cardless}
+            controls={cardlessControls}
+            searchPlaceholder={t("searchPlaceholder")}
+            rowKey={(tx) => tx.id}
+            empty={t("noMatch")}
+          />
+        </Card>
+      )}
+
       {/* Transaction list */}
       <Card>
-        <CardHeader
-          title={t("transactions")}
+        <DataTable
+          columns={columns}
+          rows={page.rows}
+          controls={controls}
+          tabs={tabs}
+          // On the list's own toolbar, like every other list's action: an
+          // import adds rows to what is below it.
           action={canImport && (
             <>
               <input
@@ -278,13 +347,6 @@ export default function BankClient({
               </span>
             </>
           )}
-        />
-
-        <DataTable
-          columns={columns}
-          rows={page.rows}
-          controls={controls}
-          tabs={tabs}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(tx) => tx.id}
           empty={t("noMatch")}

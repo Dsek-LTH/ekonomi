@@ -1,10 +1,10 @@
 {
+  "back": "Back",
   "theme": "Theme",
   "language": "Language",
   "signOut": "Sign out",
   "status": {
     "DRAFT": "Draft",
-    "PENDING_MATCH": "Awaiting match",
     "PENDING_APPROVAL": "Awaiting approval",
     "CHANGES_REQUESTED": "Changes requested",
     "APPROVED": "Approved",

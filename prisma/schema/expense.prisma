@@ -23,7 +23,6 @@ enum PaymentType {
 // 20260807_drop_rejected_status migration.
 enum ExpenseStatus {
   DRAFT
-  PENDING_MATCH
   PENDING_APPROVAL
   CHANGES_REQUESTED
   APPROVED

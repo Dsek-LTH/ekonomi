@@ -55,12 +55,6 @@ describe("queueActionFor", () => {
     expect(queueActionFor(expense({ status: "DRAFT" }), viewer([]))).toBe("SUBMIT");
   });
 
-  it("asks the submitter to match a card purchase", () => {
-    expect(queueActionFor(expense({ status: "PENDING_MATCH" }), viewer([]))).toBe(
-      "MATCH",
-    );
-  });
-
   it("does not put someone else's draft in your queue", () => {
     const theirs = expense({ status: "DRAFT", submitterId: SOMEONE_ELSE });
     expect(queueActionFor(theirs, viewer(["SKATTMASTARE"]))).toBeNull();

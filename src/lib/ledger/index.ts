@@ -3,6 +3,7 @@
 // budget-vs-actual helper which stays in öre for exact matching.
 import { prisma } from "@/lib/server/db";
 import { oreToSEK } from "@/lib/domain/money";
+import { costCenterWhere } from "./cost-center-filter";
 
 export interface LedgerYear {
   id: number; // Fortnox financial-year id
@@ -49,20 +50,20 @@ interface LedgerRowView {
 }
 
 // Individual voucher rows behind a (year, cost centre, account) cell: the
-// drill-down for the report. `costCenterCode` distinguishes three cases:
-// a code scopes to that cost centre, null scopes to the "no cost centre"
-// bucket, and undefined spans every cost centre (the summed grouping).
+// drill-down for the report. `costCenterCodes` is the report's own filter:
+// undefined spans every cost centre, otherwise only those codes, "" among them
+// for the "no cost centre" bucket. See cost-center-filter.ts.
 export async function getLedgerRows(
   financialYear: number,
   account: string,
-  costCenterCode: string | null | undefined,
+  costCenterCodes: string[] | undefined,
   period?: { from: Date; to: Date },
 ): Promise<LedgerRowView[]> {
   const rows = await prisma.ledgerRow.findMany({
     where: {
       financialYear,
       account,
-      ...(costCenterCode === undefined ? {} : { costCenterCode }),
+      ...costCenterWhere(costCenterCodes),
       ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
     },
     // The voucher is still joined. This is the drill-down, and its series,

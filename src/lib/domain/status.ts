@@ -171,7 +171,6 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
  */
 export const EDITABLE_STATUSES: ExpenseStatus[] = [
   "DRAFT",
-  "PENDING_MATCH",
   "CHANGES_REQUESTED",
 ];
 
@@ -182,7 +181,6 @@ export const isEditable = (status: string): boolean =>
 // Used by the detail page, the new/edit flow, and the transition route.
 export const SUBMITTABLE_STATUSES: ExpenseStatus[] = [
   "DRAFT",
-  "PENDING_MATCH",
   "CHANGES_REQUESTED",
 ];
 
@@ -260,7 +258,6 @@ export const isInAttestChain = (status: string): boolean =>
 // (`common.status.<STATUS>`), as everywhere else in this file.
 export const EXPENSE_STATUSES: readonly ExpenseStatus[] = [
   "DRAFT",
-  "PENDING_MATCH",
   "PENDING_APPROVAL",
   "CHANGES_REQUESTED",
   "APPROVED",
@@ -275,9 +272,8 @@ export type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "da
 // How each status reads visually. The label itself is a translation,
 // `common.status.<STATUS>` in messages/*.json, so this stays language-neutral.
 //
-// Six statuses, six meanings, one colour each:
+// Six statuses, five meanings, one colour each:
 //   neutral  nobody is waiting on anything yet
-//   warning  waiting on YOU, the submitter
 //   purple   waiting on the authority chain: an attestant has it
 //   danger   it came back; something is wrong
 //   success  settled
@@ -288,7 +284,6 @@ export type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "da
 // screen must not look like a button.
 export const STATUS_TONE: Record<ExpenseStatus, Tone> = {
   DRAFT: "neutral",
-  PENDING_MATCH: "warning",
   PENDING_APPROVAL: "purple",
   CHANGES_REQUESTED: "danger",
   APPROVED: "success",

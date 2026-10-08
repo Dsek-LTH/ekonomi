@@ -374,7 +374,7 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
               {t("label", { kind: change.kind, seq: change.seq })}
             </span>
             {revoked && (
-              <span className="rounded-lg bg-surface px-2 py-0.5 text-xs font-medium text-muted">{t("revoked")}</span>
+              <span className="rounded-control bg-surface px-2 py-0.5 text-xs font-medium text-muted">{t("revoked")}</span>
             )}
             <span className="text-xs text-muted">
               {date(change.createdAt)} – {change.createdBy.name}

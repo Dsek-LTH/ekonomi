@@ -14,6 +14,7 @@ import { CreateIncomeUnit } from "@/lib/api/schemas/income";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { incomeKeyFromName } from "@/lib/income/voucher";
 import { prisma } from "@/lib/server/db";
+import { getPrefixes, resultUnitForCode } from "@/lib/server/result-units";
 
 export async function POST(req: Request) {
   const g = await gate(canAccessSettings, "auth.adminOnly");
@@ -43,6 +44,10 @@ export async function POST(req: Request) {
   if (defaultCostCenterId) {
     const cc = await prisma.costCenter.findUnique({ where: { id: defaultCostCenterId } });
     if (!cc) return fail(422, "income.unknownCostCenter");
+    // Only one of the unit's own cost centres. See the PATCH beside this.
+    if (resultUnitForCode(cc.code, await getPrefixes())?.resultUnitId !== unit.id) {
+      return fail(422, "income.costCenterOutsideUnit", { values: { code: cc.code, name: unit.name } });
+    }
   }
 
   const income = await prisma.resultUnitIncome.create({

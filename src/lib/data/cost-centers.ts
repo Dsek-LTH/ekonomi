@@ -39,6 +39,21 @@ export function getCostCenters(): Promise<CostCenter[]> {
   return loadCostCenters({});
 }
 
+/**
+ * The Fortnox mirror at a glance, for the sync row on Settings → Fortnox: how
+ * many came from Fortnox and when the sync last wrote them. The sync stamps
+ * `updatedAt` on every row it upserts, and only a sync touches a Fortnox row
+ * (they are read-only here), so the latest one is when it last ran.
+ */
+export async function getCostCenterSyncStatus(): Promise<{ count: number; lastSyncAt: string | null }> {
+  const agg = await prisma.costCenter.aggregate({
+    where: { source: "FORTNOX" },
+    _count: true,
+    _max: { updatedAt: true },
+  });
+  return { count: agg._count, lastSyncAt: agg._max.updatedAt?.toISOString() ?? null };
+}
+
 // Cost centres a picker should offer: the active ones. `keep` forces specific
 // codes in even when retired, so a voucher or allocation that already points at
 // one still renders and re-saves instead of failing validation. Retiring a

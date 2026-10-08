@@ -84,7 +84,7 @@ export function PersonSearch({
       )}
 
       {open && query.trim() && (
-        <div className="absolute z-40 mt-1 w-full min-w-64 overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]">
+        <div className="absolute z-40 mt-1 w-full min-w-64 overflow-hidden rounded-panel border border-border bg-background shadow-[var(--shadow-pop)]">
           {loading && shown.length === 0 ? (
             <p className="flex items-center gap-2 px-3 py-3 text-sm text-muted">
               <Spinner size="sm" />
@@ -99,7 +99,7 @@ export function PersonSearch({
                   <button
                     type="button"
                     onClick={() => pick(u)}
-                    className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-hover"
+                    className="flex w-full items-center gap-3 rounded-control px-2.5 py-2 text-left transition-colors hover:bg-hover"
                   >
                     <Avatar initials={u.initials} />
                     <span className="min-w-0">

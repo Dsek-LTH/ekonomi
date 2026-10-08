@@ -101,7 +101,6 @@ export default function NewExpenseClient({
 }) {
   const returnTo = useReturnTo();
   const t = useTranslations("expenses.wizard");
-  const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const { date } = useFormat();
   // The description opens focused. See the field on the first step.
@@ -653,12 +652,7 @@ export default function NewExpenseClient({
     done(id);
   }
 
-  const chrome = wizardChrome({
-    existing,
-    t,
-    draftLabel: t("draftLabel"),
-    listLabel: tNav("expenses"),
-  });
+  const chrome = wizardChrome({ existing, t });
 
   // Every document the panel has to show, stored first (oldest first, the
   // upload order) and whatever is still only in this browser after them: a
@@ -909,7 +903,7 @@ export default function NewExpenseClient({
                   {uploadedReceipts.map((r) => (
                     <li
                       key={r.id}
-                      className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm"
+                      className="flex items-center justify-between gap-2 rounded-control bg-surface px-3 py-1.5 text-sm"
                     >
                       <span className="min-w-0 truncate">{r.filename}</span>
                       <button
@@ -925,7 +919,7 @@ export default function NewExpenseClient({
                   {pendingFiles.map((p) => (
                     <li
                       key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm"
+                      className="flex items-center justify-between gap-2 rounded-control bg-surface px-3 py-1.5 text-sm"
                     >
                       <span className="min-w-0 truncate">{p.file.name}</span>
                       <button
@@ -1000,7 +994,7 @@ export default function NewExpenseClient({
               )}
             </DetailList>
 
-            <div className="flex items-center gap-2 rounded-xl bg-surface px-3.5 py-2.5 text-sm text-muted">
+            <div className="flex items-center gap-2 rounded-control bg-surface px-3.5 py-2.5 text-sm text-muted">
               <IconCheck className="size-4 shrink-0 text-success" />
               {t("goesTo", {
                 resultUnits:

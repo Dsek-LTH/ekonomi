@@ -24,10 +24,16 @@ const CATEGORIES = [
   "invoices",
   "payout",
   "approval",
+  "budget",
 ] as const;
 //
+// The rules themselves come from Policy för ekonomi (the section's policy
+// document), and only the parts that touch what is done in this app: buying,
+// receipts, attest and the budget. The policy's sections on capital and the
+// annual accounts are deliberately not here.
+//
 // An answer is a list of blocks rather than one string, because the source
-// document it comes from ("HOW TO UTLÄGG", Skattmästare 2026) is not prose all
+// material ("HOW TO UTLÄGG", Skattmästare 2026) is not prose all
 // the way down: the alcohol split is a worked example with a table, and the
 // receipt requirements are a checklist. Flattening those into paragraphs is
 // what makes an FAQ unreadable.

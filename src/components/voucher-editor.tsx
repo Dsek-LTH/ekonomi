@@ -28,6 +28,7 @@ import { withBlankRows } from "@/lib/ui/blank-rows";
 import { isAmountInput } from "@/lib/domain/money";
 import { amountFieldProps } from "@/components/ui/amount-input";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
+import { retagRowText } from "@/lib/domain/cost-center-tag";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { cn, uid } from "@/lib/ui/utils";
 
@@ -214,6 +215,11 @@ export function VoucherEditor({
   function patch(id: string, change: Partial<VoucherEditorRow>) {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...change } : r)));
   }
+
+  // A local cost centre is not sent to Fortnox, so its code goes into the row
+  // text where the bookkeeper can see it. See lib/domain/cost-center-tag.
+  const isLocal = (code: string) =>
+    costCenters.some((c) => c.code === code && c.source === "LOCAL");
 
   // Kronor still unaccounted for, from the totals the page has already summed,
   // the locked row included, which is what makes this the amount that would
@@ -520,7 +526,12 @@ export function VoucherEditor({
                     <Combobox
                       options={ccOptions}
                       value={r.costCenterCode}
-                      onChange={(v) => patch(r.id, { costCenterCode: v })}
+                      onChange={(v) =>
+                        patch(r.id, {
+                          costCenterCode: v,
+                          description: retagRowText(r.description, r.costCenterCode, v, isLocal),
+                        })
+                      }
                       // Nothing rather than a dash: an unpicked cost centre is
                       // ordinary (plenty of rows never take one) and the
                       // chevron is already saying there is a choice here.
@@ -638,7 +649,7 @@ export function VoucherEditor({
 
 // One chip shape for both of the things said under a voucher, so the reading of
 // them is the tone and nothing else.
-const chip = "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium";
+const chip = "inline-flex items-center gap-1.5 rounded-control px-3 py-1 text-sm font-medium";
 
 /**
  * The balance state, said the same way on every booking screen: a green chip

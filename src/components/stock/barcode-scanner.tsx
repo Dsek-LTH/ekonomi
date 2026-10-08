@@ -309,7 +309,7 @@ export function BarcodeScanner({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
         <div
           className={cn(
-            "relative overflow-hidden rounded-xl border border-border bg-black",
+            "relative overflow-hidden rounded-panel border border-border bg-black",
             // No picture is coming, so the frame that would have held it is a
             // black rectangle sitting over the message explaining why.
             error && "hidden",
@@ -341,7 +341,7 @@ export function BarcodeScanner({
                 disabled={!ready}
                 aria-label={t("scan.flip")}
                 title={t("scan.flip")}
-                className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70 disabled:opacity-40"
+                className="absolute right-2 top-2 rounded-control bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70 disabled:opacity-40"
               >
                 <IconCameraFlip className="size-5" />
               </button>
@@ -351,7 +351,7 @@ export function BarcodeScanner({
             {ready && (
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-lg border-2 border-white/70"
+                className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-control border-2 border-white/70"
               />
             )}
         </div>

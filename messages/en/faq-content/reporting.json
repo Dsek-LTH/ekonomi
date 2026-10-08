@@ -8,7 +8,7 @@
       "a": [
         {
           "t": "p",
-          "v": "Every purchase has to be filed. It is the condition for getting your money back on an out-of-pocket claim, and for not becoming personally liable for a purchase on the section card."
+          "v": "Every purchase in the guild's name must be reported, whether you paid yourself or with the guild card. It is the report that gets attested, and without attest you pay for the purchase yourself."
         },
         {
           "t": "ol",
@@ -62,26 +62,51 @@
       "a": [
         {
           "t": "p",
-          "v": "Alcohol comes with additional laws to comply with. One of the requirements is that alcoholic drinks and alcohol-like preparations must be reported separately by category:"
+          "v": "Alcohol comes with further laws to follow. One requirement is that alcoholic drinks and alcohol-like products must be reported separately by category, and each category has its own cost center:"
         },
         {
-          "t": "ul",
-          "v": [
-            "Beer: lager, sour beer.",
-            "Wine: up to 22 ‰, port, sherry, vermouth.",
-            "Other fermented drinks: cider, fruit wines, mead.",
-            "Spirits: Halmstad Crush, vodka, liqueurs.",
-            "Alcohol-like preparations: alcoholic ice cream."
+          "t": "table",
+          "head": [
+            "Cost center",
+            "Category",
+            "For example"
+          ],
+          "rows": [
+            [
+              "ALKO01",
+              "Beer",
+              "Lager, sour beer"
+            ],
+            [
+              "ALKO02",
+              "Other fermented drink",
+              "Cider, fruit wines, mead"
+            ],
+            [
+              "ALKO03",
+              "Wine",
+              "At most 22 ‰, port, sherry, vermouth"
+            ],
+            [
+              "ALKO04",
+              "Spirits",
+              "Halmstad Crush, vodka, liqueurs"
+            ],
+            [
+              "ALKO05",
+              "Alcohol-like products",
+              "Alcoholic ice cream"
+            ]
           ]
         },
         {
           "t": "p",
-          "v": "In practice that means splitting the alcohol you bought across one row per category: add up everything in the same category and put it on its own row, deposit (pant) included."
+          "v": "In practice you split the alcohol you bought into one row per category: add up everything in the same category and put it on that category's cost center, deposit included."
         },
         {
           "t": "note",
           "tone": "warn",
-          "v": "If you are unsure which category a drink belongs to, always ask your committee chair. The most common mistake is filing spirits as another fermented drink: Halmstad Crush is a spirit, not a cider."
+          "v": "If you are unsure which category a drink belongs to, always ask your result owner. The most common mistake is putting spirits under other fermented drink: Halmstad Crush is a spirit, not a cider."
         }
       ]
     },
@@ -111,30 +136,30 @@
         {
           "t": "table",
           "head": [
-            "Cost centre",
+            "Cost center",
             "Amount",
             "Comment"
           ],
           "rows": [
             [
-              "ALKO",
+              "ALKO01",
               "55.60 kr",
               "Beer (deposit included)"
             ],
             [
-              "ALKO",
-              "207.90 kr",
-              "Spirits (deposit included)"
+              "ALKO02",
+              "17.90 kr",
+              "Other fermented drink (deposit included)"
             ],
             [
-              "ALKO",
+              "ALKO03",
               "209.00 kr",
               "Wine"
             ],
             [
-              "ALKO",
-              "17.90 kr",
-              "Other fermented drink (deposit included)"
+              "ALKO04",
+              "207.90 kr",
+              "Spirits (deposit included)"
             ]
           ]
         }
@@ -146,16 +171,20 @@
       "a": [
         {
           "t": "p",
-          "v": "Under the section's finance policy the treasurer may hold you personally liable if a purchase, out of pocket or on the section card, is not filed within 60 days of the purchase being made."
+          "v": "An out-of-pocket expense must be reported within 60 days of paying. That is set by Policy för ekonomi, and the same deadline applies to mileage. After that the treasurer can refuse reimbursement, unless there are special reasons."
         },
         {
           "t": "p",
-          "v": "The app refuses an out-of-pocket claim or a mileage claim older than 60 days: they cannot be sent, because that is your money the section would be paying back and the claim is too old to accept. A card purchase can still be filed after that, because the section's money is already gone and the purchase has to be booked however late it arrives. That does not mean the deadline is not yours."
+          "v": "The app stops an out-of-pocket expense or a mileage claim older than 60 days. If there are special reasons it was late, contact the treasurer: an expense granted an exemption can still be submitted, and the reason is printed on the expense report."
+        },
+        {
+          "t": "p",
+          "v": "A card purchase can still be reported afterwards, since the guild's money is already gone and the purchase has to be booked however late it comes. Report it straight away regardless: the treasurer may take back the guild card if purchases are not reported."
         },
         {
           "t": "note",
           "tone": "danger",
-          "v": "The treasury does not have time to chase you for filing on time. File your purchases straight away."
+          "v": "The treasury does not have time to chase you to report on time. Report your purchases straight away."
         }
       ]
     },

@@ -445,11 +445,7 @@ export function NewRentalClient({
       title={existing ? t("rental.editTitle") : t("rental.newTitle")}
       description={existing ? t("rental.editDescription") : t("rental.newDescription")}
       width="content"
-      back={
-        existing
-          ? { href: `/contracts/${existing.id}`, label: existing.title }
-          : { href: "/uthyrning", label: t("rental.backToRentals") }
-      }
+      back={existing ? `/contracts/${existing.id}` : "/uthyrning"}
     >
       {/* The contract, beside the form that describes it. No `onFile`: there is
           nothing to upload here, the document is drawn rather than attached,
@@ -490,7 +486,7 @@ export function NewRentalClient({
                     greyed-out field reads as something that is broken or that
                     you have not earned, and this is neither. It is simply not
                     a question. */}
-                <div className="space-y-0.5 rounded-xl bg-surface px-4 py-3 text-sm">
+                <div className="space-y-0.5 rounded-control bg-surface px-4 py-3 text-sm">
                   <p className="font-medium">{SECTION.name}</p>
                   {SECTION.orgNo && (
                     <p className="text-muted">

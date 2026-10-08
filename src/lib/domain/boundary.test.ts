@@ -86,7 +86,10 @@ const PINNED_PURE: Record<string, string[]> = {
   // report.ts (which queries) and the ledger screen (which runs in the
   // browser). Its purity is the whole point of it: the client takes these
   // types without the query layer coming along behind them.
-  ledger: ["bas.ts", "report-shape.ts"],
+  // cost-center-filter.ts is the one reading of the cost-centre filter that
+  // the report, the charts and the drill-down share; pure, so it can be tested
+  // without a database.
+  ledger: ["bas.ts", "cost-center-filter.ts", "report-shape.ts"],
   // tags.ts is the one rule that decides what a tag looks like, and both the
   // API and the search go through it. status.ts derives a contract's state,
   // including the expiry that is deliberately not a column, and the list screen

@@ -208,7 +208,12 @@
     --chart-8: var(--color-muted);
 
     /* Misc */
-    --color-ring: #c93663;
+    /* The focus ring. Neutral rather than the section's pink: the ring is for
+       finding the keyboard, and in pink it shouted on every field it landed
+       on, and read as a second accent next to the buttons that actually wear
+       one. It is the muted text grey, which keeps it at 5:1 on a card, well
+       over the 3:1 a focus indicator owes. */
+    --color-ring: #6e6e73;
     --color-scrollbar: #c7c7cc;
 
     /* The light that sweeps a skeleton block. Brighter than the surface it
@@ -217,6 +222,31 @@
     --skeleton-sheen: rgb(255 255 255 / 0.75);
 
     --spacing-inset: 1rem;
+
+    /* ── Corners ─────────────────────────────────────────────────
+       Three radii and no others. Tailwind's own scale is cleared, so a
+       `rounded-lg` written anywhere produces no CSS at all, and radius.test.ts
+       fails on it before anyone has to notice a square corner. Which one a
+       thing gets depends on what it is, never on how big it is:
+
+         panel    a surface that stands on the page or floats above it: a
+                  card, a modal, a menu, a popover, a toast, a notice, a
+                  bordered table or list.
+         control  anything you press or type into, and anything set inline
+                  inside a panel: buttons, fields, chips, status pills, tags,
+                  nav items, tinted info rows, icon tiles.
+         mark     something too small for 4px to read as a corner, or nested
+                  inside a control's padding: a checkbox, a legend swatch, a
+                  count badge, the selected segment of a switch.
+
+       `rounded-full` is kept for things that really are circles: avatars,
+       status dots, spinners, step numbers, the scrollbar thumb. Never for a
+       button or a pill. Fully round controls were most of what made the app
+       read as playful. */
+    --radius-*: initial;
+    --radius-mark: 2px;
+    --radius-control: 4px;
+    --radius-panel: 6px;
 
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -345,7 +375,7 @@
   --chart-7: #70ebd6;
 
   /* Misc */
-  --color-ring: #ff7fa5;
+  --color-ring: #98989d;
   --color-scrollbar: #48484a;
 
   /* On near-black, white at three-quarters would be a flashbulb; the sweep has
@@ -460,7 +490,7 @@
     --chart-7: #70ebd6;
 
     /* Misc */
-    --color-ring: #ff7fa5;
+    --color-ring: #98989d;
     --color-scrollbar: #48484a;
 
     /* On near-black, white at three-quarters would be a flashbulb; the sweep has
@@ -1064,7 +1094,7 @@ summary {
        light-theme values; the other six follow the tones above. */
     --chart-6: #3323b8;
     --chart-7: #0b6270;
-    --color-ring: #d02253;
+    --color-ring: #6e6e73;
     --color-scrollbar: #c8c8ce;
   }
 

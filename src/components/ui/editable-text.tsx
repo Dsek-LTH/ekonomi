@@ -2,12 +2,17 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/ui/utils";
+import { IconPencil } from "@/components/ui/icons";
 
 // A value that is an input the whole time, dressed as plain text until you go
 // near it: transparent and borderless at rest, gaining a surface on hover and a
-// border and caret on focus. Click and type. There is no mode to enter, and so
-// no pencil to find and no moment where the thing under the pointer changes
-// into a different thing.
+// border and caret on focus. Click and type. There is no mode to enter, and no
+// moment where the thing under the pointer changes into a different thing.
+//
+// A pencil sits after it all the same. Dressed as plain text, the field gave no
+// sign at rest that it could be edited, and the hover surface only helps
+// someone who already thought to point at it. The pencil is a sign, not a mode:
+// clicking it just puts the caret in the field.
 //
 // Enter commits, Escape puts back what was there, and clicking away commits
 // too: leaving a field is how every other cell in this app is finished, and
@@ -32,6 +37,7 @@ export function EditableText({
   disabled,
   className,
   inputClassName,
+  pencil: showPencil = true,
 }: {
   value: string;
   /**
@@ -49,6 +55,8 @@ export function EditableText({
   disabled?: boolean;
   className?: string;
   inputClassName?: string;
+  /** The pencil after the value. Off where the field is already plainly one. */
+  pencil?: boolean;
 }) {
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -102,6 +110,11 @@ export function EditableText({
       id={autoId}
       value={draft}
       type={type}
+      // An input asks for about twenty characters of width by default, and in
+      // the grid below that request sizes the column, pushing the pencil away
+      // from the text. One character leaves the sizer as the widest thing in
+      // the column, so the box is as wide as the text and no wider.
+      size={autoSize ? 1 : undefined}
       onChange={(e) => setDraft(e.target.value)}
       onFocus={() => { abandoned.current = false; }}
       onBlur={commit}
@@ -119,7 +132,7 @@ export function EditableText({
         METRICS,
         // Text at rest. The border is transparent rather than absent so that
         // gaining one on hover does not move the text by a pixel.
-        "rounded-md border border-transparent bg-transparent text-inherit",
+        "rounded-control border border-transparent bg-transparent text-inherit",
         "placeholder:text-muted transition-colors duration-150",
         // The affordance: a surface under the pointer says this is a thing you
         // can act on, before anyone has to guess.
@@ -131,13 +144,28 @@ export function EditableText({
         "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         type !== "text" && "tabular-nums",
         saving && "opacity-60",
-        autoSize ? "col-start-1 row-start-1 w-full min-w-0" : "w-auto",
+        autoSize ? "col-start-1 row-start-1 w-full min-w-0" : "w-auto [field-sizing:content]",
         inputClassName,
       )}
     />
   );
 
-  if (!autoSize) return <span className={cn("inline-flex items-center", className)}>{input}</span>;
+  // Out of the tab order, since the input it points at is already in it.
+  const pencil = showPencil && (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-hidden
+      onClick={() => inputRef.current?.focus()}
+      className="shrink-0 rounded-control p-0.5 text-muted transition-colors duration-150 hover:bg-hover hover:text-foreground"
+    >
+      <IconPencil className="size-[0.9em]" />
+    </button>
+  );
+
+  if (!autoSize) {
+    return <span className={cn("inline-flex items-center", className)}>{input}{pencil}</span>;
+  }
 
   return (
     // The auto-sizing grid: an invisible copy of the text sets the column's
@@ -150,7 +178,7 @@ export function EditableText({
       // item in its first row, the sizer, which carries exactly the text
       // metrics of the value. Aligning by the box instead would drop it by the
       // descender and leave the date sitting low against the words beside it.
-      className={cn("inline-grid items-center align-baseline", className)}
+      className={cn("inline-grid grid-cols-[auto_auto] items-center align-baseline", className)}
     >
       <span
         aria-hidden
@@ -163,6 +191,7 @@ export function EditableText({
         {draft || placeholder || " "}
       </span>
       {input}
+      {pencil && <span className="col-start-2 row-start-1 inline-flex">{pencil}</span>}
     </span>
   );
 }

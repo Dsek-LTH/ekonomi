@@ -210,7 +210,9 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
     },
     total: kr(expense.allocations.reduce((sum, a) => sum + a.amount, 0)),
     allocations: expense.allocations.map((a) => ({
-      costCenter: `${a.costCenter.code} – ${a.costCenter.name}`,
+      // The code alone, which is what the cost centre is called in Fortnox and
+      // in the budget.
+      costCenter: a.costCenter.code,
       amount: kr(a.amount),
       comment: a.comment,
       // Null rather than a placeholder: what an unattested slice reads as is

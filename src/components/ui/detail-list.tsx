@@ -2,7 +2,7 @@
 // by the wizard's final review step.
 export function DetailList({ children }: { children: React.ReactNode }) {
   return (
-    <dl className="divide-y divide-border rounded-xl border border-border">
+    <dl className="divide-y divide-border rounded-panel border border-border">
       {children}
     </dl>
   );

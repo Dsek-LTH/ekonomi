@@ -18,6 +18,12 @@ import { IconCheck } from "./icons";
  *
  * The fill is `accent-soft`, not `accent`: the dark theme's accent is a pale
  * pink that no foreground sits on legibly.
+ *
+ * Empty, the box is edged in `faint` and filled with the card's own white. It
+ * was `border-border`, which is 1.2:1 against a card and the same grey as the
+ * hover fill a picker row takes, so on the row under the pointer the box all
+ * but disappeared. A box's edge is what says there is a box at all, so it owes
+ * the 3:1 that `faint` is for, and the fill keeps it a box on a tinted row.
  */
 export function CheckMark({ on, className }: { on: boolean; className?: string }) {
   return (
@@ -28,8 +34,8 @@ export function CheckMark({ on, className }: { on: boolean; className?: string }
       // as a whole and two lines around one thing reads as two things.
       data-check=""
       className={cn(
-        "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-        on ? "border-accent bg-accent-soft" : "border-border",
+        "flex size-4 shrink-0 items-center justify-center rounded-mark border transition-colors",
+        on ? "border-accent bg-accent-soft" : "border-faint bg-background",
         className,
       )}
     >
@@ -50,12 +56,19 @@ export function Checkbox({
   onChange,
   label,
   className,
+  children,
 }: {
   checked: boolean;
   onChange: () => void;
   /** The accessible name. There is no visible one. These sit in a margin. */
   label: string;
   className?: string;
+  /**
+   * Visible text beside the box, for a box that stands in a list of options
+   * rather than in a margin. Inside the same <label>, so the words are part of
+   * what you click, and the box keeps `label` as its name.
+   */
+  children?: React.ReactNode;
 }) {
   return (
     // `relative`, so the input below is positioned against this label.
@@ -92,6 +105,7 @@ export function Checkbox({
         on={checked}
         className="peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-[var(--color-ring)]"
       />
+      {children && <span className="ml-2.5 text-sm">{children}</span>}
     </label>
   );
 }

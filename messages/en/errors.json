@@ -212,7 +212,7 @@
     "unbalanced": "The voucher does not balance (debit ≠ credit)",
     "onePaymentLine": "The voucher has to have exactly one line on the payment account {account}",
     "paymentLineNoCostCenter": "The payment line ({account}) cannot have a cost center",
-    "paymentLineFullAmount": "The payment line ({account}) has to credit the whole expense amount",
+    "paymentLineFullAmount": "The payment line ({account}) has to carry the whole expense amount, as a credit or as a debit for a return",
     "unknownCostCenter": "Cost centre {code} does not exist"
   },
   "income": {
@@ -246,6 +246,7 @@
     "unbalanced": "The report's total does not match its account distribution.",
     "noClearingAccount": "No clearing account is set for this source.",
     "unknownCostCenter": "That cost centre does not exist.",
+    "costCenterOutsideUnit": "Cost centre {code} does not belong to {name}.",
     "moveFeeReport": "Zettle's fees belong to no committee and cannot be moved.",
     "moveSameUnit": "The items are already on that committee.",
     "noLines": "No items are selected.",

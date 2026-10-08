@@ -219,7 +219,6 @@ function annotateAttest(
   mapped: Expense,
   ctx: AttestCtx,
 ): void {
-  const submitterRoles = raw.submitter.roles;
   const actorIsSubmitter = raw.submitterId === ctx.viewerId;
   const resultUnitById = new Map(
     raw.allocations.map((a) => [a.id, resultUnitNameForCode(a.costCenter.code, ctx.prefixes)]),
@@ -230,7 +229,6 @@ function annotateAttest(
       actorRoles: ctx.viewerRoles,
       actorIsSubmitter,
       actorOwnedResultUnits: ctx.ownedResultUnits,
-      submitterRoles,
       allocationResultUnit: resultUnitById.get(a.id) ?? null,
     });
   }
@@ -260,7 +258,6 @@ export type ExpenseListScope =
 // unless the page's question genuinely covers several.
 const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
   DRAFT: ["DRAFT"],
-  PENDING_MATCH: ["PENDING_MATCH"],
   PENDING_APPROVAL: ["PENDING_APPROVAL"],
   CHANGES_REQUESTED: ["CHANGES_REQUESTED"],
   APPROVED: ["APPROVED"],
@@ -432,7 +429,7 @@ export async function getDashboardExpenses(
   // Waiting on you as the person who sent it in.
   const waitingOnSubmitter: Prisma.ExpenseWhereInput = {
     submitterId: viewer.id,
-    status: { in: ["CHANGES_REQUESTED", "DRAFT", "PENDING_MATCH"] },
+    status: { in: ["CHANGES_REQUESTED", "DRAFT"] },
   };
 
   const candidates: Prisma.ExpenseWhereInput[] = [waitingOnSubmitter];

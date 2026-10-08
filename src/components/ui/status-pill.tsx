@@ -14,7 +14,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-control px-2.5 py-1 text-xs font-medium",
         TONE_CLASSES[STATUS_TONE[status]],
         className,
       )}
@@ -39,7 +39,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center rounded-control px-2.5 py-1 text-xs font-medium",
         TONE_CLASSES[tone],
         className,
       )}

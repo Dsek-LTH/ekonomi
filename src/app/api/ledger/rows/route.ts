@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { fail, gate } from "@/lib/api/guard";
 import { getLedgerRows } from "@/lib/ledger";
+import { parseCostCenters } from "@/lib/ledger/cost-center-filter";
+import { periodEnd, periodStart } from "@/lib/ledger/period";
 
 export async function GET(req: Request) {
   const g = await gate();
@@ -11,26 +13,27 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const year = Number(url.searchParams.get("year"));
   const account = url.searchParams.get("account");
-  // `costCenter=CODE` scopes to one cost centre, `costCenter=` (empty) to the
-  // "no cost centre" bucket, and omitting it spans them all.
-  const ccParam = url.searchParams.get("costCenter");
-  const costCenter = ccParam === null ? undefined : ccParam || null;
+  // The report's own cost-centre filter: repeated `costCenter` params, an empty
+  // one for the "no cost centre" bucket, none at all for every cost centre.
+  const costCenters = parseCostCenters(url.searchParams);
 
   if (!year || !account) {
     return fail(400, "request.yearAndAccountRequired");
   }
 
-  // Optional period, so the drill-down matches the report's month range.
+  // Optional period, read the way the report reads it, so the drill-down
+  // covers exactly the days the row it was opened from does.
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
+  // A malformed end leaves the period off rather than handing the database an
+  // invalid date.
+  const start = from ? periodStart(from, new Date(NaN)) : null;
+  const end = to ? periodEnd(to, new Date(NaN)) : null;
   const period =
-    from && to
-      ? {
-          from: new Date(`${from}-01T00:00:00Z`),
-          to: new Date(Date.UTC(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0)),
-        }
+    start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())
+      ? { from: start, to: end }
       : undefined;
 
-  const rows = await getLedgerRows(year, account, costCenter, period);
+  const rows = await getLedgerRows(year, account, costCenters, period);
   return NextResponse.json({ rows });
 }

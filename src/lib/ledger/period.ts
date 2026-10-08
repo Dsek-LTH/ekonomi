@@ -10,21 +10,33 @@
 import "server-only";
 
 import { getLedgerYears, type LedgerYear } from ".";
+import { parseCostCenters } from "./cost-center-filter";
 
-// "YYYY-MM" → the month's first day (UTC). Falls back to `fallback`.
-function monthStart(raw: string | null, fallback: Date): Date {
-  const m = /^(\d{4})-(\d{2})$/.exec(raw ?? "");
-  if (!m) return fallback;
-  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+// The period's ends as the query writes them. A day ("YYYY-MM-DD") is that
+// day. A month ("YYYY-MM"), which is what the report asked in before it took
+// dates and what an old link still carries, is its first day at the start of a
+// period and its last at the end. Anything else falls back.
+const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MONTH = /^(\d{4})-(\d{2})$/;
+
+/** The first day a period covers. Falls back to `fallback`. */
+export function periodStart(raw: string | null, fallback: Date): Date {
+  const d = DAY.exec(raw ?? "");
+  if (d) return new Date(Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3])));
+  const m = MONTH.exec(raw ?? "");
+  if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+  return fallback;
 }
 
-// "YYYY-MM" → the month's last day (UTC). Day 0 of the next month is the last
-// of this one, which is also what makes a December range end on the 31st
-// without the wrap being written out.
-function monthEnd(raw: string | null, fallback: Date): Date {
-  const m = /^(\d{4})-(\d{2})$/.exec(raw ?? "");
-  if (!m) return fallback;
-  return new Date(Date.UTC(Number(m[1]), Number(m[2]), 0));
+/** The last day a period covers. Falls back to `fallback`. */
+export function periodEnd(raw: string | null, fallback: Date): Date {
+  const d = DAY.exec(raw ?? "");
+  if (d) return new Date(Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3])));
+  // Day 0 of the next month is the last of this one, which is also what makes
+  // a December range end on the 31st without the wrap being written out.
+  const m = MONTH.exec(raw ?? "");
+  if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]), 0));
+  return fallback;
 }
 
 const clamp = (d: Date, lo: Date, hi: Date) => (d < lo ? lo : d > hi ? hi : d);
@@ -40,15 +52,11 @@ export interface LedgerPeriod {
   from: Date;
   to: Date;
   /**
-   * Which cost centre, as the query means it:
-   *
-   *   absent          every cost centre
-   *   `costCenter=`   the rows carrying none
-   *
-   * An empty string is therefore a filter and not a missing one, which is why
-   * this is `undefined` rather than `""` for the "all" case.
+   * Which cost centres, as the query means them: undefined for every one,
+   * otherwise the codes asked for, "" among them for the rows carrying none.
+   * See lib/ledger/cost-center-filter.ts.
    */
-  costCenterCode: string | undefined;
+  costCenterCodes: string[] | undefined;
 }
 
 /**
@@ -64,12 +72,10 @@ export async function resolveLedgerPeriod(url: URL): Promise<LedgerPeriod | null
 
   const yearStart = new Date(`${selected.fromDate}T00:00:00Z`);
   const yearEnd = new Date(`${selected.toDate}T00:00:00Z`);
-  const from = clamp(monthStart(url.searchParams.get("from"), yearStart), yearStart, yearEnd);
+  const from = clamp(periodStart(url.searchParams.get("from"), yearStart), yearStart, yearEnd);
   // Lower-bounded by `from` rather than by the year: a period that ended before
   // it began is not a period, and clamping it up is the only reading of it.
-  const to = clamp(monthEnd(url.searchParams.get("to"), yearEnd), from, yearEnd);
-
-  const cc = url.searchParams.get("costCenter");
+  const to = clamp(periodEnd(url.searchParams.get("to"), yearEnd), from, yearEnd);
 
   return {
     years,
@@ -78,12 +84,12 @@ export async function resolveLedgerPeriod(url: URL): Promise<LedgerPeriod | null
     yearEnd,
     from,
     to,
-    costCenterCode: cc === null ? undefined : cc,
+    costCenterCodes: parseCostCenters(url.searchParams),
   };
 }
 
-/** The period as the response reports it back: "YYYY-MM" at each end. */
+/** The period as the response reports it back: "YYYY-MM-DD" at each end. */
 export const periodOf = (p: Pick<LedgerPeriod, "from" | "to">) => ({
-  from: p.from.toISOString().slice(0, 7),
-  to: p.to.toISOString().slice(0, 7),
+  from: p.from.toISOString().slice(0, 10),
+  to: p.to.toISOString().slice(0, 10),
 });

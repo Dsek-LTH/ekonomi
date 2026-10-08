@@ -60,10 +60,13 @@ async function main() {
     // ResultUnit membership is derived from code prefixes (see lib/result units),
     // so nothing about it is written here. The sheet's result unit column is
     // informational only.
+    // Created local. The sheet has cost centres Fortnox does not (the alko
+    // ones), and a code Fortnox does not have must never be sent to it. The
+    // next Fortnox sync takes over every code Fortnox does have.
     const row = await prisma.costCenter.upsert({
       where: { code: cc.code },
       update: { name: cc.name },
-      create: { code: cc.code, name: cc.name },
+      create: { code: cc.code, name: cc.name, source: "LOCAL" },
     });
     ccByCode.set(cc.code, row.id);
   }

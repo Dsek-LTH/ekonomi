@@ -20,6 +20,7 @@
 import { prisma } from "@/lib/server/db";
 import { orient, sectionsFor, type BasSection } from "./bas";
 import { oreToSEK } from "@/lib/domain/money";
+import { costCenterMatcher, costCenterWhere } from "./cost-center-filter";
 
 /** The bucket key for rows carrying no cost centre. The report uses the same. */
 const NO_CC = "";
@@ -85,8 +86,8 @@ interface TrendOptions {
   financialYear: number;
   from: Date;
   to: Date;
-  /** A code scopes to it, "" to the rows carrying none, undefined to all. */
-  costCenterCode?: string;
+  /** Only these cost centres, "" for the rows carrying none; undefined for all. */
+  costCenterCodes?: string[];
   /** Raw öre net per `${account}|${costCenterCode}`. See lib/ledger/comparison. */
   budget?: Map<string, number> | null;
 }
@@ -113,7 +114,8 @@ function monthsBetween(from: Date, to: Date): string[] {
 }
 
 export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
-  const { financialYear, from, to, costCenterCode } = opts;
+  const { financialYear, from, to, costCenterCodes } = opts;
+  const matches = costCenterMatcher(costCenterCodes);
   const sectionDefs = sectionsFor("RESULT");
   const sectionOf = (account: string): BasSection | undefined => {
     const n = Number(account);
@@ -130,14 +132,8 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
     where: {
       financialYear,
       date: { gte: from, lte: to },
-      // The report treats a null code and an empty one as the same bucket (see
-      // `movements`), so the filter has to as well, or asking for "utan
-      // kostnadsställe" would answer with a subset of what the table shows.
-      ...(costCenterCode === undefined
-        ? {}
-        : costCenterCode === NO_CC
-          ? { OR: [{ costCenterCode: null }, { costCenterCode: "" }] }
-          : { costCenterCode }),
+      // A null code and an empty one are one bucket; the helper says so.
+      ...costCenterWhere(costCenterCodes),
     },
     _sum: { debit: true, credit: true },
   });
@@ -211,7 +207,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
       const [account, cc = NO_CC] = key.split("|");
       const section = sectionOf(account);
       if (!section) continue;
-      if (costCenterCode !== undefined && cc !== costCenterCode) continue;
+      if (!matches(cc)) continue;
       const amount = oreToSEK(orient(net, section.orientation));
       budgetByCc.set(cc, (budgetByCc.get(cc) ?? 0) + amount);
       budgetTotal += amount;

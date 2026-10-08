@@ -23,7 +23,7 @@ export function FortnoxMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded",
+        "flex size-8 shrink-0 items-center justify-center rounded-control",
         className,
       )}
     >

@@ -13,29 +13,24 @@ const claim = (over: Partial<Expense> = {}) =>
 
 describe("wizardChrome", () => {
   it("names a new claim and sends back to the list", () => {
-    const c = wizardChrome({ existing: undefined, t, draftLabel: "Utkast", listLabel: "Utlägg" });
+    const c = wizardChrome({ existing: undefined, t });
     expect(c.title).toBe("newTitle");
     expect(c.description).toBe("newDescription");
-    expect(c.back).toEqual({ href: "/expenses", label: "Utlägg" });
+    expect(c.back).toBe("/expenses");
   });
 
   it("names an edited claim by its reference, and goes back to it", () => {
-    const c = wizardChrome({ existing: claim(), t, draftLabel: "Utkast", listLabel: "Utlägg" });
+    const c = wizardChrome({ existing: claim(), t });
     expect(c.title).toBe("editTitle:U-2026-0042");
     expect(c.description).toBe("editDescription");
-    expect(c.back).toEqual({ href: "/expenses/exp1", label: "U-2026-0042" });
+    expect(c.back).toBe("/expenses/exp1");
   });
 
   it("has another word for a draft, which has no reference yet", () => {
     // A claim is numbered when it is submitted for attest, not when it is
     // started, so an edit of a draft cannot name it and must not try.
-    const c = wizardChrome({
-      existing: claim({ reference: undefined }),
-      t,
-      draftLabel: "Utkast",
-      listLabel: "Utlägg",
-    });
+    const c = wizardChrome({ existing: claim({ reference: undefined }), t });
     expect(c.title).toBe("editTitleDraft");
-    expect(c.back).toEqual({ href: "/expenses/exp1", label: "Utkast" });
+    expect(c.back).toBe("/expenses/exp1");
   });
 });

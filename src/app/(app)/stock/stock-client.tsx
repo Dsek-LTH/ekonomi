@@ -317,14 +317,14 @@ export default function StockClient({
         return (
           <div className="flex flex-wrap items-center justify-end gap-1">
             {p.impossible && (
-              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">
+              <span className="rounded-control bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">
                 {t("flag.impossible")}
               </span>
             )}
             {check && (
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  "rounded-control px-2 py-0.5 text-[11px] font-medium",
                   check.state === "over"
                     ? "bg-warning-soft text-warning"
                     : "bg-surface text-muted",

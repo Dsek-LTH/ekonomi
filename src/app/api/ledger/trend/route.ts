@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   if (!period) {
     return NextResponse.json({ year: null, period: null, trend: null, budget: null });
   }
-  const { selected, from, to, costCenterCode } = period;
+  const { selected, from, to, costCenterCodes } = period;
 
   // Only when asked for, the same as the report's comparison: evaluating a
   // budget means reading and running the whole sheet, and most readings of
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     financialYear: selected.id,
     from,
     to,
-    costCenterCode,
+    costCenterCodes,
     budget,
   });
 

@@ -424,7 +424,7 @@ export default function ReceiptViewerImpl({
     >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
-            <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
+            <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
               <ToolBtn label={t("zoomOut")} onClick={() => zoomOut()}>
                 −
               </ToolBtn>
@@ -630,7 +630,7 @@ function DocumentSheet({
               renderAnnotationLayer={false}
               // Each page reads as a sheet, which is what tells a stack of them
               // apart from one long page.
-              className="overflow-hidden rounded-sm shadow-[var(--shadow-card)]"
+              className="overflow-hidden rounded-mark shadow-[var(--shadow-card)]"
               // Nothing per page while it rasterises: the default is the words
               // "Loading page", and a column of those is worse than a stack
               // that simply fills in.
@@ -647,7 +647,7 @@ function DocumentSheet({
           alt={doc.filename ?? t("alt")}
           draggable={false}
           onError={() => setFailed(true)}
-          className="max-w-full select-none rounded-sm shadow-[var(--shadow-card)]"
+          className="max-w-full select-none rounded-mark shadow-[var(--shadow-card)]"
         />
       )}
     </div>
@@ -680,7 +680,7 @@ function ToolBtn({
       aria-label={label}
       title={title ?? label}
       className={cn(
-        "flex items-center justify-center rounded-full text-[15px] leading-none text-foreground transition-colors hover:bg-hover disabled:opacity-30",
+        "flex items-center justify-center rounded-control text-[15px] leading-none text-foreground transition-colors hover:bg-hover disabled:opacity-30",
         wide ? "h-7 gap-1.5 px-2" : "size-7",
       )}
     >
@@ -723,7 +723,7 @@ function LoadFailed({
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-hover"
+          className="rounded-control border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-hover"
         >
           {t("retry")}
         </button>

@@ -97,7 +97,7 @@ export function FilterTabs<T extends string>({
             {opt.badge != null && opt.badge > 0 && (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                  "rounded-mark px-1.5 py-0.5 text-xs tabular-nums",
                   active ? "bg-accent-soft text-accent" : "bg-surface text-muted",
                 )}
               >

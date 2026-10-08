@@ -59,7 +59,7 @@ export function InfoHint({
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:bg-hover focus-visible:text-foreground"
+        className="flex size-7 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:bg-hover focus-visible:text-foreground"
       >
         <IconHelp className="size-4" />
       </button>
@@ -70,7 +70,7 @@ export function InfoHint({
           // Right-aligned: this sits at the right-hand end of a card header, so
           // a panel growing rightwards would leave the card. Below rather than
           // above for the same reason: the header is at the top of the page.
-          className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-background p-3 text-left text-xs leading-relaxed font-normal text-muted shadow-[var(--shadow-pop)]"
+          className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-panel border border-border bg-background p-3 text-left text-xs leading-relaxed font-normal text-muted shadow-[var(--shadow-pop)]"
         >
           {children}
         </span>

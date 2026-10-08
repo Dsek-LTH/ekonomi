@@ -13,27 +13,52 @@
 // top while you scroll, and takes over showing what the report is of once the
 // panel above has scrolled out of sight.
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
-import { Combobox, type ComboOption } from "@/components/ui/combobox";
+import { Combobox, MultiCombobox, type ComboOption } from "@/components/ui/combobox";
+import { DateInput } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
 import { budgetLabel } from "@/lib/budget/compare";
-import { SearchInput } from "@/components/ui/search-input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { ReportKind } from "@/lib/ledger/bas";
 import { cn } from "@/lib/ui/utils";
 import type {
   BudgetOption,
   ComparisonMode,
-  GroupMode,
   QueryState,
-  ViewOptions,
+  ResultColumn,
 } from "./report-types";
+import { RESULT_COLUMNS } from "./report-types";
 
-// The two picker values that aren't a cost centre: all of them, and the rows
-// carrying none.
-const CC_ALL = "__ALL__";
+// The picker value for the rows carrying no cost centre. The query spells that
+// bucket "", which a picker cannot hold as a value, since it reads as empty.
+// "Every cost centre" is not an option at all any more: it is picking none,
+// which the trigger shows as its placeholder and the clear button returns to.
 const CC_NONE = "__NONE__";
+
+/**
+ * The cost centres as picker options, led by the two that are not one cost
+ * centre but a side of the line: rows carrying none, and rows carrying any.
+ * "Med kostnadsställe" is the query's own `*` (see lib/ledger/cost-center-
+ * filter.ts), which a picker can hold as it is.
+ */
+function costCenterOptions(
+  costCenters: { code: string; name: string }[],
+  noneLabel: string,
+  anyLabel: string,
+): ComboOption[] {
+  return [
+    { value: CC_NONE, label: noneLabel },
+    { value: "*", label: anyLabel },
+    ...costCenters.map((c, i) => ({
+      value: c.code,
+      label: `${c.code} – ${c.name}`,
+      // The two buckets above are sides of the line; these are the cost
+      // centres themselves, and the rule says the list changes kind here.
+      dividerBefore: i === 0,
+    })),
+  ];
+}
 
 // One decision, labelled. The label is what makes a control readable on its
 // own. Five bare pickers in a row all look like the same filter.
@@ -66,28 +91,113 @@ const PILLS = "[&>button]:h-11 sm:[&>button]:h-9";
 
 // One row of the panel. Hairline above, none on the first. The rows are the
 // structure, so they get the rule rather than the whole panel getting padding.
+//
+// From lg the panel is a column to the left of the report (see ledger-client),
+// too narrow for fields side by side, so each row stacks its fields and every
+// one takes the column's width.
 function Row({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0">
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:[&>*]:w-full">
       {children}
     </div>
   );
 }
 
+export interface PeriodChoice {
+  options: ComboOption[];
+  value: string;
+  onPick: (value: string) => void;
+  /** A date was typed or picked by hand: the range is the reader's own now. */
+  onManual: () => void;
+}
+
+/**
+ * One end of the period, as a date typed or picked.
+ *
+ * What is typed is held here and only handed on once it is a whole date that
+ * exists: the report refetches on every change to the query, and it is the
+ * slowest request in the app, so "2026-0" on the way to "2026-03-15" must not
+ * be one. Left half-typed, it goes back to the date the report is actually
+ * showing. The server clamps the period into the financial year and reports
+ * back what it used, which arrives here as a new `value`.
+ */
+function PeriodDate({
+  value,
+  onCommit,
+  "aria-label": ariaLabel,
+}: {
+  value: string | null;
+  onCommit: (date: string) => void;
+  "aria-label": string;
+}) {
+  const [draft, setDraft] = useState(value ?? "");
+  // When the report answers with a different date (clamped into the year, or
+  // a new year picked), the field follows it. Adjusted during render rather
+  // than in an effect, so there is no frame showing the stale one.
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    setShown(value);
+    setDraft(value ?? "");
+  }
+  const isDate = (s: string) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(`${s}T00:00:00Z`).getTime());
+
+  return (
+    <DateInput
+      size="sm"
+      value={draft}
+      aria-label={ariaLabel}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDraft(next);
+        if (isDate(next) && next !== value) onCommit(next);
+      }}
+      onBlur={() => {
+        if (!isDate(draft)) setDraft(value ?? "");
+      }}
+    />
+  );
+}
+
+/**
+ * How fresh the figures are, at the foot of the parameters. It used to trail
+ * the page's description under the title, where it read as part of a sentence
+ * about what the page is. It is a fact about the year being reported on, which
+ * is what the panel above it chooses, so it sits with that.
+ */
+function SyncedNote({ synced }: { synced?: string | null }) {
+  if (!synced) return null;
+  return <p className="border-t border-border px-inset py-2.5 text-xs text-muted">{synced}</p>;
+}
+
 export function ReportParameters({
   query,
   onQuery,
+  columns,
+  onColumns,
+  diff,
+  onDiff,
   years,
-  months,
   costCenters,
   budgets,
+  synced,
+  period,
 }: {
   query: QueryState;
   onQuery: (patch: Partial<QueryState>) => void;
+  /** The result report's figure columns. See ResultColumn. */
+  columns: readonly ResultColumn[];
+  onColumns: (columns: ResultColumn[]) => void;
+  /** The difference column beside the comparison. */
+  diff: boolean;
+  onDiff: (diff: boolean) => void;
   years: { id: number; year: number }[];
-  months: ComboOption[];
   costCenters: { code: string; name: string }[];
   budgets: BudgetOption[];
+  /** When the year was last synced from Fortnox, already worded. */
+  synced?: string | null;
+  /** The Period picker. See `period` in ledger-client.tsx. */
+  period?: PeriodChoice;
 }) {
   const t = useTranslations("ledger");
   const tAlloc = useTranslations("allocation");
@@ -95,11 +205,7 @@ export function ReportParameters({
     value: String(y.id),
     label: String(y.year),
   }));
-  const ccOptions: ComboOption[] = [
-    { value: CC_ALL, label: t("allCostCenters") },
-    { value: CC_NONE, label: t("noCostCenter") },
-    ...costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}` })),
-  ];
+  const ccOptions = costCenterOptions(costCenters, t("noCostCenter"), t("withCostCenter"));
 
   return (
     <Card className="print:hidden">
@@ -130,39 +236,59 @@ export function ReportParameters({
             aria-label={t("year")}
           />
         </Field>
-        <Field label={t("from")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
-          <Combobox
-            size="sm"
-            options={months}
-            value={query.from ?? ""}
-            onChange={(v) => onQuery({ from: v })}
-            placeholder={t("monthPlaceholder")}
-            searchPlaceholder={t("monthSearch")}
-            aria-label={t("fromMonth")}
+        {/* Above the dates it names. A preset sets them; typing in them makes
+            the range the reader's own, and the picker says so. */}
+        {period && (
+          <Field label={t("period")} className="w-full sm:w-56">
+            <Combobox
+              size="sm"
+              options={period.options}
+              value={period.value}
+              onChange={period.onPick}
+              searchPlaceholder={t("periodSearch")}
+              aria-label={t("period")}
+            />
+          </Field>
+        )}
+        {/* From and To as one range, side by side with a dash between, at
+            every width, including the panel's narrow column from lg, where every
+            other field takes a row of its own. Dates, not months: a report can
+            be taken over any span of days, the way Fortnox takes one. */}
+        <div className="flex min-w-0 items-end gap-2">
+        <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+          <PeriodDate
+            value={query.from}
+            onCommit={(v) => {
+              period?.onManual();
+              onQuery({ from: v });
+            }}
+            aria-label={t("from")}
           />
         </Field>
-        <Field label={t("to")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
-          <Combobox
-            size="sm"
-            options={months}
-            value={query.to ?? ""}
-            onChange={(v) => onQuery({ to: v })}
-            placeholder={t("monthPlaceholder")}
-            searchPlaceholder={t("monthSearch")}
-            aria-label={t("toMonth")}
+        {/* The height of a control, so the dash sits level with the two. */}
+        <span aria-hidden className="flex h-11 items-center text-muted sm:h-9">
+          –
+        </span>
+        <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+          <PeriodDate
+            value={query.to}
+            onCommit={(v) => {
+              period?.onManual();
+              onQuery({ to: v });
+            }}
+            aria-label={t("to")}
           />
         </Field>
+        </div>
       </Row>
 
       <Row>
         <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
-          <Combobox
+          <MultiCombobox
             size="sm"
             options={ccOptions}
-            value={query.costCenter == null ? CC_ALL : query.costCenter || CC_NONE}
-            onChange={(v) =>
-              onQuery({ costCenter: v === CC_ALL ? null : v === CC_NONE ? "" : v })
-            }
+            values={query.costCenters.map((c) => c || CC_NONE)}
+            onChange={(vs) => onQuery({ costCenters: vs.map((v) => (v === CC_NONE ? "" : v)) })}
             placeholder={t("allCostCenters")}
             searchPlaceholder={tAlloc("search")}
             emptyText={t("noCostCenters")}
@@ -171,19 +297,40 @@ export function ReportParameters({
         </Field>
       </Row>
 
-      <Row>
-        <Field label={t("grouping")}>
-          <SegmentedControl
-            className={PILLS}
-            options={[
-              { value: "SUMMED", label: t("summed") },
-              { value: "SPECIFIED", label: t("perCostCenter") },
-            ]}
-            value={query.group}
-            onChange={(v) => onQuery({ group: v as GroupMode })}
-          />
-        </Field>
-      </Row>
+      {/* Which figures stand beside each account. Result report only: the
+          balance report's columns are fixed (opening, period, closing). */}
+      {query.kind === "RESULT" && (
+        <Row>
+          <Field label={t("columns")}>
+            {/* Plain boxes, every option in sight: five is few enough to read
+                at a glance, and a dropdown hid which ones were on behind a
+                "3 valda". */}
+            <div role="group" aria-label={t("columns")} className="flex flex-col gap-2 pt-0.5">
+              {RESULT_COLUMNS.map((c) => {
+                const label = t(`columnOption.${c}`);
+                return (
+                  <Checkbox
+                    key={c}
+                    label={label}
+                    checked={columns.includes(c)}
+                    // The last ticked box stays ticked: a report of no figures
+                    // is not a report, and a table that quietly showed the
+                    // period anyway would disagree with the boxes above it.
+                    onChange={() => {
+                      if (columns.includes(c) && columns.length === 1) return;
+                      onColumns(
+                        columns.includes(c) ? columns.filter((x) => x !== c) : [...columns, c],
+                      );
+                    }}
+                  >
+                    {label}
+                  </Checkbox>
+                );
+              })}
+            </div>
+          </Field>
+        </Row>
+      )}
 
       <Row>
         <Field label={t("comparison")}>
@@ -191,15 +338,31 @@ export function ReportParameters({
             className={PILLS}
             options={[
               { value: "NONE", label: t("none") },
-              { value: "PRIOR", label: t("priorYear") },
-              // Balance-sheet accounts aren't budgeted, so the option isn't
-              // offered there rather than offered and then dropped.
-              ...(query.kind === "BALANCE" ? [] : [{ value: "BUDGET", label: t("budget") }]),
+              // The result report takes last year as columns of its own (see
+              // Kolumner above), so here it is only the budget. The balance
+              // report has no such columns and keeps last year here. Balance
+              // accounts aren't budgeted, so the budget isn't offered there.
+              ...(query.kind === "BALANCE"
+                ? [{ value: "PRIOR", label: t("priorYear") }]
+                : [{ value: "BUDGET", label: t("budget") }]),
             ]}
             value={query.compare}
             onChange={(v) => onQuery({ compare: v as ComparisonMode })}
           />
         </Field>
+        {/* With the comparison it is the difference against, and only while
+            there is one: a toggle with nothing to take a difference of would
+            be present and inert. */}
+        {query.compare !== "NONE" && (
+          <Checkbox
+            label={t("difference")}
+            checked={diff}
+            onChange={() => onDiff(!diff)}
+            className="self-end pb-2 lg:self-start lg:pb-0"
+          >
+            {t("difference")}
+          </Checkbox>
+        )}
 
         {/* Which budget you mean is part of choosing "budget", so it sits in
             the same row. Every budget is offered, not only the ones for the year
@@ -233,6 +396,7 @@ export function ReportParameters({
           </Field>
         )}
       </Row>
+      <SyncedNote synced={synced} />
     </Card>
   );
 }
@@ -249,7 +413,8 @@ export function ReportParameters({
  *                    not offered for one. Everything on this card is therefore
  *                    about a result report already.
  *   grouping       Summed or per cost centre is how the *table* stacks its
- *                    rows. /api/ledger/trend never reads it: the charts break
+ *                    rows, and it follows from the cost-centre filter rather
+ *                    than being chosen. /api/ledger/trend never reads it: the charts break
  *                    the period down per cost centre whatever it says, because
  *                    that is what two of the five are about.
  *   prior year     The one comparison these charts do not draw. Only a budget
@@ -266,16 +431,20 @@ export function ChartParameters({
   query,
   onQuery,
   years,
-  months,
   costCenters,
   budgets,
+  synced,
+  period,
 }: {
   query: QueryState;
   onQuery: (patch: Partial<QueryState>) => void;
   years: { id: number; year: number }[];
-  months: ComboOption[];
   costCenters: { code: string; name: string }[];
   budgets: BudgetOption[];
+  /** When the year was last synced from Fortnox, already worded. */
+  synced?: string | null;
+  /** The Period picker. See `period` in ledger-client.tsx. */
+  period?: PeriodChoice;
 }) {
   const t = useTranslations("ledger");
   const tAlloc = useTranslations("allocation");
@@ -283,11 +452,7 @@ export function ChartParameters({
     value: String(y.id),
     label: String(y.year),
   }));
-  const ccOptions: ComboOption[] = [
-    { value: CC_ALL, label: t("allCostCenters") },
-    { value: CC_NONE, label: t("noCostCenter") },
-    ...costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}` })),
-  ];
+  const ccOptions = costCenterOptions(costCenters, t("noCostCenter"), t("withCostCenter"));
   const pacing = query.compare === "BUDGET";
 
   return (
@@ -305,39 +470,59 @@ export function ChartParameters({
             aria-label={t("year")}
           />
         </Field>
-        <Field label={t("from")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
-          <Combobox
-            size="sm"
-            options={months}
-            value={query.from ?? ""}
-            onChange={(v) => onQuery({ from: v })}
-            placeholder={t("monthPlaceholder")}
-            searchPlaceholder={t("monthSearch")}
-            aria-label={t("fromMonth")}
+        {/* Above the dates it names. A preset sets them; typing in them makes
+            the range the reader's own, and the picker says so. */}
+        {period && (
+          <Field label={t("period")} className="w-full sm:w-56">
+            <Combobox
+              size="sm"
+              options={period.options}
+              value={period.value}
+              onChange={period.onPick}
+              searchPlaceholder={t("periodSearch")}
+              aria-label={t("period")}
+            />
+          </Field>
+        )}
+        {/* From and To as one range, side by side with a dash between, at
+            every width, including the panel's narrow column from lg, where every
+            other field takes a row of its own. Dates, not months: a report can
+            be taken over any span of days, the way Fortnox takes one. */}
+        <div className="flex min-w-0 items-end gap-2">
+        <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+          <PeriodDate
+            value={query.from}
+            onCommit={(v) => {
+              period?.onManual();
+              onQuery({ from: v });
+            }}
+            aria-label={t("from")}
           />
         </Field>
-        <Field label={t("to")} className="min-w-36 flex-1 sm:w-44 sm:flex-none">
-          <Combobox
-            size="sm"
-            options={months}
-            value={query.to ?? ""}
-            onChange={(v) => onQuery({ to: v })}
-            placeholder={t("monthPlaceholder")}
-            searchPlaceholder={t("monthSearch")}
-            aria-label={t("toMonth")}
+        {/* The height of a control, so the dash sits level with the two. */}
+        <span aria-hidden className="flex h-11 items-center text-muted sm:h-9">
+          –
+        </span>
+        <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+          <PeriodDate
+            value={query.to}
+            onCommit={(v) => {
+              period?.onManual();
+              onQuery({ to: v });
+            }}
+            aria-label={t("to")}
           />
         </Field>
+        </div>
       </Row>
 
       <Row>
         <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
-          <Combobox
+          <MultiCombobox
             size="sm"
             options={ccOptions}
-            value={query.costCenter == null ? CC_ALL : query.costCenter || CC_NONE}
-            onChange={(v) =>
-              onQuery({ costCenter: v === CC_ALL ? null : v === CC_NONE ? "" : v })
-            }
+            values={query.costCenters.map((c) => c || CC_NONE)}
+            onChange={(vs) => onQuery({ costCenters: vs.map((v) => (v === CC_NONE ? "" : v)) })}
             placeholder={t("allCostCenters")}
             searchPlaceholder={tAlloc("search")}
             emptyText={t("noCostCenters")}
@@ -384,120 +569,7 @@ export function ChartParameters({
           </Field>
         )}
       </Row>
+      <SyncedNote synced={synced} />
     </Card>
-  );
-}
-
-export function ReportBar({
-  view,
-  onView,
-  showComparison,
-  summary,
-  showSummary,
-  onEditParameters,
-  count,
-  action,
-  charting,
-}: {
-  view: ViewOptions;
-  onView: (patch: Partial<ViewOptions>) => void;
-  /** Whether a comparison column is on show. The diff toggle needs one. */
-  showComparison: boolean;
-  /** What the report is of, shown here once the panel is off screen. */
-  summary: string;
-  showSummary: boolean;
-  onEditParameters: () => void;
-  count: React.ReactNode;
-  /**
-   * What you can do with the report: export it, print it.
-   *
-   * Here rather than in the page header, which says what you are looking at and
-   * not what you can do to it (components/page-shell.tsx). It also means the
-   * two are absent until there is a report to act on, instead of sitting at the
-   * top of the page greyed out, which is the rule the chips above already
-   * follow.
-   */
-  action?: React.ReactNode;
-  /**
-   * Whether the charts are what is on screen.
-   *
-   * Everything on the left of this bar narrows *rows*: a search over account
-   * names, a chip that drops the empty ones, a column of shares. None of it
-   * means anything to a chart of the same period, and a control that is present
-   * and inert is worse than one that is absent.
-   *
-   * That so much of this bar has to disappear is why the switch between the two
-   * is no longer in it. It sits beside the page title now, in the track
-   * register, because the charts are a different question about the period
-   * rather than the same rows drawn differently. What stays here in either mode
-   * is what is true of both: which period is on screen, and what you can do
-   * with it.
-   */
-  charting?: boolean;
-}) {
-  const t = useTranslations("ledger");
-  return (
-    <div
-      className={cn(
-        // Pinned to the top of the scroll container: below md that is the page,
-        // under the 3.5rem mobile header; from md the main column.
-        "sticky top-14 z-10 -mx-4 border-b border-border px-4 py-2.5",
-        // Opaque on a phone: a translucent, blurred layer pinned over content
-        // that is scrolling under it is repainted every frame, and that is felt
-        // on a phone in a way it never is on a laptop.
-        "bg-canvas md:bg-canvas/90 md:backdrop-blur",
-        "md:top-0 md:-mx-8 md:px-8",
-        "print:hidden",
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {!charting && (
-          <>
-            <SearchInput
-              id="report-search"
-              className="w-full sm:w-64"
-              value={view.query}
-              onChange={(e) => onView({ query: e.target.value })}
-              placeholder={t("accountSearch")}
-              aria-label={t("accountSearch")}
-            />
-            <Chip active={view.hideZero} onClick={() => onView({ hideZero: !view.hideZero })}>
-              {t("hideZeroRows")}
-            </Chip>
-            <Chip active={view.share} onClick={() => onView({ share: !view.share })}>
-              {t("shareOfTotal")}
-            </Chip>
-            {/* Nothing to take a difference against without a comparison, so the
-                toggle is absent rather than present and inert. */}
-            {showComparison && (
-              <Chip active={view.diff} onClick={() => onView({ diff: !view.diff })}>
-                {t("difference")}
-              </Chip>
-            )}
-          </>
-        )}
-
-        {/* Only once the panel has scrolled away. While it's on screen it
-            already says all this, in full. Truncates rather than wraps: the
-            bar's height is what the table headers stick beneath, so it has to
-            stay one line however long the summary gets. */}
-        {showSummary && (
-          <>
-            <span className="ml-auto hidden min-w-0 flex-1 truncate text-right text-sm text-muted lg:block">
-              {summary}
-            </span>
-            <Button variant="secondary" size="sm" onClick={onEditParameters}>
-              {t("change")}
-            </Button>
-          </>
-        )}
-
-        <div className="ml-auto shrink-0 whitespace-nowrap text-sm text-muted">
-          {charting ? null : count}
-        </div>
-
-        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
-      </div>
-    </div>
   );
 }

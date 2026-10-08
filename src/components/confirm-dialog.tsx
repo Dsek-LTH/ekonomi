@@ -140,7 +140,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           >
             <div className="flex gap-3">
               {pending.tone === "danger" && (
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-danger-soft text-danger">
                   <IconAlert className="size-5" />
                 </span>
               )}

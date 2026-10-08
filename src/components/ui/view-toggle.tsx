@@ -36,7 +36,7 @@ export function ViewToggle<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5",
+        "inline-flex items-center gap-0.5 rounded-control border border-border bg-surface p-0.5",
         className,
       )}
     >
@@ -55,7 +55,7 @@ export function ViewToggle<T extends string>({
             title={opt.label}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex size-7 items-center justify-center rounded-md transition-colors",
+              "flex size-7 items-center justify-center rounded-mark transition-colors",
               active
                 // The selected pill in a track, same reasoning, and the same
                 // token, as CollectionSwitch. The gutter here is 2px, so a

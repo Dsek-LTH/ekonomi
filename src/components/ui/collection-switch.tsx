@@ -51,7 +51,7 @@ export type Collections = {
 
 // `relative`, because the pill is laid over the track rather than drawn on the
 // option. See the measurement below.
-const TRACK = "relative inline-flex rounded-full border border-border bg-surface p-1";
+const TRACK = "relative inline-flex rounded-control border border-border bg-surface p-1";
 
 // What the pill looks like, in the one place both the moving copy and the
 // static fallback read it from.
@@ -60,7 +60,7 @@ const TRACK = "relative inline-flex rounded-full border border-border bg-surface
 // content box, so it is centred by construction. But a shadow that leans
 // downwards puts more darkness in the 4px below it than above, and the eye
 // reads that as the pill sitting low. See globals.css.
-const PILL = "rounded-full bg-background shadow-[var(--shadow-pill)]";
+const PILL = "rounded-mark bg-background shadow-[var(--shadow-pill)]";
 
 const Count = ({ count }: { count?: number }) =>
   count ? <span className="ml-1.5 tabular-nums text-muted">{count}</span> : null;
@@ -125,7 +125,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     cn(
       // Above the pill, which is a positioned sibling and would otherwise paint
       // over the label.
-      "relative rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+      "relative rounded-mark px-4 py-1.5 text-sm font-medium transition-colors",
       active
         ? cn(
             "text-foreground",

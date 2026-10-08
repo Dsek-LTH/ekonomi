@@ -1,7 +1,7 @@
 {
   "categories": "Categories",
   "title": "Questions & answers",
-  "description": "All of \"How to utlägg\" as one page you can search. What to do when you have spent guild money, and what to do when it lands on you to approve.",
+  "description": "What you need to know to buy for the guild, report and attest, following Policy för ekonomi. Search the questions or pick a category.",
   "searchPlaceholder": "Search the questions…",
   "all": "All",
   "matches": "{count, plural, =0 {No matches} =1 {# match} other {# matches}}",

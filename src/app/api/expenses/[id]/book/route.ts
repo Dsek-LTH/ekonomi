@@ -76,7 +76,11 @@ async function checkPaymentLine(
   if (payment.costCenterCode) {
     return { code: "voucher.paymentLineNoCostCenter", account };
   }
-  if (payment.debit !== 0 || payment.credit !== (expense.grossAmount ?? 0)) {
+  // A return (negative gross) is the same row the other way round: the money
+  // comes back in, so the account is debited with the magnitude.
+  const gross = expense.grossAmount ?? 0;
+  const expected = gross < 0 ? { debit: -gross, credit: 0 } : { debit: 0, credit: gross };
+  if (payment.debit !== expected.debit || payment.credit !== expected.credit) {
     return { code: "voucher.paymentLineFullAmount", account };
   }
   return null;

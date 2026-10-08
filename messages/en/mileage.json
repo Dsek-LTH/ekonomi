@@ -73,6 +73,10 @@
     "removeFailed": "The rate could not be removed",
     "removeTitle": "Remove the rate?",
     "removeDescription": "Journeys already valued at it keep their amount. New journeys on those dates get whichever rate applied before.",
-    "empty": "No rate has been set yet. Without one, no mileage claims can be filed."
+    "empty": "No rate has been set yet. Without one, no mileage claims can be filed.",
+    "since": "In force since {date}",
+    "from": "From {date}",
+    "showEarlier": "Show earlier ({count})",
+    "hideEarlier": "Hide earlier"
   }
 }

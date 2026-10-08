@@ -56,7 +56,7 @@ export const DEFAULT_WIDTH = 520;
 // The panel's own controls, matching the viewer's zoom toolbar in the opposite
 // corner so the two read as one set of tools rather than two.
 const FLOATING_BTN =
-  "flex size-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
+  "flex size-7 items-center justify-center rounded-control border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
 
 /**
  * What the dropzone calls the thing it is asking for.
@@ -624,7 +624,7 @@ export function ReceiptPanelColumn() {
         // flashed without turning: motion that says "look here" rather than
         // "still going", and reduced-motion stopped it dead.
         <div role="status" className="flex flex-col items-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
             <Spinner size="lg" />
           </span>
           <p className="mt-4 text-sm font-medium">{t("uploading")}</p>
@@ -632,7 +632,7 @@ export function ReceiptPanelColumn() {
         </div>
       ) : (
         <>
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
             <IconUpload className="size-6" />
           </span>
           {/* Dragging is a desktop idea; on a phone the button is the whole
@@ -713,13 +713,13 @@ export function ReceiptPanelColumn() {
         // home indicator, the same way the phone's nav does
         // (shell/mobile-nav.tsx). Without it the word sits under the bar iOS
         // draws over the foot of the screen.
-        "bottom-0 left-0 right-0 rounded-t-2xl px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]",
+        "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]",
         // From md: the tab on the right, beside the column it opens into.
         // Every override is same-family on purpose, because `cn` joins rather than
         // merges, so `md:bottom-auto` beating `bottom-0` is Tailwind's variant
         // ordering doing it, not luck with `inset-*` against `right-*`.
         "md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2",
-        "md:flex-col md:gap-1.5 md:rounded-l-xl md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
+        "md:flex-col md:gap-1.5 md:rounded-l-panel md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
         // The right edge stays borderless at both widths. It is off-screen on
         // a phone and against the frame's edge on a desktop.
         "border-b-0 border-l-0 border-r-0 border-t border-accent md:border-b md:border-l",

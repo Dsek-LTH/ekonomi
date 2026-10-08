@@ -17,9 +17,9 @@ const TONES: Record<Tone, string> = {
 // Radius belongs to the size: "xs" is the round button that sits inside a pill,
 // the other two are square-ish row actions.
 const SIZES = {
-  xs: "rounded-full p-0.5",
-  sm: "rounded-lg p-1",
-  md: "rounded-lg p-1.5",
+  xs: "rounded-control p-0.5",
+  sm: "rounded-control p-1",
+  md: "rounded-control p-1.5",
 };
 
 export function IconButton({

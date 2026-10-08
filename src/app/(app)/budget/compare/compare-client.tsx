@@ -60,7 +60,6 @@ export function CompareClient({
 }) {
   const router = useProgressRouter();
   const t = useTranslations("budget.compare");
-  const tNav = useTranslations("nav");
 
   // The comparison lives in the URL, so changing it is a navigation, which is
   // also what re-runs the page's loader and brings back the new column.
@@ -76,7 +75,7 @@ export function CompareClient({
     <PageShell
       title={t("title")}
       description={t("description")}
-      back={{ href: "/budget", label: tNav("budget") }}
+      back="/budget"
       width="content"
     >
       {/* The picker sits on the card it fills rather than in the page header,

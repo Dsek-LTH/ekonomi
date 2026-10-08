@@ -145,7 +145,6 @@ export async function POST(
       actorRoles: actor.roles,
       actorIsSubmitter,
       actorOwnedResultUnits: actorOwned,
-      submitterRoles: expense.submitter.roles,
       allocationResultUnit: resultUnitNameForCode(a.costCenter.code, prefixes),
     });
 

@@ -355,7 +355,7 @@ export default function DeliveryClient({
     <PageShell
       title={t("delivery.title")}
       description={t("delivery.description")}
-      back={{ href: "/stock", label: t("title") }}
+      back="/stock"
       width="wide"
     >
       <Card>
@@ -436,7 +436,7 @@ export default function DeliveryClient({
                       <button
                         type="button"
                         onClick={() => drop(id)}
-                        className="shrink-0 rounded-md p-0.5 text-muted transition-opacity hover:text-foreground md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+                        className="shrink-0 rounded-control p-0.5 text-muted transition-opacity hover:text-foreground md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                         aria-label={t("delivery.remove")}
                       >
                         <IconX className="size-4" />
@@ -531,7 +531,7 @@ export default function DeliveryClient({
             typed into the wrong line before it becomes a movement in the log.
             Sticky on a phone: a pallet runs past the bottom of the screen, and
             a save button you have to scroll to find is one people forget. */}
-        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-border bg-background px-inset py-3">
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3">
           <span className="text-sm text-muted">
             {pending_rows.length === 0
               ? t("delivery.nothingToSave")

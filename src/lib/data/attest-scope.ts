@@ -17,7 +17,7 @@ import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { costCentreWhereForPrefixes, ownedResultUnits } from "@/lib/server/result-units";
-import { ELEVATED_SUBMITTER_ROLES, isAdmin } from "@/lib/domain/permissions";
+import { isAdmin } from "@/lib/domain/permissions";
 import type { Viewer } from "./expense-scope";
 
 /**
@@ -29,8 +29,6 @@ import type { Viewer } from "./expense-scope";
  *     rule that holds however many roles you have, so it is an AND over the
  *     rest rather than one of the alternatives;
  *   • skattmästare / ordförande: anyone else's, unconditionally;
- *   • vice skattmästare: those submitted by an ordinarie member, a submitter
- *     holding none of the elevated roles;
  *   • resultatansvarig: those with an allocation on a cost centre belonging to
  *     a result unit they answer for, which is a code prefix, exactly as in
  *     expense-scope.
@@ -44,12 +42,6 @@ export async function attestScopeWhere(viewer: Viewer): Promise<Prisma.ExpenseWh
   if (isAdmin(viewer.capabilities)) return notMine;
 
   const authority: Prisma.ExpenseWhereInput[] = [];
-
-  if (viewer.roles.includes("VICE_SKATTMASTARE")) {
-    authority.push({
-      submitter: { NOT: { roles: { hasSome: [...ELEVATED_SUBMITTER_ROLES] } } },
-    });
-  }
 
   // `ownedResultUnits` already returns nothing unless the role backs the
   // ownership, so the role check is not repeated here.

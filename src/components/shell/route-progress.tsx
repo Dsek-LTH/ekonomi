@@ -11,7 +11,6 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { noteIntent } from "@/lib/ui/nav-intent";
 
 // Whatever `useRouter()` hands back, rather than reaching into next/dist for
 // the name of it. The wrapper below has to stay a drop-in for exactly that.
@@ -121,7 +120,7 @@ function RouteProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 print:hidden"
     >
       <div
-        className="h-full rounded-r-full bg-brand shadow-[0_0_10px_var(--color-brand)] transition-[width,opacity] duration-200 ease-[var(--ease-out-quint)]"
+        className="h-full bg-brand shadow-[0_0_10px_var(--color-brand)] transition-[width,opacity] duration-200 ease-[var(--ease-out-quint)]"
         style={{ width: `${value}%`, opacity: active ? 1 : 0 }}
       />
     </div>
@@ -151,16 +150,7 @@ export function useProgressRouter(): Router {
       ...router,
       push: (href, options) => startTransition(() => router.push(href, options)),
       replace: (href, options) =>
-        startTransition(() => {
-          // The one kind of navigation nothing downstream could work out for
-          // itself: it changes the URL without adding a history entry, and a
-          // stack that counted it would send every Back press one step wrong.
-          // A push needs no such note. The address goes with it, so that a
-          // replace which moves nothing (the filter you are already on) is not
-          // read by whatever navigation lands next. See lib/ui/nav-intent.
-          noteIntent("replace", href);
-          router.replace(href, options);
-        }),
+        startTransition(() => router.replace(href, options)),
       refresh: () => startTransition(() => router.refresh()),
       back: () => startTransition(() => router.back()),
       forward: () => startTransition(() => router.forward()),

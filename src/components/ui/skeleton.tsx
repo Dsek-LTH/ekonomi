@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { Card } from "./card";
+import { TitleOrBar } from "@/components/shell/settings-title";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 
 // Placeholders for a wait whose shape is already known. A skeleton is only
@@ -15,7 +16,7 @@ import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 // reading out fifty empty boxes.
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("skeleton rounded-md", className)} />;
+  return <div aria-hidden className={cn("skeleton rounded-control", className)} />;
 }
 
 // Paragraph-shaped filler. The last line is short, the way a real one is.
@@ -66,17 +67,22 @@ export function SkeletonPage({
       aria-label={t("loading")}
       className={PAGE_WIDTH[width]}
     >
-      <div className="mb-10">
+      <div className="mb-6">
         {back && <Skeleton className="mb-2 h-4 w-28" />}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Skeleton className={cn("h-8", titleWidth)} />
+            {/* In the settings overlay the title is drawn in its top bar, so
+                its placeholder is too. See components/shell/settings-title. */}
+            <TitleOrBar
+              page={<Skeleton className={cn("h-8", titleWidth)} />}
+              bar={<Skeleton className="h-5 w-40" />}
+            />
             {description && <Skeleton className="mt-2.5 h-4 w-72 max-w-full" />}
           </div>
-          {action && <Skeleton className="h-10 w-36 rounded-full" />}
+          {action && <Skeleton className="h-9 w-36 rounded-control" />}
         </div>
       </div>
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
@@ -113,14 +119,14 @@ export function SkeletonTable({
           {tabs && (
             <div className="flex flex-wrap gap-1">
               {["w-16", "w-24", "w-20"].map((w) => (
-                <Skeleton key={w} className={cn("h-6 rounded-full", w)} />
+                <Skeleton key={w} className={cn("h-6 rounded-control", w)} />
               ))}
             </div>
           )}
           {toolbar && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Skeleton className="h-11 rounded-lg sm:h-9 sm:w-52 sm:shrink-0" />
-              <Skeleton className="h-11 rounded-lg sm:h-9 sm:min-w-48 sm:flex-1" />
+              <Skeleton className="h-11 rounded-control sm:h-9 sm:w-52 sm:shrink-0" />
+              <Skeleton className="h-11 rounded-control sm:h-9 sm:min-w-48 sm:flex-1" />
             </div>
           )}
         </div>
@@ -199,15 +205,15 @@ export function SkeletonCard({
   return (
     <Card className={className}>
       {header && (
-        <div className="flex items-center justify-between gap-4 border-b border-border px-inset py-4">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-inset py-3">
           <div className="min-w-0">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="mt-1.5 h-3.5 w-56 max-w-full" />
           </div>
-          {action && <Skeleton className="h-8 w-24 shrink-0 rounded-full" />}
+          {action && <Skeleton className="h-8 w-24 shrink-0 rounded-control" />}
         </div>
       )}
-      <div className="px-inset py-5">{children ?? <SkeletonText lines={3} />}</div>
+      <div className="px-inset py-4">{children ?? <SkeletonText lines={3} />}</div>
     </Card>
   );
 }
@@ -216,7 +222,7 @@ export function SkeletonCard({
 // step: DetailList's rule spacing, with the value side short.
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-border rounded-xl border border-border" aria-hidden>
+    <div className="divide-y divide-border rounded-panel border border-border" aria-hidden>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5">
           <Skeleton className="h-4 w-28" />
@@ -293,7 +299,7 @@ export function SkeletonFields({ fields = 3 }: { fields?: number }) {
       {Array.from({ length: fields }, (_, i) => (
         <div key={i}>
           <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="mt-1.5 h-10 w-full rounded-xl" />
+          <Skeleton className="mt-1.5 h-10 w-full rounded-control" />
         </div>
       ))}
     </div>

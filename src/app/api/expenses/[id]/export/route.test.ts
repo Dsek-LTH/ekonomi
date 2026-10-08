@@ -32,7 +32,7 @@ const h = vi.hoisted(() => ({
         debit: 45000,
         credit: 0,
         description: "Kolsyra",
-        costCenter: { code: "SEX01", source: "FORTNOX" },
+        costCenter: { code: "SEX01", source: "FORTNOX", active: true },
       },
       {
         account: "2440",
@@ -41,7 +41,7 @@ const h = vi.hoisted(() => ({
         description: null,
         // A local cost centre: an app-side dimension Fortnox has never heard
         // of. Sending its code would have the whole voucher rejected.
-        costCenter: { code: "INTERN", source: "LOCAL" },
+        costCenter: { code: "INTERN", source: "LOCAL", active: true },
       },
     ],
   } as unknown,
@@ -191,8 +191,9 @@ describe("POST /api/expenses/[id]/export", () => {
       date: "2026-03-01",
       rows: [
         { account: 4010, debit: 450, credit: 0, costCenter: "SEX01" },
-        // The local one is dropped rather than sent.
-        { account: 2440, debit: 0, credit: 450, costCenter: undefined },
+        // The local one is not sent as a cost centre. Its code goes into the
+        // row text, so the row can still be told apart in Fortnox.
+        { account: 2440, debit: 0, credit: 450, costCenter: undefined, description: "(INTERN)" },
       ],
     });
   });

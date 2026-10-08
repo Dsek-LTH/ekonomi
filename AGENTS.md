@@ -37,8 +37,8 @@ Good  The check asks only whether a value is there, so the value can be wrong.
 
 ## Separators in UI labels
 
-Use `–` (en dash, U+2013) to join a code and its name, or to separate fields on
-one line: `3001 – Försäljning`, `{km} km – {rate} kr/km`, `2026 – Ursprunglig`.
+Use `-` (en dash, U+2013) to join a code and its name, or to separate fields on
+one line: `3001 - Försäljning`, `{km} km - {rate} kr/km`, `2026 - Ursprunglig`.
 This is the one place a dash character is wanted.
 
 ## Exceptions

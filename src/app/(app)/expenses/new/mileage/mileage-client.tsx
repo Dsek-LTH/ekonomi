@@ -111,7 +111,6 @@ export default function MileageClient({
   const returnTo = useReturnTo();
   const t = useTranslations("mileage");
   const tWizard = useTranslations("expenses.wizard");
-  const tNav = useTranslations("nav");
   const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
   const selectOnce = useSelectOnce();
@@ -349,12 +348,7 @@ export default function MileageClient({
     </Field>
   );
 
-  const chrome = wizardChrome({
-    existing,
-    t,
-    draftLabel: tWizard("draftLabel"),
-    listLabel: tNav("expenses"),
-  });
+  const chrome = wizardChrome({ existing, t });
 
   return (
     <PageShell
@@ -507,7 +501,7 @@ export default function MileageClient({
                 The subtraction is stated rather than only its answer, because
                 somebody checking their own claim should be able to see where
                 the figure came from without doing the arithmetic again. */}
-            <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-surface px-3.5 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-control bg-surface px-3.5 py-3">
               <span className="text-sm text-muted">
                 {valued.km == null
                   ? t("total")
@@ -538,7 +532,7 @@ export default function MileageClient({
                   here would mean "selected" and there is nothing to select.
                   The same mark and hue this claim will carry in every list it
                   appears in afterwards; see components/ui/payment-tag.tsx. */}
-              <div className="rounded-xl border border-pay-mileage/30 bg-pay-mileage-soft px-4 py-3">
+              <div className="rounded-control border border-pay-mileage/30 bg-pay-mileage-soft px-4 py-3">
                 <span className="flex items-center gap-2">
                   <PaymentIcon type="MILEAGE" className="size-4 shrink-0" />
                   <span className="text-sm font-medium">{tPayment("MILEAGE.label")}</span>
@@ -640,7 +634,7 @@ export default function MileageClient({
               />
             </DetailList>
 
-            <div className="flex items-center gap-2 rounded-xl bg-surface px-3.5 py-2.5 text-sm text-muted">
+            <div className="flex items-center gap-2 rounded-control bg-surface px-3.5 py-2.5 text-sm text-muted">
               <IconCheck className="size-4 shrink-0 text-success" />
               {tWizard("goesTo", {
                 resultUnits:

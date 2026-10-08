@@ -1,117 +1,85 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import { SECTION_LABELS } from "./app-shell";
-import { SETTINGS_ROOT } from "./settings-sections";
 import { useHistoryGo, useProgressRouter } from "./route-progress";
-import {
-  applyNav,
-  backTarget,
-  EMPTY_STACK,
-  exitTarget,
-  returnTarget,
-  type BackTarget,
-  type NavStack,
-} from "@/lib/ui/history-stack";
-import { noteIntent, takeIntent } from "@/lib/ui/nav-intent";
+import { routePath } from "@/lib/ui/routes";
 
-// Where you have been on this trip, the one thing the App Router will not
-// tell you, and the one thing a "← Utlägg" link needs to be honest.
+// Back buttons do what the browser's Back button does. Nothing more.
 //
-// The problem it solves: a list keeps its state in the query string (which
-// scope, which tab, what was searched, which page. See lib/data/list-query),
-// and a back link that names a route throws all of it away. Open an utlägg
-// from "Alla" and the way back landed you in "Mina", looking at a different
-// list from the one you left.
+// What stood here before was a copy of the session history, kept in module
+// state and rebuilt from the URL changes the App Router reports. The router
+// does not say whether a change was a push, a replace or a pop, so the copy
+// had to guess. It guessed wrong for every replace that went past our own
+// router wrapper (a server `redirect()`, Next's own replaces), and for a Back
+// or Forward press onto a URL that was in the history twice. Once wrong, a
+// back link sent `history.go(-n)` into the real history with the copy's `n`,
+// and you landed somewhere else entirely.
 //
-// Module state and a subscription rather than a context, exactly as the
-// progress bar next door does it: one recorder is mounted beside the bar, and
-// anything that wants an answer reads it without a provider wrapped around the
-// app. The stack itself, what a move does to it, and what a back link should
-// make of it, is lib/ui/history-stack, which is pure and has the tests.
+// The browser already knows where you have been. Where it will tell us (the
+// Navigation API), we ask it. Where it will not, we only need one bit: has
+// this tab moved inside the app since it loaded.
 
-let stack: NavStack = EMPTY_STACK;
-const listeners = new Set<() => void>();
+// The parts of the Navigation API this file reads. TypeScript's DOM library
+// does not describe it yet.
+interface NavigationEntryLike {
+  url: string | null;
+  index: number;
+}
+interface NavigationLike {
+  canGoBack: boolean;
+  currentEntry: NavigationEntryLike | null;
+  entries(): NavigationEntryLike[];
+}
 
-// Set by `returnTo` below, consumed by the recorder once the navigation it
-// describes has landed. A mutation that pops back to a page it just changed
-// would otherwise be shown the router's cached render of that page. The
-// utlägg as it was before it was booked. It cannot simply call `refresh()`
-// itself: `refresh` acts on the route you are currently on, and at the moment
-// a mutation calls it that is still the page being left.
+function navigationApi(): NavigationLike | null {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { navigation?: NavigationLike }).navigation ?? null;
+}
+
+// For a browser without the Navigation API. Set once the URL has changed since
+// the page loaded. Coarse (Back to the first page and the flag stays set), but
+// it is only the fallback.
+let movedSinceLoad = false;
+let firstUrl: string | null = null;
+
+/**
+ * Whether going back stays in the app. The Navigation API lists only entries
+ * of this origin, so `canGoBack` is exactly that question.
+ */
+function canGoBackInApp(): boolean {
+  const nav = navigationApi();
+  if (nav) return nav.canGoBack;
+  return movedSinceLoad;
+}
+
+/**
+ * How many entries back the nearest one whose path is `path` sits, looking no
+ * further than `limit`. Null when there is none, or when the browser will not
+ * show us its history.
+ */
+function stepsBackTo(path: string, limit: number): number | null {
+  const nav = navigationApi();
+  const current = nav?.currentEntry;
+  if (!nav || !current) return null;
+  const entries = nav.entries();
+  for (let d = 1; d <= limit; d++) {
+    const url = entries[current.index - d]?.url;
+    if (!url) return null;
+    if (routePath(new URL(url).pathname) === path) return d;
+  }
+  return null;
+}
+
+// Set by `returnTo` below, consumed once the navigation it describes has
+// landed. A mutation that goes back to a page it just changed would otherwise
+// be shown the router's cached render of that page: the utlägg as it was
+// before it was booked. It cannot simply call `refresh()` itself. `refresh`
+// acts on the route you are currently on, and at that moment that is still
+// the page being left.
 let refreshOnArrival = false;
-
-// The browser keeps the session history across a reload. Every entry a back
-// link might jump to is still there and `history.go` still reaches it. All
-// that a reload actually loses is *our* memory of what those entries were, and
-// that is what this restores. Nothing here is a source of truth: it is only
-// believed when the entry it claims we are on is the URL we are actually on.
-const STORAGE_KEY = "utlagg:nav-stack";
-
-function restore(): NavStack {
-  if (typeof window === "undefined") return EMPTY_STACK;
-  try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_STACK;
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return EMPTY_STACK;
-    const { entries, index } = parsed as Partial<NavStack>;
-    if (!Array.isArray(entries) || !entries.every((e) => typeof e === "string")) return EMPTY_STACK;
-    if (typeof index !== "number" || index < 0 || index >= entries.length) return EMPTY_STACK;
-    // The stack we stored describes a history we are no longer standing in.
-    if (entries[index] !== window.location.pathname + window.location.search) return EMPTY_STACK;
-    return { entries, index };
-  } catch {
-    // Private mode, a cleared store, a half-written value: none of them are
-    // worth a broken back link, and starting empty is the reload behaviour we
-    // had before any of this was persisted.
-    return EMPTY_STACK;
-  }
-}
-
-// At module scope rather than in an effect, so the first client render already
-// has it. A back link's *text* changes with the stack, and reading it one
-// render late is a visible flicker from "← Utlägg" to "← Bokföring".
-stack = restore();
-
-function persist() {
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stack));
-  } catch {
-    // Nothing to do and nothing worth telling anyone: the stack in memory is
-    // the one being used, and this is only the copy that survives a reload.
-  }
-}
-
-/** Note a route as visited, in whatever way it was arrived at. */
-function record(url: string) {
-  const next = applyNav(stack, url, takeIntent(url));
-  if (next === stack) return;
-  stack = next;
-  persist();
-  listeners.forEach((l) => l());
-}
-
-const subscribe = (l: () => void) => {
-  listeners.add(l);
-  return () => {
-    listeners.delete(l);
-  };
-};
-
-const getStack = () => stack;
-// A server render has no history at all, and must not read module state that a
-// previous request left behind.
-const getServerStack = () => EMPTY_STACK;
-
-const sectionLabel = (path: string): string | null => SECTION_LABELS[path] ?? null;
-
-function useNavStack(): NavStack {
-  return useSyncExternalStore(subscribe, getStack, getServerStack);
-}
 
 /** Mounted once, next to the progress bar. Renders nothing. */
 export function RouteHistoryRecorder() {
@@ -120,21 +88,9 @@ export function RouteHistoryRecorder() {
   const url = search ? `${pathname}?${search}` : pathname;
   const router = useProgressRouter();
 
-  // The browser's own Back and Forward, and every `router.back()` in the app,
-  // arrive here and nowhere else. Without this a Back press is recorded as a
-  // move forward, and the page you just left becomes the page you came from.
   useEffect(() => {
-    // `popstate` fires once the address bar is already the destination's, so
-    // the note can name where the pop is going, which is what tells it apart
-    // from any other navigation in flight. See lib/ui/nav-intent.
-    const onPop = () =>
-      noteIntent("pop", window.location.pathname + window.location.search);
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  useEffect(() => {
-    record(url);
+    if (firstUrl === null) firstUrl = url;
+    else if (url !== firstUrl) movedSinceLoad = true;
     if (!refreshOnArrival) return;
     refreshOnArrival = false;
     // Now that the URL is the destination's, `refresh` acts on the destination.
@@ -145,96 +101,68 @@ export function RouteHistoryRecorder() {
 }
 
 /**
- * Where this page's "← <parent>" link should go, given where you have been,
- * and how many history entries back that is. Null when there is nothing behind
- * you that qualifies and the declared parent is the answer. See
- * lib/ui/history-stack's `backTarget` for the rule.
+ * A back button: the browser's Back when there is somewhere in the app behind
+ * you, and `fallback` when there is not (a link someone sent you, a fresh
+ * tab). `href` is what a middle click or a new tab opens.
  */
-export function useBackTarget(href: string): BackTarget | null {
-  const stack = useNavStack();
-  return useMemo(() => backTarget(stack, href, sectionLabel), [stack, href]);
-}
-
-/**
- * The settings sidebar's "← back to app" link: the nearest page behind this
- * trip that is not itself under Inställningar, so leaving it always leaves it
- * rather than stopping on the last settings page you happened to pass
- * through. `fallback` (`/dashboard`) is what a plain click already does on its
- * own when nothing behind you qualifies, so this only overrides the href when
- * there is somewhere real to pop to, restoring its scroll position along with
- * it exactly as a nested page's own back link does. See BackLink.
- */
-export function useBackToApp(fallback: string): {
+export function useGoBack(fallback: string): {
   href: string;
   onClick: (e: ReactMouseEvent<HTMLAnchorElement>) => void;
-  /**
-   * The same destination, for a caller with no click event to read: Escape
-   * dismissing the settings overlay, say. Unconditional, since there is no
-   * modifier key to defer to when nothing was clicked.
-   */
-  close: () => void;
+  /** The same, for a caller with no click event: Escape closing an overlay. */
+  goBack: () => void;
 } {
-  const stack = useNavStack();
-  const go = useHistoryGo();
   const router = useProgressRouter();
 
-  const target = useMemo(
-    () =>
-      exitTarget(
-        stack,
-        (path) => path === SETTINGS_ROOT || path.startsWith(`${SETTINGS_ROOT}/`),
-      ),
-    [stack],
-  );
-
-  const close = () => {
-    if (target) go(target.delta);
+  const goBack = useCallback(() => {
+    if (canGoBackInApp()) router.back();
     else router.push(fallback);
-  };
+  }, [router, fallback]);
 
   return {
-    href: target?.url ?? fallback,
+    href: fallback,
     onClick: (e) => {
-      if (!target) return;
       // Anything but a plain left click is opening this elsewhere, and the
-      // href above is what should be opened.
+      // href is what should be opened.
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
         return;
       }
       e.preventDefault();
-      go(target.delta);
+      goBack();
     },
-    close,
+    goBack,
   };
 }
+
+// A booked utlägg is one step back from the booking screen, a deleted one's
+// list is one or two. Anything further is a coincidence, not a return.
+const RETURN_SCAN_LIMIT = 3;
 
 /**
  * "Put me back where this started", for a mutation that has finished and has
  * nowhere left to be: a booked utlägg returning to the utlägg, a deleted one
  * returning to the list.
  *
- * It pops when the destination is genuinely just behind, which leaves the
- * history stack the length it was and restores the scroll position and the
- * page you were looking at; and replaces when it is not, which is the case for
+ * Goes back when the destination is just behind in the browser's history,
+ * which keeps the history the length it was and restores the scroll position
+ * and the list's query. Replaces when it is not, which is the case for
  * something that did not exist until a moment ago (the wizard's new utlägg).
  * Never a push. A push is what left the form you just submitted sitting on the
- * Back button, and the deleted utlägg sitting there behind its own list.
+ * Back button.
  *
  * Either way the destination is refreshed once it is reached. See
  * `refreshOnArrival`.
  */
 export function useReturnTo(): (href: string) => void {
-  const stack = useNavStack();
   const router = useProgressRouter();
   const go = useHistoryGo();
 
   return useCallback(
     (href: string) => {
       refreshOnArrival = true;
-      const target = returnTarget(stack, href);
-      if (target) go(target.delta);
+      const steps = stepsBackTo(routePath(href), RETURN_SCAN_LIMIT);
+      if (steps) go(steps);
       else router.replace(href);
     },
-    [stack, router, go],
+    [router, go],
   );
 }

@@ -33,7 +33,7 @@ export function TagChips({
         <li
           key={tag}
           className={cn(
-            "flex items-center gap-1 rounded-full border border-border bg-surface px-2 text-xs text-muted",
+            "flex items-center gap-1 rounded-control border border-border bg-surface px-2 text-xs text-muted",
             // Room for the button when there is one, and a plain pill when
             // there is not. The height is the same either way, so a form and a
             // page do not draw two different chips.
@@ -47,7 +47,7 @@ export function TagChips({
               onClick={() => onRemove(tag)}
               aria-label={removeLabel?.(tag)}
               title={removeLabel?.(tag)}
-              className="rounded-full p-0.5 text-muted transition-colors hover:bg-background hover:text-foreground"
+              className="rounded-control p-0.5 text-muted transition-colors hover:bg-background hover:text-foreground"
             >
               <IconX className="size-3" />
             </button>

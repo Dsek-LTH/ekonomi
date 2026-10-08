@@ -101,12 +101,12 @@ type Size = ControlSize;
 // sites: a toolbar is five of these in a row and any one of them opting out
 // would be the row that no longer lines up.
 export const CONTROL_SIZES: Record<ControlSize, string> = {
-  sm: "h-11 rounded-lg px-2.5 sm:h-9",
-  // No height of its own: md is sized by its padding, which puts it at 42px,
-  // near enough to the 44 a finger wants that forcing it would only make every
-  // form on a phone taller. The textarea shares this string and has no business
-  // being 44px tall either.
-  md: "rounded-xl px-3.5 py-2.5",
+  sm: "h-11 rounded-control px-2.5 sm:h-9",
+  // No height of its own: md is sized by its padding, which puts it at 38px,
+  // two above the compact register so a form field still reads as the larger
+  // of the two. The textarea shares this string, which is why it is padding and
+  // not a height.
+  md: "rounded-control px-3 py-2",
 };
 const SIZES = CONTROL_SIZES;
 const control = (size: Size, className?: string) => cn(CONTROL, SIZES[size], className);

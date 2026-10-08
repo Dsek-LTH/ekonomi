@@ -8,7 +8,11 @@
       "a": [
         {
           "t": "p",
-          "v": "If your post involves many or expensive purchases, you get a guild card. It is tied to D-sektionen's bank account, so you don't have to spend your own money up front."
+          "v": "The treasurer decides. Guild cards are payment cards linked to D-sektionen's bank account, and they exist so that you do not have to lay out your own money when buying for the guild."
+        },
+        {
+          "t": "p",
+          "v": "The card is registered to you in the app. Its purchases then show up under your card purchases, where you report them."
         }
       ]
     },
@@ -18,12 +22,16 @@
       "a": [
         {
           "t": "p",
-          "v": "No. A guild card does NOT mean you may buy whatever you like. Every purchase on a guild card must be approved by your committee chair in advance, and every purchase must be reported afterwards."
+          "v": "No. The card may only be used to pay in the guild's name, never for private purchases. Every purchase must be reported with a valid receipt and attested, just like an out-of-pocket expense."
+        },
+        {
+          "t": "p",
+          "v": "Check larger purchases with your result owner beforehand if you can. A card purchase that is not attested is invoiced to you."
         },
         {
           "t": "note",
           "tone": "danger",
-          "v": "If unauthorised purchases are made on your guild card, you become personally liable for them."
+          "v": "The treasurer may take back a guild card that is mismanaged, for example if purchases are not reported or the card is used for private purchases."
         }
       ]
     },

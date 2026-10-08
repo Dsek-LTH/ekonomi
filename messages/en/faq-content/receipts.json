@@ -28,6 +28,10 @@
           ]
         },
         {
+          "t": "p",
+          "v": "The receipt must also be in the state the seller gave it to you. A receipt you have written on, cut, or only photographed part of is not valid."
+        },
+        {
           "t": "note",
           "tone": "warn",
           "v": "If any of the above is missing, or cannot be made out CLEARLY, the approval will be rejected. You then have to request a valid receipt from the supplier."

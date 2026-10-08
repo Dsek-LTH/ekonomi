@@ -175,7 +175,7 @@ export default function StockProductClient({
       // about the product like any other, and they read better as labelled rows
       // in the card below than as a clause under the name.
       title={product.name}
-      back={{ href: "/stock", label: t("title") }}
+      back="/stock"
       width="content"
     >
       {/* `grid-cols-[minmax(0,1fr)]`, not a bare `grid`. An implicit column is
@@ -747,15 +747,15 @@ function CheckTable({
                     schedule, and a page of amber pills is a page nobody
                     reads. */}
                 {check.quiet ? (
-                  <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+                  <span className="rounded-control bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
                     {t("expiry.stateChecked", { date: check.checkedAt ?? "" })}
                   </span>
                 ) : check.state === "over" ? (
-                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
+                  <span className="rounded-control bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
                     {t("expiry.stateOver", { days: -check.daysLeft })}
                   </span>
                 ) : check.state === "soon" ? (
-                  <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-foreground">
+                  <span className="rounded-control bg-surface px-2 py-0.5 text-[11px] font-medium text-foreground">
                     {t("expiry.stateSoon", { days: check.daysLeft })}
                   </span>
                 ) : (

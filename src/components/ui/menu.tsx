@@ -172,7 +172,7 @@ export function Menu({
           data-popup-layer=""
 
           style={panelStyle()}
-          className="z-[210] max-h-[min(70vh,26rem)] w-max min-w-56 max-w-[min(22rem,80vw)] overflow-y-auto rounded-xl border border-border bg-background p-1 shadow-[var(--shadow-pop)]"
+          className="z-[210] max-h-[min(70vh,26rem)] w-max min-w-56 max-w-[min(22rem,80vw)] overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)]"
         >
           <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>
         </div>,
@@ -206,7 +206,7 @@ export function MenuItem({
         onClick();
       }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-40",
+        "flex w-full items-center gap-2 rounded-control px-2.5 py-2 text-left text-sm transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
     >

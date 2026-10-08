@@ -5,7 +5,7 @@ import { Skeleton, SkeletonPage, SkeletonSheet } from "@/components/ui/skeleton"
 // itself. Its rows are a ledger, not a list, so they get the sheet treatment.
 export default function Loading() {
   return (
-    <SkeletonPage action>
+    <SkeletonPage action description={false}>
       <Card className="print:hidden">
         {[3, 4, 2].map((fields, row) => (
           <div
@@ -15,7 +15,7 @@ export default function Loading() {
             {Array.from({ length: fields }, (_, i) => (
               <div key={i}>
                 <Skeleton className="h-3 w-16" />
-                <Skeleton className="mt-1.5 h-11 w-32 rounded-lg sm:h-9" />
+                <Skeleton className="mt-1.5 h-11 w-32 rounded-control sm:h-9" />
               </div>
             ))}
           </div>

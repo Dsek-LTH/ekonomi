@@ -264,7 +264,7 @@ export default function StockLogClient({
     <PageShell
       title={t("log.title")}
       description={t("log.description")}
-      back={{ href: "/stock", label: t("title") }}
+      back="/stock"
       width="wide"
     >
       <Card>

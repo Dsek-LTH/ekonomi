@@ -21,7 +21,7 @@ export interface WizardTitles {
 interface WizardChrome {
   title: string;
   description: string;
-  back: { href: string; label: string };
+  back: string;
 }
 
 /**
@@ -35,27 +35,21 @@ interface WizardChrome {
 export function wizardChrome({
   existing,
   t,
-  draftLabel,
-  listLabel,
 }: {
   existing: Expense | undefined;
   t: WizardTitles;
-  /** What to call a draft that has no reference (`expenses.wizard.draftLabel`). */
-  draftLabel: string;
-  /** The name of the list this returns to (`nav.expenses`). */
-  listLabel: string;
 }): WizardChrome {
   if (!existing) {
     return {
       title: t("newTitle"),
       description: t("newDescription"),
-      back: { href: "/expenses", label: listLabel },
+      back: "/expenses",
     };
   }
   return {
     title: existing.reference ? t("editTitle", { id: existing.reference }) : t("editTitleDraft"),
     description: t("editDescription"),
     // Editing belongs to the claim it changes; a new one to the list.
-    back: { href: `/expenses/${existing.id}`, label: existing.reference ?? draftLabel },
+    back: `/expenses/${existing.id}`,
   };
 }

@@ -73,7 +73,9 @@ export function BankCardHolder({ tx }: { tx: BankTransaction }) {
   // this in a button, and a button may only hold phrasing content.
   return (
     <>
-      <span className="block text-sm font-medium">{tx.cardHolderName}</span>
+      <span title={tx.cardHolderName} className="block max-w-44 truncate text-sm font-medium">
+        {tx.cardHolderName}
+      </span>
       <span className="block text-xs tabular-nums text-muted">····{tx.cardLast4}</span>
     </>
   );
@@ -95,7 +97,25 @@ export const bankHolderColumn = (
   value: (tx) => tx.cardHolderName ?? "",
   sortable: true,
   searchable: true,
-  cell: cell ?? ((tx) => <BankCardHolder tx={tx} />),
+  // A fixed width, and the name truncated inside it. The table lays itself out
+  // from what its cells hold, and this cell changes what it holds on the bank
+  // page: a name, the card picker, or a dash, and names of every length. Each
+  // change re-shared the width between every column, so assigning one card
+  // moved the whole table. 200px is the picker's 176 plus the cell's padding,
+  // so nothing this column can draw is wider than the column.
+  className: "w-50",
+  // And a fixed height, for the same reason one row down. The name with its
+  // number under it and the picker are both 36px, but the name sits in a
+  // button that is inline by default, and an inline box on a line picks up
+  // the line's descender space under it. Switching between the two changed
+  // the row's height by those few pixels. A column box of exactly 36px holds
+  // whichever it is, centred, and is the same height either way. A column and
+  // not a row, because BankCardHolder is two lines handed over as siblings.
+  cell: (tx) => (
+    <div className="flex h-9 flex-col justify-center">
+      {cell ? cell(tx) : <BankCardHolder tx={tx} />}
+    </div>
+  ),
 });
 
 // Money the way the app sets money everywhere else: `Amount`, not a flat
@@ -127,10 +147,20 @@ export const bankAmountColumn = (header: string): Column<BankTransaction> => ({
  * someone is still filling in is genuinely accounted for and genuinely has
  * nothing to be called. It still links. That half-finished utlägg is exactly
  * what a reader following this column wants to find.
+ *
+ * `unmatched` draws a row that has no utlägg yet, for a page that can offer to
+ * make one there ("Redovisa"). It is the same question, has this been dealt
+ * with, so its answer belongs in the same cell: a link where it has, the way to
+ * do it where it hasn't. Without it, or where it draws nothing, the row reads
+ * as the dash.
  */
 export const bankMatchedColumn = (
   header: string,
-  { dash = "–", linked }: { dash?: string; linked?: string } = {},
+  {
+    dash = "–",
+    linked,
+    unmatched,
+  }: { dash?: string; linked?: string; unmatched?: (tx: BankTransaction) => ReactNode } = {},
 ): Column<BankTransaction> => ({
   key: "matched",
   header,
@@ -148,6 +178,6 @@ export const bankMatchedColumn = (
         {tx.matchedExpenseRef ?? linked ?? dash}
       </Link>
     ) : (
-      <span className="text-muted">{dash}</span>
+      unmatched?.(tx) ?? <span className="text-muted">{dash}</span>
     ),
 });

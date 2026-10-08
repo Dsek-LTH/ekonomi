@@ -1,6 +1,6 @@
 import { cn } from "@/lib/ui/utils";
 
-// The app's one raised surface: `rounded-2xl`, a hairline, and an elevation
+// The app's one raised surface: `rounded-panel`, a hairline, and an elevation
 // that carries both an offset and a blur (see DESIGN.md). Anything that wants
 // to look like a card should be one rather than restate those four classes,
 // that is how surfaces end up a shadow apart from each other.
@@ -17,7 +17,7 @@ export function Card({
     <div
       {...rest}
       className={cn(
-        "rounded-2xl border border-border bg-background shadow-[var(--shadow-card)]",
+        "rounded-panel border border-border bg-background shadow-[var(--shadow-card)]",
         className,
       )}
     >
@@ -31,7 +31,12 @@ export function CardHeader({
   subtitle,
   action,
 }: {
-  title: string;
+  /**
+   * Left out where the page heading above already says it, which on a page
+   * that is one card is most of the time. The header is then the card's
+   * toolbar: the subtitle if there is one, and the action at the right.
+   */
+  title?: string;
   subtitle?: string;
   action?: React.ReactNode;
 }) {
@@ -39,7 +44,7 @@ export function CardHeader({
     // The action slot holds anything from a link to a file picker to a small
     // form, so on a narrow screen it wraps onto its own line under the title
     // rather than squeezing both.
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-inset py-4">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-inset py-3">
       {/* `min-w-0` alone was not enough, which is the trap: it lets the box
           shrink, and then the text inside it refuses to. A booking description,
           a cost-centre name, a receipt filename, in Swedish these are single
@@ -52,9 +57,9 @@ export function CardHeader({
           long one cannot grow the header without limit; its full text is on the
           element for a pointer, and in the card below for everyone else. */}
       <div className="min-w-0">
-        <h2 className="break-words text-base font-semibold">{title}</h2>
+        {title && <h2 className="break-words text-base font-semibold">{title}</h2>}
         {subtitle && (
-          <p title={subtitle} className="mt-0.5 line-clamp-2 break-words text-sm text-muted">
+          <p title={subtitle} className={cn("line-clamp-2 break-words text-sm text-muted", title && "mt-0.5")}>
             {subtitle}
           </p>
         )}
@@ -71,7 +76,7 @@ export function CardBody({
   className?: string;
   children: React.ReactNode;
 }) {
-  return <div className={cn("px-inset py-5", className)}>{children}</div>;
+  return <div className={cn("px-inset py-4", className)}>{children}</div>;
 }
 
 /**
@@ -84,7 +89,7 @@ export function CardBody({
  * smaller reads as a second card stacked inside the first rather than as one
  * card with a part of it set off, which is the thing a reader notices before
  * they can say why a page looks busy. No padding baked in, on purpose: unlike
- * `CardBody`'s fixed `px-inset py-5`, what sits inside one of these varies
+ * `CardBody`'s fixed `px-inset py-4`, what sits inside one of these varies
  * enough (a short callout, a form, a table) that a caller's own `className`
  * has to be free to set it, and a default here would either be wrong for most
  * of them or fight a caller's own value for the same property.
@@ -107,7 +112,7 @@ export function InsetPanel({
   return (
     <div
       {...rest}
-      className={cn("rounded-xl", dashed ? "border border-dashed border-border" : "bg-surface", className)}
+      className={cn("rounded-control", dashed ? "border border-dashed border-border" : "bg-surface", className)}
     >
       {children}
     </div>

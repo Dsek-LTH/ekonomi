@@ -11,34 +11,36 @@
 // fifty of them in step on every scroll event. With a single scrollport the
 // alignment is structural and there is nothing to synchronise.
 //
-// The bottom line is the one exception: it is pinned to the viewport, so it
-// cannot live inside the scrollport (`overflow-x: auto` computes `overflow-y`
-// to `auto` too, and a sticky child would then stick to a container that never
-// scrolls vertically instead of to the screen). It gets its own scrollport and
-// is the single element still kept in step, one write per scroll event.
-import { Fragment, useCallback, useRef } from "react";
+// From lg the same scrollport also scrolls down, and it is the only thing on
+// the page that does: the page around it is sized to the window (see
+// useFillViewport in ledger-client.tsx), so the parameters, the bar and the
+// header stay put while the accounts move.
+import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
-import { formatPercent, resultTone, rowValue, share, totalValue } from "./report-view";
+import { formatPercent, resultTone, rowValue, totalValue } from "./report-view";
 import type {
   GroupMode,
   LedgerReport,
   ReportAccount,
   ReportGroup,
   ReportSection,
+  ResultColumn,
   RowView,
-  ViewOptions,
 } from "./report-types";
+import { RESULT_COLUMNS } from "./report-types";
 
 export interface Shape {
   isBalance: boolean;
   showComparison: boolean;
   comparisonLabel: string;
-  share: boolean;
   diff: boolean; // the difference column beside the comparison
+  /** Which figure columns a result report shows. See ResultColumn. */
+  columns: readonly ResultColumn[];
 }
 
 // One description of the columns for the whole report. It becomes grid tracks
@@ -46,7 +48,17 @@ export interface Shape {
 // rows, the next cost centre's and the bottom line are laid out by the same
 // declaration rather than by three that have to agree.
 interface ColumnSpec {
-  key: "account" | "opening" | "amount" | "closing" | "share" | "comparison" | "diff";
+  key:
+    | "account"
+    | "opening"
+    | "amount"
+    | "closing"
+    | "accumulated"
+    | "prior"
+    | "priorAccumulated"
+    | "priorDiff"
+    | "comparison"
+    | "diff";
   /** A key under `ledger.col`, except `comparison`, whose heading names the
    *  thing being compared against and is built by the client. */
   label: string;
@@ -55,12 +67,26 @@ interface ColumnSpec {
 
 const ACCOUNT_MIN = 14; // rem, the floor the account column shrinks to
 
-export function reportColumns(shape: Shape, showShare: boolean): ColumnSpec[] {
+export function reportColumns(shape: Shape): ColumnSpec[] {
   const cols: ColumnSpec[] = [{ key: "account", label: "account", width: null }];
-  if (shape.isBalance) cols.push({ key: "opening", label: "opening", width: 9 });
-  cols.push({ key: "amount", label: shape.isBalance ? "period" : "amount", width: 9 });
-  if (shape.isBalance) cols.push({ key: "closing", label: "closing", width: 9 });
-  if (showShare) cols.push({ key: "share", label: "share", width: 6 });
+  if (shape.isBalance) {
+    cols.push(
+      { key: "opening", label: "opening", width: 9 },
+      { key: "amount", label: "period", width: 9 },
+      { key: "closing", label: "closing", width: 9 },
+    );
+  } else {
+    // The reader's pick, in the one order they always stand in. With nothing
+    // picked the period is shown: a report of no figures is not a report.
+    const picked = RESULT_COLUMNS.filter((c) => shape.columns.includes(c));
+    for (const c of picked.length ? picked : (["period"] as const)) {
+      cols.push(
+        c === "period"
+          ? { key: "amount", label: "amount", width: 9 }
+          : { key: c, label: c, width: 9 },
+      );
+    }
+  }
   if (shape.showComparison) {
     // Already worded by the client. See `comparisonLabel` on Shape.
     cols.push({ key: "comparison", label: shape.comparisonLabel, width: 9 });
@@ -88,61 +114,27 @@ const ROW = "col-span-full grid grid-cols-subgrid items-center";
 
 const AMOUNT_CELL = "px-3 py-2 text-right tabular-nums whitespace-nowrap last:pr-inset";
 
-// The sideways scrollport. On paper nothing scrolls and nothing has a minimum
+// The report's scrollport: sideways at every width, and down as well from lg,
+// where it is given the height left over in the window and is the one part of
+// the page that scrolls. On paper nothing scrolls and nothing has a minimum
 // width. The page is as wide as it is.
 export function ReportScroller({
-  register,
   className,
   children,
 }: {
-  register: (el: HTMLDivElement | null) => void;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
-      ref={register}
       className={cn(
-        "overflow-x-auto overscroll-x-contain print:overflow-visible",
+        "overflow-x-auto overscroll-contain lg:overflow-y-auto print:overflow-visible",
         className,
       )}
     >
       <div className="min-w-[var(--report-min-w)] print:min-w-0">{children}</div>
     </div>
   );
-}
-
-// The group cards and the pinned bottom line scroll as one. Two elements, one
-// write each way, and an echo is recognised by the offset already matching
-// rather than by a timer.
-export function useColumnScrollSync() {
-  const ref = useRef<{ ports: Set<HTMLDivElement>; offset: number }>({
-    ports: new Set(),
-    offset: 0,
-  });
-
-  return useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    const state = ref.current;
-    state.ports.add(el);
-    el.scrollLeft = state.offset;
-
-    const onScroll = () => {
-      if (el.scrollLeft === state.offset) return; // our own write coming back
-      state.offset = el.scrollLeft;
-      for (const other of state.ports) {
-        if (other !== el && other.scrollLeft !== state.offset) {
-          other.scrollLeft = state.offset;
-        }
-      }
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      state.ports.delete(el);
-    };
-  }, []);
 }
 
 // The difference against the comparison column, with the relative change under
@@ -169,6 +161,38 @@ function Diff({ value, against }: { value: number; against: number | null }) {
 // the bottom line) is the same row with a different label and weight. One
 // renderer, so they cannot end up disagreeing about which column a figure
 // belongs under.
+// What a figure column reads off a line, an account or a total alike. `period`
+// is passed in because an account calls it `amount` and a total `total`.
+function figure(
+  key: ColumnSpec["key"],
+  line: {
+    opening: number | null;
+    closing: number | null;
+    comparison: number | null;
+    accumulated: number | null;
+    prior: number | null;
+    priorAccumulated: number | null;
+  },
+  period: number,
+): number | null {
+  switch (key) {
+    case "opening":
+      return line.opening ?? 0;
+    case "closing":
+      return line.closing ?? 0;
+    case "comparison":
+      return line.comparison;
+    case "accumulated":
+      return line.accumulated;
+    case "prior":
+      return line.prior;
+    case "priorAccumulated":
+      return line.priorAccumulated;
+    default:
+      return period;
+  }
+}
+
 function SummaryRow({
   cols,
   shape,
@@ -181,7 +205,15 @@ function SummaryRow({
   cols: ColumnSpec[];
   shape: Shape;
   label: React.ReactNode;
-  value: { total: number; opening: number | null; closing: number | null; comparison: number | null };
+  value: {
+    total: number;
+    opening: number | null;
+    closing: number | null;
+    comparison: number | null;
+    accumulated: number | null;
+    prior: number | null;
+    priorAccumulated: number | null;
+  };
   /** Colour the result figure green or red, only where the sign is the news. */
   tone?: boolean;
   className?: string;
@@ -203,24 +235,18 @@ function SummaryRow({
             </div>
           );
         }
-        if (c.key === "share") {
-          return <div key={c.key} role="cell" className={cn(AMOUNT_CELL, cellClassName)} />;
-        }
-        if (c.key === "diff") {
+        if (c.key === "diff" || c.key === "priorDiff") {
           return (
             <div key={c.key} role="cell" className={cn(AMOUNT_CELL, cellClassName)}>
-              <Diff value={result} against={value.comparison} />
+              {c.key === "diff" ? (
+                <Diff value={result} against={value.comparison} />
+              ) : (
+                <Diff value={value.total} against={value.prior} />
+              )}
             </div>
           );
         }
-        const amount =
-          c.key === "opening"
-            ? value.opening ?? 0
-            : c.key === "closing"
-              ? value.closing ?? 0
-              : c.key === "comparison"
-                ? value.comparison
-                : value.total;
+        const amount = figure(c.key, value, value.total);
         return (
           <div
             key={c.key}
@@ -240,11 +266,75 @@ function SummaryRow({
   );
 }
 
+// Account-name bars of different lengths, so the placeholder reads as a list
+// of accounts rather than as a grid of identical blocks.
+const SKELETON_NAMES = ["w-3/5", "w-2/5", "w-1/2", "w-2/3", "w-1/3", "w-1/2"];
+
+/**
+ * The report while it loads: the same card, the same column grid and the real
+ * column headings, with the rows still to come shimmering where they will be.
+ *
+ * Its own shape rather than the app's generic sheet, which was a card of a few
+ * faint lines that looked like an empty report and then, a moment later, like a
+ * different one. Switching between resultat- and balansrapport did that every
+ * time. Drawn from the same `Shape` as the report that replaces it, so the
+ * columns are already where the figures will land and nothing moves when they
+ * do.
+ */
+export function ReportSkeleton({ shape }: { shape: Shape }) {
+  const t = useTranslations("ledger");
+  const cols = reportColumns(shape);
+  return (
+    <Card className="overflow-hidden" aria-busy="true">
+      <div className={cn(GRID, "text-sm")}>
+        <div className={cn(ROW, "border-b border-border text-xs text-muted")}>
+          {cols.map((c) => (
+            <div
+              key={c.key}
+              className={cn(
+                "py-2.5 font-medium",
+                c.key === "account" ? "pl-inset pr-3" : cn(AMOUNT_CELL, "py-2.5"),
+              )}
+            >
+              {c.key === "comparison" ? c.label : t(`col.${c.label}`)}
+            </div>
+          ))}
+        </div>
+        {[7, 5].map((count, s) => (
+          <Fragment key={s}>
+            {/* A section heading. Not on the tinted band the real one has: the
+                shimmer is drawn in that same tint and would vanish on it. */}
+            <div className="col-span-full border-t border-border px-inset py-2.5">
+              <Skeleton className="h-3 w-28" />
+            </div>
+            {Array.from({ length: count }, (_, i) => (
+              <div key={i} className={cn(ROW, "border-t border-border")}>
+                {cols.map((c) =>
+                  c.key === "account" ? (
+                    <div key={c.key} className="py-3 pl-inset pr-3">
+                      <Skeleton
+                        className={cn("h-3.5", SKELETON_NAMES[(i + s * 3) % SKELETON_NAMES.length])}
+                      />
+                    </div>
+                  ) : (
+                    <div key={c.key} className="flex justify-end px-3 py-3 last:pr-inset">
+                      <Skeleton className="h-3.5 w-16" />
+                    </div>
+                  ),
+                )}
+              </div>
+            ))}
+          </Fragment>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function ReportGroupCard({
   group,
   groupMode,
   shape,
-  view,
   openKey,
   rows,
   onToggle,
@@ -252,13 +342,12 @@ export function ReportGroupCard({
   group: ReportGroup;
   groupMode: GroupMode;
   shape: Shape;
-  view: ViewOptions;
   openKey: string | null;
   rows: Record<string, RowView[]>;
   onToggle: (group: ReportGroup, account: ReportAccount) => void;
 }) {
   const t = useTranslations("ledger");
-  const cols = reportColumns(shape, view.share);
+  const cols = reportColumns(shape);
 
   return (
     <Card className="overflow-hidden print:overflow-visible">
@@ -304,7 +393,6 @@ export function ReportGroupCard({
             group={group}
             groupMode={groupMode}
             shape={shape}
-            view={view}
             cols={cols}
             openKey={openKey}
             rows={rows}
@@ -316,43 +404,38 @@ export function ReportGroupCard({
   );
 }
 
-// The bottom line, on the same tracks as the cards above it, so each total sits
-// under the column it totals, the outcome under Belopp, the budget under
-// Budget. Pinned, so it has its own scrollport (see the note at the top).
-export function ReportTotalBar({
+// The bottom line: the whole report's result, on the same tracks as the cards
+// above it, so each total sits under the column it totals, the outcome under
+// Belopp, the budget under Budget.
+//
+// The last thing in the report's scrollport rather than pinned over it. Pinned,
+// it sat on top of the last rows and took a strip of the window on every
+// screen of a report most people read from the top. Here it is where a
+// printed report puts it, after the last account, and inside the same
+// scrollport, so it moves sideways with the columns it lines up with.
+export function ReportResult({
   report,
   shape,
-  view,
   label,
-  register,
 }: {
   report: LedgerReport;
   shape: Shape;
-  view: ViewOptions;
   label: string;
-  register: (el: HTMLDivElement | null) => void;
 }) {
-  const cols = reportColumns(shape, view.share);
+  const cols = reportColumns(shape);
   return (
-    <Card
-      className={cn(
-        "sticky bottom-0 z-10 overflow-hidden",
-        "print:static print:overflow-visible print:shadow-none",
-      )}
-    >
-      <ReportScroller register={register}>
-        <div role="table" className={cn(GRID, "text-sm")}>
-          <SummaryRow
-            cols={cols}
-            shape={shape}
-            tone
-            label={<span className="font-semibold">{label}</span>}
-            value={report}
-            className="py-1"
-            cellClassName="font-semibold"
-          />
-        </div>
-      </ReportScroller>
+    <Card className="overflow-hidden">
+      <div role="table" className={cn(GRID, "text-sm")}>
+        <SummaryRow
+          cols={cols}
+          shape={shape}
+          tone
+          label={<span className="font-semibold">{label}</span>}
+          value={report}
+          className="py-1"
+          cellClassName="font-semibold"
+        />
+      </div>
     </Card>
   );
 }
@@ -362,7 +445,6 @@ function SectionRows({
   group,
   groupMode,
   shape,
-  view,
   cols,
   openKey,
   rows,
@@ -372,16 +454,13 @@ function SectionRows({
   group: ReportGroup;
   groupMode: GroupMode;
   shape: Shape;
-  view: ViewOptions;
   cols: ColumnSpec[];
   openKey: string | null;
   rows: Record<string, RowView[]>;
   onToggle: (group: ReportGroup, account: ReportAccount) => void;
 }) {
   const t = useTranslations("ledger");
-  const { isBalance, showComparison } = shape;
-  const showDiff = showComparison && shape.diff;
-  const sectionValue = totalValue(section, isBalance);
+  const { isBalance } = shape;
 
   return (
     <Fragment>
@@ -426,37 +505,33 @@ function SectionRows({
                   <span className="text-muted">{a.accountName}</span>
                 </button>
               </div>
-              {isBalance && (
-                <div role="cell" className={cn(AMOUNT_CELL, "text-muted")}>
-                  {formatSEK(a.opening ?? 0)}
-                </div>
-              )}
-              <div
-                role="cell"
-                className={cn(AMOUNT_CELL, isBalance ? "text-muted" : "font-medium")}
-              >
-                {formatSEK(a.amount)}
-              </div>
-              {isBalance && (
-                <div role="cell" className={cn(AMOUNT_CELL, "font-medium")}>
-                  {formatSEK(a.closing ?? 0)}
-                </div>
-              )}
-              {view.share && (
-                <div role="cell" className={cn(AMOUNT_CELL, "text-muted")}>
-                  {formatPercent(share(value, sectionValue))}
-                </div>
-              )}
-              {showComparison && (
-                <div role="cell" className={cn(AMOUNT_CELL, "text-muted")}>
-                  {a.comparison == null ? "" : formatSEK(a.comparison)}
-                </div>
-              )}
-              {showDiff && (
-                <div role="cell" className={AMOUNT_CELL}>
-                  <Diff value={value} against={a.comparison} />
-                </div>
-              )}
+              {/* The figures in the columns' own order, so a row always lines up
+                  with the heading above it whatever the reader picked. */}
+              {cols.slice(1).map((c) => {
+                if (c.key === "diff" || c.key === "priorDiff") {
+                  return (
+                    <div key={c.key} role="cell" className={AMOUNT_CELL}>
+                      {c.key === "diff" ? (
+                        <Diff value={value} against={a.comparison} />
+                      ) : (
+                        <Diff value={a.amount} against={a.prior} />
+                      )}
+                    </div>
+                  );
+                }
+                const amount = figure(c.key, a, a.amount);
+                // The figure the row is read by stands out; the rest are context.
+                const lead = isBalance ? c.key === "closing" : c.key === "amount";
+                return (
+                  <div
+                    key={c.key}
+                    role="cell"
+                    className={cn(AMOUNT_CELL, lead ? "font-medium" : "text-muted")}
+                  >
+                    {amount == null ? "" : formatSEK(amount)}
+                  </div>
+                );
+              })}
             </div>
 
             {open && (

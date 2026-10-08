@@ -1,5 +1,6 @@
 import { BackLink } from "@/components/back-link";
 import { CollectionSwitch, type Collections } from "@/components/ui/collection-switch";
+import { PageTitle } from "@/components/shell/settings-title";
 import { cn } from "@/lib/ui/utils";
 
 // Standard page wrapper: a header that says what you are looking at, one of
@@ -25,25 +26,12 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
   wide: "",
 };
 
-// Where a nested page sits under its parent. A named route rather than "back":
-// it says where it goes, and it goes there however you arrived: from the list,
-// from a link someone sent you, or on a reload, where there is no history to go
-// back through.
-//
-// When the page you came from *is* this route, it returns you to the screen you
-// left rather than to the route's bare form. The query a list keeps its state
-// in is the difference between "Alla" and "Mina". See components/back-link.tsx.
-interface BackTo {
-  href: string;
-  /** The destination, as it reads after the arrow: "← Expenses". */
-  label: string;
-}
-
 export function PageShell({
   title,
   subtitle,
   description,
   collections,
+  collectionsHidden = false,
   back,
   width = "wide",
   children,
@@ -80,25 +68,34 @@ export function PageShell({
    */
   collections?: Collections;
   /**
-   * The parent this page sits under, shown as a "← <label>" link above the
-   * title. Only for nested pages. The ones reachable from the sidebar are
-   * their own starting point, and the sidebar is the way back out of them.
+   * Keep the collection switch's room but not the switch. For a page whose
+   * switch only applies some of the time (the ledger's Tabell/Diagram, which a
+   * balansrapport has no use for): taking it away outright made the header a
+   * few pixels shorter, and everything below jumped each time the report
+   * changed. Invisible and inert, so it is not there to a pointer, a keyboard
+   * or a screen reader, only to the layout.
    */
-  back?: BackTo;
+  collectionsHidden?: boolean;
+  /**
+   * The parent this page sits under. Shows a back link above the title, which
+   * goes back in history and lands here only when there is no history to go
+   * back through. Only for nested pages. The ones reachable from the sidebar
+   * are their own starting point, and the sidebar is the way back out of them.
+   */
+  back?: string;
   width?: PageWidth;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn(PAGE_WIDTH[width], className)}>
-      {/* Sectioned, not merely separated: blocks on a page stand 24px apart, so
-          a 28px gap under the title made the header read as one more block in
-          the stack. 40px is the step that says "this names everything below". */}
-      <div className="mb-10">
-        {/* Above the title, where the page it returns to reads as the thing
-            this one sits under. It returns you to the list as you left it when
-            that is where you came from. See components/back-link.tsx. */}
-        {back && <BackLink href={back.href} label={back.label} />}
+      {/* Sectioned, not merely separated: blocks on a page stand 16px apart, and
+          the header sits 24px above the first of them. That step is enough to
+          say "this names everything below" without leaving a band of empty
+          page under every title. */}
+      <div className="mb-6">
+        {/* Above the title. See components/back-link.tsx. */}
+        {back && <BackLink href={back} />}
         {/* The switch rides the title's line: it names the same thing the title
             does, only more precisely, and the two read as one heading. `gap-4`
             and `flex-wrap` so a long title drops it to the next line rather
@@ -106,7 +103,9 @@ export function PageShell({
             itself and not with the description below. */}
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            {/* In the settings overlay, drawn in its top bar instead. See
+                components/shell/settings-title.tsx. */}
+            <PageTitle>{title}</PageTitle>
             {subtitle && <p className="mt-1 text-lg font-medium tracking-tight">{subtitle}</p>}
             {/* Further from the title than the subtitle is. The subtitle names
                 the same subject a second time and belongs tight to it; the
@@ -116,11 +115,15 @@ export function PageShell({
               <p className="mt-2 max-w-prose text-[15px] text-muted">{description}</p>
             )}
           </div>
-          {collections && <CollectionSwitch {...collections} />}
+          {collections && (
+            <div className={cn(collectionsHidden && "invisible")} inert={collectionsHidden}>
+              <CollectionSwitch {...collections} />
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
