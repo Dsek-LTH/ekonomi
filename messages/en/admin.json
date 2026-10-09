@@ -184,6 +184,7 @@
       "prefixAccount": "Account",
       "unknownAccount": "Not in the chart",
       "fallback": "Fallback",
+      "makeFallback": "Make fallback",
       "noPrefixHint": "No product prefixes yet. Products starting with one are booked to its account.",
       "disabledHint": "The unit takes no money in. Turn on sales to fetch and book them.",
       "sectionHint": "How the unit's sales at the till and via Swish are booked.",

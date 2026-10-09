@@ -184,6 +184,7 @@
       "prefixAccount": "Konto",
       "unknownAccount": "Saknas i kontoplanen",
       "fallback": "Reserv",
+      "makeFallback": "Gör till reserv",
       "noPrefixHint": "Inga produktprefix än. Varor som börjar på ett prefix bokförs mot dess konto.",
       "disabledHint": "Enheten tar inte in några pengar. Slå på försäljning för att hämta och bokföra den.",
       "sectionHint": "Hur enhetens försäljning i kassan och via Swish bokförs.",

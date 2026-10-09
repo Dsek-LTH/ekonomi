@@ -406,6 +406,17 @@ function UnitDialog({
     if (ok) setProductDraft(null);
   }
 
+  // The API moves the flag off whichever prefix held it, so there is always at
+  // most one fallback and no need to clear the old one here.
+  async function makeFallback(id: string) {
+    await mutate(`/api/income/prefixes/${id}`, {
+      key: `fallback-${id}`,
+      method: "PATCH",
+      body: { isFallback: true },
+      error: t("saveFailed"),
+    });
+  }
+
   async function removeProductPrefix(id: string) {
     await mutate(`/api/income/prefixes/${id}`, {
       key: `product-${id}`,
@@ -639,10 +650,21 @@ function UnitDialog({
                             voucher Fortnox will reject, but only at export, so
                             it is worth saying here. */}
                         {!p.accountName && <Tag tone="warning">{tIncome("unknownAccount")}</Tag>}
-                        {p.isFallback && (
+                        {p.isFallback ? (
                           <span title={tIncome("fallbackHint")}>
                             <Tag tone="accent">{tIncome("fallback")}</Tag>
                           </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            title={tIncome("fallbackHint")}
+                            loading={pending === `fallback-${p.id}`}
+                            onClick={() => makeFallback(p.id)}
+                          >
+                            {tIncome("makeFallback")}
+                          </Button>
                         )}
                         <IconButton
                           tone="danger"
