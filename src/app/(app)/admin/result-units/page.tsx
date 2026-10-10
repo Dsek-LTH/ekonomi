@@ -25,7 +25,6 @@ export default async function AdminResultUnitsPage() {
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
     >
       <ResultUnitsClient
         resultUnits={resultUnits}

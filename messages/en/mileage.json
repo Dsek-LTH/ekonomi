@@ -1,6 +1,5 @@
 {
   "newTitle": "New mileage claim",
-  "newDescription": "Drove your own car on the section's errand? Enter the odometer before and after, and we work out the compensation.",
   "description": "Errand",
   "descriptionHint": "What the journey was for, e.g. \"Collect the sponsor package in Malmö\".",
   "step": {
@@ -38,7 +37,6 @@
   "documentPending": "The expense report is drawn once the claim is saved. The journey is stated on it, and it is what follows the claim into the books.",
   "editTitle": "Edit mileage claim {id}",
   "editTitleDraft": "Edit mileage claim",
-  "editDescription": "Correct the journey or the distribution.",
   "blocker": {
     "noReadings": "Enter the odometer both before and after the journey.",
     "notForward": "The reading after the journey must be higher than the one before. Check that the two are the right way round.",
@@ -47,7 +45,6 @@
   },
   "rates": {
     "title": "Mileage rate",
-    "description": "What a kilometre is worth, and from which day. Every journey is valued at the rate in force on the day it was driven. A change here never re-values a claim already filed.",
     "current": "In force",
     "col": {
       "validFrom": "Valid from",

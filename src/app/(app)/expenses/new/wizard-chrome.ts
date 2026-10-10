@@ -12,20 +12,19 @@
 // thing.
 import type { Expense } from "@/lib/domain/types";
 
-/** The five keys a claim form's namespace has to carry to use this. */
+/** The three keys a claim form's namespace has to carry to use this. */
 export interface WizardTitles {
-  (key: "editTitleDraft" | "newTitle" | "editDescription" | "newDescription"): string;
+  (key: "editTitleDraft" | "newTitle"): string;
   (key: "editTitle", values: { id: string }): string;
 }
 
 interface WizardChrome {
   title: string;
-  description: string;
   back: string;
 }
 
 /**
- * Title, description and back-link for a claim form.
+ * Title and back-link for a claim form.
  *
  * A draft has no reference yet. It is numbered when it is submitted for attest,
  * so an edit of one cannot name it and says so instead. Back belongs to the
@@ -42,13 +41,11 @@ export function wizardChrome({
   if (!existing) {
     return {
       title: t("newTitle"),
-      description: t("newDescription"),
       back: "/expenses",
     };
   }
   return {
     title: existing.reference ? t("editTitle", { id: existing.reference }) : t("editTitleDraft"),
-    description: t("editDescription"),
     // Editing belongs to the claim it changes; a new one to the list.
     back: `/expenses/${existing.id}`,
   };

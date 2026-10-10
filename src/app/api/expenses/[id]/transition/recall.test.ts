@@ -22,6 +22,7 @@ const h = vi.hoisted(() => ({
   approvals: vi.fn(),
   update: vi.fn(),
   event: vi.fn(),
+  notify: vi.fn(),
 }));
 
 vi.mock("@/lib/server/current-user", () => ({
@@ -74,6 +75,15 @@ vi.mock("@/lib/server/result-units", () => ({
   resultUnitNameForCode: () => null,
 }));
 
+// Who gets mailed is notify's own business, tested there. What matters here is
+// that the recall asks for the right mail, from inside its transaction.
+vi.mock("@/lib/server/notify", () => ({
+  attestersOf: async () => ["chief"],
+  holdersOf: async () => [],
+  notify: h.notify,
+  deliverSoon: () => {},
+}));
+
 const { POST } = await import("./route");
 
 const recall = () =>
@@ -124,6 +134,17 @@ describe("POST /api/expenses/[id]/transition: recall", () => {
     expect(h.event).toHaveBeenCalledWith({
       data: { expenseId: "e1", type: "RECALLED", actorId: "member", comment: null },
     });
+  });
+
+  it("tells whoever was asked to attest it, but not the one recalling", async () => {
+    await recall();
+    expect(h.notify).toHaveBeenCalledWith(
+      expect.anything(),
+      "EXPENSE_RECALLED",
+      ["chief"],
+      expect.objectContaining({ subject: "Tillbakadraget: DEK26-0042 – Kolsyra" }),
+      { exclude: ["member"] },
+    );
   });
 
   it("never touches the reference", async () => {

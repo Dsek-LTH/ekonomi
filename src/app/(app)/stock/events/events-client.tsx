@@ -86,7 +86,7 @@ export default function EventsClient({
   ];
 
   return (
-    <PageShell title={t("event.title")} description={t("event.description")} width="wide">
+    <PageShell title={t("event.title")} width="wide">
       <Card>
         <CardHeader
           title={t("event.listTitle")}

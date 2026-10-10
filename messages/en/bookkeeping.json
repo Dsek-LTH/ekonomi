@@ -1,6 +1,5 @@
 {
   "title": "Bookkeeping",
-  "description": "Enter the voucher lines for approved expenses and export them to Fortnox.",
   "tab": {
     "all": "All",
     "toBook": "To book",

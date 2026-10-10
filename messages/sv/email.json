@@ -1,0 +1,133 @@
+{
+  "brand": "Ekonomi",
+  "org": "D-sektionen inom TLTH",
+  "settings": "Välj vilka mejl du får under Profil.",
+  "settingsDigest": "Välj vilka andra mejl du får under Profil.",
+  "orOpen": "Eller öppna länken: {url}",
+  "fact": {
+    "costCenter": "Kostnadsställe",
+    "purchaseDate": "Kvittodatum",
+    "payment": "Betalning"
+  },
+  "column": {
+    "date": "Datum",
+    "description": "Beskrivning",
+    "amount": "Belopp"
+  },
+  "refund": "Återbetalning",
+  "cardMask": "····{last4}",
+  "more": "och {count} till",
+  "reason": {
+    "attester": "Du får det här mejlet eftersom du kan attestera utlägget.",
+    "submitter": "Du får det här mejlet eftersom du skickade in utlägget.",
+    "bookkeeper": "Du får det här mejlet eftersom du bokför sektionens utlägg.",
+    "cardHolder": "Du får det här mejlet eftersom sektionskort {cards} står på dig.",
+    "digest": "Sammanfattningen kommer varje söndag när något väntar på dig, och aldrig annars."
+  },
+  "submitted": {
+    "subject": "Att attestera: {label}",
+    "eyebrow": "Att attestera",
+    "heading": "{actor} har skickat in ett utlägg",
+    "intro": "Det väntar på din attest.",
+    "button": "Öppna och attestera"
+  },
+  "changesRequested": {
+    "subject": "Ändring begärd: {label}",
+    "eyebrow": "Behöver ändras",
+    "heading": "Ditt utlägg kom tillbaka",
+    "intro": "{actor} vill att du ändrar något innan det kan attesteras. Ändra det och skicka in det igen, så går det vidare.",
+    "button": "Ändra utlägget"
+  },
+  "waiverRevoked": {
+    "subject": "Dispensen togs tillbaka: {label}",
+    "eyebrow": "Dispens borttagen",
+    "heading": "Dispensen från redovisningsfristen är borttagen",
+    "intro": "Ett eget utlägg som är äldre än {days} dagar kan inte skickas in utan den.",
+    "button": "Öppna utlägget"
+  },
+  "waived": {
+    "subject": "Dispens beviljad: {label}",
+    "eyebrow": "Dispens beviljad",
+    "heading": "Ditt utlägg får skickas in trots att det är sent",
+    "intro": "{actor} har beviljat dispens från redovisningsfristen.",
+    "button": "Öppna utlägget"
+  },
+  "costCenterApproved": {
+    "subject": "Delvis attesterat: {label}",
+    "eyebrow": "Delvis attesterat",
+    "heading": "{actor} har attesterat {costCenter}",
+    "intro": "Resten av utlägget väntar fortfarande på attest.",
+    "button": "Öppna utlägget"
+  },
+  "approved": {
+    "subject": "Attesterat: {label}",
+    "eyebrow": "Attesterat",
+    "heading": "Ditt utlägg är attesterat",
+    "intro": "Det går vidare till bokföring.",
+    "button": "Öppna utlägget"
+  },
+  "readyToBook": {
+    "subject": "Att bokföra: {label}",
+    "eyebrow": "Att bokföra",
+    "heading": "Ett utlägg från {submitter} är attesterat",
+    "intro": "Det väntar på att bokföras.",
+    "button": "Öppna och bokför"
+  },
+  "attestWithdrawn": {
+    "subject": "Attesten drogs tillbaka: {label}",
+    "eyebrow": "Attest tillbakadragen",
+    "heading": "{actor} har dragit tillbaka sin attest",
+    "intro": "Utlägget väntar på attest igen.",
+    "button": "Öppna utlägget"
+  },
+  "recalled": {
+    "subject": "Tillbakadraget: {label}",
+    "eyebrow": "Tillbakadraget",
+    "heading": "{actor} har dragit tillbaka utlägget",
+    "intro": "Det är inte längre i attestkön, så du behöver inte göra något med det just nu.",
+    "button": "Öppna utlägget"
+  },
+  "exported": {
+    "subject": "Klart: {label}",
+    "eyebrow": "Klart",
+    "heading": "Ditt utlägg är klart",
+    "intro": "Det är bokfört och skickat till Fortnox.",
+    "button": "Öppna utlägget"
+  },
+  "exportReverted": {
+    "subject": "Export ångrad: {label}",
+    "eyebrow": "Export ångrad",
+    "heading": "{actor} har markerat utlägget som ej exporterat",
+    "intro": "Verifikationen ligger kvar i Fortnox och kan behöva rättas där.",
+    "button": "Öppna utlägget"
+  },
+  "cardTransactions": {
+    "subject": "{count, plural, one {# ny korttransaktion} other {# nya korttransaktioner}} på ditt sektionskort",
+    "eyebrow": "Sektionskort {cards}",
+    "heading": "{count, plural, one {# ny transaktion} other {# nya transaktioner}} på ditt kort",
+    "intro": "Varje köp behöver ett utlägg med kvitto, och varje återbetalning ett utlägg som visar vad som lämnades tillbaka.",
+    "button": "Skapa utlägg för dem"
+  },
+  "digest": {
+    "subject": "Veckans sammanfattning: {count, plural, one {# sak väntar} other {# saker väntar}} på dig",
+    "eyebrow": "Vecka {week}",
+    "heading": "Hej {name}, det här väntar på dig",
+    "stat": {
+      "unmatched": "kortköp utan utlägg",
+      "deadline": "nära redovisningsfristen",
+      "attest": "att attestera"
+    },
+    "unmatched": "Korttransaktioner utan utlägg",
+    "unmatchedHint": "Varje transaktion med sektionskortet behöver ett utlägg, återbetalningar också.",
+    "unmatchedLink": "Skapa utlägg för dem",
+    "deadline": "Egna utlägg nära redovisningsfristen",
+    "deadlineHint": "Ett eget utlägg måste skickas in inom {days} dagar från köpet. Efter det kan det inte betalas ut.",
+    "deadlineSub": "{status}, köpt {date}",
+    "deadlineLeft": "{left, plural, =0 {Sista dagen idag} one {# dag kvar} other {# dagar kvar}}",
+    "deadlineLink": "Till dina utlägg",
+    "attest": "Väntar på din attest",
+    "attestHint": "Det äldsta först.",
+    "attestSub": "Från {submitter}, väntat i {days, plural, =0 {mindre än en dag} one {# dag} other {# dagar}}",
+    "attestButton": "Till attestkön"
+  }
+}

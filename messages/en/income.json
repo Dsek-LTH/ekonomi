@@ -177,7 +177,6 @@
   },
   "review": {
     "viewLabel": "View",
-    "description": "Work through the days one at a time. The income statement stands beside it, the voucher is pre-filled.",
     "lines": "Items sold",
     "noCostCenter": "No cost centre",
     "edited": "Edited",
@@ -202,7 +201,6 @@
   },
   "booked": {
     "title": "Booked and exported",
-    "description": "The section's record of what it took in. This is where days go to Fortnox.",
     "searchPlaceholder": "Search committee, cost centre or voucher…",
     "empty": "Nothing is booked yet."
   }

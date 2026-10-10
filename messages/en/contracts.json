@@ -1,6 +1,5 @@
 {
   "title": "Documents",
-  "description": "The section's contracts, meeting minutes and permit applications, and the rental contracts this app draws itself.",
   "emptyTitle": "No documents yet",
   "emptyDescription": "Upload a document you already have, or draw a new rental contract.",
   "searchPlaceholder": "Search title, counterparty or tag",
@@ -45,7 +44,6 @@
   "fileCount": "{count, plural, =0 {No file} one {1 file} other {# files}}",
   "form": {
     "uploadTitle": "Upload document",
-    "uploadDescription": "A document that already exists, into the archive. Nothing is written here, what you upload is what gets stored. The file can come later.",
     "title": "Title",
     "titleHint": "The words somebody would search for: “Sponsorship with Axis 2026”.",
     "kind": "Document type",
@@ -119,7 +117,6 @@
   },
   "rental": {
     "newTitle": "Draw up a rental contract",
-    "newDescription": "The app writes the contract for you: the section's gear, a period, a price and a deposit.",
     "counterparty": "Renter",
     "counterpartyHint": "The person or organisation renting.",
     "pickupAt": "Picked up",
@@ -181,7 +178,6 @@
     "lineAmount": "Amount",
     "lineWas": "List price {gross}",
     "editTitle": "Edit rental contract",
-    "editDescription": "The contract is redrawn when you save. It can be changed until the signed contract has been uploaded.",
     "save": "Save changes",
     "saved": "Contract updated",
     "edit": "Edit contract",
@@ -191,7 +187,6 @@
   },
   "items": {
     "title": "Rental items",
-    "description": "The gear the section lets out, and what it costs to replace.",
     "name": "Name",
     "itemDescription": "Description",
     "dailyPrice": "Price per day",
@@ -224,7 +219,6 @@
   },
   "counterparties": {
     "title": "Counterparties",
-    "description": "Organisations and people the section has agreed with before, so a new contract can pick one instead of retyping their details.",
     "name": "Name",
     "orgNo": "Organisation number",
     "orgNoHint": "Or a personal number. Free text either way.",

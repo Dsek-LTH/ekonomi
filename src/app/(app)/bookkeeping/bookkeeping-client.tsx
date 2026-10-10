@@ -129,7 +129,6 @@ export default function BookkeepingClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
     >
       <Card>
         <DataTable

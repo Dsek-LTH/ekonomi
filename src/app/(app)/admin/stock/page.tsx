@@ -12,7 +12,7 @@ export default async function AdminStockPage() {
   const t = await getTranslations("admin.stock");
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <StockSettingsClient settings={await getStockSettings()} />
     </PageShell>
   );

@@ -251,10 +251,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
   ];
 
   return (
-    <PageShell
-      title={t("title")}
-      description={t("description")}
-    >
+    <PageShell title={t("title")}>
       <input
         ref={fileRef}
         type="file"

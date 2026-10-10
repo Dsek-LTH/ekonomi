@@ -68,7 +68,9 @@ export async function orNotFound<T>(
  * handful of genuinely relational rules still turn on: the attest rule's
  * vice-skattmästare and resultatansvarig clauses (lib/domain/permissions.ts).
  */
-export type Actor = { id: string; roles: Role[]; capabilities: Capability[] };
+// `name` for the words a route writes on the actor's behalf, such as "Anna has
+// sent your utlägg back" in a notification. Never for a decision.
+export type Actor = { id: string; name: string; roles: Role[]; capabilities: Capability[] };
 
 export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse };
 
@@ -122,7 +124,7 @@ export async function gate(
   const row = await loadUser(id);
   if (!row) return { ok: false, res: fail(401, "auth.signedOut") };
 
-  const actor: Actor = { id, roles: row.roles, capabilities: row.capabilities };
+  const actor: Actor = { id, name: row.name, roles: row.roles, capabilities: row.capabilities };
   if (can && !can(actor.capabilities)) return { ok: false, res: fail(403, denied) };
   return { ok: true, actor };
 }

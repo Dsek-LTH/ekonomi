@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { daysAgo, isCompleteDate, isFutureDate, today } from "./date";
+import { daysAgo, isCompleteDate, isFutureDate, isoWeek, today } from "./date";
 
 describe("isCompleteDate", () => {
   it("accepts a whole ISO date", () => {
@@ -80,5 +80,19 @@ describe("daysAgo", () => {
     // span below would be 60 days and one hour, which is how a deadline check
     // starts letting day 61 through.
     expect(daysAgo("2026-10-01", "2026-11-30")).toBe(60);
+  });
+});
+
+describe("isoWeek", () => {
+  it("runs Monday to Sunday, so a Sunday digest and the Monday after are different weeks", () => {
+    expect(isoWeek("2026-10-05")).toBe("2026-W41");
+    expect(isoWeek("2026-10-11")).toBe("2026-W41");
+    expect(isoWeek("2026-10-04")).toBe("2026-W40");
+  });
+
+  it("gives a week that crosses New Year to the year its Thursday is in", () => {
+    expect(isoWeek("2027-01-01")).toBe("2026-W53");
+    expect(isoWeek("2024-12-30")).toBe("2025-W01");
+    expect(isoWeek("2026-01-01")).toBe("2026-W01");
   });
 });

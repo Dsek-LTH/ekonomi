@@ -291,7 +291,6 @@ export default function BookedClient({
   return (
     <PageShell
       title={t("booked.title")}
-      description={t("booked.description")}
       collections={incomeSections({
         active: "booked",
         label: t("nav.label"),

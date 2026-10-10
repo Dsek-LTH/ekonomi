@@ -7,7 +7,7 @@ import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 // submitter), so it has no action slot to hold.
 export default function Loading() {
   return (
-    <SkeletonPage width="content" back description={false} titleWidth="w-72">
+    <SkeletonPage width="content" back titleWidth="w-72">
       <Card>
         <div className="flex items-start justify-between gap-6 px-inset py-4">
           <Skeleton className="mt-1.5 h-6 w-28 rounded-control" />

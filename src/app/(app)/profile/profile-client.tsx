@@ -15,9 +15,10 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
+import { NotificationSettings } from "./notification-settings";
 
 import { useFormat } from "@/lib/ui/use-format";
-import type { FortnoxStatus, Role } from "@/lib/domain/types";
+import type { FortnoxStatus, NotificationKind, Role } from "@/lib/domain/types";
 
 export function ProfileClient({
   name,
@@ -26,6 +27,7 @@ export function ProfileClient({
   clearing: c0,
   account: a0,
   fortnox,
+  notifications,
 }: {
   name: string;
   email: string;
@@ -34,6 +36,8 @@ export function ProfileClient({
   account: string;
   /** Absent for everyone who doesn't book in Fortnox under their own login. */
   fortnox?: { session: FortnoxStatus["session"] | null };
+  /** The emails this member can be sent, and whether each is on. */
+  notifications: { kind: NotificationKind; enabled: boolean }[];
 }) {
   const t = useTranslations("common");
   const tRole = useTranslations("common.role");
@@ -60,7 +64,6 @@ export function ProfileClient({
   return (
     <PageShell
       title={tNav("profile")}
-      description={tProfile("description")}
       width="form"
     >
       <Card>
@@ -174,6 +177,8 @@ export function ProfileClient({
           </CardBody>
         </Card>
       )}
+
+      <NotificationSettings email={email} initial={notifications} />
 
       <Card>
         <CardHeader title={tNav("settings")} />

@@ -108,7 +108,7 @@ export function RentalsClient({
   );
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       {page.total === 0 && !narrowed && controls.tab === "" ? (
         <EmptyState
           title={t("emptyTitle")}

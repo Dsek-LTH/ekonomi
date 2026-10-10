@@ -183,10 +183,8 @@
       "submit": "Submit"
     },
     "newTitle": "New expense",
-    "newDescription": "Upload the receipt and fill in the details.",
     "editTitle": "Edit {id}",
     "editTitleDraft": "Edit draft",
-    "editDescription": "Change the details and save. The change is logged in the history.",
     "save": "Save",
     "saveDraft": "Save draft",
     "back": "Back",

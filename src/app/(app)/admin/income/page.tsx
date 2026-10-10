@@ -29,7 +29,7 @@ export default async function AdminIncomePage() {
   ]);
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <IncomeSettingsClient config={config} costCenters={costCenters} accounts={accounts} />
     </PageShell>
   );

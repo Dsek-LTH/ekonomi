@@ -188,7 +188,6 @@ export function UploadContractClient({
   return (
     <PageShell
       title={t("form.uploadTitle")}
-      description={t("form.uploadDescription")}
       width="content"
       back="/contracts"
     >

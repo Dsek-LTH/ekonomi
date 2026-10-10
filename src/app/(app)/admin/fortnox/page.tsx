@@ -1,4 +1,3 @@
-import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -10,7 +9,6 @@ import { FortnoxClient } from "./fortnox-client";
 
 export default async function AdminFortnoxPage() {
   const user = await requirePage(canAccessSettings);
-  const t = await getTranslations("admin.fortnox");
 
   const [fortnox, accounts, settings, ledgerYears, costCenters] = await Promise.all([
     getFortnoxStatus(user.id),
@@ -21,7 +19,7 @@ export default async function AdminFortnoxPage() {
   ]);
 
   return (
-    <PageShell title="Fortnox" description={t("description")}>
+    <PageShell title="Fortnox">
       <FortnoxClient
         fortnox={fortnox}
         accounts={accounts}

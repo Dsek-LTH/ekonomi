@@ -20,7 +20,7 @@ export default async function AdminRentalItemsPage() {
   const t = await getTranslations("contracts.items");
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <RentalItemsClient items={await getRentalItemRows()} />
     </PageShell>
   );

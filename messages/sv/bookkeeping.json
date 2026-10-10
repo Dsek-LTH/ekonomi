@@ -1,6 +1,5 @@
 {
   "title": "Bokföring",
-  "description": "Kontera attesterade utlägg och exportera till Fortnox.",
   "tab": {
     "all": "Alla",
     "toBook": "Att bokföra",

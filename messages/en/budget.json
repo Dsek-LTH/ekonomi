@@ -1,7 +1,6 @@
 {
   "list": {
     "title": "Budget",
-    "description": "The guild's budgets. Several can share the same year. They are budgets in their own right, not versions of each other.",
     "new": "New budget",
     "newEmpty": "Empty budget {year}",
     "copyExisting": "Copy an existing one",
@@ -40,7 +39,6 @@
   "compare": {
     "included": "Budgets compared",
     "title": "Compare budgets",
-    "description": "Rows that only one of the budgets has are shown too. An empty cell tells you something as well.",
     "addBudget": "Add a budget…",
     "searchBudget": "Search budgets or years…",
     "noMoreBudgets": "No more budgets",

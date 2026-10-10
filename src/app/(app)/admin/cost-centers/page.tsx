@@ -13,7 +13,6 @@ export default async function AdminCostCentersPage() {
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
       width="content"
     >
       <CostCentersClient costCenters={costCenters} />

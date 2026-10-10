@@ -14,7 +14,7 @@ export default async function AdminUsersPage() {
   const holders = await getRoleHolders();
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <UsersClient holders={holders} />
     </PageShell>
   );

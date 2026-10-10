@@ -7,7 +7,7 @@ import { cn } from "@/lib/ui/utils";
 // three content widths, and uniform vertical rhythm between major blocks.
 // Every page composes the same way: <PageShell title=… width=…>…</PageShell>.
 //
-// The header is identity and nothing else: title, description, and which
+// The header is identity and nothing else: the title, and which
 // collection of things this is (`collections`, beside the title). What you can
 // *do* is not here: it belongs to the thing you would do it to, so a list's
 // create button rides its own toolbar (DataTable's `action`) and an object's
@@ -29,7 +29,6 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
 export function PageShell({
   title,
   subtitle,
-  description,
   collections,
   collectionsHidden = false,
   back,
@@ -42,13 +41,16 @@ export function PageShell({
    *  page around the shell to compose its own header. */
   title: React.ReactNode;
   /**
-   * A second identifying line between the title and the description, in the
-   * title's weight but smaller, for a page whose subject is named twice, like
-   * a budget's year and which budget for that year it is. The description
-   * below stays what it always is: the notes about that subject.
+   * A second identifying line under the title, in the title's weight but
+   * smaller, for a page whose subject is named twice, like a budget's year and
+   * which budget for that year it is.
+   *
+   * There is no description line. Every page used to carry one, a sentence
+   * under the title explaining the page, and they were removed together: a
+   * screen that needs a sentence to say what it is has a title to fix, and the
+   * ones that did not need it were paying a line of height on every visit.
    */
   subtitle?: React.ReactNode;
-  description?: React.ReactNode;
   /**
    * Which collection this page is a list of: "Mina / Alla", "Att bokföra /
    * Bokförda". See components/ui/collection-switch.tsx.
@@ -97,23 +99,16 @@ export function PageShell({
         {/* Above the title. See components/back-link.tsx. */}
         {back && <BackLink href={back} />}
         {/* The switch rides the title's line: it names the same thing the title
-            does, only more precisely, and the two read as one heading. `gap-4`
-            and `flex-wrap` so a long title drops it to the next line rather
-            than squeezing it. `items-start` keeps it level with the title
-            itself and not with the description below. */}
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+            does, only more precisely, and the two read as one heading. So the
+            row holds the title and the switch alone, centred on each other,
+            and the subtitle sits under it at full width.
+            `flex-wrap` so a long title drops the switch to the next line rather
+            than squeezing it. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
             {/* In the settings overlay, drawn in its top bar instead. See
                 components/shell/settings-title.tsx. */}
             <PageTitle>{title}</PageTitle>
-            {subtitle && <p className="mt-1 text-lg font-medium tracking-tight">{subtitle}</p>}
-            {/* Further from the title than the subtitle is. The subtitle names
-                the same subject a second time and belongs tight to it; the
-                description is a different kind of thing and reads as one when
-                it is given the room to. */}
-            {description && (
-              <p className="mt-2 max-w-prose text-[15px] text-muted">{description}</p>
-            )}
           </div>
           {collections && (
             <div className={cn(collectionsHidden && "invisible")} inert={collectionsHidden}>
@@ -121,6 +116,7 @@ export function PageShell({
             </div>
           )}
         </div>
+        {subtitle && <p className="mt-1 text-lg font-medium tracking-tight">{subtitle}</p>}
       </div>
 
       <div className="space-y-4">{children}</div>

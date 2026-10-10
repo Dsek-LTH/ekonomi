@@ -23,6 +23,8 @@ import {
   VOUCHER_INCLUDE,
 } from "@/lib/fortnox/export";
 import { voucherText } from "@/lib/fortnox/voucher-text";
+import { deliverSoon, notify } from "@/lib/server/notify";
+import { expenseNotice } from "@/lib/email/content";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -183,7 +185,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         comment: label,
       },
     });
+    await notify(tx, "EXPENSE_EXPORTED", [expense.submitterId], expenseNotice("exported", expense), {
+      exclude: [user.id],
+    });
   });
+  deliverSoon();
 
   return NextResponse.json({
     id,

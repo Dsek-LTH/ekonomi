@@ -1,6 +1,5 @@
 {
   "newTitle": "Ny milersättning",
-  "newDescription": "Körde du egen bil på sektionens ärende? Fyll i mätarställningen före och efter, så räknar vi ut ersättningen.",
   "description": "Ärende",
   "descriptionHint": "Vad resan gällde, t.ex. \"Hämta sponsorpaket i Malmö\".",
   "step": {
@@ -38,7 +37,6 @@
   "documentPending": "Utläggsräkningen ritas när utlägget sparats. Resan står på den, och det är den som följer med till bokföringen.",
   "editTitle": "Ändra milersättning {id}",
   "editTitleDraft": "Ändra milersättning",
-  "editDescription": "Rätta resan eller kostnadsfördelningen.",
   "blocker": {
     "noReadings": "Fyll i mätarställningen både före och efter resan.",
     "notForward": "Mätarställningen efter resan måste vara högre än före. Kontrollera att siffrorna står i rätt ordning.",
@@ -47,7 +45,6 @@
   },
   "rates": {
     "title": "Milersättning",
-    "description": "Vad en kilometer är värd, och från vilken dag. Varje resa räknas med den ersättning som gällde den dagen den kördes. En ändring här påverkar aldrig redan inskickade utlägg.",
     "current": "Gäller nu",
     "col": {
       "validFrom": "Gäller från",

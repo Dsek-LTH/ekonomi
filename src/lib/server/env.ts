@@ -71,6 +71,13 @@ const REQUIRED = {
 // They are all listed in .env.example, which is where someone setting the app
 // up will look.
 //
+// SMTP_HOST switches email on (lib/server/mail.ts), through the section's
+// relay. Without it, mail is written to the log instead. With it, MAIL_FROM and
+// APP_URL become required, checked below: a mail from a made-up sender is
+// binned on arrival, and a mail whose links point at localhost is no use to
+// anyone. SMTP_PORT, SMTP_USER and SMTP_PASS are for a relay that wants them.
+// CRON_SECRET switches on the scheduled jobs under app/api/cron.
+//
 // Authentik needs nothing beyond the three above: the endpoints it uses are
 // read from the issuer's discovery document rather than configured (auth.ts).
 
@@ -108,9 +115,17 @@ function envProblems(): string[] {
   // production answer, and refusing to boot over it taught people that the
   // startup check cries wolf, which is the last thing a check like this can
   // afford. What a value should be is .env.example's job to say.
-  return (Object.keys(REQUIRED) as RequiredVar[])
-    .filter((name) => !process.env[name])
-    .map((name) => `${name} saknas`);
+  const missing: string[] = (Object.keys(REQUIRED) as RequiredVar[]).filter(
+    (name) => !process.env[name],
+  );
+  // Optional as a group, required as a whole: mail half configured is mail
+  // that leaves and is binned, or arrives with links that go nowhere.
+  if (process.env.SMTP_HOST) {
+    for (const name of ["MAIL_FROM", "APP_URL"]) {
+      if (!process.env[name]) missing.push(name);
+    }
+  }
+  return missing.map((name) => `${name} saknas`);
 }
 
 /**

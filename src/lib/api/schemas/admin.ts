@@ -3,6 +3,8 @@
 // connection, and payout details.
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
+import { SWITCHABLE_KINDS } from "@/lib/domain/notifications";
+import type { NotificationKind } from "@/lib/domain/types";
 
 /** POST /api/cards: register a section card. */
 export const CreateCard = z.object({
@@ -191,3 +193,14 @@ export const PutRoleCapabilities = z.object({
   capabilities: z.array(CapabilityName),
 });
 export type PutRoleCapabilities = z.infer<typeof PutRoleCapabilities>;
+
+/**
+ * PUT /api/profile/notifications: switch one kind of email on or off for the
+ * signed-in member. Only the kinds a member may switch; the weekly digest is
+ * not among them.
+ */
+export const PutNotificationPreference = z.object({
+  kind: z.enum(SWITCHABLE_KINDS as [NotificationKind, ...NotificationKind[]]),
+  enabled: z.boolean(),
+});
+export type PutNotificationPreference = z.infer<typeof PutNotificationPreference>;

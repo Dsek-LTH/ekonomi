@@ -1,7 +1,6 @@
 {
   "list": {
     "title": "Budget",
-    "description": "Sektionens budgetar. Flera kan dela på samma år. De är egna budgetar, inte versioner av varandra.",
     "new": "Ny budget",
     "newEmpty": "Tom budget {year}",
     "copyExisting": "Kopiera en befintlig",
@@ -40,7 +39,6 @@
   "compare": {
     "included": "Budgetar i jämförelsen",
     "title": "Jämför budgetar",
-    "description": "Rader som bara finns i någon av budgetarna visas också. En tom ruta säger också något.",
     "addBudget": "Lägg till budget…",
     "searchBudget": "Sök budget eller år…",
     "noMoreBudgets": "Inga fler budgetar",

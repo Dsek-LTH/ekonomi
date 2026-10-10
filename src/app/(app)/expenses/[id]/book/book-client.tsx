@@ -310,7 +310,6 @@ export default function BookExpenseClient({
   return (
     <PageShell
       title={mode === "edit" ? t("editTitle", { id: label }) : t("createTitle", { id: label })}
-      description={mode === "edit" ? t("editDescription") : t("createDescription")}
       back={`/expenses/${expense.id}`}
       width="wide"
     >

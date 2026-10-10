@@ -183,10 +183,8 @@
       "submit": "Skicka in"
     },
     "newTitle": "Nytt utlägg",
-    "newDescription": "Ladda upp kvittot och fyll i uppgifterna.",
     "editTitle": "Redigera {id}",
     "editTitleDraft": "Redigera utkast",
-    "editDescription": "Ändra uppgifterna och spara. Ändringen loggas i historiken.",
     "save": "Spara",
     "saveDraft": "Spara utkast",
     "back": "Tillbaka",

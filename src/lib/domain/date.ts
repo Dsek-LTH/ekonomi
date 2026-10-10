@@ -89,3 +89,16 @@ export function addMonths(value: string, months: number): string {
   target.setUTCDate(Math.min(d, lastDay));
   return target.toISOString().slice(0, 10);
 }
+
+// The ISO week a day falls in, as "2026-W41": Monday to Sunday, and the year is
+// the one its Thursday is in, so 2027-01-01 (a Friday) is still in 2026-W53.
+// What the weekly digest counts in, so a week gets one however often it runs.
+export function isoWeek(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  // Thursday decides the year a week belongs to.
+  const thursday = new Date(d);
+  thursday.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const yearStart = Date.UTC(thursday.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((thursday.getTime() - yearStart) / 86_400_000 + 1) / 7);
+  return `${thursday.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}

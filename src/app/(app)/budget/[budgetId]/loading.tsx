@@ -7,7 +7,7 @@ import { Skeleton, SkeletonPage, SkeletonSheet } from "@/components/ui/skeleton"
 // width, with no list of cost centres beside it.
 export default function Loading() {
   return (
-    <SkeletonPage back description={false} action titleWidth="w-64">
+    <SkeletonPage back action titleWidth="w-64">
       <div className="flex items-center gap-3">
         <Skeleton className="h-11 w-full rounded-control sm:h-9 sm:w-72" />
         <Skeleton className="ml-auto hidden h-8 w-36 rounded-control sm:block" />

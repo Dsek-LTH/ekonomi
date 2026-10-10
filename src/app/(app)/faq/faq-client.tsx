@@ -106,7 +106,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   ];
 
   return (
-    <PageShell title={t("title")} description={t("description")} width="content">
+    <PageShell title={t("title")} width="content">
       <div className="space-y-3">
         <SearchInput
           value={query}

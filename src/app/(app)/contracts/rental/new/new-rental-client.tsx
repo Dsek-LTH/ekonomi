@@ -442,7 +442,6 @@ export function NewRentalClient({
   return (
     <PageShell
       title={existing ? t("rental.editTitle") : t("rental.newTitle")}
-      description={existing ? t("rental.editDescription") : t("rental.newDescription")}
       width="content"
       back={existing ? `/contracts/${existing.id}` : "/uthyrning"}
     >

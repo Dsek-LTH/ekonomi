@@ -1,7 +1,6 @@
 {
   "index": {
     "title": "Inställningar",
-    "description": "Kopplingar, tabeller och behörigheter som resten av appen vilar på.",
     "section": {
       "fortnox": "Kopplingen till Fortnox, och synk av kontoplan och kostnadsställen.",
       "costCenters": "Kostnadsställen som utlägg och budget kan fördelas på.",
@@ -16,7 +15,6 @@
   },
   "users": {
     "title": "Användare",
-    "description": "Roller styr åtkomst och attesträttigheter. De hämtas från Authentik.",
     "searchPlaceholder": "Sök bland alla medlemmar…",
     "searching": "Söker…",
     "noMatch": "Ingen medlem matchar.",
@@ -49,7 +47,6 @@
   },
   "cards": {
     "title": "Sektionskort",
-    "description": "Tilldela kort till medlemmar. Innehavaren ser sina okvitterade kortköp.",
     "last4": "Fyra sista",
     "last4Aria": "Kortets fyra sista siffror",
     "last4Required": "Ange kortets fyra sista siffror.",
@@ -83,7 +80,6 @@
   },
   "costCenters": {
     "title": "Kostnadsställen",
-    "description": "De med Fortnox-märket synkas under Fortnox och ändras där, övriga är lokala och finns bara här.",
     "tab": {
       "active": "Aktiva",
       "inactive": "Inaktiva",
@@ -134,7 +130,6 @@
   },
   "resultUnits": {
     "title": "Resultatenheter",
-    "description": "Prefixet avgör vilka kostnadsställen som tillhör resultatenheten, och de resultatansvariga attesterar deras utlägg.",
     "searchPlaceholder": "Sök resultatenhet…",
     "emptyNone": "Inga resultatenheter ännu.",
     "emptyNoMatch": "Inga träffar.",
@@ -214,7 +209,6 @@
     "editInRoles": "Ändra under Roller"
   },
   "fortnox": {
-    "description": "Anslutning, bokföringskonton och synk.",
     "connection": "Anslutning",
     "connectionSubtitle": "Sektionens koppling till Fortnox. Allt annat här kräver att den är ansluten.",
     "unconfigured": "Servern saknar Fortnox klient-id, secret eller redirect-URI. Lägg till dem i miljövariablerna och starta om.",
@@ -273,7 +267,6 @@
   },
   "income": {
     "title": "Intäkter",
-    "description": "Vilken verksamhet och vilket konto en såld vara hör till. Det är routingtabellen som intäktstjänsten läser.",
     "save": "Spara",
     "saved": "Sparat",
     "saveFailed": "Kunde inte spara",
@@ -340,7 +333,6 @@
   },
   "roles": {
     "title": "Roller & behörigheter",
-    "description": "Vilken Authentik-grupp som ger vilken roll här, och vad varje roll får göra.",
     "addGroup": "Koppla grupp",
     "addGroupLabel": "Namn på Authentik-grupp",
     "noGroups": "Inga grupper ännu.",
@@ -403,7 +395,6 @@
   },
   "stock": {
     "title": "Lager",
-    "description": "Inställningar för lagret. Hur länge en produkt håller sätts på produkten, inte här.",
     "save": "Spara",
     "saveFailed": "Kunde inte spara inställningen",
     "expiry": {

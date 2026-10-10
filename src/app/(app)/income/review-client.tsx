@@ -581,7 +581,6 @@ export default function IncomeReviewClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("review.description")}
       collections={incomeSections({
         active: "review",
         label: t("nav.label"),

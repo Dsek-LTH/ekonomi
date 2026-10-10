@@ -260,7 +260,6 @@ export default function StockLogClient({
   return (
     <PageShell
       title={t("log.title")}
-      description={t("log.description")}
       back="/stock"
       width="wide"
     >

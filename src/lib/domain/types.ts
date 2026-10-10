@@ -28,6 +28,10 @@ export type Capability = Schema.Capability;
 
 export type PaymentType = Schema.PaymentType;
 
+// What an email is about, and what a member switches on or off in their
+// profile. Defaults and which ones can be switched: lib/domain/notifications.ts.
+export type NotificationKind = Schema.NotificationKind;
+
 // ── Avtal ─────────────────────────────────────────────────────────
 
 // What kind of agreement a contract is, where it stands, what one of its files

@@ -1,6 +1,5 @@
 {
   "title": "Dokument",
-  "description": "Sektionens avtal, mötesprotokoll och tillståndsansökningar, och uthyrningsavtalen appen ritar själv.",
   "emptyTitle": "Inga dokument ännu",
   "emptyDescription": "Ladda upp ett dokument som redan finns, eller skriv ett nytt uthyrningsavtal.",
   "searchPlaceholder": "Sök titel, motpart eller tagg",
@@ -45,7 +44,6 @@
   "fileCount": "{count, plural, =0 {Ingen fil} one {1 fil} other {# filer}}",
   "form": {
     "uploadTitle": "Ladda upp dokument",
-    "uploadDescription": "Ett dokument som redan finns, in i arkivet. Appen skriver ingenting här, den sparar det du laddar upp. Filen kan läggas till senare.",
     "title": "Titel",
     "titleHint": "Så som någon skulle söka efter det: ”Sponsoravtal med Axis 2026”.",
     "kind": "Dokumenttyp",
@@ -119,7 +117,6 @@
   },
   "rental": {
     "newTitle": "Skriv uthyrningsavtal",
-    "newDescription": "Appen skriver avtalet åt dig: sektionens prylar, en period, ett pris och en deposition.",
     "counterparty": "Hyrestagare",
     "counterpartyHint": "Personen eller föreningen som hyr.",
     "pickupAt": "Uthämtas",
@@ -181,7 +178,6 @@
     "lineAmount": "Belopp",
     "lineWas": "Ordinarie {gross}",
     "editTitle": "Redigera uthyrningsavtal",
-    "editDescription": "Avtalet ritas om när du sparar. Det går att ändra tills det undertecknade avtalet har laddats upp.",
     "save": "Spara ändringar",
     "saved": "Avtalet är uppdaterat",
     "edit": "Redigera avtal",
@@ -191,7 +187,6 @@
   },
   "items": {
     "title": "Uthyrningsobjekt",
-    "description": "Prylarna sektionen hyr ut, med vad de kostar att ersätta.",
     "name": "Namn",
     "itemDescription": "Beskrivning",
     "dailyPrice": "Pris per dag",
@@ -224,7 +219,6 @@
   },
   "counterparties": {
     "title": "Motparter",
-    "description": "Organisationer och personer sektionen har avtalat med förut, så ett nytt avtal kan välja en av dem i stället för att skriva in uppgifterna igen.",
     "name": "Namn",
     "orgNo": "Organisationsnummer",
     "orgNoHint": "Eller personnummer. Fritext, oavsett vilket det är.",

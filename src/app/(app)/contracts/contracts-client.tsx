@@ -152,7 +152,7 @@ export function ContractsClient({
   ) : undefined;
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       {page.total === 0 && !narrowed ? (
         <EmptyState
           title={t("emptyTitle")}

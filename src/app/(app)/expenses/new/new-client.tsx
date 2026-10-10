@@ -681,7 +681,6 @@ export default function NewExpenseClient({
   return (
     <PageShell
       title={chrome.title}
-      description={chrome.description}
       back={chrome.back}
       width="content"
     >

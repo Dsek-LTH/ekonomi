@@ -10,7 +10,7 @@ export default async function AdminMileagePage() {
   const t = await getTranslations("mileage.rates");
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <MileageRatesClient rates={await getMileageRateRows()} />
     </PageShell>
   );

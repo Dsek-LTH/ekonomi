@@ -1,0 +1,133 @@
+{
+  "brand": "Ekonomi",
+  "org": "D-sektionen inom TLTH",
+  "settings": "Choose which emails you get under Profile.",
+  "settingsDigest": "Choose which other emails you get under Profile.",
+  "orOpen": "Or open the link: {url}",
+  "fact": {
+    "costCenter": "Cost centre",
+    "purchaseDate": "Receipt date",
+    "payment": "Payment"
+  },
+  "column": {
+    "date": "Date",
+    "description": "Description",
+    "amount": "Amount"
+  },
+  "refund": "Refund",
+  "cardMask": "····{last4}",
+  "more": "and {count} more",
+  "reason": {
+    "attester": "You get this email because you can attest the expense.",
+    "submitter": "You get this email because you submitted the expense.",
+    "bookkeeper": "You get this email because you book the section's expenses.",
+    "cardHolder": "You get this email because section card {cards} is in your name.",
+    "digest": "The summary comes every Sunday when something is waiting for you, and never otherwise."
+  },
+  "submitted": {
+    "subject": "To attest: {label}",
+    "eyebrow": "To attest",
+    "heading": "{actor} has submitted an expense",
+    "intro": "It is waiting for your attest.",
+    "button": "Open and attest"
+  },
+  "changesRequested": {
+    "subject": "Changes requested: {label}",
+    "eyebrow": "Needs changes",
+    "heading": "Your expense came back",
+    "intro": "{actor} wants you to change something before it can be attested. Change it and submit it again, and it goes on.",
+    "button": "Edit the expense"
+  },
+  "waiverRevoked": {
+    "subject": "Exemption revoked: {label}",
+    "eyebrow": "Exemption removed",
+    "heading": "The exemption from the filing deadline is removed",
+    "intro": "An out-of-pocket expense older than {days} days cannot be submitted without it.",
+    "button": "Open the expense"
+  },
+  "waived": {
+    "subject": "Exemption granted: {label}",
+    "eyebrow": "Exemption granted",
+    "heading": "Your expense may be submitted even though it is late",
+    "intro": "{actor} has granted an exemption from the filing deadline.",
+    "button": "Open the expense"
+  },
+  "costCenterApproved": {
+    "subject": "Partly attested: {label}",
+    "eyebrow": "Partly attested",
+    "heading": "{actor} has attested {costCenter}",
+    "intro": "The rest of the expense is still waiting for attest.",
+    "button": "Open the expense"
+  },
+  "approved": {
+    "subject": "Attested: {label}",
+    "eyebrow": "Attested",
+    "heading": "Your expense is attested",
+    "intro": "It goes on to bookkeeping.",
+    "button": "Open the expense"
+  },
+  "readyToBook": {
+    "subject": "To book: {label}",
+    "eyebrow": "To book",
+    "heading": "An expense from {submitter} is attested",
+    "intro": "It is waiting to be booked.",
+    "button": "Open and book"
+  },
+  "attestWithdrawn": {
+    "subject": "Attest withdrawn: {label}",
+    "eyebrow": "Attest withdrawn",
+    "heading": "{actor} has withdrawn their attest",
+    "intro": "The expense is waiting for attest again.",
+    "button": "Open the expense"
+  },
+  "recalled": {
+    "subject": "Recalled: {label}",
+    "eyebrow": "Recalled",
+    "heading": "{actor} has recalled the expense",
+    "intro": "It is no longer in the attest queue, so you do not need to do anything with it for now.",
+    "button": "Open the expense"
+  },
+  "exported": {
+    "subject": "Done: {label}",
+    "eyebrow": "Done",
+    "heading": "Your expense is done",
+    "intro": "It is booked and sent to Fortnox.",
+    "button": "Open the expense"
+  },
+  "exportReverted": {
+    "subject": "Export undone: {label}",
+    "eyebrow": "Export undone",
+    "heading": "{actor} has marked the expense as not exported",
+    "intro": "The voucher is still in Fortnox and may need correcting there.",
+    "button": "Open the expense"
+  },
+  "cardTransactions": {
+    "subject": "{count, plural, one {# new card transaction} other {# new card transactions}} on your section card",
+    "eyebrow": "Section card {cards}",
+    "heading": "{count, plural, one {# new transaction} other {# new transactions}} on your card",
+    "intro": "Every purchase needs an expense with a receipt, and every refund an expense showing what was returned.",
+    "button": "Create expenses for them"
+  },
+  "digest": {
+    "subject": "Your weekly summary: {count, plural, one {# thing is} other {# things are}} waiting for you",
+    "eyebrow": "Week {week}",
+    "heading": "Hi {name}, this is waiting for you",
+    "stat": {
+      "unmatched": "card purchases without an expense",
+      "deadline": "close to the filing deadline",
+      "attest": "to attest"
+    },
+    "unmatched": "Card transactions without an expense",
+    "unmatchedHint": "Every transaction on the section card needs an expense, refunds too.",
+    "unmatchedLink": "Create expenses for them",
+    "deadline": "Out-of-pocket expenses close to the filing deadline",
+    "deadlineHint": "An out-of-pocket expense must be submitted within {days} days of the purchase. After that it cannot be paid out.",
+    "deadlineSub": "{status}, bought {date}",
+    "deadlineLeft": "{left, plural, =0 {Last day today} one {# day left} other {# days left}}",
+    "deadlineLink": "Go to your expenses",
+    "attest": "Waiting for your attest",
+    "attestHint": "Oldest first.",
+    "attestSub": "From {submitter}, waited {days, plural, =0 {less than a day} one {# day} other {# days}}",
+    "attestButton": "Go to the attest queue"
+  }
+}

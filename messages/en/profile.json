@@ -1,5 +1,4 @@
 {
-  "description": "Your details, payout account and logins.",
   "name": "Name",
   "email": "Email",
   "roles": "Roles",
@@ -23,5 +22,39 @@
   "signOutFortnox": "Sign out of Fortnox",
   "fortnoxSignedOut": "Signed out of Fortnox.",
   "fortnoxSignOutFailed": "Could not sign out of Fortnox.",
-  "signOutNote": "Signing out only ends this app's access to your Fortnox account. The session expires on its own after a few hours."
+  "signOutNote": "Signing out only ends this app's access to your Fortnox account. The session expires on its own after a few hours.",
+  "notifications": {
+    "title": "Email",
+    "subtitle": "Which emails you get at {email}. Changes are saved straight away.",
+    "saveFailed": "Could not save your choice",
+    "digestNote": "Every Sunday you also get a summary of what is waiting for you: card transactions without an expense, your own expenses close to the filing deadline, and expenses to attest. It is only sent when there is something in it.",
+    "kind": {
+      "EXPENSE_SUBMITTED": "Expenses to attest",
+      "EXPENSE_CHANGES_REQUESTED": "Changes requested on your expense",
+      "EXPENSE_DEADLINE_WAIVER_REVOKED": "Exemption revoked",
+      "CARD_TRANSACTIONS_IMPORTED": "New card transactions",
+      "EXPENSE_COST_CENTER_APPROVED": "Cost centre attested",
+      "EXPENSE_APPROVED": "Your expense is attested",
+      "EXPENSE_ATTEST_WITHDRAWN": "Attest withdrawn",
+      "EXPENSE_DEADLINE_WAIVED": "Exemption granted",
+      "EXPENSE_EXPORTED": "Your expense is done",
+      "EXPENSE_RECALLED": "Expense recalled from attest",
+      "EXPENSE_READY_TO_BOOK": "Expenses to book",
+      "EXPENSE_EXPORT_REVERTED": "Export undone"
+    },
+    "hint": {
+      "EXPENSE_SUBMITTED": "When someone submits an expense for you to attest.",
+      "EXPENSE_CHANGES_REQUESTED": "When an expense you submitted comes back for changes.",
+      "EXPENSE_DEADLINE_WAIVER_REVOKED": "When the exemption from the filing deadline is removed from your expense.",
+      "CARD_TRANSACTIONS_IMPORTED": "When new purchases or refunds on your section card are imported.",
+      "EXPENSE_COST_CENTER_APPROVED": "When part of your expense is attested and the rest is still waiting.",
+      "EXPENSE_APPROVED": "When all of your expense is attested.",
+      "EXPENSE_ATTEST_WITHDRAWN": "When someone withdraws their attest on your expense.",
+      "EXPENSE_DEADLINE_WAIVED": "When your late expense is granted an exemption from the filing deadline.",
+      "EXPENSE_EXPORTED": "When your expense is booked and sent to Fortnox.",
+      "EXPENSE_RECALLED": "When someone recalls an expense that was waiting for your attest.",
+      "EXPENSE_READY_TO_BOOK": "When an expense is attested and waiting to be booked.",
+      "EXPENSE_EXPORT_REVERTED": "When someone marks an expense as not exported."
+    }
+  }
 }

@@ -32,6 +32,8 @@ import {
 import { claimBlocker } from "@/lib/mileage/claim";
 import { getMileageRates } from "@/lib/mileage/store";
 import { cancelsOut } from "@/lib/domain/matching";
+import { attestersOf, deliverSoon, holdersOf, notify } from "@/lib/server/notify";
+import { expenseNotice } from "@/lib/email/content";
 import { isFutureDate } from "@/lib/domain/date";
 import type { ExpenseStatus } from "@/lib/generated/prisma/client";
 
@@ -117,7 +119,7 @@ export async function POST(
       // Only whether one exists, since submitting asks nothing else of it.
       receipts: { select: { id: true }, take: 1 },
       submitter: {
-        select: { roles: true, bankClearingNumber: true, bankAccountNumber: true },
+        select: { name: true, roles: true, bankClearingNumber: true, bankAccountNumber: true },
       },
     },
   });
@@ -148,6 +150,26 @@ export async function POST(
       allocationResultUnit: resultUnitNameForCode(a.costCenter.code, prefixes),
     });
 
+  // The mail about this utlägg, as of the action being taken. Every branch
+  // below that tells anybody anything starts from this. See lib/server/notify.ts.
+  const about = (
+    key: Parameters<typeof expenseNotice>[0],
+    values: Record<string, string | number> = {},
+    reference = expense.reference,
+  ) =>
+    expenseNotice(
+      key,
+      { ...expense, reference },
+      { actor: actor.name, submitter: expense.submitter.name, ...values },
+      { author: actor.name, text: comment || null },
+    );
+  // Whoever is asked to attest it: the same people its SUBMITTED mail went to.
+  const attesters = () =>
+    attestersOf(
+      expense.allocations.map((a) => ({ costCenterCode: a.costCenter.code })),
+      expense.submitterId,
+    );
+
   // ── Approve: partial per-cost-centre approval ─────────────────────────────
   if (action === "approve") {
     if (expense.status !== "PENDING_APPROVAL") {
@@ -164,6 +186,7 @@ export async function POST(
     }
 
     const now = new Date();
+    const bookkeepers = await holdersOf("BOOKKEEPING");
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Stamp each of the actor's pending allocations as approved. Still
@@ -196,12 +219,30 @@ export async function POST(
               data: { status: "APPROVED" },
             }),
           );
+          await notify(tx, "EXPENSE_APPROVED", [expense.submitterId], about("approved"), {
+            exclude: [actorId],
+          });
+          await notify(tx, "EXPENSE_READY_TO_BOOK", bookkeepers, about("readyToBook"), {
+            exclude: [actorId, expense.submitterId],
+          });
           return "APPROVED" as const;
         }
+        // Not the last signature, so only the partial news, and only to
+        // whoever asked for it.
+        await notify(
+          tx,
+          "EXPENSE_COST_CENTER_APPROVED",
+          [expense.submitterId],
+          about("costCenterApproved", {
+            costCenter: mine.map((a) => `${a.costCenter.code} – ${a.costCenter.name}`).join(", "),
+          }),
+          { exclude: [actorId] },
+        );
         return "PENDING_APPROVAL" as const;
       }),
     );
     if (result instanceof NextResponse) return result;
+    deliverSoon();
     return NextResponse.json({ id, status: result });
   }
 
@@ -253,9 +294,13 @@ export async function POST(
             comment: comment || null,
           },
         });
+        await notify(tx, "EXPENSE_ATTEST_WITHDRAWN", [expense.submitterId], about("attestWithdrawn"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (withdrawn instanceof NextResponse) return withdrawn;
+    deliverSoon();
 
     return NextResponse.json({ id, status: "PENDING_APPROVAL" });
   }
@@ -285,6 +330,7 @@ export async function POST(
           });
     }
 
+    const askedToAttest = await attesters();
     const recalled = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Every signature on it, not only the ones the actor could see or give.
@@ -319,9 +365,13 @@ export async function POST(
             comment: comment || null,
           },
         });
+        await notify(tx, "EXPENSE_RECALLED", askedToAttest, about("recalled"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (recalled instanceof NextResponse) return recalled;
+    deliverSoon();
 
     return NextResponse.json({ id, status: "DRAFT" });
   }
@@ -360,9 +410,13 @@ export async function POST(
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
         });
+        await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (reopened instanceof NextResponse) return reopened;
+    deliverSoon();
     return NextResponse.json({ id, status: "CHANGES_REQUESTED" });
   }
 
@@ -385,6 +439,7 @@ export async function POST(
     if (!comment) {
       return fail(422, "expense.commentRequiredUnexport");
     }
+    const bookkeepers = await holdersOf("BOOKKEEPING");
     const reverted = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Still exported when the write lands. Two people undoing the same
@@ -422,9 +477,13 @@ export async function POST(
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "EXPORT_REVERTED", actorId, comment },
         });
+        await notify(tx, "EXPENSE_EXPORT_REVERTED", bookkeepers, about("exportReverted"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (reverted instanceof NextResponse) return reverted;
+    deliverSoon();
     return NextResponse.json({ id, status: "BOOKED" });
   }
 
@@ -486,9 +545,17 @@ export async function POST(
               comment: comment || null,
             },
           });
+          await notify(
+            tx,
+            "EXPENSE_DEADLINE_WAIVER_REVOKED",
+            [expense.submitterId],
+            about("waiverRevoked", { days: REIMBURSEMENT_DEADLINE_DAYS }),
+            { exclude: [actorId] },
+          );
         }),
       );
       if (revoked instanceof NextResponse) return revoked;
+      deliverSoon();
       return NextResponse.json({ id, deadlineWaived: false });
     }
 
@@ -531,9 +598,13 @@ export async function POST(
             comment,
           },
         });
+        await notify(tx, "EXPENSE_DEADLINE_WAIVED", [expense.submitterId], about("waived"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (waived instanceof NextResponse) return waived;
+    deliverSoon();
     return NextResponse.json({ id, deadlineWaived: true });
   }
 
@@ -654,6 +725,9 @@ export async function POST(
     return fail(422, "expense.commentRequired");
   }
 
+  // Asked before the transaction: it reads the authority tables, which the
+  // transition does not touch.
+  const askedToAttest = action === "submit" ? await attesters() : [];
   const written = await commit(() =>
     withReferenceRetry(() =>
       prisma.$transaction(async (tx) => {
@@ -689,11 +763,27 @@ export async function POST(
             comment: comment || null,
           },
         });
+        if (action === "submit") {
+          // With the number it was just given, which is what the attester
+          // will find it under.
+          await notify(
+            tx,
+            "EXPENSE_SUBMITTED",
+            askedToAttest,
+            about("submitted", {}, reference ?? expense.reference),
+            { exclude: [actorId, expense.submitterId] },
+          );
+        } else {
+          await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
+            exclude: [actorId],
+          });
+        }
         return reference ?? expense.reference;
       }),
     ),
   );
   if (written instanceof NextResponse) return written;
+  deliverSoon();
 
   return NextResponse.json({ id, reference: written, status: rule.to });
 }

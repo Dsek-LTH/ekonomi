@@ -3,7 +3,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObject } from "@/lib/server/storage";
-import { isEditable, isQuietDraftEdit, isRecallable } from "@/lib/domain/status";
+import {
+  REIMBURSEMENT_DEADLINE_DAYS,
+  isEditable,
+  isQuietDraftEdit,
+  isRecallable,
+} from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
 import { isMatchable } from "@/lib/domain/matching";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -11,6 +16,8 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchExpense } from "@/lib/api/schemas/expense";
 import { valueForStorage } from "@/lib/mileage/store";
+import { deliverSoon, notify } from "@/lib/server/notify";
+import { expenseNotice } from "@/lib/email/content";
 import {
   canEditExpense,
   denyExpenseDelete,
@@ -327,6 +334,19 @@ export async function PATCH(
             actorId: g.actor.id,
           },
         });
+        // Only reaches anyone when somebody else made the edit. The submitter
+        // changing their own date has the form telling them already.
+        await notify(
+          tx,
+          "EXPENSE_DEADLINE_WAIVER_REVOKED",
+          [expense.submitterId],
+          expenseNotice(
+            "waiverRevoked",
+            { id: expense.id, reference: expense.reference, title, grossAmount },
+            { days: REIMBURSEMENT_DEADLINE_DAYS },
+          ),
+          { exclude: [g.actor.id] },
+        );
       }
 
       // Its own event, not a line in the diff: the timeline already has a word
@@ -386,6 +406,7 @@ export async function PATCH(
     return fail(500, "database");
   }
 
+  if (dropWaiver) deliverSoon();
   return NextResponse.json({ id, changed: changedFields.length }, { status: 200 });
 }
 

@@ -28,7 +28,7 @@ export default async function AdminPage() {
   const tNav = await getTranslations("nav");
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       {/* Two up from sm and three from lg. Not `sm:grid-cols-3`: with the nav
           rail and a settings sidebar beside it, three cards in this column are
           narrower than the sentence each one carries. */}

@@ -136,7 +136,7 @@ export default function StockStatsClient({
   ];
 
   return (
-    <PageShell title={t("stats.title")} description={t("stats.description")} width="wide">
+    <PageShell title={t("stats.title")} width="wide">
       <div className="space-y-5">
         {/* One row above the charts, which is where a filter belongs: what is
             being asked is read before what came back. */}

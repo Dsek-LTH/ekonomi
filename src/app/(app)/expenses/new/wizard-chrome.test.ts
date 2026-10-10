@@ -15,14 +15,12 @@ describe("wizardChrome", () => {
   it("names a new claim and sends back to the list", () => {
     const c = wizardChrome({ existing: undefined, t });
     expect(c.title).toBe("newTitle");
-    expect(c.description).toBe("newDescription");
     expect(c.back).toBe("/expenses");
   });
 
   it("names an edited claim by its reference, and goes back to it", () => {
     const c = wizardChrome({ existing: claim(), t });
     expect(c.title).toBe("editTitle:U-2026-0042");
-    expect(c.description).toBe("editDescription");
     expect(c.back).toBe("/expenses/exp1");
   });
 

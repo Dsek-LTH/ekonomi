@@ -98,7 +98,6 @@ export function RolesClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
       // Two views of the same authority, so the header's own switch, the
       // way Mina / Alla is elsewhere.
       collections={{

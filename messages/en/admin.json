@@ -1,7 +1,6 @@
 {
   "index": {
     "title": "Settings",
-    "description": "The connections, tables and permissions the rest of the app rests on.",
     "section": {
       "fortnox": "The Fortnox connection, and syncing the chart of accounts and cost centres.",
       "costCenters": "The cost centres expenses and budgets can be split across.",
@@ -16,7 +15,6 @@
   },
   "users": {
     "title": "Users",
-    "description": "Roles govern access and approval authority. They come from Authentik.",
     "searchPlaceholder": "Search all members…",
     "searching": "Searching…",
     "noMatch": "No member matches.",
@@ -49,7 +47,6 @@
   },
   "cards": {
     "title": "Guild cards",
-    "description": "Assign cards to members. The holder sees their unaccounted card purchases.",
     "last4": "Last four",
     "last4Aria": "The card's last four digits",
     "last4Required": "Enter the card's last four digits.",
@@ -83,7 +80,6 @@
   },
   "costCenters": {
     "title": "Cost centers",
-    "description": "The ones with the Fortnox mark are synced under Fortnox and changed there, the rest are local and only exist here.",
     "tab": {
       "active": "Active",
       "inactive": "Inactive",
@@ -134,7 +130,6 @@
   },
   "resultUnits": {
     "title": "Result units",
-    "description": "The prefix decides which cost centers belong to the result unit, and its owners approve their expenses.",
     "searchPlaceholder": "Search result units…",
     "emptyNone": "No result units yet.",
     "emptyNoMatch": "No matches.",
@@ -214,7 +209,6 @@
     "editInRoles": "Change under Roles"
   },
   "fortnox": {
-    "description": "Connection, bookkeeping accounts and sync.",
     "connection": "Connection",
     "connectionSubtitle": "The guild's link to Fortnox. Everything else here needs it connected.",
     "unconfigured": "The server is missing the Fortnox client id, secret or redirect URI. Add them to the environment variables and restart.",
@@ -273,7 +267,6 @@
   },
   "income": {
     "title": "Income",
-    "description": "Which committee and which account a sold product belongs to. This is the routing table the income service reads.",
     "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save",
@@ -340,7 +333,6 @@
   },
   "roles": {
     "title": "Roles & permissions",
-    "description": "Which Authentik group grants which role here, and what each role may do.",
     "addGroup": "Link group",
     "addGroupLabel": "Authentik group name",
     "noGroups": "No groups yet.",
@@ -403,7 +395,6 @@
   },
   "stock": {
     "title": "Stock",
-    "description": "Settings for the stock. How long a product keeps is set on the product, not here.",
     "save": "Save",
     "saveFailed": "Could not save the setting",
     "expiry": {

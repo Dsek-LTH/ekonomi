@@ -74,7 +74,6 @@ export function CompareClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
       back="/budget"
       width="content"
     >

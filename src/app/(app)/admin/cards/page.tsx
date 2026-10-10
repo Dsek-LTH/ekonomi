@@ -13,7 +13,7 @@ export default async function AdminCardsPage() {
   const [cards, users] = await Promise.all([getCards(), getUsers()]);
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <CardsClient cards={cards} users={users} />
     </PageShell>
   );

@@ -177,7 +177,6 @@
   },
   "review": {
     "viewLabel": "Visning",
-    "description": "Gå igenom dagarna en och en. Intäktsräkningen står bredvid, verifikationen är förifylld.",
     "lines": "Sålda varor",
     "noCostCenter": "Kostnadsställe saknas",
     "edited": "Ändrad",
@@ -202,7 +201,6 @@
   },
   "booked": {
     "title": "Bokfört och exporterat",
-    "description": "Sektionens register över vad som tagits in. Härifrån exporteras dagarna till Fortnox.",
     "searchPlaceholder": "Sök verksamhet, kostnadsställe eller verifikation…",
     "empty": "Inget är bokfört än."
   }

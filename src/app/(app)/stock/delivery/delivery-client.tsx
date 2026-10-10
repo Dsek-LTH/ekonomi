@@ -354,7 +354,6 @@ export default function DeliveryClient({
   return (
     <PageShell
       title={t("delivery.title")}
-      description={t("delivery.description")}
       back="/stock"
       width="wide"
     >

@@ -45,7 +45,6 @@ function SkeletonText({
 export function SkeletonPage({
   width = "wide",
   back = false,
-  description = true,
   action = false,
   titleWidth = "w-56",
   children,
@@ -53,7 +52,6 @@ export function SkeletonPage({
   width?: PageWidth;
   /** Nested pages carry a "← parent" link above the title. */
   back?: boolean;
-  description?: boolean;
   /** Pages whose header holds a primary button. */
   action?: boolean;
   titleWidth?: string;
@@ -69,7 +67,7 @@ export function SkeletonPage({
     >
       <div className="mb-6">
         {back && <Skeleton className="mb-2 h-4 w-28" />}
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             {/* In the settings overlay the title is drawn in its top bar, so
                 its placeholder is too. See components/shell/settings-title. */}
@@ -77,7 +75,6 @@ export function SkeletonPage({
               page={<Skeleton className={cn("h-8", titleWidth)} />}
               bar={<Skeleton className="h-5 w-40" />}
             />
-            {description && <Skeleton className="mt-2.5 h-4 w-72 max-w-full" />}
           </div>
           {action && <Skeleton className="h-9 w-36 rounded-control" />}
         </div>

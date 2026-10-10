@@ -21,7 +21,7 @@ export default async function CounterpartiesPage() {
   const t = await getTranslations("contracts.counterparties");
 
   return (
-    <PageShell title={t("title")} description={t("description")}>
+    <PageShell title={t("title")}>
       <CounterpartiesClient counterparties={await getCounterpartyRows()} />
     </PageShell>
   );

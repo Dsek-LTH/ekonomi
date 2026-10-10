@@ -1,7 +1,6 @@
 {
   "categories": "Categories",
   "title": "Questions & answers",
-  "description": "What you need to know to buy for the guild, report and attest, following Policy för ekonomi. Search the questions or pick a category.",
   "searchPlaceholder": "Search the questions…",
   "all": "All",
   "matches": "{count, plural, =0 {No matches} =1 {# match} other {# matches}}",

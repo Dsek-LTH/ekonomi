@@ -340,7 +340,7 @@ export default function StockClient({
   ];
 
   return (
-    <PageShell title={t("title")} description={t("description")} width="wide">
+    <PageShell title={t("title")} width="wide">
       <Card>
         <CardHeader
           title={t("products.onShelf")}
