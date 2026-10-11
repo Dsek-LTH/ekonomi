@@ -21,24 +21,20 @@
 // a rung (see `entryFault`, "purchaseArrivesSealed"), so a spirit has no ladder
 // here and a bottle of vodka is one row exactly like a can of beer.
 //
-// Nothing is confirmed, for the reason the event sheet gives: a sheet with a
-// save button is a sheet that can be half filled in and abandoned, and this one
-// is filled in standing at a pallet. A cell commits when you leave it, and what
-// is on the screen is what is in the log.
-//
-// What makes that possible for deliveries specifically is that a delivery row
-// can be changed after the fact. See api/stock/entries/[id]/route.ts, which
-// exists for exactly the "200 bottles meaning 20" case. So a cell's three
-// answers map onto three requests: a figure where there was none creates the
-// row, a different figure changes it, and an emptied cell removes it. The log
-// keeps the correction either way, as a StockChange.
+// Unlike the event sheet, nothing is booked until Spara is pressed. A pallet is
+// checked against its invoice before it goes into the log, and the figure it is
+// checked by (the total in the footer) is only worth reading once every row is
+// on the sheet. The draft is kept in the browser while it is being filled in
+// (see `Draft`), and a row booked by mistake can still be corrected afterwards
+// from the log: api/stock/entries/[id]/route.ts exists for exactly the "200
+// bottles meaning 20" case, and keeps the correction as a StockChange.
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
@@ -79,6 +75,15 @@ type Draft = {
   /** What is in each row's box, keyed by product id. */
   typed: Record<string, string>;
   occurredAt: string;
+  /**
+   * What the delivery was bought for, "Höstsittningen". Free text, written onto
+   * every row as its note, and shown beside it in the log.
+   *
+   * Not a link to a StockEvent, on purpose. An entry's `eventId` puts it into
+   * that night's arithmetic, and the route refuses one on a purchase for that
+   * reason (`stock.eventOnNightOnly`). It is also usually bought before the
+   * night has been created, so there would be nothing to pick.
+   */
   note: string;
 };
 
@@ -351,34 +356,57 @@ export default function DeliveryClient({
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
 
+  // What is waiting to be booked, and the buttons that book it or throw it
+  // away. Drawn in two places, the summary card from lg and the sheet's footer
+  // below it, and only ever one of them on screen.
+  const saveStatus =
+    pending_rows.length === 0
+      ? t("delivery.nothingToSave")
+      : t("delivery.unsaved", { count: pending_rows.length });
+  const saveButtons = (
+    <div className="flex items-center gap-2">
+      {pending_rows.length > 0 && (
+        <Button variant="secondary" onClick={discard} disabled={saving}>
+          {t("delivery.discard")}
+        </Button>
+      )}
+      <Button
+        onClick={save}
+        disabled={pending_rows.length === 0}
+        loading={saving}
+        className="flex-1"
+      >
+        {t("delivery.save")}
+      </Button>
+    </div>
+  );
+
   return (
     <PageShell
       title={t("delivery.title")}
       back="/stock"
       width="wide"
     >
-      <Card>
-        <CardHeader
-          title={t("delivery.sheet")}
-          subtitle={t("delivery.counts", { count: rows.length })}
-          action={
-            // The figure the sheet exists to be checked against, in the corner
-            // the stock list keeps its own total in.
-            <div className="flex flex-col text-right">
-              <span className="text-xs uppercase tracking-wide text-muted">
-                {t("delivery.total")}
-              </span>
-              <span className="mt-1 flex h-11 items-center justify-end text-lg font-semibold tabular-nums sm:h-9">
-                {formatOreKr2(totalOre)}
-              </span>
-            </div>
-          }
-        />
-
-        {/* What the whole delivery has in common: when it arrived, and what to
-            call it. Above the sheet rather than on every row, because an
-            invoice is one date and one number however many products it lists. */}
-        <div className="grid gap-3 border-b border-border px-inset py-3 sm:grid-cols-2">
+      {/* The sheet, and beside it a summary of the delivery as a whole, the
+          way an order is laid out beside its lines: what it was bought for,
+          when it arrived, what it comes to, and the button that books it.
+          From lg the summary is a column to the right that stays in view while
+          the sheet grows. Below lg it stacks above the sheet with the two
+          fields only, and the total and Spara ride the sheet's sticky footer
+          instead, at the bottom of a phone's screen where the thumb is. */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <Card className="w-full shrink-0 lg:sticky lg:top-0 lg:order-2 lg:w-72">
+        {/* Once for the delivery rather than on every row, because an invoice
+            is one date however many products it lists. */}
+        <div className="grid gap-3 px-inset py-4 sm:grid-cols-2 lg:grid-cols-1">
+          <Field label={t("delivery.forLabel")} requirement="optional">
+            <Input
+              size="sm"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={t("delivery.forPlaceholder")}
+            />
+          </Field>
           <Field label={t("field.date")} requirement="required">
             <DateInput
               size="sm"
@@ -386,31 +414,36 @@ export default function DeliveryClient({
               onChange={(e) => setOccurredAt(e.target.value)}
             />
           </Field>
-          <Field label={t("field.note")} hint={t("delivery.noteHint")} requirement="optional">
-            <Input
-              size="sm"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t("delivery.notePlaceholder")}
-            />
-          </Field>
         </div>
+        <div className="hidden space-y-3 border-t border-border px-inset py-4 lg:block">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted">{t("delivery.total")}</div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums">{formatOreKr2(totalOre)}</div>
+            <div className="mt-1 text-sm text-muted">{saveStatus}</div>
+          </div>
+          {saveButtons}
+        </div>
+      </Card>
 
+      <Card className="min-w-0 flex-1 lg:order-1">
         {/* No CardBody: the sheet is ruled to the card's own edge, the way the
             event sheet and the voucher editor are. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
-              <th className={cn(headerCell, "w-[46%] text-left")}>
+              <th className={cn(headerCell, "w-[40%] text-left")}>
                 {t("delivery.col.product")}
               </th>
-              {/* A column of its own, because it is a figure this sheet is read
-                  against an invoice by, and a figure hiding in a sentence
-                  beside a name cannot be scanned down. */}
-              <th className={cn(headerCell, "w-[22%] text-right")}>
+              {/* Columns of their own, because they are the figures this sheet
+                  is read against an invoice by, line by line, and a figure
+                  hiding in a sentence beside a name cannot be scanned down. */}
+              <th className={cn(headerCell, "w-[19%] text-right")}>
                 {t("delivery.col.price")}
               </th>
-              <th className={cn(headerCell, "w-[32%]")}>{t("delivery.col.in")}</th>
+              <th className={cn(headerCell, "w-[17%]")}>{t("delivery.col.in")}</th>
+              <th className={cn(headerCell, "w-[24%] text-right")}>
+                {t("delivery.col.sum")}
+              </th>
             </tr>
           </thead>
 
@@ -418,11 +451,12 @@ export default function DeliveryClient({
             {rows.map((id) => {
               const product = byId.get(id);
               if (!product) return null;
+              const qty = number(id);
               return (
                 <tr key={id} className="divide-x divide-border">
                   <td className="group px-2 py-1.5 align-middle">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="min-w-0">
+                      <span className="min-w-0 truncate">
                         <Link href={`/stock/${id}`} className="font-medium hover:underline">
                           {product.name}
                         </Link>
@@ -449,17 +483,6 @@ export default function DeliveryClient({
                       focusable, so it is not a stop on the way to the quantity
                       beside it.
 
-                      No ground of its own either. This column used to carry the
-                      header's fill to say "read this", which made it read as a
-                      piece of the header band running the length of the sheet.
-                      The distinction that fill was drawing is already on the
-                      screen without it: the quantity beside it is a box you can
-                      type in, and this is small muted text that plainly is not
-                      one. Locked is the shape of the two cells, not a colour,
-                      and a price column with nothing behind it is also the one
-                      that scans best down a column of figures, which is what
-                      this sheet is read against an invoice for.
-
                       A product nobody has priced says so, in the warning
                       colour: it is about to be delivered onto the shelf at a
                       value of nothing. */}
@@ -474,6 +497,14 @@ export default function DeliveryClient({
                       : formatOreKr2(product.costPriceOre)}
                   </td>
                   <td className="p-0 align-middle">{cellFor(product)}</td>
+                  {/* The line as the invoice prints it: price times count. Blank
+                      until there is a count, so an unfilled row does not read as
+                      a line worth nothing. */}
+                  <td className="px-2 py-1.5 text-right text-sm tabular-nums">
+                    {qty > 0 && product.costPriceOre != null
+                      ? formatOreKr2(product.costPriceOre * qty)
+                      : ""}
+                  </td>
                 </tr>
               );
             })}
@@ -484,7 +515,7 @@ export default function DeliveryClient({
               its place would be a screen with no way in. */}
           <tbody className="border-t border-border">
             <tr className="divide-x divide-border">
-              <td className="p-0 align-middle">
+              <td colSpan={4} className="p-0 align-middle">
                 {/* The two ways of putting a product on the sheet, side by
                     side, because they are one errand. The scanner is the
                     quicker of them and does double duty: a code already on the
@@ -515,39 +546,28 @@ export default function DeliveryClient({
                   </IconButton>
                 </div>
               </td>
-              {/* Empty, and plain: a product that is not on the sheet yet has
-                  no price to show. It carried the price column's fill while
-                  that column had one, and without it a lone grey block is all
-                  that would be left of it. */}
-              <td />
-              <td />
             </tr>
           </tbody>
         </table>
 
-        {/* The sheet is nothing until this is pressed, so the button says how
-            much it is holding. A count is the one check that catches a row
-            typed into the wrong line before it becomes a movement in the log.
-            Sticky on a phone: a pallet runs past the bottom of the screen, and
-            a save button you have to scroll to find is one people forget. */}
-        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3">
-          <span className="text-sm text-muted">
-            {pending_rows.length === 0
-              ? t("delivery.nothingToSave")
-              : t("delivery.unsaved", { count: pending_rows.length })}
-          </span>
-          <div className="flex items-center gap-2">
-            {pending_rows.length > 0 && (
-              <Button variant="secondary" onClick={discard} disabled={saving}>
-                {t("delivery.discard")}
-              </Button>
-            )}
-            <Button onClick={save} disabled={pending_rows.length === 0} loading={saving}>
-              {t("delivery.save")}
-            </Button>
+        {/* Below lg, where the summary card is up above the sheet: the total
+            and Spara stay with the rows instead, sticky, because a pallet runs
+            past the bottom of a phone's screen and a save button you have to
+            scroll to find is one people forget. The total is beside the button
+            because it is the figure the pallet is checked against before the
+            button is pressed. */}
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3 lg:hidden">
+          <span className="text-sm text-muted">{saveStatus}</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="flex items-baseline gap-2">
+              <span className="text-xs uppercase tracking-wide text-muted">{t("delivery.total")}</span>
+              <span className="text-lg font-semibold tabular-nums">{formatOreKr2(totalOre)}</span>
+            </span>
+            {saveButtons}
           </div>
         </div>
       </Card>
+      </div>
 
       {/* Said once, under the sheet: an unpriced product is not an error and
           the row books fine, but the shelf gains nothing for it and the total

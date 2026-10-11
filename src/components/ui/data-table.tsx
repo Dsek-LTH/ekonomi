@@ -227,6 +227,7 @@ export function DataTable<T>({
   controls,
   tabs,
   filter,
+  summary,
   action,
   actionPanel,
   searchPlaceholder,
@@ -249,6 +250,20 @@ export function DataTable<T>({
   /** Dropdown filter, OR-ed across the picked values. Several of them narrow
    *  along several dimensions at once; see SelectFilters. */
   filter?: SelectFilters;
+  /**
+   * A figure about the whole list, the sum of one of its columns: the stock
+   * list's "Lagervärde 48 312 kr". At the right end of the tab row, which is
+   * text like it and otherwise empty on that side: which slice you are looking
+   * at on the left, what it is worth on the right. A table without tabs puts
+   * it at the end of the toolbar instead. Not among the toolbar's buttons when
+   * there is a choice: plain text in a row of controls reads as a label that
+   * lost its field.
+   *
+   * A figure, and whatever belongs to that figure (a button that recomputes
+   * it). Never an action on the list: those go in `action`, whose rule is
+   * spelled out below.
+   */
+  summary?: React.ReactNode;
   /**
    * What you can do to this list: "Nytt utlägg", "Importera CSV". At the right
    * end of the toolbar, and the only place in the app a list's own action is
@@ -332,6 +347,9 @@ export function DataTable<T>({
   const totalItems = controls.total;
 
   const hasText = cols.some((c) => c.searchable);
+  // Where `summary` goes: the tab row when there is one, the toolbar otherwise.
+  const hasTabs = !!tabs && tabs.length > 0;
+  const toolbarSummary = !hasTabs && !!summary;
   const hasDate = cols.some((c) => c.dateRange);
 
   // ── The toolbar on a phone ──
@@ -363,18 +381,26 @@ export function DataTable<T>({
           few pixels above, and those two ask different questions: that one
           changes which collection you are looking at, this one narrows the one
           you are in. */}
-      {tabs && tabs.length > 0 && (
-        <div className="border-b border-border px-inset">
-          <FilterTabs
-            options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge }))}
-            value={activeTab?.value ?? ""}
-            onChange={controls.setTab}
-            aria-label={t("tabsLabel")}
-          />
+      {hasTabs && (
+        // `items-end`: the active tab's underline is drawn on this row's bottom
+        // border, so the tabs keep to the bottom whatever height the summary
+        // brings, and the summary centres itself in what is left.
+        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-inset">
+          <div className="min-w-0">
+            <FilterTabs
+              options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge }))}
+              value={activeTab?.value ?? ""}
+              onChange={controls.setTab}
+              aria-label={t("tabsLabel")}
+            />
+          </div>
+          {summary && (
+            <div className="flex items-center gap-2 self-center py-1 text-sm">{summary}</div>
+          )}
         </div>
       )}
 
-      {(hasText || hasDate || filters.length > 0 || action) && (
+      {(hasText || hasDate || filters.length > 0 || toolbarSummary || action) && (
         <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
           {/* `sm:contents`. Below sm this is one row holding the trigger and
               the search; from sm it dissolves and its children take their own
@@ -467,8 +493,19 @@ export function DataTable<T>({
               somebody placed. `[&>*]:` reaches whatever the caller passed (a
               Button, a link, a Menu's wrapper) because a toolbar cannot know
               which of those it was given. */}
+          {/* The list's figure, at the end with the actions: pushed right on a
+              wide screen, a line of its own on a phone. When there are actions
+              too, they follow it and the push is the summary's. */}
+          {toolbarSummary && (
+            <div className="flex min-w-0 items-center gap-2 text-sm sm:ml-auto">{summary}</div>
+          )}
           {action && (
-            <div className="flex items-center gap-2 [&>*]:flex-1 sm:ml-auto sm:[&>*]:flex-none">
+            <div
+              className={cn(
+                "flex items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none",
+                !toolbarSummary && "sm:ml-auto",
+              )}
+            >
               {action}
             </div>
           )}

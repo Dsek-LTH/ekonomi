@@ -6,7 +6,6 @@
   "saveFailed": "Kunde inte registrera rörelsen",
   "litres": "{litres} l",
   "clPerKrona": "{cl} cl/kr",
-  "attention": "{count, plural, =1 {1 produkt behöver ses över} other {# produkter behöver ses över}}",
   "counts": {
     "products": "{count, plural, =1 {1 produkt} other {# produkter}}",
     "rows": "{count, plural, =1 {1 rörelse} other {# rörelser}}"
@@ -161,7 +160,6 @@
     "search": "Sök produkt…",
     "purchase": "Inköp",
     "stocktake": "Inventera",
-    "onShelf": "På hyllan",
     "spoilage": "Kassera"
   },
   "scan": {
@@ -194,17 +192,16 @@
   "delivery": {
     "open": "Registrera leverans",
     "title": "Registrera leverans",
-    "sheet": "Leverans",
-    "counts": "{count, plural, =0 {Ingen produkt ännu} =1 {1 produkt} other {# produkter}}",
-    "total": "Summa",
+    "total": "Totalt",
     "col": {
       "product": "Produkt",
       "price": "Pris/st",
-      "in": "In"
+      "in": "In",
+      "sum": "Summa"
     },
     "unpriced": "utan pris",
-    "noteHint": "Följer med varje rad, till exempel ett fakturanummer.",
-    "notePlaceholder": "Faktura 12345",
+    "forLabel": "Inköpt till",
+    "forPlaceholder": "Till exempel Höstsittningen",
     "addProduct": "Skriv eller välj en produkt…",
     "addSearch": "Sök produkt…",
     "newProduct": "Lägg upp ”{name}”",
@@ -376,7 +373,6 @@
   "asOf": {
     "label": "Per datum",
     "value": "Lagervärde",
-    "notice": "Siffrorna visar lagret som det såg ut den {date}. Rörelser efter det datumet räknas inte med.",
     "today": "Visa i dag"
   },
   "revalue": {
@@ -445,5 +441,9 @@
     "stateSoon": "Om {days} d",
     "stateLater": "Om {days} d",
     "stateChecked": "Kollad {date}"
+  },
+  "tabs": {
+    "all": "Alla",
+    "attention": "Behöver ses över"
   }
 }

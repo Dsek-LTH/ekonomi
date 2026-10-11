@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { useNotify } from "@/components/shell/notifications";
 import { resolveApiError } from "@/lib/ui/api-error";
+import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { useQuery } from "@/components/shell/use-query";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { IconDownload } from "@/components/ui/icons";
@@ -773,51 +774,3 @@ export default function LedgerClient({
   );
 }
 
-/**
- * Sizes an element to the rest of the window below where it starts, from lg.
- *
- * The ledger is read by scrolling a long list of accounts against a panel of
- * parameters and a bar of view options, and when the whole page scrolled, both
- * of those went off the top while the column heads went with them. Sized to
- * the window, the page itself has nothing to scroll and the report's own
- * scrollport is the only thing that moves.
- *
- * Measured rather than written as a calc(): what sits above it (the page
- * header, a sync line that comes and goes) has no fixed height. 24px is kept
- * free at the bottom, the same margin the card keeps on its other sides.
- * Below lg the parameters sit above the report instead of beside it, so the
- * page has to scroll to reach them, and nothing is sized.
- */
-function useFillViewport<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const wide = window.matchMedia("(min-width: 1024px)");
-    const fit = () => {
-      if (!wide.matches) {
-        el.style.height = "";
-        return;
-      }
-      const top = el.getBoundingClientRect().top;
-      // Floored, so a fractional pixel cannot hand the page a scrollbar back.
-      el.style.height = `${Math.max(320, Math.floor(window.innerHeight - top - 24))}px`;
-    };
-    fit();
-    // The header above it can change height (the sync line, a wrapped title),
-    // and that moves where this starts. The page shell's root is what grows
-    // when it does. Setting this element's own height lands on the same value
-    // next time round, so it settles rather than loops.
-    const observer = new ResizeObserver(fit);
-    const shell = el.parentElement?.parentElement;
-    if (shell) observer.observe(shell);
-    window.addEventListener("resize", fit);
-    wide.addEventListener("change", fit);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", fit);
-      wide.removeEventListener("change", fit);
-    };
-  }, []);
-  return ref;
-}

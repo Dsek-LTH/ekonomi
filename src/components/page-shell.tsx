@@ -30,6 +30,7 @@ export function PageShell({
   title,
   subtitle,
   collections,
+  view,
   collectionsHidden = false,
   back,
   width = "wide",
@@ -69,6 +70,19 @@ export function PageShell({
    * once, which is why every page put a different kind of thing in it.
    */
   collections?: Collections;
+  /**
+   * Which moment the page describes, for a page whose every figure moves with
+   * it: the stock list's "per datum", which re-prices the whole shelf and every
+   * row on it as of a past day. Drawn where the collection switch is, because
+   * it answers the same question, "which view of this am I looking at", only
+   * with a day instead of a set of options.
+   *
+   * View state and nothing else. It is not a way back to the `action` slot
+   * that used to live here (see `collections`): a button, a link or a form
+   * that acts on the page does not go in it, however short of room the page
+   * is. A page has a collection switch or a view control, never both.
+   */
+  view?: React.ReactNode;
   /**
    * Keep the collection switch's room but not the switch. For a page whose
    * switch only applies some of the time (the ledger's Tabell/Diagram, which a
@@ -110,10 +124,12 @@ export function PageShell({
                 components/shell/settings-title.tsx. */}
             <PageTitle>{title}</PageTitle>
           </div>
-          {collections && (
+          {collections ? (
             <div className={cn(collectionsHidden && "invisible")} inert={collectionsHidden}>
               <CollectionSwitch {...collections} />
             </div>
+          ) : (
+            view
           )}
         </div>
         {subtitle && <p className="mt-1 text-lg font-medium tracking-tight">{subtitle}</p>}

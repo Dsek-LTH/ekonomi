@@ -100,6 +100,7 @@ export function ClientDataTable<T>({
   controls,
   tabs,
   filter,
+  summary,
   action,
   actionPanel,
   searchPlaceholder,
@@ -116,6 +117,8 @@ export function ClientDataTable<T>({
   controls: ClientControls;
   tabs?: ClientTabFilter<T>;
   filter?: ClientSelectFilters<T>;
+  /** A figure about the whole list, see DataTable's own `summary`. */
+  summary?: React.ReactNode;
   /** What you can do to this list, see DataTable's own `action`. */
   action?: React.ReactNode;
   /** What `action` opened in place, see DataTable's own `actionPanel`. */
@@ -173,6 +176,7 @@ export function ClientDataTable<T>({
       controls={{ ...controls, server: true, total: data.length }}
       tabs={plainTabs}
       filter={plainFilter}
+      summary={summary}
       action={action}
       actionPanel={actionPanel}
       searchPlaceholder={searchPlaceholder}

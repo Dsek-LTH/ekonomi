@@ -30,10 +30,18 @@ const MIN_THUMB = 28;
 
 export function OverlayScroll({
   className,
+  frameClassName,
   children,
 }: {
   /** The box itself, its height cap above all: `max-h-[70vh]`. */
   className?: string;
+  /**
+   * The frame around the box, which carries the floating thumb. Only for a box
+   * that takes its height from a flex column rather than from a cap: the frame
+   * is the flex item, so it is the frame that has to grow and shrink. The
+   * budget's cost-centre list does this from lg.
+   */
+  frameClassName?: string;
   children: React.ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -152,7 +160,7 @@ export function OverlayScroll({
   return (
     // `group` so the thumb can firm up when the pointer is anywhere in the
     // panel, which is the moment someone is about to reach for it.
-    <div className="group relative">
+    <div className={cn("group relative", frameClassName)}>
       {/* `position`, not `measure`: scrolling moves the thumb, it does not
           change how long it is. What does change its length, the box or its
           contents resizing, the observer above is already watching for. */}

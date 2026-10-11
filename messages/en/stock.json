@@ -6,7 +6,6 @@
   "saveFailed": "Could not record the movement",
   "litres": "{litres} l",
   "clPerKrona": "{cl} cl/kr",
-  "attention": "{count, plural, =1 {1 product needs a look} other {# products need a look}}",
   "counts": {
     "products": "{count, plural, =1 {1 product} other {# products}}",
     "rows": "{count, plural, =1 {1 movement} other {# movements}}"
@@ -161,7 +160,6 @@
     "search": "Search products…",
     "purchase": "Purchase",
     "stocktake": "Stocktake",
-    "onShelf": "On the shelf",
     "spoilage": "Write off"
   },
   "scan": {
@@ -194,17 +192,16 @@
   "delivery": {
     "open": "Record a delivery",
     "title": "Record a delivery",
-    "sheet": "Delivery",
-    "counts": "{count, plural, =0 {No products yet} =1 {1 product} other {# products}}",
     "total": "Total",
     "col": {
       "product": "Product",
       "price": "Unit price",
-      "in": "In"
+      "in": "In",
+      "sum": "Amount"
     },
     "unpriced": "no price",
-    "noteHint": "Goes on every row. An invoice number, say.",
-    "notePlaceholder": "Invoice 12345",
+    "forLabel": "Bought for",
+    "forPlaceholder": "The autumn sittning, say",
     "addProduct": "Type or pick a product…",
     "addSearch": "Search products…",
     "newProduct": "Add “{name}”",
@@ -376,7 +373,6 @@
   "asOf": {
     "label": "As of",
     "value": "Stock value",
-    "notice": "The figures show the stock as it stood on {date}. Movements after that date are left out.",
     "today": "Show today"
   },
   "revalue": {
@@ -445,5 +441,9 @@
     "stateSoon": "In {days} d",
     "stateLater": "In {days} d",
     "stateChecked": "Checked {date}"
+  },
+  "tabs": {
+    "all": "All",
+    "attention": "Need a look"
   }
 }

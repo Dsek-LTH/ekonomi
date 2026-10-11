@@ -18,7 +18,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { DateInput } from "@/components/ui/field";
@@ -27,7 +27,6 @@ import { IconButton } from "@/components/ui/icon-button";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
-import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto } from "@/lib/data/stock";
@@ -119,7 +118,11 @@ export default function StockClient({
   // Moving average cost across the whole shelf, summed from the rows the list
   // is drawn from, so a total and its parts cannot disagree.
   const totalValueOre = levels.reduce((sum, l) => sum + l.onHand.valueOre, 0);
-  const needsAttention = levels.filter((l) => l.impossible).length;
+  // A product needs a look when its log does not add up, or when something on
+  // the shelf may be past its best: the two things the flags column says. The
+  // "Behöver ses över" tab is these rows.
+  const needsLook = (p: StockLevelDto) => p.impossible || checks[p.id] !== undefined;
+  const needsAttention = levels.filter(needsLook).length;
 
   // Every tag anything on the shelf carries. The picker in the product dialog
   // offers them, and the filter below narrows by them.
@@ -340,68 +343,82 @@ export default function StockClient({
   ];
 
   return (
-    <PageShell title={t("title")} width="wide">
+    <PageShell
+      title={t("title")}
+      width="wide"
+      // The day the whole page is true on, in the header beside the title:
+      // every row and the stock value move with it, so it is which view of
+      // the shelf this is rather than a filter on some of it. The reset sits
+      // beside it, because someone who has gone back to September needs an
+      // obvious way back to today. See PageShell's `view`.
+      view={
+        <div className="flex items-center gap-2">
+          <label htmlFor="stock-as-of" className="shrink-0 text-sm text-muted">
+            {t("asOf.label")}
+          </label>
+          <div className="w-40">
+            <DateInput
+              id="stock-as-of"
+              size="sm"
+              value={asOf ?? today}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+          {asOf && (
+            <button
+              type="button"
+              onClick={() => setDate("")}
+              className="shrink-0 text-sm font-medium text-accent underline"
+            >
+              {t("asOf.today")}
+            </button>
+          )}
+        </div>
+      }
+    >
       <Card>
-        <CardHeader
-          title={t("products.onShelf")}
-          subtitle={t("counts.products", { count: levels.length })}
-          action={
-            // The figure the page exists to produce, given its own corner
-            // rather than a clause at the end of a subtitle, and the date it
-            // is true on standing next to it, because a stock value with no day
-            // attached is only meaningful while you are looking at it.
-            // A caption over a body of the same height in both, so the two
-            // labels sit on one line and the figure sits level with the field
-            // beside it. The height is the sm control's, from CONTROL_SIZES,
-            // 44px on a phone and 36 from sm up, stated in both bands here so
-            // the pair cannot drift apart.
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col">
-                <label
-                  htmlFor="stock-as-of"
-                  className="text-xs uppercase tracking-wide text-muted"
-                >
-                  {t("asOf.label")}
-                </label>
-                <div className="mt-1 w-36">
-                  <DateInput
-                    id="stock-as-of"
-                    size="sm"
-                    value={asOf ?? today}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col text-right">
-                <span className="text-xs uppercase tracking-wide text-muted">
-                  {t("asOf.value")}
-                </span>
-                <div className="mt-1 flex h-11 items-center justify-end gap-2 sm:h-9">
-                  <span className="text-lg font-semibold tabular-nums">{formatOreKr(totalValueOre)}</span>
-                  {/* Beside the figure it repairs, which is the only place it
-                      means anything. It cannot re-price the shelf: every row
-                      carries the cost it was booked at, so this can only settle
-                      what the rules already imply. See the route. */}
-                  {canManage && (
-                    <IconButton
-                      label={t("revalue.action")}
-                      title={t("revalue.action")}
-                      loading={pending === "revalue"}
-                      onClick={revalue}
-                    >
-                      <IconSync className="size-4" />
-                    </IconButton>
-                  )}
-                </div>
-              </div>
-            </div>
-          }
-        />
         <ClientDataTable
           columns={columns}
           rows={levels}
           controls={controls}
+          // The work queue beside the whole list, the way Attest splits
+          // "Väntar" from "Alla". The count is only drawn when there is
+          // something in it, so a shelf in order shows a plain tab.
+          tabs={[
+            { value: "ALL", label: t("tabs.all") },
+            {
+              value: "ATTENTION",
+              label: t("tabs.attention"),
+              badge: needsAttention > 0 ? needsAttention : undefined,
+              predicate: needsLook,
+            },
+          ]}
           filter={filters}
+          // The sum of the Värde column, at the right of the tab row: the
+          // figure this page is opened for, kept beside the rows it is the
+          // total of rather than on a card of its own. On a
+          // past day it is that day's value, like every row. What it is made
+          // of and how it has moved is the statistics page's job.
+          summary={
+            <>
+              <span className="text-muted">{t("asOf.value")}</span>
+              <span className="font-semibold tabular-nums">{formatOreKr(totalValueOre)}</span>
+              {/* Beside the figure it repairs, which is the only place it
+                  means anything. It cannot re-price the shelf: every row
+                  carries the cost it was booked at, so this can only settle
+                  what the rules already imply. See the route. */}
+              {canManage && (
+                <IconButton
+                  label={t("revalue.action")}
+                  title={t("revalue.action")}
+                  loading={pending === "revalue"}
+                  onClick={revalue}
+                >
+                  <IconSync className="size-4" />
+                </IconButton>
+              )}
+            </>
+          }
           rowKey={(p) => p.id}
           // The row opens the product. Everything you can do to one lives
           // there, so this list carries no buttons of its own beyond adding.
@@ -439,26 +456,6 @@ export default function StockClient({
           empty={t("empty.description")}
         />
       </Card>
-
-      {/* Said once, plainly. Every figure on the page is a different number
-          from the one it shows by default, and nothing else about the layout
-          gives that away. */}
-      {asOf && (
-        <Notice tone="info">
-          {t("asOf.notice", { date: asOf })}{" "}
-          <button
-            type="button"
-            onClick={() => setDate("")}
-            className="font-medium underline"
-          >
-            {t("asOf.today")}
-          </button>
-        </Notice>
-      )}
-
-      {needsAttention > 0 && (
-        <p className="text-sm text-warning">{t("attention", { count: needsAttention })}</p>
-      )}
 
       {adding && (
         <ProductDialog product={null} knownTags={tags} onClose={() => setAdding(false)} />

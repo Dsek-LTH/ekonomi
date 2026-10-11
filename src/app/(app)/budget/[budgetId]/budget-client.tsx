@@ -22,7 +22,7 @@ import { Tag } from "@/components/ui/status-pill";
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
-import { useStickyFollow } from "@/lib/ui/use-sticky-follow";
+import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { cn } from "@/lib/ui/utils";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { CHANGES, RAMBUDGET, VARS, adjustmentRows, ccTotals, changeImpactBySheet, resultUnitLabel, resultUnitOf, fmtSigned, groupByResultUnit } from "./budget-helpers";
@@ -80,9 +80,10 @@ export default function BudgetClient({
   // clipboard until the next one replaces it, as a clipboard does.
   const [clip, setClip] = useState<BudgetClip | null>(null);
 
-  // The cost-centre list stands beside the sheet and follows the page as it is
-  // scrolled, and the offset is the hook's, not a `top-*` class.
-  const stickyList = useStickyFollow<HTMLElement>();
+  // From lg the views below are sized to the window, the way the ledger is:
+  // the page itself stops scrolling, and the cost-centre list and the sheet
+  // each scroll on their own. See lib/ui/use-fill-viewport.ts.
+  const fillRef = useFillViewport<HTMLDivElement>();
 
   // The buffered "+ new variable" name (the cost-centre sheet owns its own drafts).
   const [newVar, setNewVar] = useState("");
@@ -426,10 +427,15 @@ export default function BudgetClient({
         )}
       </div>
 
+      {/* One element for both views, so the window-sized box is never swapped
+          out from under the hook that sizes it. `-mb-14` gives back the room
+          the shell keeps under every page; `print:` lets a printout run past
+          the window's edge, the height being an inline style. */}
+      <div ref={fillRef} className="lg:-mb-14 print:h-auto!">
       {selected === RAMBUDGET ? (
         // The whole budget at once, so the whole width: no list of sheets
         // beside it. Picking a row opens that sheet in the detail view.
-        <div>
+        <div className="lg:flex lg:h-full lg:flex-col">
           <Rambudget
             comparison={comparison}
             ccIdOf={(key) => ccByCompareKey.get(key)}
@@ -439,16 +445,16 @@ export default function BudgetClient({
           />
         </div>
       ) : (
-      <div className="flex flex-col gap-4 lg:flex-row">
-        {/* Sticky from lg, where the list is a column beside a sheet rather
-            than a stack above it. A sheet is the long thing on this screen,
-            and the list scrolling away with it made picking the next cost
-            centre a scroll back to the top every time. No `top-*` here: the
-            offset is the hook's (see lib/ui/use-sticky-follow.ts), and
-            `self-start` is what makes it stick at all. */}
+      <div className="flex flex-col gap-4 lg:h-full lg:flex-row">
+        {/* From lg a column of its own beside the sheet, never taller than the
+            window. A sheet is the long thing on this screen, and the list
+            scrolling away with it made picking the next cost centre a scroll
+            back to the top every time. Now neither moves the other: the card
+            fits the column, and only its list of cost centres scrolls, so the
+            search and the "add" row stay where they are. */}
         <SidebarPanel
-          ref={stickyList}
-          className="lg:sticky lg:self-start"
+          className="lg:flex lg:max-h-full lg:flex-col"
+          cardClassName="lg:flex lg:min-h-0 lg:flex-col"
           sheetLabel={t("pickCostCenter")}
           // What the collapsed bar says: whichever sheet this pane is showing.
           // A cost centre brings its result with it, because that is the figure
@@ -520,13 +526,15 @@ export default function BudgetClient({
               them, the same as the income queue and for the same reason: these
               rows are a cost centre's name against its result, in a 16rem
               panel. See components/ui/overlay-scroll.tsx. */}
-          {/* Capped at the same height either way it is standing. A budget runs
-              to scores of cost centres, and left to be as long as it liked the
-              panel was a column of them beside a sheet a fraction of its
-              height. So the list scrolls inside the panel. The scrollbar is
-              the floating one, which is why it costs the rows nothing, and
-              what the sticky above carries is a box that fits the screen. */}
-          <OverlayScroll className="max-h-[58vh]">
+          {/* A budget runs to scores of cost centres, so the list scrolls
+              inside the panel rather than making it as long as it likes. Below
+              lg, where the panel opens as a sheet, it is capped; from lg it
+              takes whatever height the column has left. The scrollbar is the
+              floating one, which is why it costs the rows nothing. */}
+          <OverlayScroll
+            className="max-h-[58vh] lg:min-h-0 lg:flex-1 lg:max-h-none"
+            frameClassName="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+          >
             {groups.map((g) => (
               <div key={g.resultUnit}>
                 <SidebarGroupLabel>{resultUnitLabel(g.resultUnit, tGroup)}</SidebarGroupLabel>
@@ -586,7 +594,11 @@ export default function BudgetClient({
             </div>
           )}
         </SidebarPanel>
-        <div className="min-w-0 flex-1">
+        {/* The sheet's own scrollport from lg, the column the ledger's report
+            sits in. The open cost centre's header scrolls with the sheet.
+            Dragging a row to the edge scrolls this, found as the nearest
+            scroller (lib/ui/auto-scroll.ts). */}
+        <div className="min-w-0 flex-1 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:h-auto print:overflow-visible">
           {selected === VARS ? (
             <VariablesSheet budget={budget} ev={ev} comparison={comparison}
               isAdmin={canEdit} renderCell={renderCell} renderFormula={renderFormula} api={api}
@@ -625,6 +637,7 @@ export default function BudgetClient({
         </div>
       </div>
       )}
+      </div>
     </PageShell>
   );
 }

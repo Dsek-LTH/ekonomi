@@ -46,19 +46,16 @@ const PickedCtx = createContext<(() => void) | null>(null);
 export function SidebarPanel({
   children,
   className,
-  ref,
+  cardClassName,
   at = "lg",
   bar,
   sheetLabel,
 }: {
   children: React.ReactNode;
   className?: string;
-  /**
-   * The panel element itself, for a screen that has to measure or move it,
-   * the budget's list is sticky and walks its own offset as the page scrolls
-   * (see lib/ui/use-sticky-follow.ts).
-   */
-  ref?: React.Ref<HTMLElement>;
+  /** The card inside the panel, for a panel that has to fit a fixed height and
+   *  hand what is left to one of its children (the budget's list, from lg). */
+  cardClassName?: string;
   /** The breakpoint this screen stands its detail beside the panel at. */
   at?: keyof typeof BANDS;
   /**
@@ -125,11 +122,11 @@ export function SidebarPanel({
   return (
     // Until the breakpoint the master–detail screens stack, so the panel is a
     // full-width list above the detail rather than a 16rem column beside it.
-    <aside ref={ref} className={cn("w-full shrink-0", band.column, className)}>
+    <aside className={cn("w-full shrink-0", band.column, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on
           a master-detail screen, and it used to be the same shape with no
           elevation, which read as the list being a level behind. */}
-      <Card className="overflow-hidden">{children}</Card>
+      <Card className={cn("overflow-hidden", cardClassName)}>{children}</Card>
     </aside>
   );
 }
