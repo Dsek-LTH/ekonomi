@@ -57,12 +57,14 @@ export function useReminderPicks<T>({
     () => ({
       key: "remind",
       header: (
-        <Checkbox
-          checked={choosable.length > 0 && ticked.length === choosable.length}
-          indeterminate={ticked.length > 0 && ticked.length < choosable.length}
-          onChange={() => setPicked(ticked.length === choosable.length ? [] : choosable)}
-          label={t("pickAll")}
-        />
+        <Centred>
+          <Checkbox
+            checked={choosable.length > 0 && ticked.length === choosable.length}
+            indeterminate={ticked.length > 0 && ticked.length < choosable.length}
+            onChange={() => setPicked(ticked.length === choosable.length ? [] : choosable)}
+            label={t("pickAll")}
+          />
+        </Centred>
       ),
       className: "w-10 align-middle",
       hidden: !enabled,
@@ -76,14 +78,16 @@ export function useReminderPicks<T>({
           // the whole row from the title cell. This cell comes before that one,
           // so without it ticking the box opened the row instead. See the
           // compare column in app/(app)/budget/budget-list-client.tsx.
-          <Checkbox
-            className="z-10"
-            checked={ticked.includes(id)}
-            onChange={() =>
-              setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
-            }
-            label={t("pick", { label: rowLabel(row) })}
-          />
+          <Centred>
+            <Checkbox
+              className="z-10"
+              checked={ticked.includes(id)}
+              onChange={() =>
+                setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+              }
+              label={t("pick", { label: rowLabel(row) })}
+            />
+          </Centred>
         ) : null;
       },
     }),
@@ -109,4 +113,15 @@ export function useReminderPicks<T>({
       />
     ) : null,
   };
+}
+
+/**
+ * A box in the middle of its cell, both ways. The checkbox is an inline-flex
+ * label, so on its own it sits on the line's text baseline, with the room
+ * under it a descender would take, and lands visibly above the middle of a
+ * row whose other cells are centred. A block-level flex row is no line of
+ * text, so there is no baseline to sit on.
+ */
+function Centred({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center justify-center">{children}</div>;
 }
