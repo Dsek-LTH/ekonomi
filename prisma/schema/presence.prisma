@@ -1,0 +1,24 @@
+// Who has the booking screen of an utlägg open right now.
+//
+// Advisory, never a lock. Nothing that writes an utlägg reads this table: the
+// book route is guarded by the utlägg's own updatedAt, checked in the write
+// itself. A row here can only ever put a name on a screen, so a row that
+// outlives its user costs a stale name for a few seconds and blocks nobody.
+//
+// A row is "present" while its lastSeenAt is within the TTL. That is decided at
+// read time, against the database's clock, so a crashed tab, a closed lid or a
+// dropped network all clear themselves without anyone deleting anything. See
+// lib/server/presence.ts.
+
+/// One bookkeeper on one utlägg's booking screen. Refreshed by a heartbeat.
+model ExpensePresence {
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId  String
+  user       User     @relation("ExpensePresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  /// Set from Postgres now(), never from the app server's clock.
+  lastSeenAt DateTime
+
+  @@id([expenseId, userId])
+  @@index([lastSeenAt])
+}

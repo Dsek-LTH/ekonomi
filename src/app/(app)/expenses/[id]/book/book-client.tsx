@@ -9,6 +9,8 @@ import { Notice } from "@/components/ui/notice";
 import { IconCheck } from "@/components/ui/icons";
 import { useRole } from "@/components/shell/role-context";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useFormat } from "@/lib/ui/use-format";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { expenseDocuments } from "@/lib/expense/document-url";
@@ -33,6 +35,8 @@ import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
 import { useReturnTo } from "@/components/shell/route-history";
 import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
+import { useBookingPresence } from "./use-booking-presence";
+import { OthersBookingNotice, UpdatedElsewhere } from "./presence-notices";
 
 // The rows are the shared editor's shape. See components/voucher-editor.tsx.
 type Row = VoucherEditorRow;
@@ -131,6 +135,8 @@ export default function BookExpenseClient({
   const tReceipt = useTranslations("receipt");
   const { user } = useRole();
   const { busy: submitting, mutate } = useMutation();
+  const confirm = useConfirm();
+  const { list } = useFormat();
   // The voucher date opens focused and full. See the field below.
   const selectOnce = useSelectOnce();
   // `expense` is still nullable here. The not-found case is narrowed further
@@ -149,6 +155,14 @@ export default function BookExpenseClient({
   // APPROVED → create a voucher; BOOKED → amend it (before export).
   const mode: "create" | "edit" | null =
     expense?.status === "APPROVED" ? "create" : expense?.status === "BOOKED" ? "edit" : null;
+
+  // Who else has this utlägg open, and whether somebody saved it while it was
+  // open here. Only for a screen that can actually book: an empty state has
+  // nothing to collide over. See use-booking-presence.ts.
+  const presence = useBookingPresence(
+    expense && mode && canBookkeep(user.capabilities) ? expense.id : null,
+    expense?.updatedAt ?? null,
+  );
 
   // The voucher text always starts with a fixed, non-editable prefix: the
   // submitter's StiL id for a card purchase, "PU <stilid>" for a reimbursement.
@@ -285,16 +299,52 @@ export default function BookExpenseClient({
   // A payment account that isn't in the chart is a settings problem, not
   // something to book around. See the banner below.
   const paymentAccountKnown = accountExists(paymentAccount);
+  // Not on a version somebody else has already replaced. The server refuses
+  // that too. This is so the button says so first.
   const canSubmit =
-    !blocker && allValidAccounts && allValidCostCenters && paymentAccountKnown && !submitting;
+    !blocker &&
+    allValidAccounts &&
+    allValidCostCenters &&
+    paymentAccountKnown &&
+    !submitting &&
+    !presence.stale;
 
   async function save() {
+    // Somebody else has it open. Not a lock: they may have opened it and gone
+    // for coffee. But whoever saves second will have to start over, so the one
+    // saving first should know that is what they are doing.
+    const { others } = presence;
+    if (others.length > 0) {
+      const ok = await confirm({
+        title: t("presence.confirmTitle"),
+        message: t("presence.confirmMessage", {
+          names: list(others.map((o) => o.name)),
+          count: others.length,
+        }),
+        confirmLabel: mode === "edit" ? t("saveChanges") : t("book"),
+      });
+      if (!ok) return;
+    }
+
+    presence.pause();
     const saved = await mutate(`/api/expenses/${expense!.id}/book`, {
       method: mode === "edit" ? "PATCH" : "POST",
-      body: { date, description: voucherText, lines: voucherLines },
+      // The version this screen was built from. If it is no longer the
+      // utlägg's, the server answers 409 rather than overwriting.
+      body: {
+        expectedUpdatedAt: expense!.updatedAt,
+        date,
+        description: voucherText,
+        lines: voucherLines,
+      },
       error: t("saveFailed"),
     });
-    if (!saved) return;
+    if (!saved) {
+      // Possibly a 409 because somebody got there first. Asking at once turns
+      // that toast into the reload dialog instead of leaving it at a toast.
+      presence.resume();
+      return;
+    }
     // Back out of the form rather than pushing the utlägg in front of it:
     // the utlägg is the entry we came from, and pushing it made the first Back
     // press land in the booking form for an already-booked utlägg. `returnTo`
@@ -341,6 +391,11 @@ export default function BookExpenseClient({
 
       <div className="grid gap-6">
         <div className="min-w-0 space-y-4">
+          {presence.stale ? (
+            <UpdatedElsewhere by={presence.stale.by} />
+          ) : (
+            <OthersBookingNotice others={presence.others} />
+          )}
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
           <Field label={t("voucherDate")} requirement="required">

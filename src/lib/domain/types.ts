@@ -78,6 +78,9 @@ export type IncomeReportStatus = Schema.IncomeReportStatus;
 
 export type ExpenseStatus = Schema.ExpenseStatus;
 
+/** How far an export to Fortnox has got. See lib/domain/export-claim.ts. */
+export type ExportClaimState = Schema.ExportClaimState;
+
 export interface User {
   id: string;
   name: string;
@@ -312,6 +315,12 @@ export interface Expense {
   verification?: Verification; // present once booked
   revisions: RevisionEntry[];
   canReturn?: boolean; // viewer may pull this back from APPROVED (bookkeeping)
+  /**
+   * When the row last changed, ISO with milliseconds. The booking screen sends
+   * it back as the version it was looking at, and compares it against the
+   * heartbeat's to notice that somebody else saved in the meantime.
+   */
+  updatedAt: string;
   /**
    * The dispens that let this late utlägg past the filing deadline, if one was
    * given. Absent on every utlägg that never needed one, which is nearly all of

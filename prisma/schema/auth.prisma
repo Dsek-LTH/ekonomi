@@ -192,6 +192,8 @@ model User {
   outboundEmails       OutboundEmail[]          @relation("EmailRecipient")
   sentTestEmails       OutboundEmail[]          @relation("EmailSender")
   notificationPrefs    NotificationPreference[]
+  expensePresence      ExpensePresence[]        @relation("ExpensePresenceUser")
+  exportClaims         Expense[]                @relation("ExpenseExportClaim")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

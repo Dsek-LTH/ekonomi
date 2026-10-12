@@ -39,5 +39,17 @@
   "saveChanges": "Spara ändringar",
   "book": "Bokför",
   "unknownAccounts": "Följande konton finns inte i kontoplanen: {list}. Lägg upp dem eller välj andra innan du bokför.",
-  "unknownCostCenters": "Följande kostnadsställen finns inte: {list}. Välj andra innan du bokför."
+  "unknownCostCenters": "Följande kostnadsställen finns inte: {list}. Välj andra innan du bokför.",
+  "presence": {
+    "banner": "{names} har också utlägget öppet för bokföring.",
+    "confirmTitle": "Någon annan bokför samma utlägg",
+    "confirmMessage": "{names} har också utlägget öppet. Sparar du nu måste {count, plural, one {hen} other {de}} ladda om sidan innan {count, plural, one {hen} other {de}} kan spara.",
+    "updatedTitle": "Utlägget har uppdaterats",
+    "updatedMessage": "{name} har ändrat utlägget medan du hade det öppet. Ladda om för att se den senaste versionen.",
+    "updatedMessageSelf": "Utlägget har ändrats i en annan flik. Ladda om för att se den senaste versionen.",
+    "updatedMessageUnknown": "Utlägget har ändrats medan du hade det öppet. Ladda om för att se den senaste versionen.",
+    "staleBanner": "Utlägget har ändrats sedan du öppnade det. Ladda om innan du sparar.",
+    "reload": "Ladda om",
+    "close": "Stäng"
+  }
 }

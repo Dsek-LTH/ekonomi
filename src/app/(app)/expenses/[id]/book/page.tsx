@@ -39,8 +39,13 @@ export default async function BookExpensePage({
     ]),
   ]);
 
+  // Keyed on the utlägg's version. The screen's rows are state seeded from the
+  // props once, so a refresh after somebody else saved would otherwise keep
+  // showing the voucher as it was typed against the old version. A new version
+  // is a new screen. See presence-notices.tsx.
   return (
     <BookExpenseClient
+      key={expense?.updatedAt ?? "missing"}
       expense={expense}
       costCenters={costCenters}
       accounts={accounts}

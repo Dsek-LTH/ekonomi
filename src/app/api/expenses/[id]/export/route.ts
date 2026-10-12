@@ -2,10 +2,27 @@
 // the receipt, store the returned voucher number, and only then flip the expense
 // to EXPORTED. If the Fortnox call fails, nothing is mutated locally. The
 // bookkeeper can retry. The [id] param is the expense id.
+//
+// An utlägg is exported once, never twice: Fortnox has no delete for a
+// voucher. So the first thing a press of Exportera does is take the export lock
+// (lib/server/export-claim.ts), and a second press, from anyone, is refused
+// while it is held. The lock is let go when the export is recorded, or when it
+// is certain no voucher was made. When it is not certain (Fortnox did not
+// answer, or answered with a server error) it stays, marked uncertain, until
+// a bookkeeper has looked in Fortnox and said which.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessBookkeeping } from "@/lib/domain/permissions";
-import { fail, gate } from "@/lib/api/guard";
+import { fail, gate, type Actor } from "@/lib/api/guard";
+import { applied } from "@/lib/api/stale-write";
+import {
+  CLEARED,
+  claimExport,
+  markSent,
+  markUncertain,
+  releaseExport,
+  type ExportClaim,
+} from "@/lib/server/export-claim";
 import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
 import { mergeCoverAndReceipts, PdfMergeError } from "@/lib/server/pdf-merge";
@@ -31,8 +48,35 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   const g = await gate(canAccessBookkeeping, "auth.bookkeeperExport");
   if (!g.ok) return g.res;
-  const user = g.actor;
 
+  // The status check is the lock's, made with the row held, so that it is
+  // still true when the lock is written.
+  const taken = await claimExport(id, g.actor.id);
+  if (!taken.ok) return taken.res;
+  const { claim } = taken;
+
+  // Until the voucher request has gone, every way out is one where Fortnox has
+  // no voucher, so the lock is let go and the bookkeeper can press again. After
+  // it has gone, the export lets go of the lock itself, and only on certainty.
+  const sent = { value: false };
+  try {
+    const res = await exportHolding(id, g.actor, claim, sent);
+    if (!res.ok && !sent.value) await releaseExport(claim);
+    return res;
+  } catch (e) {
+    // Thrown after the request went: the voucher may exist, and nothing here
+    // knows whether it does.
+    await (sent.value ? markUncertain(claim) : releaseExport(claim));
+    throw e;
+  }
+}
+
+async function exportHolding(
+  id: string,
+  user: Actor,
+  claim: ExportClaim,
+  sent: { value: boolean },
+): Promise<NextResponse> {
   const expense = await prisma.expense.findUnique({
     where: { id },
     include: {
@@ -45,11 +89,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     },
   });
   if (!expense) return fail(404, "expense.notFound");
-  if (expense.status !== "BOOKED") {
-    return fail(409, "expense.exportOnlyBooked", {
-      values: { status: { key: `common.status.${expense.status}` } },
-    });
-  }
   const verification = expense.verification;
   if (!verification) return fail(409, "expense.noVoucherToExport");
 
@@ -156,6 +195,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
+  // The point of no return. Said in the row, and committed, before the
+  // request goes: a crash from here on must leave a lock that says a voucher
+  // may exist. A lock that is no longer ours (taken over after this export sat
+  // too long before sending) means somebody else is exporting it, and this
+  // one stops here.
+  if (!(await markSent(claim))) return fail(409, "expense.changedMeanwhile");
+  sent.value = true;
+
   let created;
   try {
     created = await createVoucher(token, {
@@ -165,31 +212,64 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       rows,
     });
   } catch (e) {
-    if (e instanceof FortnoxError) return fail(e.status ?? 502, e.message);
-    return fail(502, "expense.exportFailed");
+    // A refusal Fortnox put a reason to (a 4xx: an account it does not know,
+    // a login that ran out) made no voucher. That is certain, so the lock goes
+    // and the bookkeeper fixes the cause and presses again.
+    if (e instanceof FortnoxError && e.status && e.status >= 400 && e.status < 500) {
+      await releaseExport(claim);
+      return fail(e.status, e.message);
+    }
+    // Anything else (no answer, a dropped connection, a 5xx, an answer we
+    // could not read) may have made one. Kept, and said so.
+    console.error(`[fortnox] ${id}: voucher request ended without a clear answer`, e);
+    await markUncertain(claim);
+    return fail(502, "expense.exportUncertain", { values: { name: user.name } });
   }
 
+  const label = `${created.series}-${created.number}`;
+  try {
+    await recordExport(verification.id, created, async (tx) => {
+      // Still ours, and still BOOKED. It cannot be otherwise: nothing lets go
+      // of a lock in SENT while the request is in flight. But a voucher that
+      // exists and a record that disagrees is the one outcome this route is
+      // built to avoid, so it is checked rather than assumed.
+      applied(
+        await tx.expense.updateMany({
+          where: { id: expense.id, status: "BOOKED", exportClaimedAt: claim.token },
+          data: { status: "EXPORTED", ...CLEARED },
+        }),
+      );
+      await tx.expenseEvent.create({
+        data: {
+          expenseId: expense.id,
+          type: "EXPORTED",
+          actorId: user.id,
+          comment: label,
+        },
+      });
+      await notify(tx, "EXPENSE_EXPORTED", [expense.submitterId], expenseNotice("exported", expense), {
+        exclude: [user.id],
+      });
+    });
+  } catch (e) {
+    // The voucher is in Fortnox and is not recorded here. The lock stays, as
+    // uncertain, and the label is said loudly so it can be entered by hand.
+    console.error(`[fortnox] ${id}: voucher ${label} was made but could not be recorded`, e);
+    await markUncertain(claim);
+    return fail(500, "expense.exportUnrecorded", { values: { label } });
+  }
+  deliverSoon();
+
+  // After the record, not before it. The voucher exists from the moment
+  // Fortnox answered, and every step between that and the record is time in
+  // which the lock says SENT for a voucher that is already there. Attaching is
+  // a second request to Fortnox, so it waits until the export is safely written
+  // down here.
+  //
   // Surfaced verbatim beside the success message, so it is worded by the client
   // from this code. See `attachBestEffort` for why this one step is allowed to
   // fail without failing the export.
   const attachWarning = await attachBestEffort(token, fileId, created, id);
-
-  const label = `${created.series}-${created.number}`;
-  await recordExport(verification.id, created, async (tx) => {
-    await tx.expense.update({ where: { id: expense.id }, data: { status: "EXPORTED" } });
-    await tx.expenseEvent.create({
-      data: {
-        expenseId: expense.id,
-        type: "EXPORTED",
-        actorId: user.id,
-        comment: label,
-      },
-    });
-    await notify(tx, "EXPENSE_EXPORTED", [expense.submitterId], expenseNotice("exported", expense), {
-      exclude: [user.id],
-    });
-  });
-  deliverSoon();
 
   return NextResponse.json({
     id,

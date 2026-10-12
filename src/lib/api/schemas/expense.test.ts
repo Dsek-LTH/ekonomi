@@ -36,6 +36,7 @@ describe("BookVoucher", () => {
     // The shape from book-client.tsx: a locked payment row with text, then the
     // typed rows, whose empty fields are null. This is the request that failed.
     const body = {
+      expectedUpdatedAt: "2026-05-02T09:14:03.512Z",
       date: "2026-05-01",
       description: "Kontorsmaterial",
       lines: [
@@ -58,5 +59,11 @@ describe("BookVoucher", () => {
       ],
     };
     expect(BookVoucher.safeParse(body).success).toBe(true);
+  });
+
+  it("refuses a booking that does not say which version it was made against", () => {
+    // Without it there is nothing to tell a colleague's save from ours, and the
+    // later one would quietly win.
+    expect(BookVoucher.safeParse({ lines: [] }).success).toBe(false);
   });
 });

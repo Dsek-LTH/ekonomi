@@ -11,6 +11,7 @@ import {
 } from "@/lib/domain/status";
 import { isFutureDate } from "@/lib/domain/date";
 import { isMatchable } from "@/lib/domain/matching";
+import { exportLock } from "@/lib/domain/export-claim";
 import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -421,12 +422,25 @@ export async function DELETE(
 
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { receipts: { select: { objectKey: true } } },
+    include: {
+      receipts: { select: { objectKey: true } },
+      exportClaimedBy: { select: { name: true } },
+    },
   });
   if (!expense) return fail(404, "expense.notFound");
 
   const denied = denyExpenseDelete(g.actor, expense);
   if (denied) return denied;
+
+  // Not while an export holds it. Deleting it then would leave a voucher in
+  // Fortnox with nothing here that says it was filed, and Fortnox cannot take
+  // it back. Asked before the receipt files go, so a refusal deletes nothing.
+  const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
+  if (lock !== "free") {
+    return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
+      values: { name: expense.exportClaimedBy?.name ?? "–" },
+    });
+  }
 
   // Receipt files first, and the utlägg only if every one of them is gone.
   // deleting an utlägg deletes its receipts by cascade, so the same rule
@@ -444,7 +458,17 @@ export async function DELETE(
     return fail(503, "expense.receiptDeleteFailed");
   }
 
-  await prisma.expense.delete({ where: { id: expense.id } });
+  // And again in the delete itself, for an export that took the lock while
+  // the files were going: the row stays if it now holds a lock it did not
+  // hold when it was checked.
+  const { count } = await prisma.expense.deleteMany({
+    where: {
+      id: expense.id,
+      exportClaimState: expense.exportClaimState,
+      exportClaimedAt: expense.exportClaimedAt,
+    },
+  });
+  if (count === 0) return fail(409, "expense.changedMeanwhile");
 
   return new Response(null, { status: 204 });
 }

@@ -34,6 +34,7 @@ const expense = (over: Partial<Expense> = {}): Expense => ({
   submitterHasPayout: true,
   revisions: [],
   receipts: [],
+  updatedAt: "2026-03-02T10:00:00.000Z",
   ...over,
 });
 
