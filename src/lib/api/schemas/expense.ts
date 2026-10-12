@@ -4,6 +4,7 @@
 // the shape the route accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
+import { MAX_REMINDER_ITEMS } from "@/lib/domain/reminders";
 
 const PaymentType = z.enum(["CARD", "REIMBURSEMENT", "MILEAGE"]);
 
@@ -159,3 +160,23 @@ export const BookVoucher = z.object({
   description: Trimmed.optional(),
 });
 export type BookVoucher = z.infer<typeof BookVoucher>;
+
+/**
+ * POST /api/reminders: remind whoever each of these is waiting on. Utlägg, from
+ * one's own page or picked on a list, and card purchases with no utlägg,
+ * picked on the bank list. The message is optional and quoted at the top of
+ * every mail it sends.
+ */
+export const SendReminders = z
+  .object({
+    expenseIds: z.array(Id).default([]),
+    transactionIds: z.array(Id).default([]),
+    message: Clearable(Trimmed.max(2000)).optional(),
+  })
+  .refine((b) => b.expenseIds.length + b.transactionIds.length > 0, {
+    message: "nothing picked",
+  })
+  .refine((b) => b.expenseIds.length + b.transactionIds.length <= MAX_REMINDER_ITEMS, {
+    message: "too many picked",
+  });
+export type SendReminders = z.infer<typeof SendReminders>;

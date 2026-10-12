@@ -3,7 +3,7 @@
 // connection, and payout details.
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
-import { SWITCHABLE_KINDS } from "@/lib/domain/notifications";
+import { ALL_KINDS, SWITCHABLE_KINDS } from "@/lib/domain/notifications";
 import type { NotificationKind } from "@/lib/domain/types";
 
 /** POST /api/cards: register a section card. */
@@ -157,6 +157,7 @@ export const CapabilityName = z.enum([
   "FIRMATECKNARE",
   "RENTAL_VIEW",
   "RENTAL_MANAGE",
+  "SEND_REMINDERS",
 ]);
 
 /**
@@ -204,3 +205,12 @@ export const PutNotificationPreference = z.object({
   enabled: z.boolean(),
 });
 export type PutNotificationPreference = z.infer<typeof PutNotificationPreference>;
+
+/**
+ * POST /api/users/[id]/test-email: send one member a test mail of any kind,
+ * the digest included.
+ */
+export const SendTestEmail = z.object({
+  kind: z.enum(ALL_KINDS as [NotificationKind, ...NotificationKind[]]),
+});
+export type SendTestEmail = z.infer<typeof SendTestEmail>;

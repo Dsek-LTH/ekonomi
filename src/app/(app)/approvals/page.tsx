@@ -1,7 +1,7 @@
 import { requirePage } from "@/lib/server/current-user";
 import { getExpensePage } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
-import { canAccessBookkeeping, hasAttestRole } from "@/lib/domain/permissions";
+import { canAccessBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
 import { ApprovalsClient } from "./approvals-client";
 import { APPROVALS_DEFAULT_TAB } from "./tabs";
 
@@ -48,6 +48,7 @@ export default async function ApprovalsPage({
       page={page}
       canToggleScope={canToggleScope}
       showOwnOnly={showOwnOnly}
+      canRemind={canSendReminders(user.capabilities)}
     />
   );
 }

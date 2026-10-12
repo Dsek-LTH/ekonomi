@@ -445,3 +445,36 @@ describe("taking your own submission back", () => {
     expect(can.hasAnyAction).toBe(true);
   });
 });
+
+describe("reminding", () => {
+  const pending = expense({ status: "PENDING_APPROVAL" });
+
+  it("is offered to the admins by default", () => {
+    for (const role of ["SKATTMASTARE", "ORDFORANDE"] as Role[]) {
+      expect(expenseCapabilities(pending, viewer([role])).canRemind).toBe(true);
+    }
+  });
+
+  it("is not offered to everyone else until a role is given it", () => {
+    for (const role of ["VICE_SKATTMASTARE", "RESULTATANSVARIG", "ORDINARIE"] as Role[]) {
+      expect(expenseCapabilities(pending, viewer([role])).canRemind).toBe(false);
+    }
+  });
+
+  it("is offered while the utlägg is waiting on its submitter", () => {
+    for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(true);
+    }
+  });
+
+  it("is not offered on a draft of the viewer's own", () => {
+    const own = expense({ status: "DRAFT", submitterId: "me" });
+    expect(expenseCapabilities(own, viewer(["SKATTMASTARE"], "me")).canRemind).toBe(false);
+  });
+
+  it("is not offered once the utlägg is signed", () => {
+    for (const status of ["APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
+      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(false);
+    }
+  });
+});

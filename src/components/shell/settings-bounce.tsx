@@ -13,6 +13,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // second navigation is client-side, the interception catches it, and settings
 // open as the overlay over the dashboard. Closing it goes back to the
 // dashboard.
+//
+// The profile (@modal/(.)profile) is an overlay in the same way, and
+// /profile's layout uses the same bounce.
 
 const BACKGROUND = "/dashboard";
 
@@ -20,7 +23,7 @@ const BACKGROUND = "/dashboard";
 // sets it is unmounted by the first of them.
 let pending: string | null = null;
 
-/** /admin's own layout. Renders nothing and sends you round to the overlay. */
+/** /admin's and /profile's own layout. Renders nothing and sends you round to the overlay. */
 export function SettingsBounce() {
   const router = useRouter();
   const pathname = usePathname();

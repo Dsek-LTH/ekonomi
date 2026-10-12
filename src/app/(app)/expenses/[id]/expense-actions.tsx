@@ -77,6 +77,7 @@ export function ExpenseActions({
   onRecall,
   onRevokeDeadlineWaiver,
   onExport,
+  onRemind,
   onDelete,
 }: {
   expenseId: string;
@@ -91,6 +92,7 @@ export function ExpenseActions({
   onRecall: () => void;
   onRevokeDeadlineWaiver: () => void;
   onExport: () => void;
+  onRemind: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations("expenses.detail");
@@ -188,6 +190,14 @@ export function ExpenseActions({
       label: t("revokeDeadlineWaiver"),
       icon: <IconUndo className="size-4" />,
       onClick: onRevokeDeadlineWaiver,
+    },
+    // Behind the actions that move the utlägg itself, and ahead of editing: it
+    // is for somebody else's turn, so it leads only when nothing else here is
+    // the viewer's to do.
+    can.canRemind && {
+      key: "remind",
+      label: t("remind"),
+      onClick: onRemind,
     },
     can.canEdit && {
       key: "edit",

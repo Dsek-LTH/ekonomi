@@ -122,6 +122,11 @@ export const canManageRentals = (caps: readonly Capability[]) =>
 export const canManageContracts = (caps: readonly Capability[]) =>
   has(caps, "CONTRACT_MANAGE");
 
+// ── Reminders ─────────────────────────────────────────────────────
+
+/** May remind whoever an utlägg is waiting on, by mail. See lib/server/reminders.ts. */
+export const canSendReminders = (caps: readonly Capability[]) => has(caps, "SEND_REMINDERS");
+
 // ── Dispens från redovisningsfristen ──────────────────────────────
 
 /**
@@ -239,6 +244,7 @@ const CAPABILITY_ORDER = {
   RENTAL_VIEW: 15,
   RENTAL_MANAGE: 16,
   FIRMATECKNARE: 17,
+  SEND_REMINDERS: 18,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

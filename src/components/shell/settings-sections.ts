@@ -18,6 +18,7 @@ import {
   IconChart,
   IconHierarchy,
   IconIncome,
+  IconMail,
   IconShield,
   IconUsers,
 } from "@/components/ui/icons";
@@ -53,4 +54,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   // the catalogue is maintained rather than read. See the page's own note.
   { href: "/admin/roles", label: "roles", blurb: "roles", icon: IconShield },
   { href: "/admin/users", label: "users", blurb: "users", icon: IconUsers },
+  // Last, as the one section that is a record of what the app did rather than
+  // something to set. Beside Användare, where a test mail is sent from.
+  { href: "/admin/email", label: "email", blurb: "email", icon: IconMail },
 ];

@@ -57,7 +57,8 @@
     "EXPORT_REVERTED": "Marked as not exported",
     "RECALLED": "Withdrew the submission",
     "DEADLINE_WAIVED": "Granted a waiver from the deadline",
-    "DEADLINE_WAIVER_REVOKED": "Took the waiver back"
+    "DEADLINE_WAIVER_REVOKED": "Took the waiver back",
+    "REMINDER_SENT": "Sent a reminder"
   },
   "detail": {
     "missingTitle": "Expense not found",
@@ -133,7 +134,9 @@
     "revokeWaiverConfirm": "The expense is past the deadline and cannot be submitted again without a new waiver.",
     "deadlineWaiver": "Waiver from the filing deadline",
     "deadlineWaiverGranted": "{name} granted a waiver on {date}.",
-    "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted."
+    "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted.",
+    "remind": "Send reminder",
+    "reminderTo": "To {names}"
   },
   "mutations": {
     "transition": {
@@ -270,5 +273,31 @@
     "stuckWithRows": "None of the rows above can be picked. If the purchase is listed with a different amount, it is the amount you typed that needs correcting. If it is listed as already claimed, somebody else has taken it: talk to them or to the treasurer.",
     "stuckNoRows": "The statement has probably not been imported yet. Ask the treasurer to import the latest bank file under Bank & matching.",
     "stuckDraft": "A card purchase cannot be submitted without a match. Save it as a draft and come back when the transaction is there."
+  },
+  "reminders": {
+    "title": "Send reminder",
+    "subtitleMany": "{count} expenses selected",
+    "loading": "Finding out who it goes to…",
+    "goesTo": "The reminder goes to",
+    "target": {
+      "attesters": "Approval",
+      "submitter": "Submitter",
+      "cardHolder": "Card holder"
+    },
+    "skippedTitle": "{count, plural, one {One expense will not be reminded about} other {# expenses will not be reminded about}}",
+    "skipped": {
+      "notRemindable": "it is not waiting on anyone",
+      "nobody": "there is nobody to remind"
+    },
+    "message": "Message",
+    "messageHint": "Optional. Shown at the top of the email.",
+    "messagePlaceholder": "For example what is missing, or when it needs to be done.",
+    "send": "{count, plural, one {Send to one person} other {Send to # people}}",
+    "sendNone": "Send",
+    "sent": "{count, plural, one {Reminder sent to one person.} other {Reminder sent to # people.}}",
+    "sendFailed": "Could not send the reminder",
+    "pickAll": "Select every expense on the page to remind about",
+    "pick": "Select {label} to remind about",
+    "remindPicked": "Remind ({count})"
   }
 }

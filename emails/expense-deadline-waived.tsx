@@ -1,5 +1,5 @@
-import { ExpensePreview } from "./_shared";
+import { KindPreview } from "./_shared";
 
 export default function ExpenseDeadlineWaived() {
-  return <ExpensePreview kind="waived" comment="Tåget var försenat, så kvittot kom in sent." />;
+  return <KindPreview kind="EXPENSE_DEADLINE_WAIVED" />;
 }

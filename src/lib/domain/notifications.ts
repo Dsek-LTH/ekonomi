@@ -40,6 +40,9 @@ const OPT_IN: readonly NotificationKind[] = [
  */
 export const SWITCHABLE_KINDS: readonly NotificationKind[] = [...DEFAULT_ON, ...OPT_IN];
 
+/** Every kind there is, the digest last. What a test mail can be sent as. */
+export const ALL_KINDS: readonly NotificationKind[] = [...SWITCHABLE_KINDS, "WEEKLY_DIGEST"];
+
 export const isSwitchable = (kind: NotificationKind): boolean =>
   SWITCHABLE_KINDS.includes(kind);
 
@@ -79,5 +82,6 @@ export const AUDIENCE: Record<NotificationKind, NotificationAudience> = {
   EXPENSE_ATTEST_WITHDRAWN: "everyone",
   EXPENSE_DEADLINE_WAIVED: "everyone",
   EXPENSE_EXPORTED: "everyone",
+  EXPENSE_REMINDER: "everyone",
   WEEKLY_DIGEST: "everyone",
 };

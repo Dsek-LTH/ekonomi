@@ -21,12 +21,19 @@ describe("wants", () => {
   it("never lets a saved row silence the weekly digest", () => {
     expect(wants("WEEKLY_DIGEST", new Map([["WEEKLY_DIGEST", false]]))).toBe(true);
   });
+
+  it("never lets a saved row silence a reminder", () => {
+    expect(wants("EXPENSE_REMINDER", new Map([["EXPENSE_REMINDER", false]]))).toBe(true);
+  });
 });
 
 describe("the switchable kinds", () => {
-  it("leave out the digest, and only the digest", () => {
+  it("leave out the reminder and the digest, and only those", () => {
     const all = Object.keys(AUDIENCE) as NotificationKind[];
-    expect(all.filter((k) => !SWITCHABLE_KINDS.includes(k))).toEqual(["WEEKLY_DIGEST"]);
+    expect(all.filter((k) => !SWITCHABLE_KINDS.includes(k))).toEqual([
+      "EXPENSE_REMINDER",
+      "WEEKLY_DIGEST",
+    ]);
   });
 
   it("list the defaults before the opt-ins", () => {

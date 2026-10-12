@@ -346,5 +346,16 @@
     "itemExists": "Det finns redan ett uthyrningsobjekt som heter ’{name}’",
     "itemsUnavailable": "Följande är inte ledigt under perioden: {items}",
     "counterpartyNotFound": "Motparten hittades inte"
+  },
+  "email": {
+    "notFound": "Mejlet hittades inte",
+    "notRetryable": "Mejlet är redan skickat.",
+    "noExpense": "{name} har inga utlägg som mejlet kan byggas på.",
+    "noCardTransactions": "{name} har inga korttransaktioner på sina kort.",
+    "nothingWaiting": "Inget väntar på {name} just nu, så ingen veckosammanfattning skulle skickas."
+  },
+  "reminder": {
+    "denied": "Du får inte skicka påminnelser.",
+    "nobody": "Inget av utläggen väntar på någon som kan påminnas."
   }
 }

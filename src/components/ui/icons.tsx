@@ -400,6 +400,13 @@ export const IconComment = (p: P) => (
   </Svg>
 );
 
+export const IconMail = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </Svg>
+);
+
 export const IconChart = (p: P) => (
   <Svg {...p}>
     <path d="M3 3v18h18M7 16v-4M11 16V8M15 16v-7M19 16v-2" />

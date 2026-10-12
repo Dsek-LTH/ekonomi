@@ -1,5 +1,5 @@
-import { ExpensePreview } from "./_shared";
+import { KindPreview } from "./_shared";
 
 export default function ExpenseCostCenterApproved() {
-  return <ExpensePreview kind="costCenterApproved" />;
+  return <KindPreview kind="EXPENSE_COST_CENTER_APPROVED" />;
 }

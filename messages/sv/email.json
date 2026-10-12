@@ -3,6 +3,7 @@
   "org": "D-sektionen inom TLTH",
   "settings": "Välj vilka mejl du får under Profil.",
   "settingsDigest": "Välj vilka andra mejl du får under Profil.",
+  "testSubject": "[Test] {subject}",
   "orOpen": "Eller öppna länken: {url}",
   "fact": {
     "costCenter": "Kostnadsställe",
@@ -22,7 +23,8 @@
     "submitter": "Du får det här mejlet eftersom du skickade in utlägget.",
     "bookkeeper": "Du får det här mejlet eftersom du bokför sektionens utlägg.",
     "cardHolder": "Du får det här mejlet eftersom sektionskort {cards} står på dig.",
-    "digest": "Sammanfattningen kommer varje söndag när något väntar på dig, och aldrig annars."
+    "digest": "Sammanfattningen kommer varje söndag när något väntar på dig, och aldrig annars.",
+    "reminder": "Du får det här mejlet eftersom {sender} skickade en påminnelse till dig. Påminnelser går inte att stänga av."
   },
   "submitted": {
     "subject": "Att attestera: {label}",
@@ -129,5 +131,39 @@
     "attestHint": "Det äldsta först.",
     "attestSub": "Från {submitter}, väntat i {days, plural, =0 {mindre än en dag} one {# dag} other {# dagar}}",
     "attestButton": "Till attestkön"
+  },
+  "reminder": {
+    "eyebrow": "Påminnelse",
+    "subject": "Påminnelse: {label}",
+    "subjectMany": {
+      "expenses": "Påminnelse: {count} utlägg väntar på dig",
+      "transactions": "Påminnelse: {count, plural, one {# korttransaktion saknar} other {# korttransaktioner saknar}} utlägg",
+      "mixed": "Påminnelse: {count} saker väntar på dig"
+    },
+    "headingMany": {
+      "expenses": "{sender} påminner dig om {count} utlägg",
+      "transactions": "{sender} påminner dig om {count, plural, one {en korttransaktion} other {# korttransaktioner}}",
+      "mixed": "{sender} påminner dig om {count} saker"
+    },
+    "introMany": "De väntar på något från dig.",
+    "fromSubmitter": "Från {submitter}",
+    "ownTitle": "Dina utlägg som behöver åtgärdas",
+    "attest": {
+      "heading": "{sender} påminner dig om ett utlägg",
+      "intro": "Det väntar fortfarande på din attest.",
+      "button": "Öppna och attestera"
+    },
+    "changes": {
+      "heading": "{sender} påminner dig om ditt utlägg",
+      "intro": "Det kom tillbaka för ändring och har inte skickats in igen. Ändra det och skicka in det, så går det vidare.",
+      "button": "Ändra utlägget",
+      "short": "Behöver ändras"
+    },
+    "draft": {
+      "heading": "{sender} påminner dig om ditt utlägg",
+      "intro": "Det är sparat som utkast och har inte skickats in för attest än.",
+      "button": "Öppna utlägget",
+      "short": "Utkast, inte inskickat"
+    }
   }
 }

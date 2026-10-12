@@ -40,7 +40,9 @@
       "EXPENSE_EXPORTED": "Your expense is done",
       "EXPENSE_RECALLED": "Expense recalled from attest",
       "EXPENSE_READY_TO_BOOK": "Expenses to book",
-      "EXPENSE_EXPORT_REVERTED": "Export undone"
+      "EXPENSE_EXPORT_REVERTED": "Export undone",
+      "WEEKLY_DIGEST": "Weekly summary",
+      "EXPENSE_REMINDER": "Reminder"
     },
     "hint": {
       "EXPENSE_SUBMITTED": "When someone submits an expense for you to attest.",

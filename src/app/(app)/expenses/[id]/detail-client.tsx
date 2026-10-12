@@ -27,6 +27,7 @@ import {
   VerificationSection,
 } from "./detail-sections";
 import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
+import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
 
@@ -82,6 +83,7 @@ function ExpenseDetail({
   const t = useTranslations("expenses.detail");
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
+  const [reminding, setReminding] = useState(false);
   const documents = expenseDocuments(
     expense,
     `${tReceipt("alt")} – ${expense.title}`,
@@ -151,6 +153,7 @@ function ExpenseDetail({
               }
               onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
               onExport={mutations.exportToFortnox}
+              onRemind={() => setReminding(true)}
               onDelete={mutations.remove}
             />
           }
@@ -187,6 +190,11 @@ function ExpenseDetail({
 
         <TimelineSection revisions={expense.revisions} />
       </Card>
+
+      {/* The send refreshes the page, which puts the reminder in the history. */}
+      {reminding && (
+        <ReminderDialog expenseIds={[expense.id]} onClose={() => setReminding(false)} />
+      )}
     </PageShell>
   );
 }

@@ -11,6 +11,9 @@
 // transition that rolls back (a lost race, a 409) never tells anyone it
 // happened, and a relay that is down for an hour delays mail rather than
 // losing it. See lib/server/notify.ts.
+//
+// The outbox is also the log. Rows are never deleted once sent, so Inställningar
+// → E-post can show every mail the app has sent, to whom, and what became of it.
 
 /// What a notification is about. One per kind of email, not per event: a
 /// kind is the thing a member turns on or off in their profile.
@@ -45,6 +48,9 @@ enum NotificationKind {
   EXPENSE_DEADLINE_WAIVED
 
   // ── Always ──
+  /// A reminder somebody sent by hand, about one or more utlägg waiting on the
+  /// reader. Cannot be switched off: somebody chose to send it to them.
+  EXPENSE_REMINDER
   /// The Sunday summary. Cannot be switched off; its sections are only
   /// sent when there is something in them.
   WEEKLY_DIGEST
@@ -95,5 +101,14 @@ model OutboundEmail {
   // older than a few minutes belongs to a sender that died and is taken over.
   claimedAt DateTime?
 
+  // Who sent this by hand: a test mail from Inställningar, sent to check that
+  // mail reaches somebody and looks right. Null for everything the app sent
+  // on its own, which is every other row. Kept when the sender leaves, so the
+  // log still says it was a test.
+  sentBy   User?   @relation("EmailSender", fields: [sentById], references: [id], onDelete: SetNull)
+  sentById String?
+
   @@index([sentAt, createdAt]) // the unsent queue, oldest first
+  @@index([recipientId, createdAt]) // one member's mail, newest first
+  @@index([createdAt]) // the whole log, newest first
 }

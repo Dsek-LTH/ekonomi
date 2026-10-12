@@ -178,6 +178,12 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
 
 export type { Viewer };
 
+/** The names a REMINDER_SENT event stored in `diff`. See ExpenseEventType. */
+function reminderRecipients(diff: unknown): string[] {
+  const names = (diff as { recipients?: unknown } | null)?.recipients;
+  return Array.isArray(names) ? names.filter((n): n is string => typeof n === "string") : [];
+}
+
 // Per-request attest context: what the viewer may do and what they answer for,
 // resolved once, plus the prefix table used to place each allocation in a result
 // unit.
@@ -517,6 +523,7 @@ export async function getExpense(
       actor: ev.actor?.name ?? "System",
       action: ev.type,
       comment: ev.comment ?? undefined,
+      recipients: ev.type === "REMINDER_SENT" ? reminderRecipients(ev.diff) : undefined,
       date: ev.createdAt.toISOString(),
     })),
   };

@@ -119,6 +119,8 @@
     "RENTAL_VIEW": "Read rental contracts",
     "RENTAL_VIEW_hint": "See rental contracts in the archive, and nothing else in it. The narrow half of reading contracts.",
     "RENTAL_MANAGE": "Manage rentals",
-    "RENTAL_MANAGE_hint": "Draw rental contracts and keep the rental item catalogue."
+    "RENTAL_MANAGE_hint": "Draw rental contracts and keep the rental item catalogue.",
+    "SEND_REMINDERS": "Send reminders",
+    "SEND_REMINDERS_hint": "Remind whoever an expense is waiting on, its approvers or the person who submitted it, by email. From the expense, or several at once from the list."
   }
 }

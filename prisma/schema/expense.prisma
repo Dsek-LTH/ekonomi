@@ -62,6 +62,10 @@ enum ExpenseEventType {
   /// That dispens taken back, either by hand or because the purchase date or
   /// payment type it was granted for changed.
   DEADLINE_WAIVER_REVOKED
+  /// Somebody holding SEND_REMINDERS reminded whoever the utlägg was waiting
+  /// on. `comment` is the message they wrote, if any, and `diff` is
+  /// `{ recipients: string[] }`, the names it went to as they were then.
+  REMINDER_SENT
 }
 
 model Expense {

@@ -28,6 +28,7 @@ import {
   type ListRow,
   type Waiting,
 } from "@/lib/email/content";
+import type { Email } from "@/lib/email/types";
 import { daysAgo, isoWeek, stockholmDay, today as stockholmToday } from "@/lib/domain/date";
 import { REIMBURSEMENT_DEADLINE_DAYS, SUBMITTABLE_STATUSES } from "@/lib/domain/status";
 
@@ -38,6 +39,36 @@ const DEADLINE_WARNING_DAYS = 14;
 
 /** Queue this week's digest for everyone with something in it. */
 export async function queueWeeklyDigest(today = stockholmToday()): Promise<{ queued: number }> {
+  const waiting = await collectWaiting(today);
+  const week = isoWeek(today);
+  let queued = 0;
+  for (const [userId, w] of waiting) {
+    queued += await notify(prisma, "WEEKLY_DIGEST", [userId], (p) => digestEmail(p.name, week, w), {
+      dedupeKey: (id) => `weekly-digest:${id}:${week}`,
+    });
+  }
+  return { queued };
+}
+
+/**
+ * What this week's digest would say to one member, if it went out today. For
+ * the test mail in Inställningar (lib/server/test-email.ts). Collects for the
+ * whole section and keeps one member's, which is the same work the Sunday run
+ * does and keeps the two from ever disagreeing about what is waiting.
+ *
+ * Null when nothing is waiting on them, which is a digest that would not be
+ * sent at all.
+ */
+export async function digestFor(
+  user: { id: string; name: string },
+  today = stockholmToday(),
+): Promise<Email | null> {
+  const w = (await collectWaiting(today)).get(user.id);
+  return w ? digestEmail(user.name, isoWeek(today), w) : null;
+}
+
+/** Everything waiting on anybody, by member. A member with nothing is absent. */
+async function collectWaiting(today: string): Promise<Map<string, Waiting>> {
   const waiting = new Map<string, Waiting>();
   const of = (userId: string) => {
     const w = waiting.get(userId) ?? {};
@@ -133,13 +164,5 @@ export async function queueWeeklyDigest(today = stockholmToday()): Promise<{ que
     for (const id of ids) (of(id).attest ??= []).push(row);
   }
 
-  // ── One mail each ──
-  const week = isoWeek(today);
-  let queued = 0;
-  for (const [userId, w] of waiting) {
-    queued += await notify(prisma, "WEEKLY_DIGEST", [userId], (p) => digestEmail(p.name, week, w), {
-      dedupeKey: (id) => `weekly-digest:${id}:${week}`,
-    });
-  }
-  return { queued };
+  return waiting;
 }

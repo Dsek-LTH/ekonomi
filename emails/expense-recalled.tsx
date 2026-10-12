@@ -1,5 +1,5 @@
-import { ExpensePreview } from "./_shared";
+import { KindPreview } from "./_shared";
 
 export default function ExpenseRecalled() {
-  return <ExpensePreview kind="recalled" />;
+  return <KindPreview kind="EXPENSE_RECALLED" />;
 }

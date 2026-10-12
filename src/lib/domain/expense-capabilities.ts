@@ -15,6 +15,7 @@
 import {
   canBookkeep,
   canLogInToFortnox,
+  canSendReminders,
   canUnexport,
   canWaiveFilingDeadline,
   isAdmin,
@@ -29,6 +30,7 @@ import {
   submitBlocker,
   type SubmitBlocker,
 } from "./status";
+import { canRemindAboutExpense } from "./reminders";
 import { namedStops } from "@/lib/mileage/claim";
 import type { Capability, Expense, Role } from "./types";
 
@@ -73,6 +75,13 @@ export type ExpenseCapabilities = {
   canRevokeDeadlineWaiver: boolean;
   canMatch: boolean;
   canDelete: boolean;
+  /**
+   * May remind whoever this utlägg is waiting on. Only while it is waiting on
+   * somebody other than the viewer: a draft of their own is theirs to send.
+   * Who exactly it reaches is the server's to work out; see
+   * lib/server/reminders.ts.
+   */
+  canRemind: boolean;
   /** Whether any call-to-action is offered, which demotes "Redigera" to secondary. */
   hasPrimaryAction: boolean;
   /** Whether the panel offers anything at all. Otherwise it says so. */
@@ -162,6 +171,8 @@ export function expenseCapabilities(
   const canDelete = admin || (isOwner && !isSigned(expense.status));
   const canWaiveDeadline = mayWaive && !waived;
   const canRevokeDeadlineWaiver = mayWaive && waived;
+  const canRemind =
+    canSendReminders(viewer.capabilities) && canRemindAboutExpense(expense, viewer.id);
   // Leading, when it is on offer at all. A late utlägg with nobody able to move
   // it is the one thing on this page anybody is waiting for, and the person who
   // can move it is not the person whose claim it is.
@@ -186,6 +197,7 @@ export function expenseCapabilities(
     canDelete,
     canWaiveDeadline,
     canRevokeDeadlineWaiver,
+    canRemind,
     hasPrimaryAction,
     hasAnyAction:
       hasPrimaryAction ||
@@ -195,6 +207,7 @@ export function expenseCapabilities(
       canEdit ||
       canDelete ||
       mayUnexport ||
-      canRevokeDeadlineWaiver,
+      canRevokeDeadlineWaiver ||
+      canRemind,
   };
 }

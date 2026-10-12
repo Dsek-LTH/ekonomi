@@ -14,7 +14,9 @@ import { DataTable, type Column, type TabFilter } from "@/components/ui/data-tab
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import { useTableControls, useUrlTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
-import { canBookkeep } from "@/lib/domain/permissions";
+import { canBookkeep, canSendReminders } from "@/lib/domain/permissions";
+import { canRemindAboutTransaction } from "@/lib/domain/reminders";
+import { useReminderPicks } from "@/components/reminder-picks";
 import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -84,6 +86,19 @@ export default function BankClient({
   // having one is the permission (see page.tsx).
   const canAssign = allCards.length > 0;
   const importing = pending === "import";
+
+  // Chasing card purchases nobody has accounted for: tick them, then
+  // "Påminn", and each holder gets one mail listing theirs. Only the main
+  // list. A purchase on no card has no holder to remind, which is the job the
+  // no-card table is for. See useReminderPicks.
+  const picks = useReminderPicks({
+    rows: page.rows,
+    enabled: canSendReminders(user.capabilities),
+    subject: "transaction",
+    rowId: (tx) => tx.id,
+    remindable: (tx) => canRemindAboutTransaction(tx, viewerId),
+    rowLabel: (tx) => `${date(tx.transactionDate)} ${tx.description}`,
+  });
 
   // In the URL, like every other filter on a list: which purchases you were
   // looking at is a thing people send each other, and it is the same parameter
@@ -306,45 +321,50 @@ export default function BankClient({
       {/* Transaction list */}
       <Card>
         <DataTable
-          columns={columns}
+          columns={[picks.column, ...columns]}
           rows={page.rows}
           controls={controls}
           tabs={tabs}
           // On the list's own toolbar, like every other list's action: an
           // import adds rows to what is below it.
-          action={canImport && (
+          action={(picks.button || canImport) && (
             <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) upload(f);
-                }}
-              />
+              {picks.button}
+              {canImport && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) upload(f);
+                    }}
+                  />
 
-              <span className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  loading={importing}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <IconUpload className="size-4" />
-                  {t("pickCsv")}
-                </Button>
-                <InfoHint label={t("csvHelp.label")}>
-                  <span className="block font-medium text-foreground">
-                    {t("csvHelp.title")}
+                  <span className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      loading={importing}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      <IconUpload className="size-4" />
+                      {t("pickCsv")}
+                    </Button>
+                    <InfoHint label={t("csvHelp.label")}>
+                      <span className="block font-medium text-foreground">
+                        {t("csvHelp.title")}
+                      </span>
+                      <span className="mt-1 block">{t("csvHelp.source")}</span>
+                      <span className="mt-1.5 block">{t("csvHelp.format")}</span>
+                      <span className="mt-1.5 block">{t("csvHelp.cards")}</span>
+                      <span className="mt-1.5 block">{t("csvHelp.duplicates")}</span>
+                      <span className="mt-1.5 block">{t("csvHelp.limits")}</span>
+                    </InfoHint>
                   </span>
-                  <span className="mt-1 block">{t("csvHelp.source")}</span>
-                  <span className="mt-1.5 block">{t("csvHelp.format")}</span>
-                  <span className="mt-1.5 block">{t("csvHelp.cards")}</span>
-                  <span className="mt-1.5 block">{t("csvHelp.duplicates")}</span>
-                  <span className="mt-1.5 block">{t("csvHelp.limits")}</span>
-                </InfoHint>
-              </span>
+                </>
+              )}
             </>
           )}
           searchPlaceholder={t("searchPlaceholder")}
@@ -352,6 +372,8 @@ export default function BankClient({
           empty={t("noMatch")}
         />
       </Card>
+
+      {picks.dialog}
     </PageShell>
   );
 }

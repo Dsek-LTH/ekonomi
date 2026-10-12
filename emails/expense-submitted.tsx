@@ -1,5 +1,5 @@
-import { ExpensePreview } from "./_shared";
+import { KindPreview } from "./_shared";
 
 export default function ExpenseSubmitted() {
-  return <ExpensePreview kind="submitted" />;
+  return <KindPreview kind="EXPENSE_SUBMITTED" />;
 }

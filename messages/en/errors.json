@@ -346,5 +346,16 @@
     "itemExists": "There is already a rental item called ’{name}’",
     "itemsUnavailable": "These are not free over that period: {items}",
     "counterpartyNotFound": "Counterparty not found"
+  },
+  "email": {
+    "notFound": "Email not found",
+    "notRetryable": "The email has already been sent.",
+    "noExpense": "{name} has no expenses the email can be built from.",
+    "noCardTransactions": "{name} has no transactions on their cards.",
+    "nothingWaiting": "Nothing is waiting on {name} right now, so no weekly summary would be sent."
+  },
+  "reminder": {
+    "denied": "You may not send reminders.",
+    "nobody": "None of the expenses is waiting on anyone who can be reminded."
   }
 }

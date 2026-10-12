@@ -119,6 +119,8 @@
     "RENTAL_VIEW": "Läsa uthyrningsavtal",
     "RENTAL_VIEW_hint": "Se uthyrningsavtal i arkivet, och inget annat där. Den smala halvan av att läsa avtal.",
     "RENTAL_MANAGE": "Hantera uthyrning",
-    "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt."
+    "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
+    "SEND_REMINDERS": "Skicka påminnelser",
+    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan."
   }
 }

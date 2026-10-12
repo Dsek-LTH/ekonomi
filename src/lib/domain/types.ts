@@ -185,6 +185,8 @@ interface RevisionEntry {
   actor: string;
   action: string; // ExpenseEventType, named by `expenses.event.<TYPE>`
   comment?: string;
+  /** Who a REMINDER_SENT went to, by name as they were then. */
+  recipients?: string[];
   date: string; // ISO
 }
 

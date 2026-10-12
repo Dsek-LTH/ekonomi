@@ -40,7 +40,9 @@
       "EXPENSE_EXPORTED": "Ditt utlägg är klart",
       "EXPENSE_RECALLED": "Utlägg tillbakadraget från attest",
       "EXPENSE_READY_TO_BOOK": "Utlägg att bokföra",
-      "EXPENSE_EXPORT_REVERTED": "Export ångrad"
+      "EXPENSE_EXPORT_REVERTED": "Export ångrad",
+      "WEEKLY_DIGEST": "Veckosammanfattning",
+      "EXPENSE_REMINDER": "Påminnelse"
     },
     "hint": {
       "EXPENSE_SUBMITTED": "När någon skickar in ett utlägg som du ska attestera.",

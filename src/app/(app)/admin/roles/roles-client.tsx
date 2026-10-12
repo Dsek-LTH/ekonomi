@@ -63,6 +63,7 @@ const AREA_OF: Record<Capability, Area> = {
   ADMIN: "expenses",
   ATTEST_VIEW: "expenses",
   EXPENSE_DEADLINE_WAIVE: "expenses",
+  SEND_REMINDERS: "expenses",
   BOOKKEEPING: "bookkeeping",
   FORTNOX_LOGIN: "bookkeeping",
   EXPORT_UNDO: "bookkeeping",

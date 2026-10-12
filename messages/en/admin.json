@@ -10,7 +10,8 @@
       "mileageRates": "What a kilometre is worth, and from which day.",
       "stockSettings": "Accounts and settings for the stock bookkeeping.",
       "roles": "What each role may do. Changed here, not in the code.",
-      "users": "Who exists and which roles they hold."
+      "users": "Who exists and which roles they hold.",
+      "email": "Every email the app has sent, where it went, and test emails."
     }
   },
   "users": {
@@ -43,7 +44,8 @@
     "payoutMissing": "No account details saved.",
     "colName": "Name",
     "colRoles": "Roles",
-    "filterRole": "Role"
+    "filterRole": "Role",
+    "emailTitle": "Email"
   },
   "cards": {
     "title": "Guild cards",
@@ -403,5 +405,50 @@
       "leadDays": "Notice in days",
       "leadDaysHint": "How far ahead of the estimated date to start asking. 30 days is about right: a crate can be drunk in a month if somebody knows about it."
     }
+  },
+  "email": {
+    "title": "Email",
+    "mailOff": "Sending is off here (SMTP_HOST is not set). Emails are written to the server log instead and shown as sent.",
+    "filterLabel": "Show",
+    "filter": {
+      "all": "All",
+      "sent": "Sent",
+      "unsent": "Not sent",
+      "failed": "With errors"
+    },
+    "searchPlaceholder": "Search subject, name or address…",
+    "loading": "Loading emails…",
+    "empty": "No emails have been sent yet.",
+    "emptyPerson": "No emails have been sent to this member.",
+    "noMatch": "No emails match.",
+    "loadMore": "Show more",
+    "status": {
+      "SENT": "Sent",
+      "QUEUED": "Queued",
+      "RETRYING": "Retrying",
+      "FAILED": "Failed"
+    },
+    "test": "Test",
+    "sentBy": "Test email sent by {name}",
+    "notSent": "Not sent",
+    "fact": {
+      "to": "To",
+      "kind": "Type",
+      "created": "Created",
+      "sent": "Sent",
+      "attempts": "Attempts",
+      "sentBy": "Sent by"
+    },
+    "viewHtml": "As email",
+    "viewText": "As text",
+    "retry": "Retry now",
+    "retryHint": "Sent again right away, with all attempts reset.",
+    "retried": "The email is queued again.",
+    "retryFailed": "Could not queue the email again",
+    "testTitle": "Send test email",
+    "testHint": "Built from the member's real data: an expense they can see, their latest card transactions or what is waiting on them. [Test] is in the subject. Sent regardless of what the member has chosen in their profile.",
+    "testSend": "Send",
+    "testSent": "Test email sent to {name}.",
+    "testFailed": "Could not send the test email"
   }
 }

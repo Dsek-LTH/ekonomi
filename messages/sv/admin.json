@@ -10,7 +10,8 @@
       "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
       "stockSettings": "Konton och inställningar för lagerbokföringen.",
       "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
-      "users": "Vem som finns och vilka roller de har."
+      "users": "Vem som finns och vilka roller de har.",
+      "email": "Alla mejl appen skickat, vart de tog vägen, och testutskick."
     }
   },
   "users": {
@@ -43,7 +44,8 @@
     "payoutMissing": "Inga kontouppgifter sparade.",
     "colName": "Namn",
     "colRoles": "Roller",
-    "filterRole": "Roll"
+    "filterRole": "Roll",
+    "emailTitle": "E-post"
   },
   "cards": {
     "title": "Sektionskort",
@@ -403,5 +405,50 @@
       "leadDays": "Varsel i dagar",
       "leadDaysHint": "Hur långt innan det beräknade datumet vi börjar fråga. 30 dagar är lagom: en back hinner drickas upp på en månad om någon vet om det."
     }
+  },
+  "email": {
+    "title": "E-post",
+    "mailOff": "Utskick är avstängt här (SMTP_HOST saknas). Mejl skrivs till serverloggen i stället och visas som skickade.",
+    "filterLabel": "Visa",
+    "filter": {
+      "all": "Alla",
+      "sent": "Skickade",
+      "unsent": "Ej skickade",
+      "failed": "Med fel"
+    },
+    "searchPlaceholder": "Sök på ämne, namn eller adress…",
+    "loading": "Hämtar mejl…",
+    "empty": "Inga mejl har skickats än.",
+    "emptyPerson": "Inga mejl har skickats till den här medlemmen.",
+    "noMatch": "Inga mejl matchar.",
+    "loadMore": "Visa fler",
+    "status": {
+      "SENT": "Skickat",
+      "QUEUED": "I kö",
+      "RETRYING": "Försöker igen",
+      "FAILED": "Misslyckat"
+    },
+    "test": "Test",
+    "sentBy": "Testmejl skickat av {name}",
+    "notSent": "Inte skickat",
+    "fact": {
+      "to": "Till",
+      "kind": "Typ",
+      "created": "Skapat",
+      "sent": "Skickat",
+      "attempts": "Försök",
+      "sentBy": "Skickat av"
+    },
+    "viewHtml": "Som mejl",
+    "viewText": "Som text",
+    "retry": "Försök igen nu",
+    "retryHint": "Skickas om direkt, med alla försök återställda.",
+    "retried": "Mejlet ligger i kö igen.",
+    "retryFailed": "Kunde inte lägga mejlet i kö igen",
+    "testTitle": "Skicka testmejl",
+    "testHint": "Byggs på medlemmens riktiga data: ett utlägg de kan se, deras senaste korttransaktioner eller det som väntar på dem. [Test] står i ämnet. Skickas oavsett vad medlemmen valt i sin profil.",
+    "testSend": "Skicka",
+    "testSent": "Testmejl skickat till {name}.",
+    "testFailed": "Kunde inte skicka testmejlet"
   }
 }

@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/server/current-user";
 import { getExpensePage } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
-import { canAccessBookkeeping, hasAttestRole } from "@/lib/domain/permissions";
+import { canAccessBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
 import { ExpensesClient } from "./expenses-client";
 
 export default async function ExpensesPage({
@@ -25,6 +25,11 @@ export default async function ExpensesPage({
   const page = await getExpensePage(user, { kind: showOwnOnly ? "mine" : "all" }, query);
 
   return (
-    <ExpensesClient page={page} canToggleScope={canToggleScope} showOwnOnly={showOwnOnly} />
+    <ExpensesClient
+      page={page}
+      canToggleScope={canToggleScope}
+      showOwnOnly={showOwnOnly}
+      canRemind={canSendReminders(user.capabilities)}
+    />
   );
 }

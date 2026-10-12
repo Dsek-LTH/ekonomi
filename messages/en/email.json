@@ -3,6 +3,7 @@
   "org": "D-sektionen inom TLTH",
   "settings": "Choose which emails you get under Profile.",
   "settingsDigest": "Choose which other emails you get under Profile.",
+  "testSubject": "[Test] {subject}",
   "orOpen": "Or open the link: {url}",
   "fact": {
     "costCenter": "Cost centre",
@@ -22,7 +23,8 @@
     "submitter": "You get this email because you submitted the expense.",
     "bookkeeper": "You get this email because you book the section's expenses.",
     "cardHolder": "You get this email because section card {cards} is in your name.",
-    "digest": "The summary comes every Sunday when something is waiting for you, and never otherwise."
+    "digest": "The summary comes every Sunday when something is waiting for you, and never otherwise.",
+    "reminder": "You are getting this email because {sender} sent you a reminder. Reminders cannot be turned off."
   },
   "submitted": {
     "subject": "To attest: {label}",
@@ -129,5 +131,39 @@
     "attestHint": "Oldest first.",
     "attestSub": "From {submitter}, waited {days, plural, =0 {less than a day} one {# day} other {# days}}",
     "attestButton": "Go to the attest queue"
+  },
+  "reminder": {
+    "eyebrow": "Reminder",
+    "subject": "Reminder: {label}",
+    "subjectMany": {
+      "expenses": "Reminder: {count} expenses are waiting on you",
+      "transactions": "Reminder: {count, plural, one {# card transaction has} other {# card transactions have}} no expense",
+      "mixed": "Reminder: {count} things are waiting on you"
+    },
+    "headingMany": {
+      "expenses": "{sender} is reminding you about {count} expenses",
+      "transactions": "{sender} is reminding you about {count, plural, one {a card transaction} other {# card transactions}}",
+      "mixed": "{sender} is reminding you about {count} things"
+    },
+    "introMany": "They are waiting on something from you.",
+    "fromSubmitter": "From {submitter}",
+    "ownTitle": "Your expenses that need action",
+    "attest": {
+      "heading": "{sender} is reminding you about an expense",
+      "intro": "It is still waiting for your approval.",
+      "button": "Open and approve"
+    },
+    "changes": {
+      "heading": "{sender} is reminding you about your expense",
+      "intro": "It came back for changes and has not been resubmitted. Change it and submit it, and it moves on.",
+      "button": "Change the expense",
+      "short": "Needs changes"
+    },
+    "draft": {
+      "heading": "{sender} is reminding you about your expense",
+      "intro": "It is saved as a draft and has not been submitted for approval yet.",
+      "button": "Open the expense",
+      "short": "Draft, not submitted"
+    }
   }
 }

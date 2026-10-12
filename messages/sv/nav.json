@@ -47,5 +47,6 @@
     "title": "Sök i appen",
     "placeholder": "Sök en sida…",
     "empty": "Inga sidor matchar."
-  }
+  },
+  "email": "E-post"
 }

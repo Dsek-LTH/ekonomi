@@ -57,7 +57,8 @@
     "EXPORT_REVERTED": "Markerade som ej exporterad",
     "RECALLED": "Drog tillbaka inlämningen",
     "DEADLINE_WAIVED": "Beviljade dispens från fristen",
-    "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen"
+    "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen",
+    "REMINDER_SENT": "Skickade påminnelse"
   },
   "detail": {
     "missingTitle": "Utlägget hittades inte",
@@ -133,7 +134,9 @@
     "revokeWaiverConfirm": "Utlägget är äldre än fristen och kan inte skickas in igen utan en ny dispens.",
     "deadlineWaiver": "Dispens från redovisningsfristen",
     "deadlineWaiverGranted": "{name} beviljade dispens {date}.",
-    "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in."
+    "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in.",
+    "remind": "Skicka påminnelse",
+    "reminderTo": "Till {names}"
   },
   "mutations": {
     "transition": {
@@ -270,5 +273,31 @@
     "stuckWithRows": "Ingen av raderna ovan går att välja. Står köpet där med \"annat belopp\" är det beloppet du skrivit som behöver rättas. Står det som redan redovisat har någon annan redan tagit det, hör av dig till dem eller till skattmästaren.",
     "stuckNoRows": "Kontoutdraget är troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen under Bank & matchning.",
     "stuckDraft": "Ett kortköp går inte att skicka in utan matchning. Spara som utkast så länge och kom tillbaka när transaktionen finns."
+  },
+  "reminders": {
+    "title": "Skicka påminnelse",
+    "subtitleMany": "{count} utlägg valda",
+    "loading": "Tar reda på vem den går till…",
+    "goesTo": "Påminnelsen går till",
+    "target": {
+      "attesters": "Attest",
+      "submitter": "Inskickare",
+      "cardHolder": "Kortinnehavare"
+    },
+    "skippedTitle": "{count, plural, one {Ett utlägg påminns det inte om} other {# utlägg påminns det inte om}}",
+    "skipped": {
+      "notRemindable": "det väntar inte på någon",
+      "nobody": "det finns ingen att påminna"
+    },
+    "message": "Meddelande",
+    "messageHint": "Valfritt. Står överst i mejlet.",
+    "messagePlaceholder": "Till exempel vad som saknas, eller när det behöver vara klart.",
+    "send": "{count, plural, one {Skicka till en person} other {Skicka till # personer}}",
+    "sendNone": "Skicka",
+    "sent": "{count, plural, one {Påminnelse skickad till en person.} other {Påminnelse skickad till # personer.}}",
+    "sendFailed": "Kunde inte skicka påminnelsen",
+    "pickAll": "Välj alla utlägg på sidan att påminna om",
+    "pick": "Välj {label} att påminna om",
+    "remindPicked": "Påminn ({count})"
   }
 }

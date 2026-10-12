@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { NewExpenseMenu } from "@/components/new-expense-menu";
 import { Card } from "@/components/ui/card";
+import { useReminderPicks } from "@/components/reminder-picks";
+import { useRole } from "@/components/shell/role-context";
+import { canRemindAboutExpense } from "@/lib/domain/reminders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconCheck } from "@/components/ui/icons";
 import type { CollectionOption } from "@/components/ui/collection-switch";
@@ -30,10 +33,13 @@ export function ExpensesClient({
   page,
   canToggleScope,
   showOwnOnly,
+  canRemind,
 }: {
   page: RowPage<Expense>;
   canToggleScope: boolean;
   showOwnOnly: boolean;
+  /** Holds SEND_REMINDERS, so the rows can be ticked and reminded about. */
+  canRemind: boolean;
 }) {
   const t = useTranslations("expenses");
   const tPayment = useTranslations("common.payment");
@@ -42,6 +48,17 @@ export function ExpensesClient({
   // The list's state lives in the URL, because the query behind it runs on the
   // server. See useUrlTableControls. `page.rows` is already the page.
   const controls = useUrlTableControls(page.total);
+  const { user } = useRole();
+
+  // Bulk reminders: tick the utlägg, then "Påminn". See useReminderPicks.
+  const picks = useReminderPicks({
+    rows: page.rows,
+    enabled: canRemind,
+    subject: "expense",
+    rowId: (e) => e.id,
+    remindable: (e) => canRemindAboutExpense(e, user.id),
+    rowLabel: (e) => e.reference ?? e.title,
+  });
 
   // `t` is stable per locale, so these are built once rather than per render,
   // a fresh `columns` array would also defeat DataTable's memo.
@@ -74,6 +91,7 @@ export function ExpensesClient({
   );
 
   const columns: Column<Expense>[] = useMemo(() => [
+    picks.column,
     expenseReferenceColumn(t("col.verification")),
     expenseTitleColumn(t("col.title"), { reference: false }),
     expenseDateColumn(t("col.date"), date),
@@ -130,7 +148,7 @@ export function ExpensesClient({
         ),
     },
     expenseAmountColumn(t("col.amount")),
-  ], [t, tPayment, showOwnOnly, date]);
+  ], [t, tPayment, showOwnOnly, date, picks.column]);
 
   return (
     <PageShell
@@ -173,11 +191,15 @@ export function ExpensesClient({
             // On the list's own toolbar rather than in the page header: it adds
             // a row to what is below it, so that is where it lives.
             action={
-              // Filled: making an utlägg is the main thing this page is for, so
-              // it is drawn as the page's primary action even on a bar it shares
-              // with the search and the status filter. The empty state's copy
-              // is filled too, so the two read as the same button.
-              <NewExpenseMenu variant="primary" />
+              <>
+                {picks.button}
+                {/* Filled: making an utlägg is the main thing this page is for,
+                    so it is drawn as the page's primary action even on a bar it
+                    shares with the search and the status filter. The empty
+                    state's copy is filled too, so the two read as the same
+                    button. */}
+                <NewExpenseMenu variant="primary" />
+              </>
             }
             searchPlaceholder={t("searchPlaceholder")}
             rowKey={(e) => e.id}
@@ -186,6 +208,8 @@ export function ExpensesClient({
           />
         </Card>
       )}
+
+      {picks.dialog}
     </PageShell>
   );
 }

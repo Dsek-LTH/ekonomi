@@ -1,5 +1,5 @@
-import { ExpensePreview } from "./_shared";
+import { KindPreview } from "./_shared";
 
 export default function ExpenseDeadlineWaiverRevoked() {
-  return <ExpensePreview kind="waiverRevoked" />;
+  return <KindPreview kind="EXPENSE_DEADLINE_WAIVER_REVOKED" />;
 }

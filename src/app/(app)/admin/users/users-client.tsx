@@ -49,6 +49,7 @@ import type { UserAuthority } from "@/lib/data/authority";
 import type { User } from "@/lib/domain/types";
 import { useQuery } from "@/components/shell/use-query";
 import { PersonSearch } from "./person-search";
+import { EmailLog } from "../email/email-log";
 
 export function UsersClient({ holders }: { holders: User[] }) {
   const t = useTranslations("admin.users");
@@ -140,7 +141,8 @@ export function UsersClient({ holders }: { holders: User[] }) {
   );
 }
 
-/** One member: the roles they hold, where each came from, and their bank details. */
+/** One member: the roles they hold, where each came from, their bank details,
+ *  and the mail they have been sent. */
 function PersonDialog({ person, onClose }: { person: User; onClose: () => void }) {
   const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
@@ -195,6 +197,14 @@ function PersonDialog({ person, onClose }: { person: User; onClose: () => void }
             with SETTINGS access to this page but not BOOKKEEPING still sees
             nothing here. */}
         {canBookkeep(user.capabilities) && <PayoutPanel userId={person.id} />}
+
+        {/* The mail this member has been sent, and a test mail to send them.
+            Here rather than only under E-post because the question usually
+            arrives with a name attached: "Maja says she never got it". */}
+        <div className="space-y-3 border-t border-border pt-4">
+          <h3 className="text-sm font-semibold">{t("emailTitle")}</h3>
+          <EmailLog recipient={{ id: person.id, name: person.name }} />
+        </div>
       </ModalBody>
     </Modal>
   );

@@ -141,6 +141,22 @@ export function expenseNotice(
   const label = mailLabel(expense);
   const url = appUrl(`/expenses/${expense.id}`);
 
+  return {
+    subject: emailT(`${key}.subject`, { label }),
+    tone,
+    eyebrow: emailT(`${key}.eyebrow`),
+    heading: emailT(`${key}.heading`, values),
+    intro: emailT(`${key}.intro`, values),
+    blocks: [...commentBlock(comment), expenseBlock(expense)],
+    action: { label: emailT(`${key}.button`), url },
+    orOpen: emailT("orOpen", { url }),
+    ...frame(emailT(`reason.${reason}`)),
+  };
+}
+
+/** One utlägg as a mail shows it: reference, title, amount, and the facts the
+ *  caller had to hand. */
+function expenseBlock(expense: ExpenseFacts): Block {
   const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
   if (expense.allocations?.length) {
     const centres = [
@@ -160,33 +176,125 @@ export function expenseNotice(
   }
 
   return {
-    subject: emailT(`${key}.subject`, { label }),
-    tone,
-    eyebrow: emailT(`${key}.eyebrow`),
-    heading: emailT(`${key}.heading`, values),
-    intro: emailT(`${key}.intro`, values),
-    blocks: [
-      ...(comment?.text
-        ? [
-            {
-              kind: "comment" as const,
-              author: comment.author,
-              when: stockholmMinute.format(new Date()),
-              text: comment.text,
-            },
-          ]
-        : []),
-      {
-        kind: "expense",
-        reference: expense.reference,
-        title: expense.title,
-        amount: formatOre(expense.grossAmount ?? 0),
-        facts,
-      },
-    ],
-    action: { label: emailT(`${key}.button`), url },
-    orOpen: emailT("orOpen", { url }),
-    ...frame(emailT(`reason.${reason}`)),
+    kind: "expense",
+    reference: expense.reference,
+    title: expense.title,
+    amount: formatOre(expense.grossAmount ?? 0),
+    facts,
+  };
+}
+
+/** What somebody wrote when they acted, quoted as of now. Nothing without text. */
+function commentBlock(comment?: { author: string; text: string | null }): Block[] {
+  if (!comment?.text) return [];
+  return [
+    {
+      kind: "comment",
+      author: comment.author,
+      when: stockholmMinute.format(new Date()),
+      text: comment.text,
+    },
+  ];
+}
+
+// ── Reminders ─────────────────────────────────────────────────────
+
+/**
+ * Where an utlägg in a reminder stands, from the reader's side: waiting for
+ * their attest, sent back to them, or never sent in.
+ */
+export type ReminderState = "attest" | "changes" | "draft";
+
+export interface ReminderItem {
+  expense: ExpenseFacts;
+  state: ReminderState;
+  /** Who sent it in, for the line under an utlägg waiting on the reader's attest. */
+  submitter: string;
+}
+
+/**
+ * A reminder somebody sent by hand, about everything in it that is waiting on
+ * this reader: utlägg, and purchases on their card with no utlägg yet. One mail
+ * per reader however much was picked: a resultatansvarig with eight unsigned
+ * claims gets one mail listing eight, not eight mails.
+ *
+ * About a single utlägg it reads like the mail that utlägg would have sent,
+ * with its facts and a button straight to it. Otherwise it is sections, like
+ * the digest: the utlägg to attest, the reader's own, and the card purchases.
+ */
+export function reminderEmail(
+  sender: string,
+  message: string | null,
+  items: readonly ReminderItem[],
+  txns: readonly Txn[] = [],
+): Email {
+  const note = commentBlock({ author: sender, text: message });
+  const base = {
+    tone: "action" as const,
+    eyebrow: emailT("reminder.eyebrow"),
+    ...frame(emailT("reason.reminder", { sender })),
+  };
+
+  if (items.length === 1 && txns.length === 0) {
+    const { expense, state } = items[0];
+    const url = appUrl(`/expenses/${expense.id}`);
+    return {
+      ...base,
+      subject: emailT("reminder.subject", { label: mailLabel(expense) }),
+      heading: emailT(`reminder.${state}.heading`, { sender }),
+      intro: emailT(`reminder.${state}.intro`),
+      blocks: [...note, expenseBlock(expense)],
+      action: { label: emailT(`reminder.${state}.button`), url },
+      orOpen: emailT("orOpen", { url }),
+    };
+  }
+
+  const row = ({ expense, state, submitter }: ReminderItem): ListRow => ({
+    title: mailLabel(expense),
+    sub:
+      state === "attest"
+        ? emailT("reminder.fromSubmitter", { submitter })
+        : emailT(`reminder.${state}.short`),
+    amount: formatOre(expense.grossAmount ?? 0),
+  });
+  const attest = items.filter((i) => i.state === "attest");
+  const own = items.filter((i) => i.state !== "attest");
+  const sections: Block[] = [];
+  if (attest.length) {
+    sections.push({
+      kind: "section",
+      title: emailT("digest.attest"),
+      blocks: [capped(attest.map(row))],
+      button: { label: emailT("digest.attestButton"), url: appUrl("/approvals") },
+    });
+  }
+  if (own.length) {
+    sections.push({
+      kind: "section",
+      title: emailT("reminder.ownTitle"),
+      blocks: [capped(own.map(row))],
+      link: { label: emailT("digest.deadlineLink"), url: appUrl("/expenses") },
+    });
+  }
+  if (txns.length) {
+    sections.push({
+      kind: "section",
+      title: emailT("digest.unmatched"),
+      hint: emailT("digest.unmatchedHint"),
+      blocks: [transactionsBlock(txns, MAX_LINES)],
+      link: { label: emailT("digest.unmatchedLink"), url: appUrl("/bank?scope=mine") },
+    });
+  }
+
+  // Worded by what is in it: utlägg alone, card purchases alone, or both.
+  const count = items.length + txns.length;
+  const kind = txns.length === 0 ? "expenses" : items.length === 0 ? "transactions" : "mixed";
+  return {
+    ...base,
+    subject: emailT(`reminder.subjectMany.${kind}`, { count }),
+    heading: emailT(`reminder.headingMany.${kind}`, { sender, count }),
+    intro: emailT("reminder.introMany"),
+    blocks: [...note, ...sections],
   };
 }
 

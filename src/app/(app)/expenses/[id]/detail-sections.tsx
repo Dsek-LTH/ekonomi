@@ -479,6 +479,11 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
             <span className="min-w-0">
               <span className={cn("font-medium", EVENT_TONE[r.action])}>{tEvent(r.action)}</span>
               <span className="text-muted"> - {r.actor}</span>
+              {r.recipients && r.recipients.length > 0 && (
+                <span className="mt-0.5 block text-muted">
+                  {t("reminderTo", { names: r.recipients.join(", ") })}
+                </span>
+              )}
               {comment(r) && <span className="mt-0.5 block text-muted">{comment(r)}</span>}
             </span>
           </li>

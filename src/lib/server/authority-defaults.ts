@@ -92,6 +92,11 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTMASTARE", capability: "ADMIN" },
   { role: "ORDFORANDE", capability: "ADMIN" },
 
+  // Chasing an utlägg is the admins' to begin with. A row like any other, so
+  // the section can hand it to the treasury or a resultatansvarig as well.
+  { role: "SKATTMASTARE", capability: "SEND_REMINDERS" },
+  { role: "ORDFORANDE", capability: "SEND_REMINDERS" },
+
   { role: "SKATTMASTARE", capability: "BOOKKEEPING" },
   { role: "ORDFORANDE", capability: "BOOKKEEPING" },
   { role: "VICE_SKATTMASTARE", capability: "BOOKKEEPING" },

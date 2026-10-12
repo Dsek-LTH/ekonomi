@@ -47,5 +47,6 @@
     "title": "Search the app",
     "placeholder": "Search for a page…",
     "empty": "No pages match."
-  }
+  },
+  "email": "Email"
 }

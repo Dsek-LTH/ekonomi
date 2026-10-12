@@ -86,6 +86,10 @@ enum Capability {
   /// whose kind is RENTAL. A holder of this cannot file a sponsoravtal, edit
   /// one, or delete one.
   RENTAL_MANAGE
+  /// Send a reminder about an utlägg to whoever it is waiting on: its
+  /// attesters, or the submitter. From the utlägg itself, or several at once
+  /// from the list. Held by the admins by default.
+  SEND_REMINDERS
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -186,6 +190,7 @@ model User {
   rentalChecks         RentalDetails[]          @relation("RentalChecker")
   counterparties       Counterparty[]           @relation("CounterpartyCreator")
   outboundEmails       OutboundEmail[]          @relation("EmailRecipient")
+  sentTestEmails       OutboundEmail[]          @relation("EmailSender")
   notificationPrefs    NotificationPreference[]
 
   createdAt DateTime @default(now())

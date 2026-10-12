@@ -78,6 +78,20 @@ export async function notify(
   return count;
 }
 
+/**
+ * Put a mail that has stopped being retried back in the queue, with all its
+ * tries returned. Its last error stays until a send succeeds, so the log still
+ * says what went wrong. False when there is nothing to retry: no such mail, or
+ * one already sent.
+ */
+export async function retryEmail(id: string): Promise<boolean> {
+  const { count } = await prisma.outboundEmail.updateMany({
+    where: { id, sentAt: null },
+    data: { attempts: 0, claimedAt: null },
+  });
+  return count > 0;
+}
+
 // ── Who ───────────────────────────────────────────────────────────
 
 /** The roles that currently hold `cap`, from the editable matrix. */
@@ -150,7 +164,7 @@ const LEASE_MS = 5 * 60_000;
 // Enough tries to ride out an afternoon's outage with the cron sweep running
 // every quarter of an hour. Past it the row stays, with its last error, for
 // somebody to read.
-const MAX_ATTEMPTS = 12;
+export const MAX_ATTEMPTS = 12;
 const BATCH = 100;
 
 /** Send what is waiting in the outbox. Safe to run any number of times at once. */
