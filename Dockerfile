@@ -84,25 +84,62 @@ COPY --chown=1001:0 scripts/load-env.ts ./scripts/load-env.ts
 USER 1001:0
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
+# ── assemble ──────────────────────────────────────────────────────────
+# Lays out everything the runner ships under /out, in one RUN, so the runner
+# can take it in with a single COPY.
+#
+# This is about build time on OKD, not image size. Its builder gives every
+# instruction a layer of its own, and a COPY into a stage that already holds
+# the app is paid for in full each time: ten of them used to cost most of a
+# thirty minute build. One RUN here and one COPY below is two layers. Both
+# trees together are about 13,000 files, more than half of them the Prisma CLI
+# under /migrator.
+#
+# FROM builder because the build output and the source tree (prisma/, the
+# typst templates, scripts/) are already in it. The migrator's node_modules is
+# bind-mounted rather than copied in, which would be another layer.
+#
+# Every copy is `dir/.` into a directory made first. The standalone output
+# already holds a few of these paths (traced files under public/ and src/), and
+# a plain `cp -a dir dest` into an existing dest nests it one level down.
+FROM builder AS assemble
+RUN --mount=type=bind,from=migrator-deps,source=/migrator/node_modules,target=/migrator-deps \
+    set -e; \
+    mkdir -p /out/app/.next/static /out/app/public /out/app/src/lib/expense/cover \
+             /out/app/src/lib/contract/rental /out/app/src/lib/server/fonts \
+             /out/migrator/node_modules /out/migrator/scripts; \
+    cp -a .next/standalone/. /out/app/; \
+    cp -a .next/static/. /out/app/.next/static/; \
+    cp -a public/. /out/app/public/; \
+    cp -a src/lib/expense/cover/. /out/app/src/lib/expense/cover/; \
+    cp -a src/lib/contract/rental/. /out/app/src/lib/contract/rental/; \
+    cp -a src/lib/server/fonts/. /out/app/src/lib/server/fonts/; \
+    cp -a /migrator-deps/. /out/migrator/node_modules/; \
+    cp -a prisma prisma.config.ts /out/migrator/; \
+    cp -a scripts/load-env.ts /out/migrator/scripts/
+
 # ── runner ────────────────────────────────────────────────────────────
 FROM base AS runner
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# Everything below lands in this one COPY, laid out by the assemble stage:
+#
+#   /app       the standalone output, its static assets, public/, and the
+#              typst templates and fonts
+#   /migrator  Prisma and the migrations, for the init container
+#
 # The standalone output, its static assets and public/ are the whole app.
 # It writes nothing to disk. Receipts go to S3, so its filesystem can stay
 # read-only.  Use group 0 ownership rather than the image's `node` account:
 # OKD's restricted SCC runs containers with an arbitrary non-root UID, which
 # must still be able to read every runtime file.
-COPY --from=builder --chown=1001:0 /app/.next/standalone ./
-COPY --from=builder --chown=1001:0 /app/.next/static ./.next/static
-COPY --from=builder --chown=1001:0 /app/public ./public
-
-# The templates the app typesets and the faces they are set in, read from disk
-# at render time rather than bundled. Next's standalone output traces imports,
-# and neither a .typ nor an .otf is one, so without this they render in
-# `pnpm dev` and find nothing here. The paths mirror the source tree because
+#
+# The templates the app typesets and the faces they are set in are read from
+# disk at render time rather than bundled. Next's standalone output traces
+# imports, and neither a .typ nor an .otf is one, so without them they render
+# in `pnpm dev` and find nothing here. The paths mirror the source tree because
 # that is what lib/server/typst.ts resolves against process.cwd(), which is also
 # the compile root; the section's mark they draw is already in public/.
 #
@@ -122,20 +159,11 @@ COPY --from=builder --chown=1001:0 /app/public ./public
 # There is no typesetter to install beside them: Typst comes in as an npm
 # dependency with a musl build for this image, so `pnpm install` is the whole
 # of it.
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/expense/cover ./src/lib/expense/cover
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/contract/rental ./src/lib/contract/rental
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/server/fonts ./src/lib/server/fonts
-
-# The migrator stage's contents, for the cluster's init container to run with
-# `node node_modules/prisma/build/index.js migrate deploy` from /migrator. Its
-# own directory because the standalone output already has a node_modules here.
-COPY --from=migrator-deps --chown=1001:0 /migrator/node_modules /migrator/node_modules
-COPY --chown=1001:0 prisma /migrator/prisma
-COPY --chown=1001:0 prisma.config.ts /migrator/
-COPY --chown=1001:0 scripts/load-env.ts /migrator/scripts/load-env.ts
+#
+# /migrator is for the cluster's init container to run with
+# `node node_modules/prisma/build/index.js migrate deploy`. Its own directory
+# because the standalone output already has a node_modules in /app.
+COPY --from=assemble --chown=1001:0 /out/ /
 
 # Non-root by default outside OKD. On OKD this is replaced by the namespace's
 # arbitrary UID; neither the app nor the migration stage requires a passwd
