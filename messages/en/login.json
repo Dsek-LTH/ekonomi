@@ -2,6 +2,11 @@
   "title": "The D-Guilds economy",
   "description": "Sign in with your D-Guild account to continue",
   "loginPrompt": "Continue with your D-Guild account",
+  "errors": {
+    "denied": "Sign-in was refused. Your account has no student id.",
+    "unknownUser": "No such user. Has the database been seeded (pnpm db:seed)?",
+    "failed": "Sign-in failed. Please try again."
+  },
   "dev": {
     "heading": "Dev sign-in (local only)",
     "member": "Member",

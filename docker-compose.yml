@@ -19,39 +19,39 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: utlagg-postgres
+    container_name: ekonomi-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: utlagg
-      POSTGRES_PASSWORD: utlagg
-      POSTGRES_DB: utlagg
+      POSTGRES_USER: ekonomi
+      POSTGRES_PASSWORD: ekonomi
+      POSTGRES_DB: ekonomi
     ports:
       - "5432:5432"
     volumes:
-      - utlagg-pgdata:/var/lib/postgresql/data
+      - ekonomi-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U utlagg -d utlagg"]
+      test: ["CMD-SHELL", "pg_isready -U ekonomi -d ekonomi"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   # Object storage for uploaded receipts (S3-compatible). Console at :9001.
   minio:
-    image: minio/minio:latest
-    container_name: utlagg-minio
+    image: pgsty/minio:latest
+    container_name: ekonomi-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       # Read from .env so MinIO's credentials and the app's stay one setting.
       # The defaults are what lib/server/env.ts falls back to in development,
       # so an empty .env still gives you the same MinIO as before.
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-utlagg}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-utlagg-dev-secret}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-ekonomi}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-ekonomi-dev-secret}
     ports:
       - "9000:9000" # S3 API
       - "9001:9001" # web console
     volumes:
-      - utlagg-miniodata:/data
+      - ekonomi-miniodata:/data
 
   # The intakt service: income reports from Zettle and Swish. Built from the
   # sibling Go module, and a separate container for one blunt reason: it
@@ -71,8 +71,8 @@ services:
     build:
       context: ./intakt
       target: runtime
-    image: utlagg-intakt
-    container_name: utlagg-intakt
+    image: ekonomi-intakt
+    container_name: ekonomi-intakt
     restart: unless-stopped
     # Named one by one rather than through env_file, so this container gets the
     # three things it needs and none of the app's secrets. It has no business
@@ -112,11 +112,11 @@ services:
     build:
       context: .
       target: migrator
-    image: utlagg-migrate
+    image: ekonomi-migrate
     profiles: ["app"]
     restart: "no"
     environment:
-      DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
+      DATABASE_URL: postgresql://ekonomi:ekonomi@postgres:5432/ekonomi
     depends_on:
       postgres:
         condition: service_healthy
@@ -125,8 +125,8 @@ services:
     build:
       context: .
       target: runner
-    image: utlagg-app
-    container_name: utlagg-app
+    image: ekonomi-app
+    container_name: ekonomi-app
     profiles: ["app"]
     restart: unless-stopped
     # Everything the app reads comes from .env, exactly as it does under
@@ -145,7 +145,7 @@ services:
       # localhost inside a container is the container itself. These three are
       # the only settings that differ between `pnpm dev` and the stack,
       # everything else is whatever .env says, for both.
-      DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
+      DATABASE_URL: postgresql://ekonomi:ekonomi@postgres:5432/ekonomi
       S3_ENDPOINT: http://minio:9000
       INTAKT_URL: http://intakt:8080
     ports:
@@ -164,5 +164,5 @@ services:
       #   docker compose --profile app --profile intakt up -d
 
 volumes:
-  utlagg-pgdata:
-  utlagg-miniodata:
+  ekonomi-pgdata:
+  ekonomi-miniodata:

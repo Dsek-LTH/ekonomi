@@ -2,6 +2,11 @@
   "title": "D-sektionens ekonomi",
   "description": "Logga in med ditt D-sektionskonto för att komma vidare",
   "loginPrompt": "Fortsätt med ditt D-sektionskonto",
+  "errors": {
+    "denied": "Inloggningen nekades. Ditt konto saknar ett student-id.",
+    "unknownUser": "Det finns ingen sådan användare. Har databasen seedats (pnpm db:seed)?",
+    "failed": "Inloggningen misslyckades. Försök igen."
+  },
   "dev": {
     "heading": "Dev-inloggning (endast lokalt)",
     "member": "Medlem",

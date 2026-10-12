@@ -29,6 +29,8 @@
 // exactly where the wizard was before this existed, and none of it is worth an
 // error on the way into a form.
 
+// The project's old name, kept on purpose: renaming the database would leave
+// every file already kept in a browser behind under the old one.
 const DB_NAME = "utlagg";
 const DB_VERSION = 1;
 const STORE = "kept-files";

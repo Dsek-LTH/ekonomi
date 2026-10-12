@@ -11,6 +11,8 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
 const PREFIX = "v1"; // ciphertext marker, anything else is not ours to read
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12; // GCM standard nonce length
+// Named after the project's old name (utlagg) and kept that way on purpose.
+// The salt is part of the key, so changing it makes every stored token unreadable.
 const SALT = "utlagg.fortnox.tokens.v1";
 
 let cachedKey: Buffer | null = null;

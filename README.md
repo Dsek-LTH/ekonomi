@@ -1,4 +1,4 @@
-# utlagg
+# ekonomi
 
 Expense and budget management for the section. A member uploads a receipt, the
 expense is approved by the right result-unit owner, booked as a voucher and
@@ -74,8 +74,8 @@ depends on the previous.
 ### 1. Clone and install dependencies
 
 ```bash
-git clone <repo-url> utlagg
-cd utlagg
+git clone <repo-url> ekonomi
+cd ekonomi
 corepack enable      # makes `pnpm` resolve to the version this repo pins
 pnpm install
 ```
@@ -104,8 +104,8 @@ pnpm db:up           # docker compose up -d
 
 This starts two containers in the background:
 
-- **`utlagg-postgres`** on port `5432`, the database.
-- **`utlagg-minio`** on ports `9000` (S3 API) and `9001` (web console), object
+- **`ekonomi-postgres`** on port `5432`, the database.
+- **`ekonomi-minio`** on ports `9000` (S3 API) and `9001` (web console), object
   storage for receipt files. Receipt images are never stored in Postgres.
 
 Two, and only these two. The income service (intakt) is behind its own compose
@@ -118,6 +118,14 @@ came up with `docker compose ps`; Postgres has a healthcheck and takes a few
 seconds on first boot.
 
 Stop them again with `pnpm db:down` when you're done for the day.
+
+> **Upgrading a checkout from before the rename?** The project used to be
+> called `utlagg`, and the local Postgres user, database, MinIO keys and Docker
+> volumes were named after it. They are all `ekonomi` now. Update `DATABASE_URL`
+> and the `S3_*` keys in your `.env` to match `.env.example` (or copy it again).
+> Then run `pnpm db:down && pnpm db:up`, followed by steps 5 and 6, to get fresh
+> volumes. The old ones hold nothing the seed cannot recreate. List them with
+> `docker volume ls | grep utlagg` and remove them with `docker volume rm`.
 
 ### 4. Generate the Prisma client
 
@@ -153,7 +161,7 @@ pnpm dev
 | What | Where | Credentials |
 | --- | --- | --- |
 | The app | http://localhost:3000 | see below |
-| MinIO console | http://localhost:9001 | `utlagg` / `utlagg-dev-secret` |
+| MinIO console | http://localhost:9001 | `ekonomi` / `ekonomi-dev-secret` |
 
 The receipts bucket is created on the first upload, so you don't need to make it
 by hand.
