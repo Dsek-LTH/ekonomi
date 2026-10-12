@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# Choose between runner and migrator.
-# Needed for OKD builds because they don't have --target
-ARG TARGET_STAGE=runner
-
 # The app's production image. The serving image holds no compiler, lockfile, or
 # source: deps → builder → runner. A separate `migrator` stage contains only
 # Prisma and the migration files, without the Next build output.
+#
+# The runner also carries a copy of the migrator under /migrator. OKD builds
+# exactly one image per build, and two builds of one commit finish at different
+# times, so the cluster runs migrations from the runner image instead. Schema
+# and code then always come from the same build. The default (last) stage is
+# the runner.
 #
 # Local development does not need any of this. `pnpm dev` against
 # `pnpm db:up` is still the shorter path. This is for running the whole stack
@@ -127,6 +129,14 @@ COPY --from=builder --chown=1001:0 \
 COPY --from=builder --chown=1001:0 \
      /app/src/lib/server/fonts ./src/lib/server/fonts
 
+# The migrator stage's contents, for the cluster's init container to run with
+# `node node_modules/prisma/build/index.js migrate deploy` from /migrator. Its
+# own directory because the standalone output already has a node_modules here.
+COPY --from=migrator-deps --chown=1001:0 /migrator/node_modules /migrator/node_modules
+COPY --chown=1001:0 prisma /migrator/prisma
+COPY --chown=1001:0 prisma.config.ts /migrator/
+COPY --chown=1001:0 scripts/load-env.ts /migrator/scripts/load-env.ts
+
 # Non-root by default outside OKD. On OKD this is replaced by the namespace's
 # arbitrary UID; neither the app nor the migration stage requires a passwd
 # entry or writable image filesystem.
@@ -141,5 +151,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "server.js"]
-
-FROM ${TARGET_STAGE} AS final
