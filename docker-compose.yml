@@ -37,7 +37,7 @@ services:
 
   # Object storage for uploaded receipts (S3-compatible). Console at :9001.
   minio:
-    image: pgsty/minio:latest
+    image: minio/minio:latest
     container_name: ekonomi-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
