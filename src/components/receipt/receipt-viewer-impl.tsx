@@ -6,8 +6,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import {
+  TransformWrapper,
+  TransformComponent,
+  type ReactZoomPanPinchContentRef,
+} from "react-zoom-pan-pinch";
 import { useTranslations } from "next-intl";
+import { IconChevronDown, IconChevronLeft, IconChevronRight } from "@/components/ui/icons";
 import { Spinner } from "@/components/ui/spinner";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { useMediaQuery } from "@/lib/ui/media";
@@ -54,6 +59,16 @@ const ZOOM_SETTLE_MS = 300;
  */
 const MAX_CANVAS_WIDTH = 3200;
 
+/** How long a jump to another document takes to slide there. */
+const JUMP_MS = 300;
+
+/**
+ * Where a document lands after a jump, in pixels below the top of the viewer.
+ * Clear of the two toolbars floating in the top corners, so the divider that
+ * names the document is the first thing visible rather than tucked under them.
+ */
+const JUMP_TOP = 52;
+
 /** One thing to look at. A PDF is shown whole (every page, stacked) and an
  *  image is shown as it was stored. */
 export interface ViewerDocument {
@@ -92,6 +107,12 @@ export interface ReceiptViewerProps {
    * behind a button is one document and a rumour: the utläggsräkning was
    * genuinely hard to remember existed, because the panel opened on the receipt
    * and nothing on screen said there was anything behind it.
+   *
+   * What the stack had lost was a way to get to the third of five without
+   * scrolling past the first two. So where there is more than one, a bar at the
+   * foot of the viewer names the document in view and jumps to any of them,
+   * and each one opens under a divider that says where the last one ended.
+   * Everything stays on screen; the bar is a shortcut through it, not a pager.
    */
   documents: ViewerDocument[];
   /** Sizing/framing for the inline (non-fullscreen) viewer. */
@@ -155,6 +176,23 @@ export default function ReceiptViewerImpl({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLDivElement>(null);
+  // One box per document, by position, for the jump bar to measure and the
+  // observer below to watch.
+  const sheetRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Which document is in view is the jump bar's state, not this component's.
+  // Held here, every change re-rendered the whole viewer (the pan wrapper,
+  // every sheet, every PDF page) to move "1/3" to "2/3", and it changed in the
+  // middle of a pan, which is the moment a re-render costs most on a phone
+  // (see `startDrag` above). So the viewer only reports it, through whatever
+  // the mounted bar registered, and the bar is the one thing that redraws.
+  const reportCurrent = useRef<(i: number) => void>(() => {});
+  const registerBar = useCallback((set: ((i: number) => void) | null) => {
+    reportCurrent.current = set ?? (() => {});
+  }, []);
+  // Until when the observer should keep quiet. A jump slides past every
+  // document between here and there, and each would otherwise claim to be
+  // the current one on the way; the one jumped to is the answer.
+  const jumpQuiet = useRef(0);
   const [width, setWidth] = useState(0);
   // What the page is currently magnified by. Settled, not live. See the
   // handler on TransformWrapper.
@@ -267,6 +305,72 @@ export default function ReceiptViewerImpl({
     ro.observe(el);
     return () => ro.disconnect();
   }, [fullscreen, docsKey]);
+
+  // Which document is in view: the one taking up the most of the viewer. Not
+  // the one whose top has passed some line. That read "1/3" with the second
+  // receipt filling two thirds of the panel, because its divider was still a
+  // few pixels short of where the line was drawn.
+  //
+  // An IntersectionObserver rather than a measurement on every transform: the
+  // pan runs on the compositor (see `customTransform` below), and reading
+  // layout sixty times a second is the cost that was taken off it. The
+  // observer reports in steps of a twentieth of each document, which is fine
+  // enough to follow a pan, and it sees the transform the way the reader does.
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root || documents.length < 2) return;
+    const visible = new Map<number, number>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const i = Number((e.target as HTMLElement).dataset.sheet);
+          visible.set(i, e.isIntersecting ? e.intersectionRect.height : 0);
+        }
+        // Still counted during a jump, so the answer is current when it ends.
+        if (Date.now() < jumpQuiet.current) return;
+        let best = -1;
+        let most = 0;
+        for (const [i, h] of visible) {
+          if (h > most) {
+            most = h;
+            best = i;
+          }
+        }
+        if (best >= 0) reportCurrent.current(best);
+      },
+      { root, threshold: Array.from({ length: 21 }, (_, i) => i / 20) },
+    );
+    for (const el of sheetRefs.current.slice(0, documents.length)) if (el) io.observe(el);
+    return () => io.disconnect();
+  }, [docsKey, fullscreen, documents.length]);
+
+  /**
+   * Slide the stack so document `i` starts just under the toolbars.
+   *
+   * A pan, not a scroll: nothing in here scrolls (the viewer is
+   * overflow-hidden and the library moves the content with a transform), so
+   * the target is worked out from where the document is on screen now and
+   * handed to the library as a new position at the current zoom. Clamped to
+   * the stack, so a short last document sits at the bottom rather than
+   * leaving empty space below it.
+   */
+  const jump = (ctl: ReactZoomPanPinchContentRef, i: number) => {
+    const sheet = sheetRefs.current[i];
+    const { wrapperComponent: wrapper, contentComponent: content, state } = ctl.instance;
+    if (!sheet || !wrapper || !content) return;
+    const offset =
+      sheet.getBoundingClientRect().top - wrapper.getBoundingClientRect().top - JUMP_TOP;
+    const lowest = Math.min(0, wrapper.clientHeight - content.offsetHeight * state.scale);
+    const y = Math.min(0, Math.max(lowest, state.positionY - offset));
+    jumpQuiet.current = Date.now() + JUMP_MS + 100;
+    reportCurrent.current(i);
+    ctl.setTransform(state.positionX, y, state.scale, JUMP_MS, "easeOut");
+  };
+
+  // What a document is called in the jump bar. The caption where the page
+  // gave one, which every multi-document page does; the bare name otherwise.
+  const docName = (d: ViewerDocument, i: number) =>
+    d.label ?? d.filename ?? t("documentN", { n: i + 1 });
 
   // Tab is held inside the overlay while it is up. Fullscreen covers the page
   // it was opened from, and tabbing out of the last control landed on buttons
@@ -422,16 +526,16 @@ export default function ReceiptViewerImpl({
         }, ZOOM_SETTLE_MS);
       }}
     >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {(ctl) => (
           <>
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
-              <ToolBtn label={t("zoomOut")} onClick={() => zoomOut()}>
+              <ToolBtn label={t("zoomOut")} onClick={() => ctl.zoomOut()}>
                 −
               </ToolBtn>
-              <ToolBtn label={t("zoomIn")} onClick={() => zoomIn()}>
+              <ToolBtn label={t("zoomIn")} onClick={() => ctl.zoomIn()}>
                 +
               </ToolBtn>
-              <ToolBtn label={t("reset")} onClick={() => resetTransform()}>
+              <ToolBtn label={t("reset")} onClick={() => ctl.resetTransform()}>
                 <ResetIcon />
               </ToolBtn>
               <span className="mx-0.5 h-5 w-px bg-border" />
@@ -457,6 +561,14 @@ export default function ReceiptViewerImpl({
                 )}
               </ToolBtn>
             </div>
+
+            {documents.length > 1 && (
+              <JumpBar
+                items={documents.map((d, i) => ({ key: d.src, name: docName(d, i) }))}
+                onJump={(i) => jump(ctl, i)}
+                register={registerBar}
+              />
+            )}
 
             <TransformComponent
               wrapperStyle={{ width: "100%", height: "100%" }}
@@ -488,17 +600,42 @@ export default function ReceiptViewerImpl({
                   pages, an image, a failure. It is what the observer above
                   watches, and the library's own content element is its parent,
                   so the two grow together. */}
-              <div ref={stackRef} className="flex w-full flex-col items-center gap-6">
-                {documents.map((d) => (
-                  <DocumentSheet
+              {/* `gap-10`, up from 6, so the space between two documents is
+                  plainly wider than the space between two pages of one.
+
+                  Padded at both ends where there are several: the first
+                  divider would otherwise start under the toolbars in the top
+                  corners, and the end of the last document under the jump
+                  bar, with no way to pan either one clear. */}
+              <div
+                ref={stackRef}
+                className={cn(
+                  "flex w-full flex-col items-center gap-10",
+                  documents.length > 1 && "pb-14 pt-10",
+                )}
+              >
+                {documents.map((d, i) => (
+                  <div
                     key={d.src}
-                    doc={d}
-                    // Captioned only where there is something to tell apart.
-                    captioned={documents.length > 1}
-                    width={pdfWidth}
-                    pixelRatio={pixelRatio}
-                    onPages={reportPages}
-                  />
+                    ref={(el) => {
+                      sheetRefs.current[i] = el;
+                    }}
+                    data-sheet={i}
+                    className="w-full"
+                  >
+                    <DocumentSheet
+                      doc={d}
+                      // Captioned only where there is something to tell apart.
+                      position={
+                        documents.length > 1
+                          ? { index: i, total: documents.length, name: docName(d, i) }
+                          : undefined
+                      }
+                      width={pdfWidth}
+                      pixelRatio={pixelRatio}
+                      onPages={reportPages}
+                    />
+                  </div>
                 ))}
               </div>
             </TransformComponent>
@@ -560,13 +697,15 @@ export default function ReceiptViewerImpl({
  */
 function DocumentSheet({
   doc,
-  captioned,
+  position,
   width,
   pixelRatio,
   onPages,
 }: {
   doc: ViewerDocument;
-  captioned: boolean;
+  /** Where this document sits in a stack of several, and what to call it.
+   *  Absent for a document on its own, which needs no divider. */
+  position?: { index: number; total: number; name: string };
   width: number;
   pixelRatio: number | undefined;
   /** Reports the page count up, so the viewer can ration the canvas budget
@@ -599,11 +738,23 @@ function DocumentSheet({
 
   return (
     <div className="flex w-full flex-col items-center">
-      {/* What this document is, above its first page. Small caps would be
-          prettier and this has to survive being 40% of a dragged panel, so it
-          is a plain quiet line. */}
-      {captioned && doc.label && (
-        <p className="mb-2 text-xs font-medium text-muted">{doc.label}</p>
+      {/* Where one document ends and the next begins. It was a quiet line of
+          muted text, and between two photographed receipts it read as part of
+          the photo: the boundary was the thing hardest to see, so it is now
+          drawn. A rule across the full width, broken by a tag naming the
+          document and its place in the stack, the same "2/3" the jump bar
+          shows, so the two are visibly one system. */}
+      {position && (
+        <div className="mb-3 flex w-full items-center gap-3">
+          <span aria-hidden className="h-px flex-1 bg-border" />
+          <p className="flex min-w-0 max-w-[85%] items-center gap-2 rounded-control border border-border bg-background px-3 py-1 text-xs font-medium text-foreground shadow-sm">
+            <span className="shrink-0 tabular-nums text-muted">
+              {position.index + 1}/{position.total}
+            </span>
+            <span className="truncate">{position.name}</span>
+          </p>
+          <span aria-hidden className="h-px flex-1 bg-border" />
+        </div>
       )}
       {isPdf ? (
         <Document
@@ -650,6 +801,80 @@ function DocumentSheet({
           className="max-w-full select-none rounded-mark shadow-[var(--shadow-card)]"
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * The jump bar, at the foot where a thumb reaches it and where it covers the
+ * least of a receipt read from the top. Arrows step one document; the list
+ * goes straight to any of them and, closed, says which one is in view and how
+ * many there are.
+ *
+ * Its own component so that "which one is in view" can be its own state. The
+ * viewer reports a change through `register` rather than holding the number
+ * itself, and only these three controls redraw for it. See `reportCurrent`.
+ *
+ * A native select rather than the app's Menu: Menu draws its list in a portal
+ * under the fullscreen overlay, and a phone gives a select its own picker,
+ * which is the right one for a list of file names.
+ */
+function JumpBar({
+  items,
+  onJump,
+  register,
+}: {
+  /** One per document, in stack order. `key` is unique; `name` may not be. */
+  items: { key: string; name: string }[];
+  /** Slides the stack to document `i` and reports it back here. */
+  onJump: (i: number) => void;
+  /** Hands the viewer this bar's setter on mount, and takes it back on unmount. */
+  register: (set: ((i: number) => void) | null) => void;
+}) {
+  const t = useTranslations("receipt");
+  const [current, setCurrent] = useState(0);
+  useEffect(() => {
+    register(setCurrent);
+    return () => register(null);
+  }, [register]);
+  // Clamped on read, so removing the last document never leaves the bar
+  // pointing past the end before the viewer has reported again.
+  const shown = Math.min(current, items.length - 1);
+
+  return (
+    <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-10 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
+      <ToolBtn
+        label={t("previousDocument")}
+        onClick={() => onJump(shown - 1)}
+        disabled={shown === 0}
+      >
+        <IconChevronLeft className="size-4" />
+      </ToolBtn>
+      <label className="relative flex min-w-0">
+        <span className="sr-only">{t("jumpTo")}</span>
+        <select
+          value={shown}
+          onChange={(e) => onJump(Number(e.target.value))}
+          // As wide as its longest option up to 16rem, and no wider than the
+          // bar allows. `w-full` here sized it against a label with no width
+          // of its own and clipped every name.
+          className="h-7 max-w-64 min-w-0 cursor-pointer appearance-none truncate rounded-control bg-transparent pl-2 pr-7 text-xs font-medium text-foreground transition-colors hover:bg-hover"
+        >
+          {items.map((item, i) => (
+            <option key={item.key} value={i}>
+              {`${i + 1}/${items.length} – ${item.name}`}
+            </option>
+          ))}
+        </select>
+        <IconChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
+      </label>
+      <ToolBtn
+        label={t("nextDocument")}
+        onClick={() => onJump(shown + 1)}
+        disabled={shown === items.length - 1}
+      >
+        <IconChevronRight className="size-4" />
+      </ToolBtn>
     </div>
   );
 }

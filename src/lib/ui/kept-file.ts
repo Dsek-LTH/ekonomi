@@ -16,7 +16,7 @@
 // quota is a share of the disk.
 //
 // Several files under one draft, not one: a submitter filling in a claim that
-// needs two complementing documents picks them one after another, and the
+// needs two complementing documents picks them together or one after another, and the
 // second used to bump the first out of the browser's own memory of the
 // draft. Each is keyed `${draftKey}::${fileId}`, and the draft key alone
 // (never containing "::" itself, see keepFile) bounds an IndexedDB range that
@@ -57,7 +57,16 @@ interface KeptRow {
   name: string;
   type: string;
   savedAt: number;
+  /** Breaks ties in `savedAt`. Several files picked at once are kept in the
+   *  same millisecond, and without this they came back after a reload in key
+   *  order, which is the order of their random ids. Absent on rows written
+   *  before it existed, which sort as 0. */
+  seq?: number;
 }
+
+// Counts up for as long as the page lives. Only ever compared between rows
+// with the same `savedAt`, and those were all written by this same page.
+let seq = 0;
 
 function open(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
@@ -121,6 +130,7 @@ export async function keepFile(key: string, fileId: string, file: File): Promise
     name: file.name,
     type: file.type,
     savedAt: Date.now(),
+    seq: seq++,
   };
   await run("readwrite", (s) => s.put(row));
 }
@@ -146,7 +156,7 @@ export async function readKeptFiles(key: string): Promise<{ id: string; file: Fi
   const range = IDBKeyRange.bound(rowKey(key, ""), rowKey(key, "￿"));
   const rows = (await run<KeptRow[]>("readonly", (s) => s.getAll(range))) ?? [];
   const out: { id: string; file: File }[] = [];
-  for (const row of rows.sort((a, b) => a.savedAt - b.savedAt)) {
+  for (const row of rows.sort((a, b) => a.savedAt - b.savedAt || (a.seq ?? 0) - (b.seq ?? 0))) {
     const file = toFile(row);
     if (file) {
       out.push({ id: row.key.slice(key.length + SEP.length), file });
