@@ -105,8 +105,16 @@ type Source = {
    * With one of these the panel stays even with nothing to show, and the empty
    * panel is the dropzone: "where the receipt lives" and "where you put it"
    * are the same place, so neither needs a step of its own.
+   *
+   * `onFile` is called once per file, in the order they were picked or
+   * dropped. Without `multiple` that is only ever the first one.
    */
-  upload?: { onFile: (file: File) => void; uploading: boolean; copy?: UploadCopy };
+  upload?: {
+    onFile: (file: File) => void;
+    uploading: boolean;
+    copy?: UploadCopy;
+    multiple?: boolean;
+  };
   /**
    * Keeps the panel standing when there is no receipt, saying so in place of
    * showing one. A page that reads an utlägg alongside its underlag wants the
@@ -216,6 +224,7 @@ export function ReceiptPanelSource({
   filename,
   onFile,
   uploading = false,
+  multiple = false,
   uploadCopy,
   emptyTitle,
   emptyDescription,
@@ -244,9 +253,16 @@ export function ReceiptPanelSource({
   /** Describes whichever of the shorthands above was given. */
   mimeType?: string;
   filename?: string;
-  /** Makes the panel accept a receipt as well as show one. */
+  /** Makes the panel accept a receipt as well as show one. Called once per
+   *  file, so a page holding several does not have to unpack a list. */
   onFile?: (file: File) => void;
   uploading?: boolean;
+  /**
+   * Lets one pick or drop bring several files. Off by default: most pages hold
+   * exactly one document, and a picker that let you choose three would quietly
+   * keep the last. An utlägg's receipts are additive, so the wizard turns it on.
+   */
+  multiple?: boolean;
   /** What the dropzone should call the file, where it is not a receipt. See
    *  UploadCopy. Read only while `onFile` is given. */
   uploadCopy?: UploadCopy;
@@ -298,11 +314,13 @@ export function ReceiptPanelSource({
     }
     setSource({
       docs: docsRef.current,
-      upload: accepts ? { onFile: stableOnFile, uploading, copy: copyRef.current } : undefined,
+      upload: accepts
+        ? { onFile: stableOnFile, uploading, copy: copyRef.current, multiple }
+        : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
     });
     return () => setSource(null);
-  }, [docsKey, copyKey, accepts, uploading, stableOnFile, emptyTitle, emptyDescription, setSource]);
+  }, [docsKey, copyKey, accepts, uploading, multiple, stableOnFile, emptyTitle, emptyDescription, setSource]);
 
   return null;
 }
@@ -539,8 +557,12 @@ export function ReceiptPanelColumn() {
     setEntering(true);
     setCollapsed(false);
   };
-  const take = (file: File | undefined) => {
-    if (file && upload && !upload.uploading) upload.onFile(file);
+  // Copied out of the FileList before anything else, because the input's own
+  // list is live and emptied the moment its value is cleared for the next pick.
+  const take = (list: FileList | null | undefined) => {
+    if (!upload || upload.uploading) return;
+    const files = Array.from(list ?? []);
+    for (const file of upload.multiple ? files : files.slice(0, 1)) upload.onFile(file);
   };
 
   // No header, no title: a receipt is recognisably a receipt, and a bar naming
@@ -609,7 +631,7 @@ export function ReceiptPanelColumn() {
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        take(e.dataTransfer.files?.[0]);
+        take(e.dataTransfer.files);
       }}
       className={cn(
         "flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center transition-colors",
@@ -662,9 +684,10 @@ export function ReceiptPanelColumn() {
           ref={fileInput}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+          multiple={upload.multiple}
           className="hidden"
           onChange={(e) => {
-            take(e.target.files?.[0]);
+            take(e.target.files);
             e.target.value = ""; // allow re-selecting the same file
           }}
         />

@@ -302,7 +302,8 @@ export default function NewExpenseClient({
   // and every abandoned attempt was something a bookkeeper later had to look at
   // and dismiss. Now each one waits here and goes up with the save, so leaving
   // the page leaves nothing. Several rather than one: some receipts only
-  // substantiate a purchase alongside a second, complementary document.
+  // substantiate a purchase alongside a second, complementary document, and a
+  // single pick or drop can bring them all (see `multiple` on the panel).
   const [pendingFiles, setPendingFiles] = useState<
     { id: string; file: File; previewUrl: string }[]
   >([]);
@@ -691,12 +692,22 @@ export default function NewExpenseClient({
           is why this wizard has no upload step of its own. Once one is
           showing, the floating button adds another rather than replacing it
           (`addLabel`): some receipts only substantiate a purchase alongside a
-          second, complementary document, and the wording says so. */}
+          second, complementary document, and the wording says so.
+
+          `multiple`, so those documents can be picked or dropped together.
+          The panel hands them to `addFile` one at a time, in order, so each
+          is kept, shown and uploaded exactly as a single pick is. */}
       <ReceiptPanelSource
         documents={documents}
         onFile={addFile}
         uploading={saving}
-        uploadCopy={{ addLabel: tReceipt("addDocument") }}
+        multiple
+        uploadCopy={{
+          addLabel: tReceipt("addDocument"),
+          lead: tReceipt("dropzoneMany"),
+          leadShort: tReceipt("pickReceiptLeadMany"),
+          action: tReceipt("pickReceipts"),
+        }}
       />
 
       {/* Step 1: the details, beside the receipt */}
@@ -889,13 +900,21 @@ export default function NewExpenseClient({
             {!hasReceipt && (
               <p className="text-xs text-warning">{t("receiptRequired")}</p>
             )}
-            {/* The panel pages through every document but has nowhere to
-                remove one from; this is that. Only where there is more than
-                a single document, since a lone one is the panel's own
-                "replace" (now "add another") button to swap, and a list of
-                one with an X beside it says nothing a submitter doesn't
-                already know. */}
-            {uploadedReceipts.length + pendingFiles.length > 1 && (
+            {/* The panel shows every document but has nowhere to remove one
+                from; this is that. From the first document, not the second.
+                It used to wait for two, on the theory that a lone one was
+                swapped with the panel's "replace" button. That button adds
+                now, so the last document had no way off the form: it stayed
+                kept in the browser, came back on every visit, and reappeared
+                in this list as soon as a second one was added. Removing the
+                last one empties the panel back into the dropzone.
+
+                The X is dead while saving. `writeReceipts` works through the
+                list as it stood when the save began, so a file removed mid-save
+                vanished from here and was uploaded anyway. `saving` also covers
+                a removal already on its way to the server, so a second click
+                cannot send the same delete twice. */}
+            {uploadedReceipts.length + pendingFiles.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted">{t("documents")}</p>
                 <ul className="space-y-1">
@@ -909,7 +928,8 @@ export default function NewExpenseClient({
                         type="button"
                         onClick={() => removeUploadedReceipt(r.id)}
                         aria-label={t("removeDocument")}
-                        className="shrink-0 text-muted hover:text-foreground"
+                        disabled={saving}
+                        className="shrink-0 text-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                       >
                         <IconX className="size-4" />
                       </button>
@@ -925,7 +945,8 @@ export default function NewExpenseClient({
                         type="button"
                         onClick={() => removePendingFile(p.id)}
                         aria-label={t("removeDocument")}
-                        className="shrink-0 text-muted hover:text-foreground"
+                        disabled={saving}
+                        className="shrink-0 text-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                       >
                         <IconX className="size-4" />
                       </button>
