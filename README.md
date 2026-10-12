@@ -489,7 +489,8 @@ nothing it needs to write to disk. It listens on `PORT` (3000 by default) and
 exits non-zero on a misconfigured environment rather than serving 500s, so a
 bad deploy fails instead of going green. `prisma migrate deploy` is a separate
 step, the `migrator` stage of the same Dockerfile, and must run before a new
-version starts. [Running the whole stack in
+version starts. The runner image carries the same migrator under `/migrator`,
+which is what the cluster runs, so one build yields both. [Running the whole stack in
 Docker](#running-the-whole-stack-in-docker) is the same arrangement locally.
 
 ---
