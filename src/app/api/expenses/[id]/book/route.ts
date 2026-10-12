@@ -4,12 +4,25 @@
 // Both handlers do the same work on the same rows and differ only in which
 // status they accept and whether the verification is created or replaced, so
 // everything up to that point is shared below.
+//
+// Two bookkeepers can have the same utlägg open at once (the booking screen
+// says so, see lib/domain/presence.ts, but saying so is not stopping it). So
+// each write restates the version the screen was showing, and the first
+// statement of each transaction is a conditional update on the utlägg that
+// takes its row lock. A second booking of the same utlägg waits on that lock,
+// finds the row moved on once it gets it, and is a 409. It used to reach the
+// unique index on Verification.expenseId and come back as a 500, and a second
+// amend used to simply win.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
 import type { PaymentType } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
+import { StaleWrite, applied, commit } from "@/lib/api/stale-write";
+import { exportLock } from "@/lib/domain/export-claim";
+import { CLEARED } from "@/lib/server/export-claim";
 import { parseBody } from "@/lib/api/parse";
 import { BookVoucher } from "@/lib/api/schemas/expense";
 
@@ -133,7 +146,7 @@ async function loadForBooking(id: string) {
 
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { verification: true },
+    include: { verification: true, exportClaimedBy: { select: { name: true } } },
   });
   if (!expense) return { ok: false as const, res: fail(404, "expense.notFound") };
   return { ok: true as const, actor: g.actor, expense };
@@ -182,6 +195,24 @@ function voucherMeta(
   };
 }
 
+// A verification for this utlägg already exists. The conditional update above
+// is what normally answers a second booking, so this is the backstop for a row
+// that reached BOOKED some other way: the same answer, a 409, rather than the
+// unique index surfacing as a 500. Duck-typed on Prisma's public error code, as
+// in lib/server/expense-reference.ts.
+function alreadyBooked(err: unknown): never {
+  if (typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2002") {
+    throw new StaleWrite();
+  }
+  throw err;
+}
+
+// The utlägg's version as this write left it, for the screen that made it.
+async function newVersion(tx: Prisma.TransactionClient, id: string): Promise<string> {
+  const row = await tx.expense.findUniqueOrThrow({ where: { id }, select: { updatedAt: true } });
+  return row.updatedAt.toISOString();
+}
+
 // POST: create the voucher for an APPROVED expense and flip it to BOOKED.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -213,23 +244,37 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     description: expense.title,
   });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.verification.create({
-      data: {
-        expenseId: expense.id,
-        date,
-        description,
-        createdById: actor.id,
-        lines: { create: voucherLineData(voucher.lines, voucher.idByCode) },
-      },
-    });
-    await tx.expense.update({ where: { id: expense.id }, data: { status: "BOOKED" } });
-    await tx.expenseEvent.create({
-      data: { expenseId: expense.id, type: "BOOKED", actorId: actor.id },
-    });
-  });
+  const expected = new Date(body.expectedUpdatedAt);
+  const done = await commit(() =>
+    prisma.$transaction(async (tx) => {
+      // First, and conditional: see the top of the file.
+      const flipped = await tx.expense.updateMany({
+        where: { id: expense.id, status: "APPROVED", updatedAt: expected },
+        // The version moves on explicitly. A screen still open on the old one
+        // learns from it that this utlägg was booked.
+        data: { status: "BOOKED", updatedAt: new Date() },
+      });
+      applied(flipped);
+      await tx.verification
+        .create({
+          data: {
+            expenseId: expense.id,
+            date,
+            description,
+            createdById: actor.id,
+            lines: { create: voucherLineData(voucher.lines, voucher.idByCode) },
+          },
+        })
+        .catch(alreadyBooked);
+      await tx.expenseEvent.create({
+        data: { expenseId: expense.id, type: "BOOKED", actorId: actor.id },
+      });
+      return newVersion(tx, expense.id);
+    }),
+  );
+  if (done instanceof NextResponse) return done;
 
-  return NextResponse.json({ id }, { status: 201 });
+  return NextResponse.json({ id, updatedAt: done }, { status: 201 });
 }
 
 // PATCH: amend the konteringsrader of a BOOKED (not yet EXPORTED) verification.
@@ -246,6 +291,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           values: { status: { key: `common.status.${expense.status}` } },
         });
   }
+  // Not while it is being exported. The export reads these rows to send them,
+  // and an amend landing in between would file the old voucher in Fortnox
+  // while this app records the new one.
+  const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
+  if (lock !== "free") {
+    return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
+      values: { name: expense.exportClaimedBy?.name ?? "–" },
+    });
+  }
   const verification = expense.verification;
   if (!verification) return fail(404, "expense.noVoucherToAmend");
 
@@ -257,28 +311,47 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const { date, description } = voucherMeta(body, verification);
 
-  await prisma.$transaction(async (tx) => {
-    // Replace all lines in place (verification stays, only its rows change).
-    await tx.verification.update({
-      where: { expenseId: expense.id },
-      data: {
-        date,
-        description,
-        lines: {
-          deleteMany: {},
-          create: voucherLineData(voucher.lines, voucher.idByCode),
+  const expected = new Date(body.expectedUpdatedAt);
+  const done = await commit(() =>
+    prisma.$transaction(async (tx) => {
+      // First, and conditional: see the top of the file. The verification is
+      // not the utlägg, so the utlägg's version is bumped by hand to say that
+      // its voucher changed. It is also what catches an export that got there
+      // first, since that moves the status on.
+      //
+      // The version check also covers the export lock: taking it bumps the
+      // version. A lock abandoned before it sent anything (the only kind the
+      // check above lets through) is cleared, so the export that left it, if it
+      // is only slow rather than gone, finds it gone and sends nothing.
+      const bumped = await tx.expense.updateMany({
+        where: { id: expense.id, status: "BOOKED", updatedAt: expected },
+        data: { updatedAt: new Date(), ...CLEARED },
+      });
+      applied(bumped);
+      // Replace all lines in place (verification stays, only its rows change).
+      await tx.verification.update({
+        where: { expenseId: expense.id },
+        data: {
+          date,
+          description,
+          lines: {
+            deleteMany: {},
+            create: voucherLineData(voucher.lines, voucher.idByCode),
+          },
         },
-      },
-    });
-    await tx.expenseEvent.create({
-      data: {
-        expenseId: expense.id,
-        type: "EDITED",
-        actorId: actor.id,
-        comment: "",
-      },
-    });
-  });
+      });
+      await tx.expenseEvent.create({
+        data: {
+          expenseId: expense.id,
+          type: "EDITED",
+          actorId: actor.id,
+          comment: "",
+        },
+      });
+      return newVersion(tx, expense.id);
+    }),
+  );
+  if (done instanceof NextResponse) return done;
 
-  return NextResponse.json({ id }, { status: 200 });
+  return NextResponse.json({ id, updatedAt: done }, { status: 200 });
 }

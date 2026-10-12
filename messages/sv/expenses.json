@@ -55,6 +55,7 @@
     "BOOKED": "Bokförde utlägget",
     "EXPORTED": "Exporterade till Fortnox",
     "EXPORT_REVERTED": "Markerade som ej exporterad",
+    "EXPORT_RELEASED": "Släppte exportlåset efter kontroll i Fortnox",
     "RECALLED": "Drog tillbaka inlämningen",
     "DEADLINE_WAIVED": "Beviljade dispens från fristen",
     "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen",

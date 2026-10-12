@@ -55,6 +55,7 @@
     "BOOKED": "Booked the expense",
     "EXPORTED": "Exported to Fortnox",
     "EXPORT_REVERTED": "Marked as not exported",
+    "EXPORT_RELEASED": "Released the export lock after checking Fortnox",
     "RECALLED": "Withdrew the submission",
     "DEADLINE_WAIVED": "Granted a waiver from the deadline",
     "DEADLINE_WAIVER_REVOKED": "Took the waiver back",

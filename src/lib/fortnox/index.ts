@@ -22,6 +22,7 @@
 import { prisma } from "@/lib/server/db";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets";
 import { VOUCHER_DESCRIPTION_MAX } from "./voucher-text";
+import { FORTNOX_WRITE_TIMEOUT_MS } from "@/lib/domain/export-claim";
 
 const AUTH_URL = "https://apps.fortnox.se/oauth-v1/auth";
 const TOKEN_URL = "https://apps.fortnox.se/oauth-v1/token";
@@ -345,8 +346,13 @@ async function fortnoxGet<T>(path: string, token: string): Promise<T> {
   return json as T;
 }
 
+// Called off after FORTNOX_WRITE_TIMEOUT_MS. A write that hangs would otherwise
+// hold an utlägg's export lock in SENT with no end, and the rule that lets a
+// person resolve it relies on knowing the request is over. See
+// lib/domain/export-claim.ts.
 async function fortnoxPost<T>(path: string, token: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
+    signal: AbortSignal.timeout(FORTNOX_WRITE_TIMEOUT_MS),
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -30,6 +30,19 @@ enum ExpenseStatus {
   EXPORTED
 }
 
+/// How far an export to Fortnox has got. See the export lock on Expense.
+enum ExportClaimState {
+  /// Somebody pressed Exportera. Nothing has been asked of Fortnox's books
+  /// yet: the cover is being drawn and the attachment uploaded.
+  CLAIMED
+  /// The request to create the voucher has gone to Fortnox. From here the
+  /// voucher may exist, so the lock is never let go of on a guess.
+  SENT
+  /// The request came back with no clear answer (a timeout, a dropped
+  /// connection, a 5xx). Somebody has to look in Fortnox and say which.
+  UNCERTAIN
+}
+
 // Structured audit trail. The app renders human-readable (Swedish)
 // labels from the type; the database stays language-neutral and queryable.
 enum ExpenseEventType {
@@ -56,6 +69,9 @@ enum ExpenseEventType {
   BOOKED
   EXPORTED
   EXPORT_REVERTED
+  /// An export whose outcome was unknown was looked up in Fortnox, found not
+  /// to have made a voucher, and its lock let go so it can be exported again.
+  EXPORT_RELEASED
   /// The skattmästare allowed one late eget utlägg past the filing deadline,
   /// with a reason. See the dispens columns on Expense.
   DEADLINE_WAIVED
@@ -206,6 +222,29 @@ model Expense {
   deadlineWaivedAt     DateTime?
   deadlineWaiverReason String?
 
+  // ── The export lock ─────────────────────────────────────────────
+  //
+  // Exporting files a voucher in Fortnox, and Fortnox has no delete for one, so
+  // an utlägg must never be exported twice. Two clicks a moment apart used to
+  // both pass the BOOKED check and both file a voucher.
+  //
+  // So pressing Exportera first takes this lock, in a transaction that holds
+  // the row (SELECT ... FOR UPDATE) while it checks and writes it. Whoever gets
+  // there second finds it taken and is refused. It is stored, not held as a
+  // database lock for the length of the export, because a held lock is let go
+  // when a server dies, and a server that dies just after Fortnox said yes is
+  // exactly when a second export would be a duplicate.
+  //
+  // It is let go when the export is recorded, or when it is certain that no
+  // voucher was made. When that is not certain it stays, until a bookkeeper
+  // has looked in Fortnox. See lib/server/export-claim.ts.
+  exportClaimedBy   User?             @relation("ExpenseExportClaim", fields: [exportClaimedById], references: [id], onDelete: SetNull)
+  exportClaimedById String?
+  /// When the lock was taken. Also the lock's identity: every later write by
+  /// the export that took it is conditional on this exact value.
+  exportClaimedAt   DateTime?
+  exportClaimState  ExportClaimState?
+
   allocations  ExpenseCostAllocation[]
   receipts     Receipt[]
   events       ExpenseEvent[]
@@ -213,6 +252,8 @@ model Expense {
   // Stock bought on this utlägg. The receipt on it is the purchase
   // documentation the lagerbokföring would otherwise have to ask for again.
   stockEntries StockEntry[]            @relation("StockPurchaseExpense")
+  // Who has its booking screen open. See presence.prisma.
+  presence     ExpensePresence[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

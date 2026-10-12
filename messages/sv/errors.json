@@ -96,7 +96,13 @@
     "nothingToWaive": "Utlägget är redovisat inom {days} dagar och behöver ingen dispens.",
     "commentRequiredWaive": "Skriv ett skäl till dispensen. Det hamnar på utläggsräkningen.",
     "alreadyWaived": "Utlägget har redan dispens.",
-    "noWaiverToRevoke": "Utlägget har ingen dispens att ta tillbaka."
+    "noWaiverToRevoke": "Utlägget har ingen dispens att ta tillbaka.",
+    "exportInProgress": "{name} exporterar redan utlägget till Fortnox. Vänta tills det är klart.",
+    "exportUncertain": "Det är oklart om exporten skapade en verifikation i Fortnox. Utlägget är låst tills någon har kontrollerat i Fortnox.",
+    "exportUnrecorded": "Verifikationen {label} skapades i Fortnox men kunde inte sparas här. Utlägget är låst. Markera det som exporterat med {label}.",
+    "noExportResolveAccess": "Bara den som får ångra exporter kan lösa en oklar export.",
+    "nothingToResolve": "Utlägget har ingen oklar export att lösa.",
+    "voucherForExportNeeded": "Utlägget saknar verifikation och kan inte markeras som exporterat."
   },
   "receipt": {
     "notFound": "Kvittot hittades inte",

@@ -3,7 +3,7 @@
 // Shared with the wizard and the detail page, so the shape a screen sends and
 // the shape the route accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
-import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
+import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed, UpperCode } from "./common";
 import { MAX_REMINDER_ITEMS } from "@/lib/domain/reminders";
 
 const PaymentType = z.enum(["CARD", "REIMBURSEMENT", "MILEAGE"]);
@@ -155,11 +155,46 @@ export type VoucherLineInput = z.infer<typeof VoucherLineInput>;
 
 /** POST and PATCH /api/expenses/[id]/book. */
 export const BookVoucher = z.object({
+  // The utlägg's updatedAt as the booking screen loaded it. The write only
+  // lands if it still is, so a colleague who booked or amended it in the
+  // meantime turns this request into a 409 instead of being overwritten.
+  expectedUpdatedAt: z.iso.datetime(),
   lines: z.array(VoucherLineInput).default([]),
   date: IsoDate.optional(),
   description: Trimmed.optional(),
 });
 export type BookVoucher = z.infer<typeof BookVoucher>;
+
+/**
+ * PUT /api/expenses/[id]/presence: the booking screen's heartbeat. `active` is
+ * false once its user has gone idle, which takes them off the screen for
+ * everybody else while still answering whether the utlägg has moved on.
+ */
+export const PresenceHeartbeat = z.object({
+  active: z.boolean(),
+});
+export type PresenceHeartbeat = z.infer<typeof PresenceHeartbeat>;
+
+/**
+ * POST /api/expenses/[id]/export/resolve: what somebody found when they looked
+ * in Fortnox for an export that ended without an answer.
+ *
+ *   none     no voucher was made. The lock is let go, so it can be exported
+ *            again. Why they are sure is required, since being wrong files it
+ *            twice.
+ *   exists   it was made, with this series and number. Recorded as exported,
+ *            exactly as the export would have.
+ */
+export const ResolveExport = z.discriminatedUnion("outcome", [
+  z.object({ outcome: z.literal("none"), comment: NonEmpty }),
+  z.object({
+    outcome: z.literal("exists"),
+    series: UpperCode.pipe(z.string().min(1)),
+    number: z.int().positive(),
+    comment: Trimmed.optional(),
+  }),
+]);
+export type ResolveExport = z.infer<typeof ResolveExport>;
 
 /**
  * POST /api/reminders: remind whoever each of these is waiting on. Utlägg, from

@@ -173,6 +173,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
           }
         : undefined,
     revisions: [],
+    updatedAt: e.updatedAt.toISOString(),
   };
 }
 

@@ -96,7 +96,13 @@
     "nothingToWaive": "The expense was filed within {days} days and needs no waiver.",
     "commentRequiredWaive": "Write a reason for the waiver. It goes on the expense report.",
     "alreadyWaived": "The expense already has a waiver.",
-    "noWaiverToRevoke": "The expense has no waiver to take back."
+    "noWaiverToRevoke": "The expense has no waiver to take back.",
+    "exportInProgress": "{name} is already exporting this expense to Fortnox. Wait until it is done.",
+    "exportUncertain": "It is unclear whether the export created a voucher in Fortnox. The expense is locked until someone has checked in Fortnox.",
+    "exportUnrecorded": "Voucher {label} was created in Fortnox but could not be saved here. The expense is locked. Mark it as exported with {label}.",
+    "noExportResolveAccess": "Only someone who may undo exports can resolve an unclear export.",
+    "nothingToResolve": "This expense has no unclear export to resolve.",
+    "voucherForExportNeeded": "This expense has no voucher and cannot be marked as exported."
   },
   "receipt": {
     "notFound": "The receipt was not found",

@@ -12,5 +12,31 @@
   "loginFirst": "Logga in mot Fortnox för att exportera",
   "exportFailed": "{id}: export misslyckades",
   "exportDone": "{id}: exporterad till Fortnox ({label})",
-  "voucherLabel": "Verifikat {label}"
+  "voucherLabel": "Verifikat {label}",
+  "bookingNowTitle": "Öppet för bokföring av {names}",
+  "someone": "Någon",
+  "exportingNow": "{name} exporterar just nu",
+  "exportUncertain": "Exporten som {name} startade gav inget tydligt svar från Fortnox. Den behöver kontrolleras i Fortnox innan utlägget kan exporteras igen.",
+  "resolveExport": "Kontrollera",
+  "resolve": {
+    "title": "Oklar export – {id}",
+    "explain": "Exporten som {name} startade fick inget tydligt svar från Fortnox, så verifikationen kan finnas där. Leta efter den i Fortnox innan du väljer.",
+    "explainUnknown": "Exporten fick inget tydligt svar från Fortnox, så verifikationen kan finnas där. Leta efter den i Fortnox innan du väljer.",
+    "exists": "Verifikationen finns",
+    "none": "Ingen verifikation skapades",
+    "series": "Serie",
+    "number": "Nummer",
+    "comment": "Kommentar",
+    "reason": "Hur vet du att den inte finns?",
+    "reasonPlaceholder": "T.ex. sökte på belopp och datum i serie A",
+    "noneWarning": "Utlägget kan då exporteras igen. Finns verifikationen ändå blir den dubbel i Fortnox, och den går inte att ta bort därifrån.",
+    "voucherRequired": "Ange verifikationens serie och nummer.",
+    "reasonRequired": "Skriv hur du vet att verifikationen inte finns.",
+    "markExported": "Markera som exporterad",
+    "release": "Släpp låset",
+    "cancel": "Avbryt",
+    "failed": "Det gick inte att lösa exporten",
+    "markedExported": "Utlägget är markerat som exporterat.",
+    "released": "Låset är släppt. Utlägget kan exporteras igen."
+  }
 }

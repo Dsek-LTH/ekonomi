@@ -12,5 +12,31 @@
   "loginFirst": "Log in to Fortnox to export",
   "exportFailed": "{id}: the export failed",
   "exportDone": "{id}: exported to Fortnox ({label})",
-  "voucherLabel": "Voucher {label}"
+  "voucherLabel": "Voucher {label}",
+  "bookingNowTitle": "Open for booking by {names}",
+  "someone": "Someone",
+  "exportingNow": "{name} is exporting this right now",
+  "exportUncertain": "The export {name} started got no clear answer from Fortnox. It has to be checked in Fortnox before the expense can be exported again.",
+  "resolveExport": "Check",
+  "resolve": {
+    "title": "Unclear export – {id}",
+    "explain": "The export {name} started got no clear answer from Fortnox, so the voucher may exist there. Look for it in Fortnox before you choose.",
+    "explainUnknown": "The export got no clear answer from Fortnox, so the voucher may exist there. Look for it in Fortnox before you choose.",
+    "exists": "The voucher exists",
+    "none": "No voucher was created",
+    "series": "Series",
+    "number": "Number",
+    "comment": "Comment",
+    "reason": "How do you know it does not exist?",
+    "reasonPlaceholder": "E.g. searched by amount and date in series A",
+    "noneWarning": "The expense can then be exported again. If the voucher does exist after all, it will be in Fortnox twice, and it cannot be deleted there.",
+    "voucherRequired": "Enter the voucher's series and number.",
+    "reasonRequired": "Write how you know the voucher does not exist.",
+    "markExported": "Mark as exported",
+    "release": "Release the lock",
+    "cancel": "Cancel",
+    "failed": "Could not resolve the export",
+    "markedExported": "The expense is marked as exported.",
+    "released": "The lock is released. The expense can be exported again."
+  }
 }

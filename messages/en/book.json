@@ -39,5 +39,17 @@
   "saveChanges": "Save changes",
   "book": "Book",
   "unknownAccounts": "These accounts are not in the chart of accounts: {list}. Add them, or pick others, before booking.",
-  "unknownCostCenters": "These cost centres do not exist: {list}. Pick others before booking."
+  "unknownCostCenters": "These cost centres do not exist: {list}. Pick others before booking.",
+  "presence": {
+    "banner": "{names} {count, plural, one {also has} other {also have}} this expense open for booking.",
+    "confirmTitle": "Someone else is booking this expense",
+    "confirmMessage": "{names} {count, plural, one {also has} other {also have}} it open. If you save now, they will have to reload the page before they can save.",
+    "updatedTitle": "This expense has been updated",
+    "updatedMessage": "{name} changed this expense while you had it open. Reload to see the latest version.",
+    "updatedMessageSelf": "This expense was changed in another tab. Reload to see the latest version.",
+    "updatedMessageUnknown": "This expense was changed while you had it open. Reload to see the latest version.",
+    "staleBanner": "This expense has changed since you opened it. Reload before saving.",
+    "reload": "Reload",
+    "close": "Close"
+  }
 }
