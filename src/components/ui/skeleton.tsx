@@ -1,11 +1,12 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { Card } from "./card";
+import { TitleOrBar } from "@/components/shell/settings-title";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 
 // Placeholders for a wait whose shape is already known. A skeleton is only
-// worth more than a spinner if it is honest about what is coming — same
-// widths, same paddings, same number of rows — otherwise the page reflows the
+// worth more than a spinner if it is honest about what is coming (same
+// widths, same paddings, same number of rows), otherwise the page reflows the
 // moment the data lands and the placeholder was a lie. So these mirror the real
 // components (Card, DataTable, PageShell) rather than approximating them, and
 // the composites below are the only ones a route should need.
@@ -15,11 +16,11 @@ import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 // reading out fifty empty boxes.
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("skeleton rounded-md", className)} />;
+  return <div aria-hidden className={cn("skeleton rounded-control", className)} />;
 }
 
 // Paragraph-shaped filler. The last line is short, the way a real one is.
-export function SkeletonText({
+function SkeletonText({
   lines = 3,
   className,
 }: {
@@ -44,7 +45,6 @@ export function SkeletonText({
 export function SkeletonPage({
   width = "wide",
   back = false,
-  description = true,
   action = false,
   titleWidth = "w-56",
   children,
@@ -52,7 +52,6 @@ export function SkeletonPage({
   width?: PageWidth;
   /** Nested pages carry a "← parent" link above the title. */
   back?: boolean;
-  description?: boolean;
   /** Pages whose header holds a primary button. */
   action?: boolean;
   titleWidth?: string;
@@ -66,17 +65,21 @@ export function SkeletonPage({
       aria-label={t("loading")}
       className={PAGE_WIDTH[width]}
     >
-      <div className="mb-10">
+      <div className="mb-6">
         {back && <Skeleton className="mb-2 h-4 w-28" />}
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Skeleton className={cn("h-8", titleWidth)} />
-            {description && <Skeleton className="mt-2.5 h-4 w-72 max-w-full" />}
+            {/* In the settings overlay the title is drawn in its top bar, so
+                its placeholder is too. See components/shell/settings-title. */}
+            <TitleOrBar
+              page={<Skeleton className={cn("h-8", titleWidth)} />}
+              bar={<Skeleton className="h-5 w-40" />}
+            />
           </div>
-          {action && <Skeleton className="h-10 w-36 rounded-full" />}
+          {action && <Skeleton className="h-9 w-36 rounded-control" />}
         </div>
       </div>
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
@@ -87,7 +90,7 @@ export function SkeletonPage({
 const ROW_WIDTHS = ["w-2/5", "w-1/2", "w-1/3", "w-3/5", "w-5/12", "w-1/2"];
 
 // The inside of a DataTable: filter bar, header, rows, pagination footer. Goes
-// inside a <Card>, exactly as DataTable does — or use SkeletonTableCard, which
+// inside a <Card>, exactly as DataTable does, or use SkeletonTableCard, which
 // wraps it for you.
 //
 // Below md the real table is drawn as stacked cards, so this is too: the same
@@ -113,14 +116,14 @@ export function SkeletonTable({
           {tabs && (
             <div className="flex flex-wrap gap-1">
               {["w-16", "w-24", "w-20"].map((w) => (
-                <Skeleton key={w} className={cn("h-6 rounded-full", w)} />
+                <Skeleton key={w} className={cn("h-6 rounded-control", w)} />
               ))}
             </div>
           )}
           {toolbar && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Skeleton className="h-11 rounded-lg sm:h-9 sm:w-52 sm:shrink-0" />
-              <Skeleton className="h-11 rounded-lg sm:h-9 sm:min-w-48 sm:flex-1" />
+              <Skeleton className="h-11 rounded-control sm:h-9 sm:w-52 sm:shrink-0" />
+              <Skeleton className="h-11 rounded-control sm:h-9 sm:min-w-48 sm:flex-1" />
             </div>
           )}
         </div>
@@ -182,7 +185,7 @@ export function SkeletonTableCard(props: React.ComponentProps<typeof SkeletonTab
   );
 }
 
-// A Card with a header rule and some body content — the settings pages and the
+// A Card with a header rule and some body content. The settings pages and the
 // detail screens are stacks of these.
 export function SkeletonCard({
   header = true,
@@ -199,55 +202,30 @@ export function SkeletonCard({
   return (
     <Card className={className}>
       {header && (
-        <div className="flex items-center justify-between gap-4 border-b border-border px-inset py-4">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-inset py-3">
           <div className="min-w-0">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="mt-1.5 h-3.5 w-56 max-w-full" />
           </div>
-          {action && <Skeleton className="h-8 w-24 shrink-0 rounded-full" />}
+          {action && <Skeleton className="h-8 w-24 shrink-0 rounded-control" />}
         </div>
       )}
-      <div className="px-inset py-5">{children ?? <SkeletonText lines={3} />}</div>
+      <div className="px-inset py-4">{children ?? <SkeletonText lines={3} />}</div>
     </Card>
   );
 }
 
 // The bordered label/value list used by the profile and the wizard's review
-// step — DetailList's rule spacing, with the value side short.
+// step: DetailList's rule spacing, with the value side short.
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-border rounded-xl border border-border" aria-hidden>
+    <div className="divide-y divide-border rounded-panel border border-border" aria-hidden>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className={cn("h-4", ROW_WIDTHS[i % ROW_WIDTHS.length], "max-w-40")} />
         </div>
       ))}
-    </div>
-  );
-}
-
-// The master–detail frame: a fixed list column beside the thing it selects
-// into. Mirrors SidebarPanel, including the way it stacks below lg.
-export function SkeletonSidebarLayout({
-  items = 6,
-  children,
-}: {
-  items?: number;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <aside className="w-full shrink-0 lg:w-64">
-        <Card className="divide-y divide-border overflow-hidden">
-          {Array.from({ length: items }, (_, i) => (
-            <div key={i} className="px-3 py-2.5">
-              <Skeleton className={cn("h-4", ROW_WIDTHS[i % ROW_WIDTHS.length])} />
-            </div>
-          ))}
-        </Card>
-      </aside>
-      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -293,7 +271,7 @@ export function SkeletonFields({ fields = 3 }: { fields?: number }) {
       {Array.from({ length: fields }, (_, i) => (
         <div key={i}>
           <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="mt-1.5 h-10 w-full rounded-xl" />
+          <Skeleton className="mt-1.5 h-10 w-full rounded-control" />
         </div>
       ))}
     </div>

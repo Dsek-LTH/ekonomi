@@ -1,0 +1,11 @@
+{
+  "auth": {
+    "connected": "Fortnox anslöts.",
+    "loggedIn": "Inloggad mot Fortnox.",
+    "failed": "Fortnox-inloggningen misslyckades{reason}.",
+    "no_service_connection": "Sektionens Fortnox-anslutning saknas. Den måste kopplas upp under Inställningar → Fortnox innan någon kan logga in personligen.",
+    "wrong_company": "Fortnox-inloggningen gäller ett annat företag än sektionens. Logga in på D-sektionens Fortnox.",
+    "forbidden": "Du har inte behörighet att göra det.",
+    "invalid_state": "Inloggningen gick ut eller avbröts. Försök igen."
+  }
+}

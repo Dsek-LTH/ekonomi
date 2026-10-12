@@ -3,7 +3,7 @@ import { parseBankCsv } from "./bank-csv";
 
 // Every sample below is invented: the clearing and account numbers are zeroes
 // and the purchases are made up. A real bank export must never be checked in
-// (see .gitignore) — and nothing here needs one.
+// (see .gitignore) and nothing here needs one.
 const HEADER =
   "Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp";
 const COMMENT = "* Transaktionsrapport Period 2026-01-01 - 2026-03-31 Skapad 2026-03-31 20:06 CEST";
@@ -138,7 +138,7 @@ describe("parseBankCsv", () => {
 
   it("gives two genuinely identical purchases distinct hashes", () => {
     // Two coffees on the same card, same day, same price is an ordinary
-    // Tuesday — they must not collapse into one transaction on import.
+    // Tuesday. They must not collapse into one transaction on import.
     const identical = row({ referens: "KAFFEBAREN LUND K1234", amount: "-49.00" });
     const result = parseBankCsv(file(identical, identical));
 

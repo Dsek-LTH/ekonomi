@@ -4,7 +4,7 @@
 // This is the join between the two halves. intakt used to read all of this from
 // a config.yaml on the treasurer's laptop, which meant only whoever held the
 // file could change it and the two sides could disagree about it. Now the rows
-// are here, an admin edits them, and they are serialised into every request —
+// are here, an admin edits them, and they are serialised into every request,
 // so the service holds no configuration of its own and there is nothing to keep
 // in step.
 import "server-only";
@@ -14,7 +14,7 @@ import type { IntaktCommittee, IntaktConfig, IntaktPrefix } from "./types";
 
 /**
  * Why a config could not be built. Each is a message key under
- * `errors.income` — the routing table is admin-editable, so these are all
+ * `errors.income`. The routing table is admin-editable, so these are all
  * states a person can put the app into and has to be told how to get out of.
  */
 export type IncomeConfigBlocker =
@@ -23,12 +23,12 @@ export type IncomeConfigBlocker =
   | "noFallbackPrefix"
   | "prefixAccountNotNumeric";
 
-export type IncomeConfigResult =
+type IncomeConfigResult =
   | { ok: true; config: IntaktConfig }
   | { ok: false; blocker: IncomeConfigBlocker; detail?: string };
 
-/** Who the report is attested by — the person who asked for it. */
-export interface IncomeAttestation {
+/** Who the report is attested by, the person who asked for it. */
+interface IncomeAttestation {
   name: string;
   studentId: string;
 }
@@ -94,7 +94,7 @@ export async function buildIntaktConfig(
   const committeeMap: Record<string, IntaktCommittee> = {};
   for (const c of committees) {
     committeeMap[c.key] = {
-      // The unit's own name unless its documents need another form of it —
+      // The unit's own name unless its documents need another form of it:
       // properName is an override now, not a second copy of the name.
       proper_name: c.properName ?? c.resultUnit.name,
       description: c.description,

@@ -5,22 +5,30 @@ import { useTranslations } from "next-intl";
 import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { useProgressRouter } from "@/components/shell/route-progress";
+import { useReturnTo } from "@/components/shell/route-history";
 
-export type TransitionAction =
+type TransitionAction =
   | "submit"
   | "approve"
   | "withdraw_attest"
+  | "recall"
   | "request_changes"
   | "return_approved"
-  | "unexport";
+  | "unexport"
+  // Neither of these moves the status. They decide whether the filing
+  // deadline stands in the way of the submit that follows.
+  | "waive_deadline"
+  | "revoke_deadline_waiver";
 
 // Every write the detail page can make, over the /api/expenses/:id/* routes.
 // Matching gets its own busy scope so picking a transaction doesn't grey out
 // the action buttons.
 export function useExpenseMutations(expenseId: string) {
   const t = useTranslations("expenses.mutations");
-  const router = useProgressRouter();
+  // The dispens dialog reuses the detail page's own labels: the button that
+  // opens it and the button that confirms it say the same thing.
+  const tDetail = useTranslations("expenses.detail");
+  const returnTo = useReturnTo();
   const notify = useNotify();
   const confirm = useConfirm();
   const action = useMutation();
@@ -40,6 +48,24 @@ export function useExpenseMutations(expenseId: string) {
     return data !== null;
   }
 
+  /**
+   * Taking a dispens back, confirmed because of what it costs the other person.
+   *
+   * The utlägg is late by definition (a dispens is only ever granted on one
+   * that is), so revoking puts it back behind a deadline that has already
+   * passed: nobody can submit it again without a new dispens. That is not an
+   * undo, and the dialog says so before it happens.
+   */
+  async function revokeDeadlineWaiver() {
+    const ok = await confirm({
+      title: tDetail("revokeDeadlineWaiver"),
+      message: tDetail("revokeWaiverConfirm"),
+      confirmLabel: tDetail("revokeDeadlineWaiver"),
+      tone: "danger",
+    });
+    if (ok) await transition("revoke_deadline_waiver");
+  }
+
   // Confirmed, because on a fully approved expense it visibly knocks the status
   // back to "awaiting approval" for everyone else too.
   async function withdrawAttest() {
@@ -51,13 +77,33 @@ export function useExpenseMutations(expenseId: string) {
     if (ok) await transition("withdraw_attest");
   }
 
+  /**
+   * The submitter taking their whole claim back, to a draft.
+   *
+   * Always confirmed, and the wording depends on what it costs. On an utlägg
+   * nobody has touched it is an undo; on one somebody has already attested in
+   * part it also throws those signatures away, and somebody about to correct a
+   * payment type should know they are asking a colleague to sign again.
+   *
+   * `attested` is how many rows are signed. The caller counts them, since it
+   * is the one holding the utlägg.
+   */
+  async function recall(attested: number) {
+    const ok = await confirm({
+      title: t("recall.title"),
+      message: attested > 0 ? t("recall.messageAttested", { count: attested }) : t("recall.message"),
+      confirmLabel: t("recall.confirm"),
+    });
+    if (ok) await transition("recall");
+  }
+
   // Export to Fortnox is a real API call (its own route), not a status flip, and
-  // it can half-succeed — the voucher lands but the receipt doesn't attach.
+  // it can half-succeed: the voucher lands but the receipt doesn't attach.
   async function exportToFortnox() {
     const data = await action.mutate(url("/export"), { error: t("export.failed") });
     if (!data) return;
     const done = t("export.done", { label: String(data.label) });
-    // The warning describes itself — pass it through rather than wrapping it in
+    // The warning describes itself, pass it through rather than wrapping it in
     // a summary that leaves the bookkeeper with nothing to act on.
     if (data.attachWarning) {
       notify.info(`${done}. ${t("export.attachWarning", { detail: String(data.attachWarning) })}`);
@@ -88,7 +134,9 @@ export function useExpenseMutations(expenseId: string) {
     });
     if (!data) return;
     setDeleted(true);
-    router.push("/expenses");
+    // Not a push: the utlägg this page describes is gone, and pushing left it
+    // sitting behind its own list on the Back button.
+    returnTo("/expenses");
   }
 
   return {
@@ -96,6 +144,8 @@ export function useExpenseMutations(expenseId: string) {
     matching: matcher.busy,
     transition,
     withdrawAttest,
+    recall,
+    revokeDeadlineWaiver,
     exportToFortnox,
     match,
     remove,

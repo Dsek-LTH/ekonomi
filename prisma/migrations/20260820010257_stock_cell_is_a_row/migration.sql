@@ -4,7 +4,7 @@
 -- came to, and correcting it meant writing another row. That is why the log
 -- filled with movements nobody made: a delivery mistyped as 200 bottles stayed
 -- on the books forever, with a second row cancelling it. From here a row *is*
--- the figure — one per occasion, product, direction and rung — and putting it
+-- the figure (one per occasion, product, direction and rung) and putting it
 -- right means changing it. What was done to it is recorded in StockChange,
 -- which is what keeps an editable ledger checkable.
 
@@ -18,7 +18,7 @@ ALTER TABLE "StockEntry" ADD COLUMN "level" INTEGER NOT NULL DEFAULT 0;
 
 -- Backfill from where the rung used to be implied: the open column that moved,
 -- or, for a spill, its own column. A row touching several rungs at once keeps
--- level 0 and is left as the multi-rung row it is — only tagged rows are made
+-- level 0 and is left as the multi-rung row it is. Only tagged rows are made
 -- unique below, and the merge that follows leaves such rows alone.
 UPDATE "StockEntry" SET "level" = 80 WHERE "open80" <> 0 AND "open60" = 0 AND "open40" = 0 AND "open20" = 0 AND "units" = 0;
 UPDATE "StockEntry" SET "level" = 60 WHERE "open60" <> 0 AND "open80" = 0 AND "open40" = 0 AND "open20" = 0 AND "units" = 0;
@@ -30,8 +30,8 @@ ALTER TABLE "StockEntry" DROP COLUMN "spilledLevel";
 
 -- ── Fold the old deltas into cells ──
 --
--- Rows written under the old model — a checkout and the row correcting it, a
--- spill entered and taken back — are several rows where the new shape allows
+-- Rows written under the old model (a checkout and the row correcting it, a
+-- spill entered and taken back) are several rows where the new shape allows
 -- one. They are summed into the oldest of each group, which is the same figure
 -- read a different way: the sum was always what the screen showed.
 WITH grouped AS (

@@ -1,12 +1,12 @@
-// Request bodies for the budget tool — /api/budgets, and the per-entity routes
+// Request bodies for the budget tool: /api/budgets, and the per-entity routes
 // (/api/budget-sheets, /api/budget-accounts, /api/budget-line-items,
 // /api/budget-variables, /api/budget-comments) that hang off it.
 import { z } from "zod";
-import { Clearable, Id, NonEmpty, Trimmed, UpperCode, Year } from "./common";
+import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode, Year } from "./common";
 
 const AccountKind = z.enum(["INCOME", "COST"]);
 
-/** POST /api/budgets — a new budget, optionally copied from an existing one. */
+/** POST /api/budgets: a new budget, optionally copied from an existing one. */
 export const CreateBudget = z.object({
   year: Year.default(() => new Date().getFullYear()),
   name: NonEmpty.default("Ursprunglig"),
@@ -15,20 +15,38 @@ export const CreateBudget = z.object({
 export type CreateBudget = z.infer<typeof CreateBudget>;
 
 /**
+ * POST /api/budgets/import: the query half of a budget CSV upload.
+ *
+ * The file itself is the request body (raw bytes, so its encoding survives to
+ * be sniffed), which leaves the year and the name to travel as query
+ * parameters. Same defaults as CreateBudget: an import is a budget being
+ * created, and the two should not disagree about what an unnamed one is called.
+ */
+export const ImportBudgetQuery = z.object({
+  year: Year.default(() => new Date().getFullYear()),
+  name: NonEmpty.default("Ursprunglig"),
+});
+export type ImportBudgetQuery = z.infer<typeof ImportBudgetQuery>;
+
+/**
  * PATCH /api/budgets/[id].
  *
  * Two different gates behind one endpoint: `locked` is the treasurer's alone,
  * `name`/`year` are any admin's on an unlocked budget. The route still splits
- * on which one is present — this only says what each may be.
+ * on which one is present. This only says what each may be.
  */
 export const PatchBudget = z.object({
   locked: z.boolean().optional(),
   name: NonEmpty.optional(),
   year: Year.optional(),
+  // Clearable: a budget recorded as adopted by mistake has to be able to go
+  // back to being a draft, and an absent field means "not touching it", which
+  // is not the same statement as "never adopted".
+  adoptedAt: Clearable(IsoDate).optional(),
 });
 export type PatchBudget = z.infer<typeof PatchBudget>;
 
-/** POST /api/budgets/[id]/cost-centers — add a sheet, or clone one. */
+/** POST /api/budgets/[id]/cost-centers: add a sheet, or clone one. */
 export const CreateSheet = z.object({
   costCenterId: Clearable(Id).optional(),
   cloneFromId: Clearable(Id).optional(),
@@ -46,19 +64,26 @@ export type PatchSheet = z.infer<typeof PatchSheet>;
 /** POST /api/budgets/[id]/cost-centers/[ccid]/accounts. */
 export const CreateAccount = z.object({
   accountCode: Trimmed.default(""),
-  kindOverride: Clearable(AccountKind).optional(),
+  /**
+   * The section it is being added under.
+   *
+   * Not a classification the caller gets to choose: 3xxx is income and
+   * 4xxx-8xxx is cost, and this says which side the sheet was asking from so
+   * the server can refuse a code that does not belong there. It replaced
+   * `kindOverride`, which stored the caller's answer and let a cost account sit
+   * under Intäkter.
+   */
+  kind: AccountKind,
 });
 export type CreateAccount = z.infer<typeof CreateAccount>;
 
 /** PATCH /api/budget-accounts/[id]. */
 export const PatchAccount = z.object({
   accountCode: NonEmpty.optional(),
-  sortOrder: z.int().optional(),
-  kindOverride: Clearable(AccountKind).optional(),
 });
 export type PatchAccount = z.infer<typeof PatchAccount>;
 
-/** POST /api/budget-accounts/[id]/line-items — a new row on an account. */
+/** POST /api/budget-accounts/[id]/line-items: a new row on an account. */
 export const CreateLineItem = z.object({
   description: Trimmed.default(""),
   // A row with no equation is a zero, not an error: the sheet is filled in
@@ -89,7 +114,7 @@ export const ReorderLineItems = z.object({
 export type ReorderLineItems = z.infer<typeof ReorderLineItems>;
 
 /**
- * POST /api/budgets/[id]/cost-centers/[ccId]/paste — copied rows or accounts,
+ * POST /api/budgets/[id]/cost-centers/[ccId]/paste: copied rows or accounts,
  * named by what they were copied from rather than by their contents.
  *
  * Ids and not values: a row is a description, an equation, an antal × á-pris and
@@ -100,7 +125,7 @@ export const PasteIntoSheet = z.object({
   /** Rows to append, and the account of this sheet to append them to. */
   accountId: Id.optional(),
   lineItemIds: z.array(Id).default([]),
-  /** Accounts to bring over whole — merged into this sheet's own by code. */
+  /** Accounts to bring over whole, merged into this sheet's own by code. */
   accountIds: z.array(Id).default([]),
 });
 export type PasteIntoSheet = z.infer<typeof PasteIntoSheet>;
@@ -129,16 +154,16 @@ export type BudgetCommentBody = z.infer<typeof BudgetCommentBody>;
 /**
  * One account's share of a redaktionell ändring.
  *
- * `amount` is öre and may be sent as the string somebody typed — the belopp
- * field is free text so a Swede can write "1 234,50" — which `parseAmount` in
+ * `amount` is öre and may be sent as the string somebody typed. The belopp
+ * field is free text so a Swede can write "1 234,50", which `parseAmount` in
  * lib/budget/changes.ts turns into öre. A number is taken as öre already.
  */
-export const ChangeEntryInput = z.object({
+const ChangeEntryInput = z.object({
   costCenterId: Id,
   accountCode: Trimmed,
   amount: z.union([z.number(), z.string()]),
 });
-export type ChangeEntryInput = z.infer<typeof ChangeEntryInput>;
+type ChangeEntryInput = z.infer<typeof ChangeEntryInput>;
 
 /** POST /api/budgets/[id]/changes. */
 export const CreateChange = z.object({

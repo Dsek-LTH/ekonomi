@@ -1,8 +1,8 @@
 // Set or clear the bank-transaction match on a CARD expense. Only allowed
-// while the expense is still pre-submission (DRAFT / PENDING_MATCH /
+// while the expense is still pre-submission (DRAFT /
 // CHANGES_REQUESTED). The [id] param is the expense id.
 import { prisma } from "@/lib/server/db";
-import { isSubmittable } from "@/lib/domain/status";
+import { isQuietDraftEdit, isSubmittable } from "@/lib/domain/status";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { MatchExpense } from "@/lib/api/schemas/expense";
@@ -26,7 +26,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) return fail(404, "expense.notFound");
 
-  // Out of scope is not found, as everywhere else — a 403 here would confirm
+  // Out of scope is not found, as everywhere else. A 403 here would confirm
   // that this utlägg exists, which is the one thing the view rule is meant to
   // withhold.
   const hidden = await denyExpenseView(g.actor, expense);
@@ -43,9 +43,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // A transaction id, or null to unmatch. The schema insists it is one of the
-  // two, so the third case this used to carry — a body that named neither, and
-  // its own 422 — cannot arrive.
+  // two, so the third case this used to carry (a body that named neither, and
+  // its own 422) cannot arrive.
   const transactionId = body.transactionId;
+
+  // Already the answer: the wizard sends the match it already holds on every
+  // save, whether or not this step is the one that changed it, and re-writing
+  // the same id was logging a MATCHED nobody caused, right beside the one the
+  // create step (or an earlier save) had already written.
+  if (transactionId === expense.matchedTransactionId) {
+    return new Response(null, { status: 204 });
+  }
 
   if (transactionId !== null) {
     // Validate the transaction exists, belongs to the submitter's own section
@@ -87,9 +95,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       where: { id: expense.id },
       data: { matchedTransactionId: transactionId },
     });
-    await tx.expenseEvent.create({
-      data: { expenseId: expense.id, type: eventType, actorId: g.actor.id },
-    });
+    // Quiet before the first submission; see isQuietDraftEdit.
+    if (!isQuietDraftEdit(expense, g.actor.id)) {
+      await tx.expenseEvent.create({
+        data: { expenseId: expense.id, type: eventType, actorId: g.actor.id },
+      });
+    }
   });
 
   return new Response(null, { status: 204 });

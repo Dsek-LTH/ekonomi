@@ -8,7 +8,7 @@ import { fortnoxConfigured } from "@/lib/fortnox";
 import type { FortnoxStatus } from "@/lib/domain/types";
 
 // A user's live personal Fortnox session, or null when they have none (or it
-// has run past its cap). Just the session — for /profile, which has no use for
+// has run past its cap). Just the session, for /profile, which has no use for
 // the org's service connection.
 export async function getFortnoxSession(
   userId: string,
@@ -22,7 +22,7 @@ export async function getFortnoxSession(
 }
 
 // The org's Fortnox connection status, plus the viewer's own bookkeeping
-// session when they have one (no secrets — safe for the client).
+// session when they have one (no secrets, safe for the client).
 export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> {
   const [conn, session] = await Promise.all([
     prisma.fortnoxConnection.findFirst({ orderBy: { createdAt: "desc" } }),
@@ -34,7 +34,7 @@ export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> 
     connected: Boolean(conn),
     companyName: conn?.companyName ?? undefined,
     voucherSeries: conn?.voucherSeries ?? undefined,
-    expiresAt: conn?.expiresAt?.toISOString() ?? undefined,
+    expiresAt: conn?.expiresAt.toISOString() ?? undefined,
     session: live
       ? {
           fortnoxUserName: live.fortnoxUserName ?? undefined,

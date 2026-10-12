@@ -9,9 +9,9 @@
 export type ReportKind = "RESULT" | "BALANCE";
 
 // How to turn a raw net (debit − credit, öre) into the displayed amount.
-//   "debit"  — assets and costs: shown as-is
-//   "credit" — income, equity and liabilities: sign-flipped
-export type Orientation = "debit" | "credit";
+//   "debit":  assets and costs, shown as-is
+//   "credit": income, equity and liabilities, sign-flipped
+type Orientation = "debit" | "credit";
 
 // `key` names the section in messages: `ledger.section.<key>` for the heading
 // and `ledger.sectionTotal.<key>` for its total row.
@@ -27,7 +27,7 @@ export interface BasSection {
 //
 // That makes the report's bottom line meaningful rather than zero. Since
 //   assets = equity + liabilities + result,
-// summing every section leaves exactly the period's result — the figure Fortnox
+// summing every section leaves exactly the period's result: the figure Fortnox
 // labels "Beräknat resultat", and it must match the result report's total.
 const BALANCE_SECTIONS: BasSection[] = [
   { key: "anlaggning", from: 1000, to: 1399, orientation: "debit" },
@@ -40,7 +40,7 @@ const BALANCE_SECTIONS: BasSection[] = [
 ];
 
 // Resultaträkning. Income is credit-oriented (so it reads positive); every cost
-// section is credit-oriented too, which makes costs read negative — matching how
+// section is credit-oriented too, which makes costs read negative, matching how
 // Fortnox prints them, and letting the sections simply add up to the result.
 const RESULT_SECTIONS: BasSection[] = [
   { key: "intakter", from: 3000, to: 3999, orientation: "credit" },

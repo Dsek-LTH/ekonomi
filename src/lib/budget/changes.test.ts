@@ -66,23 +66,23 @@ describe("validateChange", () => {
     });
   });
 
-  it("refuses the same account twice — it reads as two decisions", () => {
+  it("refuses the same account twice, it reads as two decisions", () => {
     const v = validateChange("AVSTEG", [cost("a", 500), cost("a", -500)]);
     expect(v).toEqual({ ok: false, error: "duplicate" });
   });
 
-  describe("AVSTEG — must actually move the rambudget", () => {
+  describe("AVSTEG: must actually move the rambudget", () => {
     it("accepts a change that moves it", () => {
       expect(validateChange("AVSTEG", [cost("a", 500)])).toEqual({ ok: true });
     });
 
-    it("refuses one that nets to nothing — that is a förflyttning", () => {
+    it("refuses one that nets to nothing, that is a förflyttning", () => {
       const v = validateChange("AVSTEG", [cost("a", 500), cost("b", -500)]);
       expect(v).toEqual({ ok: false, error: "noEffect" });
     });
   });
 
-  describe("FORFLYTTNING — must net to zero, inside one resultatenhet", () => {
+  describe("FORFLYTTNING: must net to zero, inside one resultatenhet", () => {
     it("accepts money moved between two cost accounts", () => {
       expect(validateChange("FORFLYTTNING", [cost("a", 500), cost("b", -500)])).toEqual({
         ok: true,
@@ -159,7 +159,7 @@ describe("scopeLabel", () => {
 describe("parseAmount", () => {
   // Kronor in, öre out. This is the one place on the editorial-change path
   // where what somebody typed becomes an amount, so it is the one place the
-  // conversion happens — see the units note in lib/budget/eval.ts.
+  // conversion happens, see the units note in lib/budget/eval.ts.
   it("reads a plain number as öre", () => {
     expect(parseAmount("500")).toBe(50_000);
   });

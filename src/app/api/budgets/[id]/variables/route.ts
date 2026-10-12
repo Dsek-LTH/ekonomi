@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { appendInOrder, nextSortOrder } from "@/lib/server/sort-order";
-import { denyBudgetWrite } from "@/lib/budget/access";
+import { allowBudgetWrite } from "@/lib/budget/access";
 import { parseBody } from "@/lib/api/parse";
 import { CreateVariable } from "@/lib/api/schemas/budget";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: budgetId } = await ctx.params;
-  const denied = await denyBudgetWrite({ budget: budgetId });
-  if (denied) return denied;
+  const g = await allowBudgetWrite({ budget: budgetId });
+  if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateVariable);
   if (!parsed.ok) return parsed.res;

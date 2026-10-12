@@ -10,7 +10,7 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-panel border border-dashed border-border bg-background px-6 py-16 text-center">
       <p className="text-base font-semibold">{title}</p>
       {description && (
         <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>
@@ -21,7 +21,7 @@ export function EmptyState({
 }
 
 // "Nothing here" inside a card or list, where the full EmptyState would be too
-// loud — one centred line where the rows would have been.
+// loud. One centred line where the rows would have been.
 //
 // The spacing is a named variant rather than something a caller layers on with
 // `className`: cn() only concatenates, and Tailwind emits its utilities in scale

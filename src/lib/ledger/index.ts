@@ -2,14 +2,14 @@
 // Amounts are returned in SEK (the rest of the UI works in SEK), except the
 // budget-vs-actual helper which stays in öre for exact matching.
 import { prisma } from "@/lib/server/db";
-
-const ore = (v: number | null | undefined) => (v ?? 0) / 100;
+import { oreToSEK } from "@/lib/domain/money";
+import { costCenterWhere } from "./cost-center-filter";
 
 export interface LedgerYear {
   id: number; // Fortnox financial-year id
   year: number; // calendar year (from FromDate)
   lastSyncAt: string | null; // ISO
-  // The year's own span, so the report can offer exactly its months — a broken
+  // The year's own span, so the report can offer exactly its months. A broken
   // financial year doesn't start in January.
   fromDate: string; // YYYY-MM-DD
   toDate: string; // YYYY-MM-DD
@@ -38,40 +38,40 @@ export async function financialYearIdForCalendarYear(year: number): Promise<numb
   return fy?.id ?? null;
 }
 
-export interface LedgerRowView {
+interface LedgerRowView {
   id: string;
   date: string; // ISO
   voucher: string; // e.g. "A-42"
   description: string; // voucher text
   text: string | null; // transaction text
-  costCenter: string | null; // "code · name", for the summed grouping
+  costCenter: string | null; // "code – name", for the summed grouping
   debit: number; // SEK
   credit: number; // SEK
 }
 
-// Individual voucher rows behind a (year, cost centre, account) cell — the
-// drill-down for the report. `costCenterCode` distinguishes three cases:
-// a code scopes to that cost centre, null scopes to the "no cost centre"
-// bucket, and undefined spans every cost centre (the summed grouping).
+// Individual voucher rows behind a (year, cost centre, account) cell: the
+// drill-down for the report. `costCenterCodes` is the report's own filter:
+// undefined spans every cost centre, otherwise only those codes, "" among them
+// for the "no cost centre" bucket. See cost-center-filter.ts.
 export async function getLedgerRows(
   financialYear: number,
   account: string,
-  costCenterCode: string | null | undefined,
+  costCenterCodes: string[] | undefined,
   period?: { from: Date; to: Date },
 ): Promise<LedgerRowView[]> {
   const rows = await prisma.ledgerRow.findMany({
     where: {
       financialYear,
       account,
-      ...(costCenterCode === undefined ? {} : { costCenterCode }),
+      ...costCenterWhere(costCenterCodes),
       ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
     },
-    // The voucher is still joined — this is the drill-down, and its series,
+    // The voucher is still joined. This is the drill-down, and its series,
     // number and description are the whole point of it. What moved off the
     // relation is the *filtering*, which is what had to read every row.
     include: { voucher: true },
     // On the row's own date, so the sort is served by the same index as the
-    // filter. It ties for rows of one voucher, hence the tiebreaker — without
+    // filter. It ties for rows of one voucher, hence the tiebreaker. Without
     // one, tied rows come back in whatever order the plan produces.
     orderBy: [{ date: "asc" }, { id: "asc" }],
     take: 500,
@@ -83,10 +83,10 @@ export async function getLedgerRows(
     description: r.voucher.description,
     text: r.text,
     costCenter: r.costCenterCode
-      ? `${r.costCenterCode}${r.costCenterName ? ` · ${r.costCenterName}` : ""}`
+      ? `${r.costCenterCode}${r.costCenterName ? ` – ${r.costCenterName}` : ""}`
       : null,
-    debit: ore(r.debit),
-    credit: ore(r.credit),
+    debit: oreToSEK(r.debit),
+    credit: oreToSEK(r.credit),
   }));
 }
 

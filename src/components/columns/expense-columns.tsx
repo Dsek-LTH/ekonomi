@@ -2,11 +2,12 @@
 
 // The columns every expense list is built from. Expenses, To approve and
 // Bookkeeping showed the same five columns, each with its own copy of the cell
-// markup, the sort/search flags and the alignment classes — so a change to how
+// markup, the sort/search flags and the alignment classes, so a change to how
 // an amount or a date reads had to be made three times. They're declared once
 // here; a page picks the ones it wants, in the order it wants, and adds its own
 // alongside them.
-import { StatusPill, Tag } from "@/components/ui/status-pill";
+import { StatusPill } from "@/components/ui/status-pill";
+import { PaymentTag } from "@/components/ui/payment-tag";
 import type { Column } from "@/components/ui/data-table";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
 
@@ -24,7 +25,7 @@ import type { Expense } from "@/lib/domain/types";
 export const expenseDateColumn = (
   header: string,
   // The reader's date format, from useFormat() in the page that builds the
-  // column — a factory called at module scope cannot ask for it itself.
+  // column. A factory called at module scope cannot ask for it itself.
   date: (iso: string) => string,
 ): Column<Expense> => ({
   key: "date",
@@ -42,13 +43,7 @@ export const expenseDateColumn = (
 // neither, the cell is the title alone.
 export const expenseTitleColumn = (
   header: string,
-  {
-    paymentLabel,
-    reference = true,
-  }: {
-    paymentLabel?: (type: Expense["paymentType"]) => string;
-    reference?: boolean;
-  } = {},
+  { reference = true }: { reference?: boolean } = {},
 ): Column<Expense> => ({
   key: "title",
   header,
@@ -60,26 +55,22 @@ export const expenseTitleColumn = (
   mobile: "title",
   cell: (e) => {
     // An utlägg that hasn't been submitted yet has no reference to show, so the
-    // second line is whatever is left of it — possibly nothing, in which case
+    // second line is whatever is left of it, possibly nothing, in which case
     // there is no second line rather than an empty one.
     const ref = reference ? e.reference : undefined;
     return (
       <>
         <p className="font-medium">{e.title}</p>
-        {(ref || paymentLabel) && (
-          <p className="mt-0.5 text-xs text-muted">
-            {ref}
-            {ref && paymentLabel && " · "}
-            {paymentLabel && <Tag>{paymentLabel(e.paymentType)}</Tag>}
-          </p>
-        )}
+        {ref && <p className="mt-0.5 text-xs text-muted">{ref}</p>}
       </>
     );
   },
 });
 
-// The kind of utlägg — bought on the section card, or paid privately and to be
-// reimbursed. Sorted and searched by the label the reader sees, not the enum.
+// The kind of utlägg: bought on the section card, paid privately and to be
+// reimbursed, or driven. Sorted and searched by the label the reader sees, not
+// the enum, which is why the label still has to be passed in even though the
+// tag now looks it up itself: `value` is a plain string and runs outside React.
 export const expensePaymentTypeColumn = (
   header: string,
   paymentLabel: (type: Expense["paymentType"]) => string,
@@ -90,14 +81,17 @@ export const expensePaymentTypeColumn = (
   sortable: true,
   searchable: true,
   className: "whitespace-nowrap",
-  // Off the phone row. It is one of two values, it is on the page the row
-  // opens, and the muted line holds two or three things before it truncates —
-  // so this is the one that makes room for the date and the reference.
-  mobile: "hide",
-  cell: (e) => <Tag>{paymentLabel(e.paymentType)}</Tag>,
+  // On the phone row after all. It used to be hidden there to make room, back
+  // when it was a grey tag saying a word: three or four of those in one muted
+  // line is what crowds it, and the one that had to go was the one the reader
+  // could get by opening the row. As an icon it costs about 20px and answers
+  // the question the list is most often scanned for, so it earns the room.
+  // See PaymentTag's `compact`: the word is still there for a screen reader.
+  mobile: "meta",
+  cell: (e) => <PaymentTag type={e.paymentType} compact />,
 });
 
-// The utlägg's own reference — "DEK26-0043", the number it is known by
+// The utlägg's own reference, "DEK26-0043", the number it is known by
 // everywhere from the receipt envelope to the ledger. Not the Fortnox voucher
 // label, which only exists after export and lives on the detail page.
 //
@@ -135,9 +129,15 @@ export const expenseStatusColumn = (header: string): Column<Expense> => ({
   // Opposite the title on a phone, stacked over the amount, rather than run
   // into the muted line with the date and the reference. Where an utlägg has
   // got to is the reason most people open this list at all, and a pill is a
-  // shape you read at a glance — which is worth the right-hand column and is
+  // shape you read at a glance, which is worth the right-hand column and is
   // wasted in a row of dot-separated text.
   mobile: "trailing",
+  // Under the amount, not over it. Both sit in the right-hand column on a
+  // phone, and the figure is what somebody is running their eye down a list of
+  // utlägg for; the status is what they check once one has stopped them. The
+  // order used to fall out of where these two columns happen to sit on the
+  // desktop table, which is not a decision anybody made about the card.
+  mobileOrder: 1,
   cell: (e) => <StatusPill status={e.status} />,
 });
 

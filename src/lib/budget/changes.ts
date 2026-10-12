@@ -7,7 +7,7 @@
 //
 //   • A FORFLYTTNING must leave the rambudget exactly where it was, and must
 //     stay inside one resultatenhet.
-//   • An AVSTEG must actually move it — a change that nets to nothing is a
+//   • An AVSTEG must actually move it. A change that nets to nothing is a
 //     förflyttning, whatever it was called when it was entered.
 //
 // Everything is in integer öre, signed in the account's own orientation (see
@@ -24,7 +24,7 @@ export interface ResolvedEntry {
   accountId: string;
   amount: number;
   kind: AccountKind;
-  /** Which resultatenhet the account's sheet belongs to — see `scopeKey`. */
+  /** Which resultatenhet the account's sheet belongs to. See `scopeKey`. */
   scope: string;
   /** What that resultatenhet is called, for the error message. */
   scopeLabel: string;
@@ -44,14 +44,14 @@ export const netResultImpact = (entries: readonly { kind: AccountKind; amount: n
   entries.reduce((sum, e) => sum + resultImpact(e.kind, e.amount), 0);
 
 // Exactly zero, because the amounts are integer öre. This was `Math.abs(net) <
-// 0.005` — half an öre — because two kronor floats that ought to cancel could
+// 0.005`, half an öre, because two kronor floats that ought to cancel could
 // miss by a fraction. Integers either cancel or they do not, and a
 // förflyttning that is genuinely one öre out is now refused rather than
 // rounded into neutrality.
 const isNeutral = (net: number): boolean => net === 0;
 
 /**
- * Which resultatenhet a sheet belongs to — the unit a förflyttning may move
+ * Which resultatenhet a sheet belongs to: the unit a förflyttning may move
  * money inside. That is the result unit: Sexmästeriet is one resultatenhet, and
  * moving between SEX01 and SEX02 leaves it whole.
  *
@@ -83,7 +83,7 @@ export function scopeLabel(sheet: {
  * amount, so unlike a line item it takes no formula.
  *
  * The one place kronor become öre on this path. A number handed in is already
- * öre — that is an amount coming back from the API, not one being typed.
+ * öre. That is an amount coming back from the API, not one being typed.
  */
 export function parseAmount(raw: string | number): number {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : NaN;
@@ -99,7 +99,7 @@ export function parseAmount(raw: string | number): number {
  * to the treasurer composing the change *and* returned by the API as an error
  * code, and both readers have their own language. It lives under `errors`
  * because that is the namespace the API's codes resolve in
- * (lib/ui/api-error.ts) — one string serving both, rather than two copies that
+ * (lib/ui/api-error.ts), one string serving both, rather than two copies that
  * drift. `values` fills the code's placeholders.
  */
 export type Validation =
@@ -152,7 +152,7 @@ export function validateChange(kind: ChangeKind, entries: readonly ResolvedEntry
 }
 
 /** The shape both the server and the client hold a change in. */
-export interface ChangeLike {
+interface ChangeLike {
   kind: ChangeKind;
   revokedAt: Date | string | null;
   entries: readonly { accountId: string; amount: number }[];
@@ -163,7 +163,7 @@ export const isActive = (c: { revokedAt: Date | string | null }): boolean => c.r
 
 /**
  * Net active adjustment per account id. Everything that has to add a change into
- * a figure — the evaluator's account totals, the sheet, the rambudget — goes
+ * a figure (the evaluator's account totals, the sheet, the rambudget) goes
  * through this, so a revoked change can never leak into one of them.
  */
 export function adjustmentsByAccount(changes: readonly ChangeLike[]): Map<string, number> {
@@ -178,7 +178,7 @@ export function adjustmentsByAccount(changes: readonly ChangeLike[]): Map<string
 }
 
 /**
- * What a change is called: "Avsteg #4", "Förflyttning #7". Swedish on purpose —
+ * What a change is called: "Avsteg #4", "Förflyttning #7". Swedish on purpose.
  * this names a change inside text that gets *stored* (see budget/clone.ts). A
  * screen showing a change to a reader uses `budget.changes.label` instead.
  */

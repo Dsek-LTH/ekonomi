@@ -67,14 +67,14 @@ function costCenterFromObjects(brace: string): string | undefined {
   return undefined;
 }
 
-export interface SieTransaction {
+interface SieTransaction {
   account: string;
   costCenterCode?: string;
   amount: number; // SEK decimal; positive = debit, negative = credit
   text?: string;
 }
 
-export interface SieVoucher {
+interface SieVoucher {
   series: string;
   number: number;
   date: string; // YYYY-MM-DD
@@ -82,7 +82,7 @@ export interface SieVoucher {
   transactions: SieTransaction[];
 }
 
-export interface ParsedSie {
+interface ParsedSie {
   accounts: Map<string, string>; // account number → name
   costCenters: Map<string, string>; // dim-1 code → name
   vouchers: SieVoucher[];
@@ -92,7 +92,7 @@ export interface ParsedSie {
   //
   // Keyed `${account}|${costCenterCode}`, where an empty cost centre is the
   // account-level total from #IB/#UB. Per-cost-centre entries come from
-  // #OIB/#OUB, which an exporter may omit entirely — callers must treat them
+  // #OIB/#OUB, which an exporter may omit entirely. Callers must treat them
   // as optional detail, never as the source of the account total.
   openingBalances: Map<string, number>; // → SEK at year start
   closingBalances: Map<string, number>; // → SEK at year end
@@ -130,7 +130,7 @@ export function parseSie(text: string): ParsedSie {
         if (t[1]) accounts.set(t[1], t[2] ?? t[1]);
         break;
       case "#OBJEKT":
-        // #OBJEKT <dim> "<code>" "<name>"  — only dimension 1 is cost centre
+        // #OBJEKT <dim> "<code>" "<name>": only dimension 1 is cost centre
         if (t[1] === "1" && t[2]) costCenters.set(t[2], t[3] ?? t[2]);
         break;
       case "#IB":
@@ -189,7 +189,7 @@ export function parseSie(text: string): ParsedSie {
         });
         break;
       }
-      // #RTRANS/#BTRANS (correction registrations) are intentionally ignored —
+      // #RTRANS/#BTRANS (correction registrations) are intentionally ignored,
       // Fortnox emits the live posting as #TRANS.
     }
   }

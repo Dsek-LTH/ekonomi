@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { AppShell, NAV_PINNED_COOKIE } from "@/components/shell/app-shell";
 import { RouteHistoryRecorder } from "@/components/shell/route-history";
+import { SettingsReopener } from "@/components/shell/settings-bounce";
 import { RouteProgressBar } from "@/components/shell/route-progress";
 import {
   DEFAULT_WIDTH,
@@ -17,7 +18,6 @@ import { requireUser } from "@/lib/server/current-user";
 import { userHoldsCard } from "@/lib/data/users";
 import { getFortnoxSession } from "@/lib/data/fortnox";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
-import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
 
 // Always render against fresh DB data on a full load. Each page loads its own
 // data (Server Components); the layout only resolves the session user + chrome.
@@ -25,24 +25,29 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  /** The `@modal` parallel slot: settings, intercepted. Null on every route
+   *  that isn't a client-side navigation into /admin. See @modal/default.tsx
+   *  and @modal/(.)admin. */
+  modal: React.ReactNode;
 }) {
   const currentUser = await requireUser();
 
   // The treasury books under their own Fortnox login, and that login is
-  // short-lived by design (see FortnoxStatus) — so whether it still holds is
+  // short-lived by design (see FortnoxStatus), so whether it still holds is
   // something the frame carries for them, not something they go to /profile to
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
-  const booksInFortnox = canLogInToFortnox(currentUser.roles);
+  const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
   const [holdsCard, fortnoxSession, cookieStore] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     cookies(),
   ]);
   // Read here rather than in the client so the frame renders in its stored
-  // shape on the first paint instead of settling into it after hydration — a
+  // shape on the first paint instead of settling into it after hydration, a
   // receipt flashing open at the wrong width, or a pinned sidebar snapping from
   // 64px to 256 and shoving the page sideways as it goes.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
@@ -51,11 +56,6 @@ export default async function AppLayout({
   // Unset means the rail, which is the answer for the screens this was built
   // for; pinning is the wider screen opting out.
   const navPinned = cookieStore.get(NAV_PINNED_COOKIE)?.value === "1";
-  // Read again here rather than handed down from the root layout: what that one
-  // does with it is put a class on <html>, and a layout cannot pass values to
-  // the layouts nested inside it. The cookie is the shared channel, and reading
-  // it twice in one request costs nothing.
-  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>
@@ -65,15 +65,16 @@ export default async function AppLayout({
           {/* Outside AppShell for the same reason as the banners: it is fixed
               to the top of the viewport, not to the page column. It reads the
               query string to know when a navigation has landed, hence the
-              boundary — nothing renders in the fallback, it is a 2px bar. */}
+              boundary, nothing renders in the fallback, it is a 2px bar. */}
           <Suspense fallback={null}>
             <RouteProgressBar />
-            {/* Beside the bar because it watches the same thing — the URL
-                changing — and reads the query string to do it. What it
-                remembers is what a back link returns you to. */}
+            {/* Beside the bar because it watches the same thing, the URL
+                changing, and reads the query string to do it. See
+                components/shell/route-history. */}
             <RouteHistoryRecorder />
+            <SettingsReopener />
           </Suspense>
-          {/* A fixed overlay, deliberately outside AppShell — notifications
+          {/* A fixed overlay, deliberately outside AppShell. Notifications
               float over the page rather than pushing the content down. */}
           <NotificationBanners />
           <ReceiptPanelProvider
@@ -82,15 +83,19 @@ export default async function AppLayout({
           >
             {/* `fortnox` absent is "this reader has no Fortnox login of their
                 own", which is most of them, and the nav shows nothing at all.
-                Present with a null session is the treasury signed out — the
+                Present with a null session is the treasury signed out. The
                 one state the sidebar exists to catch. */}
             <AppShell
               defaultPinned={navPinned}
-              theme={theme}
               fortnox={booksInFortnox ? { session: fortnoxSession } : undefined}
             >
               {children}
             </AppShell>
+            {/* Settings, floating over whichever of the above is underneath
+                it. A sibling of AppShell rather than something rendered
+                inside it: the app's own sidebar is exactly what this must
+                not touch. */}
+            {modal}
           </ReceiptPanelProvider>
         </ConfirmProvider>
       </NotificationsProvider>

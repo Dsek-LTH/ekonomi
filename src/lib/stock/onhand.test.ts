@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  alcoholPerKrona,
   impossible,
   onHand,
   pureAlcoholMl,
   purchasedMl,
   unitVolume,
-  wholeLitres,
   type StockMovement,
   type StockSubject,
 } from "./onhand";
@@ -154,14 +154,6 @@ describe("purchasedMl", () => {
   });
 });
 
-describe("wholeLitres", () => {
-  it("rounds to the whole litre the form asks for", () => {
-    expect(wholeLitres(23760)).toBe(24);
-    expect(wholeLitres(4600)).toBe(5);
-    expect(wholeLitres(4400)).toBe(4);
-  });
-});
-
 describe("pureAlcoholMl", () => {
   it("is volume times strength", () => {
     expect(pureAlcoholMl(vodka, 700)).toBe(280);
@@ -170,6 +162,23 @@ describe("pureAlcoholMl", () => {
 
   it("has no answer for a product with no strength recorded", () => {
     expect(pureAlcoholMl({ kind: "UNIT", category: "OL" }, 500)).toBeNull();
+  });
+});
+
+describe("alcoholPerKrona", () => {
+  it("is pure alcohol per krona of one whole unit", () => {
+    // 700 ml at 40 % is 280 ml pure alcohol; a bottle costing 200 kr gives
+    // 28 cl for that money, so 0,14 cl for one krona of it.
+    expect(alcoholPerKrona({ ...vodka, costPriceOre: 20_000 })).toBeCloseTo(0.14, 6);
+  });
+
+  it("has no answer without a strength, a size or a price", () => {
+    expect(alcoholPerKrona({ kind: "UNIT", category: "OL", costPriceOre: 1000 })).toBeNull();
+    expect(alcoholPerKrona({ ...cans, costPriceOre: null })).toBeNull();
+  });
+
+  it("treats a zero price as unpriced rather than dividing by it", () => {
+    expect(alcoholPerKrona({ ...cans, costPriceOre: 0 })).toBeNull();
   });
 });
 

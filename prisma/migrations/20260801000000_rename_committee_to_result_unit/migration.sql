@@ -2,7 +2,7 @@
 --
 -- A pure rename: the model is untouched. A result unit still owns cost-centre
 -- prefixes and still decides who attests, and a person may still answer for
--- several units. Only the words change — so everything here renames in place
+-- several units. Only the words change, so everything here renames in place
 -- and not one row is rewritten.
 
 -- ── The role ──────────────────────────────────────────────────────

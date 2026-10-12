@@ -1,0 +1,36 @@
+{
+  "id": "examples-valid",
+  "label": "Giltiga kvitton",
+  "items": [
+    {
+      "id": "ex-store",
+      "q": "Kassakvitto från butik",
+      "a": [
+        {
+          "t": "p",
+          "v": "Datum, varje vara med pris, momssatserna, säljarens bolagsnamn, adress och organisationsnummer samt kvittonummer, allt finns med och går att läsa."
+        },
+        {
+          "t": "image",
+          "file": "valid-store",
+          "alt": "Kassakvitto där datum, varor, moms och säljarens organisationsnummer syns tydligt."
+        }
+      ]
+    },
+    {
+      "id": "ex-webshop",
+      "q": "Kvitto från en webbutik",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ett riktigt kvitto, eller en faktura ställd till sektionen, med samma uppgifter som ett kassakvitto. Mejlet du fick när du la beställningen är inte det här."
+        },
+        {
+          "t": "image",
+          "file": "valid-webshop",
+          "alt": "Kvitto från en webbutik med säljaruppgifter, moms och verifikationsnummer."
+        }
+      ]
+    }
+  ]
+}

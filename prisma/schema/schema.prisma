@@ -1,0 +1,28 @@
+// Prisma schema for the utlägg (expense) service.
+//
+// Money is stored as integer öre (minor units) everywhere, never floats, to
+// keep accounting exact and clean for Fortnox export. Divide by 100 for display,
+// multiply by 100 on import; lib/domain/money.ts is the only place that does
+// either.
+//
+// "Everywhere" now means everywhere. BudgetAdjustment.amount was a Float
+// holding kronor, and the budget engine reported kronor to match it, so the one
+// part of the app whose whole job is arithmetic was the part not following the
+// rule. Both are öre as of the 20260807 migrations. The engine still *computes*
+// in kronor, because a budget formula multiplies money by things that are not
+// money (a headcount, a percentage), and scaling those by 100 would be wrong.
+// See the units note at the top of lib/budget/eval.ts.
+
+// Generator, datasource, and the rules that hold for every file here.
+
+generator client {
+  provider = "prisma-client"
+  // Relative to this file, not to prisma/. Two levels up is the repo root,
+  // because the schema is a folder and this file sits inside it.
+  output   = "../../src/lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Connection URL lives in prisma.config.ts (Prisma 7 moved it out of the schema).
+}

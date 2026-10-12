@@ -1,0 +1,198 @@
+{
+  "id": "approval",
+  "label": "Attestering",
+  "items": [
+    {
+      "id": "what-is-attest",
+      "q": "Vad innebär det att attestera?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Attest är ett dokumenterat godkännande av ett köp. Samtliga köp som görs för sektionens räkning ska attesteras, och attesten ges när köpet har redovisats."
+        },
+        {
+          "t": "action",
+          "v": "Till attesteringen",
+          "href": "/approvals"
+        }
+      ]
+    },
+    {
+      "id": "who-attests",
+      "q": "Vem får attestera ett köp?",
+      "a": [
+        {
+          "t": "ul",
+          "v": [
+            "Firmatecknare har attesträtt för samtliga köp.",
+            "Resultatansvarig har attesträtt för alla köp gjorda under sin resultatenhet."
+          ]
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Ingen får attestera sina egna köp. Appen visar aldrig ditt eget utlägg i din attestkö."
+        },
+        {
+          "t": "p",
+          "v": "Vilken resultatenhet ett köp hör till avgörs av kostnadsstället det redovisas på. Är ett köp fördelat på kostnadsställen under flera resultatenheter attesteras varje del av sin resultatansvarig."
+        }
+      ]
+    },
+    {
+      "id": "units",
+      "q": "Vilka resultatenheter finns, och vem är resultatansvarig?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Kostnadsställets kod börjar med resultatenhetens prefix, så SEX01 hör till Sexmästeriet och attesteras av Sexmästaren."
+        },
+        {
+          "t": "table",
+          "head": [
+            "Resultatenhet",
+            "Prefix",
+            "Resultatansvarig"
+          ],
+          "rows": [
+            [
+              "Aktivitetsutskottet",
+              "AKTU",
+              "Aktivitetsansvarig"
+            ],
+            [
+              "Cafémästeriet",
+              "CAFE",
+              "Cafémästaren"
+            ],
+            [
+              "Centralprocessutskottet",
+              "CPU",
+              "Processmästaren"
+            ],
+            [
+              "DELTA",
+              "DELT",
+              "Delta-general"
+            ],
+            [
+              "Framtidsutskottet",
+              "FRA",
+              "Framtidsordförande"
+            ],
+            [
+              "Informationsutskottet",
+              "INFU",
+              "Informationsansvarig"
+            ],
+            [
+              "Jubileumsgruppen",
+              "JUBI",
+              "Jubileumsgeneral"
+            ],
+            [
+              "Källarmästeriet",
+              "KAL",
+              "Källarmästaren"
+            ],
+            [
+              "Medaljelele-kommittén",
+              "MED",
+              "Övermarskalk"
+            ],
+            [
+              "Nollningsutskottet",
+              "NOLL",
+              "Øverphøs"
+            ],
+            [
+              "Näringslivsutskottet",
+              "NARU",
+              "Näringslivsansvarig"
+            ],
+            [
+              "Sexmästeriet",
+              "SEX",
+              "Sexmästaren"
+            ],
+            [
+              "Skattmästeriet",
+              "SKT",
+              "Skattmästaren"
+            ],
+            [
+              "Studierådet",
+              "SRD",
+              "Studierådsordförande"
+            ],
+            [
+              "Tackmästeriet",
+              "TACK",
+              "Tackmästaren"
+            ],
+            [
+              "Trivselrådet",
+              "TRI",
+              "Trivselmästaren"
+            ],
+            [
+              "Valberedningen",
+              "VAL",
+              "Valberedningsordförande"
+            ],
+            [
+              "Styrelsen",
+              "STYR",
+              "Ordförande"
+            ],
+            [
+              "Sektionen",
+              "SEKT",
+              "Firmatecknare"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "attest-check",
+      "q": "Vad ska jag kontrollera innan jag godkänner?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Underlaget måste vara tillfredsställande. Ställ dig de här frågorna innan du godkänner köpet:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Är det ett giltigt kvitto, i det skick säljaren lämnade det?",
+            "Stämmer angivet datum med kvittots datum?",
+            "Är beskrivningen lämplig med avseende på varorna?",
+            "Är kostnadsstället korrekt?",
+            "Finns det budget för köpet på kostnadsstället, eller en budgetförändring som täcker det?",
+            "Är sektionskort respektive eget utlägg korrekt angivet?",
+            "På en milersättning: är resvägen ifylld, och stämmer sträckan med den? En resa tur och retur ska ha startstället både först och sist."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Du attesterar per kostnadsställe. Är köpet fördelat på flera godkänner du bara de rader du svarar för, och resten väntar på den som svarar för dem."
+        }
+      ]
+    },
+    {
+      "id": "no-attest",
+      "q": "Vad händer om ett köp inte attesteras?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Då bekostas det av den som gjorde köpet. Ett eget utlägg ersätts inte, och ett köp med sektionskortet faktureras personen som gjorde det."
+        },
+        {
+          "t": "p",
+          "v": "Skattmästaren kan, utifrån omständigheterna i det enskilda fallet, besluta att ersättning ändå ska betalas eller att fakturering inte ska ske."
+        }
+      ]
+    }
+  ]
+}

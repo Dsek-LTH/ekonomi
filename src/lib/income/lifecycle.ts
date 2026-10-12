@@ -4,7 +4,7 @@
 // into Fortnox. That last part is the whole shape of this file: a voucher that
 // has been pushed over there is over there, and nothing here can take it back.
 // So each operation is honest about how far it goes, and the order they have to
-// be used in is enforced rather than explained —
+// be used in is enforced rather than explained:
 //
 //   unexport  EXPORTED → BOOKED   this app forgets the Fortnox voucher; the
 //                                 voucher itself stays, and re-exporting would
@@ -29,18 +29,18 @@ export type LifecycleFailure =
   | { reason: "reportNotFound" }
   | { reason: "unexportOnlyExported"; status: IncomeReportStatus }
   | { reason: "reopenOnlyBooked"; status: IncomeReportStatus }
-  /** Delete refuses while Fortnox still has the voucher — unexport first. */
+  /** Delete refuses while Fortnox still has the voucher. Unexport first. */
   | { reason: "deleteExportedFirst" };
 
-export type LifecycleResult = { ok: true } | ({ ok: false } & LifecycleFailure);
+type LifecycleResult = { ok: true } | ({ ok: false } & LifecycleFailure);
 
 /**
  * Forget the Fortnox voucher: EXPORTED → BOOKED.
  *
  * The counterpart of the utlägg's "unexport" (api/expenses/[id]/transition),
  * and unwinding the same amount: our record of the export, and nothing else.
- * The voucher stays in Fortnox, which is why this is behind the treasury roles
- * — the people who can go and reverse it there.
+ * The voucher stays in Fortnox, which is why this is behind the treasury roles:
+ * the people who can go and reverse it there.
  */
 export async function unexportIncomeReport(id: string): Promise<LifecycleResult> {
   const report = await prisma.incomeReport.findUnique({
@@ -73,12 +73,12 @@ export async function unexportIncomeReport(id: string): Promise<LifecycleResult>
  *
  * The document goes with it. A stored intäktsräkning is the evidence behind a
  * figure in the ledger, and once the figure is gone the bytes substantiate
- * nothing — worse, they are a picture of the day *before* whatever correction
+ * nothing. Worse, they are a picture of the day *before* whatever correction
  * is about to be made to it. The next booking stores a freshly rendered one
  * (lib/income/document.ts), which is what the corrected day actually says.
  *
  * What comes back is an ordinary draft, in the ordinary queue, with nothing
- * marking it as special. So it waits there to be booked again — and the next
+ * marking it as special. So it waits there to be booked again, and the next
  * fetch sweeps it away like any other draft, which is the right answer for a
  * day whose takings that fetch brings back anyway.
  */
@@ -111,7 +111,7 @@ export async function reopenIncomeReport(id: string): Promise<LifecycleResult> {
 }
 
 /**
- * Remove a day entirely — the report, its sold lines and its verifikation.
+ * Remove a day entirely: the report, its sold lines and its verifikation.
  *
  * The lines and the voucher go by foreign key (both cascade from the report),
  * so what is left to do by hand is the stored PDF.

@@ -1,11 +1,11 @@
 import { canAccessBookkeeping, hasAttestRole } from "./permissions";
-import type { Expense, Role } from "./types";
+import type { Capability, Expense, Role } from "./types";
 
 // Exactly what deciding a queue needs: who is asking, and what they may do.
-// Narrower than `User` on purpose — a pure function that takes the whole record
+// Narrower than `User` on purpose. A pure function that takes the whole record
 // invites callers to pass a whole record, and then the next reader cannot tell
 // which fields matter. Both `User` and `CurrentUser` satisfy it structurally.
-type Viewer = { id: string; roles: Role[] };
+type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
 // What the dashboard is: one question, "what needs you now", answered for
 // whoever is asking.
@@ -17,12 +17,11 @@ type Viewer = { id: string; roles: Role[] };
 // section still gets one list.
 //
 // Language-neutral, like ExpenseEvent: the action is an enum and the UI renders
-// the Swedish. `domain/` stays pure — no database, no formatting, no clock.
+// the Swedish. `domain/` stays pure: no database, no formatting, no clock.
 
 export type QueueAction =
   | "FIX" // came back to you with changes requested
   | "SUBMIT" // still a draft; nobody knows about it yet
-  | "MATCH" // a card purchase with no bank row against it
   | "ATTEST" // someone else's, and you are the one who may attest it
   | "BOOK" // attested, waiting for a verifikation
   | "EXPORT"; // booked, waiting to go to Fortnox
@@ -37,16 +36,15 @@ export interface QueueItem {
 // The submitter's own blockers come first: an utlägg that came back, or never
 // left, is money the section owes someone that nothing else in the system is
 // going to move. Attest is next, because a resultatansvarig is the only person
-// who can clear it and they come in specifically to do so. Bookkeeping last —
+// who can clear it and they come in specifically to do so. Bookkeeping last,
 // it is real work, but it happens in planned sittings rather than in response
 // to a notification, and skattmästeriet has its own screens for it.
 const URGENCY: Record<QueueAction, number> = {
   FIX: 0,
   SUBMIT: 1,
-  MATCH: 2,
-  ATTEST: 3,
-  BOOK: 4,
-  EXPORT: 5,
+  ATTEST: 2,
+  BOOK: 3,
+  EXPORT: 4,
 };
 
 // The one thing this expense needs from this viewer, or null if it is waiting
@@ -63,23 +61,20 @@ export function queueActionFor(
   if (mine) {
     if (expense.status === "CHANGES_REQUESTED") return "FIX";
     if (expense.status === "DRAFT") return "SUBMIT";
-    // A card purchase cannot be sent for attest until it is matched against the
-    // bank row — the same gate `submitBlocker` enforces on the detail page.
-    if (expense.status === "PENDING_MATCH") return "MATCH";
   }
 
   // Someone else's, and you hold the ownership over one of its kostnadsställen.
   // `canAttest` is computed per allocation against the viewer, so this never
-  // has to re-derive authority — it only has to check it has not been used yet.
+  // has to re-derive authority. It only has to check it has not been used yet.
   if (
     expense.status === "PENDING_APPROVAL" &&
-    hasAttestRole(user.roles) &&
+    hasAttestRole(user.capabilities) &&
     expense.allocations.some((a) => a.canAttest && !a.approvedById)
   ) {
     return "ATTEST";
   }
 
-  if (canAccessBookkeeping(user.roles)) {
+  if (canAccessBookkeeping(user.capabilities)) {
     if (expense.status === "APPROVED") return "BOOK";
     if (expense.status === "BOOKED") return "EXPORT";
   }

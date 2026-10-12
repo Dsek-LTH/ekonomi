@@ -43,7 +43,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma — generated client (regenerated via `pnpm db:generate`)
+# prisma: generated client (regenerated via `pnpm db:generate`)
 /src/lib/generated
 
 # Section financial data. Bank exports and the budget spreadsheet are working
@@ -56,5 +56,11 @@ next-env.d.ts
 *.xls
 # Test fixtures are exempt: a parser test needs a sample file, and one written
 # by hand has no real data in it. Anything under a __fixtures__ directory is
-# assumed to be that — keep it synthetic.
+# assumed to be that. Keep it synthetic.
 !**/__fixtures__/*.csv
+
+# The intakt service (income reports from Zettle and Swish) is a separate
+# repository, cloned to ./intakt so docker-compose.yml can build it. It carries
+# its own history and belongs to itself, so it is not vendored here and not a
+# submodule. See README, "Optional integrations".
+/intakt

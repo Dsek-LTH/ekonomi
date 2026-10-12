@@ -1,7 +1,34 @@
 @import "tailwindcss";
 
-/* Class-based dark mode: toggled via <html class="dark"> (see ThemeToggle). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Dark mode is three states, not two. `.dark` and `.light` on <html> are a
+   stated preference; no class at all means "whatever the OS says". So the
+   variant cannot be a single selector: it has to match the class and the media
+   query both, which is why it is a block. See the palette below and
+   lib/ui/theme.ts. */
+@custom-variant dark {
+  &:where(.dark, .dark *) { @slot; }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light), :root:not(.light) *) { @slot; }
+  }
+}
+
+/*
+ * The nav rail is open when it is hovered, or when the keyboard is somewhere
+ * inside it. Every reveal in the shell tracks the panel's width, so all of them
+ * have to open on exactly those two things and on nothing else.
+ *
+ * As a variant rather than as a pair written out per property. Six values in
+ * app-shell.tsx each carried `md:group-hover:X md:group-has-[:focus-visible]:X`,
+ * so a seventh reveal meant remembering two spellings and a change to how the
+ * rail opens meant twelve edits. It cannot be a helper in TypeScript: Tailwind
+ * finds classes by scanning the source for literal strings, so a name built by
+ * interpolation is one whose CSS never gets generated.
+ *
+ * `:focus-visible` and not `:focus-within`: clicking a nav link focuses it, and
+ * `:focus-within` would then hold the panel open after the pointer had left and
+ * the page had changed under it.
+ */
+@custom-variant nav-open (&:is(.group:hover *, .group:has(:focus-visible) *));
 
 @theme {
     /* Neutrals */
@@ -13,72 +40,254 @@
     --color-foreground: #1d1d1f;
     --color-muted: #6e6e73;
 
+    /* ── The 3:1 tier ────────────────────────────────────────────
+       For ink that is not a word: a chevron, the search glyph, an elbow
+       connector, the box on a selected budget cell. Non-text under WCAG 1.4.11,
+       which asks 3:1 of anything that carries meaning, and this clears it on all
+       three grounds in both themes.
 
-    /* Brand */
+       Marks only. It was briefly the boundary of every control as well, on the
+       reasoning that a control's edge owes the same 3:1, and that is true but it
+       drew an app of heavy grey boxes: a hairline this dark is a different
+       design, not the same design corrected. Controls keep --color-border, which
+       is 1.26:1 in light and is a real gap, and the answer to it is a lighter
+       touch than this token was.
+
+       Not a text colour either. `--color-muted` is the floor for anything with
+       words in it, placeholders included, and it is already near that floor:
+       5.07:1 on a card in light, so there is no room for a quieter tier that a
+       reader could still read. The `text-muted/40` … `/70` ladder this replaced
+       ran from 1.72:1 to 2.81:1, and it was carrying real content. */
+    --color-faint: #8a8a8f;
+
+    /* The fill a row or a control takes while the pointer is on it. Its own
+       token rather than a fraction of the surface: `bg-surface/40` is a 3%
+       step (1.03:1), which is under what a screen at an angle can show, so in a
+       table of fifty rows the hover said nothing. One step above --color-surface
+       so a hovered row still reads over a tinted header. */
+    --color-hover: #ebebee;
+
+    /* Budget sheets rule their cells in this rather than in --color-border, a
+       hairline heavier, because a spreadsheet is read by its grid. Cool, like
+       every other neutral here: it used to be #ddd7df, the one warm grey in the
+       app. See the `.budget-grid` block near the bottom. */
+    --color-grid-line: #dbdbe0;
+
+
+    /* ── Brand ───────────────────────────────────────────────────
+       The label on the pink is white, and it is a deliberate choice against the
+       measurement rather than an oversight, so the numbers are written down
+       here and not argued about again. White reads 3.31:1 on this pink and
+       2.83:1 on the dark theme's, both under the 4.5:1 a label owes; the dark
+       hover takes it to 2.52. Near-black would read 5.08 and 5.94, and is what
+       the direction contract in app/layout.tsx originally called for and what
+       app/globals.css still prints in. It was tried and the white was preferred.
+
+       What follows from that, and is the reason the hover darkens rather than
+       lifts: every step the pink takes toward white is a step the white label
+       loses. #d94f78 keeps it at 3.93, and the #f07096 that a near-black label
+       wanted would leave it at 2.81, which is worse than not hovering at all.
+
+       So: the pink fill is for short labels on large targets, and nothing long
+       or small is set on it. The dark theme is the weaker of the two and the
+       one to look at first if this is ever revisited. */
     --color-brand: #e85d86;
     --color-brand-hover: #d94f78;
     --color-on-brand: #ffffff;
     --color-brand-edge: #d94f78;
-    --color-brand-soft: #fdf1f5;
 
 
     /* Accent */
     --color-accent: #c93663;
-    --color-accent-hover: #b72f58;
     --color-accent-soft: #fdf1f5;
 
 
-    /* Purple — secondary meaning only */
+    /* Purple, secondary meaning only */
     --color-purple: #8b5fc7;
-    --color-purple-hover: #7950b4;
     --color-purple-soft: #f6f2fc;
 
     /* Semantic */
     --color-success: #248a3d;
-    --color-success-hover: #1f7535;
     --color-success-soft: #f1f9f2;
 
     --color-warning: #9a6700;
-    --color-warning-hover: #805600;
     --color-warning-soft: #fff8e7;
 
     --color-danger: #d70015;
     --color-danger-hover: #ba0012;
-    --color-danger-soft: #fff2f3;
+    /* Off the accent's pink, deliberately. The two used to be #fff2f3 and
+       #fdf1f5, ΔE 1.6 apart, which is no distance at all: an "obalanserad"
+       chip and a selected row were the same wash, separated only by two reds
+       that converge further for a protanope. Warmer and one step deeper puts
+       them ΔE 7.1 apart (5.9 under dichromacy, up from 1.6) while staying
+       ΔE 11.0 clear of the warning amber, and the danger ink still reads on it
+       at 4.50:1. Two pale tints cannot be pulled much further apart than this
+       without moving the tones themselves, so the word in the chip stays the
+       thing that says which is which. */
+    --color-danger-soft: #ffe5e2;
     --color-on-danger: #ffffff;
 
 
+
+    /* ── How an utlägg was paid ──────────────────────────────────
+       Three kinds, and telling them apart at a glance is the whole job: a
+       purchase on the section's card is already paid for, an eget utlägg and a
+       milersättning are money the section owes a person. They were all one
+       grey tag, so the list said nothing until you opened a row.
+
+       Their own hues rather than the status tones above, because a payment
+       type is not a state: a row shows both, and the same colour meaning
+       "godkänd" in one column and "milersättning" in the next is worse than no
+       colour at all.
+
+       Chosen by measurement, not by eye. Between the three the worst pair is
+       ΔE 35.6 under deuteranopia or protanopia (34.1 dark, 30.9 in print),
+       which is the same floor the chart palette holds its adjacent series to.
+       Each reads at 5:1 or better on its own tint, in all three themes.
+
+       What could not be fixed, and is stated here for the same reason the
+       chart block states its own: five status tones already occupy the wheel,
+       so every hue left over sits near one of them for somebody. The closest
+       is the teal against the accent pink for a protanope, ΔE 4.2. It is not
+       load-bearing, and none of it is: a payment tag is an outlined chip with
+       an icon and a word, a status pill is a filled pill with a dot, they sit
+       in different columns, and the word is the answer. Colour is the second
+       way to tell these apart and never the only one. */
+    --color-pay-card: #1d4ed8;
+    --color-pay-card-soft: #eef2fd;
+    --color-pay-private: #0f766e;
+    --color-pay-private-soft: #ecf8f5;
+    --color-pay-mileage: #7c4a1e;
+    --color-pay-mileage-soft: #f9f1e9;
+
+    /* ── Chart series ────────────────────────────────────────────
+       One categorical palette for every chart in the app, and it is the status
+       palette: the six tones an utlägg is already drawn in (see
+       lib/domain/status.ts) plus two hues that only ever appear in a chart.
+       Aliases, not copies, so a status pill and the band beside it cannot
+       drift apart, and so the dark theme's steps come along for free.
+
+       This replaced a second palette of five hues named after drink types.
+       Two palettes meant the stock chart and everything else were coloured by
+       two separate decisions, and neither knew about the other. The stock
+       chart takes its five out of this list now; the mapping and the order
+       both live in lib/ui/chart-colors.ts.
+
+       Read a chart drawn in these knowing that hue carries no meaning on its
+       own. --chart-5 is the app's danger red everywhere else, and a band
+       painted in it is the fifth series, not a problem. What is over budget is
+       said in words and in the direction of a bar, never in colour alone. The
+       one place the pairing is deliberate is money in against money out, where
+       the bars also sit on opposite sides of the axis.
+
+       What reusing the status tones costs, stated because it cannot be fixed
+       here: --chart-4 and --chart-5, the app's warning amber and its danger
+       red, are ΔE 2.9 apart for a deuteranope. That is two colours nobody with
+       that vision can tell apart, and no choice of the two hues below can lift
+       it, because the collision is between two tokens the app means things with
+       elsewhere. Two things follow, and both are load-bearing. The order series
+       are handed out in (lib/ui/chart-colors.ts) keeps that pair far apart, so
+       the worst *adjacent* pair in a stack is ΔE 35 light and 28 dark, which is
+       the number that matters where two bands touch. And every chart in the app
+       carries a legend or a labelled row, so colour is the second way to tell a
+       series apart and never the only one. */
+    --chart-1: var(--color-accent);
+    --chart-2: var(--color-purple);
+    --chart-3: var(--color-success);
+    --chart-4: var(--color-warning);
+    --chart-5: var(--color-danger);
+    /* The two the status palette has no opinion about, stepped for this ground
+       rather than lightened from anything: lightness varies as well as hue,
+       which is what carries a series list through red/green colour blindness.
+       Chosen to sit as far as possible from the five above and from each other,
+       which puts the closest pair either of them is in at ΔE 13.9. */
+    --chart-6: #3323b8;
+    --chart-7: #0b6270;
+    /* Last, and not one of the seven: the neutral tone, for the bucket that is
+       an absence rather than a thing ("utan kostnadsställe", "övriga"). */
+    --chart-8: var(--color-muted);
+
     /* Misc */
-    --color-ring: #c93663;
+    /* The focus ring. Neutral rather than the section's pink: the ring is for
+       finding the keyboard, and in pink it shouted on every field it landed
+       on, and read as a second accent next to the buttons that actually wear
+       one. It is the muted text grey, which keeps it at 5:1 on a card, well
+       over the 3:1 a focus indicator owes. */
+    --color-ring: #6e6e73;
     --color-scrollbar: #c7c7cc;
 
     /* The light that sweeps a skeleton block. Brighter than the surface it
        runs across, which on a light ground means white and on a dark one a
-       thin white wash — the same gesture, not the same colour. */
+       thin white wash. The same gesture, not the same colour. */
     --skeleton-sheen: rgb(255 255 255 / 0.75);
 
     --spacing-inset: 1rem;
 
+    /* ── Corners ─────────────────────────────────────────────────
+       Three radii and no others. Tailwind's own scale is cleared, so a
+       `rounded-lg` written anywhere produces no CSS at all, and radius.test.ts
+       fails on it before anyone has to notice a square corner. Which one a
+       thing gets depends on what it is, never on how big it is:
+
+         panel    a surface that stands on the page or floats above it: a
+                  card, a modal, a menu, a popover, a toast, a notice, a
+                  bordered table or list.
+         control  anything you press or type into, and anything set inline
+                  inside a panel: buttons, fields, chips, status pills, tags,
+                  nav items, tinted info rows, icon tiles.
+         mark     something too small for 4px to read as a corner, or nested
+                  inside a control's padding: a checkbox, a legend swatch, a
+                  count badge, the selected segment of a switch.
+
+       `rounded-full` is kept for things that really are circles: avatars,
+       status dots, spinners, step numbers, the scrollbar thumb. Never for a
+       button or a pill. Fully round controls were most of what made the app
+       read as playful. */
+    --radius-*: initial;
+    --radius-mark: 2px;
+    --radius-control: 4px;
+    --radius-panel: 6px;
+
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-    --shadow-card: 0 1px 2px rgb(23 19 25 / 0.04), 0 2px 8px rgb(23 19 25 / 0.04);
-    --shadow-pop: 0 4px 12px rgb(23 19 25 / 0.08), 0 12px 32px rgb(23 19 25 / 0.12);
+    --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
+    --shadow-pop: 0 4px 12px rgb(29 29 31 / 0.08), 0 12px 32px rgb(29 29 31 / 0.12);
 
     /* For something raised inside a track rather than above the page: the
         selected pill of a switcher, sitting in a 4px gutter. The other two lean
-        downwards, which is right for a card on a page — light comes from above
-        — but in a gutter that thin the lean lands *in* the gap below the pill
+        downwards, which is right for a card on a page, since light comes from
+        above, but in a gutter that thin the lean lands *in* the gap below the pill
         and darkens it, and the pill then reads as sitting low in a track it is
         in fact dead centre of. So this one has no vertical offset at all: it
         seats the pill without telling you which way is up. */
-    --shadow-pill: 0 0 2px rgb(23 19 25 / 0.06), 0 0 6px rgb(23 19 25 / 0.05);
+    --shadow-pill: 0 0 2px rgb(29 29 31 / 0.06), 0 0 6px rgb(29 29 31 / 0.05);
 
     /* One easing for everything that moves, so the app has a single hand.
         Exponential-ish ease-out: leaves fast, settles soft. */
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    /* How long the receipt panel takes to fold away or come back. Read by
+       both halves of the motion and by the timer that unmounts the panel
+       after it (RECEIPT_FOLD_MS), so the two cannot drift apart. */
+    --receipt-fold-ms: 240ms;
 }
 
+/*
+ * ── The dark palette, and the two ways a document can be in it ──────────────
+ *
+ * `.dark` on <html> is a preference the reader stated and the server rendered
+ * from a cookie. No class at all means they have never said, and then the OS is
+ * what decides, which is the media query below. `.light` is the third state and
+ * the reason the media query is guarded: someone who has chosen light on a
+ * machine set to dark has said the thing that beats their OS.
+ *
+ * The block is written twice because CSS has no way to put a media query inside
+ * a selector list, and there is no third place to hoist the values to that
+ * would not itself have to be applied by both selectors. The two copies MUST
+ * stay identical. globals.test.ts parses this file and fails if they diverge,
+ * so adding a token to one and not the other is a red test rather than a colour
+ * that silently stops following the theme.
+ */
 .dark {
   color-scheme: dark;
 
@@ -87,7 +296,7 @@
   /* The page ground sits one step BELOW the cards, not at the bottom of the
      scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
      read as a hole the app was floating over rather than the paper it is
-     printed on. Five units under the card background — the same gap the light
+     printed on. Five units under the card background, the same gap the light
      theme puts between #fafafa and #ffffff, so the two themes separate a card
      from its ground by the same amount. */
   --color-canvas: #17171a;
@@ -97,44 +306,76 @@
   --color-foreground: #f5f5f7;
   --color-muted: #98989d;
 
+  /* The 3:1 tier, the hover fill and the sheet's gridline. Stepped for a
+     near-black ground rather than lightened from the light theme's; see the
+     notes on each in @theme. Faint clears 3:1 on all three grounds here too
+     (3.98 on a card, 3.26 on a surface). */
+  --color-faint: #7a7a7f;
+  --color-hover: #38383a;
+  --color-grid-line: #39393b;
+
 
   /* Brand */
   --color-brand: #ed7198;
   --color-brand-hover: #f080a5;
   --color-on-brand: #ffffff;
   --color-brand-edge: #ed7198;
-  --color-brand-soft: #382b31;
 
 
   /* Accent */
   --color-accent: #ff7fa5;
-  --color-accent-hover: #ff91b2;
   --color-accent-soft: #382b31;
 
 
-  /* Purple — secondary meaning only */
+  /* Purple, secondary meaning only */
   --color-purple: #a98bd8;
-  --color-purple-hover: #b79be2;
   --color-purple-soft: #302b38;
 
 
   /* Semantic */
   --color-success: #30d158;
-  --color-success-hover: #63df7d;
   --color-success-soft: #203427;
 
   --color-warning: #ff9f0a;
-  --color-warning-hover: #ffb340;
   --color-warning-soft: #382d1d;
 
   --color-danger: #ff453a;
   --color-danger-hover: #ff6961;
-  --color-danger-soft: #3a2323;
+  /* Pulled off the accent's tint the same way the light theme's is, and there
+     is more room here: ΔE 16.7 apart (12.0 under dichromacy, up from 6.0), and
+     ΔE 13.7 clear of every other tint. The danger ink reads on it at 4.52:1,
+     which is the first time in the dark theme it has cleared 4.5. */
+  --color-danger-soft: #3e1a16;
+  /* White, like the label on the pink and by the same decision. It measures
+     3.41:1 on this red and 2.82 once hovered, against 4.94 and 5.97 for a
+     near-black; the light theme's red is dark enough that white reads 5.38
+     there. Written down so the number is known rather than assumed. */
   --color-on-danger: #ffffff;
 
 
+  /* How an utlägg was paid. Stepped for a near-black ground rather than
+     lightened from the light theme's, so each still reads at 6:1 or better on
+     its own tint and the three stay ΔE 34.1 apart under colour blindness. */
+  --color-pay-card: #8ab0ff;
+  --color-pay-card-soft: #212a3d;
+  --color-pay-private: #4fd1c5;
+  --color-pay-private-soft: #1b3330;
+  --color-pay-mileage: #d9a273;
+  --color-pay-mileage-soft: #372a1e;
+
+  /* Chart series. Six of the eight are aliases of tokens this block already
+     redefines above, so they are already on this ground and are not repeated
+     here. These two are the palette's own, chosen for a near-black card rather
+     than lightened from the light theme's, and by the same rule: as far from
+     the five status hues and from each other as the space allows, which lands
+     the closest pair either is in at ΔE 13.2. The blue is the one colour here
+     with a contrast to watch, 3.9 against the card, which is a fill and not
+     text and reads. */
+  --chart-6: #4f70e8;
+  --chart-7: #70ebd6;
+
   /* Misc */
-  --color-ring: #ff7fa5;
+  --color-ring: #98989d;
   --color-scrollbar: #48484a;
 
   /* On near-black, white at three-quarters would be a flashbulb; the sweep has
@@ -159,6 +400,122 @@
     0 20px 48px rgb(0 0 0 / 0.35);
 }
 
+@media (prefers-color-scheme: dark) {
+  /* A copy of the block above, applied when the OS asks for dark and the
+     reader has not said otherwise. Do not edit one without the other. */
+  :root:not(.light) {
+    color-scheme: dark;
+
+    /* Neutrals */
+    --color-background: #1c1c1e;
+    /* The page ground sits one step BELOW the cards, not at the bottom of the
+       scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
+       read as a hole the app was floating over rather than the paper it is
+       printed on. Five units under the card background, the same gap the light
+       theme puts between #fafafa and #ffffff, so the two themes separate a card
+       from its ground by the same amount. */
+    --color-canvas: #17171a;
+    --color-surface: #2c2c2e;
+    --color-border: #3a3a3c;
+
+    --color-foreground: #f5f5f7;
+    --color-muted: #98989d;
+
+    /* The 3:1 tier, the hover fill and the sheet's gridline. Stepped for a
+       near-black ground rather than lightened from the light theme's; see the
+       notes on each in @theme. Faint clears 3:1 on all three grounds here too
+       (3.98 on a card, 3.26 on a surface). */
+    --color-faint: #7a7a7f;
+    --color-hover: #38383a;
+    --color-grid-line: #39393b;
+
+
+    /* Brand */
+    --color-brand: #ed7198;
+    --color-brand-hover: #f080a5;
+    --color-on-brand: #ffffff;
+    --color-brand-edge: #ed7198;
+
+
+    /* Accent */
+    --color-accent: #ff7fa5;
+    --color-accent-soft: #382b31;
+
+
+    /* Purple, secondary meaning only */
+    --color-purple: #a98bd8;
+    --color-purple-soft: #302b38;
+
+
+    /* Semantic */
+    --color-success: #30d158;
+    --color-success-soft: #203427;
+
+    --color-warning: #ff9f0a;
+    --color-warning-soft: #382d1d;
+
+    --color-danger: #ff453a;
+    --color-danger-hover: #ff6961;
+    /* Pulled off the accent's tint the same way the light theme's is, and there
+       is more room here: ΔE 16.7 apart (12.0 under dichromacy, up from 6.0), and
+       ΔE 13.7 clear of every other tint. The danger ink reads on it at 4.52:1,
+       which is the first time in the dark theme it has cleared 4.5. */
+    --color-danger-soft: #3e1a16;
+    /* White, like the label on the pink and by the same decision. It measures
+       3.41:1 on this red and 2.82 once hovered, against 4.94 and 5.97 for a
+       near-black; the light theme's red is dark enough that white reads 5.38
+       there. Written down so the number is known rather than assumed. */
+    --color-on-danger: #ffffff;
+
+
+    /* How an utlägg was paid. Stepped for a near-black ground rather than
+       lightened from the light theme's, so each still reads at 6:1 or better on
+       its own tint and the three stay ΔE 34.1 apart under colour blindness. */
+    --color-pay-card: #8ab0ff;
+    --color-pay-card-soft: #212a3d;
+    --color-pay-private: #4fd1c5;
+    --color-pay-private-soft: #1b3330;
+    --color-pay-mileage: #d9a273;
+    --color-pay-mileage-soft: #372a1e;
+
+    /* Chart series. Six of the eight are aliases of tokens this block already
+       redefines above, so they are already on this ground and are not repeated
+       here. These two are the palette's own, chosen for a near-black card rather
+       than lightened from the light theme's, and by the same rule: as far from
+       the five status hues and from each other as the space allows, which lands
+       the closest pair either is in at ΔE 13.2. The blue is the one colour here
+       with a contrast to watch, 3.9 against the card, which is a fill and not
+       text and reads. */
+    --chart-6: #4f70e8;
+    --chart-7: #70ebd6;
+
+    /* Misc */
+    --color-ring: #98989d;
+    --color-scrollbar: #48484a;
+
+    /* On near-black, white at three-quarters would be a flashbulb; the sweep has
+       to read as the surface catching light, not as a second colour. */
+    --skeleton-sheen: rgb(255 255 255 / 0.06);
+
+
+    /* Elevation */
+    --shadow-card:
+      0 1px 2px rgb(0 0 0 / 0.45),
+      0 4px 12px rgb(0 0 0 / 0.25);
+
+    /* The one that most needed fixing: on a dark ground the card shadow is 45%
+       black 4px down, which filled the gutter under a selected pill almost
+       solid. */
+    --shadow-pill:
+      0 0 3px rgb(0 0 0 / 0.4),
+      0 0 10px rgb(0 0 0 / 0.25);
+
+    --shadow-pop:
+      0 8px 24px rgb(0 0 0 / 0.45),
+      0 20px 48px rgb(0 0 0 / 0.35);
+  }
+}
+
 /* The inset opens up once there is room for it. One override here moves every
    surface in the app together, which is the entire point of it being a token. */
 @media (width >= 40rem) {
@@ -169,8 +526,8 @@
 
 /* ── Spacing rhythm ─────────────────────────────────────────────
    Four steps, with real gaps between them. The app had eleven gap
-   values and twenty padding values in use — every half-step Tailwind
-   offers — which is why nothing read as a boundary: with every
+   values and twenty padding values in use, every half-step Tailwind
+   offers, which is why nothing read as a boundary: with every
    interval available, no interval means anything.
 
      tight      gap-2   / 8px    inside a control; icon to label
@@ -182,9 +539,14 @@
    between two steps. The half-steps are not banned, they are for
    optical corrections, not for structure. */
 
+/* `transition: var(--ease-out-quint)` is what stood here, which is the
+   shorthand carrying an easing function and nothing else, so the duration fell
+   back to 0s and the app's most-clicked control was the one thing in it that
+   snapped. The property is named too: this class is on the nav rail and the
+   segmented control, where `transition: all` would also ease the width. */
 .brand-fill {
     background: var(--color-brand);
-    transition: var(--ease-out-quint);
+    transition: background 150ms var(--ease-out-quint);
 }
 
 .brand-fill:hover {
@@ -192,14 +554,14 @@
 }
 
 /* A block standing in for content that hasn't arrived. The surface fill is what
-   draws the shape; the sweep is what says it is coming rather than empty — an
+   draws the shape; the sweep is what says it is coming rather than empty. An
    un-animated grey block reads as a broken image, which is the opposite of the
    message. Slow and low-contrast on purpose: this runs behind a whole page of
    siblings at once, and anything faster turns a loading table into a strobe.
 
    One sweep, not one per block: `background-attachment: fixed` would sync them
    to the viewport, but that breaks inside the app's scroll containers, so each
-   block runs its own — at 1.6s the phase difference reads as texture. */
+   block runs its own, and at 1.6s the phase difference reads as texture. */
 .skeleton {
   background-color: var(--color-surface);
   background-image: linear-gradient(
@@ -222,11 +584,16 @@
   }
 }
 
+/* Three states again, matching the palette: an unclassed document defers to the
+   OS, which is what makes the UA's own paint (form controls, the scrollbar
+   gutter, the flash before first paint) agree with the tokens. */
 html {
-  color-scheme: light;
+  color-scheme: light dark;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+html.light { color-scheme: light; }
+html.dark { color-scheme: dark; }
 
 body {
   background: var(--color-canvas);
@@ -235,7 +602,7 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Headings tighten as they grow — at 24px and up the default tracking reads
+/* Headings tighten as they grow. At 24px and up the default tracking reads
    loose, and the app's page titles are the only large type it has. */
 h1,
 h2 {
@@ -256,7 +623,7 @@ table,
 }
 
 /* Tailwind's preflight resets buttons to the default arrow cursor. Anything
-   clickable should say so — done here rather than per-component so the many
+   clickable should say so. Done here rather than per-component so the many
    bare <button>s (table row actions, popover triggers, close buttons) are
    covered too. Disabled controls keep the arrow. */
 button:not(:disabled),
@@ -267,14 +634,14 @@ summary {
 
 /* ── Type size on the phone ──────────────────────────────────────
    Safari on iPhone zooms the page in whenever it focuses a control whose text
-   is under 16px — and it does not zoom back out afterwards. The page is left
+   is under 16px, and it does not zoom back out afterwards. The page is left
    magnified, the layout has moved, and the next tap is aimed at where things
    used to be. Our controls are 14px (`text-sm` on CONTROL in ui/field.tsx), so
    every field, search box and combobox did this.
 
    Fixed by giving the text the 16px Safari is asking for, rather than by
    pinning the viewport with `maximum-scale=1`. That stops the zoom too, and it
-   also stops somebody zooming in to read a receipt number — which is not ours
+   also stops somebody zooming in to read a receipt number, which is not ours
    to take away to save ourselves a stylesheet rule.
 
    Only below sm, where the controls already stand taller for a finger (see
@@ -282,7 +649,7 @@ summary {
    the app is drawn at, exactly as the heights do.
 
    OUTSIDE Tailwind's layers, like the focus ring below, so it beats the
-   `text-sm` and `text-xs` on the elements themselves — but wrapped in :where()
+   `text-sm` and `text-xs` on the elements themselves, but wrapped in :where()
    so it carries no specificity at all, and any rule that genuinely wants a
    different size still wins. Checkboxes, radios and the rest have no text to
    zoom to and are sized in pixels, so they stay out of it. */
@@ -298,7 +665,7 @@ summary {
 
 /* ── Focus ───────────────────────────────────────────────────────
    ONE focus ring for the whole app: 1.5px of the ring colour, sitting just off
-   the element rather than on its edge — on a filled control an on-the-edge ring
+   the element rather than on its edge. On a filled control an on-the-edge ring
    reads as part of the fill. A focused input, button, link and combobox all
    look the same, and nothing else marks focus: no border colour change, no soft
    halo. Fields used to add both on top of this and the same field then read as
@@ -307,18 +674,18 @@ summary {
 
    These rules are deliberately OUTSIDE Tailwind's layers, so they beat every
    utility: `focus:outline-none`, `focus:ring-2`, `focus:border-accent` and
-   friends have NO effect on a focused element and must not be added — a
+   friends have NO effect on a focused element and must not be added. A
    component that wants a different treatment opts out through one of the two
    classes below (or the sheet rules further down), not by stacking utilities.
 
-   :focus-visible, not :focus — a mouse click puts the caret in the field, which
+   :focus-visible, not :focus. A mouse click puts the caret in the field, which
    is signal enough; the ring is for finding the keyboard. */
 *:focus-visible {
   outline: 1px solid var(--color-ring);
   outline-offset: 1px;
 }
 
-/* Pull that ring inside the element — for inputs that fill their whole cell
+/* Pull that ring inside the element, for inputs that fill their whole cell
    edge to edge, where there is no room outside to draw it in. Same colour and
    thickness, just inward. The offset is the negative of the width, so the ring
    covers exactly the outermost 1.5px of the box on all four sides (the same
@@ -329,13 +696,24 @@ summary {
 
 /* A field assembled from a wrapper and a bare input (a fixed prefix beside an
    editable rest, say): the ring belongs around the whole thing, so the wrapper
-   draws it and the input inside is stopped from drawing a second one. */
-.focus-ring-within:has(:focus-visible) {
+   draws it and the input inside is stopped from drawing a second one.
+
+   The text only. A box like this can also hold a button (the scanner in the
+   barcode field, the sign toggle on an amount) and that is a separate stop on
+   the way through the form. Ringing the box for it drew exactly what the box
+   already looked like with the text focused, so tabbing onto the button
+   appeared to do nothing at all and the button read as unreachable. It gets a
+   ring of its own instead, pulled inside its edge so it is not clipped by a box
+   with `overflow-hidden` and does not sit on top of the box's border. */
+.focus-ring-within:has(:is(input, textarea):focus-visible) {
   outline: 1px solid var(--color-ring);
   outline-offset: 1px;
 }
-.focus-ring-within :focus-visible {
+.focus-ring-within :is(input, textarea):focus-visible {
   outline: none;
+}
+.focus-ring-within :is(button, a, [tabindex]):focus-visible {
+  outline-offset: -1.5px;
 }
 
 /* Subtle, unobtrusive scrollbars */
@@ -344,7 +722,7 @@ summary {
   scrollbar-color: var(--color-scrollbar) transparent;
 }
 
-/* A box that draws its own — see components/ui/overlay-scroll.tsx, which floats
+/* A box that draws its own. See components/ui/overlay-scroll.tsx, which floats
    a thumb over the content so a narrow panel does not lose 11px of every row to
    a gutter. Both properties are needed: the standard one for Firefox and recent
    Chrome, the pseudo-element for the WebKit that predates it. */
@@ -371,7 +749,7 @@ summary {
   /* One exception, and it is the whole reason the rule above can be this blunt:
      a spinner that doesn't turn is not a quieter spinner, it is a ring with no
      meaning, and the app would be telling someone nothing is happening while a
-     request is in flight. So it keeps turning — slower, and it is a 14–28px
+     request is in flight. So it keeps turning, slower, and it is a 14–28px
      mark, not travel across the screen.
 
      The skeleton sweep gets no such exemption: a static block still says
@@ -382,25 +760,126 @@ summary {
   }
 }
 
+/* The receipt panel's fold-away. See components/receipt/receipt-panel.tsx.
+   A panel that simply stops being there leaves the reader with no idea where it
+   went, and what it went to is a strip on the edge of the screen. So the panel
+   slides off toward that edge and the tab is what it leaves behind, arriving
+   with one ring that widens and fades, the once.
+
+   Only on a fold the reader asked for: the tab wears no motion at all on an
+   ordinary page load, when there is no question of where anything went. The
+   `translate` property and not `transform`, because that is the one Tailwind's
+   `-translate-y-1/2` writes. Animating the other would centre the tab twice.
+
+   `prefers-reduced-motion` is answered by the blunt rule above: both are cut to
+   nothing, and both end on the tab's resting state, so it simply arrives. */
+@keyframes receipt-tab-in {
+  from {
+    opacity: 0;
+    translate: 0 0.75rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* From md the tab is on the right edge rather than the bottom one, so it comes
+   in from the side, and carries a -50% of its own height in the very property
+   the animation writes, which the resting state needs back on every frame.
+   Redefining the keyframes inside the media query rather than branching the
+   class keeps one name in the component; the last matching definition wins.
+   48rem is Tailwind's `md`. */
+@media (min-width: 48rem) {
+  @keyframes receipt-tab-in {
+    from {
+      opacity: 0;
+      translate: 0.75rem -50%;
+    }
+    to {
+      opacity: 1;
+      translate: 0 -50%;
+    }
+  }
+}
+
+/* The receipt panel's fold, both ways.
+   
+   One transition, and only on `translate`. The panel is on screen for the whole
+   of the move in both directions: folding away it slides to the edge, and
+   coming back it is mounted *at* the edge and let go on the next frame, so the
+   same transition carries it home. See `unfold` in receipt-panel.tsx for why
+   the way back needs that extra frame. A transition has nothing to move from
+   unless the browser has painted the starting value first.
+
+   `translate` alone, deliberately. The resize drag writes `--receipt-w`
+   straight onto the node a hundred times a sweep, and a width that eased would
+   lag the pointer by the whole of this duration.
+
+   `prefers-reduced-motion` is answered by the blunt rule above: cut to nothing,
+   ending on the resting state, so the panel simply arrives, which is what it
+   did before any of this existed. */
+.receipt-panel {
+  transition: translate var(--receipt-fold-ms) var(--ease-out-quint);
+}
+
+/* Promised while it moves, and taken back when it stops.
+   
+   The panel is the whole screen on a phone and it carries a rasterised PDF
+   page. Without the hint the browser has no reason to give that its own layer
+   until the move has already started, so the first frames re-rasterise the
+   canvas, which is the judder, and it is worst on exactly the hardware where
+   the panel is largest relative to the screen. A standing promise costs memory,
+   so the class carrying it is only on for the length of the move. */
+.receipt-panel-moving {
+  will-change: translate;
+}
+
+@keyframes receipt-tab-ring {
+  from {
+    box-shadow: 0 0 0 0 var(--color-accent);
+    opacity: 0.45;
+  }
+  to {
+    box-shadow: 0 0 0 0.85rem transparent;
+    opacity: 0;
+  }
+}
+
+.receipt-tab-arriving {
+  animation: receipt-tab-in 220ms var(--ease-out-quint) both;
+}
+
+/* The ring is a layer of its own rather than the tab's own shadow: the tab
+   carries a card shadow at rest, and animating that away and back would take
+   the shape's edge with it. */
+.receipt-tab-arriving::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: receipt-tab-ring 850ms 220ms ease-out both;
+}
+
 /* Budget sheets read like a spreadsheet, not like the rest of the app: light
    hairline gridlines, roomy rows, a soft hover, neutral fills. Scoped to the
    table wrappers (class `budget-grid`). */
+/* Both colours are tokens now (`--color-grid-line` and `--color-faint` in
+   @theme), so this scope no longer carries hexes of its own and no longer needs
+   a `.dark` twin to step them: the palette has already done it. What stays here
+   is the one thing that is genuinely local, rebinding --color-border inside the
+   sheet so every `border-border` utility in it rules in the gridline. */
 .budget-grid {
-  --grid-line: #ddd7df; /* light hairline gridline */
-  --color-border: var(--grid-line); /* outer frame + row-group separators */
-  --cell-select: #948d99; /* graphite box on the merely-selected cell */
-}
-.dark .budget-grid {
-  --grid-line: #39393b; /* darker hairline so it reads on the dark cards */
-  --cell-select: #6e6e73;
+  --color-border: var(--color-grid-line); /* outer frame + row-group separators */
 }
 /* One quiet hairline colour on every rule (keeps each utility's border WIDTH but
    defeats the soft /40–/60 opacity tints used elsewhere). */
 .budget-grid :is(th, td, tr, tbody) {
-  border-color: var(--grid-line);
+  border-color: var(--color-grid-line);
 }
-/* Rambudget: the table scrolls inside its own card while the header block —
-   the column names plus the grand total — stays pinned at the top of it, so a
+/* Rambudget: the table scrolls inside its own card while the header block,
+   the column names plus the grand total, stays pinned at the top of it, so a
    fifty-row overview never loses which column is which or what it all adds up
    to. The card is the scrollport (see rambudget.tsx).
 
@@ -413,6 +892,14 @@ summary {
     position: sticky;
     top: 0;
     z-index: 20;
+    /* A fill on the block itself, under the cells' own.
+       The cells below paint every pixel they own, but under `border-collapse`
+       the rules between them belong to the table rather than to either cell,
+       and at a fractional device pixel ratio the seam that leaves is a hairline
+       of scrolling row showing between the header and the rows it is pinned
+       over. Backing the whole thead means any such seam falls on paint instead
+       of on content. It costs nothing where the cells already cover. */
+    background: var(--color-background);
   }
   /* The cells still paint their own fill and rules, both of which are needed
      once they move: the rows' rules belong to the table under `border-collapse`
@@ -439,7 +926,7 @@ summary {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
-/* A single selection box on the focused cell — sits on the gridline and encloses
+/* A single selection box on the focused cell. It sits on the gridline and encloses
    the whole cell (drag grip included). The input's own ring is removed so this is
    the only border. Graphite, not brand: moving around a sheet is the quiet
    state, and the section's pink is saved for the cell actually being edited
@@ -449,7 +936,7 @@ summary {
    An inward outline, not an inset shadow: cells carry a border on the right and
    top only, and an inset shadow is clipped to the PADDING box, so it stacks on
    top of those two borders (border + ring) while the left and bottom get the ring
-   alone — the box reads visibly thicker on two sides. An outline is measured from
+   alone, so the box reads visibly thicker on two sides. An outline is measured from
    the border box, so `outline-offset: -Npx` with an Npx width covers the outermost
    Npx of the cell evenly on all four sides, border included.
 
@@ -459,12 +946,12 @@ summary {
 .budget-grid :is(td, th):focus-within {
   position: relative;
   z-index: 10;
-  outline: 1.5px solid var(--cell-select);
+  outline: 1.5px solid var(--color-faint);
   outline-offset: -1.5px;
 }
 /* The cell box is the only selection indicator anywhere in the sheet, so nothing
    inside a cell draws one of its own: not the inputs, not the account picker,
-   not a row's ✕, not a tick box — two lines around one thing reads as two
+   not a row's ✕, not a tick box, because two lines around one thing reads as two
    things. Outside a cell (the comment box below, the buttons above the sheet)
    the app's ordinary ring is untouched. */
 .budget-grid :is(td, th) :is(input, button):focus,
@@ -474,7 +961,7 @@ summary {
 .budget-grid :is(td, th) input:focus-visible + [data-check] {
   outline: none;
 }
-/* …except a field that merely happens to sit in the sheet — the comment box on
+/* …except a field that merely happens to sit in the sheet. The comment box on
    an expanded row is a form field, not a cell. It takes the app's ordinary
    focus ring back, and its row draws no cell box around it. */
 .budget-grid td.sheet-field:focus-within {
@@ -490,7 +977,7 @@ summary {
 .budget-grid input[data-cell] {
   caret-color: transparent;
 }
-/* A selected cell also hides its text selection — the box is the selection.
+/* A selected cell also hides its text selection, because the box is the selection.
    (Type-to-edit selects the cell's text so the keystroke overwrites it; that
    highlight would otherwise flash up before edit mode paints.) */
 .budget-grid input[data-cell]::selection {
@@ -498,7 +985,7 @@ summary {
 }
 /* Edit mode: the graphite box turns the section's pink with a soft halo, the
    blinking caret returns and the text selection is visible again. The colour
-   change is what separates the two states — pink in a sheet means "you are
+   change is what separates the two states: pink in a sheet means "you are
    typing here". */
 .is-editing input[data-cell]:focus {
   caret-color: auto;
@@ -527,11 +1014,30 @@ summary {
     margin: 14mm;
   }
 
-  /* Dark mode is a screen preference. On paper it costs a full-bleed
-     black page and unreadable greys, so the light tokens are restored
-     for the print run — every component reads these, so this is all
-     it takes. */
-  html.dark {
+  /*
+   * The palette for paper, and it is now the palette for EVERY printed page
+   * rather than only for a document that happens to be dark.
+   *
+   * It used to be `html.dark` alone, on the reasoning that light was already
+   * fine in ink. That stopped being safe the moment a document could be dark
+   * without wearing the class: somebody whose OS is dark and who has never
+   * touched the toggle has no `dark` on <html>, and would have printed a
+   * full-bleed black page. Applying it unconditionally also makes a printed
+   * utläggsräkning one artefact, the same in every reader's hands, which is
+   * what a report handed to a revisor should be.
+   *
+   * Two selectors for one rule, and the reason is specificity rather than
+   * meaning: the OS arm of the palette is `:root:not(.light)`, and a plain
+   * `:root` here would lose to it and leave the dark values on paper. The
+   * second arm matches that weight and wins on source order.
+   *
+   * Every colour the dark palette redefines is redefined here, tints included.
+   * A token missed is a dark-tuned value landing in ink: a danger chip printing
+   * as a near-black block, a gridline invisible on white. globals.test.ts holds
+   * this block to the dark one so a token added there cannot be forgotten here.
+   */
+  :root,
+  :root:not(.light) {
     color-scheme: light;
 
     --color-background: #ffffff;
@@ -540,17 +1046,56 @@ summary {
     --color-border: #c8c8ce;
     --color-foreground: #000000;
     --color-muted: #45454a;
+    /* One step firmer than the screen's #8a8a8f. A hairline that is merely at
+       3:1 on a monitor is a hairline an office laser loses. */
+    --color-faint: #6e6e73;
+    /* Nothing is hovered on paper. It is set anyway so a fill that happens to
+       be painted from it is a tint rather than whichever theme's value was
+       left standing. */
+    --color-hover: #f2f2f4;
+    --color-grid-line: #c8c8ce;
 
     /* The dark palette's hues are tuned for a near-black card and read as
        washed-out highlighter on paper. A printed surplus, deficit or brand
-       mark has to stay legible in ink. */
+       mark has to stay legible in ink. Each of these is ~5.2:1 on white. */
     --color-brand: #f280a1;
+    /* Nothing hovers on paper, so it is the fill itself. It is set rather than
+       left out because leaving it out is how the dark theme's #f080a5 reaches
+       a printer. */
+    --color-brand-hover: #f280a1;
+    /* Black, and not the white the screen uses. This is a different pink: the
+       print fill is #f280a1, five steps lighter than the screen's, and white on
+       it is 2.51:1 where black is 8.38. Paper is also the one surface with no
+       backlight to carry a thin colour, and the page is going to a revisor. */
     --color-on-brand: #000000;
+    --color-brand-edge: #d02253;
     --color-accent: #d02253;
+    --color-accent-soft: #fdf1f5;
     --color-purple: #8c4ccb;
+    --color-purple-soft: #f6f2fc;
     --color-success: #1d7b4f;
+    --color-success-soft: #f1f9f2;
     --color-danger: #cb3227;
+    --color-danger-hover: #cb3227;
+    /* A shade lighter than the screen's #ffe5e2: the ink here is lighter than
+       the screen's danger red, and on that tint it would have read 4.36:1.
+       This holds 4.55 and still sits ΔE 4.9 off the accent's tint. */
+    --color-danger-soft: #ffebe8;
+    --color-on-danger: #ffffff;
     --color-warning: #a05c0d;
+    --color-warning-soft: #fff8e7;
+    --color-pay-card: #17439c;
+    --color-pay-card-soft: #eef2fd;
+    --color-pay-private: #0c6058;
+    --color-pay-private-soft: #ecf8f5;
+    --color-pay-mileage: #6b3f18;
+    --color-pay-mileage-soft: #f9f1e9;
+    /* The two chart hues that are not aliases of a status tone, back to their
+       light-theme values; the other six follow the tones above. */
+    --chart-6: #3323b8;
+    --chart-7: #0b6270;
+    --color-ring: #6e6e73;
+    --color-scrollbar: #c8c8ce;
   }
 
   html,

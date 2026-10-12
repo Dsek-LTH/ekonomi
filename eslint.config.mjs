@@ -17,14 +17,14 @@ const eslintConfig = defineConfig([
   // are meant to be read and acted on, not silenced.
   //
   // The rules only, not the plugin: eslint-config-next registers `jsx-a11y`
-  // itself (for the handful of rules it turns on — alt-text, aria-props and a
+  // itself (for the handful of rules it turns on: alt-text, aria-props and a
   // few more), and registering it twice is a hard config error. So this takes
   // the recommended rule set and leaves the plugin where it already is.
   //
   // `error` becomes `warn`; anything the plugin ships as `off` stays off. That
   // second half matters: the recommended set deliberately disables a few rules,
   // and turning them on wholesale added twenty-odd findings about empty <td/>
-  // spacer cells in the budget sheet — which are not controls and want no
+  // spacer cells in the budget sheet, which are not controls and want no
   // label. A lint that reports things that are fine is worse than no lint.
   {
     rules: Object.fromEntries(
@@ -42,7 +42,7 @@ const eslintConfig = defineConfig([
       // The rule guards against a page that grabs focus on load, moving a
       // screen reader past the heading that says where it is. Every autoFocus
       // in this app is the other thing: focus following a control the reader
-      // just operated — "byt namn", "+ ny resultatenhet", entering a cell, or
+      // just operated: "byt namn", "+ ny resultatenhet", entering a cell, or
       // a confirm dialog opening, where moving focus in is required rather
       // than merely allowed. Nine sites, one pattern, all correct.
       //

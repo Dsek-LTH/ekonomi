@@ -10,7 +10,7 @@ import { Modal, ModalHeader } from "./modal";
 
 /**
  * Where the panel stops being a full-width list and becomes a column beside the
- * detail — which is to say the breakpoint its screen stands the two side by
+ * detail, which is to say the breakpoint its screen stands the two side by
  * side at. Written out as literal classes rather than built from the key:
  * Tailwind reads these out of the source as text and never sees a template
  * string.
@@ -28,8 +28,8 @@ const PickedCtx = createContext<(() => void) | null>(null);
 // panel of selectable rows, sections and inline footers.
 //
 // Above the breakpoint it is that column, sticky beside the detail, and the two
-// are on screen together. Below it the screens used to stack — panel on top,
-// detail under — and that is where it went wrong: the budget's panel is 786px
+// are on screen together. Below it the screens used to stack (panel on top,
+// detail under) and that is where it went wrong: the budget's panel is 786px
 // of compare, search, list and add-row, so changing cost centre meant scrolling
 // back up past all of it and then down again. The income queue had already
 // noticed and capped its own list at `max-h-80`, which spends less of the screen
@@ -37,7 +37,7 @@ const PickedCtx = createContext<(() => void) | null>(null);
 //
 // So below the breakpoint the panel is a bar and a dialog: the bar says what is
 // selected and stays pinned while you work, and it opens the panel's own
-// contents unchanged. Nothing is dropped or reshaped — the grouped list keeps
+// contents unchanged. Nothing is dropped or reshaped. The grouped list keeps
 // its headings, its figures and its per-group actions, because it is the same
 // tree either way.
 //
@@ -46,23 +46,20 @@ const PickedCtx = createContext<(() => void) | null>(null);
 export function SidebarPanel({
   children,
   className,
-  ref,
+  cardClassName,
   at = "lg",
   bar,
   sheetLabel,
 }: {
   children: React.ReactNode;
   className?: string;
-  /**
-   * The panel element itself, for a screen that has to measure or move it —
-   * the budget's list is sticky and walks its own offset as the page scrolls
-   * (see lib/ui/use-sticky-follow.ts).
-   */
-  ref?: React.Ref<HTMLElement>;
+  /** The card inside the panel, for a panel that has to fit a fixed height and
+   *  hand what is left to one of its children (the budget's list, from lg). */
+  cardClassName?: string;
   /** The breakpoint this screen stands its detail beside the panel at. */
   at?: keyof typeof BANDS;
   /**
-   * What the collapsed bar says — normally the selected row's own line. Given
+   * What the collapsed bar says, normally the selected row's own line. Given
    * this, the panel collapses below the breakpoint; without it, it stacks.
    */
   bar?: React.ReactNode;
@@ -78,8 +75,16 @@ export function SidebarPanel({
       <>
         {/* `top-14` under the phone's app bar; from md the frame is fixed and
             the main column is the scrollport, so the bar sticks to the top of
-            that instead. z-10 to stay under the app bar's own 20. */}
-        <div className="sticky top-14 z-10 md:top-0">
+            that instead. z-10 to stay under the app bar's own 20.
+
+            `bg-canvas` on the wrapper, not just the Card inside it. The Card is
+            opaque but rounded, and a rounded box pinned over a scrolling list
+            is transparent at its four corner arcs: the rows underneath slid
+            through them, which reads as the bar being slightly see-through
+            rather than as the geometry it is. Canvas is the page's own colour
+            (body, globals.css), so the arcs go on showing exactly what they
+            show when nothing is scrolling. */}
+        <div className="sticky top-14 z-10 bg-canvas md:top-0">
           <Card className="overflow-hidden">
             <button
               type="button"
@@ -117,11 +122,11 @@ export function SidebarPanel({
   return (
     // Until the breakpoint the master–detail screens stack, so the panel is a
     // full-width list above the detail rather than a 16rem column beside it.
-    <aside ref={ref} className={cn("w-full shrink-0", band.column, className)}>
+    <aside className={cn("w-full shrink-0", band.column, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on
           a master-detail screen, and it used to be the same shape with no
-          elevation — which read as the list being a level behind. */}
-      <Card className="overflow-hidden">{children}</Card>
+          elevation, which read as the list being a level behind. */}
+      <Card className={cn("overflow-hidden", cardClassName)}>{children}</Card>
     </aside>
   );
 }
@@ -129,7 +134,7 @@ export function SidebarPanel({
 // One selectable row. Selection is the accent wash; everything else is left to
 // `children`, which is usually a title line plus a muted detail line.
 //
-// The rest of the button's props pass through, the same way Card's do — a row
+// The rest of the button's props pass through, the same way Card's do. A row
 // that is also a drop target (the income queue, which takes sold lines dragged
 // onto another verksamhet's day) needs its own handlers, and wrapping it in a
 // div to carry them would put the drop zone somewhere other than the thing that
@@ -158,7 +163,7 @@ export function SidebarItem({
       aria-current={active ? "true" : undefined}
       className={cn(
         "w-full px-4 py-2.5 text-left text-sm",
-        active ? "bg-accent-soft text-accent" : "hover:bg-surface",
+        active ? "bg-accent-soft text-accent" : "hover:bg-hover",
         className,
       )}
     >
@@ -170,7 +175,7 @@ export function SidebarItem({
 // A section heading between groups of items.
 //
 // `action` is for a control that belongs to the group rather than to any one row
-// in it — the income queue puts "new report for this day" beside the date, which
+// in it. The income queue puts "new report for this day" beside the date, which
 // is the only place where the day it would be for is already stated.
 export function SidebarGroupLabel({
   children,
@@ -180,7 +185,7 @@ export function SidebarGroupLabel({
   action?: React.ReactNode;
 }) {
   return (
-    <p className="flex items-center justify-between gap-2 bg-surface/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+    <p className="flex items-center justify-between gap-2 bg-surface px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
       {/* Only clipped when it is sharing the row: a heading on its own wraps,
           which is what a long result-unit name in a 16rem column needs. */}
       <span className={cn(Boolean(action) && "min-w-0 truncate")}>{children}</span>

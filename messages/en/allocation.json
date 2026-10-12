@@ -1,0 +1,10 @@
+{
+  "pick": "Pick a cost center…",
+  "search": "Search cost centers…",
+  "costCenter": "Cost center",
+  "commentPlaceholder": "Comment (optional)…",
+  "amountPlaceholder": "Amount",
+  "unit": "kr",
+  "removeRow": "Remove row",
+  "add": "+ Add cost center"
+}

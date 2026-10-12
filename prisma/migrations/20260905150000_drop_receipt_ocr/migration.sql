@@ -1,0 +1,21 @@
+-- Two columns for an OCR step that was never built.
+--
+-- `ocrText` and `ocrResult` have been on Receipt since the initial migration,
+-- meant to hold the raw text of a scanned kvitto and a structured pre-fill
+-- (amount, moms, säljare, datum) to save the claimant typing. Nothing was ever
+-- written to write them: no OCR runs anywhere in the app, no route sets them,
+-- and no screen reads them. They have held NULL on every row since the first
+-- commit.
+--
+-- Dropped rather than left in place. An empty column that looks like it holds
+-- receipt contents is worse than no column: the next person reads the schema,
+-- believes the app has the säljare and the moms off every kvitto, and writes
+-- something that depends on it. The section is not momsregistrerad and has no
+-- avdragsrätt for ingående moms, so the pre-fill this was for has no reader
+-- waiting either.
+--
+-- Nothing is lost, because nothing was there. Should OCR ever be built, adding
+-- a column back is one migration, and it can then be shaped around what the
+-- feature actually needs rather than around a guess made before it existed.
+ALTER TABLE "Receipt" DROP COLUMN "ocrText";
+ALTER TABLE "Receipt" DROP COLUMN "ocrResult";

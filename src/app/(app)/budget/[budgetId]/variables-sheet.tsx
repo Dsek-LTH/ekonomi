@@ -3,7 +3,7 @@
 // a cost-centre sheet (Enter edits; Tab moves natively).
 //
 // Variables are a flat namespace, matched across budgets on the name alone, so
-// when a comparison is on this shows the other side's value beside each — and,
+// when a comparison is on this shows the other side's value beside each, and,
 // below, the ones only the other side defines. A budget whose MEDLEMMAR the
 // section has grown out of is worth seeing.
 import { useTranslations } from "next-intl";
@@ -11,8 +11,8 @@ import { cn } from "@/lib/ui/utils";
 import { IconButton } from "@/components/ui/icon-button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconTrash } from "@/components/ui/icons";
-// Variables are not money — MEDLEMMAR is a headcount, a policy figure may be a
-// share — so they are printed as the numbers they are rather than converted
+// Variables are not money: MEDLEMMAR is a headcount, a policy figure may be a
+// share, so they are printed as the numbers they are rather than converted
 // from öre. See `fmtScalar` in budget-helpers.
 import { fmtScalar } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";
@@ -27,7 +27,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
 }) {
   const t = useTranslations("budget.variables");
   const tRam = useTranslations("budget.rambudget");
-  const cellEdit = useCellEdit("budget-grid overflow-hidden rounded-2xl border border-border bg-background");
+  const cellEdit = useCellEdit("budget-grid overflow-hidden rounded-panel border border-border bg-background");
   const showCompare = comparison.otherLabel !== null;
   const own = new Set(budget.variables.map((v) => v.name));
   const compareValue = new Map(comparison.joined.vars.map((v) => [v.name, v.values[1]]));
@@ -49,7 +49,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
         <tbody>
           {budget.variables.map((v) => {
             const url = `/api/budget-variables/${v.id}`;
-            const bad = ev.badVariables?.includes(v.name);
+            const bad = ev.badVariables.includes(v.name);
             return (
               <tr key={v.id} className="group border-b border-border/60">
                 <td className="border-r border-border/60 p-0">
@@ -80,7 +80,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
           {ghosts.map((v) => (
             <tr key={`ghost-${v.name}`} className="border-b border-border/60 text-muted">
               <td className="border-r border-border/60 px-3 py-1.5 font-mono text-xs">{v.name}</td>
-              <td className="border-r border-border/60 px-3 py-1.5 text-xs">· {tRam("notInThisBudget")}</td>
+              <td className="border-r border-border/60 px-3 py-1.5 text-xs">– {tRam("notInThisBudget")}</td>
               <td />
               <td className="border-l border-border/40 px-3 py-1.5 text-right tabular-nums">{fmtScalar(v.values[1])}</td>
               {isAdmin && <td />}
@@ -105,7 +105,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
                     if (ok) setNewVar("");
                   }}
                   placeholder={t("addPlaceholder")}
-                  className="w-full bg-transparent px-3 py-1.5 font-mono text-xs outline-none placeholder:text-muted/40 focus:bg-accent-soft/40"
+                  className="w-full bg-transparent px-3 py-1.5 font-mono text-xs outline-none placeholder:text-muted focus:bg-accent-soft/40"
                 />
               </td>
               <td /><td />

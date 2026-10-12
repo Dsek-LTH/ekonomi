@@ -1,7 +1,7 @@
 "use client";
 
 // The comparison table. Everything it needs is joined and totalled before it
-// gets here — this file is the rendering, the "remove this column" buttons and
+// gets here. This file is the rendering, the "remove this column" buttons and
 // the "add another" picker, and those three all work by changing the URL.
 
 import { useMemo } from "react";
@@ -21,7 +21,7 @@ import {
 import { fmt, fmtSigned } from "../[budgetId]/budget-helpers";
 import { cn } from "@/lib/ui/utils";
 
-// Spreadsheet notation — whole kronor, no unit — and not the app's `Amount`.
+// Spreadsheet notation: whole kronor, no unit, and not the app's `Amount`.
 // This is a budget sheet held up against another budget sheet, and the figures
 // have to read as the same figures they do on /budget/[id]: a column of
 // "1 247,50 kr" beside a column of "1 247" is two different documents. Amount is
@@ -29,7 +29,7 @@ import { cn } from "@/lib/ui/utils";
 function Cell({ value, className }: { value: number | undefined; className?: string }) {
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", className)}>
-      {value !== undefined ? fmt(value) : <span className="text-muted/40">—</span>}
+      {value !== undefined ? fmt(value) : <span className="text-muted">–</span>}
     </td>
   );
 }
@@ -39,7 +39,7 @@ function Cell({ value, className }: { value: number | undefined; className?: str
 // two budgets and not otherwise.
 function Diff({ values, className }: { values: (number | undefined)[]; className?: string }) {
   const diff = (values[1] ?? 0) - (values[0] ?? 0);
-  if (diff === 0) return <td className={cn("px-4 py-2 text-right tabular-nums text-muted", className)}>—</td>;
+  if (diff === 0) return <td className={cn("px-4 py-2 text-right tabular-nums text-muted", className)}>–</td>;
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", diff > 0 ? "text-success" : "text-danger", className)}>
       {fmtSigned(diff)}
@@ -60,9 +60,8 @@ export function CompareClient({
 }) {
   const router = useProgressRouter();
   const t = useTranslations("budget.compare");
-  const tNav = useTranslations("nav");
 
-  // The comparison lives in the URL, so changing it is a navigation — which is
+  // The comparison lives in the URL, so changing it is a navigation, which is
   // also what re-runs the page's loader and brings back the new column.
   const setIds = (next: string[]) =>
     router.replace(next.length ? `/budget/compare?b=${next.join(",")}` : "/budget/compare");
@@ -75,12 +74,11 @@ export function CompareClient({
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
-      back={{ href: "/budget", label: tNav("budget") }}
+      back="/budget"
       width="content"
     >
       {/* The picker sits on the card it fills rather than in the page header,
-          and the card is rendered even before there is anything to compare —
+          and the card is rendered even before there is anything to compare.
           reaching two budgets is what the picker is for, so it cannot be behind
           the same condition as the table. */}
       <Card>
@@ -129,7 +127,7 @@ export function CompareClient({
                   <>
                     <SectionHeader label={t("variables")} cols={cols} />
                     {joined.vars.map((v) => (
-                      <tr key={v.name} className={cn("hover:bg-surface/20", differs(v.values) && "bg-warning/5")}>
+                      <tr key={v.name} className={cn("hover:bg-hover", differs(v.values) && "bg-warning/5")}>
                         <td className="px-4 py-2 font-mono text-xs font-semibold">{v.name}</td>
                         {v.values.map((value, i) => <Cell key={i} value={value} />)}
                         {showDiff && <Diff values={v.values} />}
@@ -156,14 +154,14 @@ export function CompareClient({
   );
 }
 
-// Highlight a row where the sides disagree — including "one has it, one
+// Highlight a row where the sides disagree, including "one has it, one
 // doesn't", which is a disagreement of the most interesting kind.
 const differs = (values: (number | undefined)[]) =>
   values.some((v) => v !== values[0]);
 
 function SectionHeader({ label, cols }: { label: string; cols: number }) {
   return (
-    <tr className="bg-surface/60">
+    <tr className="bg-surface">
       <td colSpan={cols} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
         {label}
       </td>
@@ -178,7 +176,7 @@ function SheetRows({ sheet, n, cols, showDiff }: {
   // The result (income − cost) per side, which is the only sheet-level figure
   // that means the same thing whichever accounts each side happens to hold.
   const results = Array.from({ length: n }, (_, i) => sheetTotals(sheet, i).result);
-  const label = /^[@#]/.test(sheet.key) ? sheet.name : `${sheet.key} — ${sheet.name}`;
+  const label = /^[@#]/.test(sheet.key) ? sheet.name : `${sheet.key} – ${sheet.name}`;
 
   return (
     <>
@@ -198,7 +196,7 @@ function SheetRows({ sheet, n, cols, showDiff }: {
 function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: boolean }) {
   return (
     <>
-      <tr className={cn("bg-surface/30", differs(account.totals) && "bg-warning/5")}>
+      <tr className={cn("bg-surface", differs(account.totals) && "bg-warning/5")}>
         <td className="px-4 py-2 pl-8">
           <span className="mr-2 font-mono text-xs font-semibold text-muted">{account.code}</span>
           {account.name}
@@ -207,8 +205,8 @@ function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: 
         {showDiff && <Diff values={account.totals} className="font-medium" />}
       </tr>
       {account.lines.map((line) => (
-        <tr key={line.key} className={cn("text-muted hover:bg-surface/20", differs(line.values) && "bg-warning/5")}>
-          <td className="px-4 py-2 pl-14 text-xs">{line.description || "—"}</td>
+        <tr key={line.key} className={cn("text-muted hover:bg-hover", differs(line.values) && "bg-warning/5")}>
+          <td className="px-4 py-2 pl-14 text-xs">{line.description || "–"}</td>
           {line.values.map((v, i) => <Cell key={i} value={v} className="text-xs" />)}
           {showDiff && <Diff values={line.values} className="text-xs" />}
         </tr>

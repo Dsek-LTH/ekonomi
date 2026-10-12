@@ -4,11 +4,11 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { ButtonLink } from "@/components/ui/button";
+import { NewExpenseMenu } from "@/components/new-expense-menu";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/status-pill";
-import { IconPlus, IconChevronRight } from "@/components/ui/icons";
+import { IconChevronRight } from "@/components/ui/icons";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
@@ -32,14 +32,13 @@ import { useFormat } from "@/lib/ui/use-format";
 const ACTION_TONE: Record<QueueAction, React.ComponentProps<typeof Tag>["tone"]> = {
   FIX: "danger",
   SUBMIT: "neutral",
-  MATCH: "warning",
   ATTEST: "purple",
   BOOK: "accent",
   EXPORT: "accent",
 };
 
 // A queue row is an utlägg plus the action it is waiting for, so the shared
-// columns — declared over Expense, like every other list's — reach it one level
+// columns (declared over Expense, like every other list's) reach it one level
 // down. Lifting them through `.expense` is what lets this table read exactly
 // like /utlägg instead of keeping a second copy of the same cells here.
 function onExpense(c: Column<Expense>): Column<QueueItem> {
@@ -91,7 +90,7 @@ export function DashboardClient({
         // the same question for this one. The queue shows the action, not the
         // status: the status is what the utlägg *is*, the action is what you are
         // being asked to do about it, and the action is derived from the status
-        // — so showing both would say the same thing twice and bury the half
+        // So showing both would say the same thing twice and bury the half
         // that matters here.
         header: t("actionHeader"),
         cell: (i) => <Tag tone={ACTION_TONE[i.action]}>{t(`action.${i.action}`)}</Tag>,
@@ -147,7 +146,7 @@ export function DashboardClient({
                 what this page is: on the card of your own utlägg, which is what
                 a new one joins. In the header rather than on the table's
                 toolbar below, because that table is not rendered at all when
-                you have none — and having none is exactly when you want it. */}
+                you have none, and having none is exactly when you want it. */}
             <CardHeader
               title={t("mineTitle")}
               action={
@@ -159,10 +158,7 @@ export function DashboardClient({
                     {t("allExpenses")}
                     <IconChevronRight className="size-4" />
                   </Link>
-                  <ButtonLink href="/expenses/new" size="sm">
-                    <IconPlus className="size-4" />
-                    {t("newExpense")}
-                  </ButtonLink>
+                  <NewExpenseMenu size="sm" />
                 </div>
               }
             />
@@ -188,7 +184,7 @@ export function DashboardClient({
 
 // What a functionary who has never seen this app needs: not four zeroes, but
 // the shape of the whole path and where their part of it ends. This doubles as
-// the app's only help — there is no documentation anywhere else — which is why
+// the app's only help (there is no documentation anywhere else) which is why
 // step four names the payout account, the thing that actually strands people.
 function FirstRun() {
   const t = useTranslations("dashboard.firstRun");
@@ -203,7 +199,7 @@ function FirstRun() {
         <ol className="mt-8 grid gap-6 sm:grid-cols-2">
           {steps.map((n) => (
             <li key={n} className="flex gap-4">
-              {/* Numbered because the order is the information — this is a path,
+              {/* Numbered because the order is the information: this is a path,
                   not a feature list.
                   The four circles walk the brand ramp from pink to violet, so
                   the gradient is doing a job here rather than decorating: the
@@ -230,10 +226,7 @@ function FirstRun() {
         </ol>
 
         <div className="mt-8">
-          <ButtonLink href="/expenses/new">
-            <IconPlus className="size-4" />
-            {t("cta")}
-          </ButtonLink>
+          <NewExpenseMenu label={t("cta")} />
         </div>
       </div>
     </Card>

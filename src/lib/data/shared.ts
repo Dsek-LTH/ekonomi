@@ -2,7 +2,7 @@
 //
 // This directory is the one place the database schema meets the frontend: each
 // function reads rows with Prisma and maps them into the exact shapes the
-// screens already use (lib/domain/types.ts) — öre to SEK numbers, typed events to
+// screens already use (lib/domain/types.ts): öre to SEK numbers, typed events to
 // Swedish labels, relations to names. Nothing above this layer touches Prisma,
 // and nothing in it renders.
 //

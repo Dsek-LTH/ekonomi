@@ -1,0 +1,31 @@
+{
+  "title": "Uthyrning",
+  "emptyTitle": "Inga uthyrningar ännu",
+  "emptyDescription": "Skriv ett uthyrningsavtal, så dyker det upp här.",
+  "new": "Skriv uthyrningsavtal",
+  "searchPlaceholder": "Sök avtal, hyrestagare eller utrustning",
+  "noMatch": "Inga uthyrningar matchar",
+  "notChecked": "okontrollerad",
+  "period": "{from} – {to}",
+  "itemCount": "{count, plural, one {1 sak} other {# saker}}",
+  "tab": {
+    "todo": "Att göra",
+    "active": "Pågående",
+    "all": "Alla",
+    "closed": "Avslutade"
+  },
+  "col": {
+    "what": "Uthyrning",
+    "period": "Period",
+    "returned": "Återlämnad",
+    "items": "Utrustning",
+    "state": "Status"
+  },
+  "state": {
+    "UPCOMING": "Kommande",
+    "OUT": "Utlånad",
+    "OVERDUE": "Försenad",
+    "AWAITING_CHECK": "Väntar på kontroll",
+    "CLOSED": "Klar"
+  }
+}

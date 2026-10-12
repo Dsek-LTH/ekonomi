@@ -3,7 +3,7 @@
 // The other way a report comes into being. The ordinary one is a fetch: intakt
 // routes each sold product to a verksamhet by its prefix, and every verksamhet
 // it routed something to gets a report for the day (lib/income/batch.ts). That
-// covers everything except the case the routing cannot see —
+// covers everything except the case the routing cannot see:
 //
 //   two verksamheter sell all day, neither rings up a single product with its
 //   prefix, and the whole day's takings land in one report: the fallback's,
@@ -17,7 +17,7 @@
 // of them exists nowhere until somebody says it should.
 //
 // So: an empty draft, for a source, a day and a verksamhet. Nothing is invented
-// with it — it holds no lines, sums to nothing and cannot be booked (see
+// with it. It holds no lines, sums to nothing and cannot be booked (see
 // `incomeVoucherBlocker`, which answers "noDistributions") until sales are moved
 // onto it. It is a place to put them, and until they are put there it is
 // deletable and the next fetch sweeps it away like any other draft.
@@ -30,20 +30,20 @@ import type { IncomeSource } from "@/lib/domain/types";
  * The source a report may be created for.
  *
  * Not ZETTLE_FEE: Zettle's own fees are nobody's takings, have no verksamhet
- * and are never split — the fee report for a day is the fee report for that
+ * and are never split. The fee report for a day is the fee report for that
  * day. `moveIncomeLines` refuses them for the same reason.
  */
-export type DraftSource = Extract<IncomeSource, "ZETTLE" | "SWISH">;
+type DraftSource = Extract<IncomeSource, "ZETTLE" | "SWISH">;
 
-export type DraftFailure =
+type DraftFailure =
   /** Nothing has ever been fetched, so there is no working set to split. */
   | { reason: "noBatch" }
   /** The unit takes no money in: no key, no voucher text, no PDF. */
   | { reason: "moveUnitNoIncome" }
-  /** The day is already booked for this verksamhet — a second could never be. */
+  /** The day is already booked for this verksamhet, a second could never be. */
   | { reason: "moveDestinationBooked" };
 
-export interface DraftOutcome {
+interface DraftOutcome {
   ok: true;
   id: string;
   /**
@@ -51,8 +51,8 @@ export interface DraftOutcome {
    * that one instead of making a second.
    *
    * Two drafts for one source, verksamhet and day are two reports of which only
-   * one could ever be booked — the partial unique index over booked reports
-   * (IncomeReport_booked_once) is exactly that rule — so the second would be a
+   * one could ever be booked. The partial unique index over booked reports
+   * (IncomeReport_booked_once) is exactly that rule, so the second would be a
    * trap set at the moment of creation. Handing back the existing one is also
    * what someone asking for it wants: a place to drop these sales, which is what
    * that report already is.
@@ -60,11 +60,11 @@ export interface DraftOutcome {
   created: boolean;
 }
 
-export type DraftResult = DraftOutcome | ({ ok: false } & DraftFailure);
+type DraftResult = DraftOutcome | ({ ok: false } & DraftFailure);
 
-export interface CreateDraftInput {
+interface CreateDraftInput {
   source: DraftSource;
-  /** ISO date — the day that was sold. */
+  /** ISO date, the day that was sold. */
   date: string;
   resultUnitId: string;
 }
@@ -72,8 +72,8 @@ export interface CreateDraftInput {
 /**
  * An empty draft report for a verksamhet's day, or the one it already has.
  *
- * The batch is the fetch on the table. A report has to belong to one — it is
- * where the day came from — and a hand-made one came from the same place the
+ * The batch is the fetch on the table. A report has to belong to one. It is
+ * where the day came from, and a hand-made one came from the same place the
  * sales it is about to hold came from: whatever was last fetched. That is not a
  * guess. A fetch clears every unbooked report before storing what it brought
  * back (see `createSalesBatch`), so every draft in the queue belongs to the
@@ -89,7 +89,7 @@ export async function createDraftReport(input: CreateDraftInput): Promise<DraftR
       select: { id: true },
     }),
     // The destination is a verksamhet, and a verksamhet is a result unit with
-    // income settings — the same test a move applies to where it is sending
+    // income settings, the same test a move applies to where it is sending
     // lines, for the same reason: without them there is no key to file the
     // report under and no text for its voucher.
     prisma.resultUnitIncome.findUnique({
@@ -102,7 +102,7 @@ export async function createDraftReport(input: CreateDraftInput): Promise<DraftR
 
   return prisma.$transaction(async (tx) => {
     // Every report this verksamhet has for the source and the day. There can be
-    // a booked one and a draft imported after it — see `moveIncomeLines`, which
+    // a booked one and a draft imported after it. See `moveIncomeLines`, which
     // reads the same set for the same reason.
     const siblings = await tx.incomeReport.findMany({
       where: { source: input.source, resultUnitId: input.resultUnitId, date },
@@ -126,7 +126,7 @@ export async function createDraftReport(input: CreateDraftInput): Promise<DraftR
         total: 0,
         costCenterId: income.defaultCostCenterId,
         // Deliberately not set: `duplicateOf` and `existingVoucher` are findings
-        // of an import — this day, for this verksamhet, was already booked — and
+        // of an import: this day, for this verksamhet, was already booked, and
         // nothing has been imported here. A day already booked in this database
         // was refused above; one that exists only in Fortnox is caught the same
         // way it is for a report a move created, which is to say at export.

@@ -3,7 +3,7 @@
 // The voucher table: the rows of a verifikation, edited.
 //
 // Written for booking an utlägg and now shared with booking a day's takings,
-// because they are the same act — the same seven columns, the same account and
+// because they are the same act: the same seven columns, the same account and
 // cost-centre pickers, the same "does it balance" at the bottom. What differs
 // between the two is what sits *above* it (an utlägg has a voucher text with a
 // locked prefix; a day of takings has a date and a committee it cannot change)
@@ -24,8 +24,11 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Notice } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
 import { TableScroll } from "@/components/ui/table-scroll";
+import { withBlankRows } from "@/lib/ui/blank-rows";
 import { isAmountInput } from "@/lib/domain/money";
+import { amountFieldProps } from "@/components/ui/amount-input";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
+import { retagRowText } from "@/lib/domain/cost-center-tag";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { cn, uid } from "@/lib/ui/utils";
 
@@ -34,7 +37,7 @@ export interface VoucherEditorRow {
   account: string;
   description: string;
   costCenterCode: string;
-  /** Kronor as typed — "1 234,50", or "" — never a number. See isAmountInput. */
+  /** Kronor as typed, so "1 234,50" or "", never a number. See isAmountInput. */
   debit: string;
   credit: string;
 }
@@ -51,7 +54,7 @@ export const makeVoucherRow = (patch: Partial<VoucherEditorRow> = {}): VoucherEd
 
 /**
  * A row nobody has put anything in. The table always holds three of them (see
- * BLANK_ROWS), so they are not rows of the voucher — they are where the next one
+ * BLANK_ROWS), so they are not rows of the voucher. They are where the next one
  * is written. Every caller has to drop them before it counts, validates or posts
  * anything: `filledVoucherRows`.
  */
@@ -62,47 +65,20 @@ export const isBlankVoucherRow = (r: VoucherEditorRow) =>
   !r.debit.trim() &&
   !r.credit.trim();
 
-/** The rows that are actually a voucher — the typed ones, without the spare. */
+/** The rows that are actually a voucher: the typed ones, without the spare. */
 export const filledVoucherRows = (rows: VoucherEditorRow[]) => rows.filter((r) => !isBlankVoucherRow(r));
 
-// How many spare rows the table holds. Three is enough that the common voucher
-// — a cost row, its VAT, a rounding — is written without ever asking for
+// How many spare rows the table holds. Three is enough that the common voucher,
+// a cost row with its VAT and a rounding, is written without ever asking for
 // another, and the editor tops them back up as they are used, so there is no
-// "add row" button to reach for at all.
+// "add row" button to reach for at all. See lib/ui/blank-rows.ts, which is
+// where the topping-up itself is written: the rental sheet wants the same
+// behaviour at its own count, and a second sheet wanting it is what pulled it
+// out of here.
 const BLANK_ROWS = 3;
 
 /**
- * The rows with exactly BLANK_ROWS empty ones among them, or null when they
- * already are that.
- *
- * Three empty rows, not three empty rows *at the bottom*: a spare row can be
- * dragged up between two filled ones and left there, to be written in next, and
- * counting only the trailing ones would answer that by adding a fourth.
- *
- * New ones go on the end, where the next line is usually written. Extra ones are
- * taken from the end too, so a row someone is standing in — the one they have
- * just emptied — is never the one that disappears from under them.
- */
-function withBlankRows(rows: VoucherEditorRow[]): VoucherEditorRow[] | null {
-  const blanks = rows.length - filledVoucherRows(rows).length;
-  if (blanks === BLANK_ROWS) return null;
-  if (blanks < BLANK_ROWS) {
-    return [...rows, ...Array.from({ length: BLANK_ROWS - blanks }, () => makeVoucherRow())];
-  }
-  let extra = blanks - BLANK_ROWS;
-  const kept: VoucherEditorRow[] = [];
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (extra > 0 && isBlankVoucherRow(rows[i])) {
-      extra--;
-      continue;
-    }
-    kept.unshift(rows[i]);
-  }
-  return kept;
-}
-
-/**
- * A row the bookkeeper may read but not touch — the payment side of an utlägg,
+ * A row the bookkeeper may read but not touch: the payment side of an utlägg,
  * the clearing account of a day's takings. It is not part of `rows` at all, so
  * there is no state the UI could let anyone edit it through; the page assembles
  * it into the payload itself.
@@ -126,7 +102,7 @@ export interface VoucherLockedRow {
  * empty slot behind it in the table; the rows it passes snap into that slot
  * one at a time, each as the pointer crosses the halfway mark. So the only
  * thing that moves smoothly is the thing the hand is moving, and the table
- * under it is always a voucher you could read — never a line drawn between
+ * under it is always a voucher you could read, never a line drawn between
  * two rows promising what would happen if you let go.
  *
  * A pointer drag and not HTML5's, which reports what you are over and not
@@ -137,7 +113,7 @@ interface Drag {
   /** Where the pointer went down, and where the row sat in the list then. */
   startY: number;
   startIndex: number;
-  /** Where it sits now, and the rows in that order — the ref leads `rows`. */
+  /** Where it sits now, and the rows in that order. The ref leads `rows`. */
   index: number;
   rows: VoucherEditorRow[];
   /** One row's height, in pixels, and the last slot in the table. */
@@ -162,7 +138,7 @@ export function VoucherEditor({
   accounts: AccountRecord[];
   costCenters: CostCenter[];
   locked?: VoucherLockedRow;
-  /** Kronor, including the locked row — the page has already built the payload. */
+  /** Kronor, including the locked row. The page has already built the payload. */
   totalDebit: number;
   totalCredit: number;
   /** A booked voucher being looked at rather than written. */
@@ -177,10 +153,10 @@ export function VoucherEditor({
 
   // `short` collapses the trigger to the bare code once picked, which is what
   // lets these columns stay narrow; search still matches the full
-  // "1931 · Företagskonto", and for accounts the name reappears in its own
+  // "1931 – Företagskonto", and for accounts the name reappears in its own
   // column.
   //
-  // A value with no option to match it renders as the placeholder — the picker
+  // A value with no option to match it renders as the placeholder. The picker
   // has nothing to show, so it shows nothing, and a pre-filled row reads as an
   // empty one. That happens for an account a report routed to that is not in
   // the chart, or a cost centre outside the list this page was given. Carrying
@@ -196,17 +172,17 @@ export function VoucherEditor({
   };
 
   const accountOptions = withRowValues(
-    accounts.map((a) => ({ value: a.number, label: `${a.number} · ${a.name}`, short: a.number })),
+    accounts.map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number })),
     rows.map((r) => r.account),
   );
   const ccOptions = withRowValues(
-    costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}`, short: c.code })),
+    costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}`, short: c.code })),
     rows.map((r) => r.costCenterCode),
   );
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
   const cellInput =
-    "block h-10 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted/50 focus-inset";
+    "block h-10 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
   const amountInput = cn(cellInput, "tabular-nums");
   // Tight padding: these two columns are only as wide as a code needs, so the
   // chevron and padding would otherwise be most of the box.
@@ -218,19 +194,19 @@ export function VoucherEditor({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [draggedBy, setDraggedBy] = useState(0);
 
-  // Keep the table's BLANK_ROWS spare rows stocked — see `withBlankRows`.
+  // Keep the table's BLANK_ROWS spare rows stocked. See `withBlankRows`.
   //
   // Held in the caller's rows rather than beside them, because everything else
-  // here already works on that one array — a second, editor-local list of rows
+  // here already works on that one array. A second, editor-local list of rows
   // would have to be merged into it on every keystroke, and reordering would
   // have to know which list a row came from.
   //
   // Never while a row is in the air. A drag works from its own copy of the list
-  // — see `startDrag` — so rows added underneath it would be dropped again by
+  // (see `startDrag`) so rows added underneath it would be dropped again by
   // the next move, and the table would flicker between the two lengths for as
   // long as the pointer was down. Whatever the drag leaves behind is tidied the
   // moment it ends.
-  const stocked = withBlankRows(rows);
+  const stocked = withBlankRows(rows, BLANK_ROWS, isBlankVoucherRow, makeVoucherRow);
   useEffect(() => {
     if (readOnly || draggingId || !stocked) return;
     onChange(stocked);
@@ -240,7 +216,12 @@ export function VoucherEditor({
     onChange(rows.map((r) => (r.id === id ? { ...r, ...change } : r)));
   }
 
-  // Kronor still unaccounted for, from the totals the page has already summed —
+  // A local cost centre is not sent to Fortnox, so its code goes into the row
+  // text where the bookkeeper can see it. See lib/domain/cost-center-tag.
+  const isLocal = (code: string) =>
+    costCenters.some((c) => c.code === code && c.source === "LOCAL");
+
+  // Kronor still unaccounted for, from the totals the page has already summed,
   // the locked row included, which is what makes this the amount that would
   // finish the voucher. Positive: the debit side is short by it.
   const outstanding = totalCredit - totalDebit;
@@ -251,8 +232,8 @@ export function VoucherEditor({
    *
    * The one entry anyone would have made by hand, and the one they would have
    * worked out by reading the two totals at the bottom of the table. A row with
-   * an amount already in it is never touched — the difference is then a
-   * disagreement to look at, not a blank to fill — and neither is a spare row,
+   * an amount already in it is never touched, because the difference is then a
+   * disagreement to look at rather than a blank to fill, and neither is a spare row,
    * which is why the account is the condition: it is what says someone means
    * this row to be part of the voucher.
    */
@@ -289,7 +270,7 @@ export function VoucherEditor({
   }
 
   // Followed on the window rather than the grip: the pointer leaves it within a
-  // few pixels — the row it belongs to is moving out from under it — and a drag
+  // few pixels, because the row it belongs to is moving out from under it, and a drag
   // has to keep going when it does. Ends wherever the button comes up, page or
   // not, which is also what makes a pointer lost to a scroll or an alert end it.
   useEffect(() => {
@@ -303,7 +284,7 @@ export function VoucherEditor({
       const d = drag.current;
       if (!d) return;
       const delta = e.clientY - d.startY;
-      // Rounded, so a row is passed when the pointer is halfway across it —
+      // Rounded, so a row is passed when the pointer is halfway across it,
       // and read off the pointer rather than the rows, which are moving.
       const wanted = Math.min(Math.max(d.startIndex + Math.round(delta / d.height), 0), d.lastIndex);
       if (wanted !== d.index) {
@@ -345,8 +326,8 @@ export function VoucherEditor({
 
   /**
    * The keyboard's way to reorder: Alt+↑/↓ on any field in the row. A drag is a
-   * shortcut for whoever has a mouse in their hand — see components/ui/drag.tsx
-   * — and it is the only way to do this, so it cannot be the only way.
+   * shortcut for whoever has a mouse in their hand (see components/ui/drag.tsx)
+   * and it is the only way to do this, so it cannot be the only way.
    *
    * The same reach a drag has: anywhere in the table, spare rows included.
    */
@@ -358,7 +339,7 @@ export function VoucherEditor({
     next.splice(to, 0, ...next.splice(from, 1));
     onChange(next);
   }
-  // Anything that isn't on its way to an amount is simply not taken — the field
+  // Anything that isn't on its way to an amount is simply not taken. The field
   // keeps what it had, so a stray letter leaves no trace to delete.
   function patchAmount(id: string, field: "debit" | "credit", value: string) {
     if (!isAmountInput(value)) return;
@@ -372,19 +353,19 @@ export function VoucherEditor({
   const dragHandle = "absolute inset-y-0 right-2 flex items-center text-muted";
 
   // The dash is for a voucher being read, where an empty cell is a fact about
-  // it. While one is being written it is noise — three spare rows would put a
+  // it. While one is being written it is noise: three spare rows would put a
   // column of dashes under every voucher, saying nothing the empty pickers
   // beside them don't already.
   const cell = (value: string, dash = true) => (
     <div className="truncate text-center text-sm text-muted" title={value || undefined}>
-      {value || (dash ? "—" : "")}
+      {value || (dash ? "–" : "")}
     </div>
   );
 
   // What the rows point at that this app does not have. Usually pre-filled
-  // rather than typed — an income report routes to whatever account its product
-  // prefix names, and nothing has ever checked that the account is in the chart
-  // — so the row looks ordinary and the button is simply dead. Naming them is
+  // rather than typed, because an income report routes to whatever account its
+  // product prefix names and nothing has ever checked that the account is in the
+  // chart, so the row looks ordinary and the button is simply dead. Naming them is
   // the difference between "this is broken" and "3011 is missing from the
   // chart, go and add it".
   const unknown = (values: string[], has: (v: string) => boolean) => [
@@ -428,21 +409,21 @@ export function VoucherEditor({
             content can never push the table wider than its container. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
-            <tr className="divide-x divide-border border-b border-border bg-surface/40 text-xs text-muted">
+            <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
               <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
               <th className={cn(headerCell, "w-[18%]")}>{t("colAccountName")}</th>
               <th className={cn(headerCell, "w-[18%]")}>{t("colCostCenter")}</th>
               <th className={cn(headerCell, "w-[15%]")}>{t("colDescription")}</th>
               <th className={cn(headerCell, "w-[15%]")}>{t("colDebit")}</th>
               <th className={cn(headerCell, "w-[15%]")}>{t("colCredit")}</th>
-              {/* Wide enough for the ✕ and the grip side by side — the name
+              {/* Wide enough for the ✕ and the grip side by side. The name
                   column gave up the difference, being the one with slack. */}
               <th className="w-[9%]" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {locked && (
-              <tr className="divide-x divide-border bg-surface/40">
+              <tr className="divide-x divide-border bg-surface">
                 <td className="px-2 py-3 text-center align-middle font-medium tabular-nums">
                   {locked.account}
                 </td>
@@ -459,7 +440,7 @@ export function VoucherEditor({
                 </td>
                 <td className="text-center align-middle">
                   <span
-                    className="flex items-center justify-center px-2 text-muted/40"
+                    className="flex items-center justify-center px-2 text-muted"
                     title={locked.hint}
                     aria-label={locked.label}
                   >
@@ -492,7 +473,7 @@ export function VoucherEditor({
                   draggingId === r.id &&
                     "relative z-10 bg-background outline outline-1 outline-border",
                   // The rows being passed take no hovers or clicks while a row
-                  // is over them — the pointer is holding something.
+                  // is over them, because the pointer is holding something.
                   draggingId && draggingId !== r.id && "pointer-events-none",
                 )}
                 style={
@@ -500,13 +481,13 @@ export function VoucherEditor({
                 }
                 onBlur={(e) => {
                   const to = e.relatedTarget as HTMLElement | null;
-                  // Nowhere in particular — a click on dead space, or the whole
+                  // Nowhere in particular: a click on dead space, or the whole
                   // window going away. Not a move to the next row, so not the
                   // moment to write anything into this one.
                   if (!to) return;
                   if (e.currentTarget.contains(to)) return;
                   // A picker's menu hangs off <body>, so opening one reads as
-                  // leaving the row — while the row is still being filled in.
+                  // leaving the row, while the row is still being filled in.
                   if (to.closest("[data-combobox-panel]")) return;
                   balanceOnLeave(r);
                 }}
@@ -519,7 +500,7 @@ export function VoucherEditor({
               >
                 <td className={readOnly ? "px-2 py-3 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.account || "—"
+                    r.account || "–"
                   ) : (
                     <Combobox
                       options={accountOptions}
@@ -535,19 +516,24 @@ export function VoucherEditor({
                     />
                   )}
                 </td>
-                {/* Derived from the picked account, so read-only either way —
-                    it's the name the trigger no longer shows. */}
+                {/* Derived from the picked account, so read-only either way.
+                    It's the name the trigger no longer shows. */}
                 <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
                 <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.costCenterCode || "—"
+                    r.costCenterCode || "–"
                   ) : (
                     <Combobox
                       options={ccOptions}
                       value={r.costCenterCode}
-                      onChange={(v) => patch(r.id, { costCenterCode: v })}
+                      onChange={(v) =>
+                        patch(r.id, {
+                          costCenterCode: v,
+                          description: retagRowText(r.description, r.costCenterCode, v, isLocal),
+                        })
+                      }
                       // Nothing rather than a dash: an unpicked cost centre is
-                      // ordinary — plenty of rows never take one — and the
+                      // ordinary (plenty of rows never take one) and the
                       // chevron is already saying there is a choice here.
                       placeholder=""
                       searchPlaceholder={tAlloc("search")}
@@ -560,7 +546,7 @@ export function VoucherEditor({
                 </td>
                 <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.description || "—"
+                    r.description || "–"
                   ) : (
                     // size=1 kills the ~180px default intrinsic width an <input>
                     // would otherwise contribute to the column.
@@ -582,13 +568,14 @@ export function VoucherEditor({
                 </td>
                 <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.debit || "—"
+                    r.debit || "–"
                   ) : (
                     <input
                       size={1}
-                      inputMode="decimal"
-                      value={r.debit}
-                      onChange={(e) => patchAmount(r.id, "debit", e.target.value)}
+                      {...amountFieldProps({
+                        value: r.debit,
+                        onChange: (v) => patchAmount(r.id, "debit", v),
+                      })}
                       className={amountInput}
                       // A field with no placeholder still needs a name: it disappears the moment you
                       // type, and a screen reader reading this row would otherwise
@@ -600,13 +587,14 @@ export function VoucherEditor({
                 </td>
                 <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.credit || "—"
+                    r.credit || "–"
                   ) : (
                     <input
                       size={1}
-                      inputMode="decimal"
-                      value={r.credit}
-                      onChange={(e) => patchAmount(r.id, "credit", e.target.value)}
+                      {...amountFieldProps({
+                        value: r.credit,
+                        onChange: (v) => patchAmount(r.id, "credit", v),
+                      })}
                       aria-label={`${tDetail("credit")} ${r.account || ""}`.trim()}
                       className={amountInput}
                     />
@@ -619,7 +607,7 @@ export function VoucherEditor({
                     <IconButton
                       tone="danger"
                       size="sm"
-                      // Out of the tab order with the description — see there.
+                      // Out of the tab order with the description. See there.
                       tabIndex={-1}
                       label={tAlloc("removeRow")}
                       onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
@@ -661,7 +649,7 @@ export function VoucherEditor({
 
 // One chip shape for both of the things said under a voucher, so the reading of
 // them is the tone and nothing else.
-const chip = "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium";
+const chip = "inline-flex items-center gap-1.5 rounded-control px-3 py-1 text-sm font-medium";
 
 /**
  * The balance state, said the same way on every booking screen: a green chip
@@ -679,7 +667,7 @@ export function BalanceChip({ balanced, difference }: { balanced: boolean; diffe
 }
 
 /**
- * Why the voucher cannot be written yet — the companion to the balance chip,
+ * Why the voucher cannot be written yet: the companion to the balance chip,
  * and the reason the button beside it is dead.
  *
  * Warning rather than danger: an unpicked account is not an error, it is a
@@ -687,12 +675,12 @@ export function BalanceChip({ balanced, difference }: { balanced: boolean; diffe
  * that genuinely doesn't add up.
  *
  * Renders nothing for `unbalanced`, which the balance chip is already saying
- * next to it, and better — with the amount. That rule lives here rather than in
+ * next to it, and better, with the amount. That rule lives here rather than in
  * each screen's JSX so the two booking pages cannot drift on it.
  */
 export function VoucherBlockerChip({ blocker }: { blocker: VoucherBlocker | null }) {
   // The blockers carry their own sentences, shared with the routes that return
-  // them as error codes — see lib/domain/voucher.ts.
+  // them as error codes. See lib/domain/voucher.ts.
   const t = useTranslations("errors.voucher");
   if (!blocker || blocker === "unbalanced") return null;
   return <span className={cn(chip, "bg-warning-soft text-warning")}>{t(blocker)}</span>;

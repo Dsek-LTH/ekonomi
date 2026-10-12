@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
-import { isAmountInput, parseSEK } from "@/lib/domain/money";
+import { parseSEK } from "@/lib/domain/money";
+import { AmountInput } from "@/components/ui/amount-input";
+import { CONTROL_SIZES } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconX } from "@/components/ui/icons";
@@ -22,7 +24,7 @@ export function makeRow(code: string, amount = "", comment = ""): AllocationRow 
 
 interface Props {
   costCenters: CostCenter[];
-  grossAmount: number; // SEK — used only for the balance indicator
+  grossAmount: number; // SEK, used only for the balance indicator
   value: AllocationRow[];
   onChange: (rows: AllocationRow[]) => void;
 }
@@ -30,10 +32,10 @@ interface Props {
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
   // Only ever the row `add` just made. Rows restored from a draft, and the one
-  // a new utlägg opens with, are not focused — nothing was clicked to get them.
+  // a new utlägg opens with, are not focused, nothing was clicked to get them.
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const total = value.reduce((s, r) => s + parseSEK(r.amount), 0);
-  // A return is budgeted the same way, only negative — so the rows have to add
+  // A return is budgeted the same way, only negative, so the rows have to add
   // up to the gross whichever sign it has. Zero means nothing to distribute yet.
   const balanced = grossAmount !== 0 && Math.abs(total - grossAmount) < 0.005;
 
@@ -46,7 +48,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange(value.filter((r) => r.id !== id));
   }
 
-  // A new row starts unpicked, like the first one — the cost centre is always
+  // A new row starts unpicked, like the first one. The cost centre is always
   // chosen deliberately, never guessed at from what's left over. Which is why
   // the new row's cost centre is also where the focus goes: the button that
   // made the row sits below it, so without this you land past every field you
@@ -57,30 +59,49 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange([...value, row]);
   }
 
-  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}`, short: c.code }));
-  const amt =
-    "w-28 shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-right text-sm tabular-nums";
+  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}`, short: c.code }));
+
+  // On a box around the field rather than on the field. Every control in the
+  // app is `w-full` inside whatever holds it (see CONTROL), so a width handed
+  // to the control itself is a second width rule against the first, and which
+  // of them wins is down to the order two utilities happen to be printed in.
+  // The box decides how wide, the control fills it: that has one answer.
+  // 8rem: nine digits at this size, a space between the thousands, a comma and
+  // the "kr" now standing inside the box.
+  const amt = "w-32 shrink-0";
 
   const comment = cn(
-    // Full width while stacked; the line's leftover once it shares one.
-    "min-w-0 @md:flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm italic text-muted",
-    // The remaining focus: rules are about the text, not the ring — a hint set
+    // Whatever the figure and the button leave of the line.
+    "min-w-0 flex-1 border border-border bg-background italic text-muted",
+    // The same height as the combobox and the amount it shares a line with.
+    // It used to carry its own padding, which stood it 34px against their 36,
+    // and a row of three controls at two heights reads as a mistake.
+    CONTROL_SIZES.sm,
+    "text-sm",
+    // The remaining focus: rules are about the text, not the ring. A hint set
     // in grey italic becomes ordinary typing once you are in the field.
-    "placeholder:text-muted/50 focus:not-italic focus:text-foreground",
+    "placeholder:text-muted focus:not-italic focus:text-foreground",
   );
 
   return (
     // Container queries, not breakpoints: this editor's width is set by whatever
-    // it sits in — and beside a receipt panel you can drag, that width changes
+    // it sits in, and beside a receipt panel you can drag, that width changes
     // while the viewport doesn't move at all. `sm:` asked the wrong question and
     // kept five controls on one line in 300px, squeezing the comment to nothing.
     <div className="@container space-y-3">
       {value.map((row) => (
-        // Three widths. Under 448px everything stacks; from there the cost
-        // centre takes a line and the rest share the next; past 672px — about
-        // what five controls need — it's one row.
+        // Two widths, not three. The comment, the figure and the remove button
+        // share a line at every size: they are the row's own line, the figure
+        // is a fixed 8rem of it and the comment takes what is left, which is
+        // still a usable field on a 320px phone. Only the cost centre gets a
+        // line of its own until 672px, about what the four controls need.
         <div key={row.id} className="flex flex-col gap-2 @2xl:flex-row @2xl:items-center">
           <Combobox
+            // The compact register, like the two fields it shares the row
+            // with. Without this it takes the form size and stands 42px beside
+            // their 36, which is what made the row look assembled rather than
+            // designed.
+            size="sm"
             className="@2xl:flex-1"
             autoFocus={row.id === focusRowId}
             options={ccOptions}
@@ -90,7 +111,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
             searchPlaceholder={t("search")}
             aria-label={t("costCenter")}
           />
-          <div className="flex min-w-0 flex-col gap-2 @md:flex-row @md:items-center @2xl:flex-1">
+          <div className="flex min-w-0 items-center gap-2 @2xl:flex-1">
             <input
               type="text"
               placeholder={t("commentPlaceholder")}
@@ -98,34 +119,31 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               onChange={(e) => update(row.id, { comment: e.target.value })}
               className={comment}
             />
-            {/* Kept together: the amount, its unit and the row's remove button
-                are one thing, and wrapping the unit onto its own line would
-                read as a stray "kr". */}
-            <div className="flex shrink-0 items-center gap-2">
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder={t("amountPlaceholder")}
+            {/* A magnitude, like every figure in this form: which way the whole
+                claim goes is the utlägg's own question, asked once at the top
+                of the step, and a row is a part of it. The unit rides inside
+                the box, the way the strength field on a stock product carries
+                its "%": outside it was a third thing on the line and the one
+                most easily read as a word in the comment. */}
+            <div className={amt}>
+              <AmountInput
+                size="sm"
                 value={row.amount}
-                // Only what is on its way to an amount, öre included but no
-                // finer — the same rule the gross field and the voucher's
-                // amount columns hold to.
-                onChange={(e) => {
-                  if (!isAmountInput(e.target.value)) return;
-                  update(row.id, { amount: e.target.value });
-                }}
-                className={amt}
+                onChange={(amount) => update(row.id, { amount })}
+                placeholder={t("amountPlaceholder")}
+                aria-label={t("amountPlaceholder")}
+                suffix={t("unit")}
+                inputClassName="text-right"
               />
-              <span className="text-xs text-muted">kr</span>
-              <IconButton
-                tone="danger"
-                label={t("removeRow")}
-                disabled={value.length <= 1}
-                onClick={() => remove(row.id)}
-              >
-                <IconX className="size-4" />
-              </IconButton>
             </div>
+            <IconButton
+              tone="danger"
+              label={t("removeRow")}
+              disabled={value.length <= 1}
+              onClick={() => remove(row.id)}
+            >
+              <IconX className="size-4" />
+            </IconButton>
           </div>
         </div>
       ))}

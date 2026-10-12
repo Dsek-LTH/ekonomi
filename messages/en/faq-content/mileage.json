@@ -1,0 +1,113 @@
+{
+  "id": "mileage",
+  "label": "Mileage",
+  "items": [
+    {
+      "id": "mileage-what",
+      "q": "What is a mileage claim?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Payment for driving your own car on the section's errand. You are paid per kilometre at Skatteverket's standard rate, rather than handing in a receipt for petrol."
+        },
+        {
+          "t": "p",
+          "v": "It is not a claim with a receipt on it, but its own kind with its own form."
+        },
+        {
+          "t": "action",
+          "v": "New mileage claim",
+          "href": "/expenses/new/mileage"
+        }
+      ]
+    },
+    {
+      "id": "mileage-how",
+      "q": "How do I file a journey?",
+      "a": [
+        {
+          "t": "ol",
+          "v": [
+            "Write what the journey was for, and which day you drove.",
+            "Enter every place you stopped, in order.",
+            "Enter the odometer before and after the journey.",
+            "Split the amount across cost centres and send it in."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "One journey per claim. If you drove three times you file three, because each journey is attested on its own and lands on its own cost centre."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Mileage has the same deadline as an out-of-pocket expense: 60 days from the day you drove. After that it can only be submitted if the treasurer has granted an exemption."
+        }
+      ]
+    },
+    {
+      "id": "mileage-odometer",
+      "q": "Which odometer is meant?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The total one, the car's lifetime distance. Not the trip meter."
+        },
+        {
+          "t": "p",
+          "v": "The reason is that the figures have to be checkable. A trip meter can be zeroed at will, so 0 → 42 on one is just an assertion that you drove 42 km. The total reading can be held against the car, and against your other journeys in it, which only ever go upwards."
+        },
+        {
+          "t": "p",
+          "v": "The app works the distance out itself as the difference between the two. You never type a number of kilometres."
+        }
+      ]
+    },
+    {
+      "id": "mileage-route",
+      "q": "How do I fill in the route?",
+      "a": [
+        {
+          "t": "p",
+          "v": "One place per row, in the order you stopped at them. A town or a name is enough, E-huset and Snabbgross for instance."
+        },
+        {
+          "t": "p",
+          "v": "If you came back to where you started, write that place last as well. There is a button for it. Otherwise the route describes half the distance the odometer shows, and whoever attests it sees a 21 km journey against a meter saying 42."
+        },
+        {
+          "t": "p",
+          "v": "Skatteverket wants to see where the journey went, not only how far. The readings show the car moved; the route shows it was the section's errand. That is why at least two places are required before it can be sent."
+        }
+      ]
+    },
+    {
+      "id": "mileage-rate",
+      "q": "How much do I get per kilometre?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Skatteverket's standard rate, which the treasury enters into the app. The amount is worked out for you once the readings are in."
+        },
+        {
+          "t": "p",
+          "v": "Each journey is valued at the rate in force on the day you drove. So a change at the new year does not re-value a claim already filed, and a December journey filed in January is paid at December's rate."
+        }
+      ]
+    },
+    {
+      "id": "mileage-receipt",
+      "q": "Do I need a receipt?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. There is nothing to photograph about driving your own car, and you should not hand in a receipt for petrol: the standard rate covers the whole cost of owning and running the car, not just the fuel."
+        },
+        {
+          "t": "p",
+          "v": "The documentation is instead the expense report the app draws, carrying the route, the readings and the rate per kilometre. That is what follows the claim into the books."
+        }
+      ]
+    }
+  ]
+}

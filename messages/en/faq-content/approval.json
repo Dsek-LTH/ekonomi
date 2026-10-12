@@ -1,0 +1,198 @@
+{
+  "id": "approval",
+  "label": "Attesting",
+  "items": [
+    {
+      "id": "what-is-attest",
+      "q": "What does attesting mean?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Attest is a documented approval of a purchase. Every purchase made on the guild's behalf must be attested, and attest is given once the purchase has been reported."
+        },
+        {
+          "t": "action",
+          "v": "To approvals",
+          "href": "/approvals"
+        }
+      ]
+    },
+    {
+      "id": "who-attests",
+      "q": "Who may attest a purchase?",
+      "a": [
+        {
+          "t": "ul",
+          "v": [
+            "Signatories (firmatecknare) may attest every purchase.",
+            "A result owner may attest every purchase made under their result unit."
+          ]
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Nobody may attest their own purchases. The app never shows your own expense in your approval queue."
+        },
+        {
+          "t": "p",
+          "v": "Which result unit a purchase belongs to is decided by the cost center it is reported on. If a purchase is split across cost centers under several result units, each part is attested by its own result owner."
+        }
+      ]
+    },
+    {
+      "id": "units",
+      "q": "Which result units are there, and who is the result owner?",
+      "a": [
+        {
+          "t": "p",
+          "v": "A cost center's code starts with its result unit's prefix, so SEX01 belongs to Sexmästeriet and is attested by Sexmästaren."
+        },
+        {
+          "t": "table",
+          "head": [
+            "Result unit",
+            "Prefix",
+            "Result owner"
+          ],
+          "rows": [
+            [
+              "Aktivitetsutskottet",
+              "AKTU",
+              "Aktivitetsansvarig"
+            ],
+            [
+              "Cafémästeriet",
+              "CAFE",
+              "Cafémästaren"
+            ],
+            [
+              "Centralprocessutskottet",
+              "CPU",
+              "Processmästaren"
+            ],
+            [
+              "DELTA",
+              "DELT",
+              "Delta-general"
+            ],
+            [
+              "Framtidsutskottet",
+              "FRA",
+              "Framtidsordförande"
+            ],
+            [
+              "Informationsutskottet",
+              "INFU",
+              "Informationsansvarig"
+            ],
+            [
+              "Jubileumsgruppen",
+              "JUBI",
+              "Jubileumsgeneral"
+            ],
+            [
+              "Källarmästeriet",
+              "KAL",
+              "Källarmästaren"
+            ],
+            [
+              "Medaljelele-kommittén",
+              "MED",
+              "Övermarskalk"
+            ],
+            [
+              "Nollningsutskottet",
+              "NOLL",
+              "Øverphøs"
+            ],
+            [
+              "Näringslivsutskottet",
+              "NARU",
+              "Näringslivsansvarig"
+            ],
+            [
+              "Sexmästeriet",
+              "SEX",
+              "Sexmästaren"
+            ],
+            [
+              "Skattmästeriet",
+              "SKT",
+              "Skattmästaren"
+            ],
+            [
+              "Studierådet",
+              "SRD",
+              "Studierådsordförande"
+            ],
+            [
+              "Tackmästeriet",
+              "TACK",
+              "Tackmästaren"
+            ],
+            [
+              "Trivselrådet",
+              "TRI",
+              "Trivselmästaren"
+            ],
+            [
+              "Valberedningen",
+              "VAL",
+              "Valberedningsordförande"
+            ],
+            [
+              "Styrelsen",
+              "STYR",
+              "Ordförande"
+            ],
+            [
+              "Sektionen",
+              "SEKT",
+              "Firmatecknare"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "attest-check",
+      "q": "What should I check before I approve?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The documentation has to be satisfactory. Ask yourself these questions before approving the purchase:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Is it a valid receipt, in the state the seller gave it?",
+            "Does the date given match the date on the receipt?",
+            "Is the description appropriate for the goods?",
+            "Is the cost center correct?",
+            "Is there budget for the purchase on the cost center, or a budget change that covers it?",
+            "Is guild card or out-of-pocket correctly chosen?",
+            "For mileage: is the route filled in, and does the distance match it? A round trip should have the starting point both first and last."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You attest per cost center. If the purchase is split across several, you only approve the rows you answer for, and the rest wait for whoever answers for them."
+        }
+      ]
+    },
+    {
+      "id": "no-attest",
+      "q": "What happens if a purchase is not attested?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Then it is paid for by whoever made the purchase. An out-of-pocket expense is not reimbursed, and a guild card purchase is invoiced to the person who made it."
+        },
+        {
+          "t": "p",
+          "v": "The treasurer can, given the circumstances of the individual case, decide that reimbursement is paid anyway or that no invoice is sent."
+        }
+      ]
+    }
+  ]
+}

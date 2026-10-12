@@ -1,0 +1,35 @@
+{
+  "id": "invoices",
+  "label": "Fakturor",
+  "items": [
+    {
+      "id": "can-invoice",
+      "q": "Kan jag ta ett köp på faktura?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ja, blir du erbjuden att ta ett köp på faktura kan du göra det."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Stäm gärna av med din resultatansvarig innan du tar något på faktura. Fakturan ska attesteras som vilket köp som helst, och utan attest kan du bli betalningsskyldig."
+        }
+      ]
+    },
+    {
+      "id": "invoice-recipient",
+      "q": "Vem ska fakturan ställas till?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Sektionen. Se till att leverantören fakturerar D-sektionen och inte dig som privatperson."
+        },
+        {
+          "t": "p",
+          "v": "Sektionen betalar ALDRIG fakturor som inte är ställda till sektionen. Har du blivit fakturerad privat måste du betala fakturan själv och sedan göra ett utlägg på den."
+        }
+      ]
+    }
+  ]
+}

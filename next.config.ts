@@ -9,12 +9,12 @@ const withNextIntl = createNextIntlPlugin();
 //
 // script-src is deliberately absent. A CSP worth having would have to allow the
 // inline theme script in app/layout.tsx and the ones Next emits for hydration,
-// and the only way to do that without 'unsafe-inline' — which would make the
-// directive decorative — is a per-request nonce, which a static header cannot
+// and the only way to do that without 'unsafe-inline' (which would make the
+// directive decorative) is a per-request nonce, which a static header cannot
 // carry. The directives below are the ones that are worth something without it.
 const SECURITY_HEADERS = [
   // Never let the browser second-guess a Content-Type. This is what keeps an
-  // uploaded receipt from being sniffed into something executable — see the
+  // uploaded receipt from being sniffed into something executable. See the
   // magic-byte check in api/expenses/[id]/receipts.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Two years, subdomains included. Only ever sent over HTTPS, so it has no
@@ -38,11 +38,11 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   // Emit .next/standalone: server.js plus only the node_modules the traced
-  // build actually reaches. That is what the Docker image ships — the
+  // build actually reaches. That is what the Docker image ships. The
   // alternative is copying a 700 MB node_modules into the runtime image to run
   // `next start`. Harmless outside Docker; `next dev` and `next start` ignore it.
   output: "standalone",
-  // Native modules — don't bundle them; load them from node_modules. Both ship
+  // Native modules, don't bundle them; load them from node_modules. Both ship
   // a platform-specific `.node` binary, which Turbopack cannot place in a
   // JavaScript chunk and refuses outright ("non-ecmascript placeable asset").
   //
@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
     // Turbopack's on-disk dev cache, on by default in Next 16. Off here because
     // it has handed us a stale stylesheet: a new route's utilities never made it
     // into the compiled CSS, the chunk kept its old bytes across every restart,
-    // and the page rendered with classes that had no rules behind them — the
+    // and the page rendered with classes that had no rules behind them, the
     // kind of bug you debug in the wrong place for an hour, because restarting
     // is exactly what should have cleared it.
     //
@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
   // arriving on one of them.
   //
   // The wildcard is for `pnpm dev:phone`, which puts the dev server behind a
-  // Cloudflare quick tunnel — see scripts/dev-phone.sh. The hostname is random
+  // Cloudflare quick tunnel. See scripts/dev-phone.sh. The hostname is random
   // per run, so it cannot be listed the way an address can. Development only;
   // `allowedDevOrigins` has no meaning in a build.
   allowedDevOrigins: [
@@ -81,6 +81,23 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
+  // /stock/tags was renamed to /stock/events, along with the model behind it.
+  // The word had drifted three ways: "tag" in the schema and the URL, "event"
+  // in the nav key and a filename, "occasion" in the prose and the headings,
+  // and this is the one of the three that a browser had bookmarked.
+  //
+  // 307 rather than 308: these pages are behind a login, so there is no search
+  // engine to inform, and a permanent redirect is cached by the browser
+  // forever, which is a long time to live with if the path is ever wanted
+  // again. Two rules rather than one wildcard so that the list page itself is
+  // covered beyond doubt. Query strings are carried across either way, which
+  // is what a shared link to a filtered list needs.
+  async redirects() {
+    return [
+      { source: "/stock/tags", destination: "/stock/events", permanent: false },
+      { source: "/stock/tags/:path*", destination: "/stock/events/:path*", permanent: false },
+    ];
   },
 }
 

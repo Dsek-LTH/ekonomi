@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
+import type { PaymentType } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { BookVoucher } from "@/lib/api/schemas/expense";
@@ -22,8 +23,8 @@ interface NormLine {
 }
 
 // Validate the voucher lines: each row needs an account, and the verification
-// must balance (debit total == credit total). The *shapes* — strings that are
-// strings, amounts that are non-negative integer öre — are the schema's, and
+// must balance (debit total == credit total). The *shapes* (strings that are
+// strings, amounts that are non-negative integer öre) are the schema's, and
 // are not re-checked here. A number that arrived as nonsense used to become 0
 // through `Number(x) || 0` and quietly unbalance the voucher.
 function prepareLines(
@@ -49,11 +50,17 @@ function prepareLines(
 
 // The payment row is not the bookkeeper's to choose: a card purchase already
 // left the section's bank, a private outlay is a debt to the member. The UI
-// renders that row as fixed, and this is the same rule on the server — the
+// renders that row as fixed, and this is the same rule on the server. The
 // client is a convenience, not the gate.
+//
+// Milersättning falls on the member-debt side without a branch of its own, and
+// that is the right answer rather than a lucky one: the section owes the
+// claimant their petrol exactly as it owes them a receipt they paid. The test
+// is "did the section's own account already pay for this", which only the card
+// answers yes to.
 async function checkPaymentLine(
   lines: NormLine[],
-  expense: { paymentType: "CARD" | "REIMBURSEMENT"; grossAmount: number | null },
+  expense: { paymentType: PaymentType; grossAmount: number | null },
 ): Promise<{ code: string; account: string } | null> {
   const settings = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
   const account =
@@ -69,7 +76,11 @@ async function checkPaymentLine(
   if (payment.costCenterCode) {
     return { code: "voucher.paymentLineNoCostCenter", account };
   }
-  if (payment.debit !== 0 || payment.credit !== (expense.grossAmount ?? 0)) {
+  // A return (negative gross) is the same row the other way round: the money
+  // comes back in, so the account is debited with the magnitude.
+  const gross = expense.grossAmount ?? 0;
+  const expected = gross < 0 ? { debit: -gross, credit: 0 } : { debit: 0, credit: gross };
+  if (payment.debit !== expected.debit || payment.credit !== expected.credit) {
     return { code: "voucher.paymentLineFullAmount", account };
   }
   return null;
@@ -82,7 +93,7 @@ async function checkPaymentLine(
  * A code that resolves to nothing used to be booked as no cost centre at all:
  * the voucher balanced, the accounts were right, and the line simply carried no
  * kostnadsställe. That is the one field the whole budget-vs-actual side of the
- * app reads — a verification posted without it is money that has left the
+ * app reads. A verification posted without it is money that has left the
  * section and appears in nobody's outcome. PATCH /api/expenses/[id] refuses an
  * unknown code on an allocation; there is no reason the voucher itself should
  * be the laxer of the two.
@@ -114,7 +125,7 @@ const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
   }));
 
 // Authority + the expense. Booking creates a verification in the section's
-// books, so it is bookkeepers only — the status checks below say *which*
+// books, so it is bookkeepers only. The status checks below say *which*
 // utlägg, never *who*.
 async function loadForBooking(id: string) {
   const g = await gate(canBookkeep, "auth.bookkeeperBook");
@@ -131,7 +142,7 @@ async function loadForBooking(id: string) {
 // The rows, validated against the utlägg they belong to.
 async function prepareVoucher(
   body: BookVoucher,
-  expense: { paymentType: "CARD" | "REIMBURSEMENT"; grossAmount: number | null },
+  expense: { paymentType: PaymentType; grossAmount: number | null },
 ) {
   const prepared = prepareLines(body);
   if (!prepared.ok) return { ok: false as const, res: fail(prepared.status, prepared.error) };
@@ -159,7 +170,7 @@ async function prepareVoucher(
   };
 }
 
-// The verification's date and heading — the caller may set both, and each falls
+// The verification's date and heading. The caller may set both, and each falls
 // back to what the utlägg already says.
 function voucherMeta(
   body: BookVoucher,
@@ -171,7 +182,7 @@ function voucherMeta(
   };
 }
 
-// POST — create the voucher for an APPROVED expense and flip it to BOOKED.
+// POST: create the voucher for an APPROVED expense and flip it to BOOKED.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const loaded = await loadForBooking(id);
@@ -190,8 +201,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const voucher = await prepareVoucher(body, expense);
   if (!voucher.ok) return voucher.res;
 
+  // The day of the purchase, not the day somebody got round to booking it. A
+  // voucher dated today for a receipt from March puts the cost in the wrong
+  // month, and in January it puts it in the wrong financial year.
+  //
+  // Today only when the utlägg carries no date at all, which the submission
+  // form does not allow but older rows can still hold. There is nothing better
+  // to reach for in that case, and refusing to book would strand the utlägg.
   const { date, description } = voucherMeta(body, {
-    date: new Date(),
+    date: expense.purchaseDate ?? new Date(),
     description: expense.title,
   });
 
@@ -214,7 +232,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json({ id }, { status: 201 });
 }
 
-// PATCH — amend the konteringsrader of a BOOKED (not yet EXPORTED) verification.
+// PATCH: amend the konteringsrader of a BOOKED (not yet EXPORTED) verification.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const loaded = await loadForBooking(id);

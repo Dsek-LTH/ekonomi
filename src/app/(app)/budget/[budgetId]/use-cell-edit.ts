@@ -7,12 +7,12 @@
 // them.
 //
 // Spread the returned props onto the element wrapping the sheet's table(s). Only
-// the [data-cell] inputs — those rendered with `gated: true` — have the two
+// the [data-cell] inputs (those rendered with `gated: true`) have the two
 // modes; anything else (add-row inputs, comment boxes) is left alone.
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/ui/utils";
 
-export interface CellEditProps {
+interface CellEditProps {
   className: string;
   onKeyDownCapture: (e: KeyboardEvent) => void;
   onFocusCapture: () => void;
@@ -37,14 +37,14 @@ export function useCellEdit(className?: string): CellEditProps {
 
   function onKeyDownCapture(e: KeyboardEvent) {
     const t = e.target as HTMLElement;
-    if (!t.dataset?.cell) return; // not a gated cell (e.g. an add-row input)
+    if (!t.dataset.cell) return; // not a gated cell (e.g. an add-row input)
     const input = t as HTMLInputElement;
 
     if (editing) {
       // Leaving the cell drops back to selected; the input's own blur commits.
       if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); input.blur(); setEditing(false); }
       else if (e.key === "Tab" || e.key === "Escape") setEditing(false); // Tab moves natively; Escape reverts
-      // Everything else — arrows, Home/End, text — belongs to the input.
+      // Everything else (arrows, Home/End, text) belongs to the input.
       return;
     }
 
@@ -64,7 +64,7 @@ export function useCellEdit(className?: string): CellEditProps {
       const t = e.target as HTMLElement;
       // Collapse the browser's word-selection to where it was clicked, so a
       // double-click leaves a blinking caret at that spot rather than a highlight.
-      if (t.dataset?.cell) beginEdit(t as HTMLInputElement, "here");
+      if (t.dataset.cell) beginEdit(t as HTMLInputElement, "here");
     },
   };
 }

@@ -160,8 +160,8 @@ ALTER TABLE "IncomeLine" ADD CONSTRAINT "IncomeLine_reportId_fkey" FOREIGN KEY (
 
 -- A verifikation belongs to exactly one thing: an expense (money out) or an
 -- income report (money in). Prisma can only say that each column is nullable
--- and separately unique, which permits a row with neither — an orphaned
--- voucher that no screen would ever show and no export would ever pick up —
+-- and separately unique, which permits a row with neither, an orphaned
+-- voucher that no screen would ever show and no export would ever pick up,
 -- as readily as one with both.
 ALTER TABLE "Verification"
   ADD CONSTRAINT "Verification_exactly_one_subject"

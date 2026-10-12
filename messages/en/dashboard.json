@@ -1,0 +1,29 @@
+{
+  "greeting": "Hi {name} 💅",
+  "queueTitle": "Waiting on you",
+  "queueEmpty": "Nothing is waiting on you right now.",
+  "mineTitle": "Your expenses",
+  "mineEmpty": "You have no expenses yet.",
+  "allExpenses": "All expenses",
+  "actionHeader": "Action",
+  "action": {
+    "FIX": "Fix",
+    "SUBMIT": "Submit",
+    "ATTEST": "Approve",
+    "BOOK": "Book",
+    "EXPORT": "Export"
+  },
+  "firstRun": {
+    "title": "How an expense works",
+    "lead": "Spent your own money for the guild, or paid with a guild card? This is where you get it back.",
+    "step1Title": "Photograph the receipt",
+    "step1Body": "Upload the receipt and fill in what the purchase was for and which cost center it belongs to.",
+    "step2Title": "The result unit owner approves it",
+    "step2Body": "Whoever is responsible for the cost center approves the expense. You can see where it is, and who it is waiting on, the whole way through.",
+    "step3Title": "The treasury books it",
+    "step3Body": "The expense becomes a voucher and is exported to Fortnox.",
+    "step4Title": "The money arrives",
+    "step4Body": "Paid out to your account. Add your clearing and account number under My profile, or the expense will stall there.",
+    "cta": "Create your first expense"
+  }
+}

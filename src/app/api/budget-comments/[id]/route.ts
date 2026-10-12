@@ -14,7 +14,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!comment) return fail(404, "budget.commentNotFound");
 
   // Your own comment, or an admin clearing up someone else's.
-  if (comment.authorId !== g.actor.id && !isAdmin(g.actor.roles)) {
+  if (comment.authorId !== g.actor.id && !isAdmin(g.actor.capabilities)) {
     return fail(403, "auth.denied");
   }
 

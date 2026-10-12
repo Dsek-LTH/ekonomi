@@ -1,0 +1,70 @@
+{
+  "id": "receipts",
+  "label": "Kvitton",
+  "items": [
+    {
+      "id": "valid",
+      "q": "Vad är ett giltigt kvitto?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Enligt bokföringslagen (5 kap. 7 §) ska verifikationen innehålla uppgift om när den sammanställts, när affärshändelsen inträffat, vad den avser, vilket belopp den gäller, vilken motpart den berör, samt verifikationsnummer eller annan identifikation."
+        },
+        {
+          "t": "p",
+          "v": "Praktiskt måste följande finnas på kvittot:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Datum.",
+            "Vilka produkter kvittot avser.",
+            "Kostnaderna för produkterna.",
+            "Skattesatserna (momspålägget).",
+            "Säljarens organisationsnummer.",
+            "Säljarens bolagsnamn.",
+            "Säljarens adress.",
+            "Verifikationsnummer."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Kvittot ska också vara i det skick du fick det av säljaren. Ett kvitto du skrivit på, klippt i eller fotograferat bara en del av duger inte."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Saknas något av ovanstående, eller går det inte att TYDLIGT urskilja, kommer attesteringen inte att godkännas. Då får du begära ett giltigt kvitto från leverantören."
+        }
+      ]
+    },
+    {
+      "id": "one-receipt",
+      "q": "Kan jag lägga flera kvitton på samma redovisning?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej. En redovisning bär ett kvitto. Laddar du upp ett nytt ersätter det det förra."
+        },
+        {
+          "t": "p",
+          "v": "Två kvitton är två affärshändelser, och de ska bokföras var för sig även när de gjordes samma dag inför samma event. Handlade du på två ställen gör du alltså två redovisningar."
+        },
+        {
+          "t": "p",
+          "v": "Ett kvitto som gick över flera sidor är däremot en händelse: slå ihop sidorna till en PDF och ladda upp den."
+        }
+      ]
+    },
+    {
+      "id": "order-confirmation",
+      "q": "Räcker en orderbekräftelse som kvitto?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej. En orderbekräftelse är som standard inte ett kvitto. Begär ett riktigt kvitto från säljaren."
+        }
+      ]
+    }
+  ]
+}

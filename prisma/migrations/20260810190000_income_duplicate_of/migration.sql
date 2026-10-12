@@ -4,7 +4,7 @@
 -- It used to be dropped, which is the failure this keeps undoing: a day that is
 -- simply absent from the queue reads as takings that went missing, and there is
 -- no way to tell that from a fetch that never covered it. Shown and coloured,
--- it is a fact the reviewer can act on. Booking it stays impossible — the
+-- it is a fact the reviewer can act on. Booking it stays impossible: the
 -- partial unique index over booked reports is what actually guarantees that.
 ALTER TABLE "IncomeReport" ADD COLUMN "duplicateOfId" TEXT;
 

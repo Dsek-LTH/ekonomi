@@ -1,0 +1,9 @@
+{
+  "title": "Something went wrong",
+  "description": "The page could not be shown. It is usually temporary, so try again.",
+  "retry": "Try again",
+  "home": "To the overview",
+  "digest": "Reference: {digest}",
+  "notFoundTitle": "Page not found",
+  "notFoundDescription": "The link may be wrong, or what you are looking for has been removed."
+}

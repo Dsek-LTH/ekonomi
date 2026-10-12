@@ -26,14 +26,14 @@ export const Id = z.string().min(1);
  * A money amount, in integer öre.
  *
  * Integer because öre is the resolution money is kept at and a fraction of one
- * is not a smaller amount, it is a different one — and because the columns
+ * is not a smaller amount, it is a different one, and because the columns
  * behind these are integers, so a float would reach Postgres and come back as a
  * 500 instead of a message. Signed: a refund is the same claim with the sign
  * flipped.
  */
 export const Ore = z.int();
 
-/** A whole calendar date, `YYYY-MM-DD` — never a partial one. */
+/** A whole calendar date, `YYYY-MM-DD`, never a partial one. */
 export const IsoDate = z.iso.date();
 
 /**

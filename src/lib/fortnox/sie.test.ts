@@ -146,7 +146,7 @@ describe("parseSie", () => {
       expect(got.closingBalances.get("1930|SEX02")).toBe(2000);
     });
 
-    // The breakdown is optional detail, never the source of the total — so the
+    // The breakdown is optional detail, never the source of the total, so the
     // two live side by side under different keys.
     it("keeps the account total and its breakdown apart", () => {
       const got = parseSie([

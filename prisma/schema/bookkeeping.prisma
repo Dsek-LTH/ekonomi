@@ -1,0 +1,176 @@
+// The write side of accounting: vouchers this app produces, and the
+// Fortnox connection they are exported through.
+
+// App-wide bookkeeping configuration. A single row (id "singleton"): these are
+// the accounts the booking view pre-fills, which used to be the ACCOUNT.BANK /
+// ACCOUNT.MEMBER_DEBT constants in lib/accounts.ts. Kept apart from
+// FortnoxConnection so that disconnecting Fortnox doesn't discard them.
+model BookkeepingSettings {
+  id String @id @default("singleton")
+
+  // Debited when a card purchase is booked.
+  bankAccount       String @default("1930")
+  // Credited when a member is owed a reimbursement.
+  memberDebtAccount String @default("2890")
+
+  // ── Income (intäkter) ──
+  // The other side of the same idea: where money *arrives*. An income report is
+  // booked by crediting the revenue accounts its products routed to and
+  // debiting the account the money actually landed in, which depends on how it
+  // was paid. These are the app's own settings, not intakt's. The service
+  // returns what was sold and never decides which account it clears through.
+  zettleClearingAccount String      @default("1930")
+  swishClearingAccount  String      @default("1931")
+  // Zettle's own transaction fees are a cost, not income: debited here and
+  // credited against the Zettle clearing account above.
+  zettleFeeAccount      String      @default("6570")
+  // Cost centre the fee vouchers carry. Fees are not attributable to a
+  // committee the way sales are. They belong to whoever runs the terminal.
+  zettleFeeCostCenter   CostCenter? @relation("ZettleFeeCostCenter", fields: [zettleFeeCostCenterId], references: [id], onDelete: SetNull)
+  zettleFeeCostCenterId String?
+  // Which verifikationsserie a day's takings are filed under in Fortnox.
+  //
+  // Null means "the same one everything else uses", FortnoxConnection's
+  // voucherSeries, which is what every export did before this column existed.
+  // Set, it separates a term of Swish from the utlägg they would otherwise be
+  // interleaved with, and it is also the series the duplicate check reads: a
+  // day is recognised over there by its series, its date and its voucher text
+  // (lib/income/duplicate.ts), so the two must be decided in one place.
+  incomeVoucherSeries   String?
+
+  updatedAt DateTime @updatedAt
+}
+
+// A bookkeeping voucher (verifikation). Its lines must balance (sum debit ==
+// sum credit), whatever produced it.
+//
+// It hangs off exactly one of two things: an Expense (money going out, an
+// utlägg or a card purchase) or an IncomeReport (money coming in, a day's
+// takings). Both are the same object to a bookkeeper and to Fortnox, so they
+// are one table rather than two: the export path, the Fortnox voucher columns
+// and the balance rule are written once and both sides get them.
+//
+// "Exactly one" is not expressible in Prisma, because both columns are nullable and
+// separately unique, which permits neither being set as readily as both. A
+// CHECK constraint in the migration is what actually enforces it.
+model Verification {
+  id String @id @default(cuid())
+
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String?  @unique
+
+  incomeReport   IncomeReport? @relation(fields: [incomeReportId], references: [id], onDelete: Cascade)
+  incomeReportId String?       @unique
+
+  date        DateTime @db.Date
+  description String // verifikationstext
+
+  createdBy   User?   @relation("VerificationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  lines VerificationLine[]
+
+  // Set once the voucher has been exported to Fortnox. The series+number+year
+  // identify the booked verifikation in Fortnox; exportedAt marks success.
+  fortnoxSeries String?
+  fortnoxNumber Int?
+  fortnoxYear   Int?
+  exportedAt    DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// The org's SERVICE connection to Fortnox: a Fortnox service account, authorised
+// once by a Fortnox system administrator, not tied to any person. There is at
+// most one (the whole section books into a single Fortnox company), so the app
+// treats this table as a singleton. It backs everything that READS from Fortnox
+// (the ledger sync, the chart of accounts, cost centres), including the
+// scheduled job, which is why it must survive people coming and going.
+//
+// Tokens are refreshed in place: the refresh token is long-lived (~45 days) but
+// ROTATES on every use, so the new pair must be persisted on each refresh.
+// Token columns are encrypted at rest (lib/secrets.ts).
+model FortnoxConnection {
+  id            String   @id @default(cuid())
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime // when the access token expires
+  scopes        String // space-delimited granted scopes
+  tokenType     String   @default("Bearer")
+  voucherSeries String   @default("A") // default verifikationsserie for exports
+  companyName   String? // from /3/companyinformation, for display
+  orgNumber     String? // organisationsnummer, personal logins are checked against it
+
+  connectedBy   User?   @relation("FortnoxConnector", fields: [connectedById], references: [id], onDelete: SetNull)
+  connectedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A bookkeeper's PERSONAL Fortnox login, one row per app user. Everything that
+// WRITES to Fortnox (creating vouchers, attaching receipts) runs on this token
+// rather than the service account, so Fortnox stamps the voucher with the
+// person's name instead of the integration's.
+//
+// Deliberately short-lived: `sessionExpiresAt` is our own hard cap (a few
+// hours). Inside it the ~1h Fortnox access token is refreshed silently; past it
+// the row is useless and the bookkeeper has to log in to Fortnox again. Tokens
+// are encrypted at rest (lib/secrets.ts).
+model FortnoxUserSession {
+  id     String @id @default(cuid())
+  user   User   @relation("FortnoxUserSession", fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  accessToken      String
+  refreshToken     String
+  tokenExpiresAt   DateTime // when the Fortnox access token expires (~1h)
+  sessionExpiresAt DateTime // our cap, no refresh past this, log in again
+  scopes           String
+
+  // Who Fortnox says this is, from /3/me. Shown in the UI so a bookkeeper can
+  // tell which Fortnox identity their exports will be signed with.
+  fortnoxUserName  String?
+  fortnoxUserEmail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── Fortnox ledger mirror (read side) ─────────────────────────────
+// A local copy of what's actually been bookkept in Fortnox, pulled via the SIE
+// export (one file per financial year). This is the whole general ledger, not
+// just vouchers this app created, so it backs spend reporting (per account per
+// cost centre) and budget-vs-actual. Synced by replacing a whole year at a time
+// (idempotent), so closed years stay stable and the current year just re-pulls.
+model FortnoxFinancialYear {
+  id         Int       @id // Fortnox financial-year id (not the calendar year)
+  fromDate   DateTime  @db.Date
+  toDate     DateTime  @db.Date
+  lastSyncAt DateTime?
+
+  vouchers LedgerVoucher[]
+  balances LedgerAccountBalance[]
+}
+
+// ── One posting row (konteringsrad) ──────────────────────────────
+// One posting row (konteringsrad): an account, an optional cost center, and a
+// debit or credit amount (öre). A row normally has one of debit/credit set.
+model VerificationLine {
+  id             String       @id @default(cuid())
+  verification   Verification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  verificationId String
+
+  account     String // BAS account number, e.g. "1930"
+  accountName String // denormalised label at booking time (chart may change)
+  description String?
+
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  debit     Int @default(0) // öre
+  credit    Int @default(0) // öre
+  sortOrder Int @default(0)
+
+  @@index([verificationId])
+}

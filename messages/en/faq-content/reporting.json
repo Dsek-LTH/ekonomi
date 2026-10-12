@@ -1,0 +1,216 @@
+{
+  "id": "reporting",
+  "label": "Filing a claim",
+  "items": [
+    {
+      "id": "how",
+      "q": "How do I file a purchase?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Every purchase in the guild's name must be reported, whether you paid yourself or with the guild card. It is the report that gets attested, and without attest you pay for the purchase yourself."
+        },
+        {
+          "t": "ol",
+          "v": [
+            "Choose what it is: section card, section card refund, or out of pocket.",
+            "Describe what happened, enter the date from the receipt and the amount.",
+            "Split the amount across cost centres. The rows have to add up to the receipt's total.",
+            "Drop the receipt into the panel beside the form.",
+            "For a card purchase: pick the bank transaction that paid for it.",
+            "Send it in."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You can save a draft at any point and come back to it."
+        },
+        {
+          "t": "action",
+          "v": "File a purchase",
+          "href": "/expenses/new"
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "q": "Can I finish this later?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Yes. Save a draft at any point and it sits under Expenses until you send it in."
+        },
+        {
+          "t": "p",
+          "v": "What you have typed also survives a reload before you got that far, the receipt you picked included. Switch device or clear site data and it is gone, so save a draft if you are going to be a while."
+        }
+      ]
+    },
+    {
+      "id": "split",
+      "q": "The receipt has to hit several cost centres, how do I split it?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Add one row per cost centre and report the costs separately there, with a comment explaining what the row covers. The rows must add up to the total on the receipt."
+        }
+      ]
+    },
+    {
+      "id": "alcohol",
+      "q": "How do I report alcohol?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Alcohol comes with further laws to follow. One requirement is that alcoholic drinks and alcohol-like products must be reported separately by category, and each category has its own cost center:"
+        },
+        {
+          "t": "table",
+          "head": [
+            "Cost center",
+            "Category",
+            "For example"
+          ],
+          "rows": [
+            [
+              "ALKO01",
+              "Beer",
+              "Lager, sour beer"
+            ],
+            [
+              "ALKO02",
+              "Other fermented drink",
+              "Cider, fruit wines, mead"
+            ],
+            [
+              "ALKO03",
+              "Wine",
+              "At most 22 ‰, port, sherry, vermouth"
+            ],
+            [
+              "ALKO04",
+              "Spirits",
+              "Halmstad Crush, vodka, liqueurs"
+            ],
+            [
+              "ALKO05",
+              "Alcohol-like products",
+              "Alcoholic ice cream"
+            ]
+          ]
+        },
+        {
+          "t": "p",
+          "v": "In practice you split the alcohol you bought into one row per category: add up everything in the same category and put it on that category's cost center, deposit included."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "If you are unsure which category a drink belongs to, always ask your result owner. The most common mistake is putting spirits under other fermented drink: Halmstad Crush is a spirit, not a cider."
+        }
+      ]
+    },
+    {
+      "id": "alcohol-example",
+      "q": "Example: how do I split a Systembolaget purchase?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Say you bought the following for a sittning:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Norrlands Guld (beer): 2 × 13.90 kr + 2 × 1 kr deposit.",
+            "Pistonhead Haze Lager (beer): 2 × 11.90 kr + 2 × 1 kr deposit.",
+            "Crazy Cat (wine): 209 kr.",
+            "Explorer Vodka (spirits): 189 kr + 1 kr deposit.",
+            "Halmstad Crush (spirits): 16.90 kr + 1 kr deposit.",
+            "Briska Fläder (other fermented drink): 16.90 kr + 1 kr deposit."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "You then report four rows, one per category:"
+        },
+        {
+          "t": "table",
+          "head": [
+            "Cost center",
+            "Amount",
+            "Comment"
+          ],
+          "rows": [
+            [
+              "ALKO01",
+              "55.60 kr",
+              "Beer (deposit included)"
+            ],
+            [
+              "ALKO02",
+              "17.90 kr",
+              "Other fermented drink (deposit included)"
+            ],
+            [
+              "ALKO03",
+              "209.00 kr",
+              "Wine"
+            ],
+            [
+              "ALKO04",
+              "207.90 kr",
+              "Spirits (deposit included)"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deadline",
+      "q": "How quickly do I have to file?",
+      "a": [
+        {
+          "t": "p",
+          "v": "An out-of-pocket expense must be reported within 60 days of paying. That is set by Policy för ekonomi, and the same deadline applies to mileage. After that the treasurer can refuse reimbursement, unless there are special reasons."
+        },
+        {
+          "t": "p",
+          "v": "The app stops an out-of-pocket expense or a mileage claim older than 60 days. If there are special reasons it was late, contact the treasurer: an expense granted an exemption can still be submitted, and the reason is printed on the expense report."
+        },
+        {
+          "t": "p",
+          "v": "A card purchase can still be reported afterwards, since the guild's money is already gone and the purchase has to be booked however late it comes. Report it straight away regardless: the treasurer may take back the guild card if purchases are not reported."
+        },
+        {
+          "t": "note",
+          "tone": "danger",
+          "v": "The treasury does not have time to chase you to report on time. Report your purchases straight away."
+        }
+      ]
+    },
+    {
+      "id": "returns",
+      "q": "I returned something, does that have to be filed?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Yes. A return is filed as a section card claim with refund chosen, and the amount is negative. Like a purchase it is matched against the bank transaction, but against the money coming back rather than money going out."
+        },
+        {
+          "t": "p",
+          "v": "Returns only exist on the section card. Money comes back to where it was paid from, and a member does not hand the section money through a claim. If you paid yourself and were refunded privately, the original claim is corrected or deleted instead."
+        }
+      ]
+    },
+    {
+      "id": "foreign",
+      "q": "I'm buying from abroad, is there anything special to keep in mind?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Pay through Klarna if you can. Other countries are not bound by Swedish rules and are therefore not obliged to give you a receipt the way a Swedish seller is. But if the purchase goes through Klarna, Klarna always gives you a valid receipt."
+        }
+      ]
+    }
+  ]
+}

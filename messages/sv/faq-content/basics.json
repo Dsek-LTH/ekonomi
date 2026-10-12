@@ -1,0 +1,75 @@
+{
+  "id": "basics",
+  "label": "Grunderna",
+  "items": [
+    {
+      "id": "why-rules",
+      "q": "Varför är sektionen så noga med redovisning?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Bokföring är ett lagkrav i Sverige. Bokföringslagen gäller alla som driver näringsverksamhet, och D-sektionen är en näringsverksamhet, därför måste vi förhålla oss till den."
+        },
+        {
+          "t": "p",
+          "v": "Lagen innehåller de riktlinjer och krav som Skatteverket ställer på oss som organisation. En överträdelse kan få allvarliga konsekvenser både för sektionen och för skattmästaren som privatperson. Reglerna på den här sidan finns alltså inte för att krångla till det, utan för att vi ska hålla oss till lagen."
+        },
+        {
+          "t": "p",
+          "v": "Hur sektionen i övrigt sköter sin ekonomi står i Policy för ekonomi. Svaren här bygger på den, men tar bara upp det som rör det du gör i appen."
+        }
+      ]
+    },
+    {
+      "id": "own-pocket",
+      "q": "Ska jag behöva lägga ut egna pengar?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Helst inte. D-sektionen är en ideell förening, och ingen funktionär ska behöva betala ur egen ficka för att kunna göra sitt uppdrag. Därför finns sektionskorten: de ska användas för att minimera behovet av privata utlägg."
+        },
+        {
+          "t": "p",
+          "v": "Har du ändå betalat själv får du tillbaka pengarna, så länge köpet redovisas och attesteras som vanligt. Ingen funktionär ska heller tjäna pengar på sektionens verksamhet."
+        }
+      ]
+    },
+    {
+      "id": "who",
+      "q": "Vem gäller det här för?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Alla som handlar åt sektionen. Är du sektionsengagerad kommer du med största sannolikhet behöva göra ett utlägg för D-sektionens räkning någon gång under ditt verksamhetsår."
+        },
+        {
+          "t": "p",
+          "v": "Är du resultatansvarig gäller dessutom attesteringen: du granskar och godkänner köpen som gjorts under din resultatenhet."
+        }
+      ]
+    },
+    {
+      "id": "three-kinds",
+      "q": "Vilka sorters redovisning finns det?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Tre. Det första du väljer när du redovisar är vilken av dem det gäller, och valet styr resten av formuläret."
+        },
+        {
+          "t": "ul",
+          "v": [
+            "Sektionskort: sektionens pengar har redan lämnat kontot, och du redovisar vad de gick till.",
+            "Sektionskort, retur: pengar kommer tillbaka till kortet, till exempel ett återköp.",
+            "Eget utlägg: du har betalat själv och ska få tillbaka pengarna.",
+            "Milersättning: du körde egen bil på sektionens ärende och ersätts per kilometer."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "Ett kortköp ska matchas mot banktransaktionen som betalade det. Ett eget utlägg kräver att du har ett utbetalningskonto. En milersättning har inget kvitto alls, för det finns inget att fotografera när du kört din egen bil."
+        }
+      ]
+    }
+  ]
+}

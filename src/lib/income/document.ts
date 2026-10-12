@@ -2,13 +2,13 @@
 //
 // Two operations, deliberately apart:
 //
-//   renderIncomeDocument — bytes, and nothing else. What the review screen
+//   renderIncomeDocument: bytes, and nothing else. What the review screen
 //                          reads. A day nobody books is a PDF nobody keeps.
-//   storeIncomeDocument  — the same bytes, written to object storage and
+//   storeIncomeDocument:  the same bytes, written to object storage and
 //                          recorded on the report. Called when a day is
 //                          booked, because from that moment the document is
 //                          the evidence behind a figure in the ledger and has
-//                          to be the same bytes forever — the ones export
+//                          to be the same bytes forever. They are the ones export
 //                          attaches to the voucher in Fortnox.
 //
 // It has been both ways round. Rendering at booking meant the document could
@@ -18,8 +18,8 @@
 // is the split those two attempts were circling: render whenever anyone looks,
 // store when it starts to matter.
 //
-// Rendering on demand is safe because what the service renders from — the day,
-// the verksamhet, the product lines — is settled when the report is stored, so
+// Rendering on demand is safe because what the service renders from (the day,
+// the verksamhet, the product lines) is settled when the report is stored, so
 // the same report renders to the same document every time. The one field review
 // can change, the cost centre, appears nowhere on the page; it decides where the
 // money is booked, not what the document says.
@@ -56,7 +56,7 @@ export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
 /** Who the rendered report is attested by, when the batch cannot say. */
-export interface DocumentAttestation {
+interface DocumentAttestation {
   name: string;
   studentId: string;
 }
@@ -66,7 +66,7 @@ export interface DocumentAttestation {
  *
  * The attestation is the person who imported the batch, not whoever happens to
  * be asking. A report is a statement someone stands behind, and the one who
- * fetched the day's takings is that someone — otherwise the same document would
+ * fetched the day's takings is that someone. Otherwise the same document would
  * carry a different name depending on who opened it. `fallback` covers a batch
  * whose importer has since been removed from the app.
  */

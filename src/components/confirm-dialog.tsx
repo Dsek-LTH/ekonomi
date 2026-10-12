@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Field, Textarea } from "@/components/ui/field";
 import { IconAlert } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
-import { useEscape } from "@/lib/ui/escape";
+import { DialogLayer } from "@/components/ui/modal";
 
 // One reusable confirmation dialog for every destructive / irreversible action,
 // replacing window.confirm() and ad-hoc inline confirm UI. Use via useConfirm():
@@ -16,8 +16,8 @@ import { useEscape } from "@/lib/ui/escape";
 //   const ok = await confirm({ title, message, tone: "danger" });
 //   if (!ok) return;
 //
-// Some actions have to be explained to whoever they land on — sending an utlägg
-// back, reopening an attested one, undoing an export — and the comment they
+// Some actions have to be explained to whoever they land on (sending an utlägg
+// back, reopening an attested one, undoing an export) and the comment they
 // carry is the same "are you sure" question, asked in words. So it's collected
 // here rather than in a second dialog of its own:
 //
@@ -25,7 +25,7 @@ import { useEscape } from "@/lib/ui/escape";
 //   if (!ok) return;
 //   send(ok.comment);
 
-export interface ConfirmOptions {
+interface ConfirmOptions {
   title: string;
   message?: string;
   confirmLabel?: string;
@@ -40,9 +40,9 @@ export interface ConfirmOptions {
   };
 }
 
-/** `false` when dismissed. Confirming answers with the comment — "" when none
- *  was asked for — so the truthiness test every caller already does still holds. */
-export type ConfirmResult = false | { comment: string };
+/** `false` when dismissed. Confirming answers with the comment ("" when none
+ *  was asked for) so the truthiness test every caller already does still holds. */
+type ConfirmResult = false | { comment: string };
 
 type ConfirmFn = (opts: ConfirmOptions) => Promise<ConfirmResult>;
 
@@ -55,8 +55,6 @@ interface Pending extends ConfirmOptions {
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const [pending, setPending] = useState<Pending | null>(null);
-  // The dialog box itself, for the focus trap below.
-  const boxRef = useRef<HTMLDivElement>(null);
   // Whatever had focus when the dialog opened. A modal takes focus away from
   // the control that summoned it, and has to give it back: without this, a
   // keyboard user who cancels a delete is returned to the top of the document
@@ -84,7 +82,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         return null;
       });
       // Back where they were. `isConnected` because the answer may have removed
-      // the very row whose button opened this — focusing a detached node puts
+      // the very row whose button opened this. Focusing a detached node puts
       // focus on <body>, which is where it would have gone anyway.
       const opener = openerRef.current;
       openerRef.current = null;
@@ -95,70 +93,33 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
   const missingComment = Boolean(pending?.comment?.required) && comment.trim() === "";
 
-  // Esc cancels, Enter confirms — except while a comment is being written,
-  // where Enter is a new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
+  // Enter confirms, except while a comment is being written, where Enter is a
+  // new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
   //
-  // Tab is held inside the box. `aria-modal` tells a screen reader the rest of
-  // the page is inert; it does not make it so for the keyboard, and without
-  // this Tab walked straight out of the dialog and on through the page behind
-  // it — where every control was still operable while a modal claimed to be
-  // blocking them.
-  // Escape declines, and declines only this — anything opened on top of it
-  // answers first. See lib/ui/escape.ts.
-  useEscape(Boolean(pending), () => settle(false));
-
+  // Escape, the focus trap and the scroll lock are `DialogLayer`'s, which is
+  // also where the reason each of them stacks is written down.
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
-        const focusable = boxRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
-        );
-        if (!focusable?.length) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        const active = document.activeElement;
-        // Wrap at whichever end you have reached, and catch the case where
-        // focus is somewhere outside the box entirely.
-        if (e.shiftKey && (active === first || !boxRef.current?.contains(active))) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && active === last) {
-          e.preventDefault();
-          first.focus();
-        }
-        return;
-      }
       if (e.key !== "Enter") return;
       if (pending.comment && !(e.metaKey || e.ctrlKey)) return;
       if (missingComment) return;
       settle(true);
     };
     window.addEventListener("keydown", onKey);
-    // Below md the document is what scrolls, so the page would drift behind the
-    // dialog without this.
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [pending, settle, missingComment]);
 
   return (
     <Ctx.Provider value={confirm}>
       {children}
       {pending && (
-        // Clicking away cancels. That is a mouse affordance, and it has a
-        // keyboard equivalent already — Escape, handled above — so the rules
-        // asking for a key handler here are asking for a second copy of one
-        // that exists somewhere it works better.
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
-          onClick={() => settle(false)}
+        <DialogLayer
+          onDismiss={() => settle(false)}
+          // Centred at every width, unlike `Modal`: this is a sentence and two
+          // buttons, not a form, so there is nothing to gain from a phone sheet.
+          className="flex items-center justify-center p-4"
         >
-          <div ref={boxRef} className="contents">
           <Card
             role="alertdialog"
             aria-modal="true"
@@ -179,7 +140,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           >
             <div className="flex gap-3">
               {pending.tone === "danger" && (
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-danger-soft text-danger">
                   <IconAlert className="size-5" />
                 </span>
               )}
@@ -192,7 +153,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             </div>
             {pending.comment && (
               <div className="mt-4">
-                <Field label={pending.comment.label}>
+                <Field
+                  label={pending.comment.label}
+                  requirement={pending.comment.required ? "required" : "optional"}
+                >
                   <Textarea
                     autoFocus
                     rows={3}
@@ -208,7 +172,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 {pending.cancelLabel ?? t("cancel")}
               </Button>
               <Button
-                // Focus belongs in the comment box when there is one — the
+                // Focus belongs in the comment box when there is one. The
                 // confirm button is the last step there, not the first.
                 autoFocus={!pending.comment}
                 variant={pending.tone === "danger" ? "danger" : "primary"}
@@ -220,8 +184,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
           </Card>
-          </div>
-        </div>
+        </DialogLayer>
       )}
     </Ctx.Provider>
   );

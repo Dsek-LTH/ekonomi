@@ -1,5 +1,5 @@
 // "Why that could not be undone", as an HTTP answer. Shared by the three
-// routes in lib/income/lifecycle.ts — unexport, reopen and delete refuse for
+// routes in lib/income/lifecycle.ts: unexport, reopen and delete refuse for
 // overlapping reasons and should say so in the same words.
 import { fail } from "@/lib/api/guard";
 import type { LifecycleFailure } from "@/lib/income/lifecycle";

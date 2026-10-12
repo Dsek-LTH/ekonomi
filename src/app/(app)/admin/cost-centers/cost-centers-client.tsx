@@ -1,17 +1,21 @@
 "use client";
 
-// Settings → Cost centers. The Fortnox-owned ones are mirrored here by
-// the sync and read-only (the next sync would overwrite anything changed here);
-// the local ones are this app's own and fully editable.
+// Settings → Cost centers. One list. The Fortnox-owned ones are mirrored here
+// by the sync (which runs from Settings → Fortnox, with everything else fetched
+// from there) and are read-only, since the next sync would overwrite anything
+// changed here. The local ones are this app's own and fully editable. Which is
+// which is a mark on the code, not a column and a tab: it decides what you can
+// do to a row, not what kind of thing the row is.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { FieldGroup, Input } from "@/components/ui/field";
-import { IconButton } from "@/components/ui/icon-button";
-import { IconPencil, IconPlus, IconSync, IconTrash } from "@/components/ui/icons";
+import { IconDots, IconLock, IconPencil, IconPlus, IconTrash } from "@/components/ui/icons";
+import { Menu, MenuItem } from "@/components/ui/menu";
+import { IconFortnox } from "@/components/shell/fortnox-mark";
 import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -20,19 +24,12 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
 import type { CostCenter } from "@/lib/domain/types";
 
-// Retired cost centres stay in the list — seeing that SEX02 exists but is
-// inactive is what explains why it isn't in the picker — but the default filter
+// Retired cost centres stay in the list. Seeing that SEX02 exists but is
+// inactive is what explains why it isn't in the picker, but the default filter
 // is the active ones, since that is the list anyone is normally looking for.
-export function CostCentersClient({
-  costCenters,
-  connected,
-}: {
-  costCenters: CostCenter[];
-  connected: boolean; // Fortnox service connection — without it there is nothing to sync from
-}) {
+export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
   const t = useTranslations("admin.costCenters");
   const tCommon = useTranslations("common");
-  const tBookkeeping = useTranslations("bookkeeping");
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
@@ -40,7 +37,6 @@ export function CostCentersClient({
 
   const tabs: ClientTabFilter<CostCenter> = [
     { value: "active", label: t("tab.active"), predicate: (c) => c.active },
-    { value: "local", label: t("tab.local"), predicate: (c) => c.source === "LOCAL" },
     { value: "inactive", label: t("tab.inactive"), predicate: (c) => !c.active },
     { value: "all", label: t("tab.all") },
   ];
@@ -49,27 +45,6 @@ export function CostCentersClient({
   const [draft, setDraft] = useState({ code: "", name: "" });
   // The row being renamed, and the name being typed for it.
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
-
-  async function sync() {
-    const data = await mutate("/api/cost-centers/sync", {
-      key: "sync",
-      error: t("syncFailed"),
-    });
-    if (!data) return;
-    const updated = Number(data.upserted);
-    const retired = Number(data.deactivated);
-    const deleted = Number(data.deleted);
-    notify.success(
-      retired && deleted
-        ? t("syncSummaryWithRetiredAndDeleted", { updated, retired, deleted })
-        : deleted
-          ? t("syncSummaryWithDeleted", { updated, deleted })
-          : retired
-            ? t("syncSummaryWithRetired", { updated, retired })
-            : t("syncSummary", { updated }),
-      t("syncDone"),
-    );
-  }
 
   async function add() {
     const code = draft.code.trim().toUpperCase();
@@ -117,7 +92,7 @@ export function CostCentersClient({
       tone: "danger",
     });
     if (!ok) return;
-    const data = await mutate(`/api/cost-centers/${cc.id}`, {
+    const data = await mutate<{ retired: boolean }>(`/api/cost-centers/${cc.id}`, {
       key: `delete-${cc.id}`,
       method: "DELETE",
       error: t("deleteFailed"),
@@ -135,7 +110,20 @@ export function CostCentersClient({
       searchable: true,
       mobile: "title",
       className: "w-40",
-      cell: (c) => <Tag className="font-mono font-semibold">{c.code}</Tag>,
+      // The Fortnox mark says where it comes from, and so that it is not
+      // changed here. No mark is the local ones: the exception gets the badge
+      // only when it is the rule, and here Fortnox is the rule's source.
+      cell: (c) => (
+        <span className="inline-flex items-center gap-2">
+          <Tag className="font-mono font-semibold">{c.code}</Tag>
+          {c.source === "FORTNOX" && (
+            <span title={t("fortnoxHint")} className="inline-flex">
+              <IconFortnox className="size-4" />
+              <span className="sr-only">Fortnox</span>
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: "name",
@@ -193,22 +181,6 @@ export function CostCentersClient({
         ),
     },
     {
-      key: "source",
-      header: t("colSource"),
-      value: (c) => c.source,
-      sortable: true,
-      cell: (c) =>
-        c.source === "LOCAL" ? (
-          <span title={t("localHint")}>
-            <Tag tone="accent" className="font-medium">{t("local")}</Tag>
-          </span>
-        ) : (
-          <span title={t("fortnoxHint")}>
-            <Tag>Fortnox</Tag>
-          </span>
-        ),
-    },
-    {
       key: "status",
       header: t("colStatus"),
       value: (c) => (c.active ? 1 : 0),
@@ -226,50 +198,59 @@ export function CostCentersClient({
       header: "",
       align: "right",
       mobile: "actions",
-      className: "w-56",
-      // Only the local ones are ours to change — a Fortnox row edited here would
-      // just come back as it was on the next sync.
+      className: "w-14",
+      // Only the local ones are ours to change. A Fortnox row edited here would
+      // just come back as it was on the next sync, so it gets a lock saying
+      // where it is changed instead of buttons that would not stick. One menu
+      // rather than three buttons: three on some rows and none on the rest
+      // made the local ones look like a different table.
       cell: (c) =>
-        c.source === "LOCAL" && (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={pending === `active-${c.id}`}
-              onClick={() => setActive(c, !c.active)}
-            >
+        c.source === "LOCAL" ? (
+          <Menu
+            label={t("rowActions", { code: c.code })}
+            iconOnly
+            variant="ghost"
+            size="sm"
+            loading={pending === `active-${c.id}` || pending === `delete-${c.id}`}
+            icon={<IconDots className="size-4" />}
+          >
+            <MenuItem onClick={() => setRenaming({ id: c.id, name: c.name })}>
+              <IconPencil className="size-4 shrink-0 text-muted" />
+              {t("rename")}
+            </MenuItem>
+            <MenuItem onClick={() => setActive(c, !c.active)}>
+              <IconLock className="size-4 shrink-0 text-muted" />
               {t(c.active ? "deactivate" : "activate")}
-            </Button>
-            <IconButton
-              label={t("renameAria", { code: c.code })}
-              disabled={renaming?.id === c.id}
-              onClick={() => setRenaming({ id: c.id, name: c.name })}
-            >
-              <IconPencil className="size-4" />
-            </IconButton>
-            <IconButton
-              tone="danger"
-              label={t("deleteAria", { code: c.code })}
-              loading={pending === `delete-${c.id}`}
-              onClick={() => remove(c)}
-            >
-              <IconTrash className="size-4" />
-            </IconButton>
-          </div>
+            </MenuItem>
+            <MenuItem onClick={() => remove(c)} className="text-danger hover:bg-danger-soft">
+              <IconTrash className="size-4 shrink-0" />
+              {t("delete")}
+            </MenuItem>
+          </Menu>
+        ) : (
+          <span
+            title={t("fortnoxHint")}
+            className="inline-flex size-8 items-center justify-center text-faint"
+          >
+            <IconLock className="size-4" />
+            <span className="sr-only">{t("fortnoxHint")}</span>
+          </span>
         ),
     },
   ];
 
   return (
-    <>
-      {adding && (
-        <Card>
-          <CardHeader
-            title={t("newLocalTitle")}
-            subtitle={t("newLocalSubtitle")}
-          />
-          <CardBody>
-            <FieldGroup label={t("codeAndName")} hint={t("codeAndNameHint")}>
+    <Card>
+      <ClientDataTable
+        columns={columns}
+        rows={costCenters}
+        controls={controls}
+        tabs={tabs}
+        // The form for a new one opens under the toolbar, just below the
+        // button that asked for it and above the rows it will join.
+        actionPanel={
+          adding && (
+            <FieldGroup label={t("codeAndName")} hint={t("newLocalSubtitle")} requirement="required">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="w-40">
                   <Input
@@ -307,46 +288,27 @@ export function CostCentersClient({
                 </Button>
               </div>
             </FieldGroup>
-          </CardBody>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader
-          title={t("title")}
-          subtitle={t("subtitle")}
-          action={
-            <div className="flex flex-wrap items-center gap-2">
-              <IconButton
-                label={pending === "sync" ? t("syncing") : t("sync")}
-                title={connected ? undefined : tBookkeeping("connectFirst")}
-                disabled={!connected || pending === "sync"}
-                onClick={sync}
-              >
-                <IconSync className={cn("size-4", pending === "sync" && "animate-spin")} />
-              </IconButton>
-              {!adding && (
-                <Button size="sm" onClick={() => setAdding(true)}>
-                  <IconPlus className="size-4" />
-                  {t("newLocal")}
-                </Button>
-              )}
-            </div>
-          }
-        />
-        <ClientDataTable
-          columns={columns}
-          rows={costCenters}
-          controls={controls}
-          tabs={tabs}
-          searchPlaceholder={t("searchPlaceholder")}
-          rowKey={(c) => c.id}
-          rowClassName={(c) => cn(!c.active && "opacity-55")}
-          empty={
-            costCenters.length === 0 ? t("emptyNone") : t("emptyNoMatch")
-          }
-        />
-      </Card>
-    </>
+          )
+        }
+        // On the list's own toolbar, like every other list's create button.
+        // There is no card header: what the Fortnox mark means is in the page
+        // description, and a header holding only this button was a row spent
+        // on nothing.
+        action={
+          !adding && (
+            <Button size="sm" onClick={() => setAdding(true)}>
+              <IconPlus className="size-4" />
+              {t("newLocal")}
+            </Button>
+          )
+        }
+        searchPlaceholder={t("searchPlaceholder")}
+        rowKey={(c) => c.id}
+        rowClassName={(c) => cn(!c.active && "opacity-55")}
+        empty={
+          costCenters.length === 0 ? t("emptyNone") : t("emptyNoMatch")
+        }
+      />
+    </Card>
   );
 }

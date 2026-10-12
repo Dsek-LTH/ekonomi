@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { expenseScopeWhere, scopeIncludes, type ExpenseScope } from "./expense-scope";
 
-// Who may see which utlägg. This rule used to be written out three times — as a
-// list filter, as a check inside the detail loader, and again in the API — so
+// Who may see which utlägg. This rule used to be written out three times: as a
+// list filter, as a check inside the detail loader, and again in the API, so
 // these tests pin the one statement of it that all three now derive from.
 //
 // `expenseScopeOf` itself reads result unit ownerships from the database and is
@@ -25,7 +25,7 @@ const resultUnitHead: ExpenseScope = {
 describe("expenseScopeWhere", () => {
   it("filters nothing for a bookkeeping role", () => {
     // The empty filter has to compose into any `where` without a special case
-    // at the call site — that is what lets the loaders apply it unconditionally.
+    // at the call site. That is what lets the loaders apply it unconditionally.
     expect(expenseScopeWhere(BOOKKEEPING)).toEqual({});
   });
 
@@ -52,7 +52,7 @@ describe("expenseScopeWhere", () => {
 
   it("never returns an empty OR, which would match nothing", () => {
     // An `OR: []` in Prisma matches no rows at all. Every restricted scope must
-    // therefore carry at least the submitter clause — otherwise a member with
+    // therefore carry at least the submitter clause, otherwise a member with
     // no result units would lose sight of their own utlägg.
     for (const scope of [ordinaryMember, resultUnitHead]) {
       const where = expenseScopeWhere(scope);

@@ -1,0 +1,9 @@
+{
+  "title": "Något gick fel",
+  "description": "Sidan kunde inte visas. Oftast är det tillfälligt, så försök igen.",
+  "retry": "Försök igen",
+  "home": "Till översikten",
+  "digest": "Referens: {digest}",
+  "notFoundTitle": "Sidan finns inte",
+  "notFoundDescription": "Länken kan vara fel, eller så har det du letar efter tagits bort."
+}

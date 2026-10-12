@@ -4,7 +4,7 @@
 //
 // A copy is a copy and nothing more: the new budget holds its own rows and no
 // record of where they came from, and editing either one leaves the other
-// alone. That is the whole point — see Budget in schema.prisma.
+// alone. That is the whole point. See Budget in schema.prisma.
 //
 // The repointing is the part that isn't obvious. A cell reference is stored
 // bound to the line item's id (`@L<id>:<field>`, see lib/budget/grid.ts), so a
@@ -13,8 +13,10 @@
 // nothing resolves them; within a cloned cost centre they resolve to the
 // original's figures, so the two sheets would move together forever after. So
 // each copy remembers old id → new id and rewrites the references it owns. A
-// reference to a row that wasn't copied is left alone — that row is still
+// reference to a row that wasn't copied is left alone. That row is still
 // exactly the row meant.
+import { randomUUID } from "node:crypto";
+
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { lockForAppend, nextSortOrder } from "@/lib/server/sort-order";
 import { sheetName } from "@/lib/budget";
@@ -24,8 +26,6 @@ import { changeLabel, isActive } from "@/lib/budget/changes";
 type SourceAccount = {
   accountCode: string;
   accountName: string;
-  sortOrder: number;
-  kindOverride: "INCOME" | "COST" | null;
   lineItems: {
     id: string;
     description: string;
@@ -36,16 +36,39 @@ type SourceAccount = {
     values: Prisma.JsonValue;
   }[];
   // Editorial adjustments in force on this account (see BudgetChange in
-  // schema.prisma). They are copied as ordinary rows — see copyAccounts.
+  // schema.prisma). They are copied as ordinary rows. See planAccounts.
   adjustments: {
     amount: number;
     change: { seq: number; kind: "AVSTEG" | "FORFLYTTNING"; reason: string; revokedAt: Date | null };
   }[];
 };
 
+type AccountRow = {
+  id: string;
+  budgetCostCenterId: string;
+  accountCode: string;
+  accountName: string;
+};
+
+type LineRow = {
+  id: string;
+  accountId: string;
+  description: string;
+  expression: string;
+  sortOrder: number;
+  quantity: string | null;
+  unitPrice: string | null;
+  values: Prisma.InputJsonValue;
+};
+
 // What a copy needs to read off an account, for both copy paths.
 const sourceAccountInclude = {
-  orderBy: { sortOrder: "asc" },
+  // By account number, the order the sheet is read in everywhere else
+  // (lib/data/budget.ts). A clone that walked its accounts in some other order
+  // would still come out right, since nothing about a copy depends on the
+  // order, but a query that disagreed with the rest would be one more thing to
+  // reconcile the next time somebody reads this.
+  orderBy: { accountCode: "asc" },
   include: {
     lineItems: { orderBy: { sortOrder: "asc" } },
     adjustments: { include: { change: true } },
@@ -59,59 +82,87 @@ function repointRefs(text: string, idMap: Map<string, string>): string {
   });
 }
 
-// Copy one cost centre's accounts and rows onto `targetCostCenterId`, recording
-// every old line id → new line id in `idMap` for the repointing pass.
-async function copyAccounts(
-  tx: Prisma.TransactionClient,
+// The rows one cost centre's copy is made of, ready to insert.
+//
+// Ids are minted here rather than left to the database, which is what lets the
+// whole tree go in as three statements instead of one per row: a line item's id
+// is needed for `idMap` before its parent account has been written, and waiting
+// for the database to hand each one back is what made this a round trip per row.
+// Assigning them up front is the same thing the Fortnox sync and the receipt
+// upload already do. The column is a string, and `@default(cuid())` only says
+// what to use when nobody supplies one.
+//
+// A budget is the largest object in the app: a copy used to be hundreds of
+// sequential inserts inside one interactive transaction, against a timeout that
+// does not care how reasonable each of them was on its own.
+function planAccounts(
   accounts: SourceAccount[],
   targetCostCenterId: string,
   idMap: Map<string, string>,
-): Promise<void> {
+): { accountRows: AccountRow[]; lineRows: LineRow[] } {
+  const accountRows: AccountRow[] = [];
+  const lineRows: LineRow[] = [];
+
   for (const acct of accounts) {
-    const newAcct = await tx.budgetAccount.create({
-      data: {
-        budgetCostCenterId: targetCostCenterId,
-        accountCode: acct.accountCode,
-        accountName: acct.accountName,
-        sortOrder: acct.sortOrder,
-        // Carried over deliberately: an account reclassified income↔cost by hand
-        // would silently revert to code-based inference in the copy without this.
-        kindOverride: acct.kindOverride,
-      },
+    const accountId = randomUUID();
+    accountRows.push({
+      id: accountId,
+      budgetCostCenterId: targetCostCenterId,
+      accountCode: acct.accountCode,
+      accountName: acct.accountName,
+      // Carried over deliberately: an account reclassified income↔cost by hand
+      // would silently revert to code-based inference in the copy without this.
     });
+
     for (const li of acct.lineItems) {
-      const created = await tx.budgetLineItem.create({
-        data: {
-          accountId: newAcct.id,
-          description: li.description,
-          expression: li.expression,
-          sortOrder: li.sortOrder,
-          quantity: li.quantity,
-          unitPrice: li.unitPrice,
-          values: li.values as Prisma.InputJsonValue,
-        },
+      const id = randomUUID();
+      idMap.set(li.id, id);
+      lineRows.push({
+        id,
+        accountId,
+        description: li.description,
+        expression: li.expression,
+        sortOrder: li.sortOrder,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+        values: li.values as Prisma.InputJsonValue,
       });
-      idMap.set(li.id, created.id);
     }
 
     // Editorial adjustments are baked in as ordinary rows. The copy is a copy of
     // the figures, not of the decisions behind them: those belong to the budget
     // they were made on and stay there, so the row carries its motivering with
     // it rather than pointing at a history the copy doesn't have. Revoked ones
-    // are simply not copied — they count for nothing.
+    // are simply not copied. They count for nothing.
     let n = Math.max(-1, ...acct.lineItems.map((li) => li.sortOrder)) + 1;
     for (const adj of acct.adjustments) {
       if (!isActive(adj.change)) continue;
-      await tx.budgetLineItem.create({
-        data: {
-          accountId: newAcct.id,
-          description: `${changeLabel(adj.change.kind, adj.change.seq)}: ${adj.change.reason}`,
-          expression: String(adj.amount),
-          sortOrder: n++,
-        },
+      lineRows.push({
+        id: randomUUID(),
+        accountId,
+        description: `${changeLabel(adj.change.kind, adj.change.seq)}: ${adj.change.reason}`,
+        expression: String(adj.amount),
+        sortOrder: n++,
+        quantity: null,
+        unitPrice: null,
+        // Spelled out rather than left to the column default: `createMany` writes
+        // one statement for the whole batch, so every row must name the same
+        // columns or the ones that stayed quiet get the others' values.
+        values: {},
       });
     }
   }
+
+  return { accountRows, lineRows };
+}
+
+/** Write a planned tree: two statements, however many rows it holds. */
+async function insertPlan(
+  tx: Prisma.TransactionClient,
+  { accountRows, lineRows }: { accountRows: AccountRow[]; lineRows: LineRow[] },
+): Promise<void> {
+  if (accountRows.length > 0) await tx.budgetAccount.createMany({ data: accountRows });
+  if (lineRows.length > 0) await tx.budgetLineItem.createMany({ data: lineRows });
 }
 
 // Second pass: every new row exists, so the copied formulas can be pointed at
@@ -140,7 +191,7 @@ async function repointCopies(
       if (!changed) continue; // most rows are plain numbers
       await tx.budgetLineItem.update({
         where: { id: idMap.get(li.id)! },
-        data: { ...next, values: next.values as Prisma.InputJsonValue },
+        data: { ...next, values: next.values },
       });
     }
   }
@@ -148,7 +199,7 @@ async function repointCopies(
 
 // Everything that makes up a budget's numbers: variables, and the
 // cost-centre → account → line-item tree. Comments are deliberately left
-// behind — they're a discussion about one budget, not part of it.
+// behind, since they're a discussion about one budget, not part of it.
 export async function copyBudgetContents(
   tx: Prisma.TransactionClient,
   srcBudgetId: string,
@@ -169,22 +220,35 @@ export async function copyBudgetContents(
   // One id map for the whole budget: every row in it is copied, so every
   // reference between them belongs to the copy.
   const idMap = new Map<string, string>();
-  for (const cc of src.costCenters) {
-    const newCc = await tx.budgetCostCenter.create({
-      data: {
-        budgetId: targetBudgetId,
-        costCenterId: cc.costCenterId,
-        label: cc.label,
-        sortOrder: cc.sortOrder,
-      },
-    });
-    await copyAccounts(tx, cc.accounts, newCc.id, idMap);
+
+  // Planned whole and then written, rather than a create per row: the entire
+  // tree is four statements regardless of how big the budget is. Ids are minted
+  // up front (see planAccounts), so a cost centre's accounts can be built before
+  // the cost centre itself has been inserted.
+  const costCentreRows = src.costCenters.map((cc) => ({
+    id: randomUUID(),
+    budgetId: targetBudgetId,
+    costCenterId: cc.costCenterId,
+    label: cc.label,
+    sortOrder: cc.sortOrder,
+  }));
+  const plan = { accountRows: [] as AccountRow[], lineRows: [] as LineRow[] };
+  src.costCenters.forEach((cc, i) => {
+    const part = planAccounts(cc.accounts, costCentreRows[i].id, idMap);
+    plan.accountRows.push(...part.accountRows);
+    plan.lineRows.push(...part.lineRows);
+  });
+
+  if (costCentreRows.length > 0) {
+    await tx.budgetCostCenter.createMany({ data: costCentreRows });
   }
+  await insertPlan(tx, plan);
+
   for (const cc of src.costCenters) await repointCopies(tx, cc.accounts, idMap);
 
   // Variables last, and repointed like everything else. A variable is evaluated
   // against the cell map too (see lib/budget/eval.ts), so its expression can
-  // hold a cell reference — `=SEX01!C4` typed on the variables sheet is stored
+  // hold a cell reference. `=SEX01!C4` typed on the variables sheet is stored
   // as `@L<id>:expression` exactly as it would be in a row. Copied verbatim
   // those pointed back at the source budget's rows, which are not in the copy's
   // cell map at all, so the variable quietly evaluated to nothing.
@@ -201,7 +265,7 @@ export async function copyBudgetContents(
 }
 
 /**
- * Duplicate one cost centre — accounts, line items and formulas — within its own
+ * Duplicate one cost centre (accounts, line items and formulas) within its own
  * budget. The copy is created detached: the source already holds the only link
  * to that cost centre, and which one the copy is meant to be is the user's next
  * decision, not something to guess. Returns the new BudgetCostCenter id.
@@ -220,7 +284,7 @@ export async function cloneCostCenter(
   if (!src) return null;
 
   // The clone goes last in the budget, which is a read-modify-write on the same
-  // list every "add a sheet" touches — so it takes the same lock they do, for
+  // list every "add a sheet" touches, so it takes the same lock they do, for
   // the same reason. See lib/server/sort-order.ts.
   await lockForAppend(tx, "budget", src.budgetId);
   const last = await tx.budgetCostCenter.findFirst({
@@ -239,7 +303,7 @@ export async function cloneCostCenter(
   });
 
   const idMap = new Map<string, string>();
-  await copyAccounts(tx, src.accounts, clone.id, idMap);
+  await insertPlan(tx, planAccounts(src.accounts, clone.id, idMap));
   await repointCopies(tx, src.accounts, idMap);
 
   return clone.id;

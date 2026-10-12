@@ -8,7 +8,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { claimReference, withReferenceRetry } from "@/lib/server/expense-reference";
-import { canAttestAllocation, canReturnApproved, canUnexport, isAdmin } from "@/lib/domain/permissions";
+import {
+  canAttestAllocation,
+  canReturnApproved,
+  canUnexport,
+  canWaiveFilingDeadline,
+  isAdmin,
+} from "@/lib/domain/permissions";
 import { resultUnitNameForCode, getPrefixes, ownedResultUnits } from "@/lib/server/result-units";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -18,13 +24,20 @@ import {
   REIMBURSEMENT_DEADLINE_DAYS,
   SUBMITTABLE_STATUSES,
   isAttestWithdrawable,
+  isRecallable,
+  isSigned,
   isLateReimbursement,
+  isOutOfPocket,
 } from "@/lib/domain/status";
+import { claimBlocker } from "@/lib/mileage/claim";
+import { getMileageRates } from "@/lib/mileage/store";
 import { cancelsOut } from "@/lib/domain/matching";
+import { attestersOf, deliverSoon, holdersOf, notify } from "@/lib/server/notify";
+import { expenseNotice } from "@/lib/email/content";
 import { isFutureDate } from "@/lib/domain/date";
 import type { ExpenseStatus } from "@/lib/generated/prisma/client";
 
-// Note: export (BOOKED → EXPORTED) is NOT here — it's a real Fortnox API call,
+// Note: export (BOOKED → EXPORTED) is NOT here. It's a real Fortnox API call,
 // handled by app/api/expenses/[id]/export/route.ts.
 type SimpleAction = "submit" | "request_changes";
 
@@ -32,7 +45,7 @@ type SimpleAction = "submit" | "request_changes";
 //
 // Every branch below reads the utlägg once, decides against what it read, and
 // then writes. Between those two moments somebody else can act on the same
-// utlägg — two attestants clicking at once, or one person's second tab — and
+// utlägg, whether two attestants clicking at once or one person's second tab, and
 // the write would land on a row that no longer looks like the one the decision
 // was made about. Nothing failed; the numbers simply stopped meaning what they
 // said. In the approve path it was worse than a lost update: the rows to sign
@@ -42,8 +55,8 @@ type SimpleAction = "submit" | "request_changes";
 // one.
 //
 // So no write here is addressed by id alone. Each one restates the condition it
-// was decided under — the status it expects, the approval slot it expects to be
-// empty — and `applied` insists that it actually matched something. A write
+// was decided under, the status it expects and the approval slot it expects to
+// be empty, and `applied` insists that it actually matched something. A write
 // that matched nothing means the world moved underneath us, which is a 409 and
 // a reload, not a silent success.
 class StaleWrite extends Error {
@@ -103,17 +116,17 @@ export async function POST(
     include: {
       allocations: { include: { costCenter: true } },
       matchedTransaction: { select: { amount: true } },
-      // Only whether one exists — submitting asks nothing else of it.
+      // Only whether one exists, since submitting asks nothing else of it.
       receipts: { select: { id: true }, take: 1 },
       submitter: {
-        select: { roles: true, bankClearingNumber: true, bankAccountNumber: true },
+        select: { name: true, roles: true, bankClearingNumber: true, bankAccountNumber: true },
       },
     },
   });
   if (!expense) return fail(404, "expense.notFound");
 
   // An utlägg outside the caller's scope is not found, the same as everywhere
-  // else — every branch below has its own authority check, but none of them
+  // else. Every branch below has its own authority check, but none of them
   // should be reached for an utlägg whose existence isn't the caller's business.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
@@ -130,12 +143,32 @@ export async function POST(
   // The allocation's result unit comes from its cost-centre code prefix.
   const mayAttest = (a: (typeof expense.allocations)[number]) =>
     canAttestAllocation({
+      actorCapabilities: actor.capabilities,
       actorRoles: actor.roles,
       actorIsSubmitter,
       actorOwnedResultUnits: actorOwned,
-      submitterRoles: expense.submitter.roles,
       allocationResultUnit: resultUnitNameForCode(a.costCenter.code, prefixes),
     });
+
+  // The mail about this utlägg, as of the action being taken. Every branch
+  // below that tells anybody anything starts from this. See lib/server/notify.ts.
+  const about = (
+    key: Parameters<typeof expenseNotice>[0],
+    values: Record<string, string | number> = {},
+    reference = expense.reference,
+  ) =>
+    expenseNotice(
+      key,
+      { ...expense, reference },
+      { actor: actor.name, submitter: expense.submitter.name, ...values },
+      { author: actor.name, text: comment || null },
+    );
+  // Whoever is asked to attest it: the same people its SUBMITTED mail went to.
+  const attesters = () =>
+    attestersOf(
+      expense.allocations.map((a) => ({ costCenterCode: a.costCenter.code })),
+      expense.submitterId,
+    );
 
   // ── Approve: partial per-cost-centre approval ─────────────────────────────
   if (action === "approve") {
@@ -153,11 +186,12 @@ export async function POST(
     }
 
     const now = new Date();
+    const bookkeepers = await holdersOf("BOOKKEEPING");
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Stamp each of the actor's pending allocations as approved. Still
         // pending is part of the condition, not just part of how they were
-        // picked — without it this overwrote a signature somebody else had put
+        // picked. Without it this overwrote a signature somebody else had put
         // there in the meantime, and the timeline showed ours.
         applied(
           await tx.expenseCostAllocation.updateMany({
@@ -176,8 +210,8 @@ export async function POST(
           data: { expenseId: expense.id, type: "COST_CENTER_APPROVED", actorId },
         });
         if (remaining === 0) {
-          // The last signature. The utlägg has to still be waiting for one —
-          // if it was sent back for changes while we were signing, this is not
+          // The last signature. The utlägg has to still be waiting for one.
+          // If it was sent back for changes while we were signing, this is not
           // an utlägg to mark attested.
           applied(
             await tx.expense.updateMany({
@@ -185,12 +219,30 @@ export async function POST(
               data: { status: "APPROVED" },
             }),
           );
+          await notify(tx, "EXPENSE_APPROVED", [expense.submitterId], about("approved"), {
+            exclude: [actorId],
+          });
+          await notify(tx, "EXPENSE_READY_TO_BOOK", bookkeepers, about("readyToBook"), {
+            exclude: [actorId, expense.submitterId],
+          });
           return "APPROVED" as const;
         }
+        // Not the last signature, so only the partial news, and only to
+        // whoever asked for it.
+        await notify(
+          tx,
+          "EXPENSE_COST_CENTER_APPROVED",
+          [expense.submitterId],
+          about("costCenterApproved", {
+            costCenter: mine.map((a) => `${a.costCenter.code} – ${a.costCenter.name}`).join(", "),
+          }),
+          { exclude: [actorId] },
+        );
         return "PENDING_APPROVAL" as const;
       }),
     );
     if (result instanceof NextResponse) return result;
+    deliverSoon();
     return NextResponse.json({ id, status: result });
   }
 
@@ -198,7 +250,7 @@ export async function POST(
   // An approver (in practice a resultatansvarig) can regret: their own
   // allocation approvals are cleared, and if that was the last one holding the
   // expense at APPROVED it drops back to PENDING_APPROVAL. Only their own
-  // signatures are touched — other cost centres keep theirs.
+  // signatures are touched, and other cost centres keep theirs.
   if (action === "withdraw_attest") {
     if (!isAttestWithdrawable(expense.status)) {
       return expense.status === "BOOKED" || expense.status === "EXPORTED"
@@ -208,7 +260,7 @@ export async function POST(
           });
     }
 
-    // Rows this user signed and may still attest — losing the authority (e.g.
+    // Rows this user signed and may still attest. Losing the authority (e.g.
     // handing over the resultatenhet) also ends the right to undo the signature.
     const mine = expense.allocations.filter((a) => a.approvedById === actorId && mayAttest(a));
     if (mine.length === 0) {
@@ -242,11 +294,86 @@ export async function POST(
             comment: comment || null,
           },
         });
+        await notify(tx, "EXPENSE_ATTEST_WITHDRAWN", [expense.submitterId], about("attestWithdrawn"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (withdrawn instanceof NextResponse) return withdrawn;
+    deliverSoon();
 
     return NextResponse.json({ id, status: "PENDING_APPROVAL" });
+  }
+
+  // ── Take your own submission back ─────────────────────────────────────────
+  //
+  // The submitter's counterpart to the attester's `withdraw_attest` above, and a
+  // different act by a different person: that one takes back a signature, this
+  // takes back the whole claim. It exists for the correction no attester can
+  // make on the submitter's behalf: a purchase filed as an eget utlägg that
+  // turns out to have gone on the section card. Changing that means changing the
+  // payment type, and a card purchase needs a bank row matched to it, which may
+  // not have landed yet. So it comes back as a draft: theirs again, editable,
+  // and under no obligation to be finished today.
+  if (action === "recall") {
+    if (!actorIsSubmitter && !isAdmin(actor.capabilities)) {
+      return fail(403, "expense.noRecallAccess");
+    }
+    if (!isRecallable(expense.status)) {
+      // Once it is actually attested it is not the submitter's to pull back:
+      // somebody agreed to it, and undoing that is bookkeeping's call. See
+      // `return_approved` below.
+      return isSigned(expense.status)
+        ? fail(409, "expense.recallAfterApproved")
+        : fail(409, "expense.nothingToRecall", {
+            values: { status: { key: `common.status.${expense.status}` } },
+          });
+    }
+
+    const askedToAttest = await attesters();
+    const recalled = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Every signature on it, not only the ones the actor could see or give.
+        // An attest is a statement about the claim as it stood ("this 420 kr
+        // of Sexmästeriets money was spent privately and should be paid back")
+        // and this action exists precisely to change what it stood for. Carrying
+        // them over would leave a row signed for a claim that no longer says
+        // what was signed.
+        await tx.expenseCostAllocation.updateMany({
+          where: { expenseId: expense.id, approvedById: { not: null } },
+          data: { approvedById: null, approvedAt: null },
+        });
+        // Conditional on the status it was read at: two people pressing at once,
+        // or an attester approving the last row while this was in flight, must
+        // not have this quietly win.
+        applied(
+          await tx.expense.updateMany({
+            where: { id: expense.id, status: "PENDING_APPROVAL" },
+            data: { status: "DRAFT" },
+          }),
+        );
+        // The reference is deliberately kept. It was handed out when the utlägg
+        // was first sent (see `claimReference`, which only draws a number for an
+        // utlägg that has none), so the same claim keeps the same number across
+        // a correction rather than burning a second one out of the year's
+        // sequence, and the timeline underneath it stays one story.
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "RECALLED",
+            actorId,
+            comment: comment || null,
+          },
+        });
+        await notify(tx, "EXPENSE_RECALLED", askedToAttest, about("recalled"), {
+          exclude: [actorId],
+        });
+      }),
+    );
+    if (recalled instanceof NextResponse) return recalled;
+    deliverSoon();
+
+    return NextResponse.json({ id, status: "DRAFT" });
   }
 
   // ── Return a wrongly-approved expense for changes ─────────────────────────
@@ -254,7 +381,7 @@ export async function POST(
   // already-attested expense back to CHANGES_REQUESTED. Clears all allocation
   // approvals so it re-enters the attest flow.
   if (action === "return_approved") {
-    if (!canReturnApproved(actor.roles)) {
+    if (!canReturnApproved(actor.capabilities)) {
       return fail(403, "expense.noReopenAccess");
     }
     if (expense.status !== "APPROVED") {
@@ -283,9 +410,13 @@ export async function POST(
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
         });
+        await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (reopened instanceof NextResponse) return reopened;
+    deliverSoon();
     return NextResponse.json({ id, status: "CHANGES_REQUESTED" });
   }
 
@@ -293,11 +424,11 @@ export async function POST(
   // so the utlägg can be amended and exported again.
   //
   // This only unwinds OUR record. The voucher already exists in Fortnox and is
-  // NOT touched — deleting or reversing it there is a manual job, and skipping
+  // NOT touched. Deleting or reversing it there is a manual job, and skipping
   // it means the next export creates a second voucher for the same utlägg.
   // Hence the required reason and the narrow role gate.
   if (action === "unexport") {
-    if (!canUnexport(actor.roles)) {
+    if (!canUnexport(actor.capabilities)) {
       return fail(403, "expense.noUnexportAccess");
     }
     if (expense.status !== "EXPORTED") {
@@ -308,6 +439,7 @@ export async function POST(
     if (!comment) {
       return fail(422, "expense.commentRequiredUnexport");
     }
+    const bookkeepers = await holdersOf("BOOKKEEPING");
     const reverted = await commit(() =>
       prisma.$transaction(async (tx) => {
         // Still exported when the write lands. Two people undoing the same
@@ -319,7 +451,7 @@ export async function POST(
               status: "BOOKED",
               // The stored utläggsräkning goes with the export it was written
               // for. The whole reason to unexport is to amend the utlägg, and
-              // the cover names the attestations and amounts being amended — so
+              // the cover names the attestations and amounts being amended, so
               // keeping it would have the next export upload a page describing
               // the version before the correction. Cleared, the next export
               // draws a fresh one (lib/expense/document.ts).
@@ -345,29 +477,154 @@ export async function POST(
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "EXPORT_REVERTED", actorId, comment },
         });
+        await notify(tx, "EXPENSE_EXPORT_REVERTED", bookkeepers, about("exportReverted"), {
+          exclude: [actorId],
+        });
       }),
     );
     if (reverted instanceof NextResponse) return reverted;
+    deliverSoon();
     return NextResponse.json({ id, status: "BOOKED" });
   }
 
+  // ── Dispens från redovisningsfristen ──────────────────────────────────────
+  //
+  // An eget utlägg handed in more than REIMBURSEMENT_DEADLINE_DAYS after the
+  // purchase is not reimbursed. This is the section deciding, for this one
+  // claim, to take it anyway.
+  //
+  // Three conditions, and each of them is the rule rather than a convenience:
+  //
+  //   the capability   which is the skattmästare's, and only theirs by default
+  //   a status that has not gone for attest yet, because the deadline stops a
+  //                    late claim from *entering* the queue, so a dispens given
+  //                    afterwards would be permitting what already happened
+  //   an actually late claim, so that a dispens on the record always means
+  //                    something. Granting one on a claim in good time would
+  //                    leave a reason nobody can read back.
+  //
+  // And a reason, required, because "who allowed this and why" is the whole of
+  // what the record is for. The utläggsräkning prints it.
+  if (action === "waive_deadline" || action === "revoke_deadline_waiver") {
+    if (!canWaiveFilingDeadline(actor.capabilities)) {
+      return fail(403, "expense.noWaiveAccess");
+    }
+    if (!SUBMITTABLE_STATUSES.includes(expense.status)) {
+      return fail(409, "expense.waiveOnlyBeforeAttest", {
+        values: { status: { key: `common.status.${expense.status}` } },
+      });
+    }
+
+    if (action === "revoke_deadline_waiver") {
+      if (!expense.deadlineWaivedAt) return fail(422, "expense.noWaiverToRevoke");
+      const revoked = await commit(() =>
+        prisma.$transaction(async (tx) => {
+          // Still waived, and still unsent, when the write lands.
+          applied(
+            await tx.expense.updateMany({
+              where: {
+                id: expense.id,
+                status: { in: SUBMITTABLE_STATUSES },
+                deadlineWaivedAt: { not: null },
+              },
+              data: {
+                deadlineWaivedById: null,
+                deadlineWaivedAt: null,
+                deadlineWaiverReason: null,
+              },
+            }),
+          );
+          await tx.expenseEvent.create({
+            data: {
+              expenseId: expense.id,
+              type: "DEADLINE_WAIVER_REVOKED",
+              actorId,
+              // Optional here, unlike on the grant. Taking a dispens back
+              // returns the utlägg to the rule everybody already knows, and
+              // there is nothing to explain that the rule does not.
+              comment: comment || null,
+            },
+          });
+          await notify(
+            tx,
+            "EXPENSE_DEADLINE_WAIVER_REVOKED",
+            [expense.submitterId],
+            about("waiverRevoked", { days: REIMBURSEMENT_DEADLINE_DAYS }),
+            { exclude: [actorId] },
+          );
+        }),
+      );
+      if (revoked instanceof NextResponse) return revoked;
+      deliverSoon();
+      return NextResponse.json({ id, deadlineWaived: false });
+    }
+
+    // The claim has to be one the deadline actually stops. A draft with no date
+    // yet is not late; it is unfinished, and `isLateReimbursement` says so by
+    // wanting a whole date.
+    const purchaseDate = expense.purchaseDate?.toISOString().slice(0, 10) ?? "";
+    if (!isLateReimbursement(purchaseDate, expense.paymentType)) {
+      return fail(422, "expense.nothingToWaive", {
+        values: { days: REIMBURSEMENT_DEADLINE_DAYS },
+      });
+    }
+    if (!comment) return fail(422, "expense.commentRequiredWaive");
+    if (expense.deadlineWaivedAt) return fail(409, "expense.alreadyWaived");
+
+    const waived = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        // Not yet waived, and not yet sent, when the write lands: two
+        // skattmästare granting at once would otherwise both log a reason and
+        // the second would overwrite the first.
+        applied(
+          await tx.expense.updateMany({
+            where: {
+              id: expense.id,
+              status: { in: SUBMITTABLE_STATUSES },
+              deadlineWaivedAt: null,
+            },
+            data: {
+              deadlineWaivedById: actorId,
+              deadlineWaivedAt: new Date(),
+              deadlineWaiverReason: comment,
+            },
+          }),
+        );
+        await tx.expenseEvent.create({
+          data: {
+            expenseId: expense.id,
+            type: "DEADLINE_WAIVED",
+            actorId,
+            comment,
+          },
+        });
+        await notify(tx, "EXPENSE_DEADLINE_WAIVED", [expense.submitterId], about("waived"), {
+          exclude: [actorId],
+        });
+      }),
+    );
+    if (waived instanceof NextResponse) return waived;
+    deliverSoon();
+    return NextResponse.json({ id, deadlineWaived: true });
+  }
+
   // ── Simple state-machine transitions ──────────────────────────────────────
-  // Whatever is left is one of the two simple transitions — the schema's enum
+  // Whatever is left is one of the two simple transitions. The schema's enum
   // is what says so, and the check that used to answer 400 for an unknown
   // action is gone with it.
-  const rule = SIMPLE_TRANSITIONS[action as SimpleAction];
+  const rule = SIMPLE_TRANSITIONS[action];
   if (!rule.from.includes(expense.status)) {
     return fail(409, "expense.actionNotFromStatus", {
       values: { status: { key: `common.status.${expense.status}` } },
     });
   }
   if (action === "submit") {
-    // Sending an utlägg for attest is the submitter's act — it is their claim,
+    // Sending an utlägg for attest is the submitter's act. It is their claim,
     // and it lands in someone else's queue signed with their name. An admin may
     // do it on their behalf; nobody else may, however complete the utlägg
     // happens to be. Mirrors `mayAct` in lib/domain/expense-capabilities.ts,
     // which is what decides whether the button is offered.
-    if (!actorIsSubmitter && !isAdmin(actor.roles)) {
+    if (!actorIsSubmitter && !isAdmin(actor.capabilities)) {
       return fail(403, "expense.noSubmitAccess");
     }
     // Complete information is required before an expense can go for attest.
@@ -375,7 +632,7 @@ export async function POST(
       return fail(422, "expense.incomplete");
     }
     // A day that hasn't come yet is not a purchase. PATCH refuses to store one,
-    // so this catches the rows that predate that rule — sending one on for
+    // so this catches the rows that predate that rule. Sending one on for
     // attest is exactly where it would stop being the submitter's to fix.
     // Stored as @db.Date, i.e. midnight UTC, so the ISO day is the day meant.
     if (isFutureDate(expense.purchaseDate.toISOString().slice(0, 10))) {
@@ -385,7 +642,13 @@ export async function POST(
     // in more than 60 days after the purchase is not reimbursed, so it never
     // enters anyone's attest queue. A draft that aged past the deadline is
     // stopped here even though PATCH kept letting it be saved.
+    //
+    // Unless it has been given a dispens, which is exactly the moment one is
+    // for: the skattmästare has already decided, on the record and with a
+    // reason, that this late claim may be filed. See the branch below and the
+    // dispens columns on Expense.
     if (
+      !expense.deadlineWaivedAt &&
       isLateReimbursement(
         expense.purchaseDate.toISOString().slice(0, 10),
         expense.paymentType,
@@ -396,9 +659,33 @@ export async function POST(
       });
     }
     // And the underlag it all rests on. The wizard won't let you past the
-    // details without one, but the wizard isn't the only way in here — this is
+    // details without one, but the wizard isn't the only way in here. This is
     // the rule, and that is a convenience on top of it.
-    if (expense.receipts.length === 0) {
+    //
+    // A milersättning has no underlag to upload: nobody photographs driving
+    // their own car, and the journey it rests on is typeset onto the
+    // utläggsräkning instead. So the journey *is* the underlag, and what is
+    // required of it is what Skatteverket asks of one: where it went, and how
+    // far, at a rate the day can be priced at. The readings give the distance,
+    // the stops give the errand, and neither on its own is evidence of a
+    // tjänsteresa. The same answer the form was showing while it was being
+    // filled in, asked again here where it is actually enforced.
+    // See lib/mileage/claim.ts.
+    if (expense.paymentType === "MILEAGE") {
+      const blocker = claimBlocker(
+        {
+          // Whole and not in the future by the two checks above, so the date
+          // this is valued against is the one the claim will be paid on.
+          date: expense.purchaseDate.toISOString().slice(0, 10),
+          odometerStart:
+            expense.odometerStart == null ? null : Number(expense.odometerStart),
+          odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+          stops: expense.journeyStops,
+        },
+        await getMileageRates(),
+      );
+      if (blocker) return fail(422, `mileage.${blocker}`);
+    } else if (expense.receipts.length === 0) {
       return fail(422, "expense.receiptRequired");
     }
     if (expense.paymentType === "CARD" && !expense.matchedTransactionId) {
@@ -408,13 +695,15 @@ export async function POST(
     // again here rather than trusted from when it was set.
     if (
       expense.matchedTransaction &&
-      !cancelsOut(expense.matchedTransaction.amount, expense.grossAmount ?? 0)
+      !cancelsOut(expense.matchedTransaction.amount, expense.grossAmount)
     ) {
       return fail(422, "expense.matchStale");
     }
-    // Reimbursements need the submitter's payout account to pay them back.
+    // Out-of-pocket claims need the submitter's payout account to pay them
+    // back, a milersättning as much as a receipt they paid, since both are
+    // the section owing a member money rather than money it has already spent.
     if (
-      expense.paymentType === "REIMBURSEMENT" &&
+      isOutOfPocket(expense.paymentType) &&
       (!expense.submitter.bankClearingNumber || !expense.submitter.bankAccountNumber)
     ) {
       return fail(422, "expense.payoutRequired");
@@ -436,6 +725,9 @@ export async function POST(
     return fail(422, "expense.commentRequired");
   }
 
+  // Asked before the transaction: it reads the authority tables, which the
+  // transition does not touch.
+  const askedToAttest = action === "submit" ? await attesters() : [];
   const written = await commit(() =>
     withReferenceRetry(() =>
       prisma.$transaction(async (tx) => {
@@ -448,7 +740,7 @@ export async function POST(
         }
         // The number, on the way in. Only on submit, and only once: an utlägg sent
         // back for changes and re-submitted keeps the number it was already known
-        // by — to everyone who has seen it, it is the same utlägg.
+        // by. To everyone who has seen it, it is the same utlägg.
         const reference =
           action === "submit" && expense.reference === null
             ? await claimReference(tx)
@@ -471,11 +763,27 @@ export async function POST(
             comment: comment || null,
           },
         });
+        if (action === "submit") {
+          // With the number it was just given, which is what the attester
+          // will find it under.
+          await notify(
+            tx,
+            "EXPENSE_SUBMITTED",
+            askedToAttest,
+            about("submitted", {}, reference ?? expense.reference),
+            { exclude: [actorId, expense.submitterId] },
+          );
+        } else {
+          await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
+            exclude: [actorId],
+          });
+        }
         return reference ?? expense.reference;
       }),
     ),
   );
   if (written instanceof NextResponse) return written;
+  deliverSoon();
 
   return NextResponse.json({ id, reference: written, status: rule.to });
 }

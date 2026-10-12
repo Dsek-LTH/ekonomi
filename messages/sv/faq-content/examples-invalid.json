@@ -1,0 +1,66 @@
+{
+  "id": "examples-invalid",
+  "label": "Ogiltiga kvitton",
+  "items": [
+    {
+      "id": "ex-order-confirmation",
+      "q": "Orderbekräftelse",
+      "a": [
+        {
+          "t": "p",
+          "v": "Bekräftar att en beställning är lagd, inte att den är betald. Saknar verifikationsnummer och redovisar sällan moms. Begär ett kvitto när varan skickats."
+        },
+        {
+          "t": "image",
+          "file": "invalid-order-confirmation",
+          "alt": "Orderbekräftelse från en webbutik, utan verifikationsnummer och momsuppgifter."
+        }
+      ]
+    },
+    {
+      "id": "ex-no-seller",
+      "q": "Kvitto utan säljaruppgifter",
+      "a": [
+        {
+          "t": "p",
+          "v": "Utan säljarens bolagsnamn, adress och organisationsnummer går motparten inte att fastställa, och då duger kvittot inte som verifikation."
+        },
+        {
+          "t": "image",
+          "file": "invalid-no-seller",
+          "alt": "Kvitto där säljarens namn, adress och organisationsnummer saknas."
+        }
+      ]
+    },
+    {
+      "id": "ex-no-vat",
+      "q": "Kvitto utan moms",
+      "a": [
+        {
+          "t": "p",
+          "v": "Skattesatserna måste framgå. Ett underlag som bara visar totalbeloppet går inte att bokföra. Kortterminalens köpbevis är det vanligaste exemplet."
+        },
+        {
+          "t": "image",
+          "file": "invalid-no-vat",
+          "alt": "Köpbevis från en kortterminal som bara visar totalbeloppet."
+        }
+      ]
+    },
+    {
+      "id": "ex-unreadable",
+      "q": "Suddig eller beskuren bild",
+      "a": [
+        {
+          "t": "p",
+          "v": "Går texten inte att TYDLIGT urskilja, eller är en del av kvittot utanför bild, blir attesteringen nekad. Fota rakt ovanifrån, i bra ljus, med hela kvittot i bild."
+        },
+        {
+          "t": "image",
+          "file": "invalid-unreadable",
+          "alt": "Suddig bild av ett kvitto där nederkanten är utanför bild."
+        }
+      ]
+    }
+  ]
+}

@@ -37,7 +37,7 @@ describe("distributionsFor", () => {
 
   it("keeps a net-negative account rather than dropping it", () => {
     // More refunded than sold against an account. It still has to reach the
-    // voucher — as a debit row — or the voucher would not balance.
+    // voucher (as a debit row) or the voucher would not balance.
     const got = distributionsFor([line({ total: 1300 }), line({ total: -2000 })]);
     expect(got).toEqual([{ account: "3000", description: "Försäljning inom Sverige", total: -700 }]);
   });

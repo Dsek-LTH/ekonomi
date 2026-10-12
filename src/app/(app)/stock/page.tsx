@@ -1,6 +1,6 @@
 import { requirePage } from "@/lib/server/current-user";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
-import { getStockLevels } from "@/lib/data/stock";
+import { getExpiryChecks, getStockLevels } from "@/lib/data/stock";
 import { today } from "@/lib/domain/date";
 import StockClient from "./stock-client";
 
@@ -17,16 +17,22 @@ export default async function StockPage({
   const raw = params.date;
   const asOf = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : undefined;
 
-  const levels = await getStockLevels(asOf);
+  // Which products want somebody to go and read a crate. Always as of today,
+  // whatever date the list is being read at: "what did we hold in April" is a
+  // question about the past, and a check is a thing to do this week.
+  const [levels, checks] = await Promise.all([getStockLevels(asOf), getExpiryChecks()]);
   return (
     <StockClient
       levels={levels}
+      // A plain object rather than the Map the loader returns: this crosses the
+      // server boundary, and a Map does not.
+      checks={Object.fromEntries(checks)}
       asOf={asOf}
       // Settled on the server, so the two renders agree. Computed in the
       // browser it is whatever that machine's clock says, which near midnight
       // is a different day from the one the markup was built with.
       today={today()}
-      canManage={canManageStock(user.roles)}
+      canManage={canManageStock(user.capabilities)}
     />
   );
 }

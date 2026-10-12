@@ -11,11 +11,11 @@
 // Both round-trip back to a live A1 coordinate through this grid. The evaluator
 // (lib/budget/eval.ts) understands both token forms.
 
-import { effectiveKind, type AccountKind } from "@/lib/budget";
+import { effectiveKind } from "@/lib/budget";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-export type ColKind = "konto" | "text" | "number";
+type ColKind = "konto" | "text" | "number";
 
 // The six fixed general-purpose columns between Beskrivning and Belopp.
 export const EXTRA_COLUMN_KEYS = ["x1", "x2", "x3", "x4", "x5", "x6"] as const;
@@ -31,7 +31,7 @@ export interface ColumnDef {
 }
 
 // The fixed layout: Konto, Beskrivning, Belopp. Belopp holds the equation
-// itself (e.g. "=2*TROJA_POLICY"), shown as "2 × TROJA_POLICY = 700" — so the
+// itself (e.g. "=2*TROJA_POLICY"), shown as "2 × TROJA_POLICY = 700", so the
 // old general-purpose breakdown columns (x1…x6) are no longer part of the grid.
 // A built-in's `name` is a key under `budget.col`, resolved by whichever sheet
 // draws the header; a custom column would carry the name someone typed.
@@ -53,8 +53,8 @@ function legacyField(s: string): string {
   return s === "C" ? "quantity" : s === "D" ? "unitPrice" : s === "E" ? "expression" : s;
 }
 
-export interface GridLineItem { id: string }
-export interface GridAccount { id: string; accountCode: string; kindOverride: AccountKind | null; lineItems: GridLineItem[] }
+interface GridLineItem { id: string }
+interface GridAccount { id: string; accountCode: string; lineItems: GridLineItem[] }
 export interface GridSheet { code: string; accounts: GridAccount[] }
 
 type RowKind = "section" | "account" | "line";
@@ -82,8 +82,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
   for (const sheet of sheets) {
     const code = sheet.code;
     let r = 0;
-    const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "INCOME");
-    const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode, a.kindOverride) === "COST");
+    const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "INCOME");
+    const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "COST");
     const emit = (accts: GridAccount[]) => {
       r++; rowAt.set(`${code}|${r}`, { row: r, kind: "section" });
       for (const a of accts) {
@@ -115,8 +115,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
 }
 
 // What a cost-centre code may hold, kept in step with the format the settings
-// screen accepts (POST /api/cost-centers): letters — Å/Ä/Ö included, this is a
-// Swedish chart — digits, underscore and hyphen. A code the settings screen lets
+// screen accepts (POST /api/cost-centers): letters (Å/Ä/Ö included, this is a
+// Swedish chart), digits, underscore and hyphen. A code the settings screen lets
 // someone create has to be nameable in a formula.
 //
 // Two spellings, because the hyphen is only unambiguous in one of them. Inside
@@ -124,7 +124,7 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
 // bare A1 form it cannot: `=SEX01-NARU!C4` is a subtraction far more often than
 // it is a sheet called SEX01-NARU, and reading it as the latter would quietly
 // change what the formula means. So a hyphenated sheet is reachable through
-// `account(…)` and not through A1 — which fails visibly ("fel") rather than
+// `account(…)` and not through A1, which fails visibly ("fel") rather than
 // wrongly.
 const CODE = String.raw`[\p{L}\p{N}_-]+`;
 const A1_CODE = String.raw`[\p{L}\p{N}_]+`;

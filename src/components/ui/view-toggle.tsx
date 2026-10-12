@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/ui/utils";
 
-// "How are these drawn?" — the icon register. See segmented-control.tsx for
+// "How are these drawn?" The icon register. See segmented-control.tsx for
 // the grammar the four switchers share.
 //
 // Icons and no words, deliberately. A view switch is the only one of them
@@ -11,7 +11,7 @@ import { cn } from "@/lib/ui/utils";
 // options are pictures of themselves: a split view looks like a split view.
 //
 // Right-aligned, on the strip immediately above what it redraws.
-export interface ViewOption<T extends string> {
+interface ViewOption<T extends string> {
   value: T;
   /** What it does, for the tooltip and the screen reader. There is no label. */
   label: string;
@@ -36,7 +36,7 @@ export function ViewToggle<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5",
+        "inline-flex items-center gap-0.5 rounded-control border border-border bg-surface p-0.5",
         className,
       )}
     >
@@ -50,14 +50,14 @@ export function ViewToggle<T extends string>({
             role="tab"
             aria-selected={active}
             // The name a screen reader reads, and the one the pointer gets on
-            // hover — without it this is two unlabelled buttons.
+            // hover, without it this is two unlabelled buttons.
             aria-label={opt.label}
             title={opt.label}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex size-7 items-center justify-center rounded-md transition-colors",
+              "flex size-7 items-center justify-center rounded-mark transition-colors",
               active
-                // The selected pill in a track — same reasoning, and the same
+                // The selected pill in a track, same reasoning, and the same
                 // token, as CollectionSwitch. The gutter here is 2px, so a
                 // shadow that leans down has even less room to do it in.
                 ? "bg-background text-foreground shadow-[var(--shadow-pill)]"

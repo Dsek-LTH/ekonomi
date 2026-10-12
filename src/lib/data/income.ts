@@ -1,31 +1,14 @@
 // Reading income: the days, and the fetches that brought them in.
 //
-// Report-first. A batch is provenance — when someone pressed fetch — and the
+// Report-first. A batch is provenance, when someone pressed fetch, and the
 // screens that work with takings work day by day, so the two report queries
-// below are the ones that matter and getIncomeBatches is the history behind
-// them.
+// below are the ones that matter.
 import "server-only";
 
 import { oreToSEK } from "@/lib/domain/money";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import type { IncomeReportStatus, IncomeSource } from "@/lib/domain/types";
-
-/** A batch as the list screen shows it: what was fetched, and how far it got. */
-export interface IncomeBatchSummary {
-  id: string;
-  source: IncomeSource;
-  fromDate: string;
-  toDate: string;
-  filename: string | null;
-  createdAt: string;
-  createdByName: string | null;
-  reportCount: number;
-  /** What the batch's reports come to, in SEK. */
-  total: number;
-  /** Counts per status, so the list can say "12 booked, 3 left" without a second query. */
-  counts: Record<IncomeReportStatus, number>;
-}
 
 // Money here is SEK, not öre: these cross into the browser and are rendered
 // by <Amount>, and the repo's rule is that the database keeps öre and the
@@ -61,7 +44,7 @@ export interface IncomeReportRow {
   /** What the day is called on screen: the result unit's name. */
   unitName: string | null;
   /**
-   * The unit's voucher text — "Sexmästeriets verksamhet". What the verifikation
+   * The unit's voucher text, "Sexmästeriets verksamhet". What the verifikation
    * is called, and therefore how the day is recognised in Fortnox
    * (lib/income/duplicate.ts); the booking screen shows the text it will get.
    */
@@ -73,21 +56,21 @@ export interface IncomeReportRow {
    *
    * The import copies the default onto the report, so normally the two agree.
    * They don't for a day fetched before the committee had a default, or before
-   * someone set one — and those days would otherwise open with the field blank
+   * someone set one, and those days would otherwise open with the field blank
    * and refuse to book, with the answer sitting in the settings all along.
    */
   defaultCostCenterCode: string | null;
   documentFilename: string | null;
-  /** The Fortnox voucher, once exported — e.g. "IR-142". */
+  /** The Fortnox voucher, once exported, e.g. "IR-142". */
   voucherLabel: string | null;
   /**
    * A voucher Fortnox already held for this source, verksamhet and day when the
-   * report was imported — "IR-142". The day is shown and bookable all the same;
+   * report was imported, "IR-142". The day is shown and bookable all the same;
    * this is what colours it as a warning.
    */
   existingVoucher: string | null;
   /**
-   * The same day, already booked here — its voucher label if it has one, else
+   * The same day, already booked here, its voucher label if it has one, else
    * an empty string. Null when there is no such report.
    *
    * Distinct from `existingVoucher`: this one cannot be booked at all, because
@@ -98,7 +81,7 @@ export interface IncomeReportRow {
   batchId: string;
   importedAt: string;
   /**
-   * When the row last changed — moving lines onto or off it, above all.
+   * When the row last changed, moving lines onto or off it, above all.
    *
    * It is in the row because of the document. A draft's intäktsräkning is
    * rendered on the way past and held by the browser for five minutes
@@ -113,61 +96,7 @@ export interface IncomeReportRow {
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
-const emptyCounts = (): Record<IncomeReportStatus, number> => ({
-  DRAFT: 0,
-  BOOKED: 0,
-  EXPORTED: 0,
-});
-
-/**
- * The batches, newest first.
- *
- * The per-status counts come from a groupBy rather than from loading the
- * reports: a term of Swish is a hundred-odd reports per batch, and the list
- * shows none of them.
- */
-export async function getIncomeBatches(limit = 50): Promise<IncomeBatchSummary[]> {
-  const batches = await prisma.incomeBatch.findMany({
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: limit,
-    include: { createdBy: { select: { name: true } } },
-  });
-  if (batches.length === 0) return [];
-
-  const grouped = await prisma.incomeReport.groupBy({
-    by: ["batchId", "status"],
-    where: { batchId: { in: batches.map((b) => b.id) } },
-    _count: { _all: true },
-    _sum: { total: true },
-  });
-
-  const byBatch = new Map<string, { counts: Record<IncomeReportStatus, number>; total: number; n: number }>();
-  for (const row of grouped) {
-    const entry = byBatch.get(row.batchId) ?? { counts: emptyCounts(), total: 0, n: 0 };
-    entry.counts[row.status] = row._count._all;
-    entry.n += row._count._all;
-    entry.total += row._sum.total ?? 0;
-    byBatch.set(row.batchId, entry);
-  }
-
-  return batches.map((b) => {
-    const agg = byBatch.get(b.id) ?? { counts: emptyCounts(), total: 0, n: 0 };
-    return {
-      id: b.id,
-      source: b.source,
-      fromDate: isoDate(b.fromDate),
-      toDate: isoDate(b.toDate),
-      filename: b.filename,
-      createdAt: b.createdAt.toISOString(),
-      createdByName: b.createdBy?.name ?? null,
-      reportCount: agg.n,
-      total: oreToSEK(agg.total),
-      counts: agg.counts,
-    };
-  });
-}
-
-// What a report row is loaded with, wherever it is loaded — the review screen,
+// What a report row is loaded with, wherever it is loaded: the review screen,
 // the booked list, a batch. One include, so the four lists cannot drift into
 // showing subtly different things about the same day.
 const REPORT_INCLUDE = {
@@ -246,13 +175,13 @@ function reportRow(r: LoadedReport): IncomeReportRow {
 
 /**
  * A verksamhet a mis-routed sale can be moved to, and the accounts it books
- * revenue to — see lib/income/move.ts and the move dialog.
+ * revenue to. See lib/income/lines.ts and the move dialog.
  *
  * The accounts are the ones its product prefixes point at, which is the closest
  * thing to "where does this unit's money normally go" the routing table holds.
  * They are offered first in the picker rather than imposed: a unit that sells
  * beer and food has two, and which one a mis-sold line belongs to is not
- * recoverable from the line — intakt strips the prefix off the product name
+ * recoverable from the line. intakt strips the prefix off the product name
  * when it routes, so a line in the fallback never carried one.
  */
 export interface IncomeMoveTarget {
@@ -287,7 +216,7 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
   return units
     .map((u) => {
       // One entry per distinct account, carrying the prefixes that route to it
-      // — "3011 · öl, öl2" says more about what the account is for than its
+      // "3011 – öl, öl2" says more about what the account is for than its
       // name from the chart does.
       const byAccount = new Map<string, string[]>();
       for (const p of u.prefixes) {
@@ -322,7 +251,7 @@ export interface IncomeReviewQueue {
  * The days to go through: everything fetched and not yet booked, oldest first.
  *
  * This is a working set, not a record. A fetch clears it and puts back whatever
- * came in — so what is here is exactly the last fetch, and the only durable
+ * came in, so what is here is exactly the last fetch, and the only durable
  * income state is the booked and exported reports (see createSalesBatch). A
  * day nobody books is simply left here until the next fetch sweeps it away.
  */
@@ -353,8 +282,8 @@ export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
 /**
  * The durable half: every day that has been booked, newest first.
  *
- * The only income state that outlives a fetch. Drafts are scratch — see
- * getIncomeReviewQueue — so this is the section's actual record of what it took
+ * The only income state that outlives a fetch. Drafts are scratch, see
+ * getIncomeReviewQueue, so this is the section's actual record of what it took
  * in, and what has been pushed to Fortnox. A day reopened for correction leaves
  * this list the moment it is unbooked: it is back in the queue, waiting to be
  * booked again like anything else there.

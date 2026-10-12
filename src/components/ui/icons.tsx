@@ -1,4 +1,4 @@
-// Minimal stroke icons (currentColor, 1.6px) — no icon dependency.
+// Minimal stroke icons (currentColor, 1.6px), no icon dependency.
 type P = { className?: string };
 const base = "size-[18px]";
 
@@ -28,8 +28,8 @@ export const IconGrid = (p: P) => (
 );
 
 // The two shapes a list can be drawn in, for the view toggle
-// (components/ui/view-toggle.tsx). Pictures of the layouts themselves — a
-// master–detail split and a table — because the toggle carries no words.
+// (components/ui/view-toggle.tsx). Pictures of the layouts themselves: a
+// master–detail split and a table, because the toggle carries no words.
 export const IconViewSplit = (p: P) => (
   <Svg {...p}>
     <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -58,6 +58,32 @@ export const IconCard = (p: P) => (
   </Svg>
 );
 
+// Eget utlägg: one person, whose own money it was.
+//
+// A wallet and a banknote were both tried first and both are a rounded
+// rectangle, which at 18px is the card above with the details rubbed off. That
+// is the wrong failure: the icon is what carries this when the colour cannot
+// (a printed page, a reader who sees no hue), so its silhouette has to differ
+// from the other two before its detail does. A head and shoulders, a
+// rectangle and a car share no outline at any size.
+export const IconPerson = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M5 20a7 7 0 0 1 14 0" />
+  </Svg>
+);
+
+// Milersättning, the settings screen for it, and nothing else so far. A car
+// from the side: the bonnet line, the body, and the two wheels sitting on it.
+export const IconCar = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 16.5v-4l1.8-4.2A2 2 0 0 1 7.6 7h8.8a2 2 0 0 1 1.8 1.3L20 12.5v4" />
+    <path d="M4 12.5h16" />
+    <circle cx="7.5" cy="16.5" r="1.6" />
+    <circle cx="16.5" cy="16.5" r="1.6" />
+  </Svg>
+);
+
 export const IconPlus = (p: P) => (
   <Svg {...p}>
     <path d="M12 5v14M5 12h14" />
@@ -83,7 +109,7 @@ export const IconUndo = (p: P) => (
   </Svg>
 );
 
-// Two arcs chasing each other round a circle — pull from Fortnox, again. The
+// Two arcs chasing each other round a circle, pull from Fortnox, again. The
 // arcs stop at 140° each so the gaps stay open at 18px; the arrowheads sit
 // astride the stroke rather than capping it, which is what keeps this from
 // reading as a plain ring. Spin it (`animate-spin`) while a sync is running.
@@ -100,6 +126,17 @@ export const IconBook = (p: P) => (
   <Svg {...p}>
     <path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2V5Z" />
     <path d="M4 19a2 2 0 0 0 2 2h12" />
+  </Svg>
+);
+
+// Bookkeeping as a category rather than the ledger itself: two columns of
+// entries either side of a centre rule, the shape debit and kredit share
+// before either has a word on it. Distinct from IconBook, which is the one
+// ledger the group's first link opens.
+export const IconLedger = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M12 3v18M7 9h2M7 14h2M15 9h2M15 14h2" />
   </Svg>
 );
 
@@ -122,8 +159,18 @@ export const IconBox = (p: P) => (
   </Svg>
 );
 
+// The stockroom rather than one crate in it: a roofline over a door, the
+// silhouette a single IconBox does not have. For the group; the crate stays
+// on the item that is actually about one thing on a shelf.
+export const IconWarehouse = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 10 12 4l9 6v10H3V10Z" />
+    <path d="M8 20v-6h8v6" />
+  </Svg>
+);
+
 // A barcode between the corners of a viewfinder. The scanning control, whether
-// or not there is a camera behind it — the same button also takes a code typed
+// or not there is a camera behind it. The same button also takes a code typed
 // in, or fired at the field by a handheld reader.
 export const IconScan = (p: P) => (
   <Svg {...p}>
@@ -134,7 +181,7 @@ export const IconScan = (p: P) => (
 
 // Switching between the cameras a machine has: the lens, and the turn that puts
 // the other one behind it. Drawn as a lens rather than a camera body because at
-// 18px a body with arrows inside it is a smudge — the arrows need the room.
+// 18px a body with arrows inside it is a smudge, and the arrows need the room.
 export const IconCameraFlip = (p: P) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="3.5" />
@@ -145,7 +192,7 @@ export const IconCameraFlip = (p: P) => (
   </Svg>
 );
 
-// An occasion — a night with a date, which is the only thing that identifies
+// An event: a night with a date, which is the only thing that identifies
 // one. The dot is the day it is.
 export const IconCalendar = (p: P) => (
   <Svg {...p}>
@@ -154,16 +201,40 @@ export const IconCalendar = (p: P) => (
   </Svg>
 );
 
-// The log — rows in date order, which is all it ever is.
+// The log: rows in date order, which is all it ever is.
 export const IconList = (p: P) => (
   <Svg {...p}>
     <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
   </Svg>
 );
 
-export const IconBank = (p: P) => (
+// The admin group: a box put away rather than a row on a log. IconList stays
+// on Avtal, the list actually inside it.
+export const IconArchive = (p: P) => (
   <Svg {...p}>
-    <path d="M4 10h16M5 10 12 4l7 6M6 10v8M10 10v8M14 10v8M18 10v8M4 21h16" />
+    <rect x="3" y="3" width="18" height="5" rx="1.5" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 13h4" />
+  </Svg>
+);
+
+// A sheet with a signature on it: the avtal archive, and the one icon in the
+// set that has to say "document somebody put their name to" rather than merely
+// "document". The squiggle is what distinguishes it from IconList.
+export const IconContract = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+    <path d="M13 3v5h5" />
+    <path d="M8.5 17c1-1.5 1.8-2.2 2.4-2.1.7.1.3 1.8 1 2 .6.2 1.2-.7 3.6-.9" />
+  </Svg>
+);
+
+// A key, for the rental group: what actually changes hands when gear goes out
+// the door, rather than the paperwork (IconContract) that says it may.
+export const IconKey = (p: P) => (
+  <Svg {...p}>
+    <circle cx="7" cy="12" r="4" />
+    <path d="M11 12h10M16 12v3.5M19.5 12v3.5" />
   </Svg>
 );
 
@@ -181,7 +252,7 @@ export const IconUpload = (p: P) => (
 );
 
 // An elbow: down out of the line above, then right into this one. It says that
-// a row belongs to the thing over it — a product's variant stepped in under its
+// a row belongs to the thing over it: a product's variant stepped in under its
 // name, a budget line under its account number. A drawing of \variantpil in
 // intakt/assets/intakt.tex, so the sold-lines table and the intäktsräkning
 // beside it mark a grouped row the same way.
@@ -191,7 +262,7 @@ export const IconElbow = (p: P) => (
   </Svg>
 );
 
-// The mirror of IconUpload: bringing something in rather than sending it out —
+// The mirror of IconUpload: bringing something in rather than sending it out,
 // a period fetched from Zettle or Swish.
 export const IconDownload = (p: P) => (
   <Svg {...p}>
@@ -203,6 +274,16 @@ export const IconLink = (p: P) => (
   <Svg {...p}>
     <path d="M10 13a5 5 0 0 0 7.07 0l2-2a5 5 0 0 0-7.07-7.07L10.5 5.5" />
     <path d="M14 11a5 5 0 0 0-7.07 0l-2 2a5 5 0 0 0 7.07 7.07L13.5 18.5" />
+  </Svg>
+);
+
+// A link that leaves the app. The arrow out of the box, which is the one mark
+// people already read as "this opens somewhere else".
+export const IconExternal = (p: P) => (
+  <Svg {...p}>
+    <path d="M14 5h5v5" />
+    <path d="M19 5l-7 7" />
+    <path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
   </Svg>
 );
 
@@ -232,7 +313,7 @@ export const IconSearch = (p: P) => (
 );
 
 // Sliders rather than a funnel. A funnel says "narrow this down", which is the
-// same thing, but the sliders say it while also looking adjustable — and this
+// same thing, but the sliders say it while also looking adjustable, and this
 // one opens a sheet you set things in rather than applying anything itself.
 export const IconFilter = (p: P) => (
   <Svg {...p}>
@@ -253,6 +334,15 @@ export const IconDots = (p: P) => (
   </Svg>
 );
 
+// Swapping one thing for another, the stock sheet's "byt produkt". Two arrows
+// passing, rather than a circular refresh: nothing here is being reloaded, one
+// row is becoming a different product.
+export const IconSwap = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 8h13l-3.2-3.2M20 16H7l3.2 3.2" />
+  </Svg>
+);
+
 export const IconTrash = (p: P) => (
   <Svg {...p}>
     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -266,7 +356,7 @@ export const IconPencil = (p: P) => (
   </Svg>
 );
 
-// Two sheets, the back one offset — the copy action.
+// Two sheets, the back one offset, the copy action.
 export const IconCopy = (p: P) => (
   <Svg {...p}>
     <rect x="9" y="9" width="12" height="12" rx="2" />
@@ -284,7 +374,7 @@ export const IconLock = (p: P) => (
 
 // The same body, but the shackle has swung free: it keeps only its left leg and
 // the loop tilts up and away to the right, ending clear of the body. A shackle
-// that merely stops short reads as the closed one at 18px — the whole silhouette
+// that merely stops short reads as the closed one at 18px. The whole silhouette
 // has to differ, not one leg's length.
 export const IconLockOpen = (p: P) => (
   <Svg {...p}>
@@ -293,9 +383,27 @@ export const IconLockOpen = (p: P) => (
   </Svg>
 );
 
+// A shield, for Roller & behörigheter. Not a lock: a lock is a state something
+// is in (a budget is locked, a voucher is not) and this is standing authority
+// rather than a thing that has been shut. The tick inside says the same as the
+// grid the page is mostly made of.
+export const IconShield = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3l7.5 3v5.5c0 4.3-3 8.2-7.5 9.5-4.5-1.3-7.5-5.2-7.5-9.5V6L12 3Z" />
+    <path d="m9 11.8 2.1 2.1L15 10" />
+  </Svg>
+);
+
 export const IconComment = (p: P) => (
   <Svg {...p}>
     <path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z" />
+  </Svg>
+);
+
+export const IconMail = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
   </Svg>
 );
 
@@ -364,22 +472,8 @@ export const IconMoon = (p: P) => (
   </Svg>
 );
 
-export const IconMonitor = (p: P) => (
-  <Svg {...p}>
-    <rect x="3" y="4" width="18" height="13" rx="2" />
-    <path d="M8 21h8M12 17v4" />
-  </Svg>
-);
-
-export const IconUser = (p: P) => (
-  <Svg {...p}>
-    <circle cx="12" cy="8" r="3.5" />
-    <path d="M5 20a7 7 0 0 1 14 0" />
-  </Svg>
-);
-
-// A second figure standing behind the first: a list of people, where IconUser
-// is the one signed in.
+// A second figure standing behind the first: a list of people, where
+// IconPerson is one of them.
 export const IconUsers = (p: P) => (
   <Svg {...p}>
     <circle cx="9.5" cy="8" r="3.4" />
@@ -389,7 +483,7 @@ export const IconUsers = (p: P) => (
   </Svg>
 );
 
-// One node with two branching under it — a result unit is the parent its cost
+// One node with two branching under it: a result unit is the parent its cost
 // centres hang off, matched by code prefix.
 export const IconHierarchy = (p: P) => (
   <Svg {...p}>
@@ -400,7 +494,7 @@ export const IconHierarchy = (p: P) => (
   </Svg>
 );
 
-// Filled flag icons (not stroke-based) — drawn 3:2 with `slice` so they fill a
+// Filled flag icons (not stroke-based), drawn 3:2 with `slice` so they fill a
 // square/circular frame without distortion. Used by the language switcher.
 export const FlagSE = ({ className }: P) => (
   <svg viewBox="0 0 30 20" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>

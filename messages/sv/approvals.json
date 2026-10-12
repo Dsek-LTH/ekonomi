@@ -1,0 +1,13 @@
+{
+  "title": "Attest",
+  "scopeLabel": "Omfattning",
+  "description": "Utlägg som väntar på attest. Granska att uppgifterna stämmer och signera.",
+  "scope": {
+    "mine": "Mina",
+    "all": "Alla"
+  },
+  "tab": {
+    "pending": "Väntar",
+    "approved": "Attesterade"
+  }
+}

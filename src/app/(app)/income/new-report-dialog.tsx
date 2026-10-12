@@ -3,7 +3,7 @@
 // "Ny rapport": a day for a verksamhet the fetch never made one for.
 //
 // The case it exists for is the one the move dialog beside it cannot reach. A
-// sale rung up without its prefix routes to the fallback — Skattmästeriet — and
+// sale rung up without its prefix routes to the fallback (Skattmästeriet) and
 // moving it out lands it on the destination's report for that day, which
 // `moveIncomeLines` creates if there is none. That covers a stray or two. It
 // does not cover a day where *nothing* was rung up properly: two verksamheter
@@ -13,7 +13,7 @@
 //
 // One question, because there is only one. The day is the group in the queue the
 // button was pressed on, and the payment method is whatever that day's takings
-// came in as — a fetch clears the unbooked working set before storing what it
+// came in as. A fetch clears the unbooked working set before storing what it
 // brought back, so the queue is one fetch and one source, and asking which would
 // be asking someone to read it off the screen and type it back in. Whose takings
 // they are is the part nobody can work out for you, so it starts empty.
@@ -27,7 +27,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/moda
 import { Notice } from "@/components/ui/notice";
 import type { IncomeMoveTarget, IncomeReportRow } from "@/lib/data/income";
 
-/** Zettle or Swish. Never ZETTLE_FEE — see lib/income/draft.ts. */
+/** Zettle or Swish. Never ZETTLE_FEE, see lib/income/draft.ts. */
 export type NewReportSource = "ZETTLE" | "SWISH";
 
 export interface NewReportRequest {
@@ -67,8 +67,8 @@ export function NewReportDialog({
 
   // The verksamhet's report for exactly this source and day, if the queue
   // already holds one. Said before anything is pressed rather than after: the
-  // route hands back the existing report instead of making a second — two
-  // drafts for one day are two reports of which only one could ever be booked —
+  // route hands back the existing report instead of making a second: two
+  // drafts for one day are two reports of which only one could ever be booked,
   // and a button that quietly does something other than what it says is worse
   // than one that says what it is about to do.
   const existing = resultUnitId
@@ -83,7 +83,7 @@ export function NewReportDialog({
       />
 
       <ModalBody>
-        <FieldGroup label={t("unit")} hint={t("unitHint")}>
+        <FieldGroup label={t("unit")} hint={t("unitHint")} requirement="required">
           <Combobox
             options={unitOptions}
             value={resultUnitId}
@@ -96,7 +96,7 @@ export function NewReportDialog({
         {existing && <Notice tone="info">{t("alreadyExists")}</Notice>}
       </ModalBody>
 
-      <ModalFooter>
+      <ModalFooter blocker={resultUnitId ? null : t("unitRequired")}>
         <span className="text-sm text-muted">{t("footerHint")}</span>
         <div className="flex items-center gap-2.5">
           <Button variant="secondary" onClick={onCancel}>

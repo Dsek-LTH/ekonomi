@@ -7,7 +7,7 @@ export default function Loading() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-inset py-4">
           <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-8 w-28 rounded-full" />
+          <Skeleton className="h-8 w-28 rounded-control" />
         </div>
         <SkeletonTable rows={5} columns={5} />
       </Card>

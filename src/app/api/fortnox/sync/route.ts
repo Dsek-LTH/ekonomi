@@ -1,6 +1,6 @@
 // Trigger a Fortnox ledger sync. Body:
 // { scope?: "current" | "all", financialYearId?: number }.
-// Default is "current" (one SIE call — fast, safe for an interactive button).
+// Default is "current" (one SIE call, fast, safe for an interactive button).
 // "all" backfills every financial year and can take a while; prefer the CLI
 // (pnpm fortnox:sync) or the scheduled job for that.
 import { NextResponse } from "next/server";

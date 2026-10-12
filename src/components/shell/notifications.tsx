@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { IconAlert, IconCheck, IconInfo, IconX } from "@/components/ui/icons";
 import { cn, uid } from "@/lib/ui/utils";
@@ -9,22 +10,47 @@ import { cn, uid } from "@/lib/ui/utils";
 // dismissible banners at the top of the page content. Errors persist until
 // dismissed; success/info auto-dismiss after a few seconds. Use via useNotify().
 
-export type NotifyTone = "error" | "success" | "info";
+type NotifyTone = "error" | "success" | "info";
 
-export interface Notification {
+/**
+ * Where the message says to go, as somewhere the reader can actually go.
+ *
+ * A banner that names the next step and cannot take you to it is a dead end,
+ * on a phone especially, where the alternative is dismissing it, finding the
+ * menu and remembering what it said. See `API_ERROR_ACTIONS` in
+ * lib/ui/api-error.ts for which failures carry one.
+ */
+interface NotifyAction {
+  href: string;
+  label: string;
+}
+
+interface Notification {
   id: string;
   tone: NotifyTone;
   title?: string;
   message: string;
+  action?: NotifyAction;
 }
 
+/**
+ * The second argument is the title, as it always was, or an options object when
+ * there is an action as well. A union rather than a required object so that the
+ * twenty-odd `notify.success(msg)` and `notify.success(msg, title)` call sites
+ * stay as they read today. The shape only changes for callers that need more.
+ */
+type NotifyOptions = string | { title?: string; action?: NotifyAction };
+
 interface NotifyApi {
-  error: (message: string, title?: string) => string;
-  success: (message: string, title?: string) => string;
-  info: (message: string, title?: string) => string;
+  error: (message: string, opts?: NotifyOptions) => string;
+  success: (message: string, opts?: NotifyOptions) => string;
+  info: (message: string, opts?: NotifyOptions) => string;
   dismiss: (id: string) => void;
   clear: () => void;
 }
+
+const normalise = (opts?: NotifyOptions) =>
+  typeof opts === "string" ? { title: opts } : (opts ?? {});
 
 const AUTO_DISMISS_MS: Record<NotifyTone, number | null> = {
   // Errors stay until the user dismisses them; positive/neutral messages fade.
@@ -53,9 +79,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const push = useCallback(
-    (tone: NotifyTone, message: string, title?: string) => {
+    (tone: NotifyTone, message: string, opts?: NotifyOptions) => {
       const id = uid();
-      setItems((cur) => [...cur, { id, tone, title, message }]);
+      const { title, action } = normalise(opts);
+      setItems((cur) => [...cur, { id, tone, title, message, action }]);
       const ms = AUTO_DISMISS_MS[tone];
       if (ms != null) {
         timers.current.set(
@@ -70,9 +97,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const api = useMemo<NotifyApi>(
     () => ({
-      error: (message, title) => push("error", message, title),
-      success: (message, title) => push("success", message, title),
-      info: (message, title) => push("info", message, title),
+      error: (message, opts) => push("error", message, opts),
+      success: (message, opts) => push("success", message, opts),
+      info: (message, opts) => push("info", message, opts),
       dismiss,
       clear: () => setItems([]),
     }),
@@ -97,7 +124,7 @@ export function useNotify(): NotifyApi {
 // Backgrounds are deliberately translucent: the banners float over the page and
 // blur what's behind them, which only reads as blur if some of it shows through.
 //
-// Written as color-mix rather than the `/85` opacity modifier on purpose — that
+// Written as color-mix rather than the `/85` opacity modifier on purpose. That
 // modifier resolves the theme colour at build time and bakes in the light-theme
 // hex, so the banners would keep their light background in dark mode.
 const TONE_STYLE: Record<NotifyTone, { wrap: string; icon: React.ReactNode }> = {
@@ -131,7 +158,7 @@ export function NotificationBanners() {
     // banners; each banner takes it back for its own close button.
     // Above the dialogs, not below them. A toast reports what just happened,
     // and what just happened is usually the thing somebody pressed in a dialog
-    // — at z-60 the answer to "save this product" appeared behind the form
+    // At z-60 the answer to "save this product" appeared behind the form
     // that asked. Modals sit at 200 and a combobox's menu at 210, so this
     // clears both.
     <div className="pointer-events-none fixed inset-x-0 top-[4.25rem] z-[220] flex justify-center px-4 md:top-6">
@@ -143,7 +170,7 @@ export function NotificationBanners() {
               key={n.id}
               role={n.tone === "error" ? "alert" : "status"}
               className={cn(
-                "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-md",
+                "pointer-events-auto flex items-start gap-3 rounded-panel border px-4 py-3 text-sm shadow-lg backdrop-blur-md",
                 t.wrap,
               )}
             >
@@ -151,12 +178,27 @@ export function NotificationBanners() {
               <div className="min-w-0 flex-1 leading-snug">
                 {n.title && <p className="font-semibold">{n.title}</p>}
                 <p className={cn(n.title && "text-foreground/80")}>{n.message}</p>
+                {/* A button rather than the whole banner as one link: the
+                    banner already owns a close button, and nesting one control
+                    inside another is neither valid nor operable by keyboard.
+                    Dismissed on the way out: arriving at the page the message
+                    asked for, with the message still on top of it, reads as the
+                    navigation having failed. */}
+                {n.action && (
+                  <Link
+                    href={n.action.href}
+                    onClick={() => list.dismiss(n.id)}
+                    className="mt-2 inline-flex h-7 items-center rounded-control border border-current/30 px-2.5 text-xs font-medium transition hover:bg-current/10"
+                  >
+                    {n.action.label}
+                  </Link>
+                )}
               </div>
               <button
                 type="button"
                 onClick={() => list.dismiss(n.id)}
                 aria-label={tCommon("close")}
-                className="-mr-1 -mt-0.5 rounded-md p-1 opacity-70 transition hover:opacity-100"
+                className="-mr-1 -mt-0.5 rounded-control p-1 opacity-70 transition hover:opacity-100"
               >
                 <IconX className="size-4" />
               </button>

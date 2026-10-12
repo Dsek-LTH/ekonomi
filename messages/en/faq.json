@@ -1,0 +1,11 @@
+{
+  "categories": "Categories",
+  "title": "Questions & answers",
+  "searchPlaceholder": "Search the questions…",
+  "all": "All",
+  "matches": "{count, plural, =0 {No matches} =1 {# match} other {# matches}}",
+  "noMatchTitle": "No questions match your search",
+  "noMatchDescription": "Try another word, or ask the treasury if the answer isn't here.",
+  "openFull": "Open the photo full size",
+  "imageMissing": "Photo missing"
+}

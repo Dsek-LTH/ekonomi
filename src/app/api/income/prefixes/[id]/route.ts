@@ -25,7 +25,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const updated = await orNotFound(
     () =>
       prisma.$transaction(async (tx) => {
-        // Moving the fallback flag rather than colliding with it — see the
+        // Moving the fallback flag rather than colliding with it, see the
         // create route for why this is a transaction.
         if (isFallback) {
           await tx.incomeProductPrefix.updateMany({

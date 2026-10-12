@@ -1,0 +1,29 @@
+{
+  "greeting": "Hej {name} 💅",
+  "queueTitle": "Väntar på dig",
+  "queueEmpty": "Inget väntar på dig just nu.",
+  "mineTitle": "Dina utlägg",
+  "mineEmpty": "Du har inga utlägg än.",
+  "allExpenses": "Alla utlägg",
+  "actionHeader": "Åtgärd",
+  "action": {
+    "FIX": "Åtgärda",
+    "SUBMIT": "Skicka in",
+    "ATTEST": "Attestera",
+    "BOOK": "Bokför",
+    "EXPORT": "Exportera"
+  },
+  "firstRun": {
+    "title": "Så funkar ett utlägg",
+    "lead": "Har du lagt ut egna pengar för sektionen, eller handlat med ett sektionskort? Det är här du får tillbaka dem.",
+    "step1Title": "Fota kvittot",
+    "step1Body": "Ladda upp kvittot och fyll i vad köpet gällde och vilket kostnadsställe det hör till.",
+    "step2Title": "Den resultatansvariga attesterar",
+    "step2Body": "Den som ansvarar för kostnadsstället godkänner utlägget. Du ser hela tiden var det ligger och vem det väntar på.",
+    "step3Title": "Skattmästeriet bokför",
+    "step3Body": "Utlägget blir en verifikation och exporteras till Fortnox.",
+    "step4Title": "Pengarna kommer",
+    "step4Body": "Utbetalning till ditt konto. Lägg in clearing- och kontonummer under Min profil, annars fastnar utlägget där.",
+    "cta": "Skapa ditt första utlägg"
+  }
+}

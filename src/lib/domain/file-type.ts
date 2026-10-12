@@ -3,24 +3,27 @@
 // A multipart upload carries a Content-Type, and it is worth exactly nothing:
 // it is a field the client fills in, not a fact about the bytes. Accepting a
 // receipt on that basis means anything at all can be stored under a type we
-// later hand back to a browser — so the type the app records is the one read
+// later hand back to a browser, so the type the app records is the one read
 // out of the file itself, and a file whose bytes say nothing recognisable is
 // not a receipt.
 //
 // Pure and byte-level on purpose: it belongs beside the other rules rather than
 // in lib/server, and it is the sort of thing worth having tests for.
 
-/** The formats a receipt may be. Everything else is refused. */
-export const RECEIPT_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-  "application/pdf",
-] as const;
-
-export type ReceiptType = (typeof RECEIPT_TYPES)[number];
+/**
+ * The formats a receipt may be. Everything else is refused.
+ *
+ * A union rather than a runtime array: nothing iterates the list, and every
+ * member is spelled out again in the sniffing below, which is where a format is
+ * actually recognised. An array would be a second list to keep in step.
+ */
+type ReceiptType =
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp"
+  | "image/heic"
+  | "image/heif"
+  | "application/pdf";
 
 /** Bytes needed to recognise any of the formats above (HEIC's brand ends at 12). */
 export const SNIFF_BYTES = 12;

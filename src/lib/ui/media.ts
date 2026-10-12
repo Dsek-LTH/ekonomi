@@ -5,7 +5,7 @@
 //
 // Almost everything responsive in this app is a Tailwind variant, and should
 // stay that way: a `md:` class costs one render and works before hydration. But
-// a `<table>` cannot be made narrow with classes alone — its widths live in a
+// a `<table>` cannot be made narrow with classes alone. Its widths live in a
 // `<colgroup>`, and hiding a `<td>` with `display:none` shifts every cell after
 // it into the wrong column. The budget sheet is where that bites, so it asks
 // here instead.

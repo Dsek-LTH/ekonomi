@@ -2,7 +2,7 @@
 -- own, carrying its own copy of the year it used to share with its siblings.
 --
 -- Each revision keeps its id, so every link into it (its URL, its cost centres,
--- its variables) still lands where it did — only what it hangs off changes.
+-- its variables) still lands where it did. Only what it hangs off changes.
 --
 -- Order matters throughout: the cost centres and variables must be repointed at
 -- their new budget BEFORE the old container rows are deleted. Deleting a
@@ -23,7 +23,7 @@ SELECT r."id", b."year", r."createdAt", r."name", r."createdById", r."lockedAt",
   JOIN "Budget" b ON b."id" = r."budgetId";
 
 -- 3. Variables and cost centres already hold a revision id, which is now also a
---    budget id — so the column is renamed and its foreign key re-aimed, rather
+--    budget id, so the column is renamed and its foreign key re-aimed, rather
 --    than the rows being rewritten.
 ALTER TABLE "BudgetVariable" DROP CONSTRAINT "BudgetVariable_revisionId_fkey";
 ALTER TABLE "BudgetCostCenter" DROP CONSTRAINT "BudgetCostCenter_revisionId_fkey";

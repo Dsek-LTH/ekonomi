@@ -1,0 +1,79 @@
+{
+  "newTitle": "Ny milersättning",
+  "description": "Ärende",
+  "descriptionHint": "Vad resan gällde, t.ex. \"Hämta sponsorpaket i Malmö\".",
+  "step": {
+    "journey": "Resan"
+  },
+  "journeyDate": "Resdag",
+  "dateFuture": "Resan ligger i framtiden. Rätta datumet till dagen du körde.",
+  "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan. Du kan ansöka om dispens: skriv klart resan, spara den som utkast och hör av dig till skattmästaren, som avgör om den tas emot ändå.",
+  "route": {
+    "label": "Resväg",
+    "hint": "Varje ställe du stannade på, i tur och ordning. Ort eller namn räcker, t.ex. \"E-huset\" och \"Snabbgross\". Kom du tillbaka dit du startade skriver du det stället sist också, annars beskriver resvägen bara halva sträckan mätaren visar.",
+    "stop": "Stopp {n}",
+    "firstPlaceholder": "Varifrån du åkte",
+    "nextPlaceholder": "Nästa ställe du stannade på",
+    "addStop": "Lägg till stopp",
+    "addReturn": "Lägg till resan tillbaka",
+    "removeStop": "Ta bort stoppet"
+  },
+  "odometer": {
+    "label": "Mätarställning",
+    "hint": "Totalmätaren, alltså bilens sammanlagda körsträcka, inte trippmätaren. Vad den stod på när du satte dig i bilen och när du klev ur. Sträckan är skillnaden.",
+    "start": "Vid start",
+    "end": "Vid slut"
+  },
+  "total": "Ersättning",
+  "sum": "{km} km – {rate} kr/km",
+  "distance": "Sträcka",
+  "km": "{km} km",
+  "otherType": "Gällde det något annat?",
+  "otherTypeLink": "Gör ett vanligt utlägg i stället",
+  "deadlineHint": "Milersättning redovisas inom {days} dagar från resan.",
+  "perJourneyHint": "Körde du flera gånger gör du en milersättning per resa.",
+  "documentName": "Utläggsräkning",
+  "documentTitle": "Utläggsräkningen",
+  "documentPending": "Utläggsräkningen ritas när utlägget sparats. Resan står på den, och det är den som följer med till bokföringen.",
+  "editTitle": "Ändra milersättning {id}",
+  "editTitleDraft": "Ändra milersättning",
+  "blocker": {
+    "noReadings": "Fyll i mätarställningen både före och efter resan.",
+    "notForward": "Mätarställningen efter resan måste vara högre än före. Kontrollera att siffrorna står i rätt ordning.",
+    "noRate": "Det finns ingen fastställd ersättning per kilometer för resdagen. Hör av dig till skattmästaren.",
+    "noRoute": "Fyll i minst två ställen du stannade på. Mätarställningen visar hur långt bilen gick, men inte att resan var sektionens ärende."
+  },
+  "rates": {
+    "title": "Milersättning",
+    "current": "Gäller nu",
+    "col": {
+      "validFrom": "Gäller från",
+      "rate": "Ersättning",
+      "note": "Anteckning",
+      "createdBy": "Infört av"
+    },
+    "perKm": "{amount} kr/km",
+    "perMil": "{amount} kr/mil",
+    "new": "Ny ersättning",
+    "editTitle": "Ändra ersättning",
+    "newTitle": "Ny ersättning",
+    "validFrom": "Gäller från",
+    "rate": "Kronor per mil",
+    "rateHint": "Skatteverkets schablon är 25 kr/mil. Lagras som öre per kilometer.",
+    "note": "Anteckning",
+    "notePlaceholder": "T.ex. \"Skatteverkets schablon 2026\"",
+    "save": "Spara",
+    "saved": "Ersättningen sparad",
+    "saveFailed": "Ersättningen kunde inte sparas",
+    "remove": "Ta bort",
+    "removed": "Ersättningen borttagen",
+    "removeFailed": "Ersättningen kunde inte tas bort",
+    "removeTitle": "Ta bort ersättningen?",
+    "removeDescription": "Resor som redan räknats med den behåller sitt belopp. Nya resor på de datumen får den ersättning som gällde innan.",
+    "empty": "Ingen ersättning är fastställd ännu. Utan en kan inga milersättningar skickas in.",
+    "since": "Gäller sedan {date}",
+    "from": "Från {date}",
+    "showEarlier": "Visa tidigare ({count})",
+    "hideEarlier": "Dölj tidigare"
+  }
+}

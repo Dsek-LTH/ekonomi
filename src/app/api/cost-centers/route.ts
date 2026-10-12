@@ -1,4 +1,4 @@
-// Create a local cost centre — one this app owns rather than mirrors from
+// Create a local cost centre: one this app owns rather than mirrors from
 // Fortnox. See CostCenterSource in the schema for why they exist.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";

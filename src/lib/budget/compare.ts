@@ -1,6 +1,6 @@
 // Holding budgets up against each other.
 //
-// Budgets are independent (see Budget in schema.prisma) — no budget knows that
+// Budgets are independent (see Budget in schema.prisma). No budget knows that
 // another exists, and none of them shares a row, a sheet or an id. What makes
 // them comparable is that their contents mean the same thing everywhere: cost
 // centre SEX02 is SEX02 in every year, account 4010 is account 4010, and a row
@@ -10,15 +10,15 @@
 // It is an outer join at every level: a sheet, an account or a row that only one
 // side has is kept, with nothing on the other side. Dropping it would quietly
 // answer "what changed?" with "nothing" in exactly the case where the answer is
-// "all of it" — a cost centre that was dropped, an account that is new this year.
+// "all of it", a cost centre that was dropped, an account that is new this year.
 //
 // Any number of sides can be joined at once, so the same code serves the two
 // columns in the budget view and the n columns of /budget/compare.
 import { effectiveKind, sheetKey, sheetName, type AccountKind } from "@/lib/budget";
 
 /** One row, with its figure on this side. */
-export interface CompareLine {
-  key: string; // what it is matched on — see lineKeys
+interface CompareLine {
+  key: string; // what it is matched on, see lineKeys
   description: string;
   value: number | undefined; // öre
 }
@@ -32,7 +32,7 @@ export interface CompareAccount {
 }
 
 export interface CompareSheet {
-  key: string; // what it is matched on — see compareKey
+  key: string; // what it is matched on, see compareKey
   name: string;
   resultUnit: string | null;
   accounts: CompareAccount[];
@@ -41,9 +41,9 @@ export interface CompareSheet {
 /** One side of a comparison: a budget, or a year's outcome from the ledger. */
 export interface Snapshot {
   id: string;
-  label: string; // the column heading, e.g. "2025 · Ursprunglig" or "Utfall 2026"
+  label: string; // the column heading, e.g. "2025 – Ursprunglig" or "Utfall 2026"
   sheets: CompareSheet[];
-  /** Variables are not money — see the units note in lib/budget/eval.ts. */
+  /** Variables are not money. See the units note in lib/budget/eval.ts. */
   vars: Record<string, number>;
 }
 
@@ -54,12 +54,12 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 /**
  * What a sheet is matched on across budgets.
  *
- * A linked sheet is its cost-centre code — the one thing that means the same in
+ * A linked sheet is its cost-centre code, the one thing that means the same in
  * every budget of every year. A detached sheet (schema.prisma: BudgetCostCenter)
  * has no code, so it is matched on its label: copy a budget and its detached
  * sheets keep their names, which is the only reason to think two of them are the
  * same sheet. An unnamed one falls back to its own id and so matches nothing,
- * which is the honest answer — there is nothing to recognise it by.
+ * which is the honest answer. There is nothing to recognise it by.
  *
  * Note this is NOT `sheetKey` from lib/budget: that one keys the evaluator, and
  * has to keep two detached sheets apart *within* one budget even when they are
@@ -76,8 +76,8 @@ export function compareKey(cc: {
 }
 
 /**
- * What each row of an account is matched on: its description, and — when an
- * account holds several rows with the same description — which of them it is.
+ * What each row of an account is matched on: its description, and, when an
+ * account holds several rows with the same description, which of them it is.
  * Takes the whole account at once, since the n-th "Övrigt" can only be known in
  * the context of the rest.
  */
@@ -92,15 +92,24 @@ export function lineKeys(lines: { description: string }[]): string[] {
 }
 
 /**
- * How a budget names itself as a column: "2026 · Ursprunglig". Several budgets
- * share a year, so the year alone doesn't identify one — and inside a
+ * How a budget names itself as a column: "2026 – Ursprunglig". Several budgets
+ * share a year, so the year alone doesn't identify one, and inside a
  * comparison the year is the first thing you look for, so it leads.
  *
  * Here rather than beside either screen that uses it: the budget view and the
  * compare page must label the same budget the same way, and one of them is a
  * Server Component.
  */
-export const budgetLabel = (b: { year: number; name: string }) => `${b.year} · ${b.name}`;
+// What a budget is called in a picker: the financial year it is held against,
+// then its own name.
+//
+// Deliberately NOT the day it was adopted, though a budget carries one. A
+// year's ordinary budget is passed before that year begins, the 2026 budget at
+// a möte in late 2025, so leading with the adoption date would file it on
+// screen under the wrong year, and the year is the half that decides which
+// ledger the figures are compared against. The adoption date is shown where it
+// answers a different question: the list's own column, and the budget page.
+export const budgetLabel = (b: { year: number; name: string }) => `${b.year} – ${b.name}`;
 
 // The shape both the budget view and the compare page already hold: the API
 // payload for one budget. Declared structurally so neither has to convert.
@@ -113,7 +122,6 @@ interface BudgetLike {
     accounts: {
       accountCode: string;
       accountName: string;
-      kindOverride: AccountKind | null;
       lineItems: { id: string; description: string }[];
     }[];
   }[];
@@ -140,7 +148,7 @@ export function snapshotOf(budget: BudgetLike, label: string): Snapshot {
         return {
           code: a.accountCode,
           name: a.accountName,
-          kind: effectiveKind(a.accountCode, a.kindOverride),
+          kind: effectiveKind(a.accountCode),
           total: budget.evaluated.accounts[`${sheetKey(cc)}:${a.accountCode}`],
           lines: a.lineItems.map((li, j) => ({
             key: keys[j],
@@ -153,7 +161,7 @@ export function snapshotOf(budget: BudgetLike, label: string): Snapshot {
   };
 }
 
-export interface JoinedLine {
+interface JoinedLine {
   key: string;
   description: string;
   /** One per side, in the order they were joined. `undefined` = that side has no such row. */
@@ -173,7 +181,7 @@ export interface JoinedSheet {
   name: string;
   resultUnit: string | null;
   accounts: JoinedAccount[];
-  /** Whether each side has this sheet at all — a sheet may exist and total zero. */
+  /** Whether each side has this sheet at all. A sheet may exist and total zero. */
   present: boolean[];
 }
 

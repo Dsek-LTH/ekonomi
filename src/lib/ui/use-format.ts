@@ -24,4 +24,3 @@ export function useFormat() {
   );
 }
 
-export type Format = ReturnType<typeof useFormat>;

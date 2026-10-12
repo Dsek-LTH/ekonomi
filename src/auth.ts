@@ -1,13 +1,16 @@
 // Auth.js (NextAuth v5) configuration. JWT sessions; sign-in goes through the
-// guild's Authentik (auth.dsek.se), which is also where Google sits — federated
+// guild's Authentik (auth.dsek.se), which is also where Google sits, federated
 // upstream, so this app never sees a Google client. Same arrangement as the
 // guild's own web app (Dsek-LTH/web, src/hooks.server.ts): one identity
 // provider, one place a mandate is granted or revoked.
 //
 // The Authentik identity is mapped onto our own User row, keyed on the student
-// id (`preferred_username`). Roles are derived from the Authentik group list
-// (lib/server/authentik-roles.ts) and written to that row — the row, not the
-// token, is what every authority question is answered from.
+// id (`preferred_username`). Roles, and the result units a person answers for,
+// are derived from the Authentik group list (lib/server/authentik-roles.ts)
+// and written to that row: the row, not the token, is what every authority
+// question is answered from. That happens at sign-in and only at sign-in, which
+// is what fixes the length of a session. See `session` below, which is the
+// comment to read before adding anything to this token.
 //
 // A dev-only credentials provider signs in as a seeded user without reaching
 // Authentik at all.
@@ -17,38 +20,42 @@ import Credentials from "next-auth/providers/credentials";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/server/db";
 import { serverEnv } from "@/lib/server/env";
-import { rolesFromGroups, sameRoles } from "@/lib/server/authentik-roles";
-import type { Role } from "@/lib/domain/types";
+import { grantsFromGroups, sectionGroups } from "@/lib/server/authentik-roles";
 
 /**
  * The claims this app puts on the session token, on top of the standard ones.
  *
  * A local type rather than a module augmentation: `next-auth/jwt` re-exports
  * its JWT interface from `@auth/core/jwt`, which is not a package we depend on
- * directly, and an augmentation of the re-export merges into nothing — the
+ * directly, and an augmentation of the re-export merges into nothing, so the
  * fields quietly stay `unknown`. This is the only file that reads them.
  *
  * Note what is not here: the roles. The token says who signed in; the database
  * says what they may do (lib/server/current-user.ts).
+ *
+ * Note what is also not here any more: a refresh token, an expiry to compare it
+ * against, and an error to report when the trade failed. Nothing mutable can
+ * live in this token, for the reason set out above `session` below, so what is
+ * left is what was true at sign-in and will still be true when the session ends.
  */
 type AppToken = {
-  /** Our User.id — the only identity claim the app acts on. */
+  /** Our User.id, the only identity claim the app acts on. */
   uid?: string;
   studentId?: string;
   name?: string | null;
   email?: string | null;
-  /** Which provider signed this in; only "authentik" tokens are refreshable. */
-  provider?: string;
-  refresh_token?: string;
-  /** Unix seconds. Absent for a dev sign-in, which has nothing to refresh. */
-  expires_at?: number;
-  error?: string;
 };
 
 // `offline_access` is what gets us a refresh token, and `splitname` is what
 // makes Authentik send given_name/family_name separately. Both are the guild's
-// scopes, verbatim — an app asking for less would get a profile shaped
+// scopes, verbatim. An app asking for less would get a profile shaped
 // differently from the one their code documents.
+//
+// The refresh token that first scope buys is no longer stored or spent (see
+// `session` below). Kept anyway: dropping it is a change to what we ask the
+// section's identity provider for, against a client registration shared with
+// the guild's own app, and it buys nothing here. It is one word to remove the
+// day nobody is going to want it back.
 const SCOPE = "openid profile email offline_access splitname";
 
 /**
@@ -56,7 +63,7 @@ const SCOPE = "openid profile email offline_access splitname";
  *
  * That is the form Authentik puts in its own discovery document (`"issuer":
  * "https://auth.dsek.se/application/o/dev/"`), and oauth4webapi compares the
- * two as strings — an issuer stripped of its slash fails discovery with
+ * two as strings, and an issuer stripped of its slash fails discovery with
  * "response body issuer property does not match the expected value", before the
  * browser is ever redirected. Normalised rather than taken verbatim, so a value
  * copied without the slash works too; the well-known path is appended
@@ -72,7 +79,7 @@ const providers: NextAuthConfig["providers"] = [
     authorization: { params: { scope: SCOPE } },
     // Everything downstream reads these names, so the mapping happens once,
     // here. `name` is joined from the split parts because our User has one
-    // name column — the split is Authentik's shape, not ours.
+    // name column, and the split is Authentik's shape, not ours.
     profile: (profile: AuthentikProfile) => ({
       id: profile.sub,
       studentId: profile.preferred_username,
@@ -123,7 +130,7 @@ if (process.env.NODE_ENV !== "production") {
 // Next's dev server reports `request.url` with the origin it bound to
 // (localhost:3000), whatever Host the client actually sent. Auth.js takes its
 // baseUrl from that URL, so a sign-in from a phone on the LAN gets its callback
-// rewritten to localhost — which on the phone is the phone. Trust the real
+// rewritten to localhost, which on the phone is the phone. Trust the real
 // request host instead. Dev-only: in production the deployment's own origin is
 // what baseUrl already resolves to, and honouring a client-supplied host there
 // would be an open-redirect vector.
@@ -143,11 +150,18 @@ async function requestOrigin(baseUrl: string): Promise<string> {
  * The User row behind an Authentik identity, created on first sign-in and kept
  * in step on every one after.
  *
- * Roles are overwritten from the group list, deliberately: Authentik is the
- * register of who holds which post, so a mandate that ended there has ended
- * here by the holder's next sign-in without anybody remembering to do it. The
- * consequence is that roles are not editable in this app at all — the place to
- * change one is Authentik.
+ * Roles and result units are overwritten from the group list, deliberately:
+ * Authentik is the register of who holds which post, so a mandate that ended
+ * there has ended here by the holder's next sign-in without anybody
+ * remembering to do it. The consequence is that neither is editable in this app
+ * at all. The place to change who holds a post is Authentik. What a post
+ * *confers* is editable, in Inställningar → Roller, and is what the derivation
+ * this calls reads (lib/server/authentik-roles.ts).
+ *
+ * The group list itself is stored alongside them, filtered to the section's own
+ * groups. It is not authority and nothing gates on it. It is the evidence the
+ * two columns beside it were derived from, kept so that an edit to the mapping
+ * can re-derive this person without waiting for them to come back.
  */
 async function syncAuthentikUser(identity: {
   studentId: string;
@@ -157,7 +171,11 @@ async function syncAuthentikUser(identity: {
 }) {
   const studentId = identity.studentId.toLowerCase();
   const email = identity.email.toLowerCase();
-  const rest = { name: identity.name, roles: rolesFromGroups(identity.groups) };
+  const rest = {
+    name: identity.name,
+    authentikGroups: sectionGroups(identity.groups),
+    ...(await grantsFromGroups(identity.groups)),
+  };
 
   try {
     return await prisma.user.upsert({
@@ -166,7 +184,7 @@ async function syncAuthentikUser(identity: {
       update: { email, ...rest },
     });
   } catch (err) {
-    // The one thing worth recovering from here is the unique index on email —
+    // The one thing worth recovering from here is the unique index on email:
     // someone else's row still holds the address this person now uses (a
     // handover of a functionary address, most often). That is a data problem
     // for an admin to sort out, and no reason to refuse the sign-in: keep the
@@ -182,117 +200,55 @@ async function syncAuthentikUser(identity: {
   }
 }
 
-/** Re-derive roles after a token refresh, writing only when they changed. */
-async function refreshRoles(userId: string, groups: readonly string[]) {
-  const roles = rolesFromGroups(groups);
-  const current = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { roles: true },
-  });
-  if (!current || sameRoles(current.roles as Role[], roles)) return;
-  await prisma.user.update({ where: { id: userId }, data: { roles } });
-}
-
-/** The `groups` claim of an Authentik access token, or undefined if unreadable. */
-function groupsInAccessToken(accessToken: unknown): string[] | undefined {
-  if (typeof accessToken !== "string") return undefined;
-  const payload = accessToken.split(".")[1];
-  if (!payload) return undefined; // opaque token — not every provider signs JWTs
-  try {
-    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
-    return Array.isArray(claims.groups) ? (claims.groups as string[]) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 /**
- * Authentik's token endpoint, taken from its discovery document.
+ * How long a sign-in lasts, absolutely. Not from the last request, from the
+ * sign-in itself. There is no rolling window available to us: extending one
+ * means writing the cookie again, and see below for why we cannot.
  *
- * Asked for rather than derived: the endpoint is not under the application's
- * issuer (Authentik serves one `/application/o/token/` per instance while each
- * application has its own `/application/o/<slug>/`), so assembling the URL by
- * hand means encoding a guess about a layout no spec promises — and a guess
- * needs an override for when it is wrong. The provider publishes the answer,
- * and Auth.js fetches this same document on every sign-in anyway.
- *
- * The promise is memoised, not the string: the document is static, and holding
- * the in-flight promise means concurrent refreshes make one request between
- * them. A failed lookup is not cached — that would turn one bad moment into a
- * process that can never refresh a token again.
+ * A day, because it is also the freshness of every mandate in the app. Grants
+ * are re-derived from Authentik's group list at sign-in and nowhere else, so
+ * this number is the longest a post revoked in Authentik keeps working here.
+ * Thirty days, the Auth.js default this replaces, was a month, which for an
+ * app that moves the section's money is not a number anybody would have chosen
+ * on purpose.
  */
-let discovery: Promise<string> | undefined;
-function tokenEndpoint(): Promise<string> {
-  return (discovery ??= (async () => {
-    try {
-      const res = await fetch(new URL(".well-known/openid-configuration", ISSUER));
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const doc = await res.json();
-      if (typeof doc?.token_endpoint !== "string") {
-        throw new Error("discovery-dokumentet saknar token_endpoint");
-      }
-      return doc.token_endpoint;
-    } catch (err) {
-      discovery = undefined;
-      throw err;
-    }
-  })());
-}
-
-/**
- * Trade the refresh token for a new access token, and take the group list that
- * comes back — which is the point of doing it at all. Our access token opens
- * nothing; refreshing is how a mandate granted or revoked in Authentik reaches
- * this app within the hour instead of at the holder's next sign-in.
- *
- * On failure the session is marked errored rather than silently kept: a
- * refresh that stopped working usually means the session was revoked at the
- * other end, and continuing to honour it would be the app disagreeing with
- * Authentik about whether someone is still signed in.
- */
-async function refreshAccessToken<T extends AppToken>(token: T): Promise<T> {
-  if (!token.refresh_token) return { ...token, error: "RefreshTokenError" };
-
-  try {
-    const secret = serverEnv("AUTH_AUTHENTIK_CLIENT_SECRET");
-    const body = new URLSearchParams({
-      client_id: serverEnv("AUTH_AUTHENTIK_CLIENT_ID"),
-      grant_type: "refresh_token",
-      refresh_token: token.refresh_token,
-    });
-    if (secret) body.set("client_secret", secret); // public clients have none
-
-    const res = await fetch(await tokenEndpoint(), {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body,
-    });
-    const tokens = await res.json();
-    if (!res.ok) throw new Error(tokens?.error_description ?? tokens?.error ?? res.statusText);
-
-    const groups = groupsInAccessToken(tokens.access_token);
-    if (groups && token.uid) await refreshRoles(token.uid, groups);
-
-    return {
-      ...token,
-      expires_at: Math.floor(Date.now() / 1000) + Number(tokens.expires_in ?? 0),
-      refresh_token: tokens.refresh_token ?? token.refresh_token,
-      error: undefined,
-    };
-  } catch (err) {
-    console.error("Kunde inte förnya Authentik-token:", err);
-    return { ...token, error: "RefreshTokenError" };
-  }
-}
+const SESSION_MAX_AGE = 24 * 60 * 60;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
-  session: { strategy: "jwt" },
+  /**
+   * A JWT, and a strictly immutable one: it is written when you sign in and
+   * never again for the life of the session.
+   *
+   * Not a preference but a constraint, and one worth writing down because the
+   * code that ignored it looked completely reasonable. `auth()` is called from
+   * Server Components (lib/server/current-user.ts), and next-auth's RSC branch
+   * (next-auth/lib/index.js, `if (!args.length)`) drops the Set-Cookie headers
+   * the session response carries; every other branch forwards them. It has to,
+   * because a Server Component renders after the headers are sent.
+   *
+   * So anything this token carries that is supposed to change over time cannot.
+   * There used to be an OAuth refresh in the `jwt` callback below, trading the
+   * refresh token for a fresh access token every few minutes to pick up group
+   * changes. It read the rotated token back into a `token` object that was then
+   * thrown away, so the cookie kept the spent one, and Authentik, which
+   * invalidates a refresh token once it is used, refused every attempt after
+   * the first. That was reported as `RefreshTokenError`, which the app honestly
+   * treated as "Authentik says this session is over", and signed the reader out.
+   * Every few minutes, for everyone, in production.
+   *
+   * The fix is not to make the write work. It is that a session cookie is the
+   * wrong place for state that changes: authority is already read from the
+   * database on every request (lib/server/current-user.ts, lib/api/guard.ts),
+   * and what remains in here is identity, which does not expire before the
+   * session does.
+   */
+  session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
   trustHost: true,
   pages: { signIn: "/login" },
   callbacks: {
     // Same rule as Auth.js's default, except "our own origin" means the host
-    // this request actually arrived on — see requestOrigin above.
+    // this request actually arrived on. See requestOrigin above.
     async redirect({ url, baseUrl }) {
       const base = await requestOrigin(baseUrl);
       if (url.startsWith("/")) return `${base}${url}`;
@@ -300,7 +256,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return origin === base || origin === baseUrl ? url : base;
     },
     // Authentik only issues tokens to members of the section, so there is no
-    // domain rule left to enforce — but an identity with no student id is one
+    // domain rule left to enforce, but an identity with no student id is one
     // we cannot key a row on, and every page after this would be answering
     // questions about a user that doesn't exist.
     async signIn({ user }) {
@@ -309,18 +265,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // On sign-in, resolve (or provision) our DB user and stamp the id.
     //
     // The id and nothing that expires: roles used to be stamped here too, which
-    // made the token an authority document with a 30-day life. They are read
+    // made the token an authority document with a month's life. They are read
     // from the database on every request now (lib/server/current-user.ts), so
-    // this only has to say who signed in — the group list it carries is
-    // bookkeeping for the refresh below, never an answer to "may they".
+    // this only has to say who signed in. The group list it carries is spent
+    // on the way past, deriving the grants written to that row, and never an
+    // answer to "may they".
+    //
+    // A sign-in is also the only call this does anything on. On every other one
+    // it hands the token back untouched, because a change it made there could
+    // not be saved. See `session` above.
     async jwt({ token, user, account }) {
-      // Same object, with our claims named — see AppToken.
+      // Same object, with our claims named. See AppToken.
       const t = token as typeof token & AppToken;
 
       // A sign-in is the only call where both of these are present.
       if (user && account) {
-        t.provider = account.provider;
-
         if (account.provider === "authentik" && user.studentId) {
           const dbUser = await syncAuthentikUser({
             studentId: user.studentId,
@@ -332,8 +291,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           t.studentId = dbUser.studentId;
           t.name = dbUser.name;
           t.email = dbUser.email;
-          t.refresh_token = account.refresh_token;
-          t.expires_at = account.expires_at;
           return t;
         }
 
@@ -344,14 +301,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           t.name = user.name;
           t.email = user.email;
         }
-        return t;
       }
 
-      // Nothing to keep fresh for a dev sign-in, and no refresh token to do it
-      // with — asking would fail every request for the life of the session.
-      if (t.provider !== "authentik") return t;
-      if (t.expires_at && Date.now() < t.expires_at * 1000) return t;
-      return refreshAccessToken(t);
+      return t;
     },
     async session({ session, token }) {
       const t = token as typeof token & AppToken;
@@ -361,10 +313,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (t.name) session.user.name = t.name;
         if (t.email) session.user.email = t.email;
       }
-      // Surfaced rather than acted on: a session callback cannot redirect, and
-      // the app already has one place that decides an unusable session means
-      // sign in again (lib/server/current-user.ts).
-      session.error = t.error;
       return session;
     },
   },

@@ -3,15 +3,18 @@
 // amounts are in plain SEK here and converted to öre on insert.
 import type { BankTransaction, CostCenter, User } from "../src/lib/domain/types";
 
+/** A seeded person: the User columns that are actually inserted. */
+export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
+
 export interface SeedExpense {
   // The human reference. Null for an utlägg that hasn't been submitted for
-  // attest yet — that is when the number is handed out, so a draft has none.
+  // attest yet. That is when the number is handed out, so a draft has none.
   reference: string | null;
   title: string;
   submitterName: string;
   allocations: { costCenterCode: string; amount: number }[]; // SEK, must sum to grossAmount
   paymentType: "CARD" | "REIMBURSEMENT";
-  status: "DRAFT" | "PENDING_MATCH" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
+  status: "DRAFT" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
   purchaseDate: string;
   grossAmount: number;
   currency: string;
@@ -21,10 +24,14 @@ export interface SeedExpense {
 
 // The four people the dev sign-in offers, one per role. `studentId` is what
 // the app keys a user on (Authentik's `preferred_username`), so these are
-// fixed rather than generated — app/login/page.tsx names them, and a reseed
+// fixed rather than generated. app/login/page.tsx names them, and a reseed
 // must not move them. Everyone else referenced in the fixtures gets a derived
 // one; see `studentIdFor` in seed.ts.
-export const CURRENT_USERS: Record<string, User & { studentId: string }> = {
+// `capabilities` is not among them: it is resolved from the RoleCapability
+// table per request (lib/server/capabilities.ts), never stored on a row, so a
+// fixture that carried one would be stating something the database has no
+// column for.
+export const CURRENT_USERS: Record<string, SeedUser> = {
   ORDINARIE: {
     id: "u1",
     studentId: "el1234li-s",
@@ -91,7 +98,7 @@ export const EXPENSES: SeedExpense[] = [
     submitterName: "Elsa Lindqvist",
     allocations: [{ costCenterCode: "INFU", amount: 1290 }],
     paymentType: "CARD",
-    status: "PENDING_MATCH",
+    status: "DRAFT",
     purchaseDate: "2026-06-10",
     grossAmount: 1290,
     currency: "SEK",
@@ -233,7 +240,75 @@ export const CARDS: SeedCard[] = [
   },
   {
     last4: "9001",
-    holderName: null, // unassigned — appears in admin to be assigned
+    holderName: null, // unassigned, appears in admin to be assigned
     transactionIds: [],
+  },
+];
+
+// ── Uthyrningsobjekt ──────────────────────────────────────────────
+//
+// The gear a section like this actually lets out, with values that are the
+// right order of magnitude rather than exact. The replacement value is the
+// figure that matters: it is what the liability clause of an uthyrningsavtal
+// points at, so a catalogue whose values were all 100 kr would make the whole
+// feature look harmless in a way it is not.
+//
+// The quantity is what availability is measured against: one mixer and one
+// projector are the things a second contract for the same weekend has to be
+// refused, and ten beer tables are the thing it does not.
+//
+// Öre, like every other amount in this app.
+export const RENTAL_ITEMS = [
+  {
+    name: "Högtalare, aktiv 12 tum",
+    quantity: 2,
+    description: "Med stativ och kabel. Ett par räcker till en sittning.",
+    dailyPriceOre: 25_000,
+    replacementValueOre: 650_000,
+  },
+  {
+    name: "Mixerbord, 8 kanaler",
+    quantity: 1,
+    description: null,
+    dailyPriceOre: 15_000,
+    replacementValueOre: 420_000,
+  },
+  {
+    name: "Mikrofon, trådlös",
+    quantity: 4,
+    description: "Handhållen, med mottagare.",
+    dailyPriceOre: 7_500,
+    replacementValueOre: 180_000,
+  },
+  {
+    name: "Mikrofonstativ",
+    quantity: 6,
+    description: null,
+    dailyPriceOre: 2_500,
+    replacementValueOre: 45_000,
+  },
+  {
+    name: "Partytält 3×6 m",
+    quantity: 2,
+    description: "Väger en del. Kräver bil.",
+    dailyPriceOre: 40_000,
+    replacementValueOre: 900_000,
+  },
+  {
+    name: "Ölbord med bänkar",
+    quantity: 10,
+    description: null,
+    dailyPriceOre: 5_000,
+    replacementValueOre: 120_000,
+  },
+  {
+    // No standing price: what it costs depends on how long and for what, so it
+    // is priced per rental. Null rather than zero, which would print
+    // "0,00 kr per dag" on a contract.
+    name: "Projektor",
+    quantity: 1,
+    description: "Med HDMI-kabel och duk.",
+    dailyPriceOre: null,
+    replacementValueOre: 550_000,
   },
 ];

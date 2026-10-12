@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { voucherBalance, voucherBlocker, type VoucherLine } from "./voucher";
 
-// Amounts are öre throughout — that is the point of the rule living here.
+// Amounts are öre throughout. That is the point of the rule living here.
 const line = (account: string, debit: number, credit: number): VoucherLine => ({
   account,
   debit,
@@ -27,7 +27,7 @@ describe("voucherBlocker", () => {
     ).toBeNull();
   });
 
-  it("refuses a single row — one line is not double entry", () => {
+  it("refuses a single row, one line is not double entry", () => {
     expect(voucherBlocker([line("1930", 0, 25000)])).toBe("twoLines");
     expect(voucherBlocker([])).toBe("twoLines");
   });
@@ -44,7 +44,7 @@ describe("voucherBlocker", () => {
     );
   });
 
-  it("refuses negative amounts — a return flips the rows, not the sign", () => {
+  it("refuses negative amounts, a return flips the rows, not the sign", () => {
     expect(voucherBlocker([line("1930", 0, -25000), line("4010", -25000, 0)])).toBe(
       "negativeAmounts",
     );
@@ -53,7 +53,7 @@ describe("voucherBlocker", () => {
   it("refuses a row that names an account and posts nothing to it", () => {
     // The bug this exists to stop: the editors only drop a row that is empty
     // all through, so an account picked and then left behind was a "typed" row
-    // — and the rest of the voucher balancing without it made the whole thing
+    // and the rest of the voucher balancing without it made the whole thing
     // bookable. A 0,00 line nobody meant to write went to Fortnox.
     expect(
       voucherBlocker([line("1930", 0, 25000), line("4010", 25000, 0), line("6540", 0, 0)]),
@@ -67,7 +67,7 @@ describe("voucherBlocker", () => {
   });
 
   it("refuses an empty voucher by its empty rows, not by its balance", () => {
-    // It does balance — at nothing — so "debet ≠ kredit" would be a sentence
+    // It does balance, at nothing, so "debet ≠ kredit" would be a sentence
     // contradicting the two matching sides in front of the reader. What is
     // actually wrong with it is that no row has an amount, and that is what it
     // is told.
@@ -88,7 +88,7 @@ describe("voucherBlocker", () => {
 
 // Balance is the narrower question, and the booking screens ask it on its own:
 // the chip says whether the voucher adds up, the button waits on the blocker.
-// These are the cases where the two answers differ — which is where the chip
+// These are the cases where the two answers differ, which is where the chip
 // used to lie, calling a voucher whose sides met "differs by 0,00 kr".
 describe("voucherBalance", () => {
   it("agrees with the blocker on an ordinary voucher", () => {
@@ -100,7 +100,7 @@ describe("voucherBalance", () => {
     const lines = [line("1930", 0, 25000), line("", 25000, 0)];
     expect(voucherBalance(lines).balanced).toBe(true);
     expect(voucherBalance(lines).difference).toBe(0);
-    // Balanced, and still not bookable — the two questions, disagreeing.
+    // Balanced, and still not bookable: the two questions, disagreeing.
     expect(voucherBlocker(lines)).toBe("accountRequired");
   });
 

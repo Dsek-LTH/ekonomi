@@ -27,7 +27,7 @@ export function FortnoxAuthResult() {
   // the params is not enough on its own: replaceState doesn't feed back into
   // useSearchParams, so a second run of this effect still sees the old `?fortnox`
   // and announces it again. React does exactly that in development, where Strict
-  // Mode mounts every component twice — which is what showed two "inloggad"
+  // Mode mounts every component twice, which is what showed two "inloggad"
   // banners for one login. A ref survives that double mount; component state
   // wouldn't.
   const announced = useRef<string | null>(null);

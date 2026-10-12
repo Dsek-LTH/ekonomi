@@ -2,7 +2,7 @@
 // against.
 //
 // This is the field that replaced hand-editing pending.yaml. The manifest's
-// other use — deleting a line to skip the day — has no counterpart any more:
+// other use (deleting a line to skip the day) has no counterpart any more:
 // a day is booked or it is not, and an unbooked one needs no state saying so.
 import { NextResponse } from "next/server";
 
@@ -62,11 +62,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  * Remove a day: the report, its sold lines and its verifikation.
  *
  * Behind the treasury roles rather than bookkeeping access, and refused while
- * the day is exported — see lib/income/lifecycle.ts, which is where both rules
+ * the day is exported, see lib/income/lifecycle.ts, which is where both rules
  * and the reasons for them live.
  *
  * With one exception: an empty draft. Bookkeeping can make those (POST
- * ../reports — a report for a verksamhet the routing never saw, to move sales
+ * ../reports, a report for a verksamhet the routing never saw, to move sales
  * onto) and one made by mistake is a row holding no lines, no total and no
  * verifikation. Requiring a skattmästare to come and clear it away would make
  * the button that creates it a thing you think twice about pressing, which is
@@ -78,7 +78,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const g = await gate(canAccessBookkeeping, "auth.denied");
   if (!g.ok) return g.res;
 
-  if (!canUnexport(g.actor.roles)) {
+  if (!canUnexport(g.actor.capabilities)) {
     const empty = await prisma.incomeReport.findFirst({
       where: { id, status: "DRAFT", lines: { none: {} } },
       select: { id: true },

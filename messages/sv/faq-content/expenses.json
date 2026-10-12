@@ -1,0 +1,68 @@
+{
+  "id": "expenses",
+  "label": "Innan du handlar",
+  "items": [
+    {
+      "id": "what-is",
+      "q": "Vad är ett utlägg?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ett utlägg är en utgift som du betalar för någon annans räkning. Du lägger ut egna pengar för något som sektionen ska stå för, och ersätts i efterhand."
+        }
+      ]
+    },
+    {
+      "id": "reimbursement",
+      "q": "Får jag alltid tillbaka mina pengar?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej, inte automatiskt. Du får ersättning när köpet är redovisat med ett giltigt kvitto och har attesterats av någon med attesträtt för det."
+        },
+        {
+          "t": "p",
+          "v": "Ett köp som saknar attest bekostas av den som gjorde det. Är det ett eget utlägg får du ingen ersättning, och är det gjort med sektionskortet faktureras du för beloppet. Skattmästaren kan i det enskilda fallet besluta att ersättning ändå ska betalas, eller att fakturering inte ska ske."
+        },
+        {
+          "t": "p",
+          "v": "Ett eget utlägg ska dessutom vara redovisat inom 60 dagar, annars kan det nekas."
+        }
+      ]
+    },
+    {
+      "id": "before-buying",
+      "q": "Vad ska jag göra innan jag handlar?",
+      "a": [
+        {
+          "t": "ol",
+          "v": [
+            "Stäm gärna av köpet med din resultatansvarig. Det är den som attesterar det i efterhand, och ett köp som inte attesteras får du stå för själv.",
+            "Använd sektionskortet om du har ett, så slipper du ligga ute med egna pengar.",
+            "Se till att du får ett giltigt kvitto i kassan, inte bara en orderbekräftelse eller ett köpbevis från kortterminalen.",
+            "Redovisa köpet här i appen så fort du är hemma."
+          ]
+        },
+        {
+          "t": "action",
+          "v": "Redovisa ett köp",
+          "href": "/expenses/new"
+        }
+      ]
+    },
+    {
+      "id": "budget-check",
+      "q": "Finns det pengar i budgeten för köpet?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Det ska det göra. En kostnadspost i budgeten får inte överskridas utan att budgeten först har justerats. Räcker inte pengarna på den post köpet hör till behövs en budgetförändring innan köpet görs, och den godkänns av skattmästaren."
+        },
+        {
+          "t": "p",
+          "v": "Mer om hur det går till finns under Budget."
+        }
+      ]
+    }
+  ]
+}

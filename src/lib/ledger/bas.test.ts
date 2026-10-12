@@ -50,7 +50,7 @@ describe.each(["RESULT", "BALANCE"] as ReportKind[])("%s sections", (kind) => {
 
 describe("the two reports together", () => {
   it("split the chart between them without meeting", () => {
-    // 1000–2999 is the balance sheet, 3000–8999 the result — a 1930 row has no
+    // 1000–2999 is the balance sheet, 3000–8999 the result. A 1930 row has no
     // place in a result report, and vice versa.
     const balance = accountRangeFor("BALANCE");
     const result = accountRangeFor("RESULT");

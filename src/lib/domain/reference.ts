@@ -1,4 +1,4 @@
-// The utlägg's human reference — "DEK26-0043", the number it is known by
+// The utlägg's human reference: "DEK26-0043", the number it is known by
 // everywhere from the receipt envelope to the ledger, and the parenthesised tail
 // of the voucher text sent to Fortnox (see api/expenses/[id]/export). Not the
 // Fortnox verifikationsnummer, which Fortnox assigns on export and which lives
@@ -18,12 +18,12 @@
 //    point a section that still runs this code has a nicer problem to solve.
 //
 // Nothing but the counter follows the separator, so the hyphen is unambiguous
-// here — unlike in the "D-26|0043" this replaced, where the prefix had a hyphen
+// here, unlike in the "D-26|0043" this replaced, where the prefix had a hyphen
 // of its own and the separator had to be a pipe to stay distinguishable.
 
 const COUNTER_DIGITS = 4;
 
-/** "DEK26-" — everything before the counter, for a given calendar year. */
+/** "DEK26-": everything before the counter, for a given calendar year. */
 export function referencePrefix(year: number): string {
   return `DEK${String(year % 100).padStart(2, "0")}-`;
 }
@@ -35,7 +35,7 @@ export function formatReference(year: number, counter: number): string {
 
 /**
  * The reference after `last`, where `last` is the highest one already taken in
- * `year` — null when this is the year's first, which is the only case the
+ * `year`, null when this is the year's first, which is the only case the
  * caller has to think about. Every reference in the database is in this format
  * (the migration rewrote the ones that weren't), so the counter is simply the
  * prefix sliced off.
@@ -47,7 +47,7 @@ export function nextReference(year: number, last: string | null): string {
 
 /**
  * What to call an utlägg in a log line or an error message: its reference once
- * it has one, and its id before that. Never nothing — a message that names the
+ * it has one, and its id before that. Never nothing: a message that names the
  * row it is about is the whole reason anyone reads it.
  */
 export function expenseLabel(e: { id: string; reference?: string | null }): string {

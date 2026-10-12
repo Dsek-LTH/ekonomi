@@ -4,7 +4,6 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { getResultUnits, getUnassignedCostCenters } from "@/lib/data/result-units";
-import { getUsers } from "@/lib/data/users";
 import { intaktConfigured } from "@/lib/income/client";
 import { ResultUnitsClient } from "./result-units-client";
 
@@ -12,9 +11,8 @@ export default async function AdminResultUnitsPage() {
   await requirePage(canAccessSettings);
   const t = await getTranslations("admin.resultUnits");
 
-  const [resultUnits, users, unassigned] = await Promise.all([
+  const [resultUnits, unassigned] = await Promise.all([
     getResultUnits(),
-    getUsers(),
     getUnassignedCostCenters(),
   ]);
 
@@ -27,11 +25,9 @@ export default async function AdminResultUnitsPage() {
   return (
     <PageShell
       title={t("title")}
-      description={t("description")}
     >
       <ResultUnitsClient
         resultUnits={resultUnits}
-        users={users}
         unassigned={unassigned}
         costCenters={costCenters}
         incomeEnabled={intaktConfigured()}

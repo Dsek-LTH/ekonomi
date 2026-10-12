@@ -1,28 +1,34 @@
-// Seeds the database from the static fixtures in prisma/seed-data.ts — once
-// the frontend mock dataset — so the real app starts with the same scenarios
+// Seeds the database from the static fixtures in prisma/seed-data.ts, once
+// the frontend mock dataset, so the real app starts with the same scenarios
 // the design was validated against.
 // Idempotent: wipes the domain tables and re-inserts on every run.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type ExpenseEventType, type Role } from "../src/lib/generated/prisma/client";
 
-// Standalone run (pnpm db:seed) — load .env ourselves.
-import { loadEnvFile } from "./load-env";
+// Standalone run (pnpm db:seed). Load .env ourselves.
+import { loadEnvFile } from "../scripts/load-env";
+import {
+  DEFAULT_GROUP_RESULT_UNITS,
+  DEFAULT_GROUP_ROLES,
+  DEFAULT_ROLE_CAPABILITIES,
+} from "../src/lib/server/authority-defaults";
 
 loadEnvFile();
-import { bucket, deleteKeys, listObjects } from "./storage-admin";
+import { bucket, deleteKeys, listObjects } from "../scripts/storage-admin";
 import {
   BANK_TRANSACTIONS,
   CARDS,
   COST_CENTERS,
   CURRENT_USERS,
   EXPENSES,
+  RENTAL_ITEMS,
 } from "./seed-data";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-// öre — store money as integer minor units.
+// öre, store money as integer minor units.
 const ore = (sek: number) => Math.round(sek * 100);
 
 const ascii = (name: string) =>
@@ -64,18 +70,19 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
-  await prisma.resultUnitOwner.deleteMany();
-  await prisma.resultUnit.deleteMany(); // cascades → prefixes + owners
+  await prisma.contract.deleteMany(); // cascades → files, rental → lines
+  await prisma.rentalItem.deleteMany();
+  await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
   await prisma.costCenter.deleteMany();
   await prisma.user.deleteMany();
 
   // Dropping every Receipt row leaves every receipt object in the bucket with
-  // nothing pointing at it, and the seed data brings no files of its own — so
+  // nothing pointing at it, and the seed data brings no files of its own, so
   // after this wipe the correct contents of `receipts/` is nothing at all.
   // Without this a dev bucket grows by a full set of orphans per reseed.
   // Storage being down is not a reason to fail a database seed, so this warns
-  // and carries on — `pnpm receipts:gc` collects whatever it left behind.
+  // and carries on. `pnpm receipts:gc` collects whatever it left behind.
   try {
     const stored = await listObjects("receipts/");
     if (stored.length > 0) {
@@ -84,7 +91,7 @@ async function main() {
       console.log(`Rensade ${stored.length - failures.length} kvittofiler ur ${bucket()}.`);
     }
   } catch (err) {
-    console.warn(`Kunde inte rensa kvittofiler ur ${bucket()} — kör pnpm receipts:gc senare.`, err);
+    console.warn(`Kunde inte rensa kvittofiler ur ${bucket()}, kör pnpm receipts:gc senare.`, err);
   }
 
   // ── Users ───────────────────────────────────────────────────────
@@ -125,13 +132,12 @@ async function main() {
     return id;
   };
 
-  // ── Cost centers (+ result units and their ownerships) ───────────
+  // ── Cost centers (+ result units) ────────────────────────────────
   // ResultUnit membership is derived from code prefixes, so each seeded
-  // result unit gets its cost centre's full code as its prefix — matching that
+  // result unit gets its cost centre's full code as its prefix, matching that
   // one code and nothing else.
   const costCenterByCode = new Map<string, string>();
   const resultUnitByName = new Map<string, string>();
-  const ownerships = new Set<string>(); // "userId|resultUnitId" dedupe
   for (const c of COST_CENTERS) {
     const cc = await prisma.costCenter.create({
       data: { code: c.code, name: c.name },
@@ -155,17 +161,54 @@ async function main() {
         data: { resultUnitId, value: c.code.toUpperCase() },
       });
     }
-
-    if (c.ownerName) {
-      const key = `${userId(c.ownerName)}|${resultUnitId}`;
-      if (!ownerships.has(key)) {
-        ownerships.add(key);
-        await prisma.resultUnitOwner.create({
-          data: { userId: userId(c.ownerName), resultUnitId },
-        });
-      }
-    }
   }
+
+  // Resultatansvar is held by result unit *name* on the user row, the shape
+  // the Authentik mapping writes (lib/server/authentik-roles.ts). A dev sign-in
+  // has no group list, so seeding the column is the only way the seeded
+  // resultatansvariga answer for anything.
+  const seededUnits = new Map<string, string[]>();
+  for (const c of COST_CENTERS) {
+    if (!c.ownerName || !c.resultUnit) continue;
+    const units = seededUnits.get(c.ownerName) ?? [];
+    if (!units.includes(c.resultUnit)) units.push(c.resultUnit);
+    seededUnits.set(c.ownerName, units);
+  }
+  for (const [name, units] of seededUnits) {
+    await prisma.user.update({
+      where: { id: userId(name) },
+      data: { resultUnits: units },
+    });
+  }
+
+  // ── Authority ───────────────────────────────────────────────────
+  //
+  // Put back the state the section started from: which Authentik group confers
+  // which role and result unit, and what each role may do
+  // (lib/server/authority-defaults.ts).
+  //
+  // Rewritten from scratch rather than left alone, because a seed is supposed
+  // to produce one known database and these tables are editable. A dev who
+  // spent yesterday testing the settings screen should not start today holding
+  // whatever they left behind. The group → result unit rows have to be here in
+  // any case: they are foreign keys into ResultUnit, and the wipe above took
+  // them with it.
+  await prisma.groupRole.deleteMany();
+  await prisma.groupResultUnit.deleteMany();
+  await prisma.roleCapability.deleteMany();
+
+  await prisma.groupRole.createMany({ data: [...DEFAULT_GROUP_ROLES] });
+  await prisma.roleCapability.createMany({ data: [...DEFAULT_ROLE_CAPABILITIES] });
+
+  // Only the units this seed actually created. The defaults name the section's
+  // real committees and the fixtures are a smaller, invented set, so most of
+  // them have nothing to point at, and a mapping row cannot name a unit that
+  // does not exist.
+  const groupUnits = DEFAULT_GROUP_RESULT_UNITS.flatMap(({ group, unit }) => {
+    const resultUnitId = resultUnitByName.get(unit);
+    return resultUnitId ? [{ group, resultUnitId }] : [];
+  });
+  if (groupUnits.length > 0) await prisma.groupResultUnit.createMany({ data: groupUnits });
 
   // ── Bank transactions ───────────────────────────────────────────
   const txByMockId = new Map<string, string>(); // mock "t3" → real id
@@ -237,6 +280,14 @@ async function main() {
     }
   }
 
+  // ── Uthyrningsobjekt ────────────────────────────────────────────
+  //
+  // The gear catalogue, so a fresh checkout can draw an uthyrningsavtal without
+  // somebody first having to invent a speaker. No contracts are seeded: one
+  // would carry a document, and the seed brings no files of its own. Drawing
+  // one is the first thing to try on /contracts.
+  await prisma.rentalItem.createMany({ data: [...RENTAL_ITEMS] });
+
   const counts = {
     users: await prisma.user.count(),
     costCenters: await prisma.costCenter.count(),
@@ -245,6 +296,7 @@ async function main() {
     expenses: await prisma.expense.count(),
     allocations: await prisma.expenseCostAllocation.count(),
     events: await prisma.expenseEvent.count(),
+    rentalItems: await prisma.rentalItem.count(),
   };
   console.log("Seeded:", counts);
 }

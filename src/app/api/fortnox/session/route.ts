@@ -1,5 +1,5 @@
 // The caller's own Fortnox bookkeeping session. Logging in happens through the
-// OAuth flow (/api/fortnox/connect?mode=user); this only ends it early — a
+// OAuth flow (/api/fortnox/connect?mode=user); this only ends it early. A
 // session expires on its own within hours either way.
 import { clearUserSession } from "@/lib/fortnox";
 import { gate } from "@/lib/api/guard";

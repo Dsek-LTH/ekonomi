@@ -1,0 +1,113 @@
+{
+  "id": "mileage",
+  "label": "Milersättning",
+  "items": [
+    {
+      "id": "mileage-what",
+      "q": "Vad är milersättning?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ersättning för att du kört din egen bil på sektionens ärende. Du får betalt per kilometer efter Skatteverkets schablon, i stället för att lämna in ett kvitto på bensin."
+        },
+        {
+          "t": "p",
+          "v": "Det är inte ett utlägg med kvitto, utan en egen sorts redovisning med ett eget formulär."
+        },
+        {
+          "t": "action",
+          "v": "Ny milersättning",
+          "href": "/expenses/new/mileage"
+        }
+      ]
+    },
+    {
+      "id": "mileage-how",
+      "q": "Hur redovisar jag en resa?",
+      "a": [
+        {
+          "t": "ol",
+          "v": [
+            "Skriv vad resan gällde, och vilken dag du körde.",
+            "Fyll i varje ställe du stannade på, i tur och ordning.",
+            "Fyll i mätarställningen före och efter resan.",
+            "Fördela beloppet på kostnadsställen och skicka in."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "En resa per redovisning. Körde du tre gånger gör du tre, för varje resa attesteras för sig och landar på sitt eget kostnadsställe."
+        },
+        {
+          "t": "note",
+          "tone": "warn",
+          "v": "Milersättning har samma frist som ett eget utlägg: 60 dagar från resdagen. Efter det går den bara att skicka in om skattmästaren gett dispens."
+        }
+      ]
+    },
+    {
+      "id": "mileage-odometer",
+      "q": "Vilken mätare menas?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Totalmätaren, alltså bilens sammanlagda körsträcka. Inte trippmätaren."
+        },
+        {
+          "t": "p",
+          "v": "Skälet är att siffrorna ska gå att kontrollera. En trippmätare kan nollställas när som helst, så 0 → 42 på en sådan är bara ett påstående om att du kört 42 km. Totalmätarens värden går att hålla mot bilen, och mot dina andra resor med samma bil, som bara kan gå uppåt."
+        },
+        {
+          "t": "p",
+          "v": "Sträckan räknar appen ut själv som skillnaden mellan de två. Du skriver aldrig in ett antal kilometer."
+        }
+      ]
+    },
+    {
+      "id": "mileage-route",
+      "q": "Hur fyller jag i resvägen?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Ett ställe per rad, i den ordning du stannade på dem. Ort eller namn räcker, till exempel E-huset och Snabbgross."
+        },
+        {
+          "t": "p",
+          "v": "Kom du tillbaka dit du startade skriver du det stället sist också. Det finns en knapp för det. Annars beskriver resvägen bara halva sträckan mätaren visar, och den som attesterar ser en resa på 21 km mot en mätare som säger 42."
+        },
+        {
+          "t": "p",
+          "v": "Skatteverket vill se var resan gick, inte bara hur långt den var. Mätarställningarna visar att bilen rullade, resvägen visar att det var sektionens ärende. Därför krävs minst två ställen för att kunna skicka in."
+        }
+      ]
+    },
+    {
+      "id": "mileage-rate",
+      "q": "Hur mycket får jag per kilometer?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Skatteverkets schablon, som skattmästeriet lägger in i appen. Beloppet räknas ut åt dig när du fyllt i mätarställningarna."
+        },
+        {
+          "t": "p",
+          "v": "Varje resa värderas efter den ersättning som gällde den dag du körde. Ändras schablonen vid ett årsskifte räknas alltså inte en redan inskickad resa om, och en resa i december som redovisas i januari får decembers ersättning."
+        }
+      ]
+    },
+    {
+      "id": "mileage-receipt",
+      "q": "Behöver jag något kvitto?",
+      "a": [
+        {
+          "t": "p",
+          "v": "Nej. Det finns inget att fotografera när du kört din egen bil, och du ska inte lämna in kvitto på bensin: schablonen täcker hela kostnaden för att äga och köra bilen, inte bara drivmedlet."
+        },
+        {
+          "t": "p",
+          "v": "Underlaget är i stället utläggsräkningen som appen ritar, med resvägen, mätarställningarna och ersättningen per kilometer på. Det är den som följer med till bokföringen."
+        }
+      ]
+    }
+  ]
+}

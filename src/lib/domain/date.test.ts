@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { daysAgo, isCompleteDate, isFutureDate, today } from "./date";
+import { daysAgo, isCompleteDate, isFutureDate, isoWeek, today } from "./date";
 
 describe("isCompleteDate", () => {
   it("accepts a whole ISO date", () => {
@@ -9,7 +9,7 @@ describe("isCompleteDate", () => {
 
   it("rejects a date still being typed", () => {
     // What the masked field leaves behind on the way to a full date. `new Date`
-    // reads both — as 1 January and 1 July — which is the whole reason for this.
+    // reads both, as 1 January and 1 July, which is the whole reason for this.
     expect(isCompleteDate("")).toBe(false);
     expect(isCompleteDate("2026")).toBe(false);
     expect(isCompleteDate("2026-0")).toBe(false);
@@ -53,7 +53,7 @@ describe("isFutureDate", () => {
   });
 
   it("counts the day in Stockholm, not the host's UTC day", () => {
-    // 01:30 on 3 August in Stockholm (summer time, UTC+2) — a purchase made an
+    // 01:30 on 3 August in Stockholm (summer time, UTC+2), a purchase made an
     // hour ago. A server reading its own UTC clock still says 2 August here.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-02T23:30:00Z"));
@@ -80,5 +80,19 @@ describe("daysAgo", () => {
     // span below would be 60 days and one hour, which is how a deadline check
     // starts letting day 61 through.
     expect(daysAgo("2026-10-01", "2026-11-30")).toBe(60);
+  });
+});
+
+describe("isoWeek", () => {
+  it("runs Monday to Sunday, so a Sunday digest and the Monday after are different weeks", () => {
+    expect(isoWeek("2026-10-05")).toBe("2026-W41");
+    expect(isoWeek("2026-10-11")).toBe("2026-W41");
+    expect(isoWeek("2026-10-04")).toBe("2026-W40");
+  });
+
+  it("gives a week that crosses New Year to the year its Thursday is in", () => {
+    expect(isoWeek("2027-01-01")).toBe("2026-W53");
+    expect(isoWeek("2024-12-30")).toBe("2025-W01");
+    expect(isoWeek("2026-01-01")).toBe("2026-W01");
   });
 });

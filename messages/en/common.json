@@ -1,0 +1,126 @@
+{
+  "back": "Back",
+  "theme": "Theme",
+  "language": "Language",
+  "signOut": "Sign out",
+  "status": {
+    "DRAFT": "Draft",
+    "PENDING_APPROVAL": "Awaiting approval",
+    "CHANGES_REQUESTED": "Changes requested",
+    "APPROVED": "Approved",
+    "BOOKED": "Booked",
+    "EXPORTED": "Exported"
+  },
+  "payment": {
+    "CARD": {
+      "label": "Section card",
+      "description": "Purchase made with the section's card."
+    },
+    "REIMBURSEMENT": {
+      "label": "Out of pocket",
+      "description": "You paid for it yourself and get the money back."
+    },
+    "MILEAGE": {
+      "label": "Mileage",
+      "description": "You drove your own car on the section's errand."
+    }
+  },
+  "role": {
+    "SKATTMASTARE": "Treasurer",
+    "ORDFORANDE": "Chair",
+    "VICE_SKATTMASTARE": "Vice treasurer",
+    "SKATTFORMAN": "Assistant treasurer",
+    "RESULTATANSVARIG": "Result unit owner",
+    "ORDINARIE": "Member",
+    "STOCKARE": "Stockare",
+    "UTHYRNINGSANSVARIG": "Rental manager"
+  },
+  "table": {
+    "show": "Show",
+    "tabsLabel": "Filter",
+    "empty": "No results.",
+    "noResults": "No results",
+    "searchPlaceholder": "Search ...",
+    "dateFrom": "From",
+    "dateTo": "To",
+    "dateFromTitle": "From date",
+    "dateToTitle": "To date",
+    "filters": "Filters",
+    "filtersDone": "Done",
+    "clearFilters": "Clear",
+    "dateRange": "Date",
+    "perPage": "per page",
+    "showing": "Showing {from}–{to} of {total}",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "expand": "Show the rows behind"
+  },
+  "error": {
+    "action": "The action failed",
+    "network": "Something went wrong"
+  },
+  "close": "Close",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "loading": "Loading…",
+  "datePlaceholder": "YYYY-MM-DD",
+  "openDatePicker": "Pick a date from a calendar",
+  "field": {
+    "required": "required",
+    "optional": "Optional"
+  },
+  "themeMode": {
+    "toggle": "Switch colour theme"
+  },
+  "combobox": {
+    "placeholder": "Select…",
+    "searchPlaceholder": "Search…",
+    "empty": "No matches",
+    "clear": "Clear",
+    "nSelected": "{count} selected",
+    "create": "Create “{text}”"
+  },
+  "action": {
+    "goToProfile": "Go to My profile"
+  },
+  "capability": {
+    "ADMIN": "Full authority",
+    "ADMIN_hint": "Attest and edit anybody's expense.",
+    "SETTINGS": "Settings",
+    "SETTINGS_hint": "Reach Settings, this page included.",
+    "BOOKKEEPING": "Bookkeeping",
+    "BOOKKEEPING_hint": "See every expense and book its voucher. Send back one that was approved by mistake.",
+    "ATTEST_VIEW": "Approvals view",
+    "ATTEST_VIEW_hint": "See the approvals queue. What can actually be attested is decided per expense.",
+    "BUDGET_VIEW": "Budget",
+    "BUDGET_VIEW_hint": "See the budget pages.",
+    "STOCK_VIEW": "Stock",
+    "STOCK_VIEW_hint": "Read the stock overview and the log.",
+    "STOCK_MANAGE": "Stock management",
+    "STOCK_MANAGE_hint": "Book stock movements and run an occasion, from takeout to stocktake.",
+    "BUDGET_COMMENT": "Budget comments",
+    "BUDGET_COMMENT_hint": "Comment on a budget account.",
+    "BUDGET_LOCK": "Lock budget",
+    "BUDGET_LOCK_hint": "Lock an adopted budget, and unlock it.",
+    "BUDGET_CHANGE_LOCKED": "Budget departures",
+    "BUDGET_CHANGE_LOCKED_hint": "Record departures and transfers on a locked budget.",
+    "FORTNOX_LOGIN": "Fortnox login",
+    "FORTNOX_LOGIN_hint": "Book in Fortnox under their own login.",
+    "EXPORT_UNDO": "Undo export",
+    "EXPORT_UNDO_hint": "Mark an exported expense as no longer exported.",
+    "CONTRACT_VIEW": "Read contracts",
+    "CONTRACT_MANAGE": "Manage contracts",
+    "CONTRACT_VIEW_hint": "See the contract archive and open the documents in it.",
+    "EXPENSE_DEADLINE_WAIVE": "Deadline waiver",
+    "EXPENSE_DEADLINE_WAIVE_hint": "Grant one late out-of-pocket expense a waiver, so it may be filed after all. Given before the expense goes for approval, with a reason that goes on the expense report.",
+    "CONTRACT_MANAGE_hint": "Archive contracts, draw rental contracts and keep the rental item catalogue.",
+    "FIRMATECKNARE": "Authorised signatory",
+    "FIRMATECKNARE_hint": "May be named as the section's signatory on a contract. Opens nothing, and is decided by the stadgar rather than here.",
+    "RENTAL_VIEW": "Read rental contracts",
+    "RENTAL_VIEW_hint": "See rental contracts in the archive, and nothing else in it. The narrow half of reading contracts.",
+    "RENTAL_MANAGE": "Manage rentals",
+    "RENTAL_MANAGE_hint": "Draw rental contracts and keep the rental item catalogue.",
+    "SEND_REMINDERS": "Send reminders",
+    "SEND_REMINDERS_hint": "Remind whoever an expense is waiting on, its approvers or the person who submitted it, by email. From the expense, or several at once from the list."
+  }
+}

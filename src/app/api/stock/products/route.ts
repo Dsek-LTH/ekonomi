@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   // Which size a product needs follows from its kind, which is why the schema
   // cannot say it. A spirit that never had its bottle size set is a product
-  // whose levels mean nothing — 40 % of what? — and a can with no volume leaves
+  // whose levels mean nothing (40 % of what?) and a can with no volume leaves
   // itself out of the restaurangrapport's litres. Both are settled when the
   // product is made rather than discovered by the first person holding a crate.
   if (body.kind === "VOLUME" && !body.nominalMl) {
@@ -35,8 +35,8 @@ export async function POST(req: Request) {
   }
 
   // Said in words, and about a particular product. A bare "that did not save"
-  // leaves somebody holding a tin with nowhere to go; naming the owner — and
-  // saying when the owner is retired rather than in use — turns the refusal
+  // leaves somebody holding a tin with nowhere to go; naming the owner, and
+  // saying when the owner is retired rather than in use, turns the refusal
   // into an instruction.
   const clash = (await eanTaken(body.ean)) ?? (await nameTaken(body.name));
   if (clash) return clash;
@@ -51,6 +51,11 @@ export async function POST(req: Request) {
       nominalMl: body.nominalMl ?? null,
       ean: body.ean ?? null,
       costPriceOre: body.costPriceOre ?? null,
+      shelfLifeMonths: body.shelfLifeMonths ?? null,
+      systembolagetId: body.systembolagetId ?? null,
+      // Cleaned by the schema; the fallback is only the field being left out,
+      // which a product with nothing to label itself is entitled to do.
+      tags: body.tags ?? [],
     },
     select: { id: true },
   }).catch((err: unknown) => {

@@ -1,0 +1,11 @@
+{
+  "categories": "Kategorier",
+  "title": "Frågor & svar",
+  "searchPlaceholder": "Sök bland frågorna…",
+  "all": "Alla",
+  "matches": "{count, plural, =0 {Inga träffar} =1 {# träff} other {# träffar}}",
+  "noMatchTitle": "Inga frågor matchar sökningen",
+  "noMatchDescription": "Prova ett annat ord, eller hör av dig till skattmästeriet om svaret saknas här.",
+  "openFull": "Öppna bilden i full storlek",
+  "imageMissing": "Bild saknas"
+}

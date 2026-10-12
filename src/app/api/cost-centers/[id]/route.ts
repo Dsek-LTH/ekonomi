@@ -11,7 +11,7 @@ import type { CostCenter } from "@/lib/generated/prisma/client";
 const admin = () => gate(canAccessSettings, "auth.adminEditCostCenter");
 
 // The row, if it is one this app owns. Same `{ ok }` shape as the gate, so the
-// caller reads it the same way — and gets a `cc` that is actually there.
+// caller reads it the same way, and gets a `cc` that is actually there.
 type Local = { ok: true; cc: CostCenter } | { ok: false; res: NextResponse };
 
 async function loadLocal(id: string): Promise<Local> {
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // this row, and the result unit that attests them is derived from the code.
   if (body.active !== undefined) data.active = body.active;
   // A PATCH that names nothing this route acts on is a malformed request, not
-  // a quiet success — the same answer PATCH /api/budgets/[id] gives.
+  // a quiet success. The same answer PATCH /api/budgets/[id] gives.
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
 
   await prisma.costCenter.update({ where: { id: local.cc.id }, data });
@@ -55,7 +55,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { cc } = local;
 
   // Anything already booked against it has to keep resolving, so a cost centre
-  // in use is retired rather than deleted — the same end state as a Fortnox one
+  // in use is retired rather than deleted, the same end state as a Fortnox one
   // that gets deactivated.
   const [allocations, lines, budgets] = await Promise.all([
     prisma.expenseCostAllocation.count({ where: { costCenterId: cc.id } }),

@@ -1,0 +1,88 @@
+// The read side: a local mirror of the general ledger as Fortnox holds it,
+// pulled from the SIE export. Backs spend reporting and budget-vs-actual.
+
+model LedgerVoucher {
+  id            String               @id @default(cuid())
+  financialYear Int // FortnoxFinancialYear.id
+  year          FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
+  series        String // VoucherSeries, e.g. "A"
+  number        Int // VoucherNumber within the series+year
+  date          DateTime             @db.Date // transaction date
+  description   String
+
+  rows       LedgerRow[]
+  importedAt DateTime    @default(now())
+
+  @@unique([financialYear, series, number])
+  @@index([date])
+}
+
+// Per-account opening/closing balance for a financial year, from the SIE
+// #IB/#UB records. Needed by the balance report: balance-sheet accounts carry
+// history from earlier years, so the year's vouchers alone only give the
+// movement, not the actual balance. Replaced wholesale alongside the year's
+// vouchers, so it stays as idempotent as the rest of the mirror.
+model LedgerAccountBalance {
+  financialYear  Int
+  year           FortnoxFinancialYear @relation(fields: [financialYear], references: [id], onDelete: Cascade)
+  account        String // BAS account number
+  accountName    String // denormalised from the SIE #KONTO chart
+  // "" is the account-level total (#IB/#UB). A non-empty code is the optional
+  // per-cost-centre breakdown (#OIB/#OUB), which an exporter may omit, so the
+  // account-level row is the only one guaranteed to exist. Empty string rather
+  // than null because it is part of the primary key.
+  costCenterCode String               @default("")
+
+  opening Int // öre at period start (#IB), positive = debit
+  closing Int // öre at period end (#UB), positive = debit
+
+  @@id([financialYear, account, costCenterCode])
+  @@index([account])
+}
+
+model LedgerRow {
+  id        String        @id @default(cuid())
+  voucher   LedgerVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucherId String
+
+  // Denormalised from the voucher, like accountName and costCenterName above,
+  // and for the same kind of reason, except that this pair is about what can
+  // be indexed rather than what can be read. Every report and every
+  // budget-vs-actual figure asks for one financial year, usually a month range
+  // inside it; expressed through the relation that is a join against
+  // LedgerVoucher before any index on this table can be reached, on what is by
+  // far the largest table in the app. Held here, the same questions are a
+  // straight indexed scan.
+  //
+  // Kept in step by being written once: a year's rows are deleted and
+  // re-inserted wholesale on every sync (see lib/fortnox/sync.ts), so these can
+  // no more drift from the voucher than accountName can.
+  financialYear Int
+  date          DateTime @db.Date
+
+  account        String // BAS account number, e.g. "6071"
+  accountName    String // denormalised from the SIE #KONTO chart
+  // Cost centre (SIE dimension 1). Code matched to an app CostCenter by string;
+  // some Fortnox codes have no app counterpart, so this stays a denormalised
+  // string rather than a FK.
+  costCenterCode String?
+  costCenterName String?
+  project        String?
+  text           String? // SIE transaction text
+
+  debit  Int // öre
+  credit Int // öre
+
+  // The two shapes every reader actually asks in: a period within a year (the
+  // report's movements, and the budget's actuals, which take the whole year),
+  // and one account within a year (the drill-down behind a report cell).
+  //
+  // These replace a bare @@index([account]) and @@index([costCenterCode]).
+  // Neither was reachable for the queries above, since both start by narrowing
+  // to a financial year, and nothing asks about an account, or a cost centre,
+  // across all years. An index that answers nothing is not free here: a sync
+  // re-inserts tens of thousands of rows at a time and pays for every one.
+  @@index([financialYear, date])
+  @@index([financialYear, account])
+  @@index([voucherId])
+}

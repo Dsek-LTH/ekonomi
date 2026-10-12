@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
+import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconCheck, IconDots, IconUndo } from "@/components/ui/icons";
-import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
-import type { FortnoxStatus } from "@/lib/domain/types";
+import type { FortnoxStatus, PaymentType } from "@/lib/domain/types";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useProgressRouter } from "@/components/shell/route-progress";
 
@@ -26,8 +26,25 @@ import { useProgressRouter } from "@/components/shell/route-progress";
 // bookkeeper hovering to find out which icon un-exports a verifikation.
 
 /** The comment-carrying transitions. Each one lands on the person who filed the
- *  utlägg, so the server requires a reason and the dialog collects it. */
-type Explained = "request_changes" | "return_approved" | "unexport";
+ *  utlägg, so the server requires a reason and the dialog collects it.
+ *
+ *  `waive_deadline` is here for a second reason as well: the dispens is a
+ *  decision the section has to be able to read back years later, and the reason
+ *  is printed on the utläggsräkning. */
+type Explained =
+  | "request_changes"
+  | "return_approved"
+  | "unexport"
+  | "waive_deadline";
+
+/** Which label opens the dialog for each of them. Was a nested ternary that had
+ *  to grow a branch per action; this grows a line. */
+const EXPLAINED_TITLE: Record<Explained, string> = {
+  request_changes: "requestChanges",
+  return_approved: "reopen",
+  unexport: "unexport",
+  waive_deadline: "waiveDeadline",
+};
 
 /**
  * Exporting needs two separate Fortnox things, and the route checks both: the
@@ -57,7 +74,10 @@ export function ExpenseActions({
   busy,
   onTransition,
   onWithdrawAttest,
+  onRecall,
+  onRevokeDeadlineWaiver,
   onExport,
+  onRemind,
   onDelete,
 }: {
   expenseId: string;
@@ -69,7 +89,10 @@ export function ExpenseActions({
     comment?: string,
   ) => Promise<boolean>;
   onWithdrawAttest: () => void;
+  onRecall: () => void;
+  onRevokeDeadlineWaiver: () => void;
   onExport: () => void;
+  onRemind: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations("expenses.detail");
@@ -82,7 +105,7 @@ export function ExpenseActions({
   // before it happens, rather than as standing text next to a button.
   async function explain(action: Explained) {
     const answer = await confirm({
-      title: t(action === "request_changes" ? "requestChanges" : action === "return_approved" ? "reopen" : "unexport"),
+      title: t(EXPLAINED_TITLE[action]),
       message: action === "unexport" ? t("unexportWarning") : undefined,
       confirmLabel: tComment(`${action}.submit`),
       tone: action === "unexport" ? "danger" : "default",
@@ -98,7 +121,7 @@ export function ExpenseActions({
 
   // Ordered by which one the utlägg is waiting for: the first available becomes
   // the button, the rest go in the menu. Editing is last because it's always
-  // possible on an open utlägg — it's the fallback when nothing else is.
+  // possible on an open utlägg. It's the fallback when nothing else is.
   const actions: Action[] = ([
     can.canBook && {
       key: "book",
@@ -110,6 +133,14 @@ export function ExpenseActions({
       label: t("export"),
       onClick: onExport,
       disabled: !canExportNow(fortnox),
+    },
+    // Ahead of "Skicka in", because on a late utlägg it is what stands between
+    // the two: nobody can submit until the dispens is given, and the person
+    // reading this page is the only one who can give it.
+    can.canWaiveDeadline && {
+      key: "waive_deadline",
+      label: t("waiveDeadline"),
+      onClick: () => explain("waive_deadline"),
     },
     can.canSubmit && {
       key: "submit",
@@ -145,6 +176,29 @@ export function ExpenseActions({
       icon: <IconUndo className="size-4" />,
       onClick: onWithdrawAttest,
     },
+    // The submitter's own, and never offered beside the attester's: one is
+    // taking back a signature, the other the whole claim, and the two are
+    // available to different people at different moments.
+    can.canRecall && {
+      key: "recall",
+      label: t("recall"),
+      icon: <IconUndo className="size-4" />,
+      onClick: onRecall,
+    },
+    can.canRevokeDeadlineWaiver && {
+      key: "revoke_deadline_waiver",
+      label: t("revokeDeadlineWaiver"),
+      icon: <IconUndo className="size-4" />,
+      onClick: onRevokeDeadlineWaiver,
+    },
+    // Behind the actions that move the utlägg itself, and ahead of editing: it
+    // is for somebody else's turn, so it leads only when nothing else here is
+    // the viewer's to do.
+    can.canRemind && {
+      key: "remind",
+      label: t("remind"),
+      onClick: onRemind,
+    },
     can.canEdit && {
       key: "edit",
       label: t("edit"),
@@ -167,10 +221,10 @@ export function ExpenseActions({
   if (!primary) return null;
 
   // Only buttons here. What's stopping an action lives in ExpenseActionNotice,
-  // below the header — see there for why.
+  // below the header. See there for why.
   return (
     // On a phone this row is the whole width of the card header, and the two
-    // buttons used to share it as equals — a filled "Skicka in" and a filled
+    // buttons used to share it as equals, a filled "Skicka in" and a filled
     // "Mer", wrapped onto their own line and taking 250 of 361px between them.
     // Two primaries is one too many: what the page is waiting for should have
     // the width, and everything else should have as little of it as it can
@@ -212,7 +266,7 @@ export function ExpenseActions({
               // Fragment, not a div: role="menu" expects its menuitems as
               // children, and a wrapper element between them breaks that.
               <Fragment key={a.key}>
-                {/* A rule above the destructive action — but only when there is
+                {/* A rule above the destructive action, but only when there is
                     something above it to divide. Alone in the menu, delete was
                     opening with a horizontal line ruled across nothing. */}
                 {a.danger && i > 0 && <MenuSeparator />}
@@ -241,44 +295,56 @@ export function ExpenseActions({
 // It began as small print under the buttons, which was the wrong place twice
 // over: it was a whole sentence set right-aligned at max-w-xs, wrapping under
 // whichever button happened to be primary and stretching a header that aligns
-// on its baseline — and when a blocker exists the submit button isn't rendered
+// on its baseline, and when a blocker exists the submit button isn't rendered
 // at all, so it was explaining the absence of a button that wasn't there.
 // It isn't button chrome. It's the state of the utlägg, so it reads as a line
 // about the page, at the top of the page.
 export function ExpenseActionNotice({
   can,
   fortnox,
+  paymentType,
 }: {
   can: ExpenseCapabilities;
   fortnox: FortnoxStatus;
+  /** Only so the filing-deadline sentence can name what it is about, a
+   *  milersättning has no receipt to call old. See SubmitBlockerNote. */
+  paymentType?: PaymentType;
 }) {
   const t = useTranslations("expenses.detail");
-  const tBlocker = useTranslations("expenses.submitBlocker");
 
-  const notes = [
-    // `days` is only read by the filing-deadline hint; next-intl ignores it on
-    // the others, which is cheaper than picking values per blocker.
-    can.submitBlocker
-      ? tBlocker(can.submitBlocker, { days: REIMBURSEMENT_DEADLINE_DAYS })
-      : null,
-    // The export button is rendered but dead without Fortnox, and its own
-    // tooltip can't say so — Button sets `disabled:pointer-events-none`. Which
-    // half is missing decides where you have to go: the section's connection is
-    // set up once under Bokföring, your own login is yours to renew.
+  // The export button is rendered but dead without Fortnox, and its own
+  // tooltip can't say so. Button sets `disabled:pointer-events-none`. Which
+  // half is missing decides where you have to go: the section's connection is
+  // set up once under Bokföring, your own login is yours to renew.
+  const fortnoxNote =
     can.canExport && !canExportNow(fortnox)
       ? fortnox.connected
         ? t("fortnoxNotSignedIn")
         : t("fortnoxNotConnected")
-      : null,
-  ].filter((n): n is string => Boolean(n));
+      : null;
 
-  if (notes.length === 0) return null;
+  // The other side of the same sentence. Where the submitter is told their
+  // utlägg is too old to send, whoever can do something about it is told there
+  // is a decision here for them to make, because nothing else on the page would
+  // say so.
+  //
+  // And it replaces the blocker rather than joining it. The skattmästare is an
+  // admin, so they see the submitter's own hint too, and that hint ends "hör av
+  // dig till skattmästaren", which is nobody's idea of help when you are the
+  // skattmästare. The two sentences are about the same fact, so only the one
+  // written for this reader is shown.
+  const waiveNote = can.canWaiveDeadline;
+  const blocker = waiveNote && can.submitBlocker === "tooLate" ? null : can.submitBlocker;
+
+  if (!blocker && !fortnoxNote && !waiveNote) return null;
 
   return (
     <Notice>
-      {notes.map((note) => (
-        <p key={note}>{note}</p>
-      ))}
+      {/* Its own component rather than a line of text: one blocker sends the
+          submitter to another page, and the sentence carries the link there. */}
+      {blocker && <SubmitBlockerNote blocker={blocker} paymentType={paymentType} />}
+      {waiveNote && <p>{t("deadlineWaiverPending")}</p>}
+      {fortnoxNote && <p>{fortnoxNote}</p>}
     </Notice>
   );
 }

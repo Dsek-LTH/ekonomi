@@ -2,11 +2,11 @@
 //
 // What is waiting to be booked, and what has been. They are different jobs, done
 // at different times and often by different people, and they are different
-// *kinds* of thing — the first is a working set the next fetch replaces, the
+// *kinds* of thing: the first is a working set the next fetch replaces, the
 // second is the section's record. So they are two pages, and switching between
 // them is a link rather than a state.
 //
-// How a fetch's reports are looked at — one day at a time or as a table — is not
+// How a fetch's reports are looked at (one day at a time or as a table) is not
 // a third section: it is the same reports, drawn differently, which is the view
 // toggle's question and not this one.
 //
@@ -16,7 +16,7 @@
 // now the layout is PageShell's, everywhere, and this is only the content.
 import type { Collections } from "@/components/ui/collection-switch";
 
-export type IncomeSection = "review" | "booked";
+type IncomeSection = "review" | "booked";
 
 const HREF: Record<IncomeSection, string> = {
   review: "/income",

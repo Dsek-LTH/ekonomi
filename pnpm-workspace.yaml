@@ -7,7 +7,7 @@ allowBuilds:
 
 # Transitive dependencies pinned by a package above them to a version with a
 # published advisory. Each is a copy nested inside another package, not
-# something this app depends on directly — an override is the only way to
+# something this app depends on directly. An override is the only way to
 # reach them, and they go away again when the parent catches up.
 overrides:
   # next pins sharp <0.35 for its image optimizer (inherited libvips CVEs:

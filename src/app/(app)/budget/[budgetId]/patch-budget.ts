@@ -3,13 +3,13 @@
 //
 // A write used to be: POST, then re-fetch the budget, then re-render every
 // sheet in it. But a create route hands back the row it created, a delete says
-// it deleted, and a reorder was the client's own arrangement to begin with — so
+// it deleted, and a reorder was the client's own arrangement to begin with, so
 // in each case the screen already knows what changed, and what it needs is a
 // way to say so. That is all this file is: pure functions from a budget and a
 // change to the budget after it.
 //
 // Each mirrors what its route does on the server, which is the thing to be
-// careful about — a rule written twice can be written differently twice. Where
+// careful about: a rule written twice can be written differently twice. Where
 // that risk is real (the reorder, which also moves a row between accounts) it
 // is tested against the same description the route is written to.
 import type { Account, Budget, BudgetCC, Comment, LineItem, Variable } from "./budget-types";
@@ -30,7 +30,7 @@ export function withSheet(b: Budget, sheetId: string, fn: (cc: BudgetCC) => Budg
   return { ...b, costCenters: b.costCenters.map((cc) => (cc.id === sheetId ? fn(cc) : cc)) };
 }
 
-/** The budget with a row appended to an account — a created line, as returned. */
+/** The budget with a row appended to an account (a created line, as returned). */
 export function withLine(b: Budget, accountId: string, line: LineItem): Budget {
   return withAccount(b, accountId, (a) => ({ ...a, lineItems: [...a.lineItems, line] }));
 }
@@ -49,9 +49,25 @@ export function withoutLine(b: Budget, lineId: string): Budget {
   };
 }
 
-/** The budget with an account appended to a sheet — a created account, as returned. */
+/**
+ * The budget with a created account put into a sheet, in account-number order.
+ *
+ * Placed, not appended. The sheet is ordered by account code (lib/data/budget.ts),
+ * so a new 3010 dropped at the end would sit under 5800 until the next reload
+ * and then jump, which reads as the app having changed its mind about where the
+ * row goes. Same rule on both sides of the wire, so the optimistic sheet and the
+ * reloaded one agree.
+ *
+ * BAS codes are four digits throughout, so comparing them as strings is
+ * comparing them as numbers.
+ */
 export function withNewAccount(b: Budget, sheetId: string, account: Account): Budget {
-  return withSheet(b, sheetId, (cc) => ({ ...cc, accounts: [...cc.accounts, account] }));
+  return withSheet(b, sheetId, (cc) => ({
+    ...cc,
+    accounts: [...cc.accounts, account].sort((x, y) =>
+      x.accountCode.localeCompare(y.accountCode),
+    ),
+  }));
 }
 
 /** The budget without an account, and so without the rows that hung off it. */
@@ -90,7 +106,7 @@ export function withLineOrder(b: Budget, accountId: string, orderedIds: string[]
           ? {
               ...a,
               // An id the budget has never heard of is dropped rather than
-              // carried as a hole — the route drops it too, for the same reason.
+              // carried as a hole. The route drops it too, for the same reason.
               lineItems: orderedIds.flatMap((id) => rows.get(id) ?? []),
             }
           : { ...a, lineItems: a.lineItems.filter((li) => !named.has(li.id)) },
@@ -99,7 +115,7 @@ export function withLineOrder(b: Budget, accountId: string, orderedIds: string[]
   };
 }
 
-/** The budget with a variable appended — a created one, as returned. */
+/** The budget with a variable appended (a created one, as returned). */
 export function withVariable(b: Budget, variable: Variable): Budget {
   return { ...b, variables: [...b.variables, variable] };
 }

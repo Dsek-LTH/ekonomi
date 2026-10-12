@@ -4,7 +4,7 @@
 -- review screen replaced. Nothing needs it: an unbooked day is unbooked, and
 -- the next fetch clears the working set anyway.
 --
--- Any day currently sitting in it becomes a draft again — it is exactly what it
+-- Any day currently sitting in it becomes a draft again. It is exactly what it
 -- was before someone pressed skip, and the alternative (deleting it) would
 -- throw away takings that were only ever set aside.
 UPDATE "IncomeReport" SET "status" = 'DRAFT' WHERE "status" = 'EXCLUDED';

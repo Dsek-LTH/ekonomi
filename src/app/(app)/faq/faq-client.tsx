@@ -1,9 +1,10 @@
 "use client";
 
-// Frågor & svar — the guild's "HOW TO UTLÄGG" turned into something you can
+// Frågor & svar, the guild's "HOW TO UTLÄGG" turned into something you can
 // search at the register with your phone in one hand, instead of a PDF you have
-// to remember you were sent. The text itself lives in messages/faq/<locale>.json
-// (see faq-content.ts); this file is only how it reads and how you find it.
+// to remember you were sent. The text itself lives in
+// messages/<locale>/faq-content/<category>.json (see faq-content.ts); this file
+// is only how it reads and how you find it.
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -35,11 +36,11 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(ALL);
   // Which questions have been clicked open or shut *against* what the page
-  // would show on its own — see `isOpen`.
+  // would show on its own. See `isOpen`.
   const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
   const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
 
-  // One lowercased haystack per question, built once — the answers don't change
+  // One lowercased haystack per question, built once. The answers don't change
   // between keystrokes.
   const index = useMemo(
     () => sections.flatMap((s) => s.items.map((i) => [i.id, searchText(i)] as const)),
@@ -58,7 +59,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   }, [query, index]);
 
   // What a question does when nobody has touched it. A search is a question,
-  // and a screen of collapsed headlines answers none of it — so a search opens
+  // and a screen of collapsed headlines answers none of it, so a search opens
   // what it found. Failing that, /faq#deadline opens the answer it names, which
   // is what makes these anchors worth putting in a reminder mail.
   const opensItself = (id: string) => (matches ? matches.has(id) : hash === id);
@@ -105,7 +106,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   ];
 
   return (
-    <PageShell title={t("title")} description={t("description")} width="content">
+    <PageShell title={t("title")} width="content">
       <div className="space-y-3">
         <SearchInput
           value={query}
@@ -114,7 +115,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
           aria-label={t("searchPlaceholder")}
           className="sm:max-w-md"
         />
-        {/* Which slice of the questions, so the underline register — the pills
+        {/* Which slice of the questions, so the underline register (the pills
             these were would have read as "which set of questions is this
             page about", which is not a choice this page offers. */}
         <div className="border-b border-border">
@@ -172,7 +173,7 @@ function Question({
   // 200ms and the app's one easing (see DESIGN.md → Motion). The global
   // prefers-reduced-motion guard in globals.css cuts every duration here to
   // nothing, so the answer arrives instead of unfolding for anyone who asked
-  // for that — no separate branch needed.
+  // for that, no separate branch needed.
   const MOTION = "duration-200 ease-[var(--ease-out-quint)]";
   return (
     // The id is on the row, not the button: an anchor should land on the whole
@@ -183,7 +184,7 @@ function Question({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-start justify-between gap-4 px-inset py-4 text-left transition-colors hover:bg-surface/60"
+        className="flex w-full items-start justify-between gap-4 px-inset py-4 text-left transition-colors hover:bg-hover"
       >
         <span className="text-[15px] font-medium">{item.q}</span>
         <IconChevronDown
@@ -195,7 +196,7 @@ function Question({
         />
       </button>
       {/* The answer stays mounted and is opened by animating the row it sits in
-          from 0fr to 1fr — the one way to transition to a height nobody has
+          from 0fr to 1fr, the one way to transition to a height nobody has
           measured, and it costs no JS and no ResizeObserver. A browser that
           won't interpolate `fr` still lands on the right two end states and
           just snaps between them.
@@ -214,7 +215,7 @@ function Question({
       >
         {/* Two wrappers, and both are load-bearing: the outer one is the grid
             row being animated and clips what overflows it, and the inner one
-            carries the padding — on the outer, the bottom padding would keep a
+            carries the padding. On the outer, the bottom padding would keep a
             closed answer 20px tall. */}
         <div className="overflow-hidden">
           <div className="px-inset pb-5">
@@ -275,7 +276,7 @@ function Block({ block }: { block: FaqBlock }) {
       return <AnswerTable head={block.head} rows={block.rows} />;
 
     case "link":
-      // Absolute or `tel:` — an in-app destination is an `action` block, and
+      // Absolute or `tel:`. An in-app destination is an `action` block, and
       // gets a button rather than a line of text.
       return (
         <p>
@@ -306,7 +307,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
     // Capped rather than full width: a receipt photographed portrait would
     // otherwise stand taller than the screen inside an answer, and you'd scroll
     // past the explanation to reach the picture it belongs to.
-    <div className="relative aspect-[3/4] max-w-xs overflow-hidden rounded-xl border border-border bg-surface">
+    <div className="relative aspect-[3/4] max-w-xs overflow-hidden rounded-panel border border-border bg-surface">
       {block.src ? (
         // The photo is contained, not cropped to fill: a cover crop cuts off the
         // footer, which is half of what these pictures are here to show. Full
@@ -327,13 +328,13 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
           />
         </a>
       ) : (
-        // Stands in until the photo exists, and says which file to add — this
+        // Stands in until the photo exists, and says which file to add. This
         // page is maintained by whoever holds the treasury, and a frame that
         // renders nothing is a frame nobody knows how to fill.
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">
-          <IconReceipt className="size-7 text-muted/50" />
+          <IconReceipt className="size-7 text-faint" />
           <p className="text-sm font-medium text-muted">{t("imageMissing")}</p>
-          <code className="break-all text-[11px] leading-tight text-muted/70">
+          <code className="break-all text-[11px] leading-tight text-muted">
             {block.expected}
           </code>
         </div>
@@ -356,7 +357,7 @@ function AnswerTable({ head, rows }: { head: string[]; rows: string[][] }) {
     // The page column is narrow on a phone and a three-column table does not
     // fit in it; the table scrolls inside its own box rather than making the
     // page scroll sideways.
-    <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-border">
+    <div className="overflow-x-auto overscroll-x-contain rounded-panel border border-border">
       <table className="w-full text-sm text-foreground">
         <thead>
           <tr className="border-b border-border text-xs font-medium text-muted">

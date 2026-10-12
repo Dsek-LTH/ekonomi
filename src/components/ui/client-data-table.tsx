@@ -4,7 +4,7 @@
 //
 // For the handful of screens where that is the right thing: the admin cost
 // centre list, the budget index, the dashboard's two panels. Each holds every
-// row it will ever show — a few dozen — so a round trip per keystroke would buy
+// row it will ever show (a few dozen), so a round trip per keystroke would buy
 // nothing, and the state can stay in the component instead of the URL.
 //
 // It does the filtering, the sorting and the cut, then hands DataTable the page
@@ -41,18 +41,27 @@ export type ClientSelectFilter<T> = {
   options: { value: string; label: string; predicate?: (row: T) => boolean }[];
 };
 
+/** One of them, or several over different dimensions of the same rows. See
+ *  DataTable's `SelectFilters`, whose option values these are. */
+type ClientSelectFilters<T> = ClientSelectFilter<T> | ClientSelectFilter<T>[];
+
+const asFilters = <T,>(filter: ClientSelectFilters<T> | undefined): ClientSelectFilter<T>[] =>
+  filter ? (Array.isArray(filter) ? filter : [filter]) : [];
+
 // One collator for every sort, rather than an implicit one per comparison.
 const collator = new Intl.Collator("sv");
 
-// Compose every active filter — column (text/date), tab and dropdown — into a
+// Compose every active filter (column (text/date), tab and dropdown) into a
 // single predicate. Text columns match if any one contains the query; each date
-// column must fall within the from/to range; the dropdown's picked options are
-// OR-ed; then the tab predicate. A row is kept only if it passes them all.
+// column must fall within the from/to range; a dropdown's picked options are
+// OR-ed and the dropdowns are AND-ed with each other (a drink type *and* a tag
+// is a narrowing); then the tab predicate. A row is kept only if it passes them
+// all.
 function buildRowFilter<T>(
   cols: Column<T>[],
   controls: ClientControls,
   activeTab: ClientTabOption<T> | undefined,
-  filter: ClientSelectFilter<T> | undefined,
+  filter: ClientSelectFilters<T> | undefined,
 ): (row: T) => boolean {
   const { query, dateFrom: from, dateTo: to } = controls;
   const q = query.trim().toLowerCase();
@@ -68,14 +77,20 @@ function buildRowFilter<T>(
   const dates = after || before ? pick("dateRange") : [];
   const within = (v: string) => (!after || v >= after) && (!before || v <= before);
   const tabPred = activeTab?.predicate;
-  const picked = (filter?.options ?? [])
-    .filter((o) => controls.picks.includes(o.value))
-    .flatMap((o) => (o.predicate ? [o.predicate] : []));
+  // One group of predicates per dropdown, and a dropdown with nothing picked
+  // drops out rather than matching nothing.
+  const groups = asFilters(filter)
+    .map((f) =>
+      f.options
+        .filter((o) => controls.picks.includes(o.value))
+        .flatMap((o) => (o.predicate ? [o.predicate] : [])),
+    )
+    .filter((g) => g.length > 0);
 
   return (row) =>
     (!search.length || search.some((v) => String(v(row)).toLowerCase().includes(q))) &&
     dates.every((v) => within(String(v(row)))) &&
-    (!picked.length || picked.some((p) => p(row))) &&
+    groups.every((g) => g.some((p) => p(row))) &&
     (tabPred?.(row) ?? true);
 }
 
@@ -85,7 +100,9 @@ export function ClientDataTable<T>({
   controls,
   tabs,
   filter,
+  summary,
   action,
+  actionPanel,
   searchPlaceholder,
   rowKey,
   rowClassName,
@@ -95,21 +112,26 @@ export function ClientDataTable<T>({
   empty,
 }: {
   columns: Column<T>[];
-  /** Every row the list will ever show — not a page. */
+  /** Every row the list will ever show, not a page. */
   rows: T[];
   controls: ClientControls;
   tabs?: ClientTabFilter<T>;
-  filter?: ClientSelectFilter<T>;
-  /** What you can do to this list — see DataTable's own `action`. */
+  filter?: ClientSelectFilters<T>;
+  /** A figure about the whole list, see DataTable's own `summary`. */
+  summary?: React.ReactNode;
+  /** What you can do to this list, see DataTable's own `action`. */
   action?: React.ReactNode;
+  /** What `action` opened in place, see DataTable's own `actionPanel`. */
+  actionPanel?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
-  /** What sits under a row when opened — see DataTable's own `expansion`. */
+  /** What sits under a row when opened, see DataTable's own `expansion`. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
-  empty?: React.ReactNode;
+  /** Passed straight to DataTable, a string, see its note there. */
+  empty?: string;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
   const activeTab = tabs?.find((o) => o.value === controls.tab) ?? tabs?.[0];
@@ -135,15 +157,15 @@ export function ClientDataTable<T>({
   // What DataTable is handed: the page, the count behind it, and tabs stripped
   // of the predicates it has no use for.
   const plainTabs: TabFilter | undefined = useMemo(
-    () => tabs?.map(({ value, label }) => ({ value, label })),
+    () => tabs?.map(({ value, label, badge }) => ({ value, label, badge })),
     [tabs],
   );
-  const plainFilter: SelectFilter | undefined = useMemo(
+  const plainFilter: SelectFilter[] = useMemo(
     () =>
-      filter && {
-        label: filter.label,
-        options: filter.options.map(({ value, label }) => ({ value, label })),
-      },
+      asFilters(filter).map((f) => ({
+        label: f.label,
+        options: f.options.map(({ value, label }) => ({ value, label })),
+      })),
     [filter],
   );
 
@@ -154,7 +176,9 @@ export function ClientDataTable<T>({
       controls={{ ...controls, server: true, total: data.length }}
       tabs={plainTabs}
       filter={plainFilter}
+      summary={summary}
       action={action}
+      actionPanel={actionPanel}
       searchPlaceholder={searchPlaceholder}
       rowKey={rowKey}
       rowClassName={rowClassName}

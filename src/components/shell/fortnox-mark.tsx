@@ -10,7 +10,7 @@ import { cn } from "@/lib/ui/utils";
 export function IconFortnox({ className }: { className?: string }) {
   const [missing, setMissing] = useState(false);
   // cn only joins, so a caller's size would sit alongside the default and let
-  // source order pick the winner — replace it outright, as Svg does.
+  // source order pick the winner. Replace it outright, as Svg does.
   const size = className ?? "size-[18px]";
   if (missing) return <IconLink className={cn(size, "shrink-0 text-muted")} />;
   return (
@@ -23,7 +23,7 @@ export function FortnoxMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded",
+        "flex size-8 shrink-0 items-center justify-center rounded-control",
         className,
       )}
     >

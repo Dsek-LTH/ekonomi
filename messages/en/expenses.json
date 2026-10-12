@@ -1,0 +1,303 @@
+{
+  "title": "Expenses",
+  "scopeLabel": "Scope",
+  "description": "Follow an expense all the way, from receipt to bookkeeping.",
+  "new": "New expense",
+  "searchPlaceholder": "Search expenses...",
+  "noMatch": "No expenses match the filter.",
+  "emptyTitle": "No expenses here",
+  "emptyDescription": "Create your first expense by uploading a receipt.",
+  "statusFilter": {
+    "all": "All statuses"
+  },
+  "scope": {
+    "mine": "Mine",
+    "all": "All"
+  },
+  "col": {
+    "date": "Date",
+    "title": "Expense",
+    "type": "Type",
+    "submitter": "Submitted by",
+    "status": "Status",
+    "attest": "Approval",
+    "verification": "Voucher",
+    "amount": "Amount"
+  },
+  "attest": {
+    "waiting": "Awaiting approval",
+    "attestedBy": "Approved by {name}{date}",
+    "waitingResultUnit": "Awaiting approval – {resultUnit}",
+    "noResultUnit": "no result unit"
+  },
+  "submitBlocker": {
+    "match": "Match it against a bank transaction before you can submit.",
+    "payout": "Add your clearing and account number under My profile before you can submit.",
+    "receipt": "Upload the receipt before you can submit.",
+    "mileage": "Enter the odometer before and after the journey before you can send it.",
+    "incomplete": "Fill in the description, date, amount and cost distribution before you can submit.",
+    "futureDate": "The purchase date is in the future. Correct it to the day of the purchase before you can submit.",
+    "tooLate": "An expense out of your own pocket must be filed within {days} days of the purchase, and this receipt is older than that. The expense stays a draft. To apply for a waiver, get in touch with the skattmästare, who decides whether it is accepted anyway. If the date is wrong, you can correct it.",
+    "tooLateMileage": "A mileage claim must be filed within {days} days of the journey, and this journey is older than that. The journey stays a draft. To apply for a waiver, get in touch with the skattmästare, who decides whether it is accepted anyway. If the date is wrong, you can correct it."
+  },
+  "event": {
+    "CREATED": "Created the expense",
+    "EDITED": "Updated the details",
+    "RECEIPT_UPLOADED": "Uploaded a receipt",
+    "RECEIPT_REMOVED": "Removed a receipt",
+    "MATCHED": "Matched against a bank transaction",
+    "UNMATCHED": "Removed the match",
+    "SUBMITTED": "Submitted for approval",
+    "CHANGES_REQUESTED": "Requested changes",
+    "COST_CENTER_APPROVED": "Approved a cost center",
+    "ATTEST_WITHDRAWN": "Withdrew their approval",
+    "APPROVED": "Approved the expense",
+    "BOOKED": "Booked the expense",
+    "EXPORTED": "Exported to Fortnox",
+    "EXPORT_REVERTED": "Marked as not exported",
+    "RECALLED": "Withdrew the submission",
+    "DEADLINE_WAIVED": "Granted a waiver from the deadline",
+    "DEADLINE_WAIVER_REVOKED": "Took the waiver back",
+    "REMINDER_SENT": "Sent a reminder"
+  },
+  "detail": {
+    "missingTitle": "Expense not found",
+    "missingDescription": "It may have been deleted, or the link is wrong.",
+    "missingAction": "To all expenses",
+    "details": "Details",
+    "purchaseDate": "Purchase date",
+    "amount": "Amount",
+    "distribution": "Cost distribution",
+    "awaitingApproval": "Awaiting approval",
+    "allocationCostCenter": "Cost center",
+    "allocationApproval": "Approval",
+    "allocationTotal": "Total",
+    "accountName": "Name",
+    "costCenterShort": "CC",
+    "debitShort": "Dr",
+    "creditShort": "Cr",
+    "paymentType": "Payment type",
+    "verification": "Voucher",
+    "amend": "Amend",
+    "account": "Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "exportedToFortnox": "Exported to Fortnox – voucher",
+    "history": "History",
+    "receipt": "Receipt",
+    "noReceipt": "No receipt uploaded.",
+    "bankTransaction": "Bank transaction",
+    "removeMatch": "Remove match",
+    "noMatch": "No match.",
+    "more": "More",
+    "book": "Book",
+    "export": "Export to Fortnox",
+    "fortnoxNotConnected": "Fortnox is not connected. Connect it under Bookkeeping first.",
+    "fortnoxNotSignedIn": "You are not signed in to Fortnox. Sign in from your profile and you can export.",
+    "submit": "Submit for approval",
+    "approve": "Approve",
+    "withdrawAttest": "Withdraw my approval",
+    "requestChanges": "Request changes",
+    "reopen": "Reopen for changes",
+    "unexport": "Mark as not exported",
+    "unexportWarning": "The voucher is still in Fortnox. Delete or void it there, or the next export will create a duplicate.",
+    "edit": "Edit",
+    "delete": "Delete expense",
+    "comment": {
+      "request_changes": {
+        "label": "What needs to change?",
+        "placeholder": "Write a comment to whoever filed the expense…",
+        "submit": "Send back"
+      },
+      "return_approved": {
+        "label": "Why is the expense being reopened?",
+        "placeholder": "Write a comment to whoever filed the expense…",
+        "submit": "Send back"
+      },
+      "unexport": {
+        "label": "Why is the expense no longer exported?",
+        "placeholder": "E.g. the voucher was voided in Fortnox…",
+        "submit": "Mark as not exported"
+      },
+      "waive_deadline": {
+        "label": "Why is the waiver granted?",
+        "placeholder": "E.g. the receipt went missing and has been looked for since the summer…",
+        "submit": "Grant waiver"
+      }
+    },
+    "editedFields": "Changed: {fields}",
+    "voucherComment": "Voucher {label}",
+    "journeyDate": "Date driven",
+    "recall": "Withdraw",
+    "waiveDeadline": "Grant waiver",
+    "revokeDeadlineWaiver": "Take the waiver back",
+    "revokeWaiverConfirm": "The expense is past the deadline and cannot be submitted again without a new waiver.",
+    "deadlineWaiver": "Waiver from the filing deadline",
+    "deadlineWaiverGranted": "{name} granted a waiver on {date}.",
+    "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted.",
+    "remind": "Send reminder",
+    "reminderTo": "To {names}"
+  },
+  "mutations": {
+    "transition": {
+      "submit": "Submitted for approval.",
+      "approve": "The expense was approved.",
+      "withdraw_attest": "Your approval was withdrawn.",
+      "request_changes": "Sent back with a request for changes.",
+      "return_approved": "The expense was reopened for changes.",
+      "unexport": "The expense is marked as not exported.",
+      "recall": "The expense is back as a draft",
+      "waive_deadline": "Waiver granted. The expense can be submitted.",
+      "revoke_deadline_waiver": "The waiver was taken back."
+    },
+    "withdraw": {
+      "title": "Withdraw your approval?",
+      "message": "The cost centers you approved become unapproved again and the expense goes back to awaiting approval.",
+      "confirm": "Withdraw"
+    },
+    "export": {
+      "failed": "The export failed",
+      "done": "Exported to Fortnox (voucher {label})",
+      "attachWarning": "The receipt was uploaded but could not be attached to the voucher: {detail}"
+    },
+    "match": {
+      "failed": "The match failed",
+      "matched": "Transaction matched.",
+      "removed": "Match removed."
+    },
+    "delete": {
+      "title": "Delete the expense?",
+      "message": "The expense and its receipt are permanently deleted.",
+      "confirm": "Delete",
+      "failed": "Could not delete",
+      "done": "The expense was deleted."
+    },
+    "recall": {
+      "title": "Withdraw the expense?",
+      "message": "It goes back to a draft and leaves the attest queue. You can then change it (from an out-of-pocket purchase to the section card, say) and send it in again. It keeps its reference number.",
+      "messageAttested": "It goes back to a draft and leaves the attest queue. {count, plural, =1 {One approval is} other {# approvals are}} removed, because they were given for the expense as it stood. You can then change it and send it in again; it keeps its reference number.",
+      "confirm": "Withdraw"
+    }
+  },
+  "wizard": {
+    "step": {
+      "review": "Review",
+      "match": "Match",
+      "submit": "Submit"
+    },
+    "newTitle": "New expense",
+    "editTitle": "Edit {id}",
+    "editTitleDraft": "Edit draft",
+    "save": "Save",
+    "saveDraft": "Save draft",
+    "back": "Back",
+    "continue": "Continue",
+    "createFailed": "Could not create the expense",
+    "uploadFailed": "The upload failed",
+    "saveFailed": "Could not save the expense",
+    "matchSaveFailed": "Could not save the match",
+    "submitFailed": "Saved, but could not be submitted",
+    "savedChanges": "Your changes were saved.",
+    "savedDraft": "Draft saved.",
+    "submitted": "The expense was submitted for approval.",
+    "receiptRequired": "Upload the receipt in the panel beside this before continuing",
+    "description": "Description",
+    "purchaseDate": "Purchase date",
+    "date": "Date",
+    "dateIncomplete": "Type the whole date (YYYY-MM-DD)",
+    "dateFuture": "The date is in the future. A purchase cannot have been made later than today",
+    "dateTooLate": "Older than {days} days. An out-of-pocket claim has to be filed within {days} days of the purchase.",
+    "dateTooLateCard": "Was it the section card you used? Change the payment type at the top and no deadline applies.",
+    "dateTooLateWaiver": "You can apply for a waiver: finish the expense, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
+    "amount": "Amount",
+    "returnMeans": "{amount} comes back to the section.",
+    "distribution": "Cost distribution",
+    "paymentTypeFixed": "This expense accounts for this bank transaction, so the payment type is fixed. To claim your own money back instead, start a new expense without picking the transaction.",
+    "documents": "Documents",
+    "removeDocument": "Remove the document",
+    "removeDocumentFailed": "Could not remove the document",
+    "matchTitle": "Match against a bank transaction",
+    "reviewTitle": "Review and submit",
+    "match": "Match",
+    "paymentType": "Payment type",
+    "payoutTo": "Paid out to",
+    "payoutMissing": "Add an account under My profile",
+    "goesTo": "Goes to {resultUnits} for approval.",
+    "resultUnitConcerned": "the result unit concerned",
+    "resubmit": "Submit again",
+    "submit": "Submit for approval",
+    "claim": "What is this?",
+    "claimOption": {
+      "card": "Section card",
+      "cardReturn": "Section card, refund",
+      "own": "Out of pocket"
+    },
+    "claimHint": {
+      "card": "A purchase made with the section's card.",
+      "cardReturn": "Money back to the card, a refund for instance.",
+      "own": "You paid yourself and get the money back."
+    }
+  },
+  "field": {
+    "title": "Description",
+    "purchaseDate": "Purchase date",
+    "grossAmount": "Amount",
+    "allocations": "Cost distribution",
+    "paymentType": "Payment type",
+    "odometerStart": "Odometer at the start",
+    "odometerEnd": "Odometer at the end",
+    "journeyStops": "Route"
+  },
+  "newMenu": {
+    "label": "New expense",
+    "ordinary": "Ordinary expense",
+    "ordinaryHint": "You have a receipt: card or your own",
+    "mileage": "Mileage",
+    "mileageHint": "You drove your own car on the section's errand"
+  },
+  "match": {
+    "lead": "Pick the purchase on the section card. Only transactions of exactly {amount} can be picked.",
+    "showOthers": "Show other transactions ({count})",
+    "hideOthers": "Hide other transactions",
+    "search": "Search by text or amount",
+    "suggested": "Suggested",
+    "overBy": "{amount} kr more than the claim",
+    "underBy": "{amount} kr less than the claim",
+    "isIncoming": "money in, only settles a return",
+    "isOutgoing": "money out, only settles a purchase",
+    "taken": "already claimed by another expense",
+    "takenBy": "already claimed by {reference}",
+    "noneAtAll": "There are no transactions on your section card yet.",
+    "noneMatchSearch": "No transaction matches that search.",
+    "stuckTitle": "Can't find the purchase?",
+    "stuckWithRows": "None of the rows above can be picked. If the purchase is listed with a different amount, it is the amount you typed that needs correcting. If it is listed as already claimed, somebody else has taken it: talk to them or to the treasurer.",
+    "stuckNoRows": "The statement has probably not been imported yet. Ask the treasurer to import the latest bank file under Bank & matching.",
+    "stuckDraft": "A card purchase cannot be submitted without a match. Save it as a draft and come back when the transaction is there."
+  },
+  "reminders": {
+    "title": "Send reminder",
+    "subtitleMany": "{count} expenses selected",
+    "loading": "Finding out who it goes to…",
+    "goesTo": "The reminder goes to",
+    "target": {
+      "attesters": "Approval",
+      "submitter": "Submitter",
+      "cardHolder": "Card holder"
+    },
+    "skippedTitle": "{count, plural, one {One expense will not be reminded about} other {# expenses will not be reminded about}}",
+    "skipped": {
+      "notRemindable": "it is not waiting on anyone",
+      "nobody": "there is nobody to remind"
+    },
+    "message": "Message",
+    "messageHint": "Optional. Shown at the top of the email.",
+    "messagePlaceholder": "For example what is missing, or when it needs to be done.",
+    "send": "{count, plural, one {Send to one person} other {Send to # people}}",
+    "sendNone": "Send",
+    "sent": "{count, plural, one {Reminder sent to one person.} other {Reminder sent to # people.}}",
+    "sendFailed": "Could not send the reminder",
+    "pickAll": "Select every expense on the page to remind about",
+    "pick": "Select {label} to remind about",
+    "remindPicked": "Remind ({count})"
+  }
+}

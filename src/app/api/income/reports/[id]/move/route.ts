@@ -2,7 +2,7 @@
 //
 // The correction for a product rung up without its prefix: the routing sent it
 // to the fallback, and this puts it where the money actually belongs. The whole
-// operation is lib/income/lines.ts — this is the gate and the body. Its sibling
+// operation is lib/income/lines.ts, this is the gate and the body. Its sibling
 // ../lines re-accounts them without moving them.
 import { NextResponse } from "next/server";
 

@@ -19,8 +19,8 @@ const valueOf = (expression: string, variables: VariableInput[] = []) =>
 // Kronor → öre. The engine reports money in öre (see the units note in
 // eval.ts), and a budget is written in kronor, so the assertions below say what
 // the sheet says and this converts. Written out rather than hidden inside
-// `valueOf`, because which numbers here are money and which are not — a
-// variable holding a headcount is not — is exactly the distinction the units
+// `valueOf`, because which numbers here are money and which are not (a
+// variable holding a headcount is not) is exactly the distinction the units
 // change turns on.
 const kr = (n: number) => Math.round(n * 100);
 
@@ -166,7 +166,7 @@ describe("account totals", () => {
   });
 
   it("resolves a variable named with Å/Ä/Ö", () => {
-    // Variable names are never validated — only uppercased — so this is
+    // Variable names are never validated, only uppercased, so this is
     // reachable, and half-lexing one resolved it to a different, missing name.
     expect(valueOf("=ÅRSAVGIFT*2", [{ name: "ÅRSAVGIFT", expression: "150" }])).toBe(kr(300));
   });
@@ -239,8 +239,8 @@ describe("circular references", () => {
 
 describe("a formula is read whole or not at all", () => {
   // The parser used to stop wherever it stopped understanding and hand back
-  // what it had read so far. Every case below therefore had an answer — a
-  // plausible, confident, wrong one — and nothing anywhere said so.
+  // what it had read so far. Every case below therefore had an answer, a
+  // plausible, confident, wrong one, and nothing anywhere said so.
 
   it("rejects a formula with something left over after it", () => {
     expect(valueOf("=350 kr")).toBe(0);
@@ -263,7 +263,7 @@ describe("a formula is read whole or not at all", () => {
   });
 
   it("still accepts the whole language it always did", () => {
-    // The strictness is only about what is left over — nothing valid moved.
+    // The strictness is only about what is left over, nothing valid moved.
     expect(valueOf("=(2+3)*4")).toBe(kr(20));
     expect(valueOf("= 350 * 2 ")).toBe(kr(700));
     expect(valueOf("=6×7")).toBe(kr(42));
@@ -274,7 +274,7 @@ describe("a formula is read whole or not at all", () => {
 describe("an unresolvable cell does not pass for zero", () => {
   it("makes the row that reads it unresolved too", () => {
     // Previously: the broken row was flagged, and the row doubling it quietly
-    // returned 0 — a clean number with nothing to suggest it was wrong.
+    // returned 0, a clean number with nothing to suggest it was wrong.
     const result = evaluate([], [
       line("ungefär 300", "source"),
       line("=@Lsource:expression*2", "double"),
@@ -316,8 +316,8 @@ describe("an account total says when it is short a row", () => {
       line("=fel kr", "broken"),
       line("1200", "fine"),
     ]);
-    // The figure is the rows that worked — a sheet you cannot read is no help
-    // in finding the row to fix — and the account is marked as partial.
+    // The figure is the rows that worked, a sheet you cannot read is no help
+    // in finding the row to fix, and the account is marked as partial.
     expect(result.accounts.get("SEX01:5010")).toBe(kr(1200));
     expect(result.badAccounts).toEqual(["SEX01:5010"]);
   });
@@ -362,7 +362,7 @@ describe("the cells are part of the fixed point", () => {
 describe("money comes out as exact öre", () => {
   it("sums rows that do not survive being added as kronor", () => {
     // 0.1 + 0.2 is not 0.3 in binary floating point, and a sheet with a
-    // hundred such rows was quietly out by a fraction of an öre — enough for
+    // hundred such rows was quietly out by a fraction of an öre, enough for
     // an account total to disagree with the rows printed above it, and enough
     // for a förflyttning that ought to net to zero not to.
     const rows = Array.from({ length: 100 }, (_, i) => line("0,10", `r${i}`));

@@ -1,0 +1,114 @@
+// E-mail notifications: what a member is told, and the outbox it goes through.
+//
+// Two tables. NotificationPreference holds a member's departures from the
+// defaults and nothing else, so a kind added later reaches everybody with its
+// default on the day it ships, without a backfill. Which kinds are on by
+// default, and which can be switched at all, is code: see
+// lib/domain/notifications.ts.
+//
+// OutboundEmail is the outbox. A notification is written in the same
+// transaction as the event that caused it and sent after the commit, so a
+// transition that rolls back (a lost race, a 409) never tells anyone it
+// happened, and a relay that is down for an hour delays mail rather than
+// losing it. See lib/server/notify.ts.
+//
+// The outbox is also the log. Rows are never deleted once sent, so Inställningar
+// → E-post can show every mail the app has sent, to whom, and what became of it.
+
+/// What a notification is about. One per kind of email, not per event: a
+/// kind is the thing a member turns on or off in their profile.
+enum NotificationKind {
+  // ── On by default ──
+  /// An utlägg came in for attest. To whoever may attest it.
+  EXPENSE_SUBMITTED
+  /// An utlägg came back with changes requested. To the submitter.
+  EXPENSE_CHANGES_REQUESTED
+  /// A dispens was taken back, which can stop the submit. To the submitter.
+  EXPENSE_DEADLINE_WAIVER_REVOKED
+  /// New card transactions after a bank import. To the card holder.
+  CARD_TRANSACTIONS_IMPORTED
+
+  // ── Opt-in ──
+  /// One cost centre attested, others still waiting. To the submitter.
+  EXPENSE_COST_CENTER_APPROVED
+  /// The whole utlägg attested. To the submitter.
+  EXPENSE_APPROVED
+  /// The whole utlägg attested, so it is ready to book. To bookkeepers.
+  EXPENSE_READY_TO_BOOK
+  /// An attest taken back. To the submitter.
+  EXPENSE_ATTEST_WITHDRAWN
+  /// The submitter took it back out of the queue. To its attesters.
+  EXPENSE_RECALLED
+  /// Exported to Fortnox, which is as close to "handled" as the app knows.
+  /// To the submitter.
+  EXPENSE_EXPORTED
+  /// An export undone. To bookkeepers.
+  EXPENSE_EXPORT_REVERTED
+  /// A dispens from the filing deadline granted. To the submitter.
+  EXPENSE_DEADLINE_WAIVED
+
+  // ── Always ──
+  /// A reminder somebody sent by hand, about one or more utlägg waiting on the
+  /// reader. Cannot be switched off: somebody chose to send it to them.
+  EXPENSE_REMINDER
+  /// The Sunday summary. Cannot be switched off; its sections are only
+  /// sent when there is something in them.
+  WEEKLY_DIGEST
+}
+
+model NotificationPreference {
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  kind    NotificationKind
+  enabled Boolean
+
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, kind])
+}
+
+model OutboundEmail {
+  id   String           @id @default(cuid())
+  kind NotificationKind
+
+  // The member, not an address. The address is read when the mail is sent,
+  // because it is refreshed from Authentik at every sign-in and the one on
+  // file then is the one that works.
+  recipient   User   @relation("EmailRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+
+  // Rendered when written, so the mail says what was true when it happened
+  // rather than what is true by the time the relay takes it.
+  subject String
+  text    String
+  // The same mail drawn for clients that show HTML (lib/email/render.ts).
+  // Null on rows written before it existed, which then go as text only.
+  html    String?
+
+  // Set for mail that must go at most once per period: the weekly digest is
+  // `weekly-digest:<userId>:<sunday>`, so a cron job that fires twice sends
+  // one mail.
+  dedupeKey String? @unique
+
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+  attempts  Int       @default(0)
+  lastError String?
+
+  // When a sender took this row to send. Two senders can run at once (one
+  // after each request, plus the cron sweep), and without a lease both would
+  // pick up the same unsent row and the member would get it twice. A lease
+  // older than a few minutes belongs to a sender that died and is taken over.
+  claimedAt DateTime?
+
+  // Who sent this by hand: a test mail from Inställningar, sent to check that
+  // mail reaches somebody and looks right. Null for everything the app sent
+  // on its own, which is every other row. Kept when the sender leaves, so the
+  // log still says it was a test.
+  sentBy   User?   @relation("EmailSender", fields: [sentById], references: [id], onDelete: SetNull)
+  sentById String?
+
+  @@index([sentAt, createdAt]) // the unsent queue, oldest first
+  @@index([recipientId, createdAt]) // one member's mail, newest first
+  @@index([createdAt]) // the whole log, newest first
+}

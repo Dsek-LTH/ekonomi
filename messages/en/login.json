@@ -1,0 +1,12 @@
+{
+  "title": "The D-Guilds economy",
+  "description": "Sign in with your D-Guild account to continue",
+  "loginPrompt": "Continue with your D-Guild account",
+  "dev": {
+    "heading": "Dev sign-in (local only)",
+    "member": "Member",
+    "approver": "Approver",
+    "treasurer": "Treasurer",
+    "admin": "Administrator"
+  }
+}

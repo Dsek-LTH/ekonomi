@@ -4,13 +4,13 @@
 //
 // The case it exists for: somebody books 200 bottles of Fireball meaning 20.
 // The old answer was a second row of −180, which left the log saying the guild
-// once bought two hundred bottles it never bought — and made fixing a typo an
+// once bought two hundred bottles it never bought, and made fixing a typo an
 // arithmetic problem, at the moment somebody has just demonstrated they are not
 // doing arithmetic well.
 //
 // So it asks the only question worth asking: what should it have been? Zero, or
 // the remove button, takes the row away entirely, because picking the wrong
-// product is not a movement of nothing — it is no movement.
+// product is not a movement of nothing. It is no movement.
 //
 // Who changed it, and from what, goes to the product's own feed. That is what
 // keeps an editable ledger checkable, and it is the reason none of this has to
@@ -19,14 +19,25 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { Modal, ModalHeader } from "@/components/ui/modal";
+import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useMutation } from "@/components/shell/use-mutation";
 import { isQuantityInput, quantity } from "@/lib/stock/quantity";
 import type { PatchStockEntry } from "@/lib/api/schemas/stock";
 import type { CellarRowDto } from "@/lib/data/stock";
 
-/** The figure the row shows a person: positive, in things. */
-const shown = (row: CellarRowDto): number => Math.abs(row.units ?? 0);
+/**
+ * The figure the row shows a person: positive, in things.
+ *
+ * Read off the rung the row is about, not off `units`, because a row about an
+ * opened bottle leaves that at nought and puts its one bottle on the ladder.
+ * The same rule the route applies when it writes the row back. See
+ * api/stock/entries/[id]/route.ts.
+ */
+const shown = (row: CellarRowDto): number => {
+  const level = row.level ?? 0;
+  if (level === 0) return Math.abs(row.units ?? 0);
+  return Math.abs(row.open?.[level as 80] ?? 0);
+};
 
 export function EntryDialog({
   row,
@@ -69,7 +80,7 @@ export function EntryDialog({
         })}
       />
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
-        <Field label={t("entry.qty")} hint={t("entry.qtyHint", { was })}>
+        <Field label={t("entry.qty")} hint={t("entry.qtyHint", { was })} requirement="required">
           <Input
             value={text}
             inputMode="numeric"
@@ -82,9 +93,12 @@ export function EntryDialog({
           />
         </Field>
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-inset py-3">
+      {/* The blocker is about the save button alone. Removing the row is still
+          live while it shows, which is the point of saying which button is
+          waiting for what rather than greying the strip out. */}
+      <ModalFooter blocker={qty === was ? t("entry.unchanged") : null}>
         {/* Removing it outright, for the row that should never have existed.
-            Not a destructive act on the record — the product's feed keeps what
+            Not a destructive act on the record: the product's feed keeps what
             it said and who took it off. */}
         <Button variant="ghost" onClick={() => void save(0)} disabled={pending !== null}>
           {t("entry.remove")}
@@ -97,7 +111,7 @@ export function EntryDialog({
             {t("entry.save")}
           </Button>
         </div>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

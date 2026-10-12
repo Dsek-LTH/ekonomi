@@ -4,7 +4,7 @@
 //
 // Not on screen until asked for: importing happens a few times a term, reading
 // happens every time. What asks for it is the small "Hämta period" button on
-// the review screen's toolbar, beside the view toggle — this is what it
+// the review screen's toolbar, beside the view toggle. This is what it
 // reveals, so the panel itself is a plain card and holds no opinion about
 // whether it is showing.
 import { useRef, useState } from "react";
@@ -18,7 +18,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, FieldGroup } from "@/components/ui/field";
 import type { IncomeSource } from "@/lib/domain/types";
 
-/** What a fetch answers with — see api/income/batches. */
+/** What a fetch answers with. See api/income/batches. */
 interface FetchResult {
   batchId: string;
   created: number;
@@ -52,7 +52,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
   function report(result: FetchResult | null) {
     if (!result) return;
     const parts = [t("summary.imported", { count: result.created })];
-    // Each of these is only worth a line when it happened — but always worth
+    // Each of these is only worth a line when it happened, but always worth
     // one then: a day that silently went missing looks like takings that
     // vanished, and one that was quietly replaced looks like an import that
     // did nothing.
@@ -68,7 +68,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
     // Only when the check was meant to run and could not. Not being connected
     // to Fortnox at all is a way this app is run, not news.
     if (result.fortnoxCheckSkipped === "failed") parts.push(t("summary.fortnoxCheckFailed"));
-    notify.success(parts.join(" · "), t("fetchDone"));
+    notify.success(parts.join(" – "), t("fetchDone"));
   }
 
   async function fetchRange() {
@@ -86,7 +86,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
     const result = await mutate<FetchResult>(`/api/income/batches/swish?${params}`, {
       key: "fetch",
       // The CSV goes up as-is. It is ISO-8859-1, and the service is what knows
-      // that — decoding it here would mangle every å, ä and ö in a message.
+      // that. Decoding it here would mangle every å, ä and ö in a message.
       body: file,
       contentType: "text/csv",
       error: t("fetchFailed"),
@@ -99,7 +99,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
     <Card>
       <CardHeader title={t("fetch.title")} subtitle={t("fetch.description")} />
       {/* One row on a laptop, wrapping on a narrow window: the four controls
-          are one sentence — this source, these dates, go. Bottom-aligned, so
+          are one sentence: this source, these dates, go. Bottom-aligned, so
           the labels sit above a single line of controls rather than each field
           floating at its own height. A wider gap down the page than across it:
           when the row does wrap, the labels need clearing from the controls
@@ -107,10 +107,10 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
       <CardBody className="flex flex-wrap items-end gap-x-4 gap-y-5">
         {/* A FieldGroup rather than a Field: the picker's trigger is a button,
             and a <label> forwards a click anywhere in its box to the first
-            labelable element inside — so the label's own whitespace would pop
+            labelable element inside, so the label's own whitespace would pop
             the menu open. See components/ui/field.tsx. */}
         <div className="w-48">
-          <FieldGroup label={t("fetch.source")}>
+          <FieldGroup label={t("fetch.source")} requirement="required">
             <Combobox
               options={SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
               value={source}
@@ -122,19 +122,19 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
         {/* Sized on a wrapper rather than on the control: every field in the
             app is `w-full` inside whatever holds it (see `control` in
             components/ui/field.tsx), and `cn` joins classes rather than merging
-            them — a `w-40` passed to the input would leave both widths in the
+            them, a `w-40` passed to the input would leave both widths in the
             class attribute for Tailwind's emission order to settle.
 
             Ten characters wide, because that is what the mask allows and a
             field that grew with the row would be mostly empty. Both the same,
             because they are the two ends of one range. */}
         <div className="w-40">
-          <Field label={t("fetch.from")}>
+          <Field label={t("fetch.from")} requirement="required">
             <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
           </Field>
         </div>
         <div className="w-40">
-          <Field label={t("fetch.to")}>
+          <Field label={t("fetch.to")} requirement="required">
             <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
           </Field>
         </div>

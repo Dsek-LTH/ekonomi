@@ -13,7 +13,7 @@ import type { Account, Budget, LineItem } from "./budget-types";
 // and read the whole budget back to find out. The one worth holding to its
 // route is `withLineOrder`: the reorder endpoint moves a row between accounts
 // as well as within one, and if the two disagree the sheet shows an arrangement
-// the database doesn't have — until the next reload silently corrects it, which
+// the database doesn't have, until the next reload silently corrects it, which
 // is the worst way to find out.
 
 const line = (id: string): LineItem => ({
@@ -22,20 +22,22 @@ const line = (id: string): LineItem => ({
   expression: "0",
   sortOrder: 0,
   values: {},
+  // The "antal × á-pris" form, unused by every function under test: these move
+  // rows about and never look inside one.
+  quantity: null,
+  unitPrice: null,
 });
 
 const account = (id: string, lineIds: string[]): Account => ({
   id,
   accountCode: id,
   accountName: id,
-  sortOrder: 0,
-  kindOverride: null,
   lineItems: lineIds.map(line),
   comments: [],
 });
 
 /** A budget of one sheet, holding the accounts given. Only the parts these
- *  functions touch are filled in — the rest is not theirs to know about. */
+ *  functions touch are filled in, the rest is not theirs to know about. */
 const budgetOf = (...accounts: Account[]): Budget =>
   ({ costCenters: [{ id: "sheet", accounts }] }) as unknown as Budget;
 
@@ -85,10 +87,24 @@ describe("the rest", () => {
     expect(idsOf(b, "B")).toEqual(["2"]);
   });
 
-  it("appends a created account to its sheet, and removes one with its rows", () => {
+  it("puts a created account in its sheet, and removes one with its rows", () => {
     const added = withNewAccount(budgetOf(account("A", ["1"])), "sheet", account("B", []));
     expect(added.costCenters[0].accounts.map((a) => a.id)).toEqual(["A", "B"]);
     const removed = withoutAccount(added, "A");
     expect(removed.costCenters[0].accounts.map((a) => a.id)).toEqual(["B"]);
+  });
+
+  it("places a created account by its number rather than at the end", () => {
+    // The sheet is ordered by account code on the server, so an account added
+    // in the middle of the chart has to land in the middle here too. Appending
+    // it left 3010 sitting under 5800 until a reload moved it, which reads as
+    // the app changing its mind about where the row goes.
+    const sheet = budgetOf(account("3010", []), account("5800", []));
+    const added = withNewAccount(sheet, "sheet", account("4010", []));
+    expect(added.costCenters[0].accounts.map((a) => a.accountCode)).toEqual([
+      "3010",
+      "4010",
+      "5800",
+    ]);
   });
 });

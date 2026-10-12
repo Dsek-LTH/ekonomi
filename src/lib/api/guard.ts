@@ -11,17 +11,17 @@
 // Authority is worth one indexed lookup per request.
 import { NextResponse } from "next/server";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
-import type { Role } from "@/lib/domain/types";
+import type { Capability, Role } from "@/lib/domain/types";
 
 // ── What a handler answers with ────────────────────────────────────
 //
-// On failure, always `fail()` — see below.
+// On failure, always `fail()`. See below.
 //
 // On success, one of three, chosen by whether the caller has anything to learn:
 //
 //   201 + the created row   a POST that made something
 //   200 + a body            when the outcome itself is information the caller
-//                           reads — DELETE /api/cost-centers/[id] answers
+//                           reads. DELETE /api/cost-centers/[id] answers
 //                           `{ retired }`, because a cost centre in use is
 //                           retired rather than deleted and the screen says so
 //   204, no body            everything else: the write happened, there is
@@ -36,9 +36,9 @@ import type { Role } from "@/lib/domain/types";
  * there rather than letting the driver's "record not found" out as a 500.
  *
  * Prisma's `update` and `delete` raise P2025 when nothing matched. A handler
- * that has already established the row exists is still not safe from it — the
+ * that has already established the row exists is still not safe from it. The
  * check and the write are two statements, and a row can be deleted between
- * them — and a handler that never checked gets a 500 for the ordinary case of a
+ * them, and a handler that never checked gets a 500 for the ordinary case of a
  * stale link. Both are the same answer: the thing you named is not here.
  *
  *     const budget = await orNotFound(
@@ -62,7 +62,15 @@ export async function orNotFound<T>(
 }
 
 /** Who is acting, with the roles they hold right now. */
-export type Actor = { id: string; roles: Role[] };
+/**
+ * Who is acting, and what they may do. Both, because the two answer different
+ * questions: `capabilities` is what every gate reads, and `roles` is what the
+ * handful of genuinely relational rules still turn on: the attest rule's
+ * vice-skattmästare and resultatansvarig clauses (lib/domain/permissions.ts).
+ */
+// `name` for the words a route writes on the actor's behalf, such as "Anna has
+// sent your utlägg back" in a notification. Never for a decision.
+export type Actor = { id: string; name: string; roles: Role[]; capabilities: Capability[] };
 
 export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse };
 
@@ -74,7 +82,7 @@ export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse }
 export type ErrorValue = string | number | { key: string };
 
 /**
- * An error response in the shape the client expects — `{ error }` is what
+ * An error response in the shape the client expects. `{ error }` is what
  * components/shell/use-mutation.ts reads to show a message.
  *
  * `error` carries a *code*, not prose: a key under the `errors` namespace in
@@ -99,11 +107,11 @@ export const fail = (
 /**
  * Resolve the acting user and, when `can` is given, check their authority.
  * Called with no argument it means "any signed-in member", which is a real
- * policy and not the absence of one — say it explicitly rather than leaving a
+ * policy and not the absence of one. Say it explicitly rather than leaving a
  * handler ungated.
  */
 export async function gate(
-  can?: (roles: readonly Role[]) => boolean,
+  can?: (caps: readonly Capability[]) => boolean,
   denied = "auth.denied",
 ): Promise<Gate> {
   const id = await resolveUserId();
@@ -116,7 +124,7 @@ export async function gate(
   const row = await loadUser(id);
   if (!row) return { ok: false, res: fail(401, "auth.signedOut") };
 
-  const actor: Actor = { id, roles: row.roles };
-  if (can && !can(actor.roles)) return { ok: false, res: fail(403, denied) };
+  const actor: Actor = { id, name: row.name, roles: row.roles, capabilities: row.capabilities };
+  if (can && !can(actor.capabilities)) return { ok: false, res: fail(403, denied) };
   return { ok: true, actor };
 }

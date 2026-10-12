@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
+import { useDismissOnOutside } from "@/lib/ui/dismiss";
+import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
@@ -14,12 +16,17 @@ export interface ComboOption {
   label: string;
   // Shown on the trigger instead of `label` when the field is too narrow for
   // the full text. Search still matches on `label`, so the long form stays
-  // findable — only the collapsed display is shortened.
+  // findable, and only the collapsed display is shortened.
   short?: string;
+  // A hairline above this option, setting off the ones before it as a group of
+  // their own (the ledger's "with / without a cost centre" above the cost
+  // centres themselves). Drawn only on the full list: once a search has
+  // narrowed it, the groups are gone and a rule would divide nothing.
+  dividerBefore?: boolean;
 }
 
 // Everything both variants take. `Combobox` and `MultiCombobox` differ only in
-// the shape of their value — one string or a set of them — so they share the
+// the shape of their value, one string or a set of them, so they share the
 // menu, the search, the keyboard handling and the positioning below.
 type SharedProps = {
   options: ComboOption[];
@@ -29,7 +36,7 @@ type SharedProps = {
   /**
    * What to do about a value that is not in the list yet.
    *
-   * The list is strict — only something in `options` can be committed — which
+   * The list is strict, so only something in `options` can be committed, which
    * is right for a cost centre and wrong for anything a person is allowed to
    * invent. Given this, the menu offers the text they typed as a thing to
    * create, and hands it back. What that means is the caller's business: a
@@ -41,6 +48,17 @@ type SharedProps = {
   /** The offer, given what was typed. Defaults to a plain "Create …". */
   createLabel?: (text: string) => string;
   clearLabel?: string;
+  /**
+   * Whether the menu carries a box to filter by.
+   *
+   * On by default, because most of these stand over a list nobody can read at a
+   * glance: a chart of accounts, every cost centre the section has. Off for a
+   * short fixed set, where a search box is a field asking to be typed into in
+   * order to choose between four numbers, which is more work than the menu it
+   * is meant to shorten. Keyboard use survives either way; the list itself
+   * takes the arrows and Enter when there is no box to hold them.
+   */
+  searchable?: boolean;
   disabled?: boolean;
   // How the selected value sits on the trigger. "center" is for grid/table
   // cells, where a left-aligned value reads as misaligned against its column.
@@ -50,7 +68,7 @@ type SharedProps = {
    * How tall it stands, from the same table every other control uses.
    *
    * "md" by default, because a combobox is a form control and the fields it
-   * sits beside are md — it used to be hardcoded to the compact size, which is
+   * sits beside are md. It used to be hardcoded to the compact size, which is
    * why it never quite lined up with a date input. Filter bars and table
    * toolbars pass "sm".
    */
@@ -58,8 +76,8 @@ type SharedProps = {
   buttonClassName?: string; // replaces the default field appearance when given
   chevronClassName?: string; // for triggers on a coloured background
   invalid?: boolean;
-  // Takes focus on mount. For fields a click has just brought into existence —
-  // a new allocation row's cost centre — where the alternative is tabbing back
+  // Takes focus on mount. For fields a click has just brought into existence,
+  // such as a new allocation row's cost centre, where the alternative is tabbing back
   // to the thing you asked for.
   autoFocus?: boolean;
   "aria-label"?: string;
@@ -91,7 +109,7 @@ export function Combobox({
 
 // The same field over a set of values: picking toggles an option and leaves the
 // menu open, so several can be chosen in one visit. Used for filters, where the
-// empty set means "don't narrow anything" rather than "nothing selected" — which
+// empty set means "don't narrow anything" rather than "nothing selected", which
 // is why clearing is always offered and the trigger falls back to `placeholder`.
 export function MultiCombobox({
   values,
@@ -124,6 +142,7 @@ function ComboboxBase({
   searchPlaceholder,
   emptyText,
   onCreate,
+  searchable = true,
   createLabel,
   clearLabel,
   disabled,
@@ -149,13 +168,12 @@ function ComboboxBase({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   // Ids so the search box can point at the option the arrow keys have landed on
-  // — the options aren't focused, so this is what announces them.
+  // The options aren't focused, so this is what announces them.
   const listId = useId();
   const optionId = (i: number) => `${listId}-opt-${i}`;
 
@@ -180,6 +198,11 @@ function ComboboxBase({
     : picked.length === 1 ? picked[0].short ?? picked[0].label
     : t("nSelected", { count: picked.length });
 
+  // Where the field is on screen, kept current while the menu is open. See
+  // lib/ui/anchored-panel.ts, shared with the menu, which explains why this
+  // follows the trigger rather than closing when the page moves.
+  const [rect, setRect] = useAnchorRect(open, triggerRef, panelRef, close);
+
   function openMenu(initial = "") {
     if (disabled) return;
     setRect(triggerRef.current?.getBoundingClientRect() ?? null);
@@ -188,6 +211,7 @@ function ComboboxBase({
     setOpen(true);
   }
   function close() { setOpen(false); }
+
   // Picking one of several is rarely the last thing you want to do, so multi
   // stays open and keeps the search you typed; single has nothing left to offer.
   function commit(v: string) {
@@ -195,7 +219,7 @@ function ComboboxBase({
     if (!multiple) { close(); triggerRef.current?.focus(); }
   }
 
-  // Escape shuts the menu and hands the caret back to the trigger — and shuts
+  // Escape shuts the menu and hands the caret back to the trigger, and shuts
   // *only* the menu. It used to be handled on the search box, which worked, but
   // a dialog listening on the document heard the same key and closed itself
   // too. See lib/ui/escape.ts.
@@ -209,7 +233,7 @@ function ComboboxBase({
    * Where the menu goes: below by default, above only when below will not do.
    *
    * It used to flip up whenever the viewport had less than 300 px under the
-   * field — 300 being the menu's *tallest* it could ever be, with a full list
+   * field, 300 being the menu's *tallest* it could ever be, with a full list
    * scrolled. A five-item menu is a third of that, so a field with plenty of
    * room under it kept opening upwards for no reason anybody watching could see.
    *
@@ -218,36 +242,31 @@ function ComboboxBase({
    * jumping over the field. Flipping is the last resort it was meant to be:
    * only when there is genuinely more room the other way.
    */
-  const GAP = 4;
-  const EDGE = 8;
   /** Search box and its border, plus the list's own padding. */
   const CHROME = 58;
   const ROW = 30;
 
   function menuStyle(): React.CSSProperties {
     if (!rect) return {};
-    const width = Math.max(rect.width, 240);
-    const left = Math.min(Math.max(EDGE, rect.left), window.innerWidth - width - EDGE);
-
     // Counted from the whole list rather than what is filtered right now, so
     // the menu does not hop about as somebody types.
     const listRows = options.length + (onClear ? 1 : 0) + (onCreate ? 1 : 0);
     const wanted = CHROME + Math.min(240, Math.max(1, listRows) * ROW);
-
-    const under = window.innerHeight - rect.bottom - GAP - EDGE;
-    const over = rect.top - GAP - EDGE;
-    const dropUp = under < wanted && over > under;
-    const maxHeight = Math.max(140, Math.min(wanted, dropUp ? over : under));
-
-    return dropUp
-      ? { position: "fixed", bottom: window.innerHeight - rect.top + GAP, left, width, maxHeight }
-      : { position: "fixed", top: rect.bottom + GAP, left, width, maxHeight };
+    // `cap`, unlike the menu's: this list knows how tall it wants to be, so
+    // growing past that would leave blank panel under the last option.
+    return placeAnchored(rect, { wanted, cap: true, width: Math.max(rect.width, 240) });
   }
 
   // Focus the search when opening; close on outside click, scroll, resize.
+  //
+  // With no search box, the list takes the focus instead. Something inside the
+  // panel has to hold it or the arrows and Enter would still be going to the
+  // trigger, and closing would leave focus on an element that no longer exists.
   useEffect(() => {
-    if (open) searchRef.current?.focus();
-  }, [open]);
+    if (!open) return;
+    if (searchable) searchRef.current?.focus();
+    else listRef.current?.focus();
+  }, [open, searchable]);
 
   // The trigger, not the menu: the field is where you were sent, and the
   // trigger's type-to-open means the first character you type opens the search
@@ -257,65 +276,24 @@ function ComboboxBase({
     if (autoFocus) triggerRef.current?.focus();
   }, [autoFocus]);
 
-  // The options aren't focusable, so nothing scrolls the list on its own —
-  // whichever key moved the highlight (arrows or Tab), bring it into view.
+  // The options aren't focusable, so nothing scrolls the list on its own.
+  // Whichever key moved the highlight (arrows or Tab), bring it into view.
   useEffect(() => {
     if (!open) return;
     listRef.current
       ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }, [active, open]);
-  // Outside taps close it; the page moving underneath re-places it.
+  // Outside taps close it; the page moving underneath re-places it (see the
+  // anchor above). Both halves were written for a pointer and neither survived
+  // an iPhone, which is why both now live in one place: lib/ui/dismiss.ts on
+  // why the event is `pointerdown`, and lib/ui/anchored-panel.ts on why the
+  // menu follows the field instead of closing when the keyboard scrolls it.
   //
-  // Both halves were written for a pointer and neither survived an iPhone.
-  //
-  // `mousedown` was the wrong event. iOS only synthesises mouse events for
-  // things it considers clickable — a link, a button, something with a click
-  // handler or `cursor: pointer` — so a tap on the ordinary page behind the
-  // menu fired nothing at all and the menu would not dismiss. `pointerdown` is
-  // native there and fires for every target.
-  //
-  // And the menu used to *close* on scroll or resize, on the grounds that a
-  // fixed menu whose field has moved is a menu in the wrong place. True, but on
-  // iOS opening the menu focuses the search box, focusing the search box raises
-  // the keyboard, and the keyboard fires both a resize and a scroll — so the
-  // menu shut itself the instant it opened, every time, which is the whole of
-  // "the combobox doesn't work". Following the field is the better answer
-  // anyway: the menu stays where it belongs instead of vanishing because
-  // something nudged the page.
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
-      close();
-    };
-    // Not while scrolling the menu's own list — that moves nothing.
-    const follow = (e?: Event) => {
-      if (e && panelRef.current?.contains(e.target as Node)) return;
-      const el = triggerRef.current;
-      // The field has gone from the page under us — a row deleted while its
-      // menu was open. There is nothing left to point at.
-      if (!el || !el.isConnected) return close();
-      setRect(el.getBoundingClientRect());
-    };
-    document.addEventListener("pointerdown", onDown);
-    window.addEventListener("resize", follow);
-    window.addEventListener("scroll", follow, true);
-    // The keyboard on iOS changes the visual viewport without necessarily
-    // moving the layout one, and `menuStyle` measures itself against
-    // `window.innerHeight` — so the menu has to be told, or it keeps sizing
-    // itself to a screen half of which is now keyboard.
-    window.visualViewport?.addEventListener("resize", follow);
-    window.visualViewport?.addEventListener("scroll", follow);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("resize", follow);
-      window.removeEventListener("scroll", follow, true);
-      window.visualViewport?.removeEventListener("resize", follow);
-      window.visualViewport?.removeEventListener("scroll", follow);
-    };
-  }, [open]);
+  // The trigger and the panel are both the layer: the panel is portalled out of
+  // the trigger's subtree, so a press on it is not a press "inside" the field.
+  useDismissOnOutside(open, [triggerRef, panelRef], close);
+
 
   function onSearchKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }
@@ -323,7 +301,7 @@ function ComboboxBase({
     else if (e.key === "Enter") { e.preventDefault(); const o = filtered[active]; if (o) commit(o.value); }
     else if (e.key === "Tab") {
       // Tab walks the options like the arrows do, wrapping at both ends, rather
-      // than leaving the field — with the menu open the list is what you're
+      // than leaving the field. With the menu open the list is what you're
       // moving through. Enter picks the highlighted one; Escape gets you out.
       //
       // It moves the same highlight the arrows use. When the options were tab
@@ -338,7 +316,7 @@ function ComboboxBase({
 
   return (
     // min-w-0: the trigger's label is `truncate`, i.e. nowrap, so its
-    // min-content width is the whole string — and a flex item defaults to
+    // min-content width is the whole string, and a flex item defaults to
     // min-width:auto, which floors at exactly that. Without this the field
     // can't shrink below its own placeholder ("Välj kostnadsställe…") and
     // pushes whatever row it sits in past the edge instead of ellipsising.
@@ -381,19 +359,19 @@ function ComboboxBase({
           className={cn(
             "truncate",
             align === "center" && "w-full",
-            triggerLabel === null && "text-muted/60",
+            triggerLabel === null && "text-muted",
           )}
         >
           {triggerLabel ?? placeholder ?? t("placeholder")}
         </span>
-        {/* Centred, the chevron leaves the flow entirely — as a flex sibling it
+        {/* Centred, the chevron leaves the flow entirely. As a flex sibling it
             would shift the label left by half its width and the value would sit
             off-centre in the box. */}
         <IconChevronDown
           className={cn(
             "size-4 shrink-0",
             align === "center" && "pointer-events-none absolute right-1",
-            chevronClassName ?? "text-muted/60",
+            chevronClassName ?? "text-faint",
           )}
         />
       </button>
@@ -402,23 +380,33 @@ function ComboboxBase({
         <div
           ref={panelRef}
           // Marks the menu as this field's, for anything outside that has to
-          // tell "focus left the field" from "focus went into its menu" — the
+          // tell "focus left the field" from "focus went into its menu". The
           // menu is portalled to <body>, so containment can't answer that. The
           // voucher table's auto-balance reads it.
           data-combobox-panel=""
+          // A layer of its own, over whatever it was opened from. A dialog
+          // underneath holds Tab inside itself and has to leave this alone.
+          // See lib/ui/focus-trap.ts.
+          data-popup-layer=""
           style={menuStyle()}
           // Above everything, dialogs included. The menu is portalled to
           // <body>, so it shares a stacking context with the confirm dialog and
-          // the modals (both z-[200]) — at z-50 a field inside one of them
+          // the modals (both z-[200]). At z-50 a field inside one of them
           // opened its options *behind* the dialog they belong to. It cannot
           // wrongly cover something else, because a menu only stays open while
           // its own trigger is on top: an outside mousedown closes it, which is
           // how anything above it would have been opened in the first place.
-          className="z-[210] flex flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-pop)]"
+          className="z-[210] flex flex-col overflow-hidden rounded-panel border border-border bg-background shadow-[var(--shadow-pop)]"
         >
+          {searchable && (
           <div className="shrink-0 border-b border-border p-2">
             <input
               ref={searchRef}
+              // An id like every other field, so the browser does not report
+              // one it cannot autofill. Nothing points at it: the listbox is
+              // named by `aria-controls` below and the trigger carries the
+              // field's own label.
+              id={`${listId}-search`}
               role="combobox"
               aria-expanded
               aria-controls={listId}
@@ -428,18 +416,28 @@ function ComboboxBase({
               onChange={(e) => { setQuery(e.target.value); setActive(0); }}
               onKeyDown={onSearchKey}
               placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-              className="h-8 w-full rounded-lg border border-border bg-background px-2.5 text-sm"
+              className="h-8 w-full rounded-control border border-border bg-background px-2.5 text-sm"
             />
           </div>
+          )}
           {/* tabIndex -1: the list scrolls, and a scroll container with no
-              focusable children of its own becomes a tab stop in Chrome. */}
+              focusable children of its own becomes a tab stop in Chrome.
+
+              With no search box above it, this is also what holds the focus and
+              therefore what the arrows, Enter and Escape arrive at. Same
+              handler either way, so the two modes cannot drift into two
+              different sets of keys. */}
           <ul
             ref={listRef}
             id={listId}
             role="listbox"
             aria-multiselectable={multiple || undefined}
+            aria-activedescendant={
+              !searchable && filtered[active] ? optionId(active) : undefined
+            }
             tabIndex={-1}
-            className="min-h-0 flex-1 overflow-y-auto p-1"
+            onKeyDown={searchable ? undefined : onSearchKey}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
           >
             {onClear && picked.length > 0 && (
               <li>
@@ -450,7 +448,7 @@ function ComboboxBase({
                     onClear();
                     if (!multiple) { close(); triggerRef.current?.focus(); }
                   }}
-                  className="flex w-full items-center rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:bg-surface"
+                  className="flex w-full items-center rounded-control px-3 py-1.5 text-left text-sm text-muted hover:bg-hover"
                 >
                   {clearLabel ?? t("clear")}
                 </button>
@@ -471,21 +469,25 @@ function ComboboxBase({
                     close();
                     onCreate?.(query.trim());
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-surface"
+                  className="flex w-full items-center gap-2 rounded-control px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-hover"
                 >
                   {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
                 </button>
               </li>
             )}
             {filtered.map((o, i) => (
-              <li key={o.value}>
+              <Fragment key={o.value}>
+              {o.dividerBefore && !q && i > 0 && (
+                <li role="separator" aria-hidden className="mx-2 my-1 h-px bg-border" />
+              )}
+              <li>
                 <button
                   type="button"
                   id={optionId(i)}
                   data-index={i}
                   // Not a tab stop: focus stays in the search box and the arrow
                   // keys move the highlight. Left tabbable, every option was its
-                  // own stop, and Tab put a focus ring on the first one — a
+                  // own stop, and Tab put a focus ring on the first one, a
                   // second highlight competing with the arrow-key one.
                   tabIndex={-1}
                   role="option"
@@ -493,27 +495,33 @@ function ComboboxBase({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => commit(o.value)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors",
-                    // One indicator for "where the keyboard is", carrying the
-                    // focus ring — the options aren't focused themselves, so
-                    // nothing else would draw one. Arrows, Tab and the mouse all
-                    // move this same highlight; when the ring moved on its own
-                    // it left a second, stale one behind at the top of the list.
-                    i === active ? "bg-surface ring-1 ring-accent" : "hover:bg-surface",
-                    isPicked(o.value) && "font-medium text-accent",
+                    "flex w-full items-center justify-between gap-2 rounded-control px-3 py-1.5 text-left text-sm transition-colors",
+                    // One indicator for "where the keyboard is". Arrows, Tab and
+                    // the mouse all move this same highlight; when a ring moved
+                    // on its own it left a second, stale one behind at the top
+                    // of the list. A neutral fill, the same one a Menu row
+                    // takes, rather than a pink ring: the mouse moves it on
+                    // every option it passes, and a ring there made the list
+                    // flash pink under the pointer.
+                    i === active && "bg-hover",
+                    // The checkmark says which one is picked. Pink text as well
+                    // said it twice, and on the active row it was pink inside
+                    // pink.
+                    isPicked(o.value) && "font-medium",
                   )}
                 >
                   {/* Several options can be on at once, so each needs to show
-                      its own on/off state whether or not it is the picked one —
+                      its own on/off state whether or not it is the picked one,
                       a box that is either filled or empty. The single-select
                       below has only ever one, and marks it with a bare check.
                       The box is drawn by components/ui/checkbox, which is where
                       it went when the budget sheet wanted the same one. */}
                   {multiple && <CheckMark on={isPicked(o.value)} />}
                   <span className="mr-auto truncate">{o.label}</span>
-                  {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0" />}
+                  {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0 text-accent" />}
                 </button>
               </li>
+              </Fragment>
             ))}
           </ul>
         </div>,

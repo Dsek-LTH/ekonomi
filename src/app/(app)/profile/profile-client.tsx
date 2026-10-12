@@ -1,6 +1,6 @@
 "use client";
 
-// My profile — everything about this session in one place, and where the
+// My profile: everything about this session in one place, and where the
 // sidebar's footer leads. The sidebar keeps only theme and language, being the
 // two switches not worth a page load; the rest lives here.
 import { useState } from "react";
@@ -15,10 +15,10 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
+import { NotificationSettings } from "./notification-settings";
 
 import { useFormat } from "@/lib/ui/use-format";
-import type { FortnoxStatus, Role } from "@/lib/domain/types";
-import type { Theme } from "@/lib/ui/theme";
+import type { FortnoxStatus, NotificationKind, Role } from "@/lib/domain/types";
 
 export function ProfileClient({
   name,
@@ -27,7 +27,7 @@ export function ProfileClient({
   clearing: c0,
   account: a0,
   fortnox,
-  theme,
+  notifications,
 }: {
   name: string;
   email: string;
@@ -36,8 +36,8 @@ export function ProfileClient({
   account: string;
   /** Absent for everyone who doesn't book in Fortnox under their own login. */
   fortnox?: { session: FortnoxStatus["session"] | null };
-  /** What the toggle starts on, read from the cookie by the page. */
-  theme: Theme;
+  /** The emails this member can be sent, and whether each is on. */
+  notifications: { kind: NotificationKind; enabled: boolean }[];
 }) {
   const t = useTranslations("common");
   const tRole = useTranslations("common.role");
@@ -64,7 +64,6 @@ export function ProfileClient({
   return (
     <PageShell
       title={tNav("profile")}
-      description={tProfile("description")}
       width="form"
     >
       <Card>
@@ -74,7 +73,7 @@ export function ProfileClient({
             <DetailRow label={tProfile("email")} value={email} />
             <DetailRow
               label={tProfile("roles")}
-              value={roles.length ? roles.map((r) => tRole(r)).join(" · ") : tRole("ORDINARIE")}
+              value={roles.length ? roles.map((r) => tRole(r)).join(" – ") : tRole("ORDINARIE")}
             />
           </DetailList>
 
@@ -83,11 +82,37 @@ export function ProfileClient({
             <p className="mt-1 text-sm text-muted">{tProfile("payoutDescription")}</p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
+            {/* Named, and told outright that they are not credentials.
+                Unnamed, these are two text fields over a Save button, which is
+                the shape of a login form, and a password manager offering to
+                put a username in Kontonummer is what that guess looks like.
+                `autoComplete="off"` is the standard half; managers routinely
+                ignore it, so 1Password's own opt-out says it again in the one
+                language it does read. If another manager starts guessing here,
+                it will have an attribute of its own to add beside this one.
+
+                No `inputMode="numeric"`: the format asked for carries a hyphen
+                and spaces (see the placeholders), and a digits-only keypad on a
+                phone has no way to type either. */}
             <Field label={tProfile("clearing")}>
-              <Input value={clearing} placeholder={tProfile("clearingPlaceholder")} onChange={(e) => setClearing(e.target.value)} />
+              <Input
+                name="bank-clearing"
+                autoComplete="off"
+                data-1p-ignore
+                value={clearing}
+                placeholder={tProfile("clearingPlaceholder")}
+                onChange={(e) => setClearing(e.target.value)}
+              />
             </Field>
             <Field label={tProfile("account")}>
-              <Input value={account} placeholder={tProfile("accountPlaceholder")} onChange={(e) => setAccount(e.target.value)} />
+              <Input
+                name="bank-account"
+                autoComplete="off"
+                data-1p-ignore
+                value={account}
+                placeholder={tProfile("accountPlaceholder")}
+                onChange={(e) => setAccount(e.target.value)}
+              />
             </Field>
           </div>
 
@@ -99,7 +124,7 @@ export function ProfileClient({
         </CardBody>
       </Card>
 
-      {/* Only rendered for the treasury — everyone else has no Fortnox login to
+      {/* Only rendered for the treasury. Everyone else has no Fortnox login to
           have an opinion about. */}
       {fortnox && (
         <Card>
@@ -153,12 +178,14 @@ export function ProfileClient({
         </Card>
       )}
 
+      <NotificationSettings email={email} initial={notifications} />
+
       <Card>
         <CardHeader title={tNav("settings")} />
         <CardBody className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">{t("theme")}</span>
-            <ThemeToggle initial={theme} />
+            <ThemeToggle />
           </div>
           <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="text-sm text-muted">{t("language")}</span>

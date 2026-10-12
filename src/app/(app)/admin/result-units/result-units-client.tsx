@@ -2,100 +2,71 @@
 
 // Settings → Result units. A result unit owns one or more cost-centre code
 // prefixes; every cost centre whose code starts with one of them belongs to it,
-// and its resultatansvariga hold approval authority over those expenses.
+// and its resultatansvariga hold approval authority over those expenses. A unit
+// that takes money in also says how its sales are booked.
 //
-// Laid out as a master–detail pair: a searchable result unit list on the left,
-// the selected result unit on the right. Cost centres with no result unit at
-// all are the last entry in that list rather than a section of their own, so a
-// long tail of unclaimed codes stays out of the way until it's asked for.
-import { useMemo, useState } from "react";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
-import { EmptyNote } from "@/components/ui/empty-state";
-import { IconButton } from "@/components/ui/icon-button";
-import { Combobox } from "@/components/ui/combobox";
-import { Field, FieldGroup, Input } from "@/components/ui/field";
-import { Tag } from "@/components/ui/status-pill";
-import { SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
-import { IconPencil, IconPlus, IconTrash } from "@/components/ui/icons";
+// One table of every unit, and the unit itself in a dialog over it. It was a
+// list down the side and the selected unit beside it, which meant reading the
+// setup one unit at a time: whether every unit had a prefix and somebody
+// answering for it took a click per unit to find out. The table answers that
+// at a glance, and the dialog is where one unit is changed.
+//
+// Cost centres with no result unit are not a unit, so they are not a row. They
+// are a warning above the table while there are any, which is what they are:
+// expenses only an administrator can attest.
+import Link from "next/link";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ClientDataTable } from "@/components/ui/client-data-table";
+import { Combobox } from "@/components/ui/combobox";
+import { type Column } from "@/components/ui/data-table";
+import { EditableText } from "@/components/ui/editable-text";
+import { FieldGroup, Input } from "@/components/ui/field";
+import { IconButton } from "@/components/ui/icon-button";
+import { IconPlus, IconTrash, IconX } from "@/components/ui/icons";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
+import { Notice } from "@/components/ui/notice";
+import { Tag } from "@/components/ui/status-pill";
+import { ExpandToggle } from "@/components/ui/expand-toggle";
+import { useTableControls } from "@/lib/data/use-list-query";
 import { cn } from "@/lib/ui/utils";
-import type { CostCenter, ResultUnit, ResultUnitCostCenter, User } from "@/lib/domain/types";
+import type { CostCenter, ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 
-// Sentinel for the "no result unit" entry in the left-hand list.
-const UNASSIGNED = "__unassigned__";
+type Mutate = ReturnType<typeof useMutation>["mutate"];
 
 export function ResultUnitsClient({
   resultUnits,
-  users,
   unassigned,
   costCenters,
   incomeEnabled,
 }: {
   resultUnits: ResultUnit[];
-  users: User[];
+  /** Cost centres no unit's prefix matches. */
   unassigned: ResultUnitCostCenter[];
-  /** For the income section's default-cost-centre picker. */
+  /** For the sales section's cost-centre picker. */
   costCenters: CostCenter[];
-  /** False when the app runs without the intakt service — see intaktConfigured. */
+  /** False when the app runs without the intakt service. See intaktConfigured. */
   incomeEnabled: boolean;
 }) {
   const t = useTranslations("admin.resultUnits");
   const tCommon = useTranslations("common");
-  const tRole = useTranslations("common.role");
-  const tNav = useTranslations("nav");
-  const tAlloc = useTranslations("allocation");
-  const tCostCenters = useTranslations("admin.costCenters");
-  const tIncome = useTranslations("admin.resultUnits.income");
-  const confirm = useConfirm();
-  const { pending, busy, mutate } = useMutation();
+  const { pending, mutate } = useMutation();
+  const controls = useTableControls({ sortKey: "name" });
 
-  const [selectedId, setSelectedId] = useState<string>(
-    () => resultUnits[0]?.id ?? UNASSIGNED,
-  );
-  const [search, setSearch] = useState("");
-  const [ccSearch, setCcSearch] = useState("");
+  // The open unit by id, so the dialog follows the refreshed row after every
+  // save rather than holding on to the copy it was opened with.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? resultUnits.find((u) => u.id === openId) ?? null : null;
+  const [showUnassigned, setShowUnassigned] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
-  const [addingResultUnit, setAddingResultUnit] = useState(false);
-  // The prefix input is hidden behind a + until asked for, so the row of
-  // prefixes reads as data rather than as a form. The name works the same way,
-  // behind the pencil: null means "not editing".
-  const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
-  const [nameDraft, setNameDraft] = useState<string | null>(null);
-  // The product-prefix form, same idea: two fields behind a +.
-  const [productDraft, setProductDraft] = useState<{ code: string; account: string } | null>(null);
 
-  const ccOptions = costCenters.map((c) => ({
-    value: c.id,
-    label: `${c.code} — ${c.name}`,
-    short: c.code,
-  }));
-
-  const ownerCandidates = users.filter((u) => u.roles.includes("RESULTATANSVARIG"));
-
-  const q = search.trim().toLowerCase();
-  const visible = useMemo(
-    () =>
-      q
-        ? resultUnits.filter(
-            (c) =>
-              c.resultUnit.toLowerCase().includes(q) ||
-              c.prefixes.some((p) => p.value.toLowerCase().includes(q)) ||
-              c.costCenters.some(
-                (cc) =>
-                  cc.code.toLowerCase().includes(q) || cc.name.toLowerCase().includes(q),
-              ),
-          )
-        : resultUnits,
-    [resultUnits, q],
-  );
-
-  const selected =
-    selectedId === UNASSIGNED ? null : resultUnits.find((c) => c.id === selectedId) ?? null;
-  const showingUnassigned = selectedId === UNASSIGNED;
+  const unassignedActive = unassigned.filter((cc) => cc.active).length;
 
   async function createResultUnit() {
     const name = newName.trim();
@@ -108,53 +79,262 @@ export function ResultUnitsClient({
     });
     if (!created) return;
     setNewName("");
-    setAddingResultUnit(false);
-    if (typeof created.id === "string") setSelectedId(created.id);
+    setAdding(false);
+    // Straight into it: a new unit is nothing until it has a prefix.
+    if (typeof created.id === "string") setOpenId(created.id);
   }
 
-  async function removeResultUnit(c: ResultUnit) {
+  const columns: Column<ResultUnit>[] = [
+    {
+      key: "name",
+      header: t("colName"),
+      value: (u) => u.resultUnit,
+      sortable: true,
+      searchable: true,
+      mobile: "title",
+      // A button, not a click on the row: it is a tab stop, it answers Enter,
+      // and a screen reader says it opens something.
+      cell: (u) => (
+        <button
+          type="button"
+          onClick={() => setOpenId(u.id)}
+          className="text-left font-medium hover:text-accent hover:underline"
+        >
+          {u.resultUnit}
+        </button>
+      ),
+    },
+    {
+      key: "prefixes",
+      header: t("colPrefixes"),
+      value: (u) => u.prefixes.map((p) => p.value).join(" "),
+      searchable: true,
+      cell: (u) =>
+        u.prefixes.length ? (
+          <span className="flex flex-wrap gap-1">
+            {u.prefixes.map((p) => (
+              <Tag key={p.id} className="font-mono font-semibold">{p.value}</Tag>
+            ))}
+          </span>
+        ) : (
+          // A unit without one owns nothing, which is worth seeing from here.
+          <span className="text-xs text-warning">{t("noPrefix")}</span>
+        ),
+    },
+    {
+      key: "count",
+      header: t("colCount"),
+      value: (u) => u.costCenterCount,
+      sortable: true,
+      align: "right",
+      className: "tabular-nums",
+      cell: (u) => u.costCenterCount,
+    },
+    {
+      key: "owners",
+      header: t("colOwners"),
+      value: (u) => u.owners.map((o) => o.name).join(", "),
+      sortable: true,
+      searchable: true,
+      cell: (u) =>
+        u.owners.length ? (
+          <span className="text-sm">{u.owners.map((o) => o.name).join(", ")}</span>
+        ) : (
+          <span className="text-xs text-warning">{t("noOwners")}</span>
+        ),
+    },
+    {
+      key: "sales",
+      header: t("colSales"),
+      hidden: !incomeEnabled,
+      value: (u) => (u.income ? 1 : 0),
+      sortable: true,
+      mobile: "trailing",
+      cell: (u) =>
+        u.income ? (
+          <Tag tone="accent">{t("salesOn")}</Tag>
+        ) : (
+          <span className="text-muted">–</span>
+        ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {unassignedActive > 0 && (
+        <Notice>
+          <p>
+            {t("unassignedNotice", { count: unassignedActive })}{" "}
+            <button
+              type="button"
+              onClick={() => setShowUnassigned(true)}
+              className="font-medium text-accent hover:underline"
+            >
+              {t("showThem")}
+            </button>
+          </p>
+        </Notice>
+      )}
+
+      <Card>
+        <ClientDataTable
+          columns={columns}
+          rows={resultUnits}
+          controls={controls}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(u) => u.id}
+          empty={resultUnits.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
+          action={
+            !adding && (
+              <Button size="sm" onClick={() => setAdding(true)}>
+                <IconPlus className="size-4" />
+                {t("new")}
+              </Button>
+            )
+          }
+          actionPanel={
+            adding && (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-48 flex-1 sm:max-w-sm">
+                  <Input
+                    size="sm"
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && pending !== "new-resultUnit") createResultUnit();
+                      if (e.key === "Escape") setAdding(false);
+                    }}
+                    placeholder={t("namePlaceholder")}
+                    aria-label={t("namePlaceholder")}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  loading={pending === "new-resultUnit"}
+                  disabled={!newName.trim()}
+                  onClick={createResultUnit}
+                >
+                  {t("create")}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setAdding(false)}>
+                  {tCommon("cancel")}
+                </Button>
+              </div>
+            )
+          }
+        />
+      </Card>
+
+      {open && (
+        <UnitDialog
+          // Keyed, so every draft inside starts over when another unit opens.
+          key={open.id}
+          unit={open}
+          costCenters={costCenters}
+          incomeEnabled={incomeEnabled}
+          pending={pending}
+          mutate={mutate}
+          onClose={() => setOpenId(null)}
+        />
+      )}
+
+      {showUnassigned && (
+        <Modal label={t("unassigned")} onClose={() => setShowUnassigned(false)} className="max-w-lg">
+          <ModalHeader title={t("unassigned")} subtitle={t("unassignedSubtitle")} />
+          <ModalBody>
+            <CostCenterList list={unassigned} />
+          </ModalBody>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One result unit, in three sections that each answer one question: which
+ * cost centres are its, who attests them, and how its sales are booked.
+ */
+function UnitDialog({
+  unit,
+  costCenters,
+  incomeEnabled,
+  pending,
+  mutate,
+  onClose,
+}: {
+  unit: ResultUnit;
+  costCenters: CostCenter[];
+  incomeEnabled: boolean;
+  pending: string | null;
+  mutate: Mutate;
+  onClose: () => void;
+}) {
+  const t = useTranslations("admin.resultUnits");
+  const tIncome = useTranslations("admin.resultUnits.income");
+  const tCommon = useTranslations("common");
+  const tCostCenters = useTranslations("admin.costCenters");
+  const tRole = useTranslations("common.role");
+  const confirm = useConfirm();
+
+  // The prefix input is hidden behind a + until asked for, so the prefixes
+  // read as data rather than as a form. null means "not adding".
+  const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
+  const [productDraft, setProductDraft] = useState<{ code: string; account: string } | null>(null);
+  const [showCostCenters, setShowCostCenters] = useState(false);
+
+  // Only the unit's own cost centres: its sales are attested by its own
+  // resultatansvariga, which another unit's cost centre would hand to someone
+  // else. The one already chosen stays offered if it no longer matches (a
+  // prefix removed since), so the picker shows it rather than going blank.
+  const ownCodes = new Set(unit.costCenters.map((c) => c.code));
+  const ccOptions = costCenters
+    .filter((c) => ownCodes.has(c.code) || c.id === unit.income?.defaultCostCenterId)
+    .map((c) => ({
+      value: c.id,
+      label: `${c.code} – ${c.name}`,
+      short: c.code,
+    }));
+
+  async function rename(raw: string) {
+    const name = raw.trim();
+    if (!name) return false;
+    return mutate(`/api/result-units/${unit.id}`, {
+      key: `name-${unit.id}`,
+      method: "PATCH",
+      body: { name },
+      error: t("renameFailed"),
+      success: t("renamed", { name }),
+    }).then((ok) => ok !== null);
+  }
+
+  async function remove() {
     const confirmed = await confirm({
-      title: t("deleteTitle", { name: c.resultUnit }),
+      title: t("deleteTitle", { name: unit.resultUnit }),
       message:
-        c.prefixes.length > 0
-          ? t("deleteMessagePrefixes", { prefixes: c.prefixes.map((p) => p.value).join(", ") })
+        unit.prefixes.length > 0
+          ? t("deleteMessagePrefixes", { prefixes: unit.prefixes.map((p) => p.value).join(", ") })
           : t("deleteMessage"),
       confirmLabel: t("delete"),
       tone: "danger",
     });
     if (!confirmed) return;
     // The endpoint refuses while owners or unattested expenses hang on it, and
-    // says which — so no pre-check is needed here.
-    const ok = await mutate(`/api/result-units/${c.id}`, {
-      key: c.id,
+    // says which, so no pre-check is needed here.
+    const ok = await mutate(`/api/result-units/${unit.id}`, {
+      key: unit.id,
       method: "DELETE",
       error: t("deleteFailed"),
-      success: t("deleted", { name: c.resultUnit }),
+      success: t("deleted", { name: unit.resultUnit }),
     });
-    if (ok) setSelectedId(resultUnits.find((x) => x.id !== c.id)?.id ?? UNASSIGNED);
+    if (ok) onClose();
   }
 
-  async function rename(c: ResultUnit) {
-    const name = (nameDraft ?? "").trim();
-    if (!name || name === c.resultUnit) {
-      setNameDraft(null);
-      return;
-    }
-    const ok = await mutate(`/api/result-units/${c.id}`, {
-      key: `name-${c.id}`,
-      method: "PATCH",
-      body: { name },
-      error: t("renameFailed"),
-      success: t("renamed", { name }),
-    });
-    if (ok) setNameDraft(null);
-  }
-
-  async function addPrefix(c: ResultUnit) {
+  async function addPrefix() {
     const value = (prefixDraft ?? "").trim();
     if (!value) return;
-    const ok = await mutate(`/api/result-units/${c.id}/prefixes`, {
-      key: `prefix-${c.id}`,
+    const ok = await mutate(`/api/result-units/${unit.id}/prefixes`, {
+      key: `prefix-${unit.id}`,
       body: { value },
       error: t("prefixAddFailed"),
     });
@@ -170,60 +350,71 @@ export function ResultUnitsClient({
     });
   }
 
-  // ── The income half ───────────────────────────────────────────────
+  // ── Sales ──
   //
-  // Everything a verksamhet needs in order to take money in, edited here
-  // because this is where the verksamhet is. The key is not among these: it is
-  // derived from the name when the profile is created and never changed.
+  // Everything a unit needs in order to take money in. The key intakt groups
+  // reports by is not among these: it is derived from the name when the
+  // profile is created and never changed, and nobody here needs to read it.
 
-  async function enableIncome(c: ResultUnit) {
+  async function enableIncome() {
     await mutate("/api/income/units", {
-      key: `income-new-${c.id}`,
-      // The verifikationstext starts as the unit's own name — it is what the
+      key: `income-new-${unit.id}`,
+      // The verifikationstext starts as the unit's own name. It is what the
       // voucher will say, and that is a better start than blank.
-      body: { resultUnitId: c.id, description: c.resultUnit },
+      body: { resultUnitId: unit.id, description: unit.resultUnit },
       error: t("saveFailed"),
     });
   }
 
-  async function updateIncome(c: ResultUnit, body: Record<string, unknown>) {
-    if (!c.income) return;
-    await mutate(`/api/income/units/${c.income.id}`, {
-      key: `income-${c.income.id}`,
+  async function updateIncome(body: Record<string, unknown>) {
+    if (!unit.income) return;
+    await mutate(`/api/income/units/${unit.income.id}`, {
+      key: `income-${unit.income.id}`,
       method: "PATCH",
       body,
       error: t("saveFailed"),
     });
   }
 
-  async function removeIncome(c: ResultUnit) {
-    if (!c.income) return;
+  async function removeIncome() {
+    if (!unit.income) return;
     const ok = await confirm({
-      title: tIncome("removeTitle", { name: c.resultUnit }),
+      title: tIncome("removeTitle", { name: unit.resultUnit }),
       message: tIncome("removeBody"),
       confirmLabel: tIncome("remove"),
       tone: "danger",
     });
     if (!ok) return;
-    await mutate(`/api/income/units/${c.income.id}`, {
-      key: `income-${c.income.id}`,
+    await mutate(`/api/income/units/${unit.income.id}`, {
+      key: `income-${unit.income.id}`,
       method: "DELETE",
       error: t("saveFailed"),
     });
   }
 
-  async function addProductPrefix(c: ResultUnit) {
-    if (!c.income || !productDraft) return;
+  async function addProductPrefix() {
+    if (!unit.income || !productDraft) return;
     const ok = await mutate("/api/income/prefixes", {
       key: "addProduct",
       body: {
-        incomeId: c.income.id,
+        incomeId: unit.income.id,
         code: productDraft.code.trim(),
         account: productDraft.account.trim(),
       },
       error: t("saveFailed"),
     });
     if (ok) setProductDraft(null);
+  }
+
+  // The API moves the flag off whichever prefix held it, so there is always at
+  // most one fallback and no need to clear the old one here.
+  async function makeFallback(id: string) {
+    await mutate(`/api/income/prefixes/${id}`, {
+      key: `fallback-${id}`,
+      method: "PATCH",
+      body: { isFallback: true },
+      error: t("saveFailed"),
+    });
   }
 
   async function removeProductPrefix(id: string) {
@@ -234,560 +425,360 @@ export function ResultUnitsClient({
     });
   }
 
-  function toggleOwner(c: ResultUnit, userId: string) {
-    const ids = c.owners.map((m) => m.id);
-    const next = ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId];
-    mutate(`/api/result-units/${c.id}/owners`, {
-      // Keyed per owner, not per result unit: every chip in the row goes
-      // through here, and a shared key would spin all of them at once.
-      key: `owner-${c.id}-${userId}`,
-      method: "PUT",
-      body: { userIds: next },
-      error: t("ownersFailed"),
-    });
-  }
-
-  function costCentreGroups(list: ResultUnitCostCenter[]) {
-    const needle = ccSearch.trim().toLowerCase();
-    const filtered = needle
-      ? list.filter(
-          (cc) =>
-            cc.code.toLowerCase().includes(needle) || cc.name.toLowerCase().includes(needle),
-        )
-      : list;
-    return {
-      active: filtered.filter((cc) => cc.active),
-      inactive: filtered.filter((cc) => !cc.active),
-      total: filtered.length,
-    };
-  }
-
-  // A card of its own rather than a bordered box inside the result unit card —
-  // the rows run edge to edge, which is how every other list in the app reads.
-  function costCentreCard(
-    list: ResultUnitCostCenter[],
-    { subtitle, emptyText }: { subtitle: string; emptyText: string },
-  ) {
-    const groups = costCentreGroups(list);
-    return (
-      <Card>
-        <CardHeader
-          title={tNav("costCenters")}
-          subtitle={subtitle}
-          action={
-            list.length > 0 ? (
-              <div className="w-56">
-                <Input
-                  size="sm"
-                  value={ccSearch}
-                  onChange={(e) => setCcSearch(e.target.value)}
-                  placeholder={tAlloc("search")}
-                />
-              </div>
-            ) : undefined
-          }
-        />
-
-        {list.length === 0 ? (
-          <EmptyNote>{emptyText}</EmptyNote>
-        ) : groups.total === 0 ? (
-          <EmptyNote>{t("noCostCentersMatch")}</EmptyNote>
-        ) : (
-          (
-            [
-              [t("active"), groups.active, true],
-              [t("inactive"), groups.inactive, false],
-            ] as const
-          ).map(([label, rows, isActive]) =>
-            rows.length === 0 ? null : (
-              <div key={label}>
-                <p className="border-b border-border bg-surface/60 px-inset py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  {label} ({rows.length})
-                </p>
-                <ul>
-                  {rows.map((cc) => (
-                    <li
-                      key={cc.code}
-                      className={cn(
-                        "flex items-center gap-4 border-b border-border px-inset py-2.5 last:border-0",
-                        !isActive && "opacity-55",
-                      )}
-                    >
-                      <span className="w-20 shrink-0 font-mono text-xs font-semibold">
-                        {cc.code}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm">{cc.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ),
-          )
-        )}
-      </Card>
-    );
-  }
-
-  const unassignedActive = unassigned.filter((cc) => cc.active).length;
-
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <SidebarPanel>
-        <div className="border-b border-border p-3">
-          <Input
-            size="sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-          />
+    <Modal label={unit.resultUnit} onClose={onClose} className="max-w-2xl">
+      {/* Not ModalHeader: the name is edited in place here, and the delete and
+          the close sit beside it. */}
+      <div className="flex shrink-0 items-start gap-2 border-b border-border px-inset py-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold">
+            <EditableText value={unit.resultUnit} label={t("renameAria", { name: unit.resultUnit })} onSave={rename} />
+          </h2>
+          <p className="px-1.5 text-sm text-muted">
+            {t("activeCostCenters", { count: unit.costCenterCount })}
+          </p>
         </div>
-
-        <div className="max-h-[52vh] overflow-y-auto">
-          {visible.length === 0 ? (
-            <EmptyNote size="compact">
-              {resultUnits.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
-            </EmptyNote>
-          ) : (
-            <ul>
-              {visible.map((c) => (
-                <li key={c.id}>
-                  <SidebarItem
-                    active={selectedId === c.id}
-                    className="border-b border-border last:border-0"
-                    onClick={() => {
-                      setSelectedId(c.id);
-                      setCcSearch("");
-                      setPrefixDraft(null);
-                      setNameDraft(null);
-                      // Same reason as the other two drafts, and it matters
-                      // more: a product-prefix form left open across a switch
-                      // would post what was typed for one verksamhet to
-                      // whichever one is selected when Lägg till is pressed.
-                      setProductDraft(null);
-                    }}
-                  >
-                    <span className="block truncate text-sm font-medium">{c.resultUnit}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted">
-                      {c.prefixes.length
-                        ? c.prefixes.map((p) => p.value).join(", ")
-                        : t("noPrefix")}
-                      {" · "}
-                      {t("costCenterCount", { count: c.costCenterCount })}
-                    </span>
-                  </SidebarItem>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* No-resultUnit entry — a selection, not a wall of tags. */}
-        <SidebarItem
-          active={showingUnassigned}
-          className="border-t border-border"
-          onClick={() => {
-            setSelectedId(UNASSIGNED);
-            setCcSearch("");
-          }}
+        <IconButton
+          tone="danger"
+          onClick={remove}
+          loading={pending === unit.id}
+          label={t("deleteAria", { name: unit.resultUnit })}
         >
-          <span className="block truncate text-sm font-medium">{t("unassigned")}</span>
-          <span className="mt-0.5 block text-xs text-muted">
-            {t("activeCostCenters", { count: unassignedActive })}
-          </span>
-        </SidebarItem>
+          <IconTrash className="size-4" />
+        </IconButton>
+        <IconButton label={tCommon("close")} onClick={onClose}>
+          <IconX className="size-4" />
+        </IconButton>
+      </div>
 
-        <div className="border-t border-border p-3">
-          {addingResultUnit ? (
-            <div className="flex items-center gap-2">
-              <Input
-                size="sm"
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && pending !== "new-resultUnit") createResultUnit();
-                  if (e.key === "Escape") {
-                    setAddingResultUnit(false);
-                    setNewName("");
-                  }
-                }}
-                placeholder={t("namePlaceholder")}
-                className="min-w-0 flex-1"
-              />
-              <Button
-                size="sm"
-                loading={pending === "new-resultUnit"}
-                disabled={!newName.trim()}
-                onClick={createResultUnit}
-              >
-                {t("create")}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              onClick={() => setAddingResultUnit(true)}
-            >
-              <IconPlus className="size-4" />
-              {t("new")}
-            </Button>
-          )}
-        </div>
-      </SidebarPanel>
-
-      <div className="min-w-0 flex-1">
-        {showingUnassigned ? (
-          costCentreCard(unassigned, {
-            subtitle: t("unassignedSubtitle"),
-            emptyText: t("unassignedEmpty"),
-          })
-        ) : !selected ? (
-          <Card>
-            <CardBody>
-              <EmptyNote size="page">{t("pickResultUnit")}</EmptyNote>
-            </CardBody>
-          </Card>
-        ) : (
-          <div className="space-y-5">
-            <Card>
-              <div className="flex items-start justify-between gap-4 border-b border-border px-inset py-4">
-                <div className="min-w-0 flex-1">
-                  {/* Editing starts on the pencil, never by clicking the title —
-                      an input that merely looks like a heading gives no hint that
-                      it can be changed, and invites accidental edits. */}
-                  {nameDraft === null ? (
-                    <div className="flex items-center gap-2">
-                      <h2 className="truncate text-base font-semibold">{selected.resultUnit}</h2>
-                      <IconButton
-                        size="sm"
-                        label={t("renameAria", { name: selected.resultUnit })}
-                        onClick={() => setNameDraft(selected.resultUnit)}
-                      >
-                        <IconPencil className="size-4" />
-                      </IconButton>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        size="sm"
-                        autoFocus
-                        value={nameDraft}
-                        onChange={(e) => setNameDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") rename(selected);
-                          if (e.key === "Escape") setNameDraft(null);
-                        }}
-                        aria-label={t("namePlaceholder")}
-                        className="min-w-0 flex-1 font-semibold"
-                      />
-                      <Button
-                        size="sm"
-                        loading={pending === `name-${selected.id}`}
-                        disabled={!nameDraft.trim()}
-                        onClick={() => rename(selected)}
-                      >
-                        {tCostCenters("save")}
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => setNameDraft(null)}>
-                        {tCommon("cancel")}
-                      </Button>
-                    </div>
-                  )}
-                  <p className="mt-0.5 text-sm text-muted">
-                    {t("activeCostCenters", { count: selected.costCenterCount })}
-                  </p>
-                </div>
-                <IconButton
-                  tone="danger"
-                  onClick={() => removeResultUnit(selected)}
-                  loading={pending === selected.id}
-                  label={t("deleteAria", { name: selected.resultUnit })}
+      <ModalBody>
+        {/* ── Which cost centres are its ── */}
+        <Section title={t("sectionCostCenters")} hint={t("sectionCostCentersHint")}>
+          <FieldGroup label={t("prefixes")}>
+            <div className="flex flex-wrap items-center gap-2">
+              {unit.prefixes.map((p) => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-1.5 rounded-control border border-border bg-background py-1 pl-3 pr-1.5 font-mono text-xs font-semibold"
                 >
-                  <IconTrash className="size-4" />
-                </IconButton>
-              </div>
+                  {p.value}
+                  <IconButton
+                    tone="danger"
+                    onClick={() => removePrefix(p.id, p.value)}
+                    loading={pending === p.id}
+                    size="xs"
+                    label={t("prefixRemoveAria", { prefix: p.value })}
+                  >
+                    <IconTrash className="size-3.5" />
+                  </IconButton>
+                </span>
+              ))}
 
-              <CardBody className="space-y-5">
-                {/* Cost-centre prefixes — which cost centres are the unit's. */}
-                <div>
-                  <p className="mb-2 text-xs font-medium text-muted">{t("prefixes")}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {selected.prefixes.map((p) => (
-                      <span
+              {prefixDraft === null ? (
+                <Button variant="ghost" size="sm" onClick={() => setPrefixDraft("")}>
+                  <IconPlus className="size-4" />
+                  {t("prefixAdd")}
+                </Button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-24">
+                    <Input
+                      size="sm"
+                      autoFocus
+                      value={prefixDraft}
+                      onChange={(e) => setPrefixDraft(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && pending !== `prefix-${unit.id}`) addPrefix();
+                        if (e.key === "Escape") setPrefixDraft(null);
+                      }}
+                      placeholder="SKT"
+                      aria-label={t("prefixNew")}
+                      className="font-mono uppercase"
+                    />
+                  </span>
+                  <Button
+                    size="sm"
+                    loading={pending === `prefix-${unit.id}`}
+                    disabled={!prefixDraft.trim()}
+                    onClick={addPrefix}
+                  >
+                    {tCostCenters("add")}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setPrefixDraft(null)}>
+                    {tCommon("cancel")}
+                  </Button>
+                </span>
+              )}
+            </div>
+          </FieldGroup>
+
+          {/* The cost centres themselves, folded: the count is usually what is
+              wanted, and the list is there for checking a particular code. */}
+          {unit.costCenters.length === 0 ? (
+            <p className="text-sm text-muted">
+              {unit.prefixes.length ? t("noCostCentersForPrefix") : t("noPrefixHint")}
+            </p>
+          ) : (
+            <div>
+              <ExpandToggle
+                open={showCostCenters}
+                onToggle={() => setShowCostCenters(!showCostCenters)}
+                className="-ml-2"
+              >
+                {t("matches", { count: unit.costCenters.length })}
+              </ExpandToggle>
+              {showCostCenters && (
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-control border border-border">
+                  <CostCenterList list={unit.costCenters} />
+                </div>
+              )}
+            </div>
+          )}
+        </Section>
+
+        {/* ── Who attests them ──
+            Read-only here. Which groups make somebody resultatansvarig for a
+            unit is set under Inställningar → Roller, and who is in a group is
+            Authentik's. Showing the groups and not just the names is what makes
+            an empty list diagnosable: nobody holds the post, or no group grants
+            it. */}
+        <Section title={t("sectionAttest")} hint={t("sectionAttestHint")}>
+          <FieldGroup label={tRole("RESULTATANSVARIG")}>
+            {unit.owners.length === 0 ? (
+              <p className="text-sm text-muted">
+                {unit.ownerGroups.length ? t("noOwnersHolding") : t("noOwnerGroups")}
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {unit.owners.map((u) => (
+                  <span
+                    key={u.id}
+                    className="h-7 rounded-control border border-accent bg-accent-soft px-3 text-xs font-medium leading-7 text-accent"
+                  >
+                    {u.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </FieldGroup>
+          <p className="text-xs text-muted">
+            {unit.ownerGroups.length > 0 && (
+              <>
+                {t("grantedBy")}{" "}
+                {unit.ownerGroups.map((g, i) => (
+                  <span key={g}>
+                    {i > 0 && ", "}
+                    <code className="rounded-control bg-surface-2 px-1 py-0.5 font-mono">{g}</code>
+                  </span>
+                ))}
+                .{" "}
+              </>
+            )}
+            <Link href="/admin/roles" className="font-medium text-accent hover:underline">
+              {t("editInRoles")}
+            </Link>
+          </p>
+        </Section>
+
+        {/* ── How its sales are booked ──
+            Only when the income module is configured: a section that runs
+            without intakt has no use for any of it, and the result-unit screen
+            must not depend on income existing. */}
+        {incomeEnabled && (
+          <Section title={tIncome("section")} hint={tIncome("sectionHint")}>
+            {!unit.income ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted">{tIncome("disabledHint")}</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={pending === `income-new-${unit.id}`}
+                  onClick={enableIncome}
+                >
+                  <IconPlus className="size-4" />
+                  {tIncome("enable")}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label={tIncome("description")} hint={tIncome("descriptionHint")}>
+                    <Input
+                      size="sm"
+                      // Uncontrolled: it commits on blur rather than on every
+                      // keystroke. The dialog is keyed on the unit, so opening
+                      // another one re-reads the default.
+                      defaultValue={unit.income.description}
+                      aria-label={tIncome("description")}
+                      onBlur={(e) =>
+                        e.target.value !== unit.income?.description &&
+                        updateIncome({ description: e.target.value })
+                      }
+                    />
+                  </FieldGroup>
+                  <FieldGroup label={tIncome("defaultCostCenter")} hint={tIncome("defaultCostCenterHint")}>
+                    <Combobox
+                      size="sm"
+                      options={ccOptions}
+                      value={unit.income.defaultCostCenterId ?? ""}
+                      onChange={(v) => updateIncome({ defaultCostCenterId: v || null })}
+                      placeholder={tIncome("noCostCenter")}
+                      emptyText={tIncome("noOwnCostCenters")}
+                      allowClear
+                      aria-label={tIncome("defaultCostCenter")}
+                    />
+                  </FieldGroup>
+                </div>
+
+                {/* Which goods are this unit's: a small table of "starts with"
+                    and the account it is booked to, the add row as its last
+                    line. Chips with an arrow said the same thing, but not
+                    what it meant. */}
+                <FieldGroup label={tIncome("productPrefixes")} hint={tIncome("productHint")}>
+                  <ul className="rounded-control border border-border">
+                    {unit.income.prefixes.map((p) => (
+                      <li
                         key={p.id}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background py-1 pl-3 pr-1.5 font-mono text-xs font-semibold"
+                        className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0"
                       >
-                        {p.value}
+                        <span className="w-20 shrink-0 font-mono text-sm font-semibold">{p.code}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          <span className="font-mono tabular-nums">{p.account}</span>
+                          {p.accountName && <span className="text-muted"> – {p.accountName}</span>}
+                        </span>
+                        {/* An account the chart has never heard of is a
+                            voucher Fortnox will reject, but only at export, so
+                            it is worth saying here. */}
+                        {!p.accountName && <Tag tone="warning">{tIncome("unknownAccount")}</Tag>}
+                        {p.isFallback ? (
+                          <span title={tIncome("fallbackHint")}>
+                            <Tag tone="accent">{tIncome("fallback")}</Tag>
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            title={tIncome("fallbackHint")}
+                            loading={pending === `fallback-${p.id}`}
+                            onClick={() => makeFallback(p.id)}
+                          >
+                            {tIncome("makeFallback")}
+                          </Button>
+                        )}
                         <IconButton
                           tone="danger"
-                          onClick={() => removePrefix(p.id, p.value)}
-                          loading={pending === p.id}
                           size="xs"
-                          label={t("prefixRemoveAria", { prefix: p.value })}
+                          disabled={p.isFallback}
+                          loading={pending === `product-${p.id}`}
+                          label={tIncome("prefixRemove")}
+                          onClick={() => removeProductPrefix(p.id)}
                         >
                           <IconTrash className="size-3.5" />
                         </IconButton>
-                      </span>
+                      </li>
                     ))}
-
-                    {prefixDraft === null ? (
-                      <button
-                        onClick={() => setPrefixDraft("")}
-                        title={t("prefixAdd")}
-                        aria-label={t("prefixAdd")}
-                        className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-border text-muted transition hover:border-accent hover:text-accent"
+                    <li className="flex flex-wrap items-center gap-2 bg-surface px-3 py-2">
+                      <span className="w-20 shrink-0">
+                        <Input
+                          size="sm"
+                          value={productDraft?.code ?? ""}
+                          onChange={(e) =>
+                            setProductDraft({ account: productDraft?.account ?? "", code: e.target.value })
+                          }
+                          placeholder="c"
+                          aria-label={tIncome("prefixCode")}
+                          className="font-mono"
+                        />
+                      </span>
+                      <span className="w-24">
+                        <Input
+                          size="sm"
+                          inputMode="numeric"
+                          value={productDraft?.account ?? ""}
+                          onChange={(e) =>
+                            setProductDraft({ code: productDraft?.code ?? "", account: e.target.value })
+                          }
+                          onKeyDown={(e) => { if (e.key === "Enter") addProductPrefix(); }}
+                          placeholder="3011"
+                          aria-label={tIncome("prefixAccount")}
+                          className="font-mono"
+                        />
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={pending === "addProduct"}
+                        disabled={!productDraft?.code.trim() || !productDraft.account.trim()}
+                        onClick={addProductPrefix}
                       >
                         <IconPlus className="size-4" />
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="w-24">
-                          <Input
-                            size="sm"
-                            autoFocus
-                            value={prefixDraft}
-                            onChange={(e) => setPrefixDraft(e.target.value.toUpperCase())}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && pending !== `prefix-${selected.id}`) {
-                                addPrefix(selected);
-                              }
-                              if (e.key === "Escape") setPrefixDraft(null);
-                            }}
-                            placeholder="SKT"
-                            aria-label={t("prefixNew")}
-                            className="font-mono uppercase"
-                          />
-                        </span>
-                        <Button
-                          size="sm"
-                          loading={pending === `prefix-${selected.id}`}
-                          disabled={!prefixDraft.trim()}
-                          onClick={() => addPrefix(selected)}
-                        >
-                          {tCostCenters("add")}
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setPrefixDraft(null)}>
-                          {tCommon("cancel")}
-                        </Button>
-                      </span>
-                    )}
+                        {tCostCenters("add")}
+                      </Button>
+                    </li>
+                  </ul>
+                </FieldGroup>
 
-                    {selected.prefixes.length === 0 && prefixDraft === null && (
-                      <span className="text-sm text-muted">{t("noPrefixHint")}</span>
-                    )}
-                  </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="dangerOutline"
+                    size="sm"
+                    loading={pending === `income-${unit.income.id}`}
+                    onClick={removeIncome}
+                  >
+                    {tIncome("remove")}
+                  </Button>
                 </div>
-
-                {/* Product prefixes and the rest of the income half. Rendered
-                    only when the income module is configured: a section that
-                    runs without intakt has no use for any of it, and the
-                    result-unit screen must not depend on income existing. */}
-                {incomeEnabled && (
-                  <div className="space-y-4 rounded-xl border border-border p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs font-medium text-muted">{tIncome("section")}</p>
-                      {selected.income ? (
-                        <span className="flex items-center gap-2 text-xs text-muted">
-                          {/* Derived from the name and never edited — shown so
-                              it can be recognised in intakt's own output. */}
-                          <span className="font-mono">{selected.income.key}</span>
-                          <IconButton
-                            tone="danger"
-                            size="xs"
-                            label={tIncome("remove")}
-                            loading={pending === `income-${selected.income.id}`}
-                            onClick={() => removeIncome(selected)}
-                          >
-                            <IconTrash className="size-3.5" />
-                          </IconButton>
-                        </span>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          loading={pending === `income-new-${selected.id}`}
-                          onClick={() => enableIncome(selected)}
-                        >
-                          <IconPlus className="size-4" />
-                          {tIncome("enable")}
-                        </Button>
-                      )}
-                    </div>
-
-                    {selected.income ? (
-                      <>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <Field label={tIncome("description")} hint={tIncome("descriptionHint")}>
-                            <Input
-                              size="sm"
-                              // Uncontrolled, because it commits on blur rather
-                              // than on every keystroke — so `defaultValue` is
-                              // read once, when the input mounts. Selecting
-                              // another verksamhet does not remount it: it is
-                              // the same element in the same place, and React
-                              // keeps it (and its typed-in value) while only
-                              // the props change. The field went on showing the
-                              // first unit's verifikationstext however many
-                              // units you clicked through. Keying it on the
-                              // income profile makes switching a remount, which
-                              // is what re-reads the default.
-                              key={selected.income.id}
-                              defaultValue={selected.income.description}
-                              onBlur={(e) =>
-                                e.target.value !== selected.income?.description &&
-                                updateIncome(selected, { description: e.target.value })
-                              }
-                            />
-                          </Field>
-                          <FieldGroup label={tIncome("defaultCostCenter")}>
-                            <Combobox
-                              options={ccOptions}
-                              value={selected.income.defaultCostCenterId ?? ""}
-                              onChange={(v) => updateIncome(selected, { defaultCostCenterId: v || null })}
-                              placeholder={tIncome("noCostCenter")}
-                              allowClear
-                              aria-label={tIncome("defaultCostCenter")}
-                            />
-                          </FieldGroup>
-                        </div>
-
-                        <div>
-                          <p className="mb-2 text-xs font-medium text-muted">
-                            {tIncome("productPrefixes")}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {selected.income.prefixes.map((p) => (
-                              <span
-                                key={p.id}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background py-1 pl-3 pr-1.5 text-xs"
-                              >
-                                <span className="font-mono font-semibold">{p.code}</span>
-                                <span className="text-muted">→ {p.account}</span>
-                                {/* An account the chart has never heard of is a
-                                    voucher Fortnox will reject, but only at
-                                    export — so it is worth saying here. */}
-                                {!p.accountName && (
-                                  <Tag tone="warning">{tIncome("unknownAccount")}</Tag>
-                                )}
-                                {p.isFallback && <Tag tone="accent">{tIncome("fallback")}</Tag>}
-                                <IconButton
-                                  tone="danger"
-                                  size="xs"
-                                  disabled={p.isFallback}
-                                  loading={pending === `product-${p.id}`}
-                                  label={tIncome("prefixRemove")}
-                                  onClick={() => removeProductPrefix(p.id)}
-                                >
-                                  <IconTrash className="size-3.5" />
-                                </IconButton>
-                              </span>
-                            ))}
-
-                            {productDraft === null ? (
-                              <button
-                                onClick={() => setProductDraft({ code: "", account: "" })}
-                                title={tIncome("prefixAdd")}
-                                aria-label={tIncome("prefixAdd")}
-                                className="inline-flex size-7 items-center justify-center rounded-full border border-dashed border-border text-muted transition hover:border-accent hover:text-accent"
-                              >
-                                <IconPlus className="size-4" />
-                              </button>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="w-20">
-                                  <Input
-                                    size="sm"
-                                    autoFocus
-                                    value={productDraft.code}
-                                    onChange={(e) =>
-                                      setProductDraft({ ...productDraft, code: e.target.value })
-                                    }
-                                    placeholder="s1"
-                                    aria-label={tIncome("prefixCode")}
-                                    className="font-mono"
-                                  />
-                                </span>
-                                <span className="w-24">
-                                  <Input
-                                    size="sm"
-                                    inputMode="numeric"
-                                    value={productDraft.account}
-                                    onChange={(e) =>
-                                      setProductDraft({ ...productDraft, account: e.target.value })
-                                    }
-                                    placeholder="3011"
-                                    aria-label={tIncome("prefixAccount")}
-                                    className="font-mono"
-                                  />
-                                </span>
-                                <Button
-                                  size="sm"
-                                  loading={pending === "addProduct"}
-                                  disabled={!productDraft.code.trim() || !productDraft.account.trim()}
-                                  onClick={() => addProductPrefix(selected)}
-                                >
-                                  {tCostCenters("add")}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => setProductDraft(null)}
-                                >
-                                  {tCommon("cancel")}
-                                </Button>
-                              </span>
-                            )}
-
-                            {selected.income.prefixes.length === 0 && productDraft === null && (
-                              <span className="text-sm text-muted">{tIncome("noPrefixHint")}</span>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-sm text-muted">{tIncome("disabledHint")}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Owners */}
-                <div>
-                  <p className="mb-2 text-xs font-medium text-muted">{tRole("RESULTATANSVARIG")}</p>
-                  {ownerCandidates.length === 0 ? (
-                    <p className="text-sm text-muted">{t("noOwners")}</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {ownerCandidates.map((u) => (
-                        <Chip
-                          key={u.id}
-                          active={selected.owners.some((m) => m.id === u.id)}
-                          loading={pending === `owner-${selected.id}-${u.id}`}
-                          disabled={busy}
-                          onClick={() => toggleOwner(selected, u.id)}
-                        >
-                          {u.name}
-                        </Chip>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-              </CardBody>
-            </Card>
-
-            {costCentreCard(selected.costCenters, {
-              subtitle: t("matchedBy", {
-                prefixes: selected.prefixes.length
-                  ? selected.prefixes.map((p) => p.value).join(", ")
-                  : t("noPrefixLower"),
-              }),
-              emptyText: t("noCostCentersForPrefix"),
-            })}
-          </div>
+              </>
+            )}
+          </Section>
         )}
+      </ModalBody>
+    </Modal>
+  );
+}
+
+/** A titled part of the unit dialog, with a line saying what it decides. */
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3 border-b border-border pb-5 last:border-0 last:pb-0">
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <p className="text-xs text-muted">{hint}</p>
       </div>
-    </div>
+      {children}
+    </section>
+  );
+}
+
+/** Cost centres by code, the retired ones after the rest and dimmed. */
+function CostCenterList({ list }: { list: ResultUnitCostCenter[] }) {
+  const t = useTranslations("admin.resultUnits");
+  if (list.length === 0) return <p className="text-sm text-muted">{t("unassignedEmpty")}</p>;
+  const sorted = [...list].sort((a, b) => Number(b.active) - Number(a.active));
+  return (
+    <ul>
+      {sorted.map((cc) => (
+        <li
+          key={cc.code}
+          className={cn(
+            "flex items-center gap-4 border-b border-border px-3 py-2 last:border-0",
+            !cc.active && "opacity-55",
+          )}
+        >
+          <span className="w-20 shrink-0 font-mono text-xs font-semibold">{cc.code}</span>
+          <span className="min-w-0 flex-1 truncate text-sm">{cc.name}</span>
+          {!cc.active && <span className="text-xs text-muted">{t("inactive")}</span>}
+        </li>
+      ))}
+    </ul>
   );
 }

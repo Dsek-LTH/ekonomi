@@ -1,5 +1,5 @@
 // Utlägg: the list every screen renders, and the full single one behind the
-// detail page. Also the place a viewer's scope is applied — which expenses they
+// detail page. Also the place a viewer's scope is applied: which expenses they
 // may see at all, and which allocations they may attest.
 import "server-only";
 
@@ -13,6 +13,7 @@ import {
   type PrefixRow,
 } from "@/lib/server/result-units";
 import { oreToSEK as ore } from "@/lib/domain/money";
+import { journeyKm } from "@/lib/mileage/claim";
 import {
   canAccessBookkeeping,
   canAttestAllocation,
@@ -20,6 +21,7 @@ import {
   hasAttestRole,
 } from "@/lib/domain/permissions";
 import type {
+  Capability,
   CostAllocation,
   Expense,
   Role,
@@ -67,20 +69,26 @@ function mapAllocation(
 }
 
 // Relations needed to render a row in any expense list (no per-expense audit
-// timeline and no voucher lines — those are loaded only on the detail page).
+// timeline and no voucher lines, since those are loaded only on the detail page).
 const summaryInclude = {
   submitter: true,
+  // Only the name, and only so a standing dispens can say whose it is. Nearly
+  // every utlägg has none, so this is a null column on the row and no join at
+  // all for the rows that matter.
+  deadlineWaivedBy: { select: { name: true } },
   allocations: {
     include: { costCenter: true, approvedBy: true },
   },
-  // take: 1 makes the tiebreaker matter twice over — two receipts stored in the
-  // same instant would otherwise pick an arbitrary one as "newest". The
-  // annotation keeps this array mutable despite the `as const` below, which is
-  // what Prisma's argument types require.
+  // Every receipt, oldest first: the order they were uploaded in, which is
+  // the order they are stapled behind the cover for Fortnox (see
+  // lib/server/pdf-merge.ts) and the order they page through in the panel.
+  // The tiebreaker matters for the same reason a single "newest" used to need
+  // one: two stored in the same instant must still come back in a fixed
+  // order. The annotation keeps this array mutable despite the `as const`
+  // below, which is what Prisma's argument types require.
   receipts: {
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }] as Prisma.ReceiptOrderByWithRelationInput[],
-    take: 1,
-    select: { id: true, mimeType: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }] as Prisma.ReceiptOrderByWithRelationInput[],
+    select: { id: true, filename: true, mimeType: true },
   },
   verification: { include: { createdBy: true } },
 } as const;
@@ -95,7 +103,7 @@ function fortnoxLabel(v: { fortnoxSeries: string | null; fortnoxNumber: number |
 
 // One shape for the booked voucher, whether or not its rows were loaded.
 //
-// A list wants the heading — the date, who booked it, the Fortnox number — and
+// A list wants the heading: the date, who booked it, the Fortnox number, and
 // has no use for the rows; the detail page wants both. That was two copies of
 // the same object literal, and the detail one worked by building the version
 // without rows and then discarding it whole to build it again with them.
@@ -117,7 +125,7 @@ function mapVerification(
 function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
   return {
     id: e.id,
-    // Absent until the utlägg is submitted for attest — see reference in
+    // Absent until the utlägg is submitted for attest. See reference in
     // schema.prisma. The interface says so rather than inventing a placeholder.
     reference: e.reference ?? undefined,
     title: e.title,
@@ -131,23 +139,62 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     grossAmount: ore(e.grossAmount),
     currency: e.currency,
     matchedTransactionId: e.matchedTransactionId ?? undefined,
-    receiptId: e.receipts[0]?.id,
-    receiptMimeType: e.receipts[0]?.mimeType,
+    receipts: e.receipts.map((r) => ({ id: r.id, filename: r.filename, mimeType: r.mimeType })),
+    // Absent, not empty, for anything that is not a milersättning. See the
+    // field on the Expense interface. The readings live on the utlägg itself,
+    // so this costs no join.
+    mileage:
+      e.paymentType === "MILEAGE"
+        ? {
+            odometerStart: e.odometerStart == null ? null : Number(e.odometerStart),
+            odometerEnd: e.odometerEnd == null ? null : Number(e.odometerEnd),
+            stops: e.journeyStops,
+            km: journeyKm(
+              e.odometerStart == null ? null : Number(e.odometerStart),
+              e.odometerEnd == null ? null : Number(e.odometerEnd),
+            ),
+            orePerKm: e.mileageOrePerKm,
+          }
+        : undefined,
     submitterHasPayout: Boolean(
       e.submitter.bankClearingNumber && e.submitter.bankAccountNumber,
     ),
     verification: e.verification ? mapVerification(e.verification) : undefined,
+    // All three columns or none: the route writes and clears them together, so
+    // a half-set dispens would be a row nobody wrote. Reading it as absent is
+    // the safe way round either way, since it is what lifts the filing
+    // deadline.
+    deadlineWaiver:
+      e.deadlineWaivedAt && e.deadlineWaiverReason
+        ? {
+            by: e.deadlineWaivedBy?.name ?? "–",
+            at: e.deadlineWaivedAt.toISOString(),
+            reason: e.deadlineWaiverReason,
+          }
+        : undefined,
     revisions: [],
   };
 }
 
 export type { Viewer };
 
-// Per-request attest context: the viewer's roles + result units, resolved once,
-// plus the prefix table used to place each allocation in a result unit.
+/** The names a REMINDER_SENT event stored in `diff`. See ExpenseEventType. */
+function reminderRecipients(diff: unknown): string[] {
+  const names = (diff as { recipients?: unknown } | null)?.recipients;
+  return Array.isArray(names) ? names.filter((n): n is string => typeof n === "string") : [];
+}
+
+// Per-request attest context: what the viewer may do and what they answer for,
+// resolved once, plus the prefix table used to place each allocation in a result
+// unit.
+//
+// Both roles and capabilities, because the attest rule reads both: ADMIN is a
+// capability, the vice-skattmästare and resultatansvarig clauses are roles.
+// See canAttestAllocation in lib/domain/permissions.ts.
 type AttestCtx = {
   viewerId: string;
   viewerRoles: Role[];
+  viewerCapabilities: Capability[];
   ownedResultUnits: string[];
   prefixes: PrefixRow[];
 };
@@ -160,6 +207,7 @@ async function attestCtx(viewer: Viewer): Promise<AttestCtx> {
   return {
     viewerId: viewer.id,
     viewerRoles: viewer.roles,
+    viewerCapabilities: viewer.capabilities,
     ownedResultUnits: owned.names,
     prefixes,
   };
@@ -177,54 +225,52 @@ function annotateAttest(
   mapped: Expense,
   ctx: AttestCtx,
 ): void {
-  const submitterRoles = raw.submitter.roles;
   const actorIsSubmitter = raw.submitterId === ctx.viewerId;
   const resultUnitById = new Map(
     raw.allocations.map((a) => [a.id, resultUnitNameForCode(a.costCenter.code, ctx.prefixes)]),
   );
   for (const a of mapped.allocations) {
     a.canAttest = canAttestAllocation({
+      actorCapabilities: ctx.viewerCapabilities,
       actorRoles: ctx.viewerRoles,
       actorIsSubmitter,
       actorOwnedResultUnits: ctx.ownedResultUnits,
-      submitterRoles,
       allocationResultUnit: resultUnitById.get(a.id) ?? null,
     });
   }
-  mapped.canReturn = canReturnApproved(ctx.viewerRoles);
+  mapped.canReturn = canReturnApproved(ctx.viewerCapabilities);
 }
 
 // ── The list screens ──────────────────────────────────────────────
 
 /**
  * Which slice of the section's utlägg a list screen is about, before anything
- * the reader has typed. This is the page's own subject — "the attest queue",
- * "what bookkeeping still has to book" — and it is the page that knows it.
+ * the reader has typed. This is the page's own subject: "the attest queue",
+ * "what bookkeeping still has to book", and it is the page that knows it.
  */
 export type ExpenseListScope =
   | { kind: "all" }
   /** Only the viewer's own. */
   | { kind: "mine" }
-  /** What the viewer may attest — see attest-scope.ts. */
+  /** What the viewer may attest. See attest-scope.ts. */
   | { kind: "attestable" }
   /** The whole section's attest queue, for a bookkeeping role looking wider. */
   | { kind: "attestChain" }
   /** Signed and beyond: what bookkeeping works on. */
   | { kind: "signed" };
 
-// The status tabs, as the database spells them — which is now the same way the
+// The status tabs, as the database spells them, which is now the same way the
 // interface spells them, since REJECTED was migrated away. A tab is one status
 // unless the page's question genuinely covers several.
 const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
   DRAFT: ["DRAFT"],
-  PENDING_MATCH: ["PENDING_MATCH"],
   PENDING_APPROVAL: ["PENDING_APPROVAL"],
   CHANGES_REQUESTED: ["CHANGES_REQUESTED"],
   APPROVED: ["APPROVED"],
   BOOKED: ["BOOKED"],
   EXPORTED: ["EXPORTED"],
   // The attest page names its two tabs after the question it asks rather than
-  // after a status — "waiting on someone" and "signed" — and the second covers
+  // after a status ("waiting on someone" and "signed") and the second covers
   // three. Distinct from the names above, so one table serves every list.
   PENDING: ["PENDING_APPROVAL"],
   ATTESTED: ["APPROVED", "BOOKED", "EXPORTED"],
@@ -247,8 +293,8 @@ const EXPENSE_ORDER: Record<string, (dir: SortDir) => Prisma.ExpenseOrderByWithR
   submitter: (d) => [{ submitter: { name: d } }, { id: d }],
 };
 
-// Newest first, and the order references are handed out in. Not unique — a
-// seeded batch shares a timestamp — so it carries a tiebreaker too.
+// Newest first, and the order references are handed out in. Not unique: a
+// seeded batch shares a timestamp, so it carries a tiebreaker too.
 const EXPENSE_DEFAULT_ORDER: Prisma.ExpenseOrderByWithRelationInput[] = [
   { createdAt: "desc" },
   { id: "desc" },
@@ -310,7 +356,7 @@ function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
  * the database.
  *
  * What that is worth depends on there being an index behind the ordering, which
- * for a while there was not — the work moved to Postgres and Postgres sorted the
+ * for a while there was not. The work moved to Postgres and Postgres sorted the
  * whole matching set for every page. The orderings this issues by default, and
  * the columns it filters on, are indexed now (see Expense in schema.prisma);
  * `title` and `paymentType` are deliberately not, so choosing one of those sorts
@@ -320,7 +366,7 @@ function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
  * The search is a different matter and no index helps it: `contains` is
  * `ILIKE '%q%'`, which no btree can answer, so it reads the table. Same
  * conclusion at this size, and the same thing to revisit first if it ever stops
- * being true — a trigram index is the answer, and it needs the pg_trgm
+ * being true. A trigram index is the answer, and it needs the pg_trgm
  * extension.
  */
 export async function getExpensePage(
@@ -329,7 +375,7 @@ export async function getExpensePage(
   q: ListQuery,
 ): Promise<RowPage<Expense>> {
   // Two filters, both always applied: what this screen is about, and what the
-  // viewer is allowed to see at all. The second is not the first's business —
+  // viewer is allowed to see at all. The second is not the first's business.
   // an attest queue is narrower than "everything you may see", and a
   // bookkeeping list is wider, but neither may reach past the scope.
   const where: Prisma.ExpenseWhereInput = {
@@ -368,7 +414,7 @@ export async function getExpensePage(
 
 /**
  * Everything that could possibly be waiting on this viewer, and their own most
- * recent utlägg — the two things the dashboard is made of.
+ * recent utlägg, the two things the dashboard is made of.
  *
  * The queue is derived by `buildQueue` (domain/queue.ts), which asks each utlägg
  * whether it is waiting on this person. It used to be asked of every utlägg in
@@ -376,7 +422,7 @@ export async function getExpensePage(
  * are what is fetched. An exported utlägg from three years ago cannot be
  * waiting on anybody, and there is no reason to read it to find that out.
  *
- * The filter is deliberately wider than `queueActionFor` — it is a shortlist,
+ * The filter is deliberately wider than `queueActionFor`. It is a shortlist,
  * not a second copy of the rule. That function still decides, unchanged, and if
  * the two ever disagree the worst case is a row fetched and then dropped.
  */
@@ -389,16 +435,16 @@ export async function getDashboardExpenses(
   // Waiting on you as the person who sent it in.
   const waitingOnSubmitter: Prisma.ExpenseWhereInput = {
     submitterId: viewer.id,
-    status: { in: ["CHANGES_REQUESTED", "DRAFT", "PENDING_MATCH"] },
+    status: { in: ["CHANGES_REQUESTED", "DRAFT"] },
   };
 
   const candidates: Prisma.ExpenseWhereInput[] = [waitingOnSubmitter];
-  if (hasAttestRole(viewer.roles)) {
+  if (hasAttestRole(viewer.capabilities)) {
     candidates.push({
       AND: [await attestScopeWhere(viewer), { status: { in: ["PENDING_APPROVAL"] } }],
     });
   }
-  if (canAccessBookkeeping(viewer.roles)) {
+  if (canAccessBookkeeping(viewer.capabilities)) {
     candidates.push({ status: { in: ["APPROVED", "BOOKED"] } });
   }
 
@@ -429,7 +475,7 @@ export async function getDashboardExpenses(
   return { queueCandidates: map(queueRows), mine: map(mineRows) };
 }
 
-// Full single expense for the detail page — adds the event timeline and the
+// Full single expense for the detail page. Adds the event timeline and the
 // verification's voucher lines on top of the summary shape.
 export async function getExpense(
   id: string,
@@ -477,6 +523,7 @@ export async function getExpense(
       actor: ev.actor?.name ?? "System",
       action: ev.type,
       comment: ev.comment ?? undefined,
+      recipients: ev.type === "REMINDER_SENT" ? reminderRecipients(ev.diff) : undefined,
       date: ev.createdAt.toISOString(),
     })),
   };

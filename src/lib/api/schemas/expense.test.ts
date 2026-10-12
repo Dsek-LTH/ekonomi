@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { BookVoucher, VoucherLineInput } from "./expense";
 
-// A voucher row is built by two screens — the utlägg booking table and the
-// income one — and both of them send a cleared text field as null. The schema
+// A voucher row is built by two screens (the utlägg booking table and the
+// income one) and both of them send a cleared text field as null. The schema
 // used to accept a string or nothing at all but not null, which refused the
 // whole booking over a row nobody had written anything on.
 describe("VoucherLineInput's optional text", () => {

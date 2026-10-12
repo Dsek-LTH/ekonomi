@@ -24,7 +24,7 @@ export default async function IncomePage({
   const { report } = await searchParams;
 
   // Running without the intakt service is a supported way to run, the same as
-  // running without Fortnox — so the page loads and says so rather than
+  // running without Fortnox, so the page loads and says so rather than
   // failing. Checked here because the environment is the server's to read.
   return (
     <IncomeReviewClient

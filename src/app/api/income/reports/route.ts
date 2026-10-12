@@ -1,8 +1,8 @@
 // Make a report for a day by hand.
 //
 // The collection route, beside the [id] ones that work on a day that already
-// exists. Everything else in the queue arrives through ./batches — a fetch of
-// what was actually sold — and this is the one thing a fetch cannot produce:
+// exists. Everything else in the queue arrives through ./batches (a fetch of
+// what was actually sold) and this is the one thing a fetch cannot produce:
 // a report for a verksamhet whose sales all went somewhere else, so the routing
 // never saw them and made no report for them. See lib/income/draft.ts.
 import { NextResponse } from "next/server";
@@ -32,6 +32,6 @@ export async function POST(req: Request) {
 
   // 200 rather than 201 when the verksamhet already had a draft for the day:
   // nothing was made, and the caller is being handed the report that was
-  // already there — which is what `created` says.
+  // already there, which is what `created` says.
   return NextResponse.json(result, { status: result.created ? 201 : 200 });
 }

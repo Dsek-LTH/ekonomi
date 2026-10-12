@@ -2,7 +2,7 @@
 // AWS SDK v3, so the same code works against MinIO now and any S3/R2 later by
 // changing env vars. Receipt *bytes* live here; the *metadata* lives in Postgres
 // (see the Receipt model). This is the "proxy" model: only the Next server
-// reaches MinIO — it is never exposed to the browser.
+// reaches MinIO. It is never exposed to the browser.
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
@@ -24,7 +24,7 @@ function createClient() {
   return new S3Client(s3ClientOptions(serverEnv));
 }
 
-// Singleton — avoids creating a new client per request under hot-reload.
+// Singleton: avoids creating a new client per request under hot-reload.
 const globalForS3 = globalThis as unknown as { s3?: S3Client };
 const s3 = globalForS3.s3 ?? createClient();
 if (process.env.NODE_ENV !== "production") globalForS3.s3 = s3;
@@ -66,14 +66,14 @@ export function receiptKey(
 }
 
 // The rendered intäktsräkning for a day's takings. Kept under its own prefix
-// rather than alongside receipts because it is generated rather than uploaded —
+// rather than alongside receipts because it is generated rather than uploaded:
 // re-rendering a report replaces the object at the same key, which a receipt
 // never does.
 export function incomeDocumentKey(reportId: string, filename: string): string {
   return `income/${reportId}/${safeName(filename)}`;
 }
 
-// The rendered utläggsräkning — the cover page naming who attested what. Its
+// The rendered utläggsräkning, the cover page naming who attested what. Its
 // own prefix for the same reason as the income one: generated, not uploaded.
 //
 // The cover only. The receipt it fronts stays under `receipts/` and is joined
@@ -81,6 +81,26 @@ export function incomeDocumentKey(reportId: string, filename: string): string {
 // are never held twice.
 export function expenseDocumentKey(expenseId: string, filename: string): string {
   return `expenses/${expenseId}/${safeName(filename)}`;
+}
+
+// A file belonging to an avtal: an uploaded original, a rendered
+// uthyrningsavtal, a signed PDF, the signing provider's evidence log.
+//
+// One prefix for all four rather than one each, because what a file *is* to its
+// contract is ContractFile.role and belongs in the row, not in the key. A key
+// that encoded it would have to be rewritten the day a GENERATED file becomes
+// the SIGNED one, and rewriting a key means copying the bytes.
+//
+// The fileId (a cuid) carries uniqueness, so re-uploading a file of the same
+// name never collides with the one already there. That matters more here than
+// it does for receipts: a contract holds many files at once, and two of them
+// really are often called scan.pdf.
+export function contractFileKey(
+  contractId: string,
+  fileId: string,
+  filename: string,
+): string {
+  return `contracts/${contractId}/${fileId}-${safeName(filename)}`;
 }
 
 export async function putObject(
@@ -99,7 +119,7 @@ export async function putObject(
   );
 }
 
-export interface ObjectStream {
+interface ObjectStream {
   body: ReadableStream;
   contentType: string;
   contentLength?: number;
@@ -153,8 +173,8 @@ export async function deleteObject(key: string): Promise<void> {
 // Delete without letting storage trouble block the caller. Only for the upload
 // rollback, where the request is already failing and there is no useful way to
 // tell the user about a second problem behind the first. The object then
-// outlives the request, and the only way anyone learns that is this log line —
-// the sweeper (prisma/gc-receipts.ts) collects what lands here.
+// outlives the request, and the only way anyone learns that is this log line:
+// the sweeper (scripts/gc-receipts.ts) collects what lands here.
 export async function deleteObjectBestEffort(key: string): Promise<void> {
   try {
     await deleteObject(key);
@@ -164,6 +184,6 @@ export async function deleteObjectBestEffort(key: string): Promise<void> {
 }
 
 // Listing the bucket is the sweeper's business, and the sweeper has its own
-// client (prisma/storage-admin.ts) because a tsx script cannot import a
+// client (scripts/storage-admin.ts) because a tsx script cannot import a
 // `server-only` module. There was a copy of it here too, unreachable from
 // anything, under a comment saying the sweeper needed it.

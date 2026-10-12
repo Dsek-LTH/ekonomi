@@ -3,7 +3,7 @@
 -- orderings those issue: every page of 25 was a full sort of everything that
 -- matched, and the paging read the whole set to discard most of it.
 --
--- The three indexes dropped below are not lost, only widened — each is the
+-- The three indexes dropped below are not lost, only widened: each is the
 -- leading column of the composite that replaces it, so the filters they served
 -- are still served, and now the ORDER BY after them is too.
 --

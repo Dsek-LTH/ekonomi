@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
@@ -16,15 +15,14 @@ import { canChangeLockedBudget, canCommentBudget, canLockBudget, isAdmin as isAd
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
-import { IconButton } from "@/components/ui/icon-button";
 import { startRouteProgress } from "@/components/shell/route-progress";
 import { IconLock, IconLockOpen } from "@/components/ui/icons";
+import { Tag } from "@/components/ui/status-pill";
 
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
-import { useFormat } from "@/lib/ui/use-format";
-import { useStickyFollow } from "@/lib/ui/use-sticky-follow";
+import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { cn } from "@/lib/ui/utils";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { CHANGES, RAMBUDGET, VARS, adjustmentRows, ccTotals, changeImpactBySheet, resultUnitLabel, resultUnitOf, fmtSigned, groupByResultUnit } from "./budget-helpers";
@@ -37,6 +35,7 @@ import { ChangesSheet } from "./changes-sheet";
 import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
 import type { Budget, BudgetClip } from "./budget-types";
+import { SearchInput } from "@/components/ui/search-input";
 
 export default function BudgetClient({
   initialBudget,
@@ -50,19 +49,17 @@ export default function BudgetClient({
 }) {
   const { budgetId } = useParams<{ budgetId: string }>();
   const t = useTranslations("budget.sheet");
-  const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const tList = useTranslations("budget.list");
   const tAlloc = useTranslations("allocation");
   const tEval = useTranslations("budget.eval");
   const tGroup = useTranslations("budget.group");
   const { user } = useRole();
-  const { date } = useFormat();
   const notify = useNotify();
   const { mutate } = useMutation();
-  const isAdmin = isAdminRole(user.roles);
-  const canComment = canCommentBudget(user.roles);
-  const canLock = canLockBudget(user.roles);
+  const isAdmin = isAdminRole(user.capabilities);
+  const canComment = canCommentBudget(user.capabilities);
+  const canLock = canLockBudget(user.capabilities);
 
   // The budget lives in client state because editing it is a client concern:
   // committing a cell re-evaluates every formula in the browser (see
@@ -79,25 +76,26 @@ export default function BudgetClient({
 
   // What has been copied, held on the page: copying is for moving something from
   // one cost centre to another, and the sheet it was copied from is unmounted
-  // the moment the next one is picked. Cleared by nothing — a copy stays on the
+  // the moment the next one is picked. Cleared by nothing: a copy stays on the
   // clipboard until the next one replaces it, as a clipboard does.
   const [clip, setClip] = useState<BudgetClip | null>(null);
 
-  // The cost-centre list stands beside the sheet and follows the page as it is
-  // scrolled — the offset is the hook's, not a `top-*` class.
-  const stickyList = useStickyFollow<HTMLElement>();
+  // From lg the views below are sized to the window, the way the ledger is:
+  // the page itself stops scrolling, and the cost-centre list and the sheet
+  // each scroll on their own. See lib/ui/use-fill-viewport.ts.
+  const fillRef = useFillViewport<HTMLDivElement>();
 
   // The buffered "+ new variable" name (the cost-centre sheet owns its own drafts).
   const [newVar, setNewVar] = useState("");
 
-  // Year and name are edited here, on the budget itself, rather than in the
-  // list — both are properties of the thing this page is showing, and the list
-  // is for finding a budget, not for editing one. The edit state itself belongs
-  // to each EditableText.
+  // The name is edited here, on the budget itself, rather than in the list.
+  // It is a property of the thing this page is showing, and the list is for
+  // finding a budget, not for editing one. The edit state itself belongs to
+  // the EditableText.
 
   // The year's outcome from the ledger, which the reload below deliberately
   // does not ask for again. Held here rather than read off `budget` so that
-  // `load` — and everything built on it — does not have to depend on the state
+  // `load`, and everything built on it, does not have to depend on the state
   // it sets.
   const outcome = useRef({
     actuals: initialBudget.actuals,
@@ -105,20 +103,27 @@ export default function BudgetClient({
     actualsYear: initialBudget.actualsYear,
   });
 
-  // Re-read the budget after a write. Same payload the page server-rendered —
+  // Re-read the budget after a write. Same payload the page server-rendered:
   // GET /api/budgets/[id] and the page share one loader (lib/data/budget.ts),
   // so this replaces state with the identical shape it started from.
   //
   // Bar two things it asks the server not to bother with. The outcome, because
   // no budget edit can change what the ledger reported and gathering it is a
-  // group-by over the whole financial year — the copy already in hand is
+  // group-by over the whole financial year, so the copy already in hand is
   // carried over instead. And the evaluated figures, because this page works
   // those out for every cell it commits anyway (`recomputeBudget`, the same
   // evaluator the server runs); asking for them meant evaluating the budget
   // twice over and sending every line's figure back for the pleasure.
+  // Not a `useQuery`: this is a refetch on demand rather than a question the
+  // url asks, and it may make a second request depending on the first one's
+  // answer. What it does borrow is the staleness guard. Two writes in quick
+  // succession are two reloads, and the slower one landing second would put the
+  // earlier budget back on screen, undoing the later edit until the next write.
+  const reload = useRef(0);
   const load = useCallback(async () => {
+    const id = ++reload.current;
     const res = await fetch(`/api/budgets/${budgetId}?actuals=0&evaluated=0`);
-    if (!res.ok) return;
+    if (!res.ok || id !== reload.current) return;
     const fresh = (await res.json()) as Budget;
     // Unless the budget has been moved to another year, when the outcome beside
     // it is a different year's and the only honest thing is to go and get it.
@@ -133,22 +138,23 @@ export default function BudgetClient({
         };
       }
     }
+    if (id !== reload.current) return;
     setBudget(recomputeBudget({ ...fresh, ...outcome.current }));
   }, [budgetId]);
 
   // Every sheet write goes through here: the shared mutation path for the
-  // request and the error message, then a reload — the budget is client-loaded,
+  // request and the error message, then a reload. The budget is client-loaded,
   // so the router refresh useMutation does for Server Components isn't enough.
   //
   // `refresh: false` because it is worse than not enough: this page's server
   // component exists to hand over the *first* copy of the budget, which state
-  // has owned ever since, so refreshing it re-ran the whole loader — the nested
-  // query, the evaluation, the year's ledger — and threw the answer away. Every
+  // has owned ever since, so refreshing it re-ran the whole loader (the nested
+  // query, the evaluation, the year's ledger) and threw the answer away. Every
   // save was paying for that budget twice and using neither copy.
   //
   // It holds the top progress bar for the whole of it, request and reload
   // both. Every other screen gets that from useMutation's router.refresh; this
-  // one reloads itself instead, so it has to say so — and it is the screen
+  // one reloads itself instead, so it has to say so, and it is the screen
   // where a save is least visible, since a committed cell already shows its new
   // value while the server is still being told about it.
   const api = useCallback(async (
@@ -161,8 +167,8 @@ export default function BudgetClient({
     try {
       const data = await mutate(url, { method, body, error: tCommon("error.action"), refresh: false });
       if (!data) return false;
-      // The write has already said what it did — the row it created, the id it
-      // removed — so the budget is patched with that and the figures re-derived
+      // The write has already said what it did, the row it created or the id it
+      // removed, so the budget is patched with that and the figures re-derived
       // here. Only a write that cannot describe itself sends us back for the
       // whole budget.
       if (apply) setBudget((prev) => recomputeBudget(apply(prev, data)));
@@ -178,32 +184,32 @@ export default function BudgetClient({
 
   // A1 grid across all cost-centre sheets, for ↔ token conversion of references.
   const grid = useMemo<BudgetGrid>(() => buildGrid(
-    (budget?.costCenters ?? []).map((cc) => ({
+    budget.costCenters.map((cc) => ({
       code: sheetKey(cc),
       accounts: cc.accounts.map((a) => ({
-        id: a.id, accountCode: a.accountCode, kindOverride: a.kindOverride,
+        id: a.id, accountCode: a.accountCode,
         lineItems: a.lineItems.map((li) => ({ id: li.id })),
       })),
     })),
     columns,
   ), [budget, columns]);
 
-  // A locked budget is read-only for everyone, admin or not — so every edit
+  // A locked budget is read-only for everyone, admin or not, so every edit
   // affordance below hangs off `canEdit` rather than `isAdmin`. The server
   // refuses the writes too (lib/budget/access.ts); this is what keeps the UI
   // from offering them.
-  const locked = budget?.lockedAt != null;
+  const locked = budget.lockedAt != null;
   const canEdit = isAdmin && !locked;
 
   // The other door: a locked budget is changed by recording a deviation or a
   // transfer beside it, which is the treasurer's alone (see
   // canChangeLockedBudget) and only exists while it is locked.
-  const canChange = canChangeLockedBudget(user.roles) && locked;
+  const canChange = canChangeLockedBudget(user.capabilities) && locked;
 
   // Cell renderers + buffered-edit / focus state + optimistic commit.
   const { renderCell, renderFormula } = useBudgetCells({ grid, isAdmin: canEdit, budget, setBudget, mutate, load, api });
 
-  // What this budget is held up against, if anything. Off until asked for — but
+  // What this budget is held up against, if anything. Off until asked for, but
   // the join exists either way, and the views read their rows from it.
   const { target: compareTarget, setTarget: setCompareTarget, options: compareOptions, comparison } = useComparison(budget);
 
@@ -229,21 +235,27 @@ export default function BudgetClient({
 
   const ev = budget.evaluated;
 
-  // Two properties of the same budget, saved separately so each pencil writes
-  // its own row. Returning false keeps the field open on a value we won't write.
-  async function saveYear(raw: string) {
-    const year = Number(raw);
-    if (!Number.isInteger(year) || year < 1900 || year > 2200) {
-      notify.error(tList("invalidYear"));
-      return false;
-    }
-    return api(`/api/budgets/${budgetId}`, "PATCH", { year });
-  }
-
+  // Returning false keeps the field open on a value we won't write.
   async function saveName(raw: string) {
     const name = raw.trim();
     if (!name) { notify.error(t("nameRequired")); return false; }
     return api(`/api/budgets/${budgetId}`, "PATCH", { name });
+  }
+
+  // The day the möte adopted it. Cleared by emptying the field, which is the
+  // only way back to "this was never adopted". A budget recorded as decided by
+  // mistake would otherwise be stuck claiming a meeting that did not happen.
+  // The year follows the date, so there is no second field to keep in step
+  // with it. Clearing the date leaves the year where it was.
+  async function saveAdoptedAt(raw: string) {
+    const value = raw.trim();
+    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      notify.error(t("invalidAdoptedAt"));
+      return false;
+    }
+    return api(`/api/budgets/${budgetId}`, "PATCH", value
+      ? { adoptedAt: value, year: Number(value.slice(0, 4)) }
+      : { adoptedAt: null });
   }
 
   // Sheets with no cost centre hold none, so they never take one out of the
@@ -252,7 +264,7 @@ export default function BudgetClient({
   const availableCc = allCostCenters.filter((c) => c.active && !usedCc.has(c.id));
   const q = search.trim().toLowerCase();
   // By code. `numeric` compares digit runs as numbers, so AKTU2 sits before
-  // AKTU10 rather than after it — the codes aren't reliably zero-padded.
+  // AKTU10 rather than after it, since the codes aren't reliably zero-padded.
   // Sheets with no cost centre have no code to sort on and go last, among
   // themselves by name ("sv", so å/ä/ö land where a Swedish reader looks).
   // filter() already copied, so sorting in place doesn't touch the budget.
@@ -273,9 +285,22 @@ export default function BudgetClient({
     ? budget.costCenters.find((c) => c.id === selected) ?? null : null;
   const ccCode = cc ? sheetKey(cc) : "";
 
+  // Which of the two views is open, and where the detail view opens. It comes
+  // back to the sheet that was last open there, so a look at the rambudget and
+  // back does not lose your place; the first cost centre the first time.
+  const view = selected === RAMBUDGET ? "FRAME" : "DETAIL";
+  const [lastDetail, setLastDetail] = useState<string | null>(null);
+  if (selected !== RAMBUDGET && selected !== lastDetail) setLastDetail(selected);
+  const detailTarget =
+    (lastDetail && (lastDetail === VARS || lastDetail === CHANGES || budget.costCenters.some((c) => c.id === lastDetail))
+      ? lastDetail
+      : null) ??
+    groups[0]?.items[0]?.id ??
+    VARS;
+
   // Editorial changes, in the two shapes the views need: the rows to show under
   // each account, and what they have done to each sheet's result. Both count
-  // only the changes still in force — see budget-helpers.
+  // only the changes still in force. See budget-helpers.
   const adjustments = adjustmentRows(budget.changes);
   const impactBySheet = changeImpactBySheet(budget);
   const hasChanges = budget.changes.length > 0;
@@ -295,102 +320,147 @@ export default function BudgetClient({
 
   // Duplicate the open sheet and jump to the copy, which lands unconnected.
   async function cloneCc(sourceId: string) {
-    const data = await mutate(`/api/budgets/${budgetId}/cost-centers`, {
+    const data = await mutate<{ id: string }>(`/api/budgets/${budgetId}/cost-centers`, {
       body: { cloneFromId: sourceId },
       success: t("cloned"),
       error: t("cloneFailed"),
-      refresh: false, // the reload below is what this page reads — see `api`
+      refresh: false, // the reload below is what this page reads, see `api`
     });
     if (!data) return;
     await load();
-    if (data.id) setSelected(String(data.id));
+    if (data.id) setSelected(data.id);
   }
 
+  // The antagen date: the one fact about a budget worth keeping on screen, since
+  // it is a decision (the möte that passed it). Editable in place, and shown
+  // even when unset, because an empty slot invites the date where no slot at
+  // all hides that the budget is missing one. The prefix only where there is a
+  // date for it to introduce: "Antagen inte antagen" is what it said otherwise.
+  const adopted = (
+    <>
+      {budget.adoptedAt && <>{t("adoptedOn")} </>}
+      <EditableText
+        value={budget.adoptedAt ?? ""}
+        type="date"
+        label={t("changeAdoptedAt")}
+        placeholder={t("notAdopted")}
+        disabled={!canEdit}
+        onSave={saveAdoptedAt}
+        pencil={false}
+        // As tall as the lock button beside it, so the two read as one row.
+        inputClassName="h-8"
+      />
+    </>
+  );
+
   return (
-    // PageShell like every other screen. This used to compose PageHeader itself
-    // and wrap the rest in a bare <div>, only because PageShell typed its title
-    // as a string and this page's title is editable in place — the shell takes a
-    // node now, so the exception is gone.
     <PageShell
-      // The year the budget is for, and the name that tells it apart from the
-      // others for the same year — a line and a pencil each, since they are
-      // two separate saves.
+      // The name is the only thing edited up here. The year is not shown: it
+      // follows the antagen date, which sits by the lock below. The lock chip
+      // in purple, not grey: a lock is not an absence of state, it is the
+      // authority chain saying this is adopted and only the treasurer moves it
+      // now.
       title={
-        <span className="flex flex-wrap items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <EditableText
-            value={String(budget.year)}
-            type="number"
-            label={t("changeYear")}
+            value={budget.name}
+            label={t("changeName")}
+            placeholder={t("namePlaceholder")}
             disabled={!canEdit}
-            inputClassName="w-32"
-            onSave={saveYear}
+            onSave={saveName}
           />
-          {/* Purple, not grey: a lock is not an absence of state, it is the
-              authority chain saying this is adopted and only the treasurer
-              moves it now. Same colour the approval queue wears. */}
           {locked && (
-            <span className="rounded-lg bg-purple-soft px-2 py-1 text-xs font-medium text-purple">
-              {tList("locked")}
-            </span>
+            <Tag tone="purple">{tList("locked")}</Tag>
           )}
         </span>
       }
-      subtitle={
-        <EditableText
-          value={budget.name}
-          label={t("changeName")}
-          placeholder={t("namePlaceholder")}
-          disabled={!canEdit}
-          inputClassName="w-64"
-          onSave={saveName}
-        />
-      }
-      description={
-        <>
-          {t("createdBy", { name: budget.createdBy.name })}
-          {budget.actualsSynced
-            ? <span className="ml-2 text-muted">· {t("actualsSynced", { year: budget.actualsYear ?? budget.year })}</span>
-            : <span className="ml-2 text-muted">· {t("actualsNotSynced", { year: budget.actualsYear ?? budget.year })}</span>}
-          {locked && (
-            <span className="ml-2 text-muted">
-              ·{" "}
-              {budget.lockedBy
-                ? t("lockedByOn", { name: budget.lockedBy.name, date: date(budget.lockedAt ?? "") })
-                : t("lockedOn", { date: date(budget.lockedAt ?? "") })}
-            </span>
-          )}
-          {ev.errors.length > 0 && (
-            <span className="ml-2 text-warning">· {tEval(ev.errors[0])}</span>
-          )}
-        </>
-      }
-      back={{ href: "/budget", label: tNav("budget") }}
+      // The budget as a whole, or one sheet of it at a time. Variabler and
+      // Ändringar change the sheets, so they belong to the second.
+      collections={{
+        label: t("view"),
+        value: view,
+        options: [
+          { value: "FRAME", label: t("frameBudget") },
+          { value: "DETAIL", label: t("detailBudget") },
+        ],
+        onChange: (v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget),
+      }}
+      back="/budget"
     >
-      <div className="flex flex-col gap-4 lg:flex-row">
-        {/* Sticky from lg, where the list is a column beside a sheet rather
-            than a stack above it. A sheet is the long thing on this screen —
-            a cost centre runs to scores of rows, and the rambudget to every
-            sheet at once — and the list scrolling away with it made picking
-            the next cost centre a scroll back to the top every time.
+      {/* What acts on the budget whichever view is open: what it is held
+          against, and the lock. One row under the header, the same place in
+          both views. */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Nothing is compared until asked for. See use-comparison.tsx. */}
+        <Combobox
+          size="sm"
+          options={[
+            { value: "", label: t("noComparison") },
+            ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+          ]}
+          value={compareTarget}
+          onChange={setCompareTarget}
+          placeholder={t("compareWith")}
+          searchPlaceholder={tList("searchPlaceholder")}
+          emptyText={t("nothingToCompare")}
+          aria-label={t("compareWith")}
+          className="w-full sm:w-72"
+        />
+        {/* A formula that does not evaluate is a problem with the budget, not
+            a fact about it, so it stays on screen where the rest went. */}
+        {ev.errors.length > 0 && <p className="text-sm text-warning">{tEval(ev.errors[0])}</p>}
+        {/* The antagen date beside the lock, since the two are one decision:
+            the möte adopts it, the treasurer locks it. */}
+        <span className="ml-auto inline-flex h-8 items-center text-[13px] text-muted">{adopted}</span>
+        {/* A closed padlock to lock it, a sprung one to unlock. The icon shows
+            the action, and the chip by the name is the state. */}
+        {canLock && (
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={locking}
+            onClick={() => setLocked(!locked)}
+          >
+            {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
+            {locked ? t("unlock") : t("lock")}
+          </Button>
+        )}
+      </div>
 
-            No `top-*` here: the offset is the hook's, walked up and down as the
-            page scrolls so that a list longer than the screen is reachable in
-            full either way (see lib/ui/use-sticky-follow.ts). `self-start` is
-            what makes it stick at all — the row stretches its items, so the
-            panel was already as tall as the sheet beside it, and a sticky box
-            with no scroll range of its own never moves. */}
+      {/* One element for both views, so the window-sized box is never swapped
+          out from under the hook that sizes it. `-mb-14` gives back the room
+          the shell keeps under every page; `print:` lets a printout run past
+          the window's edge, the height being an inline style. */}
+      <div ref={fillRef} className="lg:-mb-14 print:h-auto!">
+      {selected === RAMBUDGET ? (
+        // The whole budget at once, so the whole width: no list of sheets
+        // beside it. Picking a row opens that sheet in the detail view.
+        <div className="lg:flex lg:h-full lg:flex-col">
+          <Rambudget
+            comparison={comparison}
+            ccIdOf={(key) => ccByCompareKey.get(key)}
+            impactOf={(key) => impactBySheet.get(key)}
+            showImpact={hasChanges}
+            onPick={setSelected}
+          />
+        </div>
+      ) : (
+      <div className="flex flex-col gap-4 lg:h-full lg:flex-row">
+        {/* From lg a column of its own beside the sheet, never taller than the
+            window. A sheet is the long thing on this screen, and the list
+            scrolling away with it made picking the next cost centre a scroll
+            back to the top every time. Now neither moves the other: the card
+            fits the column, and only its list of cost centres scrolls, so the
+            search and the "add" row stay where they are. */}
         <SidebarPanel
-          ref={stickyList}
-          className="lg:sticky lg:self-start"
+          className="lg:flex lg:max-h-full lg:flex-col"
+          cardClassName="lg:flex lg:min-h-0 lg:flex-col"
           sheetLabel={t("pickCostCenter")}
-          // What the collapsed bar says: whichever of the four things this pane
-          // is showing. A cost centre brings its result with it, because that is
-          // the figure you came to the sheet for and it is one the bar can carry
-          // for free.
+          // What the collapsed bar says: whichever sheet this pane is showing.
+          // A cost centre brings its result with it, because that is the figure
+          // you came to the sheet for and one the bar can carry for free.
           bar={
-            selected === RAMBUDGET ? (
-              t("frameBudget")
-            ) : selected === VARS ? (
+            selected === VARS ? (
               t("variables")
             ) : selected === CHANGES ? (
               t("changes")
@@ -424,51 +494,10 @@ export default function BudgetClient({
             )
           }
         >
-          {/* The two things that act on the budget as a whole, at the head of
-              the column that lists its sheets — the pane on the right is one
-              sheet at a time, and both of these change every one of them. They
-              were in the page header until that became identity only; the row
-              is shaped like the search and "add cost centre" rows further down
-              this same panel. */}
-          <div className="flex items-center gap-1.5 border-b border-border p-2">
-            {/* Nothing is compared until asked for — see use-comparison.tsx. */}
-            <Combobox
-              size="sm"
-              options={[
-                { value: "", label: t("noComparison") },
-                ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
-              ]}
-              value={compareTarget}
-              onChange={setCompareTarget}
-              placeholder={t("compareWith")}
-              searchPlaceholder={tList("searchPlaceholder")}
-              emptyText={t("nothingToCompare")}
-              aria-label={t("compareWith")}
-              className="min-w-0 flex-1"
-            />
-            {/* A closed padlock to lock it, a sprung one to unlock — the icon
-                shows the action, and the chip by the year is the state. */}
-            {canLock && (
-              <IconButton
-                label={locked ? t("unlock") : t("lock")}
-                loading={locking}
-                onClick={() => setLocked(!locked)}
-              >
-                {locked ? <IconLockOpen className="size-5" /> : <IconLock className="size-5" />}
-              </IconButton>
-            )}
-          </div>
-          <SidebarItem
-            active={selected === RAMBUDGET}
-            onClick={() => setSelected(RAMBUDGET)}
-            className="font-medium"
-          >
-            {t("frameBudget")}
-          </SidebarItem>
           <SidebarItem
             active={selected === VARS}
             onClick={() => setSelected(VARS)}
-            className="flex items-center justify-between border-t border-border font-medium"
+            className="flex items-center justify-between font-medium"
           >
             <span>{t("variables")}</span>
             <span className="text-xs text-muted">{budget.variables.length}</span>
@@ -486,24 +515,26 @@ export default function BudgetClient({
             </SidebarItem>
           )}
           <div className="border-t border-border px-3 py-2">
-            <Input
-              size="sm"
+            <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tAlloc("search")}
+              aria-label={tAlloc("search")}
             />
           </div>
           {/* The scrollbar floats over the rows instead of taking a column from
-              them — same as the income queue, and for the same reason: these
+              them, the same as the income queue and for the same reason: these
               rows are a cost centre's name against its result, in a 16rem
               panel. See components/ui/overlay-scroll.tsx. */}
-          {/* Capped at the same height either way it is standing. A budget runs
-              to scores of cost centres, and left to be as long as it liked the
-              panel was a column of them beside a sheet a fraction of its
-              height. So the list scrolls inside the panel — the scrollbar is
-              the floating one, which is why it costs the rows nothing — and
-              what the sticky above carries is a box that fits the screen. */}
-          <OverlayScroll className="max-h-[58vh]">
+          {/* A budget runs to scores of cost centres, so the list scrolls
+              inside the panel rather than making it as long as it likes. Below
+              lg, where the panel opens as a sheet, it is capped; from lg it
+              takes whatever height the column has left. The scrollbar is the
+              floating one, which is why it costs the rows nothing. */}
+          <OverlayScroll
+            className="max-h-[58vh] lg:min-h-0 lg:flex-1 lg:max-h-none"
+            frameClassName="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+          >
             {groups.map((g) => (
               <div key={g.resultUnit}>
                 <SidebarGroupLabel>{resultUnitLabel(g.resultUnit, tGroup)}</SidebarGroupLabel>
@@ -563,17 +594,12 @@ export default function BudgetClient({
             </div>
           )}
         </SidebarPanel>
-
-        <div className="min-w-0 flex-1">
-          {selected === RAMBUDGET ? (
-            <Rambudget
-              comparison={comparison}
-              ccIdOf={(key) => ccByCompareKey.get(key)}
-              impactOf={(key) => impactBySheet.get(key)}
-              showImpact={hasChanges}
-              onPick={setSelected}
-            />
-          ) : selected === VARS ? (
+        {/* The sheet's own scrollport from lg, the column the ledger's report
+            sits in. The open cost centre's header scrolls with the sheet.
+            Dragging a row to the edge scrolls this, found as the nearest
+            scroller (lib/ui/auto-scroll.ts). */}
+        <div className="min-w-0 flex-1 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:h-auto print:overflow-visible">
+          {selected === VARS ? (
             <VariablesSheet budget={budget} ev={ev} comparison={comparison}
               isAdmin={canEdit} renderCell={renderCell} renderFormula={renderFormula} api={api}
               newVar={newVar} setNewVar={setNewVar} budgetId={budgetId} />
@@ -610,7 +636,8 @@ export default function BudgetClient({
           )}
         </div>
       </div>
-
+      )}
+      </div>
     </PageShell>
   );
 }

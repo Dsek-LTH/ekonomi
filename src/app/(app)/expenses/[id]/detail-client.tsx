@@ -3,26 +3,31 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { StatusPill } from "@/components/ui/status-pill";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SearchInput } from "@/components/ui/search-input";
-import { Spinner } from "@/components/ui/spinner";
-import { IconLink } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { NoMatchNote, TransactionPicker } from "@/components/transaction-picker";
 import { expenseDocuments } from "@/lib/expense/document-url";
 import { Amount } from "@/components/ui/amount";
 // For the amount that sits inside a translated sentence ("Pick a transaction for
 // exactly …"), where a React node cannot go. Everything rendered as a figure in
 // its own right uses Amount.
 import { formatSEK } from "@/lib/ui/format";
-import { cancelsOut } from "@/lib/domain/matching";
+import { cancelsOut, matchCandidates } from "@/lib/domain/matching";
 import { useFormat } from "@/lib/ui/use-format";
-import { cn } from "@/lib/ui/utils";
 import type { BankTransaction, Expense, FortnoxStatus } from "@/lib/domain/types";
-import { DetailsCard, TimelineCard, VerificationCard } from "./detail-sections";
+import {
+  AllocationSection,
+  ExpenseSummary,
+  FactStrip,
+  InspectorSection,
+  NotesSection,
+  TimelineSection,
+  VerificationSection,
+} from "./detail-sections";
 import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
+import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
 
@@ -70,41 +75,53 @@ function ExpenseDetail({
   fortnox,
 }: {
   expense: Expense;
-  /** Decided on the server — see expenseCapabilities. */
+  /** Decided on the server. See expenseCapabilities. */
   can: ExpenseCapabilities;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
 }) {
   const t = useTranslations("expenses.detail");
-  const tNav = useTranslations("nav");
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
-  const documents = expenseDocuments(expense, `${tReceipt("alt")} · ${expense.title}`);
+  const [reminding, setReminding] = useState(false);
+  const documents = expenseDocuments(
+    expense,
+    `${tReceipt("alt")} – ${expense.title}`,
+    // The panel stacks the two into one scroll, so each is captioned.
+    { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
+  );
+  const matched = bankTransactions.find((t) => t.id === expense.matchedTransactionId);
 
   return (
     <PageShell
+      // The same width as the form that made it, so opening an utlägg after
+      // filling one in does not shrink the page into a narrow column.
       width="content"
       title={expense.title}
       // Before it is submitted there is no reference to show, and the status
-      // pill below already says so — the name alone, not a gap where a number
+      // pill below already says so, the name alone, not a gap where a number
       // would be.
       subtitle={
         expense.reference
           ? `${expense.reference} - ${expense.submitterName}`
           : expense.submitterName
       }
-      description={<StatusPill status={expense.status} />}
-      back={{ href: "/expenses", label: tNav("expenses") }}
+      back="/expenses"
     >
-      {/* The receipt is the app's panel now, not a card in this page — the page
+      {/* The receipt is the app's panel now, not a card in this page. The page
           declares it and the shell stands it beside all of this, full height.
 
-          Two documents, not one: the utläggsräkning — the cover page naming
-          who attested what — and the underlag behind it, with the panel's
-          pager between them. Stapled together they are what gets attached to
-          the voucher in Fortnox, and being able to read that here is most of
-          the reason to render it at all; a document you cannot see until it is
-          in somebody else's system is one nobody checks.
+          Two documents, not one: the utläggsräkning (the cover page naming
+          who attested what) and the underlag behind it, with the panel's pager
+          between them. They are in the order they are stapled in for Fortnox,
+          which is what makes paging through them a reading of the thing the
+          section will actually file; a document you cannot see until it is in
+          somebody else's system is one nobody checks.
+
+          It opens on the second of them all the same. The receipt is what
+          somebody comes to this page to look at. The cover is generated from
+          data already on screen beside it, so the panel lands there and the
+          cover is a page back.
 
           A draft has no cover worth drawing and shows its receipt alone.
           See lib/expense/document-url.ts. */}
@@ -114,62 +131,88 @@ function ExpenseDetail({
         emptyDescription={t("noReceipt")}
       />
 
-      <ExpenseActionNotice can={can} fortnox={fortnox} />
+      <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
-      {/* min-w-0: without it a grid item's own min-width is auto, so one long
-          unbroken string — a cost-centre name, a receipt filename — widens the
-          column past the screen instead of being truncated inside its card. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
-        <div className="min-w-0 space-y-6">
-          <DetailsCard
-            expense={expense}
-            action={
-              <ExpenseActions
-                expenseId={expense.id}
-                can={can}
-                fortnox={fortnox}
-                busy={mutations.busy}
-                onTransition={mutations.transition}
-                onWithdrawAttest={mutations.withdrawAttest}
-                onExport={mutations.exportToFortnox}
-                onDelete={mutations.remove}
-              />
-            }
-          />
-
-          {expense.paymentType === "CARD" && (
-            <BankTransactionCard
-              expense={expense}
-              bankTransactions={bankTransactions}
-              // Whose card the purchase was on, which is the submitter's —
-              // matching someone else's utlägg means offering their
-              // transactions, and the route refuses any other.
-              cardHolderId={expense.submitterId}
-              canMatch={can.canMatch}
-              matching={mutations.matching}
-              onMatch={mutations.match}
-            />
-          )}
-
-          {expense.verification && (
-            <VerificationCard
-              verification={expense.verification}
+      {/* The inspector. One card, read top to bottom; see detail-sections.tsx
+          for why it is not a stack of cards. */}
+      <Card>
+        <ExpenseSummary
+          expense={expense}
+          actions={
+            <ExpenseActions
               expenseId={expense.id}
-              canEdit={can.canEditVerification}
+              can={can}
+              fortnox={fortnox}
+              busy={mutations.busy}
+              onTransition={mutations.transition}
+              onWithdrawAttest={mutations.withdrawAttest}
+              // How many rows are already signed, so the confirmation can say
+              // what taking it back actually costs somebody else.
+              onRecall={() =>
+                mutations.recall(expense.allocations.filter((a) => a.approvedById).length)
+              }
+              onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
+              onExport={mutations.exportToFortnox}
+              onRemind={() => setReminding(true)}
+              onDelete={mutations.remove}
             />
-          )}
+          }
+        />
 
-          <TimelineCard revisions={expense.revisions} />
-        </div>
-      </div>
+        <FactStrip expense={expense} />
+
+        <NotesSection expense={expense} />
+
+        {expense.paymentType === "CARD" && (
+          <BankSection
+            expense={expense}
+            matched={matched}
+            bankTransactions={bankTransactions}
+            // Whose card the purchase was on, which is the submitter's,
+            // matching someone else's utlägg means offering their
+            // transactions, and the route refuses any other.
+            cardHolderId={expense.submitterId}
+            canMatch={can.canMatch}
+            matching={mutations.matching}
+            onMatch={mutations.match}
+          />
+        )}
+
+        <AllocationSection allocations={expense.allocations} />
+
+        {expense.verification && (
+          <VerificationSection
+            verification={expense.verification}
+            expenseId={expense.id}
+            canEdit={can.canEditVerification}
+          />
+        )}
+
+        <TimelineSection revisions={expense.revisions} />
+      </Card>
+
+      {/* The send refreshes the page, which puts the reminder in the history. */}
+      {reminding && (
+        <ReminderDialog expenseIds={[expense.id]} onClose={() => setReminding(false)} />
+      )}
     </PageShell>
   );
 }
 
-// Shows the matched transaction, or — for someone who may still match — a
-// picker over their own unmatched purchases of the same amount.
-function BankTransactionCard({
+/**
+ * The bank side of a card purchase, in one place whatever state it is in.
+ *
+ * Matched, it is the transaction as the bank list draws it: what and how much
+ * on the first line, when under it, so it can be checked
+ * against the receipt beside it without leaving the page. Taking the match off
+ * is a button in the section's heading, where every other section keeps its
+ * action. It used to be a line of small print beside the date, where it read
+ * as part of the date. Unmatched, it is the picker for whoever may match, and
+ * a plain sentence for whoever may not.
+ */
+function BankSection({
   expense,
+  matched,
   bankTransactions,
   cardHolderId,
   canMatch,
@@ -177,6 +220,7 @@ function BankTransactionCard({
   onMatch,
 }: {
   expense: Expense;
+  matched: BankTransaction | undefined;
   bankTransactions: BankTransaction[];
   cardHolderId: string;
   canMatch: boolean;
@@ -184,136 +228,80 @@ function BankTransactionCard({
   onMatch: (transactionId: string | null) => void;
 }) {
   const t = useTranslations("expenses.detail");
+  const tMatch = useTranslations("expenses.match");
   const { date } = useFormat();
-  const txn = bankTransactions.find((t) => t.id === expense.matchedTransactionId);
-
-  return (
-    <Card>
-      <CardHeader title={t("bankTransaction")} />
-      <CardBody className="space-y-3">
-        {txn ? (
-          <>
-            <div className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
-              <div>
-                <p className="text-sm font-medium">{txn.description}</p>
-                <p className="text-xs text-muted">{date(txn.transactionDate)}</p>
-              </div>
-              <Amount value={txn.amount} />
-            </div>
-            {canMatch && (
-              <button
-                onClick={() => onMatch(null)}
-                disabled={matching}
-                aria-busy={matching || undefined}
-                className="inline-flex items-center gap-1.5 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline disabled:opacity-40"
-              >
-                {matching && <Spinner size="sm" />}
-                {t("removeMatch")}
-              </button>
-            )}
-          </>
-        ) : canMatch ? (
-          <TransactionPicker
-            // Every unmatched purchase on this member's card, not just the ones
-            // that fit: the picker greys out the rest, so a mistyped amount
-            // shows up as "the right purchase is there but not selectable"
-            // instead of an empty list.
-            transactions={bankTransactions.filter(
-              (t) => !t.matchedExpenseId && t.cardHolderId === cardHolderId,
-            )}
-            grossAmount={expense.grossAmount}
-            onSelect={onMatch}
-            disabled={matching}
-          />
-        ) : (
-          <p className="text-sm text-muted">{t("noMatch")}</p>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-function TransactionPicker({
-  transactions,
-  grossAmount,
-  onSelect,
-  disabled,
-}: {
-  transactions: BankTransaction[];
-  /** The expense's amount — only a row that cancels it out can be picked. */
-  grossAmount: number;
-  onSelect: (id: string) => void;
-  disabled: boolean;
-}) {
-  const t = useTranslations("expenses.detail");
-  const tList = useTranslations("expenses");
-  const { date } = useFormat();
-  const [query, setQuery] = useState("");
-  // Which row was clicked. `disabled` says a match is being written but not
-  // which one, and the answer is the only thing worth showing here — the list
-  // stays on screen throughout, so without it the click looks ignored.
+  // Which row was clicked. `matching` says a write is in flight but not which
+  // one, and the list stays on screen throughout, so without this the click
+  // looks ignored.
   const [picked, setPicked] = useState<string | null>(null);
-  const q = query.trim().toLowerCase();
-  const filtered = transactions
-    .filter((t) => !q || t.description.toLowerCase().includes(q))
-    .map((txn) => ({ txn, selectable: cancelsOut(txn.amount, grossAmount) }))
-    // Selectable first; within each group the incoming date order (newest
-    // first) is kept, so the list stays predictable.
-    .sort((a, b) => Number(b.selectable) - Number(a.selectable));
+
+  if (matched) {
+    return (
+      <InspectorSection
+        title={t("bankTransaction")}
+        action={
+          canMatch ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={matching}
+              onClick={() => onMatch(null)}
+            >
+              {t("removeMatch")}
+            </Button>
+          ) : undefined
+        }
+      >
+        <div className="flex items-start justify-between gap-4 text-sm">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{matched.description}</p>
+            <p className="mt-0.5 text-xs tabular-nums text-muted">{date(matched.transactionDate)}</p>
+          </div>
+          <span className="shrink-0">
+            <Amount value={matched.amount} />
+          </span>
+        </div>
+      </InspectorSection>
+    );
+  }
+
+  if (!canMatch) {
+    return (
+      <InspectorSection title={t("bankTransaction")}>
+        <p className="text-sm text-muted">{t("noMatch")}</p>
+      </InspectorSection>
+    );
+  }
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-muted">
-        {t("pickTransaction", { amount: formatSEK(Math.abs(grossAmount)) })}
-      </p>
-      <SearchInput
-        placeholder={t("searchTransaction")}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <ul className="max-h-52 divide-y divide-border overflow-y-auto rounded-xl border border-border">
-        {filtered.map(({ txn, selectable }) => (
-          <li key={txn.id}>
-            <button
-              onClick={() => {
-                setPicked(txn.id);
-                onSelect(txn.id);
-              }}
-              disabled={disabled || !selectable}
-              title={selectable ? undefined : t("amountMismatch")}
-              className={cn(
-                "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:pointer-events-none",
-                selectable ? "hover:bg-surface disabled:opacity-40" : "opacity-45",
-              )}
-            >
-              {/* The spinner sits in the link glyph's box so the row doesn't
-                  shift under the pointer while the match is written. */}
-              <span className="grid size-4 shrink-0 place-items-center">
-                {disabled && picked === txn.id ? (
-                  <Spinner size="sm" className="text-accent" />
-                ) : (
-                  <IconLink className="size-4 text-muted" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{txn.description}</p>
-                <p className="text-xs text-muted">
-                  {date(txn.transactionDate)}
-                  {txn.cardHolderName && <> · {txn.cardHolderName}</>}
-                  {!selectable && ` · ${t("otherAmount")}`}
-                </p>
-              </div>
-              <span className="shrink-0"><Amount value={txn.amount} /></span>
-            </button>
-          </li>
-        ))}
-        {filtered.length === 0 && (
-          <li className="px-4 py-4 text-center text-sm text-muted">
-            {t("noUnmatched")}
-          </li>
-        )}
-      </ul>
-      <p className="text-xs text-muted">{tList("noMatchHint")}</p>
-    </div>
+    <InspectorSection title={t("bankTransaction")}>
+      <div className="space-y-3">
+        <p className="text-sm text-muted">
+          {tMatch("lead", { amount: formatSEK(Math.abs(expense.grossAmount)) })}
+        </p>
+        {/* Every row on this member's card, the claimed ones included. They
+            used to be filtered out here, so a purchase somebody else had
+            already redovisat simply was not in the list and the reason was
+            unfindable. The picker names the utlägg holding them. */}
+        <TransactionPicker
+          candidates={matchCandidates(
+            bankTransactions.filter((t) => t.cardHolderId === cardHolderId),
+            expense.grossAmount,
+          )}
+          onPick={(id) => {
+            setPicked(id);
+            onMatch(id);
+          }}
+          busy={matching}
+          pendingId={picked}
+        />
+        {!bankTransactions.some(
+          (t) =>
+            t.cardHolderId === cardHolderId &&
+            !t.matchedExpenseId &&
+            cancelsOut(t.amount, expense.grossAmount),
+        ) && <NoMatchNote hasRows={bankTransactions.length > 0} />}
+      </div>
+    </InspectorSection>
   );
 }

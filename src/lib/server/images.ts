@@ -3,7 +3,7 @@
 // them to a web-friendly image and fix EXIF rotation. PDFs are not touched here.
 //
 // There is one stored size and no thumbnail. There used to be a second, 480px
-// encode written alongside it, and nothing ever asked for it — the viewer always
+// encode written alongside it, and nothing ever asked for it. The viewer always
 // read the full-size object, and no list shows a preview. It cost an extra
 // encode on every upload and an extra object per receipt to produce something
 // nobody looked at.
@@ -22,14 +22,14 @@ export function isNormalisableImage(mime: string): boolean {
 }
 
 /** What a normalised receipt can be stored as. */
-export type NormalisedMime = "image/jpeg" | "image/png";
+type NormalisedMime = "image/jpeg" | "image/png";
 
-export interface NormalisedImage {
+interface NormalisedImage {
   full: Buffer; // display image (EXIF-rotated, downscaled)
   mimeType: NormalisedMime;
 }
 
-const MAX_FULL = 2400; // px on the longest side — plenty to zoom into details
+const MAX_FULL = 2400; // px on the longest side, plenty to zoom into details
 
 const EXTENSION: Record<NormalisedMime, string> = {
   "image/jpeg": "jpg",
@@ -41,7 +41,7 @@ const EXTENSION: Record<NormalisedMime, string> = {
  *
  * Two questions, and both have to be asked. `hasAlpha` is about the file's
  * channels, and a screenshot saved as PNG has an alpha channel whether or not a
- * single pixel uses it — going by that alone would store every PNG receipt as a
+ * single pixel uses it. Going by that alone would store every PNG receipt as a
  * PNG, which for a photographed receipt is several times the size of the JPEG
  * it should have been. `stats()` reads the pixels and answers whether any of
  * them is see-through, which is the question that matters; it is the expensive
@@ -62,7 +62,7 @@ export async function normaliseImage(input: Buffer): Promise<NormalisedImage> {
   const base = sharp(input, { failOn: "none" }).rotate();
 
   // JPEG has no alpha channel. Encoding a see-through image as one doesn't
-  // fail, it composites the image onto sharp's default background — black —
+  // fail, it composites the image onto sharp's default background (black),
   // so a receipt that looked right in the browser came back out of the archive
   // as white text on a black page. Anything transparent is kept as PNG, which
   // has the channel to keep. Everything else is still JPEG: it is the smaller

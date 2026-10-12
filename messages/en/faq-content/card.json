@@ -1,0 +1,115 @@
+{
+  "id": "card",
+  "label": "The section card",
+  "items": [
+    {
+      "id": "who-gets",
+      "q": "Who gets a guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The treasurer decides. Guild cards are payment cards linked to D-sektionen's bank account, and they exist so that you do not have to lay out your own money when buying for the guild."
+        },
+        {
+          "t": "p",
+          "v": "The card is registered to you in the app. Its purchases then show up under your card purchases, where you report them."
+        }
+      ]
+    },
+    {
+      "id": "card-rules",
+      "q": "Can I buy whatever I want with the guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. The card may only be used to pay in the guild's name, never for private purchases. Every purchase must be reported with a valid receipt and attested, just like an out-of-pocket expense."
+        },
+        {
+          "t": "p",
+          "v": "Check larger purchases with your result owner beforehand if you can. A card purchase that is not attested is invoiced to you."
+        },
+        {
+          "t": "note",
+          "tone": "danger",
+          "v": "The treasurer may take back a guild card that is mismanaged, for example if purchases are not reported or the card is used for private purchases."
+        }
+      ]
+    },
+    {
+      "id": "declined",
+      "q": "My card was declined at the register, what do I do?",
+      "a": [
+        {
+          "t": "p",
+          "v": "That means we haven't moved enough money over to the card account. If it is urgent, your best move is to call us straight away:"
+        },
+        {
+          "t": "link",
+          "v": "Treasurer (Ludwig): 070-893 55 85",
+          "href": "tel:+46708935585"
+        },
+        {
+          "t": "link",
+          "v": "Vice treasurer (Edvin): 079-349 06 22",
+          "href": "tel:+46793490622"
+        }
+      ]
+    },
+    {
+      "id": "lend",
+      "q": "Can I lend out my guild card?",
+      "a": [
+        {
+          "t": "p",
+          "v": "No. A guild card must never be lent to anyone else. It belongs to you and to your post."
+        }
+      ]
+    },
+    {
+      "id": "match",
+      "q": "Why does a card purchase have to be matched to a bank transaction?",
+      "a": [
+        {
+          "t": "p",
+          "v": "So the claim points at the money. The match says that this particular row on the card account is the money that left the section for this particular purchase, and so that the row is accounted for and the purchase booked against the right amount."
+        },
+        {
+          "t": "p",
+          "v": "Without it nobody can tell whether two claims describe one purchase or two, and the card account cannot be reconciled. That is why a card purchase cannot be sent unmatched."
+        },
+        {
+          "t": "p",
+          "v": "The transaction has to be for exactly the same amount and go the right way: a purchase settles against money out, a refund against money in."
+        }
+      ]
+    },
+    {
+      "id": "no-match",
+      "q": "I can't find my purchase in the list, what is wrong?",
+      "a": [
+        {
+          "t": "p",
+          "v": "The list shows every row on your card, the ones you cannot pick included, and writes the reason on each. Four things make a row unpickable:"
+        },
+        {
+          "t": "ul",
+          "v": [
+            "A different amount. The row stays, saying how far off it is, “6,50 kr more than the claim” for instance. Usually it is the amount you typed that needs correcting.",
+            "The wrong way. Money in only settles a refund, money out only settles a purchase.",
+            "Already claimed. Somebody else has taken the purchase on a claim of their own. Talk to them or to the treasurer.",
+            "Somebody else's card. You only see transactions on your own."
+          ]
+        },
+        {
+          "t": "p",
+          "v": "If the purchase is not listed at all, the statement has probably not been imported yet. Ask the treasurer to import the latest bank file. Save a draft in the meantime."
+        },
+        {
+          "t": "action",
+          "v": "To card purchases",
+          "href": "/bank"
+        }
+      ]
+    }
+  ]
+}

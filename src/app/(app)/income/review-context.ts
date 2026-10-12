@@ -1,7 +1,7 @@
 // Everything the review view needs besides the days themselves.
 //
-// Two pages render that view — the queue a fetch produced, and one reopened day
-// on its own — and they have to hand it the same settings, the same pickers and
+// Two pages render that view (the queue a fetch produced, and one reopened day
+// on its own) and they have to hand it the same settings, the same pickers and
 // the same move targets. Working that out twice is how two screens end up
 // disagreeing about which cost centres exist.
 import "server-only";
@@ -12,7 +12,7 @@ import { getIncomeMoveTargets, type IncomeMoveTarget, type IncomeReportRow } fro
 import { getIncomeSettings, type IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 
-export interface IncomeReviewContext {
+interface IncomeReviewContext {
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
@@ -21,13 +21,13 @@ export interface IncomeReviewContext {
 
 /**
  * The pickers offer active accounts and cost centres, plus whatever the days in
- * front of you already point at — retiring a cost centre must not strand
+ * front of you already point at. Retiring a cost centre must not strand
  * takings already assigned to it, nor a clearing account still in use.
  */
 export async function loadReviewContext(
   reports: readonly IncomeReportRow[],
 ): Promise<IncomeReviewContext> {
-  // The move targets are the verksamheter still taking money in — where a sale
+  // The move targets are the verksamheter still taking money in, where a sale
   // that was rung up without its prefix, and so landed in the fallback, can be
   // put back (lib/income/lines.ts).
   const [settings, moveTargets] = await Promise.all([getIncomeSettings(), getIncomeMoveTargets()]);

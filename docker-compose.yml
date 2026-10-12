@@ -4,10 +4,18 @@
 # Two ways to use this file:
 #
 #   pnpm db:up    postgres + minio only, and you run the app with `pnpm dev`.
-#                 The everyday loop. Unchanged by the `app` profile below.
+#                 The everyday loop. Unchanged by the profiles below.
 #   pnpm app:up   the whole stack, app included, built from the Dockerfile and
-#                 run the way production runs it. Needs real values in .env —
+#                 run the way production runs it. Needs real values in .env,
 #                 see "Running the whole stack in Docker" in the README.
+#   pnpm intakt:up
+#                 adds the intakt service. Separate because it builds from a
+#                 sibling repository that is not part of this one, so it is the
+#                 one service here that a bare clone cannot start. See
+#                 "Optional integrations" in the README.
+#
+# Every command above works from a bare clone except `intakt:up`, which is the
+# reason intakt has a profile of its own rather than sitting in the default set.
 services:
   postgres:
     image: postgres:16-alpine
@@ -46,16 +54,20 @@ services:
       - utlagg-miniodata:/data
 
   # The intakt service: income reports from Zettle and Swish. Built from the
-  # sibling Go module, and a separate container for one blunt reason — it
+  # sibling Go module, and a separate container for one blunt reason: it
   # renders its PDFs with pdflatex, and a TeX installation has no business
   # inside the image that serves every page of the app.
   #
-  # Not behind the `app` profile: `pnpm db:up` should bring up everything the
-  # app is developed against, and this is one of those things.
+  # Behind a profile of its own because `context` below points at a repository
+  # that is not this one and is not vendored here. Clone it to ./intakt first
+  # (README, "Optional integrations"), then `pnpm intakt:up`. Without the
+  # profile every other service in this file would refuse to start on a machine
+  # that has not done so, which is what used to happen to `pnpm db:up`.
   #
   # Its image is built once and then reused, so changing the Go source does
   # nothing until it is rebuilt: `pnpm intakt:build`.
   intakt:
+    profiles: ["intakt"]
     build:
       context: ./intakt
       target: runtime
@@ -63,7 +75,7 @@ services:
     container_name: utlagg-intakt
     restart: unless-stopped
     # Named one by one rather than through env_file, so this container gets the
-    # three things it needs and none of the app's secrets — it has no business
+    # three things it needs and none of the app's secrets. It has no business
     # holding DATABASE_URL or the Fortnox credentials.
     #
     # These are interpolated from THIS directory's .env when the container is
@@ -77,15 +89,15 @@ services:
       # The app presents this as a bearer token. The default matches
       # .env.example so an empty .env still gives a working pair.
       INTAKT_TOKEN: ${INTAKT_TOKEN:-dev-only-insecure-intakt-token}
-      # Zettle is optional — without it the service still imports Swish
+      # Zettle is optional, without it the service still imports Swish
       # exports and renders, and reports its Zettle endpoints unavailable.
       # Note these live in the *root* .env, which is the one compose reads;
       # intakt/.env is for running the CLI by hand from that directory.
       ZETTLE_CLIENT_ID: ${ZETTLE_CLIENT_ID:-}
       ZETTLE_API_KEY: ${ZETTLE_API_KEY:-}
     ports:
-      # Published so `pnpm dev` on the host can reach it, which is the whole
-      # point of it not being behind the profile.
+      # Published so `pnpm dev` on the host can reach it, which is the point of
+      # running it at all: the app talks to it over the network either way.
       - "8080:8080"
 
   # ── The app itself, under the `app` profile ─────────────────────────
@@ -94,8 +106,8 @@ services:
 
   # Brings the schema up to date, then exits. The app waits for it to succeed,
   # so a stack that starts is a stack whose database matches the code. Seeding
-  # is separate and manual — it wipes the domain tables:
-  #   docker compose --profile app run --rm migrate pnpm db:seed
+  # is deliberately not in this production migration image: it wipes domain
+  # tables and needs application source, neither of which belongs in a deploy.
   migrate:
     build:
       context: .
@@ -118,12 +130,12 @@ services:
     profiles: ["app"]
     restart: unless-stopped
     # Everything the app reads comes from .env, exactly as it does under
-    # `pnpm dev` — except the two addresses that are wrong inside the compose
+    # `pnpm dev`, except the two addresses that are wrong inside the compose
     # network, which are overridden below. NODE_ENV is production here, so
     # lib/server/env.ts holds this to production rules: every required variable
     # has to be set, and there are no development fallbacks left to fall back
-    # on. Whether a value is a *good* one is not checked and cannot be — see
-    # the note on `envProblems` — so .env.example is what says what each should
+    # on. Whether a value is a *good* one is not checked and cannot be. See
+    # the note on `envProblems`, so .env.example is what says what each should
     # be. A stack that exits immediately is that check talking; read it with
     # `docker compose --profile app logs app`.
     env_file:
@@ -131,7 +143,7 @@ services:
         required: false
     environment:
       # localhost inside a container is the container itself. These three are
-      # the only settings that differ between `pnpm dev` and the stack —
+      # the only settings that differ between `pnpm dev` and the stack,
       # everything else is whatever .env says, for both.
       DATABASE_URL: postgresql://utlagg:utlagg@postgres:5432/utlagg
       S3_ENDPOINT: http://minio:9000
@@ -143,11 +155,13 @@ services:
         condition: service_completed_successfully
       minio:
         condition: service_started
-      # Only started, not healthy: the app runs perfectly well while intakt is
-      # still booting, and says the service is unavailable if asked before it
-      # is. Waiting on it would make every stack start pay for a TeX container.
-      intakt:
-        condition: service_started
+      # intakt is deliberately not listed. The app runs perfectly well without
+      # it and says the service is unavailable if asked, the same way it does
+      # without Fortnox, so depending on it would only mean `pnpm app:up`
+      # failing on a machine that has not cloned a second repository. Run both
+      # profiles when you want it:
+      #
+      #   docker compose --profile app --profile intakt up -d
 
 volumes:
   utlagg-pgdata:

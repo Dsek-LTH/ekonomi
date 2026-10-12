@@ -1,0 +1,31 @@
+{
+  "title": "Rentals",
+  "emptyTitle": "No rentals yet",
+  "emptyDescription": "Draw a rental contract and it turns up here.",
+  "new": "Draw up rental contract",
+  "searchPlaceholder": "Search contract, renter or equipment",
+  "noMatch": "No rentals match",
+  "notChecked": "not inspected",
+  "period": "{from} – {to}",
+  "itemCount": "{count, plural, one {1 item} other {# items}}",
+  "tab": {
+    "todo": "To do",
+    "active": "Ongoing",
+    "all": "All",
+    "closed": "Finished"
+  },
+  "col": {
+    "what": "Rental",
+    "period": "Period",
+    "returned": "Returned",
+    "items": "Equipment",
+    "state": "Status"
+  },
+  "state": {
+    "UPCOMING": "Upcoming",
+    "OUT": "Out",
+    "OVERDUE": "Overdue",
+    "AWAITING_CHECK": "Awaiting inspection",
+    "CLOSED": "Done"
+  }
+}

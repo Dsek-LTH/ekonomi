@@ -21,7 +21,7 @@ export default async function StockLogPage({
   const filter = {
     productIds: many("product"),
     kinds: many("kind") as StockEntryKind[],
-    tagId: one("tag"),
+    eventId: one("event"),
     from: one("from"),
     to: one("to"),
   };

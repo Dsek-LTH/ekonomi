@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
+import { useReminderPicks } from "@/components/reminder-picks";
+import { useRole } from "@/components/shell/role-context";
+import { canRemindAboutExpense } from "@/lib/domain/reminders";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import type { CollectionOption } from "@/components/ui/collection-switch";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
@@ -25,6 +28,7 @@ export function ApprovalsClient({
   page,
   canToggleScope,
   showOwnOnly,
+  canRemind,
 }: {
   page: RowPage<Expense>;
   // Whether this viewer may see the whole section's attest queue and not only
@@ -33,6 +37,8 @@ export function ApprovalsClient({
   canToggleScope: boolean;
   /** Which of the two questions below the page asked. Decided on the server. */
   showOwnOnly: boolean;
+  /** Holds SEND_REMINDERS, so the rows can be ticked and reminded about. */
+  canRemind: boolean;
 }) {
   const t = useTranslations("approvals");
   const tCol = useTranslations("expenses.col");
@@ -40,12 +46,26 @@ export function ApprovalsClient({
   const tList = useTranslations("expenses");
   const { date } = useFormat();
   const controls = useUrlTableControls(page.total, APPROVALS_DEFAULT_TAB);
+  const { user } = useRole();
+
+  // Chasing the queue: tick what has sat too long, then "Påminn", and each
+  // attester still to sign gets one mail listing theirs. On "Mina" the viewer
+  // is usually the attester, and the dialog says when that leaves nobody else
+  // to ask. See useReminderPicks.
+  const picks = useReminderPicks({
+    rows: page.rows,
+    enabled: canRemind,
+    subject: "expense",
+    rowId: (e) => e.id,
+    remindable: (e) => canRemindAboutExpense(e, user.id),
+    rowLabel: (e) => e.reference ?? e.title,
+  });
 
   const SCOPE_OPTS: CollectionOption[] = useMemo(() => [
     { value: "MINE", label: t("scope.mine") },
     { value: "ALL", label: t("scope.all") },
   ], [t]);
-  // Mine is authority — the allocations this viewer may sign. Alla is the queue
+  // Mine is authority: the allocations this viewer may sign. Alla is the queue
   // itself, everything that has been sent and not yet left the chain, whoever it
   // is waiting on. They are different questions, not a narrow and a wide cut of
   // one, and now each is asked of the database directly (ExpenseListScope
@@ -56,6 +76,7 @@ export function ApprovalsClient({
   ];
 
   const columns: Column<Expense>[] = [
+    picks.column,
     expenseReferenceColumn(tCol("verification")),
     expenseTitleColumn(tCol("title"), { reference: false }),
     expenseDateColumn(tCol("date"), date),
@@ -67,7 +88,7 @@ export function ApprovalsClient({
 
   return (
     <PageShell
-      // Fixed, whichever scope is showing — see the note on the same field in
+      // Fixed, whichever scope is showing, see the note on the same field in
       // expenses-client.tsx. What "mine" and "alla" mean here is not a wide and
       // a narrow cut of one list but two different questions, so the track is
       // the one place that says which was asked.
@@ -93,12 +114,15 @@ export function ApprovalsClient({
           rows={page.rows}
           controls={controls}
           tabs={tabs}
+          action={picks.button}
           searchPlaceholder={tList("searchPlaceholder")}
           rowKey={(e) => e.id}
           rowHref={(e) => `/expenses/${e.id}`}
           empty={tList("noMatch")}
         />
       </Card>
+
+      {picks.dialog}
     </PageShell>
   );
 }

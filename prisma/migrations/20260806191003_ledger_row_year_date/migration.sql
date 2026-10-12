@@ -12,7 +12,7 @@ ALTER TABLE "LedgerRow" ADD COLUMN "financialYear" INTEGER,
                         ADD COLUMN "date" DATE;
 
 -- 2. Backfill from the voucher. This is the same value the sync will write from
---    now on — the row is a line of that voucher, so it is in that voucher's year
+--    now on: the row is a line of that voucher, so it is in that voucher's year
 --    and dated with it.
 UPDATE "LedgerRow" r
    SET "financialYear" = v."financialYear",

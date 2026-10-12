@@ -4,15 +4,15 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useProgressRouter } from "./route-progress";
 import { useNotify } from "./notifications";
-import { resolveApiError } from "@/lib/ui/api-error";
+import { apiErrorAction, resolveApiError } from "@/lib/ui/api-error";
 
 type MutateOptions = {
-  /** Marks which control is busy — compare against `pending`. Defaults to the url. */
+  /** Marks which control is busy (compare against `pending`). Defaults to the url. */
   key?: string;
   method?: string;
   /**
    * Sent as JSON, unless it is already something the browser can send on its own
-   * (a File/Blob or FormData) — those go through untouched. Omit for requests
+   * (a File/Blob or FormData); those go through untouched. Omit for requests
    * without a body (DELETE, plain POST).
    */
   body?: unknown;
@@ -29,7 +29,7 @@ type MutateOptions = {
    * Off for a screen that already shows it: the budget sheet applies a cell edit
    * locally and re-evaluates in the browser, so a refresh per committed cell
    * would be a round trip whose whole result is data the page is already
-   * displaying. Turning it off is not "skip the update" — it is "the update
+   * displaying. Turning it off is not "skip the update", it is "the update
    * already happened here".
    */
   refresh?: boolean;
@@ -41,13 +41,13 @@ const isRawBody = (b: unknown): b is BodyInit =>
 // The write path every client screen repeats: fire the request, surface the
 // server's own error message, and refresh the Server Components on success.
 //
-// Returns the parsed response body, or null once a failure has been reported —
+// Returns the parsed response body, or null once a failure has been reported,
 // so callers only add what's specific to them. One hook instance is one busy
 // scope; take two when a screen has an action that shouldn't block the others.
 //
 // The response type is the caller's to name: `mutate<{ id: string }>(…)`. It
 // used to be `Record<string, unknown>` for everybody, which meant every screen
-// reading something back cast it — `created.id as string` — and a route that
+// reading something back cast it (`created.id as string`), and a route that
 // changed what it returned broke nothing until somebody ran it. Nothing here
 // can verify the claim, so a wrong one is still wrong; what it buys is that the
 // claim is written down at the call site instead of asserted mid-expression.
@@ -86,10 +86,14 @@ export function useMutation() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           // The status is only worth showing when the server gave no reason of
-          // its own — then it is the only clue anyone has.
+          // its own; then it is the only clue anyone has.
           notify.error(
             resolveApiError(t, data) ??
               `${error ?? t("common.error.action")} (${res.status})`,
+            // Some codes name somewhere to go; the banner offers it as a button
+            // rather than leaving the reader to find it. Undefined for the rest,
+            // which is every other failure in the app.
+            { action: apiErrorAction(t, data) ?? undefined },
           );
           return null;
         }

@@ -5,21 +5,21 @@ import { Spinner } from "./spinner";
 
 // The one icon-only button: row actions (delete, rename, close, cancel) across
 // the lists, sheets and settings screens. `label` is both the tooltip and the
-// accessible name — an icon button always needs both, and they were drifting
+// accessible name. An icon button always needs both, and they were drifting
 // apart when every call site wrote them by hand.
 type Tone = "muted" | "danger";
 
 const TONES: Record<Tone, string> = {
-  muted: "hover:bg-surface hover:text-foreground",
+  muted: "hover:bg-hover hover:text-foreground",
   danger: "hover:bg-danger/10 hover:text-danger",
 };
 
 // Radius belongs to the size: "xs" is the round button that sits inside a pill,
 // the other two are square-ish row actions.
 const SIZES = {
-  xs: "rounded-full p-0.5",
-  sm: "rounded-lg p-1",
-  md: "rounded-lg p-1.5",
+  xs: "rounded-control p-0.5",
+  sm: "rounded-control p-1",
+  md: "rounded-control p-1.5",
 };
 
 export function IconButton({
@@ -67,7 +67,7 @@ export function IconButton({
       )}
       {...props}
     >
-      {/* Stacked on the icon rather than swapped for it — call sites size their
+      {/* Stacked on the icon rather than swapped for it. Call sites size their
           own glyph (16px in a sheet row, 20px in a header), and the button has
           no padding to spare, so the hidden icon is what holds the box open. */}
       {loading ? (

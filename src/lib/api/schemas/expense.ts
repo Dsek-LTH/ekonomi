@@ -4,13 +4,14 @@
 // the shape the route accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
+import { MAX_REMINDER_ITEMS } from "@/lib/domain/reminders";
 
-const PaymentType = z.enum(["CARD", "REIMBURSEMENT"]);
+const PaymentType = z.enum(["CARD", "REIMBURSEMENT", "MILEAGE"]);
 
-/** POST /api/expenses — opens a draft for the wizard to attach a receipt to. */
+/** POST /api/expenses: opens a draft for the wizard to attach a receipt to. */
 export const CreateExpense = z.object({
   // Anything other than REIMBURSEMENT used to fall through to CARD, including a
-  // typo. It is one of the two or it is a bad request.
+  // typo. It is one of the three or it is a bad request.
   paymentType: PaymentType.default("CARD"),
   title: Trimmed.default(""),
   matchedTransactionId: Clearable(Id).optional(),
@@ -26,11 +27,35 @@ export const AllocationInput = z.object({
 export type AllocationInput = z.infer<typeof AllocationInput>;
 
 /**
+ * A total odometer reading, in kilometres. The car's lifetime figure, not the
+ * trip meter; see the columns on the Expense model for why that distinction is
+ * the whole point of recording readings at all.
+ *
+ * One decimal, matching the column, because some dashboards show one. Not
+ * negative, and bounded well past what any car reaches, because a slipped digit
+ * here is a slipped digit in an amount.
+ *
+ * Zero is a real reading: a car straight off the lot. So the two are
+ * `Clearable` rather than falsy-checked anywhere, "not given yet" is null, and
+ * a draft is allowed to have one.
+ */
+const Odometer = z.number().min(0).max(9_999_999).multipleOf(0.1);
+
+/**
+ * One stop on a journey, as somebody writes it.
+ *
+ * Capped because it goes on the utläggsräkning, where a paragraph in a table
+ * cell is a broken page rather than a better underlag. Long enough for a street
+ * address with a town after it.
+ */
+const Place = Trimmed.max(120);
+
+/**
  * PATCH /api/expenses/[id].
  *
  * Every field is optional because this patches: absent means "leave it", and
  * the route fills from the stored row. `purchaseDate` and `grossAmount` are
- * additionally clearable, since a draft is allowed to not have them yet — which
+ * additionally clearable, since a draft is allowed to not have them yet, which
  * is why they are `Clearable` rather than merely optional, and why the two are
  * different things here.
  */
@@ -40,6 +65,37 @@ export const PatchExpense = z.object({
   grossAmount: Clearable(Ore).optional(),
   paymentType: PaymentType.optional(),
   allocations: z.array(AllocationInput).optional(),
+  /**
+   * The odometer at each end of the journey, for a milersättning.
+   *
+   * No distance and no amount: what the claim is worth is the server's to work
+   * out from the difference and the rate in force on the day of the journey
+   * (lib/mileage/claim.ts). Sending either would be sending the one figure on
+   * the whole form that decides how much money leaves the section, which is not
+   * a client's to decide, so a request that carries these has its
+   * `grossAmount` written from them whatever else it said.
+   *
+   * Clearable, because a draft may hold one reading and not the other, and
+   * because taking one back out is something somebody correcting a typo does.
+   */
+  odometerStart: Clearable(Odometer).optional(),
+  odometerEnd: Clearable(Odometer).optional(),
+  /**
+   * Every place the car stopped, in the order it stopped there.
+   *
+   * Sent whole rather than patched per stop: it is a list whose order carries
+   * the meaning, and "change stop 2" is not something a client can express
+   * without the two ends agreeing on what stop 2 was. Absent leaves the stored
+   * list alone; an empty array is a draft with nothing filled in yet.
+   *
+   * Blank entries are allowed through, because an editor with three rows and
+   * the middle one cleared is a real state to save a draft from. `claimBlocker`
+   * is what counts the ones that name a place.
+   *
+   * Capped so a claim cannot carry an unbounded list into a typeset page.
+   * Twenty stops is far past any errand and well short of a denial of service.
+   */
+  journeyStops: z.array(Place).max(20).optional(),
 });
 export type PatchExpense = z.infer<typeof PatchExpense>;
 
@@ -53,17 +109,26 @@ export type PatchExpense = z.infer<typeof PatchExpense>;
 export const TransitionExpense = z.object({
   action: z.enum([
     "submit",
+    // The submitter taking their own claim back out of the queue, apart from
+    // "withdraw_attest", which is an attester taking back a signature.
+    "recall",
     "request_changes",
     "approve",
     "withdraw_attest",
     "return_approved",
     "unexport",
+    // Dispens från redovisningsfristen: letting one late eget utlägg be filed
+    // anyway, and taking that back. Neither moves the status, so neither is in
+    // SIMPLE_TRANSITIONS, but both are acts performed on an utlägg by somebody
+    // with the standing to, which is what this endpoint is.
+    "waive_deadline",
+    "revoke_deadline_waiver",
   ]),
   comment: Trimmed.default(""),
 });
 export type TransitionExpense = z.infer<typeof TransitionExpense>;
 
-/** POST /api/expenses/[id]/match — `null` unmatches. */
+/** POST /api/expenses/[id]/match: `null` unmatches. */
 export const MatchExpense = z.object({
   transactionId: Clearable(Id),
 });
@@ -76,7 +141,7 @@ export const VoucherLineInput = z.object({
   // Clearable like the cost centre beside it, and for the same reason: a row
   // with nothing written on it sends null, and "no description" is not a
   // malformed request. It was `Trimmed.optional()`, which accepts a string or
-  // the key being absent but not the null a cleared field actually sends — so
+  // the key being absent but not the null a cleared field actually sends, so
   // booking an utlägg whose second row had no text was refused outright, with
   // `lines.1.description` as the only clue. Both ends already agreed on the
   // meaning: the route stores `description || null`, and the column is
@@ -95,3 +160,23 @@ export const BookVoucher = z.object({
   description: Trimmed.optional(),
 });
 export type BookVoucher = z.infer<typeof BookVoucher>;
+
+/**
+ * POST /api/reminders: remind whoever each of these is waiting on. Utlägg, from
+ * one's own page or picked on a list, and card purchases with no utlägg,
+ * picked on the bank list. The message is optional and quoted at the top of
+ * every mail it sends.
+ */
+export const SendReminders = z
+  .object({
+    expenseIds: z.array(Id).default([]),
+    transactionIds: z.array(Id).default([]),
+    message: Clearable(Trimmed.max(2000)).optional(),
+  })
+  .refine((b) => b.expenseIds.length + b.transactionIds.length > 0, {
+    message: "nothing picked",
+  })
+  .refine((b) => b.expenseIds.length + b.transactionIds.length <= MAX_REMINDER_ITEMS, {
+    message: "too many picked",
+  });
+export type SendReminders = z.infer<typeof SendReminders>;

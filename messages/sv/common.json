@@ -1,0 +1,126 @@
+{
+  "back": "Tillbaka",
+  "theme": "Tema",
+  "language": "Språk",
+  "signOut": "Logga ut",
+  "status": {
+    "DRAFT": "Utkast",
+    "PENDING_APPROVAL": "Väntar på attest",
+    "CHANGES_REQUESTED": "Behöver ändras",
+    "APPROVED": "Attesterat",
+    "BOOKED": "Bokfört",
+    "EXPORTED": "Exporterat"
+  },
+  "payment": {
+    "CARD": {
+      "label": "Sektionskort",
+      "description": "Köp gjort med sektionens kort."
+    },
+    "REIMBURSEMENT": {
+      "label": "Eget utlägg",
+      "description": "Du betalade själv och får tillbaka pengarna."
+    },
+    "MILEAGE": {
+      "label": "Milersättning",
+      "description": "Du körde egen bil på sektionens ärende."
+    }
+  },
+  "role": {
+    "SKATTMASTARE": "Skattmästare",
+    "ORDFORANDE": "Ordförande",
+    "VICE_SKATTMASTARE": "Vice skattmästare",
+    "SKATTFORMAN": "Skattförman",
+    "RESULTATANSVARIG": "Resultatansvarig",
+    "ORDINARIE": "Medlem",
+    "STOCKARE": "Stockare",
+    "UTHYRNINGSANSVARIG": "Uthyrningsansvarig"
+  },
+  "table": {
+    "show": "Visa",
+    "tabsLabel": "Urval",
+    "empty": "Inga resultat.",
+    "noResults": "Inga resultat",
+    "searchPlaceholder": "Sök ...",
+    "dateFrom": "Från",
+    "dateTo": "Till",
+    "dateFromTitle": "Från datum",
+    "dateToTitle": "Till datum",
+    "filters": "Filter",
+    "filtersDone": "Klar",
+    "clearFilters": "Rensa",
+    "dateRange": "Datum",
+    "perPage": "per sida",
+    "showing": "Visar {from}–{to} av {total}",
+    "prevPage": "Föregående sida",
+    "nextPage": "Nästa sida",
+    "expand": "Visa rader bakom"
+  },
+  "error": {
+    "action": "Åtgärden misslyckades",
+    "network": "Något gick fel"
+  },
+  "close": "Stäng",
+  "cancel": "Avbryt",
+  "confirm": "Bekräfta",
+  "loading": "Laddar…",
+  "datePlaceholder": "ÅÅÅÅ-MM-DD",
+  "openDatePicker": "Välj datum i kalender",
+  "field": {
+    "required": "krävs",
+    "optional": "Frivilligt"
+  },
+  "themeMode": {
+    "toggle": "Byt färgtema"
+  },
+  "combobox": {
+    "placeholder": "Välj…",
+    "searchPlaceholder": "Sök…",
+    "empty": "Inga träffar",
+    "clear": "Rensa",
+    "nSelected": "{count} valda",
+    "create": "Skapa ”{text}”"
+  },
+  "action": {
+    "goToProfile": "Till Min profil"
+  },
+  "capability": {
+    "ADMIN": "Full behörighet",
+    "ADMIN_hint": "Attestera och redigera vems utlägg som helst.",
+    "SETTINGS": "Inställningar",
+    "SETTINGS_hint": "Nå Inställningar, den här sidan inräknad.",
+    "BOOKKEEPING": "Bokföring",
+    "BOOKKEEPING_hint": "Se alla utlägg och bokföra verifikaten. Skicka tillbaka det som attesterats fel.",
+    "ATTEST_VIEW": "Attestvyn",
+    "ATTEST_VIEW_hint": "Se kön att attestera. Vad som faktiskt går att attestera avgörs per utlägg.",
+    "BUDGET_VIEW": "Budget",
+    "BUDGET_VIEW_hint": "Se budgetsidorna.",
+    "STOCK_VIEW": "Lager",
+    "STOCK_VIEW_hint": "Läsa lageröversikten och loggen.",
+    "STOCK_MANAGE": "Lagerföring",
+    "STOCK_MANAGE_hint": "Registrera lagerrörelser och köra ett tillfälle, från uttag till inventering.",
+    "BUDGET_COMMENT": "Budgetkommentarer",
+    "BUDGET_COMMENT_hint": "Kommentera ett budgetkonto.",
+    "BUDGET_LOCK": "Låsa budget",
+    "BUDGET_LOCK_hint": "Låsa en antagen budget, och låsa upp den.",
+    "BUDGET_CHANGE_LOCKED": "Budgetavsteg",
+    "BUDGET_CHANGE_LOCKED_hint": "Föra in avsteg och förflyttningar i en låst budget.",
+    "FORTNOX_LOGIN": "Fortnox-inloggning",
+    "FORTNOX_LOGIN_hint": "Bokföra i Fortnox under sin egen inloggning.",
+    "EXPORT_UNDO": "Ångra export",
+    "EXPORT_UNDO_hint": "Markera ett exporterat utlägg som inte längre exporterat.",
+    "CONTRACT_VIEW": "Läsa avtal",
+    "CONTRACT_MANAGE": "Hantera avtal",
+    "CONTRACT_VIEW_hint": "Se avtalsarkivet och öppna dokumenten i det.",
+    "CONTRACT_MANAGE_hint": "Arkivera avtal, skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
+    "EXPENSE_DEADLINE_WAIVE": "Dispens från fristen",
+    "EXPENSE_DEADLINE_WAIVE_hint": "Bevilja ett enskilt sent eget utlägg dispens, så att det får redovisas ändå. Ges innan utlägget skickas för attest, med ett skäl som hamnar på utläggsräkningen.",
+    "FIRMATECKNARE": "Firmatecknare",
+    "FIRMATECKNARE_hint": "Får stå som sektionens undertecknare på ett avtal. Ger ingen åtkomst till något, och bestäms av stadgarna, inte här.",
+    "RENTAL_VIEW": "Läsa uthyrningsavtal",
+    "RENTAL_VIEW_hint": "Se uthyrningsavtal i arkivet, och inget annat där. Den smala halvan av att läsa avtal.",
+    "RENTAL_MANAGE": "Hantera uthyrning",
+    "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
+    "SEND_REMINDERS": "Skicka påminnelser",
+    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan."
+  }
+}
