@@ -11,7 +11,7 @@
 //             job, so it must outlive individual employees. FortnoxConnection.
 //   user    a bookkeeper's own Fortnox login, short-lived. Backs everything
 //             that WRITES, so Fortnox stamps the voucher with their name rather
-//             than "utlagg". FortnoxUserSession.
+//             than the integration's. FortnoxUserSession.
 //
 // Fortnox scopes are not split into read/write. `bookkeeping` grants both, so
 // this separation is enforced here in code, not by Fortnox. Tighten the service
@@ -106,8 +106,8 @@ function getConfig(): FortnoxConfig {
 //
 // `account_type=service` is what makes the difference between the two modes. It
 // asks Fortnox to mint a service account, a synthetic Fortnox user named after
-// the integration, which is why service-created vouchers read "Skapad av
-// utlagg". Omitting it binds the token to the Fortnox user who authorises, and
+// the integration, which is why service-created vouchers read "Skapad av" and
+// the integration's own name. Omitting it binds the token to the Fortnox user who authorises, and
 // their name lands on the voucher instead.
 //
 // Both modes request offline access: the service connection refreshes forever,

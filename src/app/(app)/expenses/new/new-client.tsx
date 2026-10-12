@@ -79,6 +79,9 @@ type WizardDraft = {
  * Versioned, so a draft written before this screen asked for something it now
  * needs is left where it is rather than loaded into a form that no longer has a
  * place to put it.
+ *
+ * The "utlagg" prefix is the project's old name, kept on purpose. Renaming it
+ * would drop every draft already saved in a browser.
  */
 const DRAFT_KEY = "utlagg:new-expense:v1";
 

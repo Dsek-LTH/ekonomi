@@ -7,7 +7,7 @@
 //
 // What was avoidable was each of them carrying its own copy of the endpoint,
 // the region, the addressing mode and the development credentials. Two copies
-// of `utlagg-dev-secret` in a repo is two chances for them to stop agreeing,
+// of `ekonomi-dev-secret` in a repo is two chances for them to stop agreeing,
 // and the failure that produces is a script quietly reading a different bucket
 // than the app writes to. The settings live here; the two clients differ only
 // in how they read the environment, which is the part that genuinely differs.
@@ -26,8 +26,8 @@ export const S3_DEFAULTS = {
   S3_ENDPOINT: "http://localhost:9000",
   S3_REGION: "us-east-1",
   S3_BUCKET: "receipts",
-  S3_ACCESS_KEY: "utlagg",
-  S3_SECRET_KEY: "utlagg-dev-secret",
+  S3_ACCESS_KEY: "ekonomi",
+  S3_SECRET_KEY: "ekonomi-dev-secret",
 } as const;
 
 export type S3Var = keyof typeof S3_DEFAULTS;

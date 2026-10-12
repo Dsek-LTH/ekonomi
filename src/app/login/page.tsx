@@ -1,73 +1,43 @@
-"use client";
+import { redirect } from "next/navigation";
+import { loadUser, resolveUserId } from "@/lib/server/current-user";
+import { LoginClient } from "./login-client";
 
-import { signIn } from "next-auth/react";
-import { useTranslations } from "next-intl";
+type SearchParams = { [key: string]: string | string[] | undefined };
 
-// Seeded local accounts, one per role, so a developer can sign in as each of
-// them without Authentik. Keyed on student id, which is what the app keys a
-// user on everywhere else. `role` is a key under `login.dev`.
-const DEV_USERS = [
-  { studentId: "el1234li-s", name: "Elsa Lindqvist", role: "member" },
-  { studentId: "os5678be-s", name: "Oskar Berg", role: "approver" },
-  { studentId: "lu9012ge-s", name: "Ludwig Gehlsdorf", role: "treasurer" },
-  { studentId: "ma3456ho-s", name: "Maja Holm", role: "admin" },
-];
+/**
+ * A path on this site, or the dashboard. Only a single leading slash passes:
+ * `//evil.example` is a path to a browser and a host to everyone else.
+ */
+function localPath(value: string | string[] | undefined): string {
+  const v = Array.isArray(value) ? value[0] : value;
+  return v && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\")
+    ? v
+    : "/dashboard";
+}
 
-export default function LoginPage() {
-  const isDev = process.env.NODE_ENV !== "production";
+// Auth.js sends a refused sign-in back here as `?error=<type>`. Only two of its
+// types say something the reader can act on. Everything else is our side.
+function errorKey(value: string | string[] | undefined) {
+  const v = Array.isArray(value) ? value[0] : value;
+  if (!v) return null;
+  if (v === "AccessDenied") return "denied";
+  if (v === "CredentialsSignin") return "unknownUser";
+  return "failed";
+}
 
-  const t = useTranslations("login");
-  const tDev = useTranslations("login.dev");
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const callbackUrl = localPath(params.callbackUrl);
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm text-center">
-        {/* The mark stands on its own. It used to sit inside a 56px rounded
-            tile with a card shadow and a white text colour, none of which had
-            anything to render: an 80px symbol overflowing an empty box. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/symbol_rosa.svg"
-          alt="D-sektionen"
-          className="mx-auto mb-7 h-20 w-auto"
-        />
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="mx-auto mt-2 max-w-xs text-[15px] text-muted">
-          {t("description")}
-        </p>
+  // Already signed in: go where the sign-in would have gone. Asks for the row
+  // and not just the token, the same question `requireUser` asks, or a token
+  // whose user was deleted would bounce between here and the dashboard.
+  const id = await resolveUserId();
+  if (id && (await loadUser(id))) redirect(callbackUrl);
 
-        <button
-          onClick={() => signIn("authentik", { callbackUrl: "/dashboard" })}
-          className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-control border border-border bg-background text-sm font-medium transition-colors hover:bg-hover"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/symbol_rosa.svg" alt="" aria-hidden className="h-5 w-auto" />
-          {t("loginPrompt")}
-        </button>
-
-        {isDev && (
-          <div className="mt-8 rounded-panel border border-dashed border-border p-4 text-left">
-            <p className="mb-3 text-xs font-medium text-muted">
-              {tDev("heading")}
-            </p>
-            <div className="space-y-2">
-              {DEV_USERS.map((u) => (
-                <button
-                  key={u.studentId}
-                  onClick={() =>
-                    signIn("dev", { studentId: u.studentId, callbackUrl: "/dashboard" })
-                  }
-                  className="flex h-11 w-full items-center rounded-control border border-border bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-9"
-                >
-                  {u.name} – {tDev(u.role)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <LoginClient callbackUrl={callbackUrl} error={errorKey(params.error)} />;
 }

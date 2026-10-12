@@ -29,7 +29,7 @@ const mustBeConfigured = isProduction && !isBuildPhase;
 // Required to run. The value is what local development falls back to; in
 // production there is no fallback and the variable must be set.
 const REQUIRED = {
-  DATABASE_URL: "postgresql://utlagg:utlagg@localhost:5432/utlagg",
+  DATABASE_URL: "postgresql://ekonomi:ekonomi@localhost:5432/ekonomi",
   // Signs the session JWTs. A known constant is fine on a laptop and is a
   // forgery key on the internet, and since the check below only asks whether
   // a value is set, nothing stops a deploy that kept this one. Generating it

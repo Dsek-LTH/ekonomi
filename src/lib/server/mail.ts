@@ -43,7 +43,7 @@ function sender(): string {
   const from = process.env.MAIL_FROM;
   if (from) return from;
   if (isProduction && mailEnabled()) throw new Error("MAIL_FROM är inte satt. Se .env.example.");
-  return "Utlägg <utlagg@localhost>";
+  return "Ekonomi <ekonomi@localhost>";
 }
 
 let transporter: Transporter | null = null;

@@ -69,4 +69,4 @@ export interface Email {
 }
 
 /** The content id the logo is attached under. See lib/server/mail.ts. */
-export const LOGO_CID = "logo@utlagg";
+export const LOGO_CID = "logo@ekonomi";
