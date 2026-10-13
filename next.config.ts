@@ -58,9 +58,19 @@ const nextConfig: NextConfig = {
     // is exactly what should have cleared it.
     //
     // The cost is a slower cold `next dev`; nothing recompiles differently once
-    // it is up, and the production build has its own flag
-    // (turbopackFileSystemCacheForBuild), which is off by default anyway.
+    // it is up.
     turbopackFileSystemCacheForDev: false,
+    // The production build's cache, on by default since Next 16. Off because
+    // nothing reads it: every image build starts from a clean layer, so it only
+    // wrote about 200 MB into .next/cache that the next build threw away, and
+    // in a layer at that. Halves what `next build` writes.
+    turbopackFileSystemCacheForBuild: false,
+    // Server source maps cost about a third of the compile and 40 MB of .next,
+    // and bought nothing: errors in the server log were printed against the
+    // compiled chunks anyway (`_1n74zgk._.js:404:5174`), because nothing there
+    // applies them. Browser source maps are a separate setting and stay off by
+    // default.
+    serverSourceMaps: false,
   },
   // Who may load /_next/* from the dev server when the page was not served from
   // localhost. Next blocks cross-origin dev requests otherwise, which is why
@@ -77,6 +87,15 @@ const nextConfig: NextConfig = {
     "172.20.10.4",
     "*.trycloudflare.com",
   ],
+  // The image build skips the type check (SKIP_TYPECHECK=1, set in the
+  // Dockerfile). It was 15 to 30 seconds of every build, rerun on code a laptop
+  // had already checked. `pnpm build` anywhere else still checks, and
+  // `pnpm typecheck` runs the same check alone. Note that with nothing else
+  // checking types before a deploy, a type error now reaches production
+  // unless someone ran one of those two first.
+  typescript: {
+    ignoreBuildErrors: process.env.SKIP_TYPECHECK === "1",
+  },
   // The framework's version is not the visitor's business.
   poweredByHeader: false,
   async headers() {

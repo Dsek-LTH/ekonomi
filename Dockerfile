@@ -34,9 +34,14 @@ WORKDIR /app
 # change a dependency. pnpm-workspace.yaml carries the overrides and the
 # allowBuilds list (sharp, prisma), without it the postinstall scripts those
 # packages need to unpack their binaries never run.
+#
+# The cache mount has to sit where pnpm keeps its store, and with PNPM_HOME set
+# (base, above) that is $PNPM_HOME/store, not ~/.local/share/pnpm/store. With
+# the mount anywhere else the store lands in this layer instead: 1.6 GB and
+# about 36,000 files that every later stage inherits and nothing reads.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 # ── builder ───────────────────────────────────────────────────────────
@@ -45,10 +50,15 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 # resolve it. `next build` runs with NODE_ENV=production but is exempt from the
 # environment check. See the NEXT_PHASE note in lib/server/env.ts. Nothing
 # here reaches a database or a bucket.
+#
+# One RUN for both, because a layer between them holds nothing anyone uses.
+#
+# SKIP_TYPECHECK makes `next build` skip its TypeScript pass here (see
+# next.config.ts). Run `pnpm typecheck` before pushing; this build no longer
+# will.
 FROM deps AS builder
 COPY . .
-RUN pnpm prisma generate
-RUN pnpm build
+RUN pnpm prisma generate && SKIP_TYPECHECK=1 pnpm build
 
 # ── migrator ──────────────────────────────────────────────────────────
 # Prisma deploy needs its CLI, configuration, and migration SQL; it does not
@@ -66,6 +76,36 @@ FROM base AS migrator-deps
 WORKDIR /migrator
 COPY docker/migrator/package.json docker/migrator/package-lock.json ./
 RUN npm ci --omit=dev
+
+# Then cut it down to what `migrate deploy` loads. The Prisma CLI depends on
+# everything its other commands need too: Studio's UI and the React it renders
+# with, an embedded Postgres for `prisma dev`, and drivers for databases we do
+# not run. As installed that is about 8,000 files and 220 MB, more than the app
+# itself, and every one of them is copied into the runner.
+#
+# The lists below came from tracing every file the CLI opens (strace) while it
+# applies migrations, finds nothing to apply, cannot reach the database, and
+# hits a migration that fails. What is removed was never opened in any of them:
+#
+#   whole packages   Studio's UI stack, the embedded Postgres, the MySQL and
+#                    postgres.js drivers, and the HTTP server `prisma dev` runs
+#   studio-core      its UI bundle. The CLI requires the package at startup, but
+#                    only dist/data, so the package itself has to stay
+#   effect           its TypeScript sources and ESM build. Only dist/cjs loads
+#   everywhere       type declarations, source maps and READMEs, which Node
+#                    never reads
+#
+# After a Prisma upgrade, check `migrate deploy` still runs from the image
+# before trusting this. A package the new version starts loading eagerly fails
+# here loudly, as a missing module, rather than quietly.
+RUN cd node_modules \
+ && rm -rf @electric-sql @hono hono react react-dom scheduler chart.js @kurkle \
+           csstype @types ajv fast-uri mysql2 aws-ssl-profiles postgres \
+           @prisma/query-plan-executor \
+           @prisma/studio-core/dist/ui @prisma/studio-core/dist/metafile-*.json \
+           effect/src effect/dist/esm effect/dist/dts \
+ && find . -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' \
+           -o -name '*.map' -o -iname 'README*' -o -iname 'CHANGELOG*' \) -delete
 
 FROM base AS migrator
 #
@@ -95,16 +135,19 @@ CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 # trees together are about 13,000 files, more than half of them the Prisma CLI
 # under /migrator.
 #
-# FROM builder because the build output and the source tree (prisma/, the
-# typst templates, scripts/) are already in it. The migrator's node_modules is
-# bind-mounted rather than copied in, which would be another layer.
+# FROM base rather than FROM builder, with the builder bind-mounted read-only
+# at /b. A stage built on the builder starts from a copy of its whole
+# filesystem, node_modules and all, to use a few hundred megabytes of it. The
+# migrator's node_modules is mounted the same way.
 #
 # Every copy is `dir/.` into a directory made first. The standalone output
 # already holds a few of these paths (traced files under public/ and src/), and
 # a plain `cp -a dir dest` into an existing dest nests it one level down.
-FROM builder AS assemble
-RUN --mount=type=bind,from=migrator-deps,source=/migrator/node_modules,target=/migrator-deps \
+FROM base AS assemble
+RUN --mount=type=bind,from=builder,source=/app,target=/b \
+    --mount=type=bind,from=migrator-deps,source=/migrator/node_modules,target=/migrator-deps \
     set -e; \
+    cd /b; \
     mkdir -p /out/app/.next/static /out/app/public /out/app/src/lib/expense/cover \
              /out/app/src/lib/contract/rental /out/app/src/lib/server/fonts \
              /out/migrator/node_modules /out/migrator/scripts; \
