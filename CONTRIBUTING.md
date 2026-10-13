@@ -44,10 +44,13 @@ place that converts, so never write `* 100` by hand.
 **Permissions are derived, never hardcoded.** Every API route starts with
 `gate()` from `lib/api/guard.ts`, which reads roles from the database rather
 than the session, because a role that is removed has to stop applying at once.
+Budget writes also go through `lib/budget/access.ts`, which handles the lock.
 
 **Every control has to work without a mouse.** A row that opens something is a
 link, not an `onClick` on the `<tr>`. A sortable column is a button, and the
-header carries `aria-sort`.
+header carries `aria-sort`. A dialog traps Tab and gives focus back when it
+closes. `eslint-plugin-jsx-a11y` runs as warnings and is currently clean. Keep
+it that way rather than silencing it.
 
 ## Adding a user-facing string
 
