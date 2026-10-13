@@ -34,9 +34,14 @@ WORKDIR /app
 # change a dependency. pnpm-workspace.yaml carries the overrides and the
 # allowBuilds list (sharp, prisma), without it the postinstall scripts those
 # packages need to unpack their binaries never run.
+#
+# The cache mount has to sit where pnpm keeps its store, and with PNPM_HOME set
+# (base, above) that is $PNPM_HOME/store, not ~/.local/share/pnpm/store. With
+# the mount anywhere else the store lands in this layer instead: 1.6 GB and
+# about 36,000 files that every later stage inherits and nothing reads.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 # ── builder ───────────────────────────────────────────────────────────
@@ -45,10 +50,15 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 # resolve it. `next build` runs with NODE_ENV=production but is exempt from the
 # environment check. See the NEXT_PHASE note in lib/server/env.ts. Nothing
 # here reaches a database or a bucket.
+#
+# One RUN for both, because a layer between them holds nothing anyone uses.
+#
+# SKIP_TYPECHECK makes `next build` skip its TypeScript pass here (see
+# next.config.ts). Run `pnpm typecheck` before pushing; this build no longer
+# will.
 FROM deps AS builder
 COPY . .
-RUN pnpm prisma generate
-RUN pnpm build
+RUN pnpm prisma generate && SKIP_TYPECHECK=1 pnpm build
 
 # ── migrator ──────────────────────────────────────────────────────────
 # Prisma deploy needs its CLI, configuration, and migration SQL; it does not
@@ -67,6 +77,36 @@ WORKDIR /migrator
 COPY docker/migrator/package.json docker/migrator/package-lock.json ./
 RUN npm ci --omit=dev
 
+# Then cut it down to what `migrate deploy` loads. The Prisma CLI depends on
+# everything its other commands need too: Studio's UI and the React it renders
+# with, an embedded Postgres for `prisma dev`, and drivers for databases we do
+# not run. As installed that is about 8,000 files and 220 MB, more than the app
+# itself, and every one of them is copied into the runner.
+#
+# The lists below came from tracing every file the CLI opens (strace) while it
+# applies migrations, finds nothing to apply, cannot reach the database, and
+# hits a migration that fails. What is removed was never opened in any of them:
+#
+#   whole packages   Studio's UI stack, the embedded Postgres, the MySQL and
+#                    postgres.js drivers, and the HTTP server `prisma dev` runs
+#   studio-core      its UI bundle. The CLI requires the package at startup, but
+#                    only dist/data, so the package itself has to stay
+#   effect           its TypeScript sources and ESM build. Only dist/cjs loads
+#   everywhere       type declarations, source maps and READMEs, which Node
+#                    never reads
+#
+# After a Prisma upgrade, check `migrate deploy` still runs from the image
+# before trusting this. A package the new version starts loading eagerly fails
+# here loudly, as a missing module, rather than quietly.
+RUN cd node_modules \
+ && rm -rf @electric-sql @hono hono react react-dom scheduler chart.js @kurkle \
+           csstype @types ajv fast-uri mysql2 aws-ssl-profiles postgres \
+           @prisma/query-plan-executor \
+           @prisma/studio-core/dist/ui @prisma/studio-core/dist/metafile-*.json \
+           effect/src effect/dist/esm effect/dist/dts \
+ && find . -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' \
+           -o -name '*.map' -o -iname 'README*' -o -iname 'CHANGELOG*' \) -delete
+
 FROM base AS migrator
 #
 # Invoke Prisma through Node rather than Corepack's `pnpm` shim. The latter
@@ -84,25 +124,65 @@ COPY --chown=1001:0 scripts/load-env.ts ./scripts/load-env.ts
 USER 1001:0
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
+# ── assemble ──────────────────────────────────────────────────────────
+# Lays out everything the runner ships under /out, in one RUN, so the runner
+# can take it in with a single COPY.
+#
+# This is about build time on OKD, not image size. Its builder gives every
+# instruction a layer of its own, and a COPY into a stage that already holds
+# the app is paid for in full each time: ten of them used to cost most of a
+# thirty minute build. One RUN here and one COPY below is two layers. Both
+# trees together are about 13,000 files, more than half of them the Prisma CLI
+# under /migrator.
+#
+# FROM base rather than FROM builder, with the builder bind-mounted read-only
+# at /b. A stage built on the builder starts from a copy of its whole
+# filesystem, node_modules and all, to use a few hundred megabytes of it. The
+# migrator's node_modules is mounted the same way.
+#
+# Every copy is `dir/.` into a directory made first. The standalone output
+# already holds a few of these paths (traced files under public/ and src/), and
+# a plain `cp -a dir dest` into an existing dest nests it one level down.
+FROM base AS assemble
+RUN --mount=type=bind,from=builder,source=/app,target=/b \
+    --mount=type=bind,from=migrator-deps,source=/migrator/node_modules,target=/migrator-deps \
+    set -e; \
+    cd /b; \
+    mkdir -p /out/app/.next/static /out/app/public /out/app/src/lib/expense/cover \
+             /out/app/src/lib/contract/rental /out/app/src/lib/server/fonts \
+             /out/migrator/node_modules /out/migrator/scripts; \
+    cp -a .next/standalone/. /out/app/; \
+    cp -a .next/static/. /out/app/.next/static/; \
+    cp -a public/. /out/app/public/; \
+    cp -a src/lib/expense/cover/. /out/app/src/lib/expense/cover/; \
+    cp -a src/lib/contract/rental/. /out/app/src/lib/contract/rental/; \
+    cp -a src/lib/server/fonts/. /out/app/src/lib/server/fonts/; \
+    cp -a /migrator-deps/. /out/migrator/node_modules/; \
+    cp -a prisma prisma.config.ts /out/migrator/; \
+    cp -a scripts/load-env.ts /out/migrator/scripts/
+
 # ── runner ────────────────────────────────────────────────────────────
 FROM base AS runner
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# Everything below lands in this one COPY, laid out by the assemble stage:
+#
+#   /app       the standalone output, its static assets, public/, and the
+#              typst templates and fonts
+#   /migrator  Prisma and the migrations, for the init container
+#
 # The standalone output, its static assets and public/ are the whole app.
 # It writes nothing to disk. Receipts go to S3, so its filesystem can stay
 # read-only.  Use group 0 ownership rather than the image's `node` account:
 # OKD's restricted SCC runs containers with an arbitrary non-root UID, which
 # must still be able to read every runtime file.
-COPY --from=builder --chown=1001:0 /app/.next/standalone ./
-COPY --from=builder --chown=1001:0 /app/.next/static ./.next/static
-COPY --from=builder --chown=1001:0 /app/public ./public
-
-# The templates the app typesets and the faces they are set in, read from disk
-# at render time rather than bundled. Next's standalone output traces imports,
-# and neither a .typ nor an .otf is one, so without this they render in
-# `pnpm dev` and find nothing here. The paths mirror the source tree because
+#
+# The templates the app typesets and the faces they are set in are read from
+# disk at render time rather than bundled. Next's standalone output traces
+# imports, and neither a .typ nor an .otf is one, so without them they render
+# in `pnpm dev` and find nothing here. The paths mirror the source tree because
 # that is what lib/server/typst.ts resolves against process.cwd(), which is also
 # the compile root; the section's mark they draw is already in public/.
 #
@@ -122,20 +202,11 @@ COPY --from=builder --chown=1001:0 /app/public ./public
 # There is no typesetter to install beside them: Typst comes in as an npm
 # dependency with a musl build for this image, so `pnpm install` is the whole
 # of it.
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/expense/cover ./src/lib/expense/cover
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/contract/rental ./src/lib/contract/rental
-COPY --from=builder --chown=1001:0 \
-     /app/src/lib/server/fonts ./src/lib/server/fonts
-
-# The migrator stage's contents, for the cluster's init container to run with
-# `node node_modules/prisma/build/index.js migrate deploy` from /migrator. Its
-# own directory because the standalone output already has a node_modules here.
-COPY --from=migrator-deps --chown=1001:0 /migrator/node_modules /migrator/node_modules
-COPY --chown=1001:0 prisma /migrator/prisma
-COPY --chown=1001:0 prisma.config.ts /migrator/
-COPY --chown=1001:0 scripts/load-env.ts /migrator/scripts/load-env.ts
+#
+# /migrator is for the cluster's init container to run with
+# `node node_modules/prisma/build/index.js migrate deploy`. Its own directory
+# because the standalone output already has a node_modules in /app.
+COPY --from=assemble --chown=1001:0 /out/ /
 
 # Non-root by default outside OKD. On OKD this is replaced by the namespace's
 # arbitrary UID; neither the app nor the migration stage requires a passwd
