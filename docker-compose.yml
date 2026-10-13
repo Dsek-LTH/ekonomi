@@ -148,6 +148,12 @@ services:
       DATABASE_URL: postgresql://ekonomi:ekonomi@postgres:5432/ekonomi
       S3_ENDPOINT: http://minio:9000
       INTAKT_URL: http://intakt:8080
+      # The address Auth.js hands Authentik as the sign-in callback. Without it
+      # the callback is built from the request, which the standalone server
+      # sees as HOSTNAME (0.0.0.0, so it listens on every interface), and
+      # Authentik refuses http://0.0.0.0:3000 with "Redirect URI Error". The
+      # cluster sets the same variable to its public address.
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
