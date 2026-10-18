@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/server/current-user";
 import { getBankTransactions, getBankTransactionsByIds } from "@/lib/data/bank";
 import { getExpense } from "@/lib/data/expenses";
+import { getExpenseQueues } from "@/lib/data/expense-queue";
 import { getFortnoxStatus } from "@/lib/data/fortnox";
 import { expenseCapabilities } from "@/lib/domain/expense-capabilities";
 import ExpenseDetailClient from "./detail-client";
@@ -25,12 +26,15 @@ export default async function ExpenseDetailPage({
   // transaction this utlägg is already matched to: a bookkeeper looking at
   // someone else's card purchase still has to see what it was matched against,
   // so it is named explicitly rather than reached by widening the rule.
-  const [expense, fortnox] = await Promise.all([
+  const [expense, fortnox, queues] = await Promise.all([
     getExpense(id, user),
     // With the user id, so the status carries their own Fortnox login and not
     // just the section's connection. Exporting needs both, and without this the
     // page couldn't tell that half of it was missing.
     getFortnoxStatus(user.id),
+    // What is next in the attest and bookkeeping queues, for the bar that
+    // offers it when this utlägg was opened from one of them.
+    getExpenseQueues(user, id),
   ]);
 
   // What this viewer may do with this utlägg, worked out here rather than
@@ -66,6 +70,7 @@ export default async function ExpenseDetailPage({
       can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
+      queues={queues}
     />
   );
 }

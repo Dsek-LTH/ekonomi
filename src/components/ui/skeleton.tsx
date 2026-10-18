@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { Card } from "./card";
 import { TitleOrBar } from "@/components/shell/settings-title";
+import { PageHeaderSkeleton } from "@/components/shell/section-nav";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 
 // Placeholders for a wait whose shape is already known. A skeleton is only
@@ -47,6 +48,8 @@ export function SkeletonPage({
   back = false,
   action = false,
   titleWidth = "w-56",
+  subtitle = false,
+  aside,
   children,
 }: {
   width?: PageWidth;
@@ -55,6 +58,10 @@ export function SkeletonPage({
   /** Pages whose header holds a primary button. */
   action?: boolean;
   titleWidth?: string;
+  /** Pages with a second line under the title (PageShell's `subtitle`). */
+  subtitle?: boolean;
+  /** Placeholders for controls on the title's line (PageShell's `aside`). */
+  aside?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const t = useTranslations("common");
@@ -65,20 +72,26 @@ export function SkeletonPage({
       aria-label={t("loading")}
       className={PAGE_WIDTH[width]}
     >
-      <div className="mb-6">
-        {back && <Skeleton className="mb-2 h-4 w-28" />}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            {/* In the settings overlay the title is drawn in its top bar, so
-                its placeholder is too. See components/shell/settings-title. */}
-            <TitleOrBar
-              page={<Skeleton className={cn("h-8", titleWidth)} />}
-              bar={<Skeleton className="h-5 w-40" />}
-            />
-          </div>
-          {action && <Skeleton className="h-9 w-36 rounded-control" />}
-        </div>
-      </div>
+      {/* Inside a section of the nav, its name and tabs are drawn for real
+          and only the page's own parts wait. See PageHeaderSkeleton. */}
+      <PageHeaderSkeleton
+        back={back}
+        aside={aside}
+        right={action ? <Skeleton className="h-9 w-36 rounded-control" /> : undefined}
+        title={
+          // In the settings overlay the title is drawn in its top bar, so its
+          // placeholder is too. See components/shell/settings-title.
+          <TitleOrBar
+            page={
+              <>
+                <Skeleton className={cn("h-8", titleWidth)} />
+                {subtitle && <Skeleton className="mt-1 h-7 w-44" />}
+              </>
+            }
+            bar={<Skeleton className="h-5 w-40" />}
+          />
+        }
+      />
       <div className="space-y-4">{children}</div>
     </div>
   );

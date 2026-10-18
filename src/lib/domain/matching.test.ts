@@ -189,3 +189,45 @@ describe("matchCandidates", () => {
     expect(idsOf(matchCandidates(same, 250))).toEqual(idsOf(matchCandidates(same, 250)));
   });
 });
+
+describe("matchCandidates, by the day", () => {
+  const txn = (id: string, amount: number, transactionDate: string, matchedExpenseId?: string) => ({
+    id,
+    amount,
+    transactionDate,
+    matchedExpenseId,
+  });
+  const ids = (cs: { txn: { id: string } }[]) => cs.map((c) => c.txn.id);
+
+  it("puts a near day ahead of a near amount among the rows that cannot be picked", () => {
+    const rows = [txn("last-month", -251, "2026-09-12"), txn("same-day", -253, "2026-10-12")];
+    expect(ids(matchCandidates(rows, 250, null, "2026-10-12"))).toEqual(["same-day", "last-month"]);
+  });
+
+  it("still ranks by amount when there is no purchase date", () => {
+    const rows = [txn("last-month", -251, "2026-09-12"), txn("same-day", -253, "2026-10-12")];
+    expect(ids(matchCandidates(rows, 250))).toEqual(["last-month", "same-day"]);
+  });
+
+  it("keeps the rows that can be picked first, whatever their day", () => {
+    const rows = [txn("near-wrong", -253, "2026-10-12"), txn("far-right", -250, "2026-09-01")];
+    expect(ids(matchCandidates(rows, 250, null, "2026-10-12"))).toEqual(["far-right", "near-wrong"]);
+  });
+
+  it("takes a free row a few days off with another amount for a typo", () => {
+    const found = matchCandidates(
+      [
+        txn("typo", -253, "2026-10-14"),
+        txn("too-far", -253, "2026-10-20"),
+        txn("claimed", -253, "2026-10-12", "e9"),
+        txn("refund", 253, "2026-10-12"),
+      ],
+      250,
+      null,
+      "2026-10-12",
+    );
+    const fixable = Object.fromEntries(found.map((c) => [c.txn.id, c.fixable]));
+    expect(fixable).toEqual({ typo: true, "too-far": false, claimed: false, refund: false });
+    expect(found.find((c) => c.txn.id === "typo")!.daysOff).toBe(2);
+  });
+});

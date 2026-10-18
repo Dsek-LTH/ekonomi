@@ -60,6 +60,7 @@ export function ChangeFeed({
       value: (c) => c.at,
       sortable: true,
       mobile: "meta",
+      mobileOrder: 1,
       cell: (c) => stamp(c.at),
     },
     {
@@ -101,7 +102,7 @@ export function ChangeFeed({
       value: named,
       sortable: true,
       searchable: true,
-      mobile: "meta",
+      mobile: "status",
       cell: named,
     },
     {

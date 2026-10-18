@@ -1,7 +1,8 @@
 "use client";
 
 // Settings → Guild cards. Assigning a card to a member is what makes their
-// card purchases show up under Card purchases.
+// card purchases show up on their own bank feed, and assigning it a result unit
+// is what lets that unit's resultatansvarig read them.
 //
 // The same shape as every other list in settings: one table, its create
 // button on the toolbar, and the form that button opens just under it. It was
@@ -28,9 +29,11 @@ import type { Card as SectionCard, User } from "@/lib/domain/types";
 export function CardsClient({
   cards,
   users,
+  resultUnits,
 }: {
   cards: SectionCard[];
   users: User[];
+  resultUnits: { id: string; name: string }[];
 }) {
   const t = useTranslations("admin.cards");
   const tCommon = useTranslations("common");
@@ -42,6 +45,7 @@ export function CardsClient({
   const [newLast4, setNewLast4] = useState("");
 
   const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const unitOptions = resultUnits.map((u) => ({ value: u.id, label: u.name }));
 
   // A card on nobody is a card whose purchases reach nobody's own list, so it
   // is the one worth a tab of its own.
@@ -81,6 +85,20 @@ export function CardsClient({
     });
   }
 
+  async function assignUnit(card: SectionCard, resultUnitId: string) {
+    const unit = resultUnits.find((u) => u.id === resultUnitId);
+    await mutate(`/api/cards/${card.id}`, {
+      key: `unit-${card.id}`,
+      method: "PATCH",
+      // "" clears it. See PatchCard.
+      body: { resultUnitId },
+      error: t("unitAssignFailed"),
+      success: unit
+        ? t("unitAssigned", { last4: card.last4, name: unit.name })
+        : t("unitUnassigned", { last4: card.last4 }),
+    });
+  }
+
   async function deleteCard(card: SectionCard) {
     const ok = await confirm({
       title: t("deleteTitle", { last4: card.last4 }),
@@ -113,6 +131,8 @@ export function CardsClient({
     },
     {
       key: "holder",
+      mobile: "meta",
+      mobileCell: (c) => c.holderName ?? t("noHolder"),
       header: t("colHolder"),
       value: (c) => c.holderName ?? "",
       sortable: true,
@@ -132,7 +152,30 @@ export function CardsClient({
       ),
     },
     {
+      key: "resultUnit",
+      mobile: "meta",
+      mobileCell: (c) => c.resultUnitName ?? t("noResultUnit"),
+      header: t("colResultUnit"),
+      value: (c) => c.resultUnitName ?? "",
+      sortable: true,
+      searchable: true,
+      cell: (c) => (
+        <Combobox
+          size="sm"
+          className="w-full sm:w-56"
+          options={unitOptions}
+          value={c.resultUnitId ?? ""}
+          onChange={(v) => assignUnit(c, v)}
+          disabled={pending === `unit-${c.id}`}
+          placeholder={t("noResultUnit")}
+          allowClear
+          aria-label={t("resultUnitFor", { last4: c.last4 })}
+        />
+      ),
+    },
+    {
       key: "purchases",
+      mobile: "hide",
       header: t("colPurchases"),
       value: (c) => c.txCount,
       sortable: true,

@@ -1,24 +1,15 @@
 "use client";
 
-// The two pieces of furniture every wizard step wears: the shape of a pickable
-// option, and the strip of buttons at the foot.
+// The pieces the utlägg form is built from: a choice card and a titled
+// section. Its action bar along the foot is components/action-bar.tsx.
 //
-// Their own file so a step can live in one too. They were defined inside
-// new-client.tsx, which meant the only place a step could be written was inside
-// new-client.tsx.
-import { useTranslations } from "next-intl";
-
-import { Button } from "@/components/ui/button";
+// It was a wizard of two or three steps, the last of which only repeated what
+// had just been typed. One page now, with saving and sending always in reach
+// and the bar saying what is still missing rather than leaving a grey button
+// to be puzzled over.
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/ui/utils";
 
-// Three of the wizard's questions are answered by picking one of a few: which
-// way the money goes, how it was paid, and which bank transaction to match.
-// Both are a bordered card that fills with accent once chosen.
-//
-// `locked` draws the same three cards where there is nothing left to press:
-// opened from one bank transaction, the claim is the transaction's own and
-// showing all three, muted, says which of them this is without offering the
-// other two as a choice that isn't there.
 export const optionCard = (selected: boolean, locked = false) =>
   cn(
     "w-full rounded-control border px-4 py-3 text-left transition-colors",
@@ -29,43 +20,29 @@ export const optionCard = (selected: boolean, locked = false) =>
         : "border-border hover:bg-hover",
   );
 
-// Every wizard step ends the same way: back on the left, "save draft" and the
-// step's own primary action on the right.
-export function StepFooter({
-  onBack,
-  onSave,
-  saveLabel,
-  saveDisabled,
-  saving,
+/** One part of the form, as a card. A heading only where the part needs one
+ *  to say what it is asking (which card purchase it was). */
+export function FormSection({
+  title,
+  hint,
   children,
 }: {
-  /** Omitted on the first step, which has nowhere to go back to. */
-  onBack?: () => void;
-  onSave: () => void;
-  saveLabel: string;
-  saveDisabled: boolean;
-  /** The draft save this footer owns is in flight, not the step's own action. */
-  saving: boolean;
-  children?: React.ReactNode;
+  title?: string;
+  /** Beside the heading: a "?" with the explanation the section has no room for. */
+  hint?: React.ReactNode;
+  children: React.ReactNode;
 }) {
-  const t = useTranslations("expenses.wizard");
   return (
-    <div className="flex flex-wrap justify-between gap-2.5 pt-1">
-      {onBack ? (
-        <Button variant="secondary" onClick={onBack}>
-          {t("back")}
-        </Button>
-      ) : (
-        // Keeps the save/primary pair against the right edge, where they are on
-        // every other step.
-        <span />
-      )}
-      <div className="flex gap-2.5">
-        <Button variant="secondary" onClick={onSave} loading={saving} disabled={saveDisabled}>
-          {saveLabel}
-        </Button>
+    <Card>
+      <section className="space-y-4 px-inset py-5">
+        {title && (
+          <h2 className="flex items-center gap-1.5 text-base font-semibold">
+            {title}
+            {hint}
+          </h2>
+        )}
         {children}
-      </div>
-    </div>
+      </section>
+    </Card>
   );
 }

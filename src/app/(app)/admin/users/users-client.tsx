@@ -100,6 +100,8 @@ export function UsersClient({ holders }: { holders: User[] }) {
     },
     {
       key: "roles",
+      mobile: "meta",
+      mobileCell: (u) => held(u).map((r) => tRole(r)).join(", "),
       header: t("colRoles"),
       value: (u) => held(u).map((r) => tRole(r)).join(", "),
       sortable: true,

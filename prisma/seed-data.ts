@@ -1,7 +1,7 @@
 // Seed fixtures for a fresh database. These were the frontend mock dataset
 // (the UI now reads from the DB instead). The seed maps these into real rows;
 // amounts are in plain SEK here and converted to öre on insert.
-import type { BankTransaction, CostCenter, User } from "../src/lib/domain/types";
+import type { BankTransaction, User } from "../src/lib/domain/types";
 
 /** A seeded person: the User columns that are actually inserted. */
 export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
@@ -66,23 +66,23 @@ export const CURRENT_USERS: Record<string, SeedUser> = {
   },
 };
 
-// `resultUnit` (resultatenhet) drives attest authority: whoever answers for the
-// result unit attests that cost centre's allocations. `ownerName`, when set,
-// seeds a resultatansvarig ownership for that result unit.
-export const COST_CENTERS: (CostCenter & { ownerName?: string })[] = [
-  { id: "c1", code: "NÄRU", name: "Näringslivsutskottet", resultUnit: "Näringslivsutskottet", ownerName: "Oskar Berg", active: true, source: "FORTNOX" },
-  { id: "c2", code: "SEXM", name: "Sexmästeriet", resultUnit: "Sexmästeriet", ownerName: "Klara Ström", active: true, source: "FORTNOX" },
-  { id: "c3", code: "STYR", name: "Styrelsen", resultUnit: "Styrelsen", active: true, source: "FORTNOX" },
-  { id: "c4", code: "INFU", name: "Infoutskottet", resultUnit: "Infoutskottet", ownerName: "Oskar Berg", active: true, source: "FORTNOX" },
-  { id: "c5", code: "IDRU", name: "Idrottsutskottet", resultUnit: "Idrottsutskottet", ownerName: "Klara Ström", active: true, source: "FORTNOX" },
-];
+/**
+ * Who answers for which result unit, by the unit's name as the app has it
+ * (the names Authentik's groups are mapped to, lib/server/authority-defaults).
+ * The units and their cost centres themselves come from the real budget; see
+ * prisma/seed.ts.
+ */
+export const UNIT_OWNERS: Record<string, string[]> = {
+  "Oskar Berg": ["Näringslivsutskottet", "Infoutskottet"],
+  "Klara Ström": ["Sexmästeriet", "Aktivitetsutskottet"],
+};
 
 export const EXPENSES: SeedExpense[] = [
   {
     reference: null,
     title: "Fika till sektionsmöte",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "NÄRU", amount: 845.5 }],
+    allocations: [{ costCenterCode: "NARU01", amount: 845.5 }],
     paymentType: "REIMBURSEMENT",
     status: "DRAFT",
     purchaseDate: "2026-06-12",
@@ -96,7 +96,7 @@ export const EXPENSES: SeedExpense[] = [
     reference: null,
     title: "Banderoll till mottagningen",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "INFU", amount: 1290 }],
+    allocations: [{ costCenterCode: "INFU01", amount: 1290 }],
     paymentType: "CARD",
     status: "DRAFT",
     purchaseDate: "2026-06-10",
@@ -113,8 +113,8 @@ export const EXPENSES: SeedExpense[] = [
     submitterName: "Anton Falk",
     // Multi-cost-centre example: shared between two result units.
     allocations: [
-      { costCenterCode: "SEXM", amount: 1000 },
-      { costCenterCode: "NÄRU", amount: 560 },
+      { costCenterCode: "SEX02", amount: 1000 },
+      { costCenterCode: "NARU01", amount: 560 },
     ],
     paymentType: "CARD",
     status: "PENDING_APPROVAL",
@@ -132,7 +132,7 @@ export const EXPENSES: SeedExpense[] = [
     reference: "DEK26-0038",
     title: "Priser till idrottsdagen",
     submitterName: "Sara Nyberg",
-    allocations: [{ costCenterCode: "IDRU", amount: 2340 }],
+    allocations: [{ costCenterCode: "AKTU07", amount: 2340 }],
     paymentType: "REIMBURSEMENT",
     status: "CHANGES_REQUESTED",
     purchaseDate: "2026-06-05",
@@ -154,7 +154,7 @@ export const EXPENSES: SeedExpense[] = [
     reference: "DEK26-0036",
     title: "Kontorsmaterial",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "STYR", amount: 432 }],
+    allocations: [{ costCenterCode: "STYR01", amount: 432 }],
     paymentType: "CARD",
     status: "APPROVED",
     purchaseDate: "2026-06-02",
@@ -172,7 +172,7 @@ export const EXPENSES: SeedExpense[] = [
     reference: "DEK26-0034",
     title: "Förtäring styrelsemöte",
     submitterName: "Anton Falk",
-    allocations: [{ costCenterCode: "STYR", amount: 318 }],
+    allocations: [{ costCenterCode: "STYR01", amount: 318 }],
     paymentType: "CARD",
     status: "BOOKED",
     purchaseDate: "2026-05-28",
@@ -189,7 +189,7 @@ export const EXPENSES: SeedExpense[] = [
     reference: "DEK26-0031",
     title: "Trycksaker phadderverksamhet",
     submitterName: "Sara Nyberg",
-    allocations: [{ costCenterCode: "INFU", amount: 4120 }],
+    allocations: [{ costCenterCode: "INFU01", amount: 4120 }],
     paymentType: "REIMBURSEMENT",
     status: "EXPORTED",
     purchaseDate: "2026-05-20",
@@ -224,6 +224,9 @@ export const BANK_TRANSACTIONS: BankTransaction[] = [
 export interface SeedCard {
   last4: string;
   holderName: string | null; // null = unassigned (admin to assign)
+  /** The result unit the card is spent for, so its resultatansvarig reads
+   *  its purchases on /bank. By the unit's name in the app. */
+  resultUnit?: string;
   transactionIds: string[];
 }
 
@@ -231,11 +234,13 @@ export const CARDS: SeedCard[] = [
   {
     last4: "8842",
     holderName: "Elsa Lindqvist",
+    resultUnit: "Sexmästeriet",
     transactionIds: ["t1", "t4", "t8"], // t8 is already matched → not "missing"
   },
   {
     last4: "3310",
     holderName: "Ludwig Gehlsdorf",
+    resultUnit: "Infoutskottet",
     transactionIds: ["t5"],
   },
   {
@@ -310,5 +315,70 @@ export const RENTAL_ITEMS = [
     description: "Med HDMI-kabel och duk.",
     dailyPriceOre: null,
     replacementValueOre: 550_000,
+  },
+];
+
+// ── Lager ─────────────────────────────────────────────────────────
+//
+// What a section bar keeps: beer and cider by the can, spirits and wine by the
+// bottle. Prices are what Systembolaget charges, in öre, which is what a
+// delivery is booked at. A pallet in September, then a pub and a sittning in
+// October drawing on it, so the list, the log, the events and the statistics
+// all have a term's worth of movements to show.
+
+export interface SeedStockProduct {
+  name: string;
+  kind: "UNIT" | "VOLUME";
+  category: "OL" | "OVRIG_JASTDRYCK" | "VIN" | "SPRITDRYCK";
+  abv: number;
+  /** A can's or bottle's millilitres: `unitMl` for a UNIT, `nominalMl` for a VOLUME. */
+  ml: number;
+  costPriceOre: number;
+  tags?: string[];
+  /** How many came in with the September delivery. */
+  delivered: number;
+}
+
+export const STOCK_PRODUCTS: SeedStockProduct[] = [
+  { name: "Norrlands Guld 33 cl", kind: "UNIT", category: "OL", abv: 5.3, ml: 330, costPriceOre: 1290, tags: ["Pub"], delivered: 192 },
+  { name: "Mariestads Export 50 cl", kind: "UNIT", category: "OL", abv: 5.3, ml: 500, costPriceOre: 1690, tags: ["Pub"], delivered: 96 },
+  { name: "Brooklyn Lager 35,5 cl", kind: "UNIT", category: "OL", abv: 5.2, ml: 355, costPriceOre: 2290, delivered: 48 },
+  { name: "Somersby Pear 33 cl", kind: "UNIT", category: "OVRIG_JASTDRYCK", abv: 4.5, ml: 330, costPriceOre: 1490, tags: ["Pub"], delivered: 96 },
+  { name: "Absolut Vodka 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 40, ml: 700, costPriceOre: 26900, delivered: 6 },
+  { name: "Fireball 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 33, ml: 700, costPriceOre: 24900, delivered: 4 },
+  { name: "Jägermeister 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 35, ml: 700, costPriceOre: 26900, delivered: 4 },
+  { name: "Santa Helena Merlot 75 cl", kind: "VOLUME", category: "VIN", abv: 13.5, ml: 750, costPriceOre: 8990, tags: ["Sittning"], delivered: 24 },
+];
+
+/**
+ * A night, and what it took out and brought back, by product name. `out` is
+ * sealed units; `back` is sealed units, and for a bottle `backOpen` the opened
+ * ones that came back, by the level they were at.
+ */
+export interface SeedStockEvent {
+  name: string;
+  date: string;
+  moves: { product: string; out: number; back?: number; backOpen?: Partial<Record<80 | 60 | 40 | 20, number>> }[];
+}
+
+export const STOCK_EVENTS: SeedStockEvent[] = [
+  {
+    name: "Pub 2 oktober",
+    date: "2026-10-02",
+    moves: [
+      { product: "Norrlands Guld 33 cl", out: 96, back: 31 },
+      { product: "Somersby Pear 33 cl", out: 48, back: 22 },
+      { product: "Fireball 70 cl", out: 2, backOpen: { 40: 1 } },
+      { product: "Jägermeister 70 cl", out: 1, backOpen: { 60: 1 } },
+    ],
+  },
+  {
+    name: "Höstsittningen",
+    date: "2026-10-10",
+    moves: [
+      { product: "Mariestads Export 50 cl", out: 48, back: 12 },
+      { product: "Santa Helena Merlot 75 cl", out: 18, back: 4, backOpen: { 20: 1 } },
+      { product: "Absolut Vodka 70 cl", out: 2, back: 1 },
+    ],
   },
 ];

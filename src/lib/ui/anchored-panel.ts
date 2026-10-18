@@ -40,7 +40,12 @@ export function useAnchorRect(
     if (!open) return;
     const follow = (e?: Event) => {
       // Not while scrolling the panel's own list, which moves nothing.
-      if (e && panel.current?.contains(e.target as Node)) return;
+      //
+      // Only a node can be inside the panel. A resize comes from the window and
+      // the keyboard's from the visual viewport, and Safari throws on being
+      // asked whether the panel contains either, where other browsers say no.
+      const target = e?.target;
+      if (target instanceof Node && panel.current?.contains(target)) return;
       const el = trigger.current;
       if (!el || !el.isConnected) return onGone();
       setRect(el.getBoundingClientRect());

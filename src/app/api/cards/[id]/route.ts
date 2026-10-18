@@ -1,5 +1,6 @@
-// Assign / unassign a section card's holder. Admin only. The card→member
-// registry is the source of truth for whose card purchases show up where.
+// Assign / unassign a section card's holder and result unit. Admin only. The
+// card registry is the source of truth for whose card purchases show up where:
+// the holder's own feed, and the result unit's.
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
@@ -8,7 +9,8 @@ import { PatchCard } from "@/lib/api/schemas/admin";
 
 const admin = () => gate(canAccessSettings, "auth.adminOnly");
 
-// PATCH /api/cards/:id: body: { holderId: string | null }
+// PATCH /api/cards/:id: body: { holderId?: string | null, resultUnitId?: string | null }
+// A field left out is left as it is.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await admin();
@@ -17,17 +19,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const card = await prisma.card.findUnique({ where: { id } });
   if (!card) return fail(404, "card.notFound");
 
-  // Empty / null → unassign; otherwise must be an existing user.
+  // Empty / null → unassign; otherwise must be an existing row.
   const parsed = await parseBody(req, PatchCard);
   if (!parsed.ok) return parsed.res;
-  let holderId: string | null = null;
-  if (parsed.data.holderId) {
-    const user = await prisma.user.findUnique({ where: { id: parsed.data.holderId } });
+  const { holderId, resultUnitId } = parsed.data;
+  if (holderId) {
+    const user = await prisma.user.findUnique({ where: { id: holderId } });
     if (!user) return fail(422, "user.unknown");
-    holderId = user.id;
+  }
+  if (resultUnitId) {
+    const unit = await prisma.resultUnit.findUnique({ where: { id: resultUnitId } });
+    if (!unit) return fail(422, "resultUnit.notFound");
   }
 
-  await prisma.card.update({ where: { id }, data: { holderId } });
+  await prisma.card.update({ where: { id }, data: { holderId, resultUnitId } });
   return new Response(null, { status: 204 });
 }
 

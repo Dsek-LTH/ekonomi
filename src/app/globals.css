@@ -30,6 +30,17 @@
  */
 @custom-variant nav-open (&:is(.group:hover *, .group:has(:focus-visible) *));
 
+/* While somebody is typing: a field that brings up a phone's keyboard has the
+ * focus. The receipt button in a form's corner steps aside then: iOS lifts what
+ * is fixed to the foot onto the keyboard, where it covers the field. (The tab
+ * bar does not need this. It is not on the pages where people type, see
+ * shell/app-shell.tsx.)
+ *
+ * The attribute is set from the focus events by lib/ui/typing.ts. A
+ * `body:has(input:focus)` selector said the same thing without any script, and
+ * never matched on an iPhone. */
+@custom-variant typing (:root[data-typing] &);
+
 @theme {
     /* Neutrals */
     --color-background: #ffffff;

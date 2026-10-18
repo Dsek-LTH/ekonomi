@@ -17,6 +17,7 @@ import { FortnoxAuthResult } from "@/components/shell/fortnox-auth-result";
 import { requireUser } from "@/lib/server/current-user";
 import { userHoldsCard } from "@/lib/data/users";
 import { getFortnoxSession } from "@/lib/data/fortnox";
+import { getNavCounts } from "@/lib/data/nav-counts";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
 
 // Always render against fresh DB data on a full load. Each page loads its own
@@ -41,10 +42,14 @@ export default async function AppLayout({
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
   const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
-  const [holdsCard, fortnoxSession, cookieStore] = await Promise.all([
+  const [holdsCard, fortnoxSession, cookieStore, counts] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     cookies(),
+    // The numbers beside the nav's links. Counts only, four of them, since
+    // this runs for every page. They refresh with the layout, which every
+    // write in the app does on its way out (see useMutation's refresh).
+    getNavCounts(currentUser),
   ]);
   // Read here rather than in the client so the frame renders in its stored
   // shape on the first paint instead of settling into it after hydration, a
@@ -88,6 +93,12 @@ export default async function AppLayout({
             <AppShell
               defaultPinned={navPinned}
               fortnox={booksInFortnox ? { session: fortnoxSession } : undefined}
+              counts={{
+                "/expenses": counts.expenses,
+                "/bank": counts.bank,
+                "/approvals": counts.approvals,
+                "/bookkeeping": counts.bookkeeping,
+              }}
             >
               {children}
             </AppShell>

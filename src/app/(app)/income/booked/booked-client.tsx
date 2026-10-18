@@ -27,7 +27,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { Tag } from "@/components/ui/status-pill";
@@ -177,6 +177,8 @@ export default function BookedClient({
   const columns: Column<IncomeReportRow>[] = [
     {
       key: "date",
+      mobile: "meta",
+      mobileOrder: 1,
       header: t("table.date"),
       value: (r) => r.date,
       sortable: true,
@@ -200,6 +202,7 @@ export default function BookedClient({
     },
     {
       key: "costCenter",
+      mobile: "meta",
       header: t("table.costCenter"),
       value: (r) => r.costCenterCode ?? "",
       sortable: true,
@@ -209,6 +212,7 @@ export default function BookedClient({
     },
     {
       key: "status",
+      mobile: "status",
       header: t("table.status"),
       value: (r) => r.status,
       sortable: true,
@@ -216,6 +220,7 @@ export default function BookedClient({
     },
     {
       key: "voucher",
+      mobile: "hide",
       header: t("table.voucher"),
       value: (r) => r.voucherLabel ?? "",
       sortable: true,
@@ -308,13 +313,11 @@ export default function BookedClient({
       />
 
       <Card>
-        {/* The bulk export sits with the days it exports rather than on the
-            shell's strip: that strip carries what fills a section, and this
-            acts on the rows below it. Same rule as "bokför alla" on the queue.
-            */}
-        <CardHeader
-          title={t("booked.title")}
-          subtitle={t("counts.reports", { count: reports.length })}
+        {/* No header of its own: the tabs and the switch above already say
+            this is Bokfört och exporterat, and the table's footer counts it.
+            The bulk export rides the table's toolbar, with the rows it acts on,
+            the way every list's own button does. */}
+        <ClientDataTable
           action={
             waiting.length > 0 ? (
               <Button size="sm" onClick={exportAll} loading={pending === "exportAll"}>
@@ -322,8 +325,6 @@ export default function BookedClient({
               </Button>
             ) : undefined
           }
-        />
-        <ClientDataTable
           columns={columns}
           rows={reports}
           controls={controls}

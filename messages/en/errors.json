@@ -111,7 +111,8 @@
     "deleteStorageFailed": "The receipt's file could not be removed from the archive. The receipt was kept. Please try again.",
     "unreadable": "Could not read the image file",
     "unsupportedType": "The file type ’{type}’ is not supported",
-    "sizeRange": "The file has to be between 1 byte and {max} bytes"
+    "sizeRange": "The file has to be between 1 byte and {max} bytes",
+    "orderMismatch": "The documents have changed since the page loaded. Reload and try again."
   },
   "bank": {
     "txnNotFound": "The transaction does not exist",
@@ -317,7 +318,12 @@
     "sizeRequired": "The volume per unit is needed.",
     "eanTaken": "That barcode already belongs to {name}.",
     "nameTaken": "There is already a product called {name}.",
-    "noCheckOnRow": "Only a delivery can have a best-before date to check."
+    "noCheckOnRow": "Only a delivery can have a best-before date to check.",
+    "eanRequired": "Enter the product's barcode, or mark that it has none.",
+    "internalCodeTyped": "Codes starting with 2 are given out by the app to products without a barcode. Mark the product as having none instead.",
+    "onlyStocktake": "Only a stocktake can be turned into a purchase.",
+    "stocktakeFoundNothing": "The stocktake found no more sealed than the log, so there is no purchase to make of it.",
+    "costRequired": "The product needs a cost price before the purchase can be valued. Set it on the product first."
   },
   "mileage": {
     "noReadings": "The mileage claim is missing an odometer reading before or after the journey.",

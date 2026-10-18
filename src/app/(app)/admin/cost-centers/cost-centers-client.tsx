@@ -127,6 +127,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     },
     {
       key: "name",
+      mobile: "meta",
       header: t("colName"),
       value: (c) => c.name,
       sortable: true,
@@ -167,6 +168,8 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     },
     {
       key: "resultUnit",
+      mobile: "meta",
+      mobileCell: (c) => c.resultUnit ?? t("noResultUnit"),
       header: t("colResultUnit"),
       value: (c) => c.resultUnit ?? "",
       sortable: true,
@@ -185,7 +188,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       header: t("colStatus"),
       value: (c) => (c.active ? 1 : 0),
       sortable: true,
-      mobile: "trailing",
+      mobile: "status",
       cell: (c) =>
         c.active ? (
           <span className="text-xs text-muted">{t("active")}</span>

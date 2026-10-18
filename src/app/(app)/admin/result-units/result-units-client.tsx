@@ -106,6 +106,8 @@ export function ResultUnitsClient({
     },
     {
       key: "prefixes",
+      mobile: "meta",
+      mobileCell: (u) => u.prefixes.map((p) => p.value).join(", "),
       header: t("colPrefixes"),
       value: (u) => u.prefixes.map((p) => p.value).join(" "),
       searchable: true,
@@ -123,6 +125,7 @@ export function ResultUnitsClient({
     },
     {
       key: "count",
+      mobile: "hide",
       header: t("colCount"),
       value: (u) => u.costCenterCount,
       sortable: true,
@@ -132,6 +135,8 @@ export function ResultUnitsClient({
     },
     {
       key: "owners",
+      mobile: "meta",
+      mobileCell: (u) => u.owners.map((o) => o.name).join(", "),
       header: t("colOwners"),
       value: (u) => u.owners.map((o) => o.name).join(", "),
       sortable: true,

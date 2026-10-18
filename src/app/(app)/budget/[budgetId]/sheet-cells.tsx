@@ -22,17 +22,31 @@ export function CompareCells({ other, own, incomeLike, strong }: {
   other: number | undefined; own: number | undefined; incomeLike: boolean; strong?: boolean;
 }) {
   const diff = other === undefined ? undefined : other - (own ?? 0);
+  // Each in its group's own tint, under its own heading (COMPARE_GROUP), so
+  // which figure is the budget, which is what happened and which is the gap
+  // between them is read off where it stands rather than worked out.
   return (
     <>
-      <td className={cn("border-l border-border/40 px-2 py-1.5 text-right tabular-nums text-muted", strong && "font-semibold")}>
+      <td className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right tabular-nums", strong && "font-semibold")}>
         {fmt(other)}
       </td>
-      <td className={cn("px-2 py-1.5 text-right tabular-nums", strong && "font-semibold", diff !== undefined && diffClass(diff, incomeLike))}>
+      <td className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right tabular-nums", strong && "font-semibold", diff !== undefined && diffClass(diff, incomeLike))}>
         {fmtSigned(diff)}
       </td>
     </>
   );
 }
+
+/**
+ * The comparison's two columns as groups apart from the budget's own: a heavier
+ * rule where the budget ends, and a tint each, the same on the group heading,
+ * the column heading and every cell, so a column reads as one band down the
+ * sheet.
+ */
+export const COMPARE_GROUP = {
+  other: "border-l-2 border-border bg-surface/70",
+  diff: "border-l border-border/60 bg-surface/35",
+};
 
 // Column header with its A1 letter shown before the name (the six general
 // columns are unnamed, so they show just their letter).

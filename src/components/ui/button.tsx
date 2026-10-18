@@ -136,10 +136,16 @@ export function ButtonLink({
   className,
   children,
   href,
-}: CommonProps & { href: string }) {
+  replace,
+}: CommonProps & {
+  href: string;
+  /** Replace the current history entry rather than adding one. */
+  replace?: boolean;
+}) {
   return (
     <Link
       href={href}
+      replace={replace}
       className={cn(BASE, DIMMED, VARIANTS[variant], SIZES[size], className)}
     >
       {children}

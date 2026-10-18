@@ -43,6 +43,8 @@ export function reviewColumns({
   return [
     {
       key: "date",
+      mobile: "meta",
+      mobileOrder: 1,
       header: t("table.date"),
       value: (r) => r.date,
       sortable: true,
@@ -73,6 +75,7 @@ export function reviewColumns({
     },
     {
       key: "costCenter",
+      mobile: "meta",
       header: t("table.costCenter"),
       value: (r) => costCentreFor(r, settings),
       sortable: true,

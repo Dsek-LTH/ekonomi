@@ -137,7 +137,23 @@
     "deadlineWaiverGranted": "{name} granted a waiver on {date}.",
     "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted.",
     "remind": "Send reminder",
-    "reminderTo": "To {names}"
+    "reminderTo": "To {names}",
+    "queue": {
+      "next": "Next: {name}",
+      "skip": "Skip to next",
+      "approvals": {
+        "done": "Approved. {count, plural, =1 {1 more is} other {# more are}} waiting for your approval.",
+        "empty": "Approved. Nothing else is waiting for your approval.",
+        "waiting": "{count, plural, =1 {1 more} other {# more}} in the approval queue.",
+        "toList": "To approvals"
+      },
+      "bookkeeping": {
+        "done": "Done here. {count, plural, =1 {1 more is} other {# more are}} waiting to be booked.",
+        "empty": "Done here. Nothing else is waiting to be booked.",
+        "waiting": "{count, plural, =1 {1 more} other {# more}} to book.",
+        "toList": "To bookkeeping"
+      }
+    }
   },
   "mutations": {
     "transition": {
@@ -201,7 +217,6 @@
     "savedChanges": "Your changes were saved.",
     "savedDraft": "Draft saved.",
     "submitted": "The expense was submitted for approval.",
-    "receiptRequired": "Upload the receipt in the panel beside this before continuing",
     "description": "Description",
     "purchaseDate": "Purchase date",
     "date": "Date",
@@ -211,13 +226,11 @@
     "dateTooLateCard": "Was it the section card you used? Change the payment type at the top and no deadline applies.",
     "dateTooLateWaiver": "You can apply for a waiver: finish the expense, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
     "amount": "Amount",
-    "returnMeans": "{amount} comes back to the section.",
     "distribution": "Cost distribution",
     "paymentTypeFixed": "This expense accounts for this bank transaction, so the payment type is fixed. To claim your own money back instead, start a new expense without picking the transaction.",
     "documents": "Documents",
-    "removeDocument": "Remove the document",
     "removeDocumentFailed": "Could not remove the document",
-    "matchTitle": "Match against a bank transaction",
+    "matchTitle": "Which card purchase was it?",
     "reviewTitle": "Review and submit",
     "match": "Match",
     "paymentType": "Payment type",
@@ -237,6 +250,20 @@
       "card": "A purchase made with the section's card.",
       "cardReturn": "Money back to the card, a refund for instance.",
       "own": "You paid yourself and get the money back."
+    },
+    "reorderFailed": "Could not save the order of the documents",
+    "duplicateLead": "{count, plural, one {You already have an expense with the same amount and nearly the same date:} other {You already have expenses with the same amount and nearly the same date:}}",
+    "duplicateDetail": "({date}, {amount})",
+    "duplicateUntitled": "Untitled",
+    "duplicateHint": "If it is the same purchase there is no need to hand it in again. If it is a different one, carry on as usual.",
+    "missingLabel": "Missing",
+    "missing": {
+      "receipt": "receipt",
+      "title": "description",
+      "date": "date",
+      "amount": "amount",
+      "costCenter": "cost centre",
+      "match": "card purchase to match"
     }
   },
   "field": {
@@ -257,23 +284,23 @@
     "mileageHint": "You drove your own car on the section's errand"
   },
   "match": {
-    "lead": "Pick the purchase on the section card. Only transactions of exactly {amount} can be picked.",
-    "showOthers": "Show other transactions ({count})",
-    "hideOthers": "Hide other transactions",
+    "hideOthers": "Hide other card purchases",
     "search": "Search by text or amount",
-    "suggested": "Suggested",
-    "overBy": "{amount} kr more than the claim",
-    "underBy": "{amount} kr less than the claim",
-    "isIncoming": "money in, only settles a return",
-    "isOutgoing": "money out, only settles a purchase",
-    "taken": "already claimed by another expense",
-    "takenBy": "already claimed by {reference}",
+    "taken": "Already accounted for",
+    "takenBy": "Already on {reference}",
     "noneAtAll": "There are no transactions on your section card yet.",
     "noneMatchSearch": "No transaction matches that search.",
-    "stuckTitle": "Can't find the purchase?",
-    "stuckWithRows": "None of the rows above can be picked. If the purchase is listed with a different amount, it is the amount you typed that needs correcting. If it is listed as already claimed, somebody else has taken it: talk to them or to the treasurer.",
-    "stuckNoRows": "The statement has probably not been imported yet. Ask the treasurer to import the latest bank file under Bank & matching.",
-    "stuckDraft": "A card purchase cannot be submitted without a match. Save it as a draft and come back when the transaction is there."
+    "change": "Change",
+    "noneFits": "No card purchase of {amount} yet.",
+    "showAll": "Show all card purchases ({count})",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "useAmount": "Use {amount}",
+    "helpLabel": "How matching works",
+    "help1": "Pick the purchase on your section card. Only purchases of exactly the expense's amount can be picked.",
+    "help2": "A purchase already accounted for on another expense cannot be picked again. Contact whoever has it, or the treasurer.",
+    "help3": "If the purchase shows a different amount, the amount was probably mistyped. Use the button on the row to take the bank's amount.",
+    "help4": "Purchases appear once the treasury has imported the bank statement. If yours is not there yet, save as a draft and come back."
   },
   "reminders": {
     "title": "Send reminder",

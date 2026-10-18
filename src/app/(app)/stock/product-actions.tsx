@@ -47,13 +47,16 @@ const int = (s: string): number => {
 export function PurchaseDialog({
   product,
   onClose,
+  initialUnits,
 }: {
   product: StockLevelDto;
   onClose: () => void;
+  /** Filled in, when it comes from a stocktake that found this many more. */
+  initialUnits?: number;
 }) {
   const t = useTranslations("stock");
   const { pending, mutate } = useMutation();
-  const [units, setUnits] = useState("");
+  const [units, setUnits] = useState(initialUnits ? String(initialUnits) : "");
   const [occurredAt, setOccurredAt] = useState(today());
   const [note, setNote] = useState("");
 
@@ -142,9 +145,16 @@ export function PurchaseDialog({
 export function StocktakeDialog({
   product,
   onClose,
+  onPurchaseInstead,
 }: {
   product: StockLevelDto;
   onClose: () => void;
+  /**
+   * Leave the count for a purchase of this many. Offered when the count finds
+   * more sealed than the log, which is far more often a delivery somebody is
+   * booking in the wrong place than bottles the cellar had lost.
+   */
+  onPurchaseInstead?: (units: number) => void;
 }) {
   const t = useTranslations("stock");
   const { pending, mutate } = useMutation();
@@ -233,6 +243,22 @@ export function StocktakeDialog({
               })
             : t("stocktake.agrees")}
         </Notice>
+
+        {/* More sealed than the log: was it bought? A stocktake that "finds"
+            a delivery books it at the shelf's average, often nothing, and
+            leaves it out of the restaurangrapport's bought-in volume. Asked
+            here, with the way to the right form one press away, rather than
+            discovered later as a shelf worth nothing. */}
+        {diffSealed > 0 && onPurchaseInstead && (
+          <Notice>
+            <p>{t("stocktake.wasBought", { count: diffSealed })}</p>
+            <div className="mt-2">
+              <Button size="sm" variant="secondary" onClick={() => onPurchaseInstead(diffSealed)}>
+                {t("stocktake.purchaseInstead")}
+              </Button>
+            </div>
+          </Notice>
+        )}
 
         <Field label={t("field.note")} hint={t("stocktake.noteHint")} requirement="optional">
           <Input value={note} onChange={(e) => setNote(e.target.value)} />

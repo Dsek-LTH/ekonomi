@@ -5,18 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useReturnTo } from "@/components/shell/route-history";
 import { useTranslations } from "next-intl";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { usePhone } from "@/lib/ui/media";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { AmountInput } from "@/components/ui/amount-input";
 import { PageShell } from "@/components/page-shell";
 import { wizardChrome } from "./wizard-chrome";
-import { Button } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
-import { DetailList, DetailRow } from "@/components/ui/detail-list";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
-import { Stepper } from "@/components/ui/stepper";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
-import { IconCheck, IconX } from "@/components/ui/icons";
 import {
   REIMBURSEMENT_DEADLINE_DAYS,
   isLateReimbursement,
@@ -39,8 +35,13 @@ import type {
   ReceiptSummary,
 } from "@/lib/domain/types";
 import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
-import { MatchStep } from "./match-step";
-import { optionCard, StepFooter } from "./step-chrome";
+import { MatchSection } from "./match-step";
+import { MatchHelp } from "@/components/transaction-picker";
+import { likelyDuplicates, type ExpenseFingerprint } from "@/lib/domain/duplicates";
+import { Notice } from "@/components/ui/notice";
+import Link from "next/link";
+import { FormSection, optionCard } from "./step-chrome";
+import { ActionBar } from "@/components/action-bar";
 import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
 import { uid } from "@/lib/ui/utils";
 import { underlagCaption } from "@/lib/expense/document-url";
@@ -49,10 +50,6 @@ import { useSelectOnce } from "@/lib/ui/use-select-once";
 import { AllocationEditor, makeRow } from "@/components/allocation-editor";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import type { AllocationRow } from "@/components/allocation-editor";
-
-// The step keys, named by `expenses.wizard.step.<key>` in messages. The match
-// step only exists for card purchases; a reimbursement goes straight from
-// review to submit.
 
 /**
  * Which way the money goes.
@@ -93,6 +90,7 @@ export default function NewExpenseClient({
   holdsCard,
   payoutClearing,
   payoutAccount,
+  ownExpenses,
   existing,
 }: {
   costCenters: CostCenter[];
@@ -100,10 +98,13 @@ export default function NewExpenseClient({
   holdsCard: boolean;
   payoutClearing: string;
   payoutAccount: string;
+  /** The submitter's recent utlägg, for the duplicate warning. */
+  ownExpenses: ExpenseFingerprint[];
   existing?: Expense;
 }) {
   const returnTo = useReturnTo();
   const t = useTranslations("expenses.wizard");
+  const phone = usePhone();
   const tReceipt = useTranslations("receipt");
   const { date } = useFormat();
   // The description opens focused. See the field on the first step.
@@ -122,7 +123,6 @@ export default function NewExpenseClient({
     const id = searchParams.get("txn");
     return id ? bankTransactions.find((t) => t.id === id) : undefined;
   })();
-  const [step, setStep] = useState(0);
   /**
    * Everything the wizard is holding that the server has not been told about.
    *
@@ -265,14 +265,6 @@ export default function NewExpenseClient({
   const setAllocations = (value: AllocationRow[]) => patchDraft("allocations", value);
   const setMatchId = (value: string | null) => patchDraft("matchId", value);
 
-  // The step flow depends on payment type: a reimbursement skips "Matcha".
-  // Uploading isn't among them. The receipt panel beside the form is where a
-  // receipt goes and where it then stays, so it needs no step of its own.
-  const stepKeys = paymentType === "CARD"
-    ? (["review", "match", "submit"] as const)
-    : (["review", "submit"] as const);
-  const stepLabels = stepKeys.map((k) => t(`step.${k}`));
-  const cur = stepKeys[step] ?? stepKeys[stepKeys.length - 1];
   // One busy scope for the whole wizard: saving and submitting, and the
   // receipt upload inside them, block the same footer.
   const { pending, mutate } = useMutation();
@@ -310,6 +302,12 @@ export default function NewExpenseClient({
   const [pendingFiles, setPendingFiles] = useState<
     { id: string; file: File; previewUrl: string }[]
   >([]);
+  // The documents in the order the reader put them, by key: a stored one's
+  // receipt id, a waiting one's local id. Only what has been moved is in here
+  // in any meaningful sense; anything missing goes after it, in the order it
+  // arrived (see `documents` below), so adding a file needs no bookkeeping.
+  const [order, setOrder] = useState<string[]>([]);
+
   // Kept current without being a dependency, so the unmount cleanup below
   // sees every preview URL ever created under this draft rather than only
   // the ones present when the effect last ran.
@@ -392,6 +390,23 @@ export default function NewExpenseClient({
   // were the same thing while the upload happened on drop; they aren't now.
   const hasReceipt = uploadedReceipts.length > 0 || pendingFiles.length > 0;
 
+  // Every document, stored and waiting, in the reader's order: the ones they
+  // have placed by `order`, the rest after them, stored first and then
+  // waiting, each in the order it arrived. A reader who has just added a
+  // second document expects to find it behind the first, not in front of it.
+  const docs = useMemo(() => {
+    const all = [
+      ...uploadedReceipts.map((r) => ({ kind: "uploaded" as const, key: r.id, receipt: r })),
+      ...pendingFiles.map((p) => ({ kind: "pending" as const, key: p.id, pending: p })),
+    ];
+    const rank = new Map(order.map((k, i) => [k, i]));
+    return all
+      .map((d, i) => ({ d, r: rank.get(d.key) ?? order.length + i }))
+      .sort((a, b) => a.r - b.r)
+      .map(({ d }) => d);
+  }, [uploadedReceipts, pendingFiles, order]);
+
+
   // Put every waiting document in the archive. Part of saving now, so it can
   // fail the save: an utlägg whose document didn't make it is not saved but
   // half saved, and the next attempt tries the upload again against the row
@@ -399,7 +414,12 @@ export default function NewExpenseClient({
   // single-file upload used to: the ones before it are already stored (and
   // dropped from `pendingFiles`), and a retry only has to send the rest.
   async function writeReceipts(id: string): Promise<boolean> {
-    for (const pending of pendingFiles) {
+    // In the order shown, so the new ones are appended in that order, and the
+    // receipt id each waiting file became, for the order saved after them.
+    const storedAs = new Map<string, string>();
+    for (const doc of docs) {
+      if (doc.kind !== "pending") continue;
+      const pending = doc.pending;
       const fd = new FormData();
       fd.append("file", pending.file);
       const receipt = await mutate<ReceiptSummary>(`/api/expenses/${id}/receipts`, {
@@ -409,13 +429,29 @@ export default function NewExpenseClient({
         refresh: false,
       });
       if (!receipt) return false;
+      storedAs.set(pending.id, receipt.id);
       setUploadedReceipts((rs) => [...rs, receipt]);
+      setOrder((o) => o.map((k) => (k === pending.id ? receipt.id : k)));
       URL.revokeObjectURL(pending.previewUrl);
       setPendingFiles((files) => files.filter((f) => f.id !== pending.id));
       // And the browser's copy is spent: the file is somewhere it can be read
       // back from, and restoring it over a later claim would attach the wrong
       // document to it.
       void dropKeptFile(draftKey, pending.id);
+    }
+    // Then the order, for the whole set. A new file lands last on the server
+    // whatever the reader did with it here, and a stored one moved on this
+    // form has only moved here until this is sent.
+    if (docs.length > 1) {
+      const ids = docs.map((d) => (d.kind === "pending" ? storedAs.get(d.key)! : d.key));
+      const ok = await mutate(`/api/expenses/${id}/receipts/order`, {
+        key: "save",
+        method: "PUT",
+        body: { ids },
+        error: t("reorderFailed"),
+        refresh: false,
+      });
+      if (ok === null) return false;
     }
     return true;
   }
@@ -441,14 +477,41 @@ export default function NewExpenseClient({
   // lib/domain/matching.ts, where it can be tested; see `matchCandidates` for
   // why `grossSEK` and not the form's own figure.
   const candidates = useMemo(
-    () => matchCandidates(bankTransactions, grossSEK, matchId),
-    [bankTransactions, grossSEK, matchId],
+    () => matchCandidates(bankTransactions, grossSEK, matchId, form.purchaseDate),
+    [bankTransactions, grossSEK, matchId, form.purchaseDate],
   );
 
   // A match only counts while it still cancels the amount out. Editing the
   // amount afterwards silently invalidates it, and the server rejects it too.
   const matchedTxn = bankTransactions.find((t) => t.id === matchId);
   const matchDone = !!matchedTxn && cancelsOut(matchedTxn.amount, grossSEK);
+
+  // Where exactly one card purchase fits, it is the answer, so it is picked
+  // for you: the section folds to that one line, with a way to change it. Also
+  // when the amount changes under a match that no longer fits and another now
+  // does. Never over a match that still fits, which someone may have chosen.
+  const onlyFit = useMemo(() => {
+    const fits = candidates.filter((c) => c.selectable);
+    return fits.length === 1 ? fits[0].txn.id : null;
+  }, [candidates]);
+  useEffect(() => {
+    if (paymentType !== "CARD" || matchDone || !onlyFit) return;
+    setMatchId(onlyFit);
+    // setMatchId is rebuilt every render and changes nothing a rerun needs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentType, matchDone, onlyFit]);
+
+  // The fix for an amount typed wrong: take the bank's, and pick the row.
+  function takeBankAmount(txn: BankTransaction) {
+    const gross = Math.abs(txn.amount).toFixed(2).replace(".", ",");
+    setDraft((d) => ({
+      ...d,
+      form: { ...d.form, gross },
+      matchId: txn.id,
+      // A single row is the whole amount, so it follows it, as typing does.
+      allocations: d.allocations.length === 1 ? [{ ...d.allocations[0], amount: gross }] : d.allocations,
+    }));
+  }
   // The date field is a mask, so it can be left half-typed ("2026", "2026-07").
   // Empty is a draft in progress; a partial date is an error to point at.
   const dateComplete = isCompleteDate(form.purchaseDate);
@@ -471,6 +534,21 @@ export default function NewExpenseClient({
   // behind it. What the submitter can now do is finish the utlägg and leave it
   // as a draft, which is the thing a dispens is asked for.
   const dateTooLate = isLateReimbursement(form.purchaseDate, paymentType);
+
+  // The same receipt handed in twice: the same amount, near the same day, among
+  // the submitter's own. Warned about, never refused; see lib/domain/duplicates.
+  // Once the date is whole, so a half-typed one does not flash a match.
+  const duplicates = useMemo(
+    () =>
+      dateComplete
+        ? likelyDuplicates(ownExpenses, {
+            grossAmount: grossSEK,
+            purchaseDate: form.purchaseDate,
+            excludeId: draftId,
+          })
+        : [],
+    [ownExpenses, grossSEK, form.purchaseDate, draftId, dateComplete],
+  );
   // What to say about it, in the order the reader should try things: the rule,
   // then the cheap fix, then the expensive one.
   //
@@ -487,16 +565,6 @@ export default function NewExpenseClient({
   ]
     .filter(Boolean)
     .join(" ");
-  // Enough to move on: a receipt, an amount (either sign, but not zero), a
-  // whole date that has already happened and is still in time, and a cost
-  // centre on every row.
-  const filledForm =
-    hasReceipt &&
-    magnitude !== 0 &&
-    dateComplete &&
-    !dateInFuture &&
-    allocations.length > 0 &&
-    allocations.every((a) => a.costCenterCode);
   // A submitted/approved expense can be edited but not re-submitted from here.
   const submittable = !existing || isSubmittable(existing.status);
 
@@ -658,29 +726,48 @@ export default function NewExpenseClient({
 
   const chrome = wizardChrome({ existing, t });
 
-  // Every document the panel has to show, stored first (oldest first, the
-  // upload order) and whatever is still only in this browser after them: a
-  // reader who has just added a second document expects to find it behind
-  // the first, not in front of it. Captioned the same way a saved utlägg's
+  // Every document the panel has to show, in the reader's order (see `docs`).
+  // Captioned the same way a saved utlägg's
   // are (see underlagCaption): a submitter should not learn a new word for
   // the same thing between filling this in and reading it back on the
   // detail page, and the merged PDF Fortnox gets uses the same numbering.
-  const receiptFiles = [
-    ...uploadedReceipts.map((r) => ({
-      src: `/api/receipts/${r.id}`,
-      mimeType: r.mimeType,
-      filename: r.filename,
-    })),
-    ...pendingFiles.map((p) => ({
-      src: p.previewUrl,
-      mimeType: p.file.type,
-      filename: p.file.name,
-    })),
-  ];
+  const receiptFiles = docs.map((d) =>
+    d.kind === "uploaded"
+      ? { src: `/api/receipts/${d.receipt.id}`, mimeType: d.receipt.mimeType, filename: d.receipt.filename }
+      : { src: d.pending.previewUrl, mimeType: d.pending.file.type, filename: d.pending.file.name },
+  );
   const documents = receiptFiles.map((d, i) => ({
     ...d,
     label: underlagCaption(tReceipt("underlagLabel"), i, receiptFiles.length, d.filename),
   }));
+
+  // What still has to be filled in before this can be sent, by name, for the
+  // action bar. In the order the page asks for them.
+  const missing = [
+    !hasReceipt && t("missing.receipt"),
+    !form.title.trim() && t("missing.title"),
+    !dateComplete && t("missing.date"),
+    magnitude === 0 && t("missing.amount"),
+    (allocations.length === 0 || allocations.some((a) => !a.costCenterCode)) &&
+      t("missing.costCenter"),
+    paymentType === "CARD" && !matchDone && t("missing.match"),
+  ].filter((m): m is string => Boolean(m));
+
+  // Whose attest it goes to, for the action bar: the result units its cost
+  // centres belong to.
+  const resultUnits = [
+    ...new Set(
+      allocations
+        .map((a) => costCenters.find((c) => c.code === a.costCenterCode)?.resultUnit)
+        .filter(Boolean),
+    ),
+  ].join(", ");
+
+  function removeDocument(key: string) {
+    const d = docs.find((x) => x.key === key);
+    if (d?.kind === "uploaded") void removeUploadedReceipt(key);
+    else removePendingFile(key);
+  }
 
   return (
     <PageShell
@@ -688,8 +775,6 @@ export default function NewExpenseClient({
       back={chrome.back}
       width="content"
     >
-      <Stepper steps={stepLabels} current={step} />
-
       {/* The panel takes documents as well as showing them: with none
           uploaded yet it stands open beside the form as the dropzone, which
           is why this wizard has no upload step of its own. Once one is
@@ -705,6 +790,14 @@ export default function NewExpenseClient({
         onFile={addFile}
         uploading={saving}
         multiple
+        // The thumbnails along the panel's foot: the one place the documents
+        // are put in order and taken off. See components/receipt/document-strip.
+        arrange={{
+          keys: docs.map((d) => d.key),
+          onReorder: setOrder,
+          onRemove: removeDocument,
+          disabled: saving,
+        }}
         uploadCopy={{
           addLabel: tReceipt("addDocument"),
           lead: tReceipt("dropzoneMany"),
@@ -713,343 +806,267 @@ export default function NewExpenseClient({
         }}
       />
 
-      {/* Step 1: the details, beside the receipt */}
-      {cur === "review" && (
-        <Card>
-          <CardBody className="space-y-5">
-            {/* The first thing asked for, so the first thing focused: this
-                step opens with the receipt beside it and one question to
-                answer, and reaching for the mouse to answer it is a step
-                nobody needs. Selected as well as focused, which only matters
-                when an existing utlägg is being edited, because then the title is
-                already there and typing should replace it. */}
-            {/* Before anything else, because it is the question everything
-                below it depends on: what the figures mean, whether the 60-day
-                deadline applies, whether a payout account is wanted, and
-                whether this wizard has a Matcha step at all.
+      <div className="space-y-6">
+        {/* One card, no headings: the fields say what they are, and a
+            heading over every two of them was height spent saying it again. */}
+        <FormSection>
+          {/* The first thing asked for, so the first thing focused: this
+              step opens with the receipt beside it and one question to
+              answer, and reaching for the mouse to answer it is a step
+              nobody needs. Selected as well as focused, which only matters
+              when an existing utlägg is being edited, because then the title is
+              already there and typing should replace it. */}
+          {/* Before anything else, because it is the question everything
+              below it depends on: what the figures mean, whether the 60-day
+              deadline applies, whether a payout account is wanted, and
+              whether this wizard has a Matcha step at all.
 
-                One group, not two. The direction and the payment type were
-                asked separately, at the top and the bottom of this same card,
-                and they are one question with three answers. Split, the date
-                three fields down was being judged against a payment type
-                nobody had reached yet: a four-month-old card purchase came up
-                as "too old to file" and Continue stayed dead until you scrolled
-                past the fördelning to change it.
+              One group, not two. The direction and the payment type were
+              asked separately, at the top and the bottom of this same card,
+              and they are one question with three answers. Split, the date
+              three fields down was being judged against a payment type
+              nobody had reached yet: a four-month-old card purchase came up
+              as "too old to file" and Continue stayed dead until you scrolled
+              past the fördelning to change it.
 
-                Not asked at all where there is one answer. Somebody with no
-                card can only be laying out their own money, and a lone card
-                nobody chose reads as a group that is broken. */}
-            {claimOptions.length > 1 && (
-              <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
-                {/* A container query, not a viewport one, because the width
-                    these three have is not the window's. The receipt panel is
-                    ~520px of it and the nav rail another 64, so at 941px with
-                    the panel open this column is about 320px: `sm:grid-cols-3`
-                    was true and there were three 100px cards in it. `@xl` is
-                    the column being wide enough for three, whatever the window
-                    is doing and whether the panel is open or shut.
+              Not asked at all where there is one answer. Somebody with no
+              card can only be laying out their own money, and a lone card
+              nobody chose reads as a group that is broken. */}
+          {claimOptions.length > 1 && (
+            <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
+              {/* A container query, not a viewport one, because the width
+                  these three have is not the window's. The receipt panel is
+                  ~520px of it and the nav rail another 64, so at 941px with
+                  the panel open this column is about 320px: `sm:grid-cols-3`
+                  was true and there were three 100px cards in it. `@xl` is
+                  the column being wide enough for three, whatever the window
+                  is doing and whether the panel is open or shut.
 
-                    42rem, not the 36 that three cards technically fit in: at 36
-                    each one is 184px wide and "Sektionskort, retur" is most of
-                    that. Stacked is never broken, only taller, so the threshold
-                    is where three read comfortably rather than where they last
-                    fit.
+                  42rem, not the 36 that three cards technically fit in: at 36
+                  each one is 184px wide and "Sektionskort, retur" is most of
+                  that. Stacked is never broken, only taller, so the threshold
+                  is where three read comfortably rather than where they last
+                  fit.
 
-                    The same trick the fördelning below already uses. */}
-                <div className="@container">
-                  <div className="grid gap-3 @2xl:grid-cols-3">
-                    {claimOptions.map((c) => {
-                      // The icon in its own colour, which is the same mark the
-                      // list will show this claim with afterwards. Learning it
-                      // here is the point: choosing (or, locked, simply seeing)
-                      // is the one moment they are side by side with their
-                      // meanings spelled out.
-                      //
-                      // `min-w-0` on the label, so a long one wraps inside the
-                      // card rather than pushing the icon out of it.
-                      const content = (
-                        <>
-                          <span className="flex items-start gap-2">
-                            <PaymentIcon
-                              type={CLAIMS[c].paymentType}
-                              className="mt-0.5 size-4 shrink-0"
-                            />
-                            <span className="min-w-0 text-sm font-medium">
-                              {t(`claimOption.${c}`)}
-                            </span>
+                  The same trick the fördelning below already uses. */}
+              <div className="@container">
+                <div className="grid gap-3 @2xl:grid-cols-3">
+                  {claimOptions.map((c) => {
+                    // The icon in its own colour, which is the same mark the
+                    // list will show this claim with afterwards. Learning it
+                    // here is the point: choosing (or, locked, simply seeing)
+                    // is the one moment they are side by side with their
+                    // meanings spelled out.
+                    //
+                    // `min-w-0` on the label, so a long one wraps inside the
+                    // card rather than pushing the icon out of it.
+                    const content = (
+                      <>
+                        <span className="flex items-start gap-2">
+                          <PaymentIcon
+                            type={CLAIMS[c].paymentType}
+                            className="mt-0.5 size-4 shrink-0"
+                          />
+                          <span className="min-w-0 text-sm font-medium">
+                            {t(`claimOption.${c}`)}
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted">
-                            {t(`claimHint.${c}`)}
-                          </span>
-                        </>
-                      );
-                      // Opened from one purchase there is nothing to press:
-                      // the money already left that way, and the other two
-                      // cards are shown, muted, only so the reader can see
-                      // what this one wasn't.
-                      return locked ? (
-                        <div key={c} className={optionCard(claim === c, true)}>
-                          {content}
-                        </div>
-                      ) : (
-                        <button
-                          key={c}
-                          onClick={() => chooseClaim(c)}
-                          className={optionCard(claim === c)}
-                          aria-pressed={claim === c}
-                        >
-                          {content}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {t(`claimHint.${c}`)}
+                        </span>
+                      </>
+                    );
+                    // Opened from one purchase there is nothing to press:
+                    // the money already left that way, and the other two
+                    // cards are shown, muted, only so the reader can see
+                    // what this one wasn't.
+                    return locked ? (
+                      <div key={c} className={optionCard(claim === c, true)}>
+                        {content}
+                      </div>
+                    ) : (
+                      <button
+                        key={c}
+                        onClick={() => chooseClaim(c)}
+                        className={optionCard(claim === c)}
+                        aria-pressed={claim === c}
+                      >
+                        {content}
+                      </button>
+                    );
+                  })}
                 </div>
-                {locked && (
-                  <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
-                )}
-              </FieldGroup>
-            )}
+              </div>
+              {locked && (
+                <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
+              )}
+            </FieldGroup>
+          )}
 
-            <Field label={t("description")} requirement="required">
-              <Input
-                autoFocus
-                onFocus={selectOnce}
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+          <Field label={t("description")} requirement="required">
+            <Input
+              // Not on a phone. There it opens no keyboard (iOS will not
+              // raise one without a tap) and only puts a caret in a field the
+              // receipt panel is covering, while the page reads as somebody
+              // typing and puts the receipt button away.
+              autoFocus={!phone}
+              onFocus={selectOnce}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </Field>
+
+          {/* Two up at every width, not only from sm. A date and an amount
+              are short fields, ten characters and eight, and a column of
+              full-width boxes on a phone makes a four-field form look like a
+              long one and pushes the fördelning below the fold. `gap-3`
+              rather than `gap-5` while they are sharing 329px. */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-5">
+            <Field
+              label={t("purchaseDate")}
+              requirement="required"
+              error={
+                dateIncomplete
+                  ? t("dateIncomplete")
+                  : dateInFuture
+                    ? t("dateFuture")
+                    : undefined
+              }
+              // A hint rather than an error: the date is a real day and the
+              // form accepts it. What it cannot do is be sent without a
+              // dispens, and marking the field invalid would be saying the
+              // submitter typed something wrong when they typed the truth.
+              hint={dateTooLate ? tooLateHint : undefined}
+            >
+              <DateInput
+                value={form.purchaseDate}
+                onChange={(e) =>
+                  setForm({ ...form, purchaseDate: e.target.value })
+                }
               />
             </Field>
+            {/* The keypad, the guard and the separator all live in
+                AmountInput now, including the sign button, which is the only
+                way to reach a negative amount on a phone: no mobile numeric
+                keypad has a minus key. A return is the same utlägg with the
+                sign flipped, so it is a case this field has to allow. */}
+            {/* FieldGroup, not Field: the label carries a control of its
+                own, and a <label> forwards a click anywhere in its box to
+                the first labelable element inside it, which here would be
+                one of the two direction buttons.
 
-            {/* Two up at every width, not only from sm. A date and an amount
-                are short fields, ten characters and eight, and a column of
-                full-width boxes on a phone makes a four-field form look like a
-                long one and pushes the fördelning below the fold. `gap-3`
-                rather than `gap-5` while they are sharing 329px. */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-5">
-              <Field
-                label={t("purchaseDate")}
-                requirement="required"
-                error={
-                  dateIncomplete
-                    ? t("dateIncomplete")
-                    : dateInFuture
-                      ? t("dateFuture")
-                      : undefined
-                }
-                // A hint rather than an error: the date is a real day and the
-                // form accepts it. What it cannot do is be sent without a
-                // dispens, and marking the field invalid would be saying the
-                // submitter typed something wrong when they typed the truth.
-                hint={dateTooLate ? tooLateHint : undefined}
-              >
-                <DateInput
-                  value={form.purchaseDate}
-                  onChange={(e) =>
-                    setForm({ ...form, purchaseDate: e.target.value })
+                The direction rides the label's line rather than standing
+                above the box, so this cell is exactly as tall as the date
+                beside it. Which way the money goes is not a minus typed into
+                the figure: no phone number pad has the key, and a word says
+                it where a character has to be noticed. */}
+            <Field label={t("amount")} requirement="required">
+              <AmountInput
+                value={form.gross}
+                onChange={(gross: string) => {
+                  setForm({ ...form, gross });
+                  // A single row is the whole amount, so it follows it.
+                  if (allocations.length === 1) {
+                    setAllocations([{ ...allocations[0], amount: gross }]);
                   }
-                />
-              </Field>
-              {/* The keypad, the guard and the separator all live in
-                  AmountInput now, including the sign button, which is the only
-                  way to reach a negative amount on a phone: no mobile numeric
-                  keypad has a minus key. A return is the same utlägg with the
-                  sign flipped, so it is a case this field has to allow. */}
-              {/* FieldGroup, not Field: the label carries a control of its
-                  own, and a <label> forwards a click anywhere in its box to
-                  the first labelable element inside it, which here would be
-                  one of the two direction buttons.
-
-                  The direction rides the label's line rather than standing
-                  above the box, so this cell is exactly as tall as the date
-                  beside it. Which way the money goes is not a minus typed into
-                  the figure: no phone number pad has the key, and a word says
-                  it where a character has to be noticed. */}
-              <Field label={t("amount")} requirement="required">
-                <AmountInput
-                  value={form.gross}
-                  onChange={(gross: string) => {
-                    setForm({ ...form, gross });
-                    // A single row is the whole amount, so it follows it.
-                    if (allocations.length === 1) {
-                      setAllocations([{ ...allocations[0], amount: gross }]);
-                    }
-                  }}
-                />
-                {/* What the unusual answer means, in the words somebody would
-                    use for it. Only when it is chosen, so the ordinary utlägg
-                    carries no extra line. */}
-                {/* `success`, like the figure it describes: the sentence says
-                    money is coming back to the section, which is the one thing
-                    on this form that is not a cost. See ui/amount.tsx. */}
-                {direction === "return" && magnitude > 0 && (
-                  <p className="mt-1 text-xs text-success">
-                    {t("returnMeans", { amount: formatSEK(magnitude) })}
-                  </p>
-                )}
-              </Field>
-            </div>
-
-            <FieldGroup label={t("distribution")} requirement="required">
-              <AllocationEditor
-                costCenters={selectableCostCenters}
-                grossAmount={magnitude}
-                value={allocations}
-                onChange={setAllocations}
+                }}
               />
-            </FieldGroup>
+            </Field>
+          </div>
 
-            {/* The receipt is a condition like any other, and the one that
-                isn't in this card. Without saying so, Fortsätt is a dead
-                button with its reason off at the edge of the screen. */}
-            {!hasReceipt && (
-              <p className="text-xs text-warning">{t("receiptRequired")}</p>
-            )}
-            {/* The panel shows every document but has nowhere to remove one
-                from; this is that. From the first document, not the second.
-                It used to wait for two, on the theory that a lone one was
-                swapped with the panel's "replace" button. That button adds
-                now, so the last document had no way off the form: it stayed
-                kept in the browser, came back on every visit, and reappeared
-                in this list as soon as a second one was added. Removing the
-                last one empties the panel back into the dropzone.
-
-                The X is dead while saving. `writeReceipts` works through the
-                list as it stood when the save began, so a file removed mid-save
-                vanished from here and was uploaded anyway. `saving` also covers
-                a removal already on its way to the server, so a second click
-                cannot send the same delete twice. */}
-            {uploadedReceipts.length + pendingFiles.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted">{t("documents")}</p>
-                <ul className="space-y-1">
-                  {uploadedReceipts.map((r) => (
-                    <li
-                      key={r.id}
-                      className="flex items-center justify-between gap-2 rounded-control bg-surface px-3 py-1.5 text-sm"
+          {duplicates.length > 0 && (
+            <Notice>
+              <p>{t("duplicateLead", { count: duplicates.length })}</p>
+              <ul className="mt-1 space-y-0.5">
+                {duplicates.map((d) => (
+                  <li key={d.id}>
+                    <Link
+                      href={`/expenses/${d.id}`}
+                      target="_blank"
+                      className="font-medium text-accent hover:underline"
                     >
-                      <span className="min-w-0 truncate">{r.filename}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeUploadedReceipt(r.id)}
-                        aria-label={t("removeDocument")}
-                        disabled={saving}
-                        className="shrink-0 text-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-                      >
-                        <IconX className="size-4" />
-                      </button>
-                    </li>
-                  ))}
-                  {pendingFiles.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-control bg-surface px-3 py-1.5 text-sm"
-                    >
-                      <span className="min-w-0 truncate">{p.file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removePendingFile(p.id)}
-                        aria-label={t("removeDocument")}
-                        disabled={saving}
-                        className="shrink-0 text-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-                      >
-                        <IconX className="size-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                      {d.reference ? `${d.reference} – ` : ""}
+                      {d.title || t("duplicateUntitled")}
+                    </Link>
+                    <span className="text-muted">
+                      {" "}
+                      {t("duplicateDetail", {
+                        date: date(d.purchaseDate),
+                        amount: formatSEK(d.grossAmount),
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-muted">{t("duplicateHint")}</p>
+            </Notice>
+          )}
+
+          <FieldGroup label={t("distribution")} requirement="required">
+            <AllocationEditor
+              costCenters={selectableCostCenters}
+              grossAmount={magnitude}
+              value={allocations}
+              onChange={setAllocations}
+            />
+          </FieldGroup>
+        </FormSection>
+
+        {/* A card purchase is settled by the bank row it was, so which one is
+            the last thing asked. It was a step of its own; it is a section of
+            the same page now, and only there for a card. */}
+        {paymentType === "CARD" && (
+          <FormSection title={t("matchTitle")} hint={<MatchHelp />}>
+            <MatchSection
+              candidates={candidates}
+              matchId={matchId}
+              onPick={setMatchId}
+              grossSEK={grossSEK}
+              onUseAmount={takeBankAmount}
+            />
+          </FormSection>
+        )}
+      </div>
+
+      <ActionBar
+        summary={
+          <>
+            <span className="font-medium">
+              <Amount value={grossSEK} signed />
+            </span>
+            <PaymentTag type={paymentType} />
+            {resultUnits && (
+              <span className="text-xs text-muted">{t("goesTo", { resultUnits })}</span>
             )}
-            {/* No back: this is the first step now. */}
-            <StepFooter onSave={saveDraft} saveLabel={saveLabel} saveDisabled={!canPersist} saving={exit === "draft"}>
-              <Button disabled={!filledForm} onClick={() => setStep(1)}>{t("continue")}</Button>
-            </StepFooter>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Step 2: match (card purchases only) */}
-      {cur === "match" && (
-        <MatchStep
-          candidates={candidates}
-          matchId={matchId}
-          onPick={setMatchId}
-          grossSEK={grossSEK}
-          onBack={() => setStep(0)}
-          onSave={saveDraft}
-          saveLabel={saveLabel}
-          saveDisabled={!canPersist}
-          saving={exit === "draft"}
-          canContinue={matchDone}
-          onContinue={() => setStep(2)}
-        />
-      )}
-
-      {/* Final step: review and submit */}
-      {cur === "submit" && (
-        <Card>
-          <CardBody className="space-y-5">
-            <h2 className="text-base font-semibold">{t("reviewTitle")}</h2>
-            <DetailList>
-              <DetailRow label={t("description")} value={form.title} />
-              <DetailRow label={t("date")} value={date(form.purchaseDate)} />
-              <DetailRow label={t("amount")} value={<Amount value={grossSEK} signed />} />
-              {allocations.map((a, i) => (
-                <DetailRow
-                  key={a.id}
-                  label={i === 0 ? t("distribution") : ""}
-                  value={<>{a.costCenterCode} – <Amount value={signedAllocations[i].value} signed /></>}
-                />
-              ))}
-              <DetailRow label={t("paymentType")} value={<PaymentTag type={paymentType} />} />
-              {paymentType === "CARD" ? (
-                <DetailRow
-                  label={t("match")}
-                  value={bankTransactions.find((tx) => tx.id === matchId)?.description ?? "–"}
-                />
-              ) : (
-                <DetailRow
-                  label={t("payoutTo")}
-                  value={
-                    payoutClearing && payoutAccount
-                      ? `${payoutClearing} – ${payoutAccount}`
-                      : t("payoutMissing")
-                  }
-                />
-              )}
-            </DetailList>
-
-            <div className="flex items-center gap-2 rounded-control bg-surface px-3.5 py-2.5 text-sm text-muted">
-              <IconCheck className="size-4 shrink-0 text-success" />
-              {t("goesTo", {
-                resultUnits:
-                  [...new Set(
-                    allocations
-                      .map((a) => costCenters.find((c) => c.code === a.costCenterCode)?.resultUnit)
-                      .filter(Boolean),
-                  )].join(", ") || t("resultUnitConcerned"),
-              })}
-            </div>
-
-            {submittable && blocker && (
-              <SubmitBlockerNote
-                blocker={blocker}
-                paymentType={paymentType}
-                className="text-xs text-warning"
-              />
-            )}
-            <StepFooter onBack={() => setStep(step - 1)} onSave={saveDraft} saveLabel={saveLabel} saveDisabled={!canPersist} saving={exit === "draft"}>
-              {submittable && !blocker && (
-                <Button
-                  onClick={submitExpense}
-                  loading={exit === "submit"}
-                  disabled={!canPersist}
-                >
-                  {existing?.status === "CHANGES_REQUESTED" ? t("resubmit") : t("submit")}
-                </Button>
-              )}
-            </StepFooter>
-          </CardBody>
-        </Card>
-      )}
+          </>
+        }
+        missing={missing}
+        missingLabel={t("missingLabel")}
+        note={
+          submittable && blocker ? (
+            <SubmitBlockerNote
+              blocker={blocker}
+              paymentType={paymentType}
+              className="text-xs text-warning"
+            />
+          ) : undefined
+        }
+        onSave={saveDraft}
+        saveLabel={saveLabel}
+        saveDisabled={!canPersist}
+        saving={exit === "draft"}
+        submit={
+          submittable
+            ? {
+                label:
+                  existing?.status === "CHANGES_REQUESTED" ? t("resubmit") : t("submit"),
+                onClick: submitExpense,
+                disabled: !canPersist || Boolean(blocker),
+                loading: exit === "submit",
+              }
+            : undefined
+        }
+      />
     </PageShell>
   );
 }

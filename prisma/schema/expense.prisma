@@ -346,6 +346,12 @@ model Receipt {
   uploadedBy   User?   @relation("ReceiptUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   uploadedById String?
 
+  // Where it comes among the utlägg's documents: the order the panel pages
+  // through them and the order they are stapled behind the cover for Fortnox.
+  // The submitter sets it by dragging; a new one goes last. Ties fall back to
+  // createdAt, which is what the order was before it could be chosen.
+  position Int @default(0)
+
   createdAt DateTime @default(now())
 
   @@index([expenseId])
@@ -391,11 +397,19 @@ model Card {
   holderId String?
   active   Boolean @default(true)
 
+  // The result unit the card is spent for. Set by an admin, not derived: a card
+  // carries no cost centre, and its holder may sit in more than one utskott.
+  // Its resultatansvarig may read every purchase on it (bank/page.tsx), and
+  // that is all it grants. Accounting for one is still the holder's job.
+  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
+  resultUnitId String?
+
   transactions BankTransaction[]
 
   createdAt DateTime @default(now())
 
   @@index([holderId])
+  @@index([resultUnitId])
 }
 
 model ExpenseEvent {

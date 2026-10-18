@@ -28,13 +28,12 @@
     "colAdopted": "Antagen",
     "notAdopted": "–",
     "compareAria": "Jämför {year} {name}",
-    "budgets": "Budgetar",
-    "budgetCount": "{count, plural, one {# budget} other {# budgetar}}",
-    "compare": "Jämför",
-    "compareCount": "Jämför ({count})",
+    "compare": "Jämför budgetar",
+    "compareCount": "Jämför {count} budgetar",
     "searchPlaceholder": "Sök budget eller år…",
     "emptyNone": "Ingen budget har skapats ännu.",
-    "emptyNoMatch": "Ingen budget matchar sökningen."
+    "emptyNoMatch": "Ingen budget matchar sökningen.",
+    "compareHint": "Kryssa i minst två budgetar för att jämföra dem"
   },
   "compare": {
     "included": "Budgetar i jämförelsen",
@@ -58,11 +57,8 @@
     "lock": "Lås budgeten",
     "unlock": "Lås upp budgeten",
     "nameRequired": "Budgeten behöver ett namn.",
-    "changeName": "Byt namn på budgeten",
-    "changeAdoptedAt": "Byt datum för antagande",
     "adoptedOn": "Antagen",
     "notAdopted": "Inte antagen",
-    "invalidAdoptedAt": "Datumet måste skrivas som ÅÅÅÅ-MM-DD.",
     "namePlaceholder": "Budgetens namn",
     "noComparison": "Ingen jämförelse",
     "compareWith": "Jämför med…",
@@ -126,7 +122,16 @@
     "totalCosts": "Summa utgifter",
     "incompleteSum": "ofullständig – en rad går inte att räkna ut",
     "view": "Vy",
-    "detailBudget": "Detaljbudget"
+    "detailBudget": "Detaljbudget",
+    "actions": "Mer om budgeten",
+    "edit": "Ändra budgeten",
+    "editHint": "Namnet syns i budgetlistan och i jämförelser. Antagningsdatumet bestämmer vilket år budgeten gäller.",
+    "editSave": "Spara",
+    "field": {
+      "name": "Namn",
+      "adoptedAt": "Antagen",
+      "adoptedAtHint": "Dagen mötet antog budgeten. Lämna tomt om den inte är antagen än."
+    }
   },
   "col": {
     "konto": "Konto",
@@ -202,5 +207,13 @@
   },
   "eval": {
     "circular": "Budgeten har cirkulära beroenden. Vissa värden kan vara fel."
+  },
+  "compareGroups": {
+    "budget": "Budget",
+    "other": "Jämfört med",
+    "diff": "Avvikelse",
+    "diffColumn": "Avvikelse",
+    "diffHint": "Jämförelsen minus budgeten. Grönt är bättre än budgeterat (mer intäkter eller mindre kostnader), rött sämre.",
+    "ofBudget": "{label} (budget)"
   }
 }

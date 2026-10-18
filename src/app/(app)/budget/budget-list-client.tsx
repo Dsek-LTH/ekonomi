@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import { IconButton } from "@/components/ui/icon-button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Menu, MenuItem, MenuLabel, MenuNote, MenuSeparator } from "@/components/ui/menu";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
@@ -18,7 +18,6 @@ import { IconCompare, IconCopy, IconPlus, IconTrash, IconUpload } from "@/compon
 import { Tag } from "@/components/ui/status-pill";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isAdmin } from "@/lib/domain/permissions";
-import { cn } from "@/lib/ui/utils";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import type { BudgetSummary } from "@/lib/data/budget";
 
@@ -147,9 +146,6 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
 
   const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
 
-  // The compare button carries no text, so this is its whole accessible name,
-  // and the count is the part that changes as boxes are ticked.
-  const compareLabel = picked.length >= 2 ? t("compareCount", { count: picked.length }) : t("compare");
 
   const columns: Column<BudgetSummary>[] = [
     {
@@ -177,6 +173,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
     },
     {
       key: "year",
+      mobile: "meta",
       header: t("colYear"),
       value: (b) => b.year,
       sortable: true,
@@ -190,6 +187,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
       // actually remembers it. A draft sorts by the empty string and so lands
       // together with the others that were never adopted.
       key: "adoptedAt",
+      mobile: "meta",
       header: t("colAdopted"),
       value: (b) => b.adoptedAt ?? "",
       sortable: true,
@@ -263,36 +261,38 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
         }}
       />
       <Card>
-        <CardHeader
-          title={t("budgets")}
-          subtitle={t("budgetCount", { count: budgets.length })}
-          action={
-            // Icon only: the checkbox column is what explains it, and the label
-            // it used to carry said the same thing twice. The count lives in the
-            // accessible name, which is the one place it still has to be said.
-            <Link
-              href={`/budget/compare?b=${picked.join(",")}`}
-              aria-label={compareLabel}
-              title={compareLabel}
-              // Two is the fewest that makes a comparison; there is no upper
-              // bound, and the compare view gives each its own column.
-              aria-disabled={picked.length < 2}
-              className={cn(
-                "inline-flex size-8 items-center justify-center rounded-control border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
-                picked.length < 2 && "pointer-events-none opacity-40",
-              )}
-            >
-              <IconCompare className="size-4" />
-            </Link>
-          }
-        />
+        {/* No header of its own: the page's heading already says Budget, and
+            the table's footer counts the rows. Comparing rides the table's
+            toolbar beside "new", acting on the rows ticked below it. */}
         <ClientDataTable
           columns={columns}
           rows={budgets}
           controls={controls}
           // On the list's toolbar: it adds a budget to the list under it.
           action={
-            admin ? (
+            <div className="flex items-center gap-2">
+              {/* Said in words. As an icon alone it was a pair of arrows
+                  nobody could read as "compare budgets", greyed out until two
+                  rows were ticked with nothing saying that ticking them is
+                  what it waits for. Two is the fewest that makes a comparison;
+                  there is no upper bound, the compare view gives each budget
+                  its own column. */}
+              {picked.length >= 2 ? (
+                <ButtonLink
+                  variant="secondary"
+                  size="sm"
+                  href={`/budget/compare?b=${picked.join(",")}`}
+                >
+                  <IconCompare className="size-4" />
+                  {t("compareCount", { count: picked.length })}
+                </ButtonLink>
+              ) : (
+                <Button variant="secondary" size="sm" disabled title={t("compareHint")}>
+                  <IconCompare className="size-4" />
+                  {t("compare")}
+                </Button>
+              )}
+              {admin && (
               // Not a form in a dropdown: two ways to start, each one click.
               <Menu
                 label={t("new")}
@@ -322,7 +322,8 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
                 </MenuItem>
                 <MenuNote>{t("importHint")}</MenuNote>
               </Menu>
-            ) : undefined
+              )}
+            </div>
           }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(b) => b.id}

@@ -1,18 +1,7 @@
 {
   "greeting": "Hej {name} 💅",
-  "queueTitle": "Väntar på dig",
-  "queueEmpty": "Inget väntar på dig just nu.",
   "mineTitle": "Dina utlägg",
-  "mineEmpty": "Du har inga utlägg än.",
   "allExpenses": "Alla utlägg",
-  "actionHeader": "Åtgärd",
-  "action": {
-    "FIX": "Åtgärda",
-    "SUBMIT": "Skicka in",
-    "ATTEST": "Attestera",
-    "BOOK": "Bokför",
-    "EXPORT": "Exportera"
-  },
   "firstRun": {
     "title": "Så funkar ett utlägg",
     "lead": "Har du lagt ut egna pengar för sektionen, eller handlat med ett sektionskort? Det är här du får tillbaka dem.",
@@ -25,5 +14,77 @@
     "step4Title": "Pengarna kommer",
     "step4Body": "Utbetalning till ditt konto. Lägg in clearing- och kontonummer under Min profil, annars fastnar utlägget där.",
     "cta": "Skapa ditt första utlägg"
+  },
+  "todoTitle": "Att göra",
+  "todo": {
+    "FIX": "{count, plural, one {utlägg att åtgärda} other {utlägg att åtgärda}}",
+    "SUBMIT": "{count, plural, one {utkast att skicka in} other {utkast att skicka in}}",
+    "ATTEST": "att attestera",
+    "BOOK": "att bokföra",
+    "EXPORT": "att exportera till Fortnox",
+    "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}"
+  },
+  "budget": {
+    "title": "Budget och utfall {year}",
+    "subtitle": "Jämfört med {budget}. Utfall från Fortnox, senast hämtat {synced}.",
+    "neverSynced": "aldrig",
+    "openBudget": "Budgeten",
+    "openReports": "Utfall och rapporter",
+    "emptyNoBudget": "Det finns ingen budget för i år ännu, och inget bokfört utfall att visa.",
+    "emptyNoData": "Budgeten för i år har inga belopp ännu.",
+    "colUnit": "Resultatenhet",
+    "colIncome": "Intäkter",
+    "colCost": "Kostnader",
+    "colResult": "Resultat",
+    "noUnit": "Utan resultatenhet",
+    "noCostCenter": "Utan kostnadsställe",
+    "yours": "Din",
+    "of": "av {amount}",
+    "unbudgeted": "ej budgeterat",
+    "over": "{amount} över budget",
+    "budgeted": "budget {amount}",
+    "yearMarker": "Strecket visar hur stor del av året som gått ({percent} %). Intäkter och kostnader är bokfört utfall mot budget.",
+    "titleOwn": "Ditt utskott {year}",
+    "pace": {
+      "ON_TRACK": "I fas",
+      "AHEAD": "Före takten",
+      "OVER": "Över budget",
+      "hint": {
+        "ON_TRACK": "Kostnaderna följer året.",
+        "AHEAD": "Mer av kostnadsbudgeten är använt än året har gått.",
+        "OVER": "Kostnaderna är högre än budgeten för hela året."
+      }
+    }
+  },
+  "mineNone": "Inga utlägg än.",
+  "youTitle": "Du",
+  "todoEmpty": "Inget väntar på dig just nu.",
+  "payoutMissing": "Lägg in clearing- och kontonummer under Min profil, annars kan dina utlägg inte betalas ut.",
+  "budgetLink": "Se hur sektionens budget ser ut",
+  "viewLabel": "Visa",
+  "view": {
+    "personal": "Mina pengar",
+    "unit": "Mitt utskott",
+    "section": "Sektionen"
+  },
+  "money": {
+    "onItsWayLabel": "På väg tillbaka till dig",
+    "nothingOwed": "Sektionen är inte skyldig dig något just nu.",
+    "stage": {
+      "awaitingAttest": "Väntar på attest",
+      "approved": "Attesterat",
+      "exportedThisYear": "Till utbetalning i år"
+    },
+    "count": "{count, plural, one {# utlägg} other {# utlägg}}"
+  },
+  "kpi": {
+    "income": "Intäkter",
+    "cost": "Kostnader",
+    "result": "Resultat",
+    "left": "Kvar av kostnadsbudgeten",
+    "share": "{percent} % av budget",
+    "ofBudget": "av {amount}",
+    "budgeted": "budget {amount}",
+    "unbudgeted": "ej budgeterat"
   }
 }

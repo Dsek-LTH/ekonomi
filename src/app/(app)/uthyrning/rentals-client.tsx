@@ -64,6 +64,7 @@ export function RentalsClient({
       },
       {
         key: "period",
+        mobile: "meta",
         header: t("col.period"),
         cell: (r) => (
           <span className="whitespace-nowrap text-muted">
@@ -100,7 +101,7 @@ export function RentalsClient({
       {
         key: "state",
         header: t("col.state"),
-        mobile: "trailing",
+        mobile: "status",
         cell: (r) => <Tag tone={RENTAL_STATE_TONE[r.state]}>{t(`state.${r.state}`)}</Tag>,
       },
     ],

@@ -27,7 +27,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { Card, CardHeader } from "@/components/ui/card";
+import { HISTORY_PATH, historyHref, type HistoryView } from "../history/views";
+import { Card } from "@/components/ui/card";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { MultiCombobox } from "@/components/ui/combobox";
@@ -103,7 +104,7 @@ export default function StockLogClient({
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
     else next.delete(key);
-    router.push(`/stock/log?${next.toString()}`);
+    router.push(`${HISTORY_PATH}?${next.toString()}`);
   };
 
   // Several values in one parameter, comma-separated: `?kind=PURCHASE,COUNT`.
@@ -125,6 +126,8 @@ export default function StockLogClient({
       value: (r) => r.occurredAt,
       sortable: true,
       mobile: "meta",
+      mobileOrder: 1,
+      mobileCell: (r) => r.occurredAt,
       cell: (r) => (
         <>
           {r.occurredAt}
@@ -172,7 +175,7 @@ export default function StockLogClient({
       header: t("log.col.units"),
       align: "right",
       className: "tabular-nums",
-      mobile: "meta",
+      mobile: "status",
       // A spill at a pub keeps its count in its own column, because it must
       // not move the shelf, but it is still a quantity that went somewhere, and
       // a breakage that showed a dash in every column was a row this screen
@@ -258,20 +261,36 @@ export default function StockLogClient({
   ];
 
   return (
+    // No back link: the log is one of Lager's tabs, not a page under Produkter,
+    // and with one it was drawn as a page under the tabs, with its own title.
     <PageShell
       title={t("log.title")}
-      back="/stock"
       width="wide"
+      // The other view of the same history, for the same period. See
+      // ../history/views.ts.
+      collections={{
+        label: t("history.viewLabel"),
+        value: "movements",
+        options: [
+          { value: "movements", label: t("history.movements") },
+          { value: "stats", label: t("history.stats") },
+        ],
+        href: (v) => historyHref(v as HistoryView, filter.from, filter.to),
+      }}
     >
       <Card>
-        {/* The narrowing sits in the header rather than in a card of its own:
-            it is what this list *is*, not a separate thing above it. All four
-            are compact, so they read as one bar. */}
-        <CardHeader
-          title={t("log.title")}
-          subtitle={t("counts.rows", { count: log.length })}
+        {/* No header of its own: the tab above says this is the log, and the
+            table's footer counts its rows. The narrowing rides the table's
+            toolbar beside the search, where every list in the app keeps its
+            own controls, so it reads as one bar with the search. */}
+        <ClientDataTable
+          columns={columns}
+          rows={log}
+          controls={controls}
+          rowKey={(r) => r.id}
+          searchPlaceholder={t("log.searchPlaceholder")}
           action={
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="flex h-11 items-center gap-2 text-sm text-muted sm:h-9">
                 <Checkbox
                   checked={showRevisions}
@@ -307,25 +326,21 @@ export default function StockLogClient({
                   aria-label={t("log.filter.kind")}
                 />
               </div>
-              <DateFilter
-                label={t("log.filter.from")}
-                value={filter.from ?? ""}
-                onCommit={(v) => setParam("from", v)}
-              />
-              <DateFilter
-                label={t("log.filter.to")}
-                value={filter.to ?? ""}
-                onCommit={(v) => setParam("to", v)}
-              />
+              <span className="flex items-center gap-2">
+                <DateFilter
+                  label={t("log.filter.from")}
+                  value={filter.from ?? ""}
+                  onCommit={(v) => setParam("from", v)}
+                />
+                <span className="text-xs text-muted">–</span>
+                <DateFilter
+                  label={t("log.filter.to")}
+                  value={filter.to ?? ""}
+                  onCommit={(v) => setParam("to", v)}
+                />
+              </span>
             </div>
           }
-        />
-        <ClientDataTable
-          columns={columns}
-          rows={log}
-          controls={controls}
-          rowKey={(r) => r.id}
-          searchPlaceholder={t("log.searchPlaceholder")}
           // A night's line is a sum of up to three directions and, for a
           // spirit, of several rungs. This is what it is made of.
           expansion={(r) => (r.parts?.length ? <Parts row={r} /> : null)}
@@ -344,8 +359,9 @@ export default function StockLogClient({
  * whole date would navigate. So it keeps what is typed and commits only what
  * the URL can use: a complete date, or nothing.
  *
- * Compact and labelled above, to sit in the header bar with the two comboboxes
- * rather than in a form.
+ * Compact, its label written inside it as the placeholder, the way the table's
+ * own date range is, to sit on the toolbar in one line with the search and the
+ * two comboboxes.
  */
 function DateFilter({
   label,
@@ -368,20 +384,19 @@ function DateFilter({
   }
 
   return (
-    <label className="flex w-32 flex-col gap-1">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
-        {label}
-      </span>
+    <span className="w-32">
       <DateInput
         size="sm"
         value={typed}
+        placeholder={label}
+        aria-label={label}
         onChange={(e) => {
           const next = e.target.value;
           setTyped(next);
           if (next === "" || /^\d{4}-\d{2}-\d{2}$/.test(next)) onCommit(next);
         }}
       />
-    </label>
+    </span>
   );
 }
 

@@ -7,6 +7,7 @@ import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
+import { usePhone } from "@/lib/ui/media";
 import { CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
@@ -203,6 +204,14 @@ function ComboboxBase({
   // follows the trigger rather than closing when the page moves.
   const [rect, setRect] = useAnchorRect(open, triggerRef, panelRef, close);
 
+  // On a phone the menu is a screen of its own rather than a panel by the
+  // field. A panel placed against the field cannot also be placed against the
+  // keyboard: iOS slides the page under a keyboard without telling the layout,
+  // so the list ended up behind it, or above the field and apart from it. A
+  // full screen with the search at the top has nothing to place. The keyboard
+  // covers the foot of the list, and the matches are at its head.
+  const phone = usePhone();
+
   function openMenu(initial = "") {
     if (disabled) return;
     setRect(triggerRef.current?.getBoundingClientRect() ?? null);
@@ -295,6 +304,9 @@ function ComboboxBase({
   useDismissOnOutside(open, [triggerRef, panelRef], close);
 
 
+  /** A row's height: a finger's worth on a phone, a pointer's elsewhere. */
+  const row = phone ? "py-3 text-base" : "py-1.5 text-sm";
+
   function onSearchKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
@@ -376,7 +388,7 @@ function ComboboxBase({
         />
       </button>
 
-      {open && rect && createPortal(
+      {open && (phone || rect) && createPortal(
         <div
           ref={panelRef}
           // Marks the menu as this field's, for anything outside that has to
@@ -388,7 +400,7 @@ function ComboboxBase({
           // underneath holds Tab inside itself and has to leave this alone.
           // See lib/ui/focus-trap.ts.
           data-popup-layer=""
-          style={menuStyle()}
+          style={phone ? undefined : menuStyle()}
           // Above everything, dialogs included. The menu is portalled to
           // <body>, so it shares a stacking context with the confirm dialog and
           // the modals (both z-[200]). At z-50 a field inside one of them
@@ -396,10 +408,35 @@ function ComboboxBase({
           // wrongly cover something else, because a menu only stays open while
           // its own trigger is on top: an outside mousedown closes it, which is
           // how anything above it would have been opened in the first place.
-          className="z-[210] flex flex-col overflow-hidden rounded-panel border border-border bg-background shadow-[var(--shadow-pop)]"
+          className={cn(
+            "z-[210] flex flex-col overflow-hidden bg-background",
+            phone
+              ? "fixed inset-0 pt-[env(safe-area-inset-top)]"
+              : "rounded-panel border border-border shadow-[var(--shadow-pop)]",
+          )}
         >
+          {/* What is being picked, and the way out, where the menu has covered
+              the field that said so. Several picks are kept as they are made,
+              so that way out is "Klar" rather than "Avbryt". */}
+          {phone && (
+            <div className="flex h-14 shrink-0 items-center gap-3 px-4">
+              <p className="min-w-0 flex-1 truncate text-base font-semibold">
+                {ariaLabel ?? placeholder ?? t("placeholder")}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  triggerRef.current?.focus();
+                }}
+                className="-mr-2 rounded-control px-2 py-1.5 text-base font-medium text-accent"
+              >
+                {multiple ? t("done") : t("cancel")}
+              </button>
+            </div>
+          )}
           {searchable && (
-          <div className="shrink-0 border-b border-border p-2">
+          <div className={cn("shrink-0 border-b border-border", phone ? "px-4 pb-3" : "p-2")}>
             <input
               ref={searchRef}
               // An id like every other field, so the browser does not report
@@ -416,7 +453,11 @@ function ComboboxBase({
               onChange={(e) => { setQuery(e.target.value); setActive(0); }}
               onKeyDown={onSearchKey}
               placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-              className="h-8 w-full rounded-control border border-border bg-background px-2.5 text-sm"
+              // 16px on a phone: iOS zooms the page in on any field set smaller.
+              className={cn(
+                "w-full rounded-control border border-border bg-background",
+                phone ? "h-11 px-3 text-base" : "h-8 px-2.5 text-sm",
+              )}
             />
           </div>
           )}
@@ -437,7 +478,10 @@ function ComboboxBase({
             }
             tabIndex={-1}
             onKeyDown={searchable ? undefined : onSearchKey}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+              phone ? "px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]" : "p-1",
+            )}
           >
             {onClear && picked.length > 0 && (
               <li>
@@ -448,7 +492,7 @@ function ComboboxBase({
                     onClear();
                     if (!multiple) { close(); triggerRef.current?.focus(); }
                   }}
-                  className="flex w-full items-center rounded-control px-3 py-1.5 text-left text-sm text-muted hover:bg-hover"
+                  className={cn("flex w-full items-center rounded-control px-3 text-left text-muted hover:bg-hover", row)}
                 >
                   {clearLabel ?? t("clear")}
                 </button>
@@ -469,7 +513,7 @@ function ComboboxBase({
                     close();
                     onCreate?.(query.trim());
                   }}
-                  className="flex w-full items-center gap-2 rounded-control px-3 py-1.5 text-left text-sm font-medium text-accent hover:bg-hover"
+                  className={cn("flex w-full items-center gap-2 rounded-control px-3 text-left font-medium text-accent hover:bg-hover", row)}
                 >
                   {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
                 </button>
@@ -495,7 +539,8 @@ function ComboboxBase({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => commit(o.value)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-control px-3 py-1.5 text-left text-sm transition-colors",
+                    "flex w-full items-center justify-between gap-2 rounded-control px-3 text-left transition-colors",
+                    row,
                     // One indicator for "where the keyboard is". Arrows, Tab and
                     // the mouse all move this same highlight; when a ring moved
                     // on its own it left a second, stale one behind at the top

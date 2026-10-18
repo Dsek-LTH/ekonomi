@@ -4,9 +4,11 @@ import { canAccessBookkeeping } from "@/lib/domain/permissions";
 import { getBankTransactionPage, getCardlessTransactions, getCards } from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
-import BankClient, { type BankScope } from "./bank-client";
+import { ownedResultUnits } from "@/lib/server/result-units";
+import BankClient from "./bank-client";
+import { bankDefaultTab, type BankScope } from "./scope";
 
-// One feed, two readings of it.
+// One feed, three readings of it.
 //
 // This page and /card-purchases were the same query (`getBankTransactionPage`)
 // drawn twice: the same four columns, the same three server-side tabs, one
@@ -21,6 +23,11 @@ import BankClient, { type BankScope } from "./bank-client";
 // where anybody can type it, and a reader who may not see the section's feed is
 // answered with their own no matter what they asked for. The client is told
 // which scope it got and never decides one.
+//
+// The third reading is a resultatansvarig's: the purchases on the cards an
+// admin has put under a result unit they answer for (Card.resultUnit). It is
+// for reading. Redovisa stays with the holder, and deleting and placing cards
+// stay with bookkeeping, both of which the client already decides per row.
 export default async function BankPage({
   searchParams,
 }: {
@@ -30,30 +37,42 @@ export default async function BankPage({
   const params = await searchParams;
 
   const canSeeAll = canAccessBookkeeping(user.capabilities);
-  const holdsCard = await userHoldsCard(user.id);
-  // Neither a card nor the books: there is no reading of this feed for them.
-  if (!canSeeAll && !holdsCard) redirect("/dashboard");
+  const [holdsCard, owned] = await Promise.all([
+    userHoldsCard(user.id),
+    ownedResultUnits(user),
+  ]);
+  const answersForUnits = owned.names.length > 0;
 
-  const asked = params.scope === "mine" ? "mine" : params.scope === "all" ? "all" : null;
-  // Opens on your own purchases when you hold a card, the same as Utlägg opens
-  // on Mina. Bookkeeping without a card has nothing of its own to show and
-  // opens on the whole feed. Everybody else has exactly one scope and it is not
-  // a choice.
-  const scope: BankScope = canSeeAll ? (asked ?? (holdsCard ? "mine" : "all")) : "mine";
+  // The readings this person has, in the order the track draws them.
+  const scopes: BankScope[] = [
+    ...(holdsCard ? (["mine"] as const) : []),
+    ...(answersForUnits ? (["unit"] as const) : []),
+    ...(canSeeAll ? (["all"] as const) : []),
+  ];
+  // No card, no unit and not the books: there is no reading of this feed for them.
+  if (scopes.length === 0) redirect("/dashboard");
 
-  const query = parseListQuery(params, {
-    // Your own purchases open on the ones not yet accounted for. That is what
-    // the page was for when it was Kortköp, and it is still the only actionable
-    // thing in the list. The section's feed opens on all of it.
-    defaultTab: scope === "mine" ? "UNMATCHED" : "ALL",
-  });
+  // What was asked for, if it is one of theirs. Otherwise the first they have:
+  // your own purchases when you hold a card, the same as Utlägg opens on Mina,
+  // then your unit's, then the whole feed.
+  const asked = scopes.find((s) => s === params.scope);
+  const scope: BankScope = asked ?? scopes[0];
+
+  const query = parseListQuery(params, { defaultTab: bankDefaultTab(scope) });
 
   // Purchases on no card are bookkeeping's to place, and only on the section's
   // feed, since they are on nobody's own.
   const canPlaceCards = canSeeAll && scope === "all";
 
   const [page, cards, allCards, cardless] = await Promise.all([
-    getBankTransactionPage(scope === "mine" ? { cardHolderId: user.id } : {}, query),
+    getBankTransactionPage(
+      scope === "mine"
+        ? { cardHolderId: user.id }
+        : scope === "unit"
+          ? { resultUnitNames: owned.names }
+          : {},
+      query,
+    ),
     // Only to decide whether the card column earns its width, so only asked for
     // where it could be shown.
     holdsCard ? getCards({ holderId: user.id }) : Promise.resolve([]),
@@ -71,7 +90,7 @@ export default async function BankPage({
       // The track is drawn only for somebody who has two readings to choose
       // between. One scope is not a choice, and a switch that cannot switch is
       // a control that reads as broken.
-      canPickScope={canSeeAll && holdsCard}
+      scopes={scopes}
       cards={cards}
       allCards={allCards}
       cardless={cardless}

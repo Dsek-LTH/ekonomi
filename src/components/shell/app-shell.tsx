@@ -10,8 +10,15 @@ import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { Avatar } from "../ui/avatar";
 import { IconFortnox } from "./fortnox-mark";
-import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
+import {
+  ReceiptPanelColumn,
+  useReceiptPanelActive,
+  useReceiptTabShowing,
+} from "../receipt/receipt-panel";
+import { TabBar } from "./tab-bar";
 import { MobileNav } from "./mobile-nav";
+import { NavCount } from "./nav-count";
+import { SectionBand, SectionNavProvider, type SectionNav } from "./section-nav";
 import { CommandPalette, useCommandPaletteHotkey, type CommandItem } from "./command-palette";
 import {
   IconArchive,
@@ -25,21 +32,17 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
-  IconCompare,
   IconContract,
   IconExternal,
   IconGear,
   IconGrid,
   IconHelp,
   IconKey,
-  IconLedger,
   IconList,
   IconMenu,
   IconReceipt,
   IconSearch,
-  IconUpload,
   IconUsers,
-  IconWarehouse,
 } from "../ui/icons";
 import {
   canAccessBookkeeping,
@@ -54,7 +57,8 @@ import {
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { SETTINGS_ROOT, SETTINGS_SECTIONS } from "./settings-sections";
 
-import { owningRoute } from "@/lib/ui/routes";
+import { carriedSection, owningRoute, routePath } from "@/lib/ui/routes";
+import { useTypingFlag } from "@/lib/ui/typing";
 import { cn } from "@/lib/ui/utils";
 
 /** The section's own site, which the mark in the corner goes back to. Not a
@@ -74,12 +78,14 @@ export type NavItem = {
   visible: (user: CurrentUser) => boolean;
 };
 
+/**
+ * A section of the app: one row in the nav, and its pages as tabs across the
+ * top of each of them (see SectionTabs). The row goes to the first page the
+ * reader may see.
+ */
 export type NavGroup = {
   label: string;
-  /** What the collapsed header row shows instead of one of its items' own
-   *  icons: a group is a category, not a page, and reusing the first item's
-   *  icon for it would be an accident of list order rather than a choice
-   *  about what the category is. */
+  /** The section's row on the rail, where it is the only thing drawn. */
   icon: (p: { className?: string }) => React.ReactNode;
   items: NavItem[];
 };
@@ -150,10 +156,7 @@ const SETTINGS: NavItem = {
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "groupExpenses",
-    // Not IconReceipt: that is the group's own first link, and a folded
-    // group showing the same glyph as the row it opens onto is one icon
-    // doing two jobs. This one says "hand something in" instead.
-    icon: IconUpload,
+    icon: IconReceipt,
     items: [
       { href: "/expenses", label: "expenses", icon: IconReceipt, visible: ALL },
       // The bank feed, which used to be two links: "Kortköp" here for a card
@@ -165,18 +168,20 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/bank",
         label: "bank",
         icon: IconCard,
-        visible: (u) => u.holdsCard || canAccessBookkeeping(u.capabilities),
+        // A resultatansvarig reads their unit's card purchases there too. The
+        // role is the closest thing the frame knows to "answers for a unit";
+        // the page itself checks the unit (bank/page.tsx).
+        visible: (u) =>
+          u.holdsCard ||
+          u.roles.includes("RESULTATANSVARIG") ||
+          canAccessBookkeeping(u.capabilities),
       },
       { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.capabilities) },
     ],
   },
   {
     label: "groupBudget",
-    // Not IconBudget, for the same reason groupExpenses is not IconReceipt.
-    // The group is the comparison itself, planned against utfall, which is
-    // exactly what this icon already means on the budget page's own compare
-    // button.
-    icon: IconCompare,
+    icon: IconBudget,
     items: [
       {
         href: "/budget",
@@ -198,9 +203,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupBookkeeping",
-    // Not IconBook: that is Bokföring's own link below. IconLedger instead,
-    // for the category rather than the one ledger.
-    icon: IconLedger,
+    icon: IconBook,
     items: [
       {
         href: "/bookkeeping",
@@ -218,9 +221,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupStock",
-    // Not IconBox: that is Lager's own link below, one crate rather than the
-    // stockroom. IconWarehouse for the group.
-    icon: IconWarehouse,
+    icon: IconBox,
     items: [
       // Its own group rather than a line under Bokföring: keeping the
       // lagerbokföring is a different job, done by different people, and the
@@ -235,26 +236,20 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconCalendar,
         visible: (u) => canViewStock(u.capabilities),
       },
-      {
-        href: "/stock/log",
-        label: "stockLog",
-        icon: IconList,
-        visible: (u) => canViewStock(u.capabilities),
-      },
       // Last in the group, because it is the one you open to look rather than
-      // to do: the three above are where the work happens.
+      // to do: the two above are where the work happens. The log and the
+      // statistics, as two views of one page (stock/history/views.ts); they
+      // were two tabs answering the same question for the same people.
       {
-        href: "/stock/stats",
-        label: "stockStats",
-        icon: IconChart,
+        href: "/stock/history",
+        label: "stockHistory",
+        icon: IconList,
         visible: (u) => canViewStock(u.capabilities),
       },
     ],
   },
   {
     label: "groupRental",
-    // Not IconContract: that is "Uthyrningar" below, the paperwork. A key is
-    // what actually changes hands when the gear goes out the door.
     icon: IconKey,
     items: [
       // Its own group rather than a corner of Avtal, for the same reason
@@ -282,12 +277,6 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "groupAdmin",
-    // Was IconGear, back when Settings lived in this group and lent it the
-    // icon. Now that Settings is pinned on its own (see SETTINGS below), a
-    // gear here would read as a second way to the same place. Then IconList,
-    // borrowed from Avtal below, until that made the group and its own first
-    // link indistinguishable. IconArchive instead: the group is the record
-    // kept, not the list it happens to be read as.
     icon: IconArchive,
     items: [
       // The archive, over every kind of agreement the section has. Distinct
@@ -347,6 +336,7 @@ export function AppShell({
   children,
   defaultPinned = false,
   fortnox,
+  counts = {},
 }: {
   children: React.ReactNode;
   /** The stored pin, read from the cookie by the layout so a pinned nav renders
@@ -359,6 +349,8 @@ export function AppShell({
    * signed out. See the foot of the nav.
    */
   fortnox?: { session: FortnoxStatus["session"] | null };
+  /** How much waits behind each link, by its href. See lib/data/nav-counts. */
+  counts?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const { user } = useRole();
@@ -379,24 +371,16 @@ export function AppShell({
   // a frame that does not exist below md.
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Which groups the reader has opened or closed by hand, against the
-  // default of "whichever one owns the page you're on is open, the rest
-  // aren't" (see `owning` below). A group with no entry here follows that
-  // default; one that does follows the reader instead, which is what lets
-  // the active group be folded too rather than being the one row that can't
-  // be. Keyed by an explicit true/false rather than a set of "opened", since
-  // the default it is overriding is not the same for every group.
-  //
-  // Starts empty rather than seeded from a cookie: with seven groups and the
-  // active one already shown, there is no first-paint flash to avoid the way
-  // there is for `pinned`, and which ones somebody last folded or opened is a
-  // browsing habit, not a standing preference about the shape of the frame.
-  const [groupOverride, setGroupOverride] = useState<Record<string, boolean>>({});
-  const toggleGroup = (label: string, currentlyOpen: boolean) =>
-    setGroupOverride((prev) => ({ ...prev, [label]: !currentlyOpen }));
+  // Where a page's switch goes in the section band: the band's own element,
+  // once it has one. See PageHeader in section-nav.tsx.
+  const [sectionSlot, setSectionSlot] = useState<HTMLElement | null>(null);
+  // Whether the open page is one of its section's own, as the page itself
+  // says (PageHeader), which knows whether it has a way back. Until it has
+  // said, the path is the guess.
+  const [pageOwn, setPageOwn] = useState<boolean | null>(null);
 
-  // Cmd/Ctrl+K, wherever the reader is: a collapsed group or a folded phone
-  // menu should not cost this its own way in. See command-palette.tsx.
+  // Cmd/Ctrl+K, wherever the reader is: a folded rail or a closed phone menu
+  // should not cost this its own way in. See command-palette.tsx.
   const [paletteOpen, setPaletteOpen] = useState(false);
   useCommandPaletteHotkey(() => setPaletteOpen(true));
 
@@ -502,34 +486,76 @@ export function AppShell({
   // was excluded so it would not swallow everything under it, and
   // "/expenses/new" was never a nav route at all, so that clause could not
   // fire.
-  const activeSection = sectionHref(pathname);
+  //
+  // Which section that is for a page reached from several (an utlägg, opened
+  // from Attest or Bokföring) is the one you came from, carried across while
+  // you stay on such pages. See carriedSection. Worked out during render when
+  // the path changes, so the tabs and the sidebar never show the URL's section
+  // for a frame before settling.
+  const [lit, setLit] = useState<{ path: string; section: string | null }>(() => ({
+    path: pathname,
+    section: sectionHref(pathname),
+  }));
+  let activeSection = lit.section;
+  if (lit.path !== pathname) {
+    activeSection = carriedSection(pathname, lit.section, Object.keys(SECTION_LABELS));
+    setLit({ path: pathname, section: activeSection });
+  }
   const isActive = (href: string) => href === activeSection;
 
-  const navLink = (item: NavItem, groupLabel?: string) => {
-    const Icon = item.icon;
-    const label = t(item.label);
+  const navLink = (item: NavItem) =>
+    navRow({
+      href: item.href,
+      label: t(item.label),
+      icon: item.icon,
+      active: isActive(item.href),
+      count: counts[item.href] ?? 0,
+    });
+
+  // One row of the rail: a section, or one of the pages that stand on their
+  // own (Översikt, Inställningar, Frågor & svar).
+  const navRow = ({
+    href,
+    label,
+    icon: Icon,
+    active,
+    count,
+  }: {
+    href: string;
+    label: string;
+    icon: NavItem["icon"];
+    active: boolean;
+    count: number;
+  }) => {
     return (
       <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => {
-          closeNav();
-          // Only for a row inside a group: OVERVIEW and HELP stand outside
-          // every group already and have nothing to fold on the way to.
-          if (groupLabel) foldOtherGroups(groupLabel);
-        }}
+        key={href}
+        href={href}
+        onClick={closeNav}
+        aria-current={active ? "page" : undefined}
         // `px-[11px]`, not `px-3`: the nav's own `px-3` leaves a 40px row on the
         // rail, and 11 + the 18px icon + 11 is exactly that, so the icon sits
         // on the rail's centre line and stays on it, to the pixel, as the panel
         // widens around it. Nothing about the row moves; only the label arrives.
         className={cn(
           "flex items-center rounded-control px-[11px] py-2 text-sm font-medium transition-colors",
-          isActive(item.href)
-            ? "brand-fill text-on-brand"
-            : "text-foreground hover:bg-hover",
+          active ? "brand-fill text-on-brand" : "text-foreground hover:bg-hover",
         )}
       >
-        <Icon className="size-[18px] shrink-0" />
+        {/* On the rail, where there is no room for the number, a dot on the
+            icon says there is one. It goes as the label arrives with it. */}
+        <span className="relative shrink-0">
+          <Icon className="size-[18px]" />
+          {count > 0 && (
+            <span
+              aria-hidden
+              className={cn(
+                "absolute -right-1 -top-1 size-2 rounded-full bg-accent ring-2 ring-background transition-opacity",
+                pinned ? "opacity-0" : "opacity-0 md:opacity-100 md:nav-open:opacity-0",
+              )}
+            />
+          )}
+        </span>
         {/* Margin rather than the row's `gap`, which would be spent whether or
             not there is a label to separate: 12px of it, on a row with 0 to
             spare, pushing the icon off the centre line every time the panel
@@ -540,6 +566,9 @@ export function AppShell({
             the width transition, so the label it would repeat is already on
             screen before it could appear. */}
         <span className={cn("ms-3 min-w-0 flex-1 truncate transition-opacity", labelFade)}>{label}</span>
+        {count > 0 && (
+          <NavCount count={count} active={active} className={cn("ms-2 transition-opacity", labelFade)} />
+        )}
       </Link>
     );
   };
@@ -549,17 +578,25 @@ export function AppShell({
     items: group.items.filter((i) => i.visible(user)),
   })).filter((group) => group.items.length > 0);
 
-  // Opening a page settles the question every other group's disclosure is
-  // asking: not this one. Folding the rest on the way there is what keeps a
-  // handful of groups opened out of curiosity from just accumulating, one
-  // click at a time, until the rail is the flat list the disclosures exist to
-  // avoid.
-  const foldOtherGroups = (label: string) =>
-    setGroupOverride((prev) => {
-      const next = { ...prev };
-      for (const g of groups) next[g.label] = g.label === label;
-      return next;
-    });
+  // The section whose pages go across the top of this one as tabs: the one
+  // that owns it, where it has more than one page for this reader. Drawn by
+  // the page's own header (components/shell/section-nav.tsx), on the
+  // section's pages and on everything under them, an utlägg or a budget, so
+  // the way across to the section's other pages is always at the top.
+  const tabSection =
+    groups.find((g) => g.items.length > 1 && g.items.some((i) => isActive(i.href))) ?? null;
+  const sectionNav: SectionNav | null = tabSection && {
+    label: t(tabSection.label),
+    tabsLabel: t("sectionTabs"),
+    tabs: tabSection.items.map((i) => ({
+      href: i.href,
+      label: t(i.label),
+      icon: i.icon,
+      active: isActive(i.href),
+      count: counts[i.href] ?? 0,
+    })),
+    root: tabSection.items.some((i) => i.href === pathname),
+  };
 
   // The same answer the sidebar highlights with, spelled out. The top bar and
   // the lit row cannot disagree if they are the one lookup.
@@ -567,11 +604,24 @@ export function AppShell({
   const section = sectionKey ? t(sectionKey) : null;
 
   const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
+  // Marks <html> while a field has the keyboard up, for the receipt button.
+  useTypingFlag(pathname);
   const receiptTab = useReceiptTabShowing();
+  // The phone's tab bar, on the app's top-level pages only: the ones the nav
+  // links to, and the profile. A page inside one of them (an utlägg, an
+  // event's sheet, a stocktake) has its back arrow instead, the way an iOS app
+  // drops its tab bar on a pushed screen. Those are where the typing happens,
+  // and a bar fixed to the foot sat on top of the keyboard there; iOS gives a
+  // page no way to know the keyboard is up, so the answer is not to have the
+  // bar on those pages at all. The top bar's menu button is the way round.
+  //
+  // Never with a receipt panel either, which wants the foot for its own button.
+  const receiptPanel = useReceiptPanelActive();
+  const topLevel = pathname === "/profile" || Object.hasOwn(SECTION_LABELS, routePath(pathname));
+  const tabBar = topLevel && !receiptPanel;
 
-  // Every destination the palette can jump to, regardless of which groups are
-  // collapsed in the sidebar: typing is a way past that, not another view of
-  // it. Settings' own pages are included whenever the reader may reach /admin
+  // Every destination the palette can jump to: typing is a way past scanning
+  // the nav, not another view of it. Settings' own pages are included whenever the reader may reach /admin
   // at all, the same gate the "Inställningar" row itself is behind, so a page
   // that is not a link anywhere for this reader is not a search result either.
   const paletteItems: CommandItem[] = [
@@ -619,6 +669,10 @@ export function AppShell({
 
       {/* The phone's navigation. A sibling of the rail rather than a state of
           it: below md the rail is not rendered at all, and this is. */}
+      {tabBar && (
+        <TabBar user={user} isActive={isActive} counts={counts} onMore={() => setMenuOpen(true)} />
+      )}
+
       <MobileNav
         open={menuOpen}
         onClose={closeNav}
@@ -627,6 +681,7 @@ export function AppShell({
         help={HELP}
         settings={SETTINGS.visible(user) ? SETTINGS : null}
         isActive={isActive}
+        counts={counts}
         user={user}
         fortnox={fortnox}
       />
@@ -791,96 +846,25 @@ export function AppShell({
               </button>
             </div>
             <div className="flex flex-col gap-0.5">{navLink(OVERVIEW)}</div>
-            {groups.map((group) => {
-              // The group the current page belongs to defaults to open, so
-              // arriving on a page never buries it, but it is still only a
-              // default: a reader who wants the sidebar out of the way while
-              // they work can fold it like any other, and `groupOverride`
-              // remembers that they did.
-              const owning = group.items.some((i) => isActive(i.href));
-              const open = groupOverride[group.label] ?? owning;
-              const GroupIcon = group.icon;
-              return (
-                <div key={group.label} className="flex flex-col gap-0.5">
-                  {/* A disclosure button now, not a decoration: with seven
-                      groups and a couple dozen items between them, listing
-                      every row of every group at once was the sidebar this
-                      exists to shorten. Only the one the current page owns
-                      (and whichever others were opened by hand) still lists
-                      its pages; the rest collapse to this one row.
-
-                      Carries the group's own icon rather than one borrowed
-                      from whichever item happens to be listed first: a
-                      category is its own thing, not an accident of list
-                      order, and a folded group otherwise has nothing on it
-                      but a bare arrow, indistinguishable from every other
-                      folded group at a glance. Same size and the same
-                      `px-[11px]` inset as an item row below it, so the icon
-                      column lines up whether the row it lands on is a group
-                      or a page.
-
-                      The chevron moves to the trailing edge and fades in
-                      with the label: at rail width there is no room to read
-                      either, and the icon alone is what identifies the row
-                      there, the same as it does for every item. Wide, the
-                      chevron is what says the icon's row is a disclosure and
-                      not a link. */}
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.label, open)}
-                    aria-expanded={open}
-                    className="flex items-center rounded-control px-[11px] py-2 text-left transition-colors hover:bg-hover"
-                  >
-                    <GroupIcon className="size-[18px] shrink-0 text-muted" />
-                    <span
-                      className={cn(
-                        "ms-3 min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wider text-muted transition-opacity",
-                        labelFade,
-                      )}
-                    >
-                      {t(group.label)}
-                    </span>
-                    <IconChevronRight
-                      aria-hidden
-                      className={cn(
-                        "ms-2 size-3.5 shrink-0 text-muted transition-[transform,opacity] duration-200",
-                        open && "rotate-90",
-                        labelFade,
-                      )}
-                    />
-                  </button>
-                  {/* Animated open the same way the profile footer's own
-                      switches are (see `switchReveal`): a grid whose one row
-                      tweens between 0fr and 1fr, clipped by the child that
-                      holds the overflow while it does. `grid-template-rows`
-                      rather than `height`, because these rows do not have a
-                      fixed height to animate to or from; `0fr → 1fr` reaches
-                      whatever that height turns out to be without measuring
-                      it in JS first.
-
-                      Unlike the footer's switches, this collapse has nothing
-                      to do with the rail's own width, so there is no
-                      `:focus-visible` rule anywhere that would widen the
-                      panel and reveal a hidden row the instant Tab reached
-                      it. `inert` is what stands in for that here: a collapsed
-                      group's links leave the tab order and the accessibility
-                      tree entirely, rather than sitting invisibly in either
-                      of them. */}
-                  <div
-                    className={cn(
-                      "grid transition-[grid-template-rows] duration-200 ease-out",
-                      open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                    )}
-                  >
-                    <div className="overflow-hidden">
-                      <div inert={!open} className="flex flex-col gap-0.5">
-                        {group.items.map((item) => navLink(item, group.label))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {/* The sections, one row each, and the pages inside a section as
+                tabs across the top of each of them (SectionTabs, below). It
+                has been both of the other ways. Disclosures folded every
+                group but the current one, so any other page was two clicks
+                and a folded heading did not say what was in it. Then every
+                page at once, which for the treasury was a list long enough to
+                scroll. One row a section is short for everybody, and the tabs
+                say what is in a section the moment you are in it. */}
+            <div className="flex flex-col gap-0.5">
+              {groups.map((group) =>
+                navRow({
+                  href: group.items[0].href,
+                  label: t(group.label),
+                  icon: group.icon,
+                  active: group.items.some((i) => isActive(i.href)),
+                  count: group.items.reduce((n, i) => n + (counts[i.href] ?? 0), 0),
+                }),
+              )}
+            </div>
             {/* `mt-auto` so it sits against the profile footer however few groups
                 this user's roles leave above it. Settings pinned beside Help
                 rather than buried in groupAdmin: neither is a job you go do,
@@ -925,17 +909,25 @@ export function AppShell({
           shell's own `overflow-hidden` could not clip it. The document grew to
           fit it, and scrolling over anything outside this column (the
           sidebar's profile footer) scrolled the whole frame off the screen. */}
-      <div className="relative flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain print:overflow-visible">
-        {/* Mobile top bar: the only way to reach the nav below md. */}
+      <div
+        // What scrolls from md up, for anything that has to know whether the
+        // page is scrolled (the section band's fade, section-nav.tsx).
+        data-main-scroll
+        className="relative flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain print:overflow-visible"
+      >
+        {/* Mobile top bar. Its menu button only where the tab bar is not,
+            since the tab bar's "Mer" is the same door. */}
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:hidden print:hidden">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label={t("openMenu")}
-            className="-ml-1 flex size-9 items-center justify-center rounded-control text-foreground transition-colors hover:bg-hover"
-          >
-            <IconMenu className="size-5" />
-          </button>
+          {!tabBar && (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label={t("openMenu")}
+              className="-ml-1 flex size-9 items-center justify-center rounded-control text-foreground transition-colors hover:bg-hover"
+            >
+              <IconMenu className="size-5" />
+            </button>
+          )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-7" />
           {/* Where you are, not what app this is. The mark beside it already
@@ -979,13 +971,35 @@ export function AppShell({
             // Each written as one utility or the other, never both: `cn` joins
             // rather than merges, so two `pb-` would be settled by stylesheet
             // order instead of by intent.
-            receiptTab ? "pb-32 md:pb-20" : "pb-16 md:pb-20",
+            // The tab bar is fixed as well, 56px and the home indicator, so
+            // below md the page owes it that much plus its own breathing room.
+            // On a phone the folded receipt is a round button in the bottom
+            // corner, so the page ends clear of it and the last buttons on it
+            // are never under it.
+            receiptTab
+              ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
+              : tabBar
+                ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
+                : "pb-16 md:pb-20",
             receiptTab ? "pr-6 md:pr-12" : "pr-6 md:pr-6",
             // The budget sheets need more room; everything else stays centered.
             caps,
           )}
         >
-          {children}
+          {/* The section's band, drawn here rather than by the page so that it
+              stays put while the page under it changes. See section-nav.tsx. */}
+          <SectionNavProvider
+            value={{ nav: sectionNav, slot: sectionSlot, reportOwn: setPageOwn, active: activeSection }}
+          >
+            {sectionNav && (
+              <SectionBand
+                section={sectionNav}
+                own={pageOwn ?? sectionNav.root}
+                slotRef={setSectionSlot}
+              />
+            )}
+            {children}
+          </SectionNavProvider>
         </main>
       </div>
 
@@ -1217,3 +1231,4 @@ function ProfileFooter({
     </div>
   );
 }
+

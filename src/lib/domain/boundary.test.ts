@@ -79,6 +79,9 @@ const PINNED_PURE: Record<string, string[]> = {
     "grid.ts",
     "index.ts",
     "inputs.ts",
+    // overview.ts is the dashboard's budget-against-utfall arithmetic. The
+    // loader in lib/data fetches, this adds up, so the sums are tested alone.
+    "overview.ts",
     "paste.ts",
     "payload.ts",
   ],

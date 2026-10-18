@@ -40,6 +40,7 @@
   "scopeLabel": "Omfattning",
   "scope": {
     "mine": "Mina",
+    "unit": "Min resultatenhet",
     "all": "Alla"
   },
   "colCard": "Kort",

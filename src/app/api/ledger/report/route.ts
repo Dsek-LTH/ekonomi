@@ -51,7 +51,18 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const period = await resolveLedgerPeriod(url);
   if (!period) {
-    return NextResponse.json({ years: [], year: null, report: null, comparison: "NONE" });
+    // Still the whole shape the page reads, empty: it reaches for `budgets`
+    // whether or not there is a report, and crashed on a ledger never synced.
+    return NextResponse.json({
+      years: [],
+      year: null,
+      period: null,
+      report: null,
+      comparison: "NONE",
+      comparisonRequested: "NONE",
+      budgets: [],
+      budget: null,
+    });
   }
   const { years, selected, yearStart, from, to, costCenterCodes } = period;
 

@@ -74,6 +74,10 @@ model ResultUnit {
   income        ResultUnitIncome?
   incomeReports IncomeReport[]
 
+  // Section cards spent from on this unit's behalf. The unit's resultatansvarig
+  // reads their purchases on /bank, see Card.resultUnit.
+  cards Card[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

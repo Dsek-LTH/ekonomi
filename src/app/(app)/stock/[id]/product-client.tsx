@@ -23,6 +23,10 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PurchaseDialog, SpoilageDialog, StocktakeDialog } from "../product-actions";
+import { BottleLevels } from "@/components/stock/bottle-levels";
+import { isInternalCode, validGtin } from "@/lib/stock/barcode";
+import { Notice } from "@/components/ui/notice";
+import { CategoryMark } from "@/components/stock/category-mark";
 import { ProductDialog } from "../product-dialog";
 import { TagChips } from "@/components/stock/tag-chips";
 import type { CellarRowDto, ProductEventDto, StockLevelDto } from "@/lib/data/stock";
@@ -88,6 +92,8 @@ export default function StockProductClient({
   const t = useTranslations("stock");
   const [editing, setEditing] = useState(false);
   const [buying, setBuying] = useState(false);
+  // What a stocktake handed over when it turned out to be a delivery.
+  const [buyingUnits, setBuyingUnits] = useState<number | undefined>(undefined);
   const [counting, setCounting] = useState(false);
   const [spoiling, setSpoiling] = useState(false);
   /** Which delivery is being ticked off, so only its own button spins. */
@@ -97,6 +103,24 @@ export default function StockProductClient({
   const notify = useNotify();
   const returnTo = useReturnTo();
   const { mutate } = useMutation();
+
+  // A stocktake that found bottles which were really a delivery, made the
+  // delivery it should have been. See api/stock/entries/[id]/to-purchase.
+  async function toPurchase(row: CellarRowDto) {
+    const count = row.units ?? 0;
+    const ok = await confirm({
+      title: t("toPurchase.title"),
+      message: t("toPurchase.message", { count, date: row.occurredAt ?? "" }),
+      confirmLabel: t("toPurchase.confirm"),
+    });
+    if (!ok) return;
+    await mutate(`/api/stock/entries/${row.id}/to-purchase`, {
+      key: `to-purchase-${row.id}`,
+      body: {},
+      error: t("toPurchase.failed"),
+      success: t("toPurchase.done", { count }),
+    });
+  }
 
   /**
    * Record that somebody went and looked at one delivery, and found it fine.
@@ -173,260 +197,307 @@ export default function StockProductClient({
       // Identity only: what sort of drink it is and how it is counted are facts
       // about the product like any other, and they read better as labelled rows
       // in the card below than as a clause under the name.
-      title={product.name}
+      title={
+        <span className="flex items-center gap-2.5">
+          <CategoryMark category={product.category} size="lg" />
+          {product.name}
+        </span>
+      }
       back="/stock"
       width="content"
     >
-      {/* `grid-cols-[minmax(0,1fr)]`, not a bare `grid`. An implicit column is
+      {/* Two columns from lg: what there is of it on the left, larger, with
+          the three things you do to the shelf, and what the product is on the
+          right. The history (its nights, and the cellar) runs across both
+          underneath. It was five cards in one column, and what is in stock,
+          the figure the page is opened for, was the second of them.
+
+          `grid-cols-[minmax(0,1fr)]`, not a bare `grid`. An implicit column is
           `auto`, whose minimum is the min-content of what sits in it, so the
           widest thing in any of these cards decides the column's width and the
           cards then stand wider than the screen. On a phone that was 346px of
           card in 280px of page, and the whole document scrolled sideways. The
-          `minmax(0, …)` is what lets the column be as narrow as it is given. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
-        {/* What the product *is*, kept apart from what there is of it. The card
-            below answers "how much have we got"; this one answers the questions
-            that come up when somebody is holding the tin and not sure it is the
-            right one: is this the 33 cl or the 50, is this the one we pay
-            twelve kronor for. Every field the product carries is here, so the
-            page is the whole answer and not a summary of one. */}
-        <Card>
-          {/* What you can do to a thing belongs to the thing: changing what the
-              product *is* rides the card that says what it is, and the two that
-              move stock ride the card that counts it. */}
-          <CardHeader
-            title={t("product.details")}
-            action={
-              canManage ? (
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                    {t("products.edit")}
-                  </Button>
-                  <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={remove}>
-                    {t("products.remove")}
-                  </Button>
-                </div>
-              ) : undefined
-            }
-          />
-          <CardBody className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-4 sm:grid-cols-2">
-            <Detail
-              label={t("products.field.category")}
-              value={t(`category.${product.category}`)}
-            />
-            <Detail
-              label={t("products.field.kind")}
-              value={t(`kindName.${product.kind}`)}
-            />
-            <Detail
-              label={t("products.field.tags")}
-              value={
-                product.tags.length === 0 ? (
-                  <span className="text-muted">–</span>
-                ) : (
-                  <TagChips tags={product.tags} className="mt-0.5" />
-                )
-              }
-            />
-            <Detail
-              label={t("product.ean")}
-              value={
-                product.ean ? (
-                  <span className="tabular-nums">{product.ean}</span>
-                ) : (
-                  <span className="text-muted">{t("product.noEan")}</span>
-                )
-              }
-            />
-            <Detail
-              label={t("products.field.systembolagetId")}
-              value={
-                product.systembolagetId ? (
-                  // Linked because the number is only useful as a way back to
-                  // the page it came from: a price, a new vintage, the article
-                  // being delisted. Through their search rather than a stored
-                  // address: the canonical URL carries a slug that changes when
-                  // a product is renamed, and the number does not.
-                  <a
-                    href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="tabular-nums text-accent hover:underline"
-                  >
-                    {product.systembolagetId}
-                  </a>
-                ) : (
-                  // Named, like the missing barcode above it, rather than left
-                  // as a dash. The field is for finding the article's page
-                  // again, and plenty of the cellar is not bought there at all,
-                  // so an empty one is a product with no article number and not
-                  // a product somebody forgot to finish.
-                  <span className="text-muted">{t("product.noSystembolagetId")}</span>
-                )
-              }
-            />
-            <Detail
-              label={t("product.size")}
-              value={
-                size == null ? (
-                  <span className="text-muted">–</span>
-                ) : (
-                  t("ml", { ml: size })
-                )
-              }
-            />
-            <Detail
-              label={t("product.abv")}
-              value={
-                product.abv == null ? (
-                  <span className="text-muted">–</span>
-                ) : (
-                  `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(product.abv)} %`
-                )
-              }
-            />
-            <Detail
-              label={t("product.unitCost")}
-              value={
-                product.costPriceOre == null ? (
-                  <span className="text-muted">{t("product.noCostPrice")}</span>
-                ) : (
-                  formatOreKr(product.costPriceOre, { decimals: 2 })
-                )
-              }
-            />
-            <Detail
-              label={t("product.alcoholPerKrona")}
-              value={
-                alcoholPerKrona(product) == null ? (
-                  <span className="text-muted">–</span>
-                ) : (
-                  t("clPerKrona", { cl: formatClPerKrona(alcoholPerKrona(product)!) })
-                )
-              }
-            />
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title={t("product.inStock")}
-            action={
-              canManage ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => setBuying(true)}>
-                    {t("products.purchase")}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setCounting(true)}>
-                    {t("products.stocktake")}
-                  </Button>
-                  {/* Beside the stocktake rather than hidden behind it, because
-                      a broken bottle recorded as a count difference is a
-                      difference nobody can explain a term later. */}
-                  <Button size="sm" variant="ghost" onClick={() => setSpoiling(true)}>
-                    {t("products.spoilage")}
-                  </Button>
-                </div>
-              ) : undefined
-            }
-          />
-          {/* Across rather than down. What is in stock is a handful of small
-              numbers that are read together, five rungs and a value, and a
-              stacked list made each one a line to scroll past instead of a
-              figure to take in at a glance. Auto-fitting columns, so a can's
-              two cells and a spirit's six lay themselves out without the page
-              knowing which it is looking at. */}
-          <CardBody className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-x-6 gap-y-4">
-            <Detail
-              label={isVolume ? t("product.sealed") : t("product.units")}
-              value={String(onHand.units)}
-            />
-            {isVolume &&
-              LEVELS.map((level) => (
-                <Detail
-                  key={level}
-                  label={t("field.levelOf", { level })}
-                  value={String(bottlesAt(onHand.open, level))}
-                  dim={bottlesAt(onHand.open, level) === 0}
-                />
-              ))}
-            {/* Sealed and open together, which is an estimate stacked on
-                estimates for a spirit (see openMl) and exactly the figure the
-                restaurangrapport asks for. */}
-            <Detail
-              label={t("product.totalVolume")}
-              value={
-                onHand.totalMl == null ? "–" : t("litres", { litres: formatLitres(onHand.totalMl) })
-              }
-              dim={onHand.totalMl == null}
-            />
-            <Detail
-              label={t("product.value")}
-              value={onHand.valueOre > 0 ? formatOreKr(onHand.valueOre) : "–"}
-            />
-          </CardBody>
-        </Card>
-
-        {product.impossible && (
-          <p className="text-sm text-danger">{t("product.impossible")}</p>
-        )}
-
-        {/* The whole best-before feature, and hedged on purpose in every line
-            of it. The app has never seen a crate. It knows a delivery came in
-            on a day and that the product keeps so many months, so what it can
-            honestly ask for is somebody to go and read the label.
-
-            A row per delivery rather than one notice, because that is how the
-            work is done: go down, find the crate that came in on this date,
-            read it, tick it off, and start on the next one. The overview folds
-            these to a single flag; this is where they get worked through.
-
-            Deliveries the shelf has been empty since are not here at all. They
-            are not dismissed, they are gone. */}
-        {checks.length > 0 && (
+          `minmax(0, …)` is what lets a column be as narrow as it is given. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-6">
           <Card>
-            <CardHeader title={t("expiry.title")} subtitle={t("expiry.hint")} />
-            <CheckTable
-              checks={checks}
+            <CardHeader
+              title={t("product.inStock")}
+              action={
+                canManage ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => setBuying(true)}>
+                      {t("products.purchase")}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setCounting(true)}>
+                      {t("products.stocktake")}
+                    </Button>
+                    {/* Beside the stocktake rather than hidden behind it, because
+                        a broken bottle recorded as a count difference is a
+                        difference nobody can explain a term later. */}
+                    <Button size="sm" variant="ghost" onClick={() => setSpoiling(true)}>
+                      {t("products.spoilage")}
+                    </Button>
+                  </div>
+                ) : undefined
+              }
+            />
+            {/* Across rather than down. What is in stock is a handful of small
+                numbers that are read together, five rungs and a value, and a
+                stacked list made each one a line to scroll past instead of a
+                figure to take in at a glance. Auto-fitting columns, so a can's
+                two cells and a spirit's six lay themselves out without the page
+                knowing which it is looking at. */}
+            {/* The shelf as a picture first, the way the list shows it,
+                large: the sealed with their count and every opened bottle at
+                its level. The figures below are the same shelf spelled out. */}
+            <div className="border-b border-border px-inset py-4">
+              <BottleLevels kind={product.kind} sealed={onHand.units} open={onHand.open} size="lg" />
+            </div>
+            <CardBody className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-x-6 gap-y-4">
+              <Detail
+                label={isVolume ? t("product.sealed") : t("product.units")}
+                value={String(onHand.units)}
+              />
+              {isVolume &&
+                LEVELS.map((level) => (
+                  <Detail
+                    key={level}
+                    label={t("field.levelOf", { level })}
+                    value={String(bottlesAt(onHand.open, level))}
+                    dim={bottlesAt(onHand.open, level) === 0}
+                  />
+                ))}
+              {/* Sealed and open together, which is an estimate stacked on
+                  estimates for a spirit (see openMl) and exactly the figure the
+                  restaurangrapport asks for. */}
+              <Detail
+                label={t("product.totalVolume")}
+                value={
+                  onHand.totalMl == null ? "–" : t("litres", { litres: formatLitres(onHand.totalMl) })
+                }
+                dim={onHand.totalMl == null}
+              />
+              <Detail
+                label={t("product.value")}
+                value={onHand.valueOre > 0 ? formatOreKr(onHand.valueOre) : "–"}
+              />
+            </CardBody>
+          </Card>
+
+          {product.impossible && (
+            <p className="text-sm text-danger">{t("product.impossible")}</p>
+          )}
+          {/* A made-up barcode, from before the field checked: the product
+              cannot be scanned by it, and the next edit will refuse it. Said
+              here with what to do, so it is fixed on purpose rather than
+              discovered by a save that will not go through. */}
+          {product.ean && !validGtin(product.ean) && (
+            <Notice>
+              <p>{t("barcode.invalidHint")}</p>
+            </Notice>
+          )}
+
+          {/* The whole best-before feature, and hedged on purpose in every line
+              of it. The app has never seen a crate. It knows a delivery came in
+              on a day and that the product keeps so many months, so what it can
+              honestly ask for is somebody to go and read the label.
+
+              A row per delivery rather than one notice, because that is how the
+              work is done: go down, find the crate that came in on this date,
+              read it, tick it off, and start on the next one. The overview folds
+              these to a single flag; this is where they get worked through.
+
+              Deliveries the shelf has been empty since are not here at all. They
+              are not dismissed, they are gone. */}
+          {checks.length > 0 && (
+            <Card>
+              <CardHeader title={t("expiry.title")} subtitle={t("expiry.hint")} />
+              <CheckTable
+                checks={checks}
+                canManage={canManage}
+                pending={checking}
+                onCheck={markChecked}
+                onWriteOff={() => setSpoiling(true)}
+              />
+            </Card>
+          )}
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-6">
+          {/* What the product *is*, kept apart from what there is of it. The card
+              below answers "how much have we got"; this one answers the questions
+              that come up when somebody is holding the tin and not sure it is the
+              right one: is this the 33 cl or the 50, is this the one we pay
+              twelve kronor for. Every field the product carries is here, so the
+              page is the whole answer and not a summary of one. */}
+          <Card>
+            {/* What you can do to a thing belongs to the thing: changing what the
+                product *is* rides the card that says what it is, and the two that
+                move stock ride the card that counts it. */}
+            <CardHeader
+              title={t("product.details")}
+              action={
+                canManage ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                      {t("products.edit")}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={remove}>
+                      {t("products.remove")}
+                    </Button>
+                  </div>
+                ) : undefined
+              }
+            />
+            <CardBody className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-4 sm:grid-cols-2">
+              <Detail
+                label={t("products.field.category")}
+                value={t(`category.${product.category}`)}
+              />
+              <Detail
+                label={t("products.field.kind")}
+                value={t(`kindName.${product.kind}`)}
+              />
+              <Detail
+                label={t("products.field.tags")}
+                value={
+                  product.tags.length === 0 ? (
+                    <span className="text-muted">–</span>
+                  ) : (
+                    <TagChips tags={product.tags} className="mt-0.5" />
+                  )
+                }
+              />
+              <Detail
+                label={t("product.ean")}
+                value={
+                  product.ean ? (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="tabular-nums">{product.ean}</span>
+                      {isInternalCode(product.ean) && (
+                        <Tag size="sm">{t("barcode.ownTag")}</Tag>
+                      )}
+                      {!validGtin(product.ean) && (
+                        <Tag size="sm" tone="warning">{t("barcode.invalidTag")}</Tag>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted">{t("product.noEan")}</span>
+                  )
+                }
+              />
+              <Detail
+                label={t("products.field.systembolagetId")}
+                value={
+                  product.systembolagetId ? (
+                    // Linked because the number is only useful as a way back to
+                    // the page it came from: a price, a new vintage, the article
+                    // being delisted. Through their search rather than a stored
+                    // address: the canonical URL carries a slug that changes when
+                    // a product is renamed, and the number does not.
+                    <a
+                      href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="tabular-nums text-accent hover:underline"
+                    >
+                      {product.systembolagetId}
+                    </a>
+                  ) : (
+                    // Named, like the missing barcode above it, rather than left
+                    // as a dash. The field is for finding the article's page
+                    // again, and plenty of the cellar is not bought there at all,
+                    // so an empty one is a product with no article number and not
+                    // a product somebody forgot to finish.
+                    <span className="text-muted">{t("product.noSystembolagetId")}</span>
+                  )
+                }
+              />
+              <Detail
+                label={t("product.size")}
+                value={
+                  size == null ? (
+                    <span className="text-muted">–</span>
+                  ) : (
+                    t("ml", { ml: size })
+                  )
+                }
+              />
+              <Detail
+                label={t("product.abv")}
+                value={
+                  product.abv == null ? (
+                    <span className="text-muted">–</span>
+                  ) : (
+                    `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(product.abv)} %`
+                  )
+                }
+              />
+              <Detail
+                label={t("product.unitCost")}
+                value={
+                  product.costPriceOre == null ? (
+                    <span className="text-muted">{t("product.noCostPrice")}</span>
+                  ) : (
+                    formatOreKr(product.costPriceOre, { decimals: 2 })
+                  )
+                }
+              />
+              <Detail
+                label={t("product.alcoholPerKrona")}
+                value={
+                  alcoholPerKrona(product) == null ? (
+                    <span className="text-muted">–</span>
+                  ) : (
+                    t("clPerKrona", { cl: formatClPerKrona(alcoholPerKrona(product)!) })
+                  )
+                }
+              />
+            </CardBody>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-2">
+          {/* What it did at nights, per night. The same shape as the event sheet,
+              because it is the same question asked of one product: what went out,
+              what came back, and what that came to. Anything somebody later
+              changed about a night hangs off that night's own row. */}
+          <Card>
+            <CardHeader
+              title={t("product.events")}
+              subtitle={t("product.eventsHint")}
+            />
+            <EventTable rows={events} kind={product.kind} />
+          </Card>
+        </div>
+
+        <div className="lg:col-span-2">
+          {/* And what has been done to it in the cellar, which is a different
+              sort of event, and a list rather than a per-night fold. Corrections
+              live here rather than in a card of their own: putting a delivery
+              right is the same kind of deliberate act as making one. */}
+          <Card>
+            <CardHeader
+              title={t("product.cellar")}
+              subtitle={t("product.cellarHint")}
+              action={
+                <Link
+                  href={`/stock/history?product=${product.id}`}
+                  className="text-sm font-medium text-accent"
+                >
+                  {t("product.wholeLog")}
+                </Link>
+              }
+            />
+            <CellarTable
+              rows={cellar}
               canManage={canManage}
-              pending={checking}
-              onCheck={markChecked}
-              onWriteOff={() => setSpoiling(true)}
+              onFix={setFixing}
+              onToPurchase={toPurchase}
             />
           </Card>
-        )}
-
-        {/* What it did at nights, per night. The same shape as the event sheet,
-            because it is the same question asked of one product: what went out,
-            what came back, and what that came to. Anything somebody later
-            changed about a night hangs off that night's own row. */}
-        <Card>
-          <CardHeader
-            title={t("product.events")}
-            subtitle={t("product.eventsHint")}
-          />
-          <EventTable rows={events} kind={product.kind} />
-        </Card>
-
-        {/* And what has been done to it in the cellar, which is a different
-            sort of event, and a list rather than a per-night fold. Corrections
-            live here rather than in a card of their own: putting a delivery
-            right is the same kind of deliberate act as making one. */}
-        <Card>
-          <CardHeader
-            title={t("product.cellar")}
-            subtitle={t("product.cellarHint")}
-            action={
-              <Link
-                href={`/stock/log?product=${product.id}`}
-                className="text-sm font-medium text-accent"
-              >
-                {t("product.wholeLog")}
-              </Link>
-            }
-          />
-          <CellarTable rows={cellar} canManage={canManage} onFix={setFixing} />
-        </Card>
+        </div>
       </div>
 
       {editing && (
@@ -436,8 +507,27 @@ export default function StockProductClient({
           onClose={() => setEditing(false)}
         />
       )}
-      {buying && <PurchaseDialog product={product} onClose={() => setBuying(false)} />}
-      {counting && <StocktakeDialog product={product} onClose={() => setCounting(false)} />}
+      {buying && (
+        <PurchaseDialog
+          product={product}
+          initialUnits={buyingUnits}
+          onClose={() => {
+            setBuying(false);
+            setBuyingUnits(undefined);
+          }}
+        />
+      )}
+      {counting && (
+        <StocktakeDialog
+          product={product}
+          onClose={() => setCounting(false)}
+          onPurchaseInstead={(units) => {
+            setCounting(false);
+            setBuyingUnits(units);
+            setBuying(true);
+          }}
+        />
+      )}
       {spoiling && <SpoilageDialog product={product} onClose={() => setSpoiling(false)} />}
       {fixing && <EntryDialog row={fixing} onClose={() => setFixing(null)} />}
     </PageShell>
@@ -505,7 +595,9 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
     className: "tabular-nums",
     value: pick,
     sortable: true,
-    mobile: "meta" as const,
+    // Off a phone's row, which is the night, when, and what went (`sold`
+    // below). Out, back and spilled are the night's own sheet.
+    mobile: "hide" as const,
     cell: (r: ProductEventDto) =>
       pick(r) === 0 ? (
         <span className="text-muted">–</span>
@@ -568,10 +660,12 @@ function CellarTable({
   rows,
   canManage,
   onFix,
+  onToPurchase,
 }: {
   rows: CellarRowDto[];
   canManage: boolean;
   onFix: (row: CellarRowDto) => void;
+  onToPurchase: (row: CellarRowDto) => void;
 }) {
   const t = useTranslations("stock");
   const controls = useTableControls();
@@ -654,8 +748,8 @@ function CellarTable({
       key: "fix",
       header: "",
       align: "right",
-      // A button, so it goes where the buttons go rather than into a line of
-      // dot-separated facts.
+      // A button, so it goes where the buttons go rather than into the row's
+      // second line.
       mobile: "actions",
       hidden: !canManage,
       cell: (r) =>
@@ -666,6 +760,16 @@ function CellarTable({
             className="relative z-10 text-xs font-medium text-accent hover:underline"
           >
             {t("entry.fix")}
+          </button>
+        ) : r.kind === "COUNT" && (r.units ?? 0) > 0 ? (
+          // A count that found more sealed than the log expected: very often
+          // a delivery booked as a stocktake. Offered, not assumed.
+          <button
+            type="button"
+            onClick={() => onToPurchase(r)}
+            className="relative z-10 whitespace-nowrap text-xs font-medium text-accent hover:underline"
+          >
+            {t("toPurchase.action")}
           </button>
         ) : null,
     },

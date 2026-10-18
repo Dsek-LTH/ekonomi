@@ -6,5 +6,10 @@
   "amountPlaceholder": "Amount",
   "unit": "kr",
   "removeRow": "Remove row",
-  "add": "+ Add cost center"
+  "add": "+ Add cost center",
+  "left": "{amount} left to allocate",
+  "over": "{amount} too much allocated",
+  "balancedChip": "Allocated",
+  "split": "Split across several cost centres",
+  "comment": "Comment"
 }

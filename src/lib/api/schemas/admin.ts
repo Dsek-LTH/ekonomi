@@ -14,9 +14,10 @@ export const CreateCard = z.object({
 });
 export type CreateCard = z.infer<typeof CreateCard>;
 
-/** PATCH /api/cards/[id]: assign or unassign the holder. */
+/** PATCH /api/cards/[id]: assign or unassign the holder, the result unit, or both. */
 export const PatchCard = z.object({
-  holderId: Clearable(Id),
+  holderId: Clearable(Id).optional(),
+  resultUnitId: Clearable(Id).optional(),
 });
 export type PatchCard = z.infer<typeof PatchCard>;
 

@@ -17,12 +17,12 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { DateInput } from "@/components/ui/field";
-import { IconBox, IconPlus, IconSync } from "@/components/ui/icons";
+import { IconBox, IconList, IconPlus, IconSync } from "@/components/ui/icons";
 import { IconButton } from "@/components/ui/icon-button";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
@@ -33,7 +33,14 @@ import type { StockLevelDto } from "@/lib/data/stock";
 import type { Check } from "@/lib/stock/expiry";
 import { alcoholPerKrona, unitVolume } from "@/lib/stock/onhand";
 import { hasTag, tagsInUse } from "@/lib/stock/tags";
+import { validGtin } from "@/lib/stock/barcode";
+
+/** A barcode that is there and does not add up. See lib/stock/barcode.ts. */
+const badBarcode = (p: { ean?: string | null }) => Boolean(p.ean) && !validGtin(p.ean!);
 import { TagChips } from "@/components/stock/tag-chips";
+import { CategoryMark } from "@/components/stock/category-mark";
+import { BottleLevels } from "@/components/stock/bottle-levels";
+import { Menu, MenuItem } from "@/components/ui/menu";
 import { ProductDialog } from "./product-dialog";
 import { CATEGORIES } from "@/lib/domain/categories";
 import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
@@ -121,7 +128,10 @@ export default function StockClient({
   // A product needs a look when its log does not add up, or when something on
   // the shelf may be past its best: the two things the flags column says. The
   // "Behöver ses över" tab is these rows.
-  const needsLook = (p: StockLevelDto) => p.impossible || checks[p.id] !== undefined;
+  // A barcode with the wrong check digit too: one made up to get past the
+  // field before it checked, which the shelf cannot be scanned by.
+  const needsLook = (p: StockLevelDto) =>
+    p.impossible || checks[p.id] !== undefined || badBarcode(p);
   const needsAttention = levels.filter(needsLook).length;
 
   // Every tag anything on the shelf carries. The picker in the product dialog
@@ -192,8 +202,15 @@ export default function StockClient({
       sortable: true,
       searchable: true,
       mobile: "title",
-      cell: (p) => (
-        <span className="font-medium">{p.name}</span>
+      cell: (p) => <span className="font-medium">{p.name}</span>,
+      // On a phone the drink type's mark goes before the name, since the
+      // category column is not on the row there. On a wider screen the column
+      // says it, mark and word, and a mark here as well said it twice.
+      mobileCell: (p) => (
+        <span className="flex min-w-0 items-center gap-2.5">
+          <CategoryMark category={p.category} />
+          <span className="truncate">{p.name}</span>
+        </span>
       ),
     },
     {
@@ -246,8 +263,16 @@ export default function StockClient({
       value: (p) => t(`category.${p.category}`),
       sortable: true,
       searchable: true,
-      mobile: "meta",
-      cell: (p) => t(`category.${p.category}`),
+      // Off a phone's row, where the mark goes before the name instead.
+      mobile: "hide",
+      // Its mark beside its name, so the column is scanned by kind before it
+      // is read. See components/stock/category-mark.tsx.
+      cell: (p) => (
+        <span className="flex items-center gap-2">
+          <CategoryMark category={p.category} />
+          {t(`category.${p.category}`)}
+        </span>
+      ),
     },
     {
       key: "tags",
@@ -257,7 +282,7 @@ export default function StockClient({
       // of labels has no order anybody would be looking for.
       value: (p) => p.tags.join(" "),
       searchable: true,
-      mobile: "meta",
+      mobile: "hide",
       cell: (p) =>
         p.tags.length === 0 ? <span className="text-muted">–</span> : <TagChips tags={p.tags} />,
     },
@@ -269,10 +294,9 @@ export default function StockClient({
       value: (p) => p.onHand.units,
       sortable: true,
       mobile: "meta",
-      cell: (p) =>
-        p.kind === "VOLUME"
-          ? t("holding.volume", { sealed: p.onHand.units, open: p.onHand.openBottles })
-          : t("holding.unit", { units: p.onHand.units }),
+      // Drawn: the sealed with their count, and each opened bottle filled to
+      // its level. See components/stock/bottle-levels.tsx.
+      cell: (p) => <BottleLevels kind={p.kind} sealed={p.onHand.units} open={p.onHand.open} />,
     },
     {
       key: "litres",
@@ -306,7 +330,7 @@ export default function StockClient({
       key: "flags",
       header: "",
       align: "right",
-      mobile: "meta",
+      mobile: "status",
       // Said on the row rather than gathered into a banner, which is this
       // page's whole rule: a warning away from its subject has to name it and
       // then be kept in step with it.
@@ -321,6 +345,11 @@ export default function StockClient({
           <div className="flex flex-wrap items-center justify-end gap-1">
             {p.impossible && (
               <Tag tone="danger" size="sm">{t("flag.impossible")}</Tag>
+            )}
+            {badBarcode(p) && (
+              <Tag tone="warning" size="sm" title={t("barcode.invalidHint")}>
+                {t("barcode.invalidTag")}
+              </Tag>
             )}
             {check && (
               <Tag
@@ -437,15 +466,23 @@ export default function StockClient({
               // ran off the side of the card. Wrapped they are two full-width
               // buttons, which is what a phone wanted from them anyway.
               <div className="flex flex-wrap items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
-                {/* A pallet's worth of deliveries, on its own screen. It sits
-                    beside "new product" rather than on a product because that
-                    is what it is not about: a delivery of twenty things found
-                    one at a time in this list is twenty dialogs, which is the
-                    whole reason the sheet exists. */}
-                <ButtonLink variant="secondary" href="/stock/delivery">
-                  <IconBox className="size-4" />
-                  {t("delivery.open")}
-                </ButtonLink>
+                {/* The two sheets that write to every product at once, a
+                    pallet's delivery and the end of term's stocktake, under one
+                    "Registrera". They sit beside "new product" rather than on a
+                    product because that is what they are not about. One menu
+                    rather than two buttons: they are the same kind of errand,
+                    done a few times a term, and the toolbar's one primary
+                    action reads as that with only one thing beside it. */}
+                <Menu label={t("register.label")} variant="secondary">
+                  <MenuItem onClick={() => router.push("/stock/delivery")}>
+                    <IconBox className="size-4" />
+                    {t("delivery.open")}
+                  </MenuItem>
+                  <MenuItem onClick={() => router.push("/stock/stocktake")}>
+                    <IconList className="size-4" />
+                    {t("stocktakeSheet.open")}
+                  </MenuItem>
+                </Menu>
                 <Button onClick={() => setAdding(true)}>
                   <IconPlus className="size-4" />
                   {t("products.new")}

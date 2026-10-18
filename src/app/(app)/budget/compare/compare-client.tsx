@@ -12,7 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconTrash } from "@/components/ui/icons";
+import { IconX } from "@/components/ui/icons";
 import { TableScroll } from "@/components/ui/table-scroll";
 import {
   joinSnapshots, sheetTotals,
@@ -114,7 +114,7 @@ export function CompareClient({
                           tone="danger"
                           onClick={() => setIds(ids.filter((_, j) => j !== i))}
                         >
-                          <IconTrash className="size-3.5" />
+                          <IconX className="size-3.5" />
                         </IconButton>
                       </span>
                     </th>

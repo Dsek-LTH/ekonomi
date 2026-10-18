@@ -215,3 +215,9 @@ export const SendReminders = z
     message: "too many picked",
   });
 export type SendReminders = z.infer<typeof SendReminders>;
+
+/** PUT /api/expenses/[id]/receipts/order: every document's id, in the order wanted. */
+export const ReorderReceipts = z.object({
+  ids: z.array(Id).min(1),
+});
+export type ReorderReceipts = z.infer<typeof ReorderReceipts>;

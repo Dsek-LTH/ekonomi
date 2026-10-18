@@ -7,14 +7,10 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
-import { NoMatchNote, TransactionPicker } from "@/components/transaction-picker";
+import { MatchHelp, TransactionPicker } from "@/components/transaction-picker";
 import { expenseDocuments } from "@/lib/expense/document-url";
 import { Amount } from "@/components/ui/amount";
-// For the amount that sits inside a translated sentence ("Pick a transaction for
-// exactly …"), where a React node cannot go. Everything rendered as a figure in
-// its own right uses Amount.
-import { formatSEK } from "@/lib/ui/format";
-import { cancelsOut, matchCandidates } from "@/lib/domain/matching";
+import { matchCandidates } from "@/lib/domain/matching";
 import { useFormat } from "@/lib/ui/use-format";
 import type { BankTransaction, Expense, FortnoxStatus } from "@/lib/domain/types";
 import {
@@ -30,12 +26,15 @@ import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
 import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
+import { QueueBar } from "./queue-bar";
+import type { ExpenseQueue, QueueNext } from "@/lib/data/expense-queue";
 
 export default function ExpenseDetailClient({
   expense,
   can,
   bankTransactions,
   fortnox,
+  queues,
 }: {
   expense: Expense | null;
   // Null exactly when `expense` is: there is nothing to be capable of. The two
@@ -43,6 +42,7 @@ export default function ExpenseDetailClient({
   can: ExpenseCapabilities | null;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
+  queues: Partial<Record<ExpenseQueue, QueueNext>>;
 }) {
   if (!expense || !can) {
     return <ExpenseMissing />;
@@ -53,6 +53,7 @@ export default function ExpenseDetailClient({
       can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
+      queues={queues}
     />
   );
 }
@@ -73,12 +74,14 @@ function ExpenseDetail({
   can,
   bankTransactions,
   fortnox,
+  queues,
 }: {
   expense: Expense;
   /** Decided on the server. See expenseCapabilities. */
   can: ExpenseCapabilities;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
+  queues: Partial<Record<ExpenseQueue, QueueNext>>;
 }) {
   const t = useTranslations("expenses.detail");
   const tReceipt = useTranslations("receipt");
@@ -103,7 +106,7 @@ function ExpenseDetail({
       // would be.
       subtitle={
         expense.reference
-          ? `${expense.reference} - ${expense.submitterName}`
+          ? `${expense.reference} – ${expense.submitterName}`
           : expense.submitterName
       }
       back="/expenses"
@@ -129,6 +132,13 @@ function ExpenseDetail({
         documents={documents}
         emptyTitle={tReceipt("alt")}
         emptyDescription={t("noReceipt")}
+      />
+
+      <QueueBar
+        queues={queues}
+        // Whether this one still waits on the viewer in each queue. Once it
+        // does not, the bar is the way on rather than a way to skip it.
+        waiting={{ approvals: can.canApprove, bookkeeping: can.canBook }}
       />
 
       <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
@@ -228,7 +238,6 @@ function BankSection({
   onMatch: (transactionId: string | null) => void;
 }) {
   const t = useTranslations("expenses.detail");
-  const tMatch = useTranslations("expenses.match");
   const { date } = useFormat();
   // Which row was clicked. `matching` says a write is in flight but not which
   // one, and the list stays on screen throughout, so without this the click
@@ -274,11 +283,10 @@ function BankSection({
   }
 
   return (
-    <InspectorSection title={t("bankTransaction")}>
+    // How matching works is behind the "?" beside the heading, the same as on
+    // the form, rather than a paragraph above the list.
+    <InspectorSection title={t("bankTransaction")} aside={<MatchHelp />}>
       <div className="space-y-3">
-        <p className="text-sm text-muted">
-          {tMatch("lead", { amount: formatSEK(Math.abs(expense.grossAmount)) })}
-        </p>
         {/* Every row on this member's card, the claimed ones included. They
             used to be filtered out here, so a purchase somebody else had
             already redovisat simply was not in the list and the reason was
@@ -287,7 +295,10 @@ function BankSection({
           candidates={matchCandidates(
             bankTransactions.filter((t) => t.cardHolderId === cardHolderId),
             expense.grossAmount,
+            null,
+            expense.purchaseDate,
           )}
+          amount={Math.abs(expense.grossAmount)}
           onPick={(id) => {
             setPicked(id);
             onMatch(id);
@@ -295,12 +306,6 @@ function BankSection({
           busy={matching}
           pendingId={picked}
         />
-        {!bankTransactions.some(
-          (t) =>
-            t.cardHolderId === cardHolderId &&
-            !t.matchedExpenseId &&
-            cancelsOut(t.amount, expense.grossAmount),
-        ) && <NoMatchNote hasRows={bankTransactions.length > 0} />}
       </div>
     </InspectorSection>
   );

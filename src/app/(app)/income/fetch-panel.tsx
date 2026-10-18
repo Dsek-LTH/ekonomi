@@ -2,11 +2,13 @@
 
 // Fetching a range: the three sources, the two dates, and the button.
 //
-// Not on screen until asked for: importing happens a few times a term, reading
-// happens every time. What asks for it is the small "Hämta period" button on
-// the review screen's toolbar, beside the view toggle. This is what it
-// reveals, so the panel itself is a plain card and holds no opinion about
-// whether it is showing.
+// Two ways onto the screen, the same form in both. While there is nothing to
+// book it is the page (FetchPanel), because fetching is then the only thing
+// to do. Once there is, it is a dialog (FetchDialog) opened from the list's
+// own header: importing happens a few times a term and reading every day, so
+// the form stays out of the way until asked for, and opening it moves nothing
+// on the page. It used to be a card unfolded under a button on a toolbar row
+// of its own, which stood alone above the list and pushed it down.
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -14,6 +16,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Modal, ModalHeader } from "@/components/ui/modal";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, FieldGroup } from "@/components/ui/field";
 import type { IncomeSource } from "@/lib/domain/types";
@@ -33,7 +36,50 @@ interface FetchResult {
 
 const SOURCES: IncomeSource[] = ["SWISH", "ZETTLE", "ZETTLE_FEE"];
 
-export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }) {
+/** The form inside a card, as the page, for when there is nothing to book. */
+export function FetchPanel({
+  serviceConfigured,
+  title,
+  subtitle,
+}: {
+  serviceConfigured: boolean;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Card>
+      <CardHeader title={title} subtitle={subtitle} />
+      <FetchForm serviceConfigured={serviceConfigured} />
+    </Card>
+  );
+}
+
+/** The form in a dialog, from the list's header. Closes itself once a fetch
+ *  has gone through, since what it fetched is then on the list behind it. */
+export function FetchDialog({
+  serviceConfigured,
+  onClose,
+}: {
+  serviceConfigured: boolean;
+  onClose: () => void;
+}) {
+  const t = useTranslations("income");
+  return (
+    <Modal label={t("fetch.title")} onClose={onClose} className="max-w-2xl">
+      <ModalHeader title={t("fetch.title")} subtitle={t("fetch.description")} />
+      <FetchForm serviceConfigured={serviceConfigured} onDone={onClose} />
+    </Modal>
+  );
+}
+
+function FetchForm({
+  serviceConfigured,
+  onDone,
+}: {
+  serviceConfigured: boolean;
+  /** After a fetch that went through. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("income");
   const notify = useNotify();
   const { pending, mutate } = useMutation();
@@ -51,6 +97,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
 
   function report(result: FetchResult | null) {
     if (!result) return;
+    onDone?.();
     const parts = [t("summary.imported", { count: result.created })];
     // Each of these is only worth a line when it happened, but always worth
     // one then: a day that silently went missing looks like takings that
@@ -96,8 +143,7 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
   }
 
   return (
-    <Card>
-      <CardHeader title={t("fetch.title")} subtitle={t("fetch.description")} />
+    <>
       {/* One row on a laptop, wrapping on a narrow window: the four controls
           are one sentence: this source, these dates, go. Bottom-aligned, so
           the labels sit above a single line of controls rather than each field
@@ -161,6 +207,6 @@ export function FetchPanel({ serviceConfigured }: { serviceConfigured: boolean }
           </Button>
         )}
       </CardBody>
-    </Card>
+    </>
   );
 }

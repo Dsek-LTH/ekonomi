@@ -76,6 +76,12 @@
     "assigned": "Card ····{last4} assigned to {name}.",
     "unassigned": "Card ····{last4} no longer has a holder.",
     "assignFailed": "Could not change the holder",
+    "colResultUnit": "Result unit",
+    "noResultUnit": "No result unit",
+    "resultUnitFor": "Result unit for card ····{last4}",
+    "unitAssigned": "Card ····{last4} now belongs to {name}.",
+    "unitUnassigned": "Card ····{last4} no longer belongs to a result unit.",
+    "unitAssignFailed": "Could not change the result unit",
     "searchPlaceholder": "Search card or holder…",
     "noMatch": "No cards match.",
     "addHint": "Cards are also added on their own when a bank file mentions a new card number."

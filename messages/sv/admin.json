@@ -76,6 +76,12 @@
     "assigned": "Kort ····{last4} tilldelat {name}.",
     "unassigned": "Kort ····{last4} har ingen innehavare längre.",
     "assignFailed": "Kunde inte byta innehavare",
+    "colResultUnit": "Resultatenhet",
+    "noResultUnit": "Ingen resultatenhet",
+    "resultUnitFor": "Resultatenhet för kort ····{last4}",
+    "unitAssigned": "Kort ····{last4} hör nu till {name}.",
+    "unitUnassigned": "Kort ····{last4} hör inte längre till någon resultatenhet.",
+    "unitAssignFailed": "Kunde inte byta resultatenhet",
     "searchPlaceholder": "Sök kort eller innehavare…",
     "noMatch": "Inga kort matchar.",
     "addHint": "Kort läggs också upp av sig själva när en bankfil nämner ett nytt kortnummer."

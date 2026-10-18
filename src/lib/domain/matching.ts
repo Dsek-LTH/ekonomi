@@ -33,20 +33,29 @@ export function isMatchable(paymentType: string): boolean {
   return paymentType === "CARD";
 }
 
-// What both pickers say when nothing in the list can settle the claim is
-// `NoMatchNote` in components/transaction-picker.tsx. It used to be one line of
-// hint text guessing at an unimported bank file, which is one of the reasons and
-// often the wrong one; the note names the case it is actually looking at and
-// says that saving a draft is the way on, since a card purchase cannot be
-// submitted unmatched at all (see `submitBlocker`).
+// What the picker says when nothing in the list can settle the claim is one
+// line, and every row that cannot be picked carries its reason as a tag. Why
+// matching works the way it does, including that saving a draft is the way on
+// while a purchase is not imported yet (a card purchase cannot be submitted
+// unmatched at all, see `submitBlocker`), is `MatchHelp` in
+// components/transaction-picker.tsx, behind a "?".
 
 /** As much of a bank row as choosing one needs. */
 interface MatchableTransaction {
   id: string;
   amount: number;
+  /** YYYY-MM-DD. Optional, so a list without dates still ranks by amount. */
+  transactionDate?: string;
   matchedExpenseId?: string;
   matchedExpenseRef?: string;
 }
+
+/**
+ * How many days apart a row may be from the purchase and still be taken for it
+ * when only the amount differs. The bank's Transdag and the receipt's date are
+ * usually the same day; a weekend or a slow terminal moves it by one or two.
+ */
+export const NEAR_DAYS = 3;
 
 /**
  * Why a row cannot settle this claim.
@@ -86,6 +95,18 @@ export interface MatchCandidate<T> {
    * behind it belongs with the rule it comes from.
    */
   offBy: number;
+  /**
+   * Days between the row and the purchase, either way. Null where either date
+   * is unknown.
+   */
+  daysOff: number | null;
+  /**
+   * Very likely this purchase with the amount typed wrong: the right direction,
+   * free, within NEAR_DAYS of it, and only the amount differs. The screen offers
+   * to take the row's amount, which is the one-click fix for the commonest
+   * mistake on this step.
+   */
+  fixable: boolean;
 }
 
 /**
@@ -120,7 +141,11 @@ export function matchCandidates<T extends MatchableTransaction>(
   transactions: readonly T[],
   grossAmount: number,
   keepTransactionId?: string | null,
+  /** The utlägg's purchase date, YYYY-MM-DD. Ranks the rows nearest it first. */
+  purchaseDate?: string | null,
 ): MatchCandidate<T>[] {
+  const day = (iso?: string | null) => (iso ? Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) : NaN);
+  const bought = day(purchaseDate);
   // Money coming back to the section is settled by an incoming row; money it
   // spent, by an outgoing one.
   const incoming = grossAmount < 0;
@@ -138,6 +163,9 @@ export function matchCandidates<T extends MatchableTransaction>(
           : taken
             ? "taken"
             : null;
+      const on = day(txn.transactionDate);
+      const daysOff =
+        Number.isNaN(bought) || Number.isNaN(on) ? null : Math.round(Math.abs(on - bought) / 86_400_000);
       return {
         txn,
         selectable: blocked === null,
@@ -146,6 +174,13 @@ export function matchCandidates<T extends MatchableTransaction>(
         // return: what is asked is "how far off is this row", not which way
         // round the two happen to be signed.
         offBy: Math.round((Math.abs(txn.amount) - magnitude) * 100) / 100,
+        daysOff,
+        fixable:
+          blocked === "amount" &&
+          !taken &&
+          magnitude > 0 &&
+          daysOff !== null &&
+          daysOff <= NEAR_DAYS,
       };
     })
     .sort(
@@ -155,6 +190,11 @@ export function matchCandidates<T extends MatchableTransaction>(
         // work, which is where it does the most good: it is the answer to why
         // the purchase you are looking at cannot be picked.
         Number(b.selectable) - Number(a.selectable) ||
+        // Then by the day, where there is one to go by: a row from the same day
+        // that differs by three kronor is the purchase typed wrong, and one
+        // from last month that differs by one krona is a different purchase.
+        // Ranking by size alone put the second first.
+        (a.daysOff ?? Infinity) - (b.daysOff ?? Infinity) ||
         Math.abs(a.offBy) - Math.abs(b.offBy) ||
         // A stable last resort, so two rows of the same size do not swap places
         // between renders.

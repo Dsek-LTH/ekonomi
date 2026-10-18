@@ -14,6 +14,7 @@ import { isEditable, isQuietDraftEdit, isRecallable } from "@/lib/domain/status"
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import { fail, gate } from "@/lib/api/guard";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
+import { RECEIPT_ORDER } from "@/lib/data/receipt-order";
 
 // Generous limit on the *original* upload. Images get downscaled on the server.
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
@@ -126,9 +127,16 @@ export async function POST(
     await putObject(objectKey, body, mimeType);
 
     const receipt = await prisma.$transaction(async (tx) => {
+      // Last among the utlägg's documents. The submitter can move it from
+      // there (see ./order).
+      const last = await tx.receipt.aggregate({
+        where: { expenseId: expense.id },
+        _max: { position: true },
+      });
       const created = await tx.receipt.create({
         data: {
           id: receiptId,
+          position: (last._max.position ?? -1) + 1,
           expenseId: expense.id,
           objectKey,
           filename,
@@ -175,7 +183,7 @@ export async function GET(
 
   const receipts = await prisma.receipt.findMany({
     where: { expenseId: expense.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: RECEIPT_ORDER,
     select: {
       id: true,
       filename: true,

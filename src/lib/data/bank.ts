@@ -122,17 +122,23 @@ const BANK_DEFAULT_ORDER: Prisma.BankTransactionOrderByWithRelationInput[] = [
 /**
  * One page of the bank feed, and how many rows are behind it.
  *
- * `scope` is the same narrowing `getBankTransactions` takes and means the same
- * thing: a member's own card purchases, or the whole feed for bookkeeping.
+ * `scope` narrows to a member's own card purchases, or to the cards spent for
+ * some result units (a resultatansvarig's reading). Neither is the whole feed,
+ * for bookkeeping.
  * Whether a row is accounted for is a tab rather than a search: it is the
  * question this screen exists to answer.
  */
 export async function getBankTransactionPage(
-  scope: { cardHolderId?: string },
+  scope: { cardHolderId?: string; resultUnitNames?: readonly string[] },
   q: ListQuery,
 ): Promise<RowPage<BankTransaction>> {
   const and: Prisma.BankTransactionWhereInput[] = [];
   if (scope.cardHolderId) and.push({ card: { holderId: scope.cardHolderId } });
+  // The cards spent for these result units. An empty list is no cards, not
+  // every card: it narrows to nothing rather than falling through to the feed.
+  if (scope.resultUnitNames) {
+    and.push({ card: { resultUnit: { name: { in: [...scope.resultUnitNames] } } } });
+  }
 
   // `is: null` / `isNot: null` on a one-to-one relation, which is how "has an
   // utlägg against it" is asked of the database rather than of a loaded row.
@@ -185,17 +191,30 @@ export async function getCardlessTransactions(): Promise<BankTransaction[]> {
   return txns.map(toBankTransaction);
 }
 
+/** How many of a member's own card purchases have no utlägg yet. */
+export async function countUnaccountedPurchases(holderId: string): Promise<number> {
+  return prisma.bankTransaction.count({
+    where: { card: { holderId }, matchedExpense: { is: null } },
+  });
+}
+
 export async function getCards(opts: { holderId?: string } = {}): Promise<Card[]> {
   const cards = await prisma.card.findMany({
     where: opts.holderId ? { holderId: opts.holderId } : {},
     orderBy: { last4: "asc" },
-    include: { holder: true, _count: { select: { transactions: true } } },
+    include: {
+      holder: true,
+      resultUnit: { select: { name: true } },
+      _count: { select: { transactions: true } },
+    },
   });
   return cards.map((c) => ({
     id: c.id,
     last4: c.last4,
     holderId: c.holderId ?? undefined,
     holderName: c.holder?.name,
+    resultUnitId: c.resultUnitId ?? undefined,
+    resultUnitName: c.resultUnit?.name,
     active: c.active,
     txCount: c._count.transactions,
   }));

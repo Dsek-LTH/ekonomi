@@ -34,6 +34,9 @@ export const expenseDateColumn = (
   sortable: true,
   dateRange: true,
   className: "whitespace-nowrap text-muted",
+  // On a phone the second line is who and when, in that order.
+  mobile: "meta",
+  mobileOrder: 1,
   cell: (e) => date(e.purchaseDate),
 });
 
@@ -50,9 +53,10 @@ export const expenseTitleColumn = (
   value: (e) => e.title,
   sortable: true,
   searchable: true,
-  // The cell already carries its own second line, which is exactly what the
-  // card's headline slot wants.
+  // The title alone on a phone. The reference under it was a third line on a
+  // row that has two, and it is on the utlägg the row opens.
   mobile: "title",
+  mobileCell: (e) => e.title,
   cell: (e) => {
     // An utlägg that hasn't been submitted yet has no reference to show, so the
     // second line is whatever is left of it, possibly nothing, in which case
@@ -81,13 +85,8 @@ export const expensePaymentTypeColumn = (
   sortable: true,
   searchable: true,
   className: "whitespace-nowrap",
-  // On the phone row after all. It used to be hidden there to make room, back
-  // when it was a grey tag saying a word: three or four of those in one muted
-  // line is what crowds it, and the one that had to go was the one the reader
-  // could get by opening the row. As an icon it costs about 20px and answers
-  // the question the list is most often scanned for, so it earns the room.
-  // See PaymentTag's `compact`: the word is still there for a screen reader.
-  mobile: "meta",
+  // Not on a phone: the row there is what, how much, who, when and where it
+  // has got to, and the payment type is on the utlägg the row opens.
   cell: (e) => <PaymentTag type={e.paymentType} compact />,
 });
 
@@ -115,6 +114,7 @@ export const expenseSubmitterColumn = (header: string, hidden = false): Column<E
   sortable: true,
   searchable: true,
   className: "text-muted",
+  mobile: "meta",
   cell: (e) => e.submitterName,
 });
 
@@ -126,18 +126,10 @@ export const expenseStatusColumn = (header: string): Column<Expense> => ({
   header,
   value: (e) => EXPENSE_STATUSES.indexOf(e.status),
   sortable: true,
-  // Opposite the title on a phone, stacked over the amount, rather than run
-  // into the muted line with the date and the reference. Where an utlägg has
-  // got to is the reason most people open this list at all, and a pill is a
-  // shape you read at a glance, which is worth the right-hand column and is
-  // wasted in a row of dot-separated text.
-  mobile: "trailing",
-  // Under the amount, not over it. Both sit in the right-hand column on a
-  // phone, and the figure is what somebody is running their eye down a list of
-  // utlägg for; the status is what they check once one has stopped them. The
-  // order used to fall out of where these two columns happen to sit on the
-  // desktop table, which is not a decision anybody made about the card.
-  mobileOrder: 1,
+  // Opposite the second line on a phone, under the amount. Where an utlägg
+  // has got to is the reason most people open this list at all, and a pill is
+  // a shape you read at a glance.
+  mobile: "status",
   cell: (e) => <StatusPill status={e.status} />,
 });
 

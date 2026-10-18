@@ -36,21 +36,20 @@
 // and three. That matches the errand, since you are carrying crates one
 // direction at a time, and it is the only arrangement that keeps a row on one line without
 // asking anybody to drag a grid sideways in a cellar.
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
 import {
   IconDots,
-  IconElbow,
   IconLock,
-  IconScan,
+  IconPencil,
   IconSwap,
   IconTrash,
   IconX,
@@ -80,8 +79,12 @@ import { useGridFocus, useSeekFocus } from "@/lib/ui/use-grid-focus";
 import type { StockChangeDto, StockLevelDto, StockEventDetailDto } from "@/lib/data/stock";
 import type { TagTotals } from "@/lib/stock/event";
 import { ChangeFeed } from "@/components/stock/change-feed";
+import { Bottle } from "@/components/stock/bottle-levels";
+import { CategoryMark } from "@/components/stock/category-mark";
+import { CATEGORIES } from "@/lib/domain/categories";
 import type { WriteStockCells } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
+import { usePhone } from "@/lib/ui/media";
 import { formatMovementLitres } from "@/lib/ui/format";
 
 /** A figure in the product's own unit: litres for a spirit, a count otherwise. */
@@ -101,6 +104,7 @@ export default function EventClient({
 }) {
   const t = useTranslations("stock");
   const router = useRouter();
+  const phone = usePhone();
   const { pending, mutate } = useMutation();
   const confirm = useConfirm();
   const notify = useNotify();
@@ -131,6 +135,9 @@ export default function EventClient({
   const [added, setAdded] = useState<string[]>([]);
   const [column, setColumn] = useState<CellKind>("CHECKOUT");
   const [editing, setEditing] = useState(false);
+  /** The sheet, or how its figures got there. See the page's collections. */
+  const [view, setView] = useState<"sheet" | "changes">("sheet");
+  const locale = useLocale();
   /** A product a scan has just put on the sheet, waiting for the caret. */
   const [seeking, setSeeking] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -200,9 +207,31 @@ export default function EventClient({
    * scroll past when you are holding one of them.
    */
   const hunt = search.trim().toLowerCase();
-  const shown = hunt
+  const found = hunt
     ? rows.filter((id) => byId.get(id)?.name.toLowerCase().includes(hunt))
     : rows;
+
+  /**
+   * The drawn rows by drink type, in the order every stock screen keeps them,
+   * and otherwise as the night has them.
+   *
+   * Grouped because a night is read the way the cellar is stocked: the beer
+   * crates, then the wine, then the spirit shelf. A row added in the evening
+   * goes in with its kind rather than at the foot. The keyboard's grid is
+   * built from `shown`, so it walks the rows in the order they are drawn.
+   */
+  const rank = (id: string): number => {
+    const at = CATEGORIES.indexOf(byId.get(id)?.category as (typeof CATEGORIES)[number]);
+    return at === -1 ? CATEGORIES.length : at;
+  };
+  const shown = [...found].sort((a, b) => rank(a) - rank(b));
+  const groups: [string, string[]][] = [];
+  for (const id of shown) {
+    const category = byId.get(id)?.category ?? "";
+    const last = groups[groups.length - 1];
+    if (last && last[0] === category) last[1].push(id);
+    else groups.push([category, [id]]);
+  }
 
   /** What the log says a cell is, as text. Nothing at all when it is nothing. */
   const bookedText = (key: string): string => {
@@ -624,6 +653,14 @@ export default function EventClient({
   // around a bare full-height input. The box *is* the cell, which is what makes
   // the focus ring land on the cell rather than inside it.
   const headerCell = "px-2 py-2.5 text-center font-medium";
+  /**
+   * How many columns a full-width row spans: all of them from md, and on a
+   * phone the three that show (the product, the column being typed in, and
+   * what went). A span counts only cells that are displayed, so spanning the
+   * hidden two as well made the table invent two empty columns down its right
+   * edge to hold them.
+   */
+  const span = phone ? 3 : CELL_KINDS.length + 2;
   const cellInput =
     "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
 
@@ -775,12 +812,55 @@ export default function EventClient({
     );
   }
 
+  // The night's date as people say it, weekday first: a pub is "fredagens",
+  // and 2026-10-17 had to be worked out.
+  const longDate = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${event.date}T12:00:00`));
+
   return (
     <PageShell
       title={event.name}
-      subtitle={event.date}
+      subtitle={longDate}
       back="/stock/events"
       width="wide"
+      // Two readings of one night: where the figures ended up, and how they got
+      // there. The second was a card under the sheet that only mattered when
+      // something looked wrong, and pushed the sheet's foot further down.
+      collections={{
+        label: t("event.view.label"),
+        value: view,
+        options: [
+          { value: "sheet", label: t("event.view.sheet") },
+          { value: "changes", label: t("event.view.changes") },
+        ],
+        onChange: (v) => setView(v as "sheet" | "changes"),
+      }}
+      // What is done to the night itself rather than to its figures. It sat on
+      // the sheet's card, where it read as acting on the sheet.
+      aside={
+        canManage ? (
+          <Menu
+            label={t("event.actions")}
+            iconOnly
+            variant="ghost"
+            size="sm"
+            icon={<IconDots className="size-4" />}
+          >
+            <MenuItem onClick={() => setEditing(true)}>
+              <IconPencil className="size-4 shrink-0 text-muted" />
+              {t("event.edit")}
+            </MenuItem>
+            <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
+              <IconTrash className="size-4 shrink-0" />
+              {t("event.remove")}
+            </MenuItem>
+          </Menu>
+        ) : undefined
+      }
     >
       {editing && (
         <EventDialog
@@ -788,16 +868,29 @@ export default function EventClient({
           onClose={() => setEditing(false)}
         />
       )}
+      {view === "changes" ? (
+        <Card className="overflow-hidden">
+          <ChangeFeed changes={changes} scope="event" />
+          <div className="border-t border-border px-inset py-3">
+            <Link
+              href={`/stock/history?event=${event.id}`}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              {t("event.movements", { count: event.entries })}
+            </Link>
+          </div>
+        </Card>
+      ) : (
+      <>
       <Card>
         <SheetHeader
           t={t}
           search={search}
           onSearch={setSearch}
+          onScan={canManage ? scan : undefined}
           kinds={CELL_KINDS}
           column={column}
           onColumn={setColumn}
-          onEdit={canManage ? () => setEditing(true) : undefined}
-          onRemove={canManage ? remove : undefined}
         />
 
         {/* No CardBody: the sheet is ruled to the card's own edge, the way the
@@ -834,7 +927,21 @@ export default function EventClient({
                 </tr>
               </thead>
 
-              {shown.map((productId) => {
+              {groups.map(([category, ids]) => (
+                <Fragment key={category}>
+                  {/* The drink type, as a ruled line across the sheet rather
+                      than a heading over a card of its own. */}
+                  <tbody>
+                    <tr className="border-b border-border bg-surface/60">
+                      <td colSpan={span} className="px-3 py-1.5">
+                        <span className="flex items-center gap-2 text-xs font-medium text-muted">
+                          <CategoryMark category={category as StockLevelDto["category"]} />
+                          {t(`category.${category}`)}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+              {ids.map((productId) => {
                 const product = byId.get(productId);
                 if (!product) return null;
                 const totals = nightOf(product);
@@ -890,14 +997,18 @@ export default function EventClient({
                               </IconButton>
                             </div>
                           ) : (
+                            // The name, and under it what the cellar holds.
+                            // On one line they ran together, and a long name
+                            // pushed the stock count onto a line of its own
+                            // anyway, at a different place on every row.
                             <span className="min-w-0">
                               <Link
                                 href={`/stock/${productId}`}
-                                className="font-medium hover:underline"
+                                className="block truncate font-medium hover:underline"
                               >
                                 {product.name}
                               </Link>
-                              <span className="ml-2 text-xs text-muted">
+                              <span className="block truncate text-xs text-muted">
                                 {isVolume
                                   ? t("holding.volume", {
                                       sealed: shelf.sealed,
@@ -906,7 +1017,7 @@ export default function EventClient({
                                   : t("holding.unit", { units: shelf.sealed })}
                               </span>
                               {fault && (
-                                <span className="ml-2 text-xs text-danger">
+                                <span className="block text-xs text-danger">
                                   {t(`fault.${fault}`)}
                                 </span>
                               )}
@@ -965,11 +1076,17 @@ export default function EventClient({
                     {isVolume &&
                       lines.map((level) => (
                         <tr key={level} className="divide-x divide-border">
-                          <td className="py-1.5 pl-6 pr-2 align-middle">
-                            <span className="flex items-center gap-1 text-xs text-muted">
-                              <IconElbow className="size-3 shrink-0" />
-                              {rungName(level)}
-                              <span className="text-muted">– {available(product, level)}</span>
+                          {/* The rung as the bottle it stands for, and how
+                              many of those the night found on the shelf. It
+                              was "↳ 80 % – 3", which left the 3 to be
+                              guessed at. */}
+                          <td className="py-1 pl-4 pr-2 align-middle">
+                            <span className="flex items-center gap-1.5 text-xs text-muted">
+                              <Bottle level={level === WHOLE ? 100 : level} />
+                              <span className="text-foreground">{rungName(level)}</span>
+                              <span className="ml-auto truncate tabular-nums">
+                                {t("event.sheet.onShelf", { count: available(product, level) })}
+                              </span>
                             </span>
                           </td>
                           {CELL_KINDS.map((kind) => (
@@ -989,6 +1106,8 @@ export default function EventClient({
                   </tbody>
                 );
               })}
+                </Fragment>
+              ))}
 
               {/* Said inside the table rather than in place of it: the spare
                   rows below are where you would go next, and hiding them to
@@ -997,7 +1116,7 @@ export default function EventClient({
               {shown.length === 0 && rows.length > 0 && (
                 <tbody>
                   <tr>
-                    <td colSpan={CELL_KINDS.length + 2} className="px-inset py-4">
+                    <td colSpan={span} className="px-inset py-4">
                       <EmptyNote>{t("event.sheet.noMatch", { text: search.trim() })}</EmptyNote>
                     </td>
                   </tr>
@@ -1017,14 +1136,11 @@ export default function EventClient({
                 <tbody>
                   <tr className="divide-x divide-border">
                     <td className="p-0 align-middle">
-                      {/* The two ways of putting a product on the sheet, side
-                          by side, because they are one errand. The scanner is
-                          the quicker of them and does double duty: a code the
-                          event already has jumps to that product's row
-                          instead of adding a second one, which is the whole
-                          reason it sits on the row that adds rather than off in
-                          the header where it read as a separate feature. */}
-                      <div className="flex items-center gap-1 pr-1">
+                      {/* Picking by name. The scanner, the quicker way in,
+                          is on the toolbar beside the search: a code the
+                          event already has jumps to that product's row, so
+                          it finds as much as it adds. */}
+                      <div className="flex items-center">
                         <div className="min-w-0 flex-1">
                           <Combobox
                             value=""
@@ -1041,13 +1157,6 @@ export default function EventClient({
                             buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
                           />
                         </div>
-                        <IconButton
-                          label={t("event.sheet.scan")}
-                          title={t("event.sheet.scan")}
-                          onClick={scan}
-                        >
-                          <IconScan className="size-4" />
-                        </IconButton>
                       </div>
                     </td>
                     {CELL_KINDS.map((kind) => (
@@ -1073,17 +1182,8 @@ export default function EventClient({
         )}
       </Card>
 
-      {/* The sheet above says where the night's figures ended up. This says how
-          they got there, and who. Its own card because they are two questions:
-          one is read at a glance, the other only when something looks wrong. */}
-      <Card>
-        <CardHeader title={t("changes.title")} />
-        <ChangeFeed changes={changes} scope="event" />
-      </Card>
-
-      <Link href={`/stock/log?event=${event.id}`} className="text-sm font-medium text-accent">
-        {t("event.movements", { count: event.entries })}
-      </Link>
+      </>
+      )}
 
       {overlay}
     </PageShell>

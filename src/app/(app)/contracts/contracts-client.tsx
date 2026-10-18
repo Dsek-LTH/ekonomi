@@ -81,11 +81,13 @@ export function ContractsClient({
       },
       {
         key: "counterparty",
+        mobile: "meta",
         header: t("col.counterparty"),
         cell: (c) => c.counterparty ?? <span className="text-muted">–</span>,
       },
       {
         key: "kind",
+        mobile: "hide",
         header: t("col.kind"),
         cell: (c) => <span className="text-muted">{t(`kind.${c.kind}`)}</span>,
       },
@@ -117,7 +119,7 @@ export function ContractsClient({
       {
         key: "status",
         header: t("col.status"),
-        mobile: "trailing",
+        mobile: "status",
         cell: (c) => {
           // Derived against the page's one `today`, so every row on the screen
           // is judged on the same day. Null for PROTOCOL/OTHER, which carry

@@ -135,6 +135,39 @@ export function AccountBlock({ account }: { account: Account }) {
   // what was adopted.
   const adjRows = adjustments.get(account.id) ?? [];
   const adjTotal = adjRows.reduce((sum, r) => sum + r.amount, 0);
+  // Read against something else (the utfall, or another budget), an account
+  // is one row: its number, its name, what it budgets, and the comparison
+  // beside it. The rows that build the figure, the changes and the way to add
+  // one are how a budget is written, not how it is read against what
+  // happened, and the utfall has nothing to say about a row anyway: Fortnox
+  // books to an account, so every row of it stood there with two empty cells.
+  // Writing comes back with the comparison switched off.
+  if (showCompare) {
+    return (
+      <tbody className="border-b border-border">
+        <tr className="bg-background">
+          {gut(grid.accountRow.get(`${ccCode}|${account.id}`))}
+          <td className="border-r border-border/60 px-2 py-2 text-center font-mono text-sm font-semibold">
+            {account.accountCode}
+          </td>
+          <td className="border-r border-border/60 px-3 py-2 text-sm font-medium" colSpan={columns.length - 2}>
+            {account.accountName}
+          </td>
+          <td
+            className={cn(
+              "px-2 py-2 text-right font-semibold tabular-nums",
+              totalIncomplete && "text-warning",
+            )}
+          >
+            {fmt(total)}
+          </td>
+          <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />
+          <td />
+        </tr>
+      </tbody>
+    );
+  }
+
   return (
     <tbody className="border-b border-border">
       {/* Marked like the rows below it: standing in this line and copying
@@ -431,18 +464,6 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
         <CompareCells other={account.totals[1]} own={undefined} incomeLike={incomeLike} strong />
         <td />
       </tr>
-      {account.lines.map((l) => (
-        <tr key={l.key} className="border-t border-border/40 text-muted">
-          {gut(undefined)}
-          {columns.map((col) => (
-            <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-              {col.key === "beskrivning" && <span className="pl-3">{l.description || "–"}</span>}
-            </td>
-          ))}
-          <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />
-          <td />
-        </tr>
-      ))}
     </tbody>
   );
 }

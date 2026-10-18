@@ -33,5 +33,10 @@
   "documentN": "Dokument {n}",
   "resize": "Ändra kvittopanelens bredd",
   "coverLabel": "Utläggsräkning",
-  "underlagLabel": "Underlag"
+  "underlagLabel": "Underlag",
+  "documents": "Dokument",
+  "showDocument": "Visa dokument {n}: {name}",
+  "documentTileHint": "Klicka för att visa, dra för att flytta",
+  "removeDocumentN": "Ta bort dokument {n}",
+  "stripHint": "Dra för att ändra ordning. Ordningen är den som skickas till Fortnox."
 }

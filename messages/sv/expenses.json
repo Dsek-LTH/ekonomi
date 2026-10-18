@@ -137,7 +137,23 @@
     "deadlineWaiverGranted": "{name} beviljade dispens {date}.",
     "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in.",
     "remind": "Skicka påminnelse",
-    "reminderTo": "Till {names}"
+    "reminderTo": "Till {names}",
+    "queue": {
+      "next": "Nästa: {name}",
+      "skip": "Hoppa till nästa",
+      "approvals": {
+        "done": "Attesterat. {count, plural, =1 {1 till väntar} other {# till väntar}} på din attest.",
+        "empty": "Attesterat. Inget mer väntar på din attest.",
+        "waiting": "{count, plural, =1 {1 till} other {# till}} i attestkön.",
+        "toList": "Till attest"
+      },
+      "bookkeeping": {
+        "done": "Klart här. {count, plural, =1 {1 till väntar} other {# till väntar}} på att bokföras.",
+        "empty": "Klart här. Inget mer väntar på att bokföras.",
+        "waiting": "{count, plural, =1 {1 till} other {# till}} att bokföra.",
+        "toList": "Till bokföring"
+      }
+    }
   },
   "mutations": {
     "transition": {
@@ -201,7 +217,6 @@
     "savedChanges": "Ändringarna sparades.",
     "savedDraft": "Utkast sparat.",
     "submitted": "Utlägget skickades in för attest.",
-    "receiptRequired": "Ladda upp kvittot i panelen bredvid innan du går vidare",
     "description": "Beskrivning",
     "purchaseDate": "Kvittodatum",
     "date": "Datum",
@@ -211,13 +226,11 @@
     "dateTooLateCard": "Var det sektionskortet du använde? Ändra betalsätt överst, så gäller ingen frist.",
     "dateTooLateWaiver": "Du kan ansöka om dispens: skriv klart utlägget, spara det som utkast och hör av dig till skattmästaren, som avgör om det tas emot ändå.",
     "amount": "Belopp",
-    "returnMeans": "{amount} kommer tillbaka till sektionen.",
     "distribution": "Kostnadsfördelning",
     "paymentTypeFixed": "Utlägget redovisar den här banktransaktionen, så betalsättet är låst. Vill du i stället få tillbaka egna pengar skapar du ett nytt utlägg utan att utgå från transaktionen.",
     "documents": "Dokument",
-    "removeDocument": "Ta bort dokumentet",
     "removeDocumentFailed": "Kunde inte ta bort dokumentet",
-    "matchTitle": "Matcha mot banktransaktion",
+    "matchTitle": "Vilket kortköp var det?",
     "reviewTitle": "Granska och skicka in",
     "match": "Matchning",
     "paymentType": "Betalsätt",
@@ -237,6 +250,20 @@
       "card": "Köp gjort med sektionens kort.",
       "cardReturn": "Pengar tillbaka till kortet, till exempel ett återköp.",
       "own": "Du betalade själv och får tillbaka pengarna."
+    },
+    "reorderFailed": "Kunde inte spara dokumentens ordning",
+    "duplicateLead": "{count, plural, one {Du har redan ett utlägg med samma belopp och nästan samma datum:} other {Du har redan utlägg med samma belopp och nästan samma datum:}}",
+    "duplicateDetail": "({date}, {amount})",
+    "duplicateUntitled": "Utan beskrivning",
+    "duplicateHint": "Är det samma köp behöver du inte skicka in det igen. Är det ett annat köp kan du fortsätta som vanligt.",
+    "missingLabel": "Saknas",
+    "missing": {
+      "receipt": "kvitto",
+      "title": "beskrivning",
+      "date": "datum",
+      "amount": "belopp",
+      "costCenter": "kostnadsställe",
+      "match": "kortköp att matcha"
     }
   },
   "field": {
@@ -257,23 +284,23 @@
     "mileageHint": "Du körde egen bil på sektionens ärende"
   },
   "match": {
-    "lead": "Välj köpet på sektionskortet. Bara transaktioner på exakt {amount} kan väljas.",
-    "showOthers": "Visa övriga transaktioner ({count})",
-    "hideOthers": "Dölj övriga transaktioner",
+    "hideOthers": "Dölj övriga kortköp",
     "search": "Sök på text eller belopp",
-    "suggested": "Föreslagen",
-    "overBy": "{amount} kr mer än utlägget",
-    "underBy": "{amount} kr mindre än utlägget",
-    "isIncoming": "en inbetalning, matchar bara en återbetalning",
-    "isOutgoing": "en utbetalning, matchar bara ett köp",
-    "taken": "redan redovisad på ett annat utlägg",
-    "takenBy": "redan redovisad på {reference}",
+    "taken": "Redan redovisad",
+    "takenBy": "Redan på {reference}",
     "noneAtAll": "Det finns inga transaktioner på ditt sektionskort ännu.",
     "noneMatchSearch": "Ingen transaktion matchar sökningen.",
-    "stuckTitle": "Hittar du inte köpet?",
-    "stuckWithRows": "Ingen av raderna ovan går att välja. Står köpet där med \"annat belopp\" är det beloppet du skrivit som behöver rättas. Står det som redan redovisat har någon annan redan tagit det, hör av dig till dem eller till skattmästaren.",
-    "stuckNoRows": "Kontoutdraget är troligen inte inläst ännu. Be skattmästaren läsa in senaste bankfilen under Bank & matchning.",
-    "stuckDraft": "Ett kortköp går inte att skicka in utan matchning. Spara som utkast så länge och kom tillbaka när transaktionen finns."
+    "change": "Byt",
+    "noneFits": "Inget kortköp på {amount} ännu.",
+    "showAll": "Visa alla kortköp ({count})",
+    "incoming": "Inbetalning",
+    "outgoing": "Utbetalning",
+    "useAmount": "Använd {amount}",
+    "helpLabel": "Så fungerar matchningen",
+    "help1": "Välj köpet på ditt sektionskort. Bara köp med exakt samma belopp som utlägget kan väljas.",
+    "help2": "Ett köp som redan är redovisat på ett annat utlägg kan inte väljas igen. Hör av dig till den som har det, eller till skattmästaren.",
+    "help3": "Står köpet med ett annat belopp har beloppet troligen skrivits fel. Använd knappen på raden för att ta bankens belopp.",
+    "help4": "Köp syns först när skattmästeriet har läst in kontoutdraget. Finns köpet inte ännu kan du spara som utkast och komma tillbaka."
   },
   "reminders": {
     "title": "Skicka påminnelse",

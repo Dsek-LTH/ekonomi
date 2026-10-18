@@ -6,7 +6,13 @@ import { parseBody } from "@/lib/api/parse";
 import { CreateStockProduct } from "@/lib/api/schemas/stock";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockProducts } from "@/lib/data/stock";
-import { eanTaken, isCollision, nameTaken } from "@/lib/server/stock-product-guard";
+import {
+  eanTaken,
+  isCollision,
+  nameTaken,
+  nextInternalCode,
+  typedInternalCode,
+} from "@/lib/server/stock-product-guard";
 
 export async function GET() {
   const g = await gate(canViewStock, "stock.noAccess");
@@ -38,7 +44,13 @@ export async function POST(req: Request) {
   // leaves somebody holding a tin with nowhere to go; naming the owner, and
   // saying when the owner is retired rather than in use, turns the refusal
   // into an instruction.
-  const clash = (await eanTaken(body.ean)) ?? (await nameTaken(body.name));
+  // A barcode, or the product said outright to have none, in which case it
+  // gets one of the section's own (lib/stock/barcode.ts).
+  if (!body.noBarcode && !body.ean) return fail(422, "stock.eanRequired");
+  if (!body.noBarcode && typedInternalCode(body.ean)) return fail(422, "stock.internalCodeTyped");
+  const ean = body.noBarcode ? await nextInternalCode() : body.ean!;
+
+  const clash = (await eanTaken(ean)) ?? (await nameTaken(body.name));
   if (clash) return clash;
 
   const product = await prisma.stockProduct.create({
@@ -49,7 +61,7 @@ export async function POST(req: Request) {
       abv: body.abv ?? null,
       unitMl: body.unitMl ?? null,
       nominalMl: body.nominalMl ?? null,
-      ean: body.ean ?? null,
+      ean,
       costPriceOre: body.costPriceOre ?? null,
       shelfLifeMonths: body.shelfLifeMonths ?? null,
       systembolagetId: body.systembolagetId ?? null,

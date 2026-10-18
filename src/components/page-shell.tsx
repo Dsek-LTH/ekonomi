@@ -1,6 +1,5 @@
-import { BackLink } from "@/components/back-link";
 import { CollectionSwitch, type Collections } from "@/components/ui/collection-switch";
-import { PageTitle } from "@/components/shell/settings-title";
+import { PageHeader } from "@/components/shell/section-nav";
 import { cn } from "@/lib/ui/utils";
 
 // Standard page wrapper: a header that says what you are looking at, one of
@@ -33,6 +32,7 @@ export function PageShell({
   view,
   collectionsHidden = false,
   back,
+  aside,
   width = "wide",
   children,
   className,
@@ -99,6 +99,13 @@ export function PageShell({
    * are their own starting point, and the sidebar is the way back out of them.
    */
   back?: string;
+  /**
+   * Controls on the title's own line, at its far end, for a page whose header
+   * holds state that applies to the whole of it: the budget's comparison and
+   * its lock. Not an action slot (see `collections`): what acts on a list or a
+   * card still belongs to that list or card.
+   */
+  aside?: React.ReactNode;
   width?: PageWidth;
   children: React.ReactNode;
   className?: string;
@@ -106,34 +113,24 @@ export function PageShell({
   return (
     <div className={cn(PAGE_WIDTH[width], className)}>
       {/* Sectioned, not merely separated: blocks on a page stand 16px apart, and
-          the header sits 24px above the first of them. That step is enough to
-          say "this names everything below" without leaving a band of empty
-          page under every title. */}
-      <div className="mb-6">
-        {/* Above the title. See components/back-link.tsx. */}
-        {back && <BackLink href={back} />}
-        {/* The switch rides the title's line: it names the same thing the title
-            does, only more precisely, and the two read as one heading. So the
-            row holds the title and the switch alone, centred on each other,
-            and the subtitle sits under it at full width.
-            `flex-wrap` so a long title drops the switch to the next line rather
-            than squeezing it. */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <div className="min-w-0">
-            {/* In the settings overlay, drawn in its top bar instead. See
-                components/shell/settings-title.tsx. */}
-            <PageTitle>{title}</PageTitle>
-          </div>
-          {collections ? (
+          the header sits 24px above the first of them. The header itself is
+          drawn by PageHeader, which also knows whether this page is in a
+          section of the nav and draws the section's tabs if so. */}
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        back={back}
+        aside={aside}
+        right={
+          collections ? (
             <div className={cn(collectionsHidden && "invisible")} inert={collectionsHidden}>
               <CollectionSwitch {...collections} />
             </div>
           ) : (
             view
-          )}
-        </div>
-        {subtitle && <p className="mt-1 text-lg font-medium tracking-tight">{subtitle}</p>}
-      </div>
+          )
+        }
+      />
 
       <div className="space-y-4">{children}</div>
     </div>

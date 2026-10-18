@@ -22,6 +22,7 @@ import type { StockProductDto } from "@/lib/data/stock";
 import type { CreateStockProduct } from "@/lib/api/schemas/stock";
 import { parseSystembolagetId } from "@/lib/stock/systembolaget";
 import { MAX_TAG, MAX_TAGS, cleanTags, hasTag } from "@/lib/stock/tags";
+import { isInternalCode, validGtin } from "@/lib/stock/barcode";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 import { CATEGORIES } from "@/lib/domain/categories";
 
@@ -37,6 +38,8 @@ type Draft = {
   costPrice: string;
   shelfLifeMonths: string;
   ean: string;
+  /** Said to have no barcode, so it is given one of the section's own. */
+  noBarcode: boolean;
   systembolagetId: string;
   tags: string[];
 };
@@ -51,6 +54,7 @@ const emptyDraft = (): Draft => ({
   costPrice: "",
   shelfLifeMonths: "",
   ean: "",
+  noBarcode: false,
   systembolagetId: "",
   tags: [],
 });
@@ -65,6 +69,7 @@ const draftOf = (p: StockProductDto): Draft => ({
   costPrice: p.costPriceOre != null ? (p.costPriceOre / 100).toString() : "",
   shelfLifeMonths: p.shelfLifeMonths?.toString() ?? "",
   ean: p.ean ?? "",
+  noBarcode: isInternalCode(p.ean),
   systembolagetId: p.systembolagetId ?? "",
   tags: p.tags,
 });
@@ -118,6 +123,10 @@ export function ProductDialog({
     product ? draftOf(product) : { ...emptyDraft(), name: name ?? "", ean: ean ?? "" },
   );
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((p) => ({ ...p, [k]: v }));
+  // Asking whether it really has no barcode, before it is taken as having
+  // none. See the box under the barcode field.
+  const [askingNoBarcode, setAskingNoBarcode] = useState(false);
+  const ownCode = product && isInternalCode(product.ean) ? product.ean : null;
 
   const isVolume = d.kind === "VOLUME";
 
@@ -170,9 +179,13 @@ export function ProductDialog({
   const blockerFault =
     d.name.trim() === ""
       ? "nameRequired"
-      : !/^\d{8,14}$/.test(d.ean.trim())
+      : !d.noBarcode && d.ean.trim() === ""
         ? "eanRequired"
-        : num(d.abv) == null
+        : !d.noBarcode && !validGtin(d.ean)
+          ? "eanInvalid"
+          : !d.noBarcode && isInternalCode(d.ean) && d.ean.trim() !== ownCode
+            ? "internalCodeTyped"
+            : num(d.abv) == null
           ? "abvRequired"
           : isVolume && !int(d.nominalMl)
             ? "calibrationNoVolume"
@@ -213,7 +226,10 @@ export function ProductDialog({
       // turns out not to go off has to be able to stop raising checks, and
       // undefined in a PATCH means "leave it alone".
       shelfLifeMonths: int(d.shelfLifeMonths) || null,
-      ean: d.ean.trim(),
+      // Said to have none: the route gives it the section's own (or keeps the
+      // one it has), so nothing is sent for the field itself.
+      ean: d.noBarcode ? undefined : d.ean.trim(),
+      noBarcode: d.noBarcode || undefined,
       // Whatever was pasted, reduced to the article number. The route takes
       // only digits. Null rather than undefined so clearing the field clears
       // the column; undefined in a PATCH means "leave it alone".
@@ -252,50 +268,104 @@ export function ProductDialog({
             and a <label> forwards a click anywhere in its area to the first
             labelable element inside it, which on a phone is the difference
             between tapping the scanner and opening the keyboard. */}
-        <FieldGroup
-          label={t("products.field.ean")}
-          hint={t("products.field.eanHint")}
-          requirement="required"
-        >
-          <SuffixedInput
-            inputMode="numeric"
-            // Named, and told outright that it is not a credential. The same
-            // treatment the payout fields in Min profil needed, for the same
-            // reason and one of its own: an unnamed numeric box that wants
-            // thirteen digits is the shape of a card number, so a password
-            // manager offers to fill one in. `autoComplete="off"` is the
-            // standard half; managers routinely ignore it, so 1Password's own
-            // opt-out says it again in the one language it does read. If
-            // another manager starts guessing here, it will have an attribute
-            // of its own to add beside this one.
-            name="product-ean"
-            autoComplete="off"
-            data-1p-ignore
-            value={d.ean}
-            onChange={(e) => set("ean", e.target.value.replace(/[^0-9]/g, ""))}
-            inputClassName="tabular-nums"
-            placeholder="7312040017072"
-            aria-label={t("products.field.ean")}
-            // The box gives up its right padding so the button can sit near the
-            // edge, and the button gives up its vertical margin so it does not
-            // set the box's height, 32px of tappable button inside a field
-            // that still measures the same as the ones above and below it.
-            className="pr-1"
-            suffix={
-              /* Read it off the tin rather than off the tin and then into the
-                 box. Thirteen digits copied by eye is the one part of making a
-                 product that a machine does better. */
-              <IconButton
-                label={t("scan.action")}
-                title={t("scan.action")}
-                onClick={() => setScanning(true)}
-                className="-my-1.5"
-              >
-                <IconScan className="size-5" />
-              </IconButton>
-            }
-          />
-        </FieldGroup>
+        {/* A barcode, or the product said outright to have none. Not an
+            empty field the form lets past: a keg had no barcode, the field
+            would not take nothing, and a made-up number went in. Now there is
+            an honest way, and the check digit (lib/stock/barcode.ts) stops the
+            made-up one. Choosing "none" asks once more first, so it is not the
+            quick way past a barcode somebody could not be bothered to scan. */}
+        {d.noBarcode ? (
+          <FieldGroup label={t("products.field.ean")}>
+            <p className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-muted">
+              {ownCode
+                ? t("barcode.ownCode", { code: ownCode })
+                : t("barcode.willGetOwn")}
+            </p>
+          </FieldGroup>
+        ) : (
+          <FieldGroup
+            label={t("products.field.ean")}
+            hint={t("products.field.eanHint")}
+            requirement="required"
+          >
+            <SuffixedInput
+              inputMode="numeric"
+              // Named, and told outright that it is not a credential. The same
+              // treatment the payout fields in Min profil needed, for the same
+              // reason and one of its own: an unnamed numeric box that wants
+              // thirteen digits is the shape of a card number, so a password
+              // manager offers to fill one in. `autoComplete="off"` is the
+              // standard half; managers routinely ignore it, so 1Password's own
+              // opt-out says it again in the one language it does read. If
+              // another manager starts guessing here, it will have an attribute
+              // of its own to add beside this one.
+              name="product-ean"
+              autoComplete="off"
+              data-1p-ignore
+              value={d.ean}
+              onChange={(e) => set("ean", e.target.value.replace(/[^0-9]/g, ""))}
+              inputClassName="tabular-nums"
+              placeholder="7312040017072"
+              aria-label={t("products.field.ean")}
+              // The box gives up its right padding so the button can sit near the
+              // edge, and the button gives up its vertical margin so it does not
+              // set the box's height, 32px of tappable button inside a field
+              // that still measures the same as the ones above and below it.
+              className="pr-1"
+              suffix={
+                /* Read it off the tin rather than off the tin and then into the
+                   box. Thirteen digits copied by eye is the one part of making a
+                   product that a machine does better. */
+                <IconButton
+                  label={t("scan.action")}
+                  title={t("scan.action")}
+                  onClick={() => setScanning(true)}
+                  className="-my-1.5"
+                >
+                  <IconScan className="size-5" />
+                </IconButton>
+              }
+            />
+          </FieldGroup>
+        )}
+        <div className="-mt-2 space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={d.noBarcode || askingNoBarcode}
+              onChange={(e) => {
+                if (e.target.checked) setAskingNoBarcode(true);
+                else {
+                  setAskingNoBarcode(false);
+                  // Back to typing one: the section's own code is not one to
+                  // keep in the field, it would be refused as typed.
+                  setD((p) => ({ ...p, noBarcode: false, ean: isInternalCode(p.ean) ? "" : p.ean }));
+                }
+              }}
+              className="size-4 accent-[var(--color-accent)]"
+            />
+            {t("barcode.none")}
+          </label>
+          {askingNoBarcode && !d.noBarcode && (
+            <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm">
+              <p>{t("barcode.confirm")}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    set("noBarcode", true);
+                    setAskingNoBarcode(false);
+                  }}
+                >
+                  {t("barcode.confirmYes")}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setAskingNoBarcode(false)}>
+                  {t("barcode.confirmNo")}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Takes a pasted product URL as readily as the bare number: the number
             is only ever found on the product's page, so the address bar is what
@@ -322,7 +392,14 @@ export function ProductDialog({
             empty space beside it pops the menu open. Field's own note says so.
           */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup label={t("products.field.kind")} requirement="required">
+          {/* The hint says what the choice means, which the two names alone
+              do not: Styckvara is counted in whole things, Nivåvara in sealed
+              bottles and how full the opened ones are. */}
+          <FieldGroup
+            label={t("products.field.kind")}
+            hint={t(`kindHint.${d.kind}`)}
+            requirement="required"
+          >
             <Combobox
               value={d.kind}
               onChange={(v) => set("kind", v as StockKind)}

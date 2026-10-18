@@ -7,8 +7,7 @@
   "litres": "{litres} l",
   "clPerKrona": "{cl} cl/kr",
   "counts": {
-    "products": "{count, plural, =1 {1 produkt} other {# produkter}}",
-    "rows": "{count, plural, =1 {1 rörelse} other {# rörelser}}"
+    "products": "{count, plural, =1 {1 produkt} other {# produkter}}"
   },
   "holding": {
     "volume": "{sealed} oöppnade – {open} öppnade",
@@ -40,7 +39,11 @@
   },
   "kindName": {
     "UNIT": "Styckvara",
-    "VOLUME": "Spritflaska"
+    "VOLUME": "Nivåvara"
+  },
+  "kindHint": {
+    "UNIT": "Räknas i hela enheter, till exempel burkar eller flaskor öl.",
+    "VOLUME": "Räknas i oöppnade flaskor och hur fulla de öppnade är, till exempel sprit och vin."
   },
   "field": {
     "date": "Datum",
@@ -68,10 +71,12 @@
     "moreThanOnShelf": "Det finns bara {count} på hyllan",
     "moreBottlesThanWentOut": "Fler flaskor tillbaka än som togs ut",
     "nameRequired": "Produkten behöver ett namn",
-    "eanRequired": "Streckkoden behövs. Skanna den eller skriv in den (8–14 siffror)",
+    "eanRequired": "Streckkoden behövs. Skanna den eller skriv in den, eller markera att produkten saknar streckkod",
     "abvRequired": "Alkoholhalten behövs till restaurangrapporten",
     "sizeRequired": "Volymen behövs till restaurangrapportens liter",
-    "costRequired": "Inköpspriset behövs för att lagret ska kunna värderas"
+    "costRequired": "Inköpspriset behövs för att lagret ska kunna värderas",
+    "eanInvalid": "Det här är ingen giltig streckkod. Kontrollera siffrorna eller skanna koden",
+    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen. Markera att produkten saknar streckkod i stället"
   },
   "log": {
     "title": "Lagerlogg",
@@ -224,7 +229,9 @@
     "expected": "Loggen säger {count}",
     "difference": "Skiljer sig från loggen ({sealed} oöppnade). Justeringen skrivs in i loggen.",
     "agrees": "Stämmer med loggen. Inget att justera.",
-    "noteHint": "Skriv gärna varför det skiljer, om ni vet."
+    "noteHint": "Skriv gärna varför det skiljer, om ni vet.",
+    "wasBought": "Inventeringen visar {count, plural, =1 {1 oöppnad} other {# oöppnade}} fler än loggen. Har ni köpt in? Registrera det då som ett inköp, så får flaskorna sitt värde och kommer med i restaurangrapporten.",
+    "purchaseInstead": "Registrera som inköp i stället"
   },
   "spoilage": {
     "title": "Kassera",
@@ -272,8 +279,6 @@
   },
   "event": {
     "title": "Tillfällen",
-    "listTitle": "Tillfällen",
-    "counts": "{count, plural, =1 {1 tillfälle} other {# tillfällen}}",
     "search": "Sök tillfälle…",
     "empty": "Inga tillfällen ännu. Skapa ett innan du tar ut varor.",
     "new": "Nytt tillfälle",
@@ -314,11 +319,9 @@
       "back": "Tillbaka",
       "spilled": "Spill",
       "sold": "Gick åt",
-      "soldValue": "Värde",
       "value": "Värde"
     },
     "sheet": {
-      "title": "Ut, in och spill",
       "column": "Vilken kolumn",
       "addProduct": "Skriv eller välj en produkt…",
       "addSearch": "Sök produkt…",
@@ -342,11 +345,22 @@
       "rowActions": "Ändra raden",
       "swap": "Byt produkt",
       "swapTo": "Byt till…",
-      "swapCancel": "Avbryt bytet"
-    }
+      "swapCancel": "Avbryt bytet",
+      "onShelf": "{count} på hyllan",
+      "scanShort": "Skanna"
+    },
+    "continue": "Fortsätt registrera",
+    "open": "Öppna",
+    "noneBooked": "inget bokfört",
+    "noMatch": "Inga tillfällen matchar sökningen.",
+    "view": {
+      "label": "Visa",
+      "sheet": "Ark",
+      "changes": "Ändringar"
+    },
+    "actions": "Mer om tillfället"
   },
   "changes": {
-    "title": "Händelser",
     "none": "Inget har ändrats ännu.",
     "inTheCellar": "I lagret",
     "col": {
@@ -445,5 +459,65 @@
   "tabs": {
     "all": "Alla",
     "attention": "Behöver ses över"
+  },
+  "stocktakeSheet": {
+    "open": "Inventera lagret",
+    "title": "Inventering",
+    "notePlaceholder": "Till exempel Terminsslut HT26",
+    "search": "Sök produkt eller streckkod",
+    "onlyDiffering": "Bara skillnader",
+    "noMatch": "Inga produkter matchar.",
+    "sealedShort": "oöppnade",
+    "unitsShort": "st",
+    "openAt": "{count} på {level} %",
+    "countFor": "Räknat för {name}",
+    "openFor": "Öppnade flaskor av {name} på {level} %",
+    "agrees": "Stämmer",
+    "openDiffers": "Öppnade skiljer",
+    "progress": "{counted} av {total} räknade",
+    "differing": "{count, plural, =1 {1 produkt skiljer från loggen och justeras} other {# produkter skiljer från loggen och justeras}}",
+    "save": "{count, plural, =0 {Bokför} other {Bokför # räkningar}}",
+    "saved": "{count, plural, =1 {1 räkning bokfördes} other {# räkningar bokfördes}}",
+    "failed": "{name} kunde inte bokföras.",
+    "discardTitle": "Rensa inventeringen?",
+    "discardMessage": "{count, plural, =1 {1 räknad produkt} other {# räknade produkter}} tas bort. Inget är bokfört, så det går inte att få tillbaka.",
+    "increases": "{count, plural, =1 {1 produkt har} other {# produkter har}} fler oöppnade än loggen. Var det inköp?",
+    "toDelivery": "Registrera ökningarna som leverans",
+    "toDeliveryFailed": "Kunde inte flytta ökningarna till leveransen",
+    "increaseHint": "Fler oöppnade än loggen. Är det ett inköp ska det registreras som leverans, annars får flaskorna inget värde och kommer inte med i restaurangrapporten.",
+    "col": {
+      "product": "Produkt",
+      "log": "Loggen",
+      "sealed": "Oöppnade",
+      "difference": "Skillnad"
+    },
+    "logSealed": "{count} {unit}"
+  },
+  "register": {
+    "label": "Registrera"
+  },
+  "barcode": {
+    "none": "Produkten har ingen streckkod",
+    "confirm": "Har förpackningen verkligen ingen streckkod? Kontrollera både fatet eller flaskan och kartongen. Produkten får då en egen kod från appen.",
+    "confirmYes": "Ja, den saknar streckkod",
+    "confirmNo": "Avbryt",
+    "willGetOwn": "Ingen streckkod. Appen ger produkten en egen kod när den sparas.",
+    "ownCode": "Ingen streckkod. Egen kod: {code}",
+    "ownTag": "Egen kod",
+    "invalidTag": "Ogiltig streckkod",
+    "invalidHint": "Streckkoden har fel kontrollsiffra och är troligen påhittad eller felskriven. Skanna den riktiga koden, eller markera att produkten saknar streckkod."
+  },
+  "toPurchase": {
+    "action": "Gör om till inköp",
+    "title": "Gör om inventeringen till ett inköp?",
+    "message": "Inventeringen {date} hittade {count, plural, =1 {1 oöppnad} other {# oöppnade}} fler än loggen. Om de var inköpta läggs ett inköp in samma dag till produktens inköpspris, så att de får sitt värde och kommer med i restaurangrapporten. Inventeringen ligger kvar och stämmer då med loggen.",
+    "confirm": "Gör om till inköp",
+    "done": "{count, plural, =1 {1 oöppnad är nu bokförd som inköp} other {# oöppnade är nu bokförda som inköp}}",
+    "failed": "Kunde inte göra om inventeringen till ett inköp"
+  },
+  "history": {
+    "viewLabel": "Visa",
+    "movements": "Rörelser",
+    "stats": "Statistik"
   }
 }

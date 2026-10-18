@@ -23,11 +23,18 @@ export async function generateMetadata(): Promise<Metadata> {
  * does it fall back to the pair the OS picks between. The colours are
  * `--color-canvas` in each theme, the ground the page itself is on, so the
  * chrome continues the page instead of framing it.
+ *
+ * `viewportFit: "cover"` is what makes `env(safe-area-inset-*)` mean anything.
+ * Every bar fixed to the foot of a phone (the tab bar, the action bar, the
+ * sheets) pads itself by `safe-area-inset-bottom`, and without it iOS reports
+ * every inset as nought: the tab bar sat under the home indicator and Safari's
+ * floating toolbar on a recent iPhone.
  */
 export async function generateViewport(): Promise<Viewport> {
   const choice = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
-  if (choice) return { themeColor: CANVAS[choice] };
+  if (choice) return { viewportFit: "cover", themeColor: CANVAS[choice] };
   return {
+    viewportFit: "cover",
     themeColor: [
       { media: "(prefers-color-scheme: light)", color: CANVAS.light },
       { media: "(prefers-color-scheme: dark)", color: CANVAS.dark },
@@ -94,7 +101,13 @@ export default async function RootLayout({
     // question to `prefers-color-scheme` in globals.css. An explicit light is a
     // class of its own and not the absence of `dark`: on a machine set to dark
     // those are two different documents. See lib/ui/theme.ts.
-    <html lang={locale} className={cn("h-full", theme)}>
+    //
+    // suppressHydrationWarning because browser extensions write attributes onto
+    // <html> before React hydrates (one leaves `__gcrremoteframetoken`), and each
+    // of them was a hydration error in dev. It covers this element's own
+    // attributes and nothing below it. The theme class is rendered here from the
+    // cookie, so there is no difference of our own for it to hide.
+    <html lang={locale} className={cn("h-full", theme)} suppressHydrationWarning>
       <body className="min-h-full">
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <NextIntlClientProvider locale={locale} messages={messages}>

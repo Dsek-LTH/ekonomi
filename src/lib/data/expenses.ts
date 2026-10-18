@@ -38,6 +38,8 @@ import {
   type SortDir,
 } from "./list-query";
 import { isoDate } from "./shared";
+import { RECEIPT_ORDER } from "./receipt-order";
+import type { ExpenseFingerprint } from "@/lib/domain/duplicates";
 
 // Map one allocation row (+ its cost-centre/approver relations) to the UI shape.
 // Shared by both the list and the detail mappers.
@@ -79,15 +81,13 @@ const summaryInclude = {
   allocations: {
     include: { costCenter: true, approvedBy: true },
   },
-  // Every receipt, oldest first: the order they were uploaded in, which is
-  // the order they are stapled behind the cover for Fortnox (see
+  // Every receipt, in the order the submitter put them (see RECEIPT_ORDER),
+  // which is the order they are stapled behind the cover for Fortnox (see
   // lib/server/pdf-merge.ts) and the order they page through in the panel.
-  // The tiebreaker matters for the same reason a single "newest" used to need
-  // one: two stored in the same instant must still come back in a fixed
-  // order. The annotation keeps this array mutable despite the `as const`
-  // below, which is what Prisma's argument types require.
+  // The annotation keeps this array mutable despite the `as const` below,
+  // which is what Prisma's argument types require.
   receipts: {
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }] as Prisma.ReceiptOrderByWithRelationInput[],
+    orderBy: RECEIPT_ORDER as Prisma.ReceiptOrderByWithRelationInput[],
     select: { id: true, filename: true, mimeType: true },
   },
   verification: { include: { createdBy: true } },
@@ -530,4 +530,31 @@ export async function getExpense(
   };
   if (viewer) annotateAttest(e, mapped, await attestCtx(viewer));
   return mapped;
+}
+
+/**
+ * One member's utlägg, as little of each as a duplicate check needs. See
+ * lib/domain/duplicates.ts. The last fifteen months, since the same receipt
+ * handed in twice is handed in twice within weeks, and a member's whole
+ * history is not worth shipping to a form to find that out.
+ */
+export async function getExpenseFingerprints(submitterId: string): Promise<ExpenseFingerprint[]> {
+  const since = new Date();
+  since.setUTCMonth(since.getUTCMonth() - 15);
+  const rows = await prisma.expense.findMany({
+    where: {
+      submitterId,
+      grossAmount: { not: null },
+      purchaseDate: { gte: since },
+    },
+    select: { id: true, reference: true, title: true, grossAmount: true, purchaseDate: true },
+    orderBy: [{ purchaseDate: "desc" }, { id: "desc" }],
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    reference: r.reference ?? undefined,
+    title: r.title,
+    grossAmount: ore(r.grossAmount),
+    purchaseDate: isoDate(r.purchaseDate!),
+  }));
 }

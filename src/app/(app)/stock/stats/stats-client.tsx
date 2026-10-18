@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { PageShell } from "@/components/page-shell";
+import { HISTORY_PATH, historyHref, type HistoryView } from "../history/views";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { DateInput, FieldGroup } from "@/components/ui/field";
 import { MultiCombobox } from "@/components/ui/combobox";
@@ -108,13 +109,12 @@ export default function StockStatsClient({
    *  absent: an address carries the questions asked and no others. */
   function ask(next: Partial<{ from: string; to: string; cats: string[]; tags: string[] }>) {
     const now = { from, to, cats: categories as string[], tags, ...next };
-    const p = new URLSearchParams();
+    const p = new URLSearchParams({ view: "stats" });
     if (now.from) p.set("from", now.from);
     if (now.to && now.to !== today) p.set("to", now.to);
     if (now.cats.length) p.set("cats", now.cats.join(","));
     if (now.tags.length) p.set("tags", now.tags.join(","));
-    const q = p.toString();
-    router.push(q ? `/stock/stats?${q}` : "/stock/stats");
+    router.push(`${HISTORY_PATH}?${p.toString()}`);
   }
 
   const shown = stats.holdings.reduce((sum, h) => sum + h.valueOre, 0);
@@ -136,7 +136,21 @@ export default function StockStatsClient({
   ];
 
   return (
-    <PageShell title={t("stats.title")} width="wide">
+    <PageShell
+      title={t("stats.title")}
+      width="wide"
+      // The other view of the same history, for the same period. See
+      // ../history/views.ts.
+      collections={{
+        label: t("history.viewLabel"),
+        value: "stats",
+        options: [
+          { value: "movements", label: t("history.movements") },
+          { value: "stats", label: t("history.stats") },
+        ],
+        href: (v) => historyHref(v as HistoryView, from, to),
+      }}
+    >
       <div className="space-y-5">
         {/* One row above the charts, which is where a filter belongs: what is
             being asked is read before what came back. */}
@@ -213,7 +227,7 @@ export default function StockStatsClient({
             }
             action={
               filtering ? (
-                <Button variant="ghost" size="sm" onClick={() => router.push("/stock/stats")}>
+                <Button variant="ghost" size="sm" onClick={() => router.push(historyHref("stats"))}>
                   {t("stats.clear")}
                 </Button>
               ) : undefined

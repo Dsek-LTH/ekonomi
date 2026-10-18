@@ -117,11 +117,22 @@ export interface ReceiptViewerProps {
   documents: ViewerDocument[];
   /** Sizing/framing for the inline (non-fullscreen) viewer. */
   className?: string;
+  /**
+   * For a page that shows its own way through the documents (the receipt
+   * panel's thumbnails, on a form where they can be put in order): the jump
+   * bar is left out, `jumpTo` slides to a document each time its `seq`
+   * changes, and `onCurrentChange` says which one is in view.
+   */
+  navigation?: {
+    jumpTo: { index: number; seq: number } | null;
+    onCurrentChange: (i: number) => void;
+  };
 }
 
 export default function ReceiptViewerImpl({
   documents,
   className,
+  navigation,
 }: ReceiptViewerProps) {
   const t = useTranslations("receipt");
 
@@ -189,6 +200,11 @@ export default function ReceiptViewerImpl({
   const registerBar = useCallback((set: ((i: number) => void) | null) => {
     reportCurrent.current = set ?? (() => {});
   }, []);
+  // Without the bar, the page's own navigation is what listens instead.
+  const onCurrentChange = navigation?.onCurrentChange;
+  useEffect(() => {
+    if (onCurrentChange) registerBar(onCurrentChange);
+  }, [onCurrentChange, registerBar]);
   // Until when the observer should keep quiet. A jump slides past every
   // document between here and there, and each would otherwise claim to be
   // the current one on the way; the one jumped to is the answer.
@@ -562,7 +578,10 @@ export default function ReceiptViewerImpl({
               </ToolBtn>
             </div>
 
-            {documents.length > 1 && (
+            {navigation && (
+              <JumpOnRequest request={navigation.jumpTo} onJump={(i) => jump(ctl, i)} />
+            )}
+            {documents.length > 1 && !navigation && (
               <JumpBar
                 items={documents.map((d, i) => ({ key: d.src, name: docName(d, i) }))}
                 onJump={(i) => jump(ctl, i)}
@@ -819,6 +838,31 @@ function DocumentSheet({
  * under the fullscreen overlay, and a phone gives a select its own picker,
  * which is the right one for a list of file names.
  */
+/**
+ * Slides to a document whenever a new request arrives. A component of its own
+ * because it needs the pan controller, which only exists inside the wrapper's
+ * render function, and an effect is the way to act on a prop changing there.
+ */
+function JumpOnRequest({
+  request,
+  onJump,
+}: {
+  request: { index: number; seq: number } | null;
+  onJump: (i: number) => void;
+}) {
+  const jumpRef = useRef(onJump);
+  useEffect(() => {
+    jumpRef.current = onJump;
+  });
+  const seq = request?.seq;
+  const index = request?.index;
+  useEffect(() => {
+    if (seq === undefined || index === undefined) return;
+    jumpRef.current(index);
+  }, [seq, index]);
+  return null;
+}
+
 function JumpBar({
   items,
   onJump,
@@ -842,7 +886,9 @@ function JumpBar({
   const shown = Math.min(current, items.length - 1);
 
   return (
-    <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-10 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
+    // No safe-area inset of its own: the panel around the viewer keeps clear
+    // of the home indicator already, and both counting it doubled the gap.
+    <div className="absolute bottom-3 left-1/2 z-10 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
       <ToolBtn
         label={t("previousDocument")}
         onClick={() => onJump(shown - 1)}

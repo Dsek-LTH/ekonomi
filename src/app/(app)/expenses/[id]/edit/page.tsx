@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { getBankTransactions } from "@/lib/data/bank";
 import { getCostCenters } from "@/lib/data/cost-centers";
-import { getExpense } from "@/lib/data/expenses";
+import { getExpense, getExpenseFingerprints } from "@/lib/data/expenses";
 import { getPayoutAccount, userHoldsCard } from "@/lib/data/users";
 import { isAdmin } from "@/lib/domain/permissions";
 import { isEditable } from "@/lib/domain/status";
@@ -61,6 +61,9 @@ export default async function EditExpensePage({
       holdsCard={holdsCard}
       payoutClearing={payout.clearing}
       payoutAccount={payout.account}
+      // The submitter's, not the viewer's: an admin editing somebody's utlägg
+      // is asking whether *they* handed it in twice.
+      ownExpenses={await getExpenseFingerprints(expense.submitterId)}
       existing={expense}
     />
   );

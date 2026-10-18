@@ -42,6 +42,7 @@ import {
 import { voucherText } from "@/lib/fortnox/voucher-text";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
+import { RECEIPT_ORDER } from "@/lib/data/receipt-order";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -85,7 +86,7 @@ async function exportHolding(
       // the order they are stapled behind the cover. No odometer readings
       // loaded here: a milersättning's journey is printed on the cover, and
       // the cover reads them itself.
-      receipts: { orderBy: { createdAt: "asc" } },
+      receipts: { orderBy: RECEIPT_ORDER },
     },
   });
   if (!expense) return fail(404, "expense.notFound");

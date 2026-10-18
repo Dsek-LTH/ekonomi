@@ -13,6 +13,7 @@ import "server-only";
 // rule that will be right once.
 
 import { prisma } from "./db";
+import { INTERNAL_PREFIX, internalCode, internalNumber, isInternalCode } from "@/lib/stock/barcode";
 import { fail } from "@/lib/api/guard";
 import type { NextResponse } from "next/server";
 
@@ -53,4 +54,31 @@ export async function nameTaken(name: string, self?: string): Promise<NextRespon
     select: { id: true, name: true },
   });
   return twin ? fail(409, "stock.nameTaken", { values: { name: twin.name } }) : null;
+}
+
+/**
+ * The next of the section's own barcodes, for a product said to have none: one
+ * past the highest given out so far. See lib/stock/barcode.ts.
+ *
+ * Read and then written in two steps, so two products made in the same instant
+ * could be handed the same number. The unique index on the barcode refuses the
+ * second, which the route answers as a collision to try again; at a few kegs a
+ * term that is not worth a lock.
+ */
+export async function nextInternalCode(): Promise<string> {
+  const rows = await prisma.stockProduct.findMany({
+    where: { ean: { startsWith: INTERNAL_PREFIX } },
+    select: { ean: true },
+  });
+  const highest = rows.reduce((n, r) => Math.max(n, internalNumber(r.ean ?? "") ?? 0), 0);
+  return internalCode(highest + 1);
+}
+
+/**
+ * A barcode in the section's own range that this product was not given. The
+ * range is the app's to hand out, so one is never typed in: typed, it could be
+ * the next one the app means to give a keg.
+ */
+export function typedInternalCode(ean: string | undefined, current?: string | null): boolean {
+  return Boolean(ean) && isInternalCode(ean) && ean !== current;
 }

@@ -15,7 +15,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Field, FieldGroup, Input, Textarea } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconPlus, IconX } from "@/components/ui/icons";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tag } from "@/components/ui/status-pill";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -283,7 +283,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                           label={tAlloc("removeRow")}
                           onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== row.key) : rs))}
                         >
-                          <IconTrash className="size-4" />
+                          <IconX className="size-4" />
                         </IconButton>
                       </div>
                     );

@@ -7,8 +7,7 @@
   "litres": "{litres} l",
   "clPerKrona": "{cl} cl/kr",
   "counts": {
-    "products": "{count, plural, =1 {1 product} other {# products}}",
-    "rows": "{count, plural, =1 {1 movement} other {# movements}}"
+    "products": "{count, plural, =1 {1 product} other {# products}}"
   },
   "holding": {
     "volume": "{sealed} sealed – {open} open",
@@ -40,7 +39,11 @@
   },
   "kindName": {
     "UNIT": "Counted in units",
-    "VOLUME": "Spirit bottle"
+    "VOLUME": "Counted by level"
+  },
+  "kindHint": {
+    "UNIT": "Counted in whole units, such as cans or bottles of beer.",
+    "VOLUME": "Counted in sealed bottles and how full the opened ones are, such as spirits and wine."
   },
   "field": {
     "date": "Date",
@@ -68,10 +71,12 @@
     "moreThanOnShelf": "There are only {count} on the shelf",
     "moreBottlesThanWentOut": "More bottles home than went out",
     "nameRequired": "The product needs a name",
-    "eanRequired": "The barcode is needed. Scan it or type it in (8–14 digits)",
+    "eanRequired": "The barcode is needed. Scan it or type it in, or mark the product as having none",
     "abvRequired": "The strength is needed for the restaurangrapport",
     "sizeRequired": "The volume is needed for the report's litres",
-    "costRequired": "The cost price is needed before the stock can be valued"
+    "costRequired": "The cost price is needed before the stock can be valued",
+    "eanInvalid": "This is not a valid barcode. Check the digits or scan the code",
+    "internalCodeTyped": "Codes starting with 2 are given out by the app. Mark the product as having none instead"
   },
   "log": {
     "title": "Stock log",
@@ -224,7 +229,9 @@
     "expected": "The log says {count}",
     "difference": "Differs from the log ({sealed} sealed). The adjustment goes into the log.",
     "agrees": "Agrees with the log. Nothing to adjust.",
-    "noteHint": "Say why it differs, if you know."
+    "noteHint": "Say why it differs, if you know.",
+    "wasBought": "The stocktake shows {count, plural, =1 {1 sealed} other {# sealed}} more than the log. Did you buy them? Then register a purchase instead, so they carry their value and count in the restaurangrapport.",
+    "purchaseInstead": "Register as a purchase instead"
   },
   "spoilage": {
     "title": "Write off",
@@ -272,8 +279,6 @@
   },
   "event": {
     "title": "Occasions",
-    "listTitle": "Occasions",
-    "counts": "{count, plural, =1 {1 occasion} other {# occasions}}",
     "search": "Search occasions…",
     "empty": "No occasions yet. Create one before taking stock out.",
     "new": "New occasion",
@@ -314,11 +319,9 @@
       "back": "Back",
       "spilled": "Spilled",
       "sold": "Used",
-      "soldValue": "Value",
       "value": "Value"
     },
     "sheet": {
-      "title": "Out, in and spill",
       "column": "Which column",
       "addProduct": "Type or pick a product…",
       "addSearch": "Search products…",
@@ -342,11 +345,22 @@
       "rowActions": "Change the row",
       "swap": "Switch product",
       "swapTo": "Switch to…",
-      "swapCancel": "Cancel the switch"
-    }
+      "swapCancel": "Cancel the switch",
+      "onShelf": "{count} on the shelf",
+      "scanShort": "Scan"
+    },
+    "continue": "Continue registering",
+    "open": "Open",
+    "noneBooked": "nothing booked",
+    "noMatch": "No events match the search.",
+    "view": {
+      "label": "Show",
+      "sheet": "Sheet",
+      "changes": "Changes"
+    },
+    "actions": "More about the event"
   },
   "changes": {
-    "title": "Activity",
     "none": "Nothing has been changed yet.",
     "inTheCellar": "In the cellar",
     "col": {
@@ -445,5 +459,65 @@
   "tabs": {
     "all": "All",
     "attention": "Need a look"
+  },
+  "stocktakeSheet": {
+    "open": "Count the stock",
+    "title": "Stocktake",
+    "notePlaceholder": "For example End of autumn term",
+    "search": "Search product or barcode",
+    "onlyDiffering": "Differences only",
+    "noMatch": "No products match.",
+    "sealedShort": "sealed",
+    "unitsShort": "pcs",
+    "openAt": "{count} at {level}%",
+    "countFor": "Counted for {name}",
+    "openFor": "Open bottles of {name} at {level}%",
+    "agrees": "Matches",
+    "openDiffers": "Open differ",
+    "progress": "{counted} of {total} counted",
+    "differing": "{count, plural, =1 {1 product differs from the log and is adjusted} other {# products differ from the log and are adjusted}}",
+    "save": "{count, plural, =0 {Book} other {Book # counts}}",
+    "saved": "{count, plural, =1 {1 count booked} other {# counts booked}}",
+    "failed": "{name} could not be booked.",
+    "discardTitle": "Clear the stocktake?",
+    "discardMessage": "{count, plural, =1 {1 counted product} other {# counted products}} will be removed. Nothing is booked, so it cannot be recovered.",
+    "increases": "{count, plural, =1 {1 product has} other {# products have}} more sealed than the log. Were they bought?",
+    "toDelivery": "Register the increases as a delivery",
+    "toDeliveryFailed": "Could not move the increases to the delivery",
+    "increaseHint": "More sealed than the log. If it is a purchase, register it as a delivery, or the bottles get no value and are left out of the restaurangrapport.",
+    "col": {
+      "product": "Product",
+      "log": "Log",
+      "sealed": "Sealed",
+      "difference": "Difference"
+    },
+    "logSealed": "{count} {unit}"
+  },
+  "register": {
+    "label": "Register"
+  },
+  "barcode": {
+    "none": "The product has no barcode",
+    "confirm": "Does the packaging really have no barcode? Check both the keg or bottle and the box. The product then gets its own code from the app.",
+    "confirmYes": "Yes, it has none",
+    "confirmNo": "Cancel",
+    "willGetOwn": "No barcode. The app gives the product its own code when it is saved.",
+    "ownCode": "No barcode. Own code: {code}",
+    "ownTag": "Own code",
+    "invalidTag": "Invalid barcode",
+    "invalidHint": "The barcode has the wrong check digit and is probably made up or mistyped. Scan the real code, or mark the product as having none."
+  },
+  "toPurchase": {
+    "action": "Make it a purchase",
+    "title": "Turn the stocktake into a purchase?",
+    "message": "The stocktake on {date} found {count, plural, =1 {1 sealed} other {# sealed}} more than the log. If they were bought, a purchase is added the same day at the product's cost price, so they carry their value and count in the restaurangrapport. The stocktake stays and then agrees with the log.",
+    "confirm": "Make it a purchase",
+    "done": "{count, plural, =1 {1 sealed is now booked as a purchase} other {# sealed are now booked as a purchase}}",
+    "failed": "Could not turn the stocktake into a purchase"
+  },
+  "history": {
+    "viewLabel": "Show",
+    "movements": "Movements",
+    "stats": "Statistics"
   }
 }

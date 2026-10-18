@@ -33,3 +33,30 @@ export function owningRoute(path: string, routes: readonly string[]): string | n
   }
   return best;
 }
+
+/**
+ * Which section a page is lit under, given the one the previous page was lit
+ * under.
+ *
+ * A page that is not itself a nav route (an utlägg, its booking form, a
+ * product) can be reached from several sections: an utlägg from Utlägg, from
+ * Attest, from Bokföring and from Översikt. By its URL it always belongs to
+ * Utlägg, so opening one from the attest queue moved the tabs and the sidebar
+ * to a section you had not gone to, and Back moved them again. Such a page
+ * keeps the section you came to it from instead, and so does the next nested
+ * page after it (the booking form, the next utlägg in the queue).
+ *
+ * A nav route is always its own section: clicking a tab or a row in the
+ * sidebar is the way out. With nothing before it (a link someone sent, a
+ * reload) a page is lit by its URL, as it always was.
+ */
+export function carriedSection(
+  path: string,
+  previous: string | null,
+  routes: readonly string[],
+): string | null {
+  const own = owningRoute(path, routes);
+  const p = routePath(path);
+  if (routes.includes(p)) return own;
+  return previous ?? own;
+}

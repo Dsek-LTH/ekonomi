@@ -18,11 +18,18 @@ import { bucket, deleteKeys, listObjects } from "../scripts/storage-admin";
 import {
   BANK_TRANSACTIONS,
   CARDS,
-  COST_CENTERS,
   CURRENT_USERS,
   EXPENSES,
   RENTAL_ITEMS,
+  STOCK_EVENTS,
+  STOCK_PRODUCTS,
+  UNIT_OWNERS,
 } from "./seed-data";
+import { replay, type ReplayRow } from "../src/lib/stock/replay";
+import { buildBudget, loadBudgetJson, type BudgetJson } from "../scripts/import/budget-json";
+import { evaluatorInputs } from "../src/lib/budget/inputs";
+import { evaluate } from "../src/lib/budget/eval";
+import { effectiveKind } from "../src/lib/budget";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -63,8 +70,236 @@ const EVENT_TYPE: Record<string, ExpenseEventType> = {
   "Exporterade till Fortnox": "EXPORTED",
 };
 
+// The workbook names some result units differently from the app, and the app's
+// names are the ones that matter: they are what Authentik's groups are mapped
+// to (lib/server/authority-defaults.ts), so a unit seeded under the workbook's
+// name would be one nobody's group answers for.
+const APP_UNIT_NAMES: Record<string, string> = {
+  "Cafémästeriet": "Caféutskottet",
+  "Centralprocessutskottet": "CPU",
+  "Informationsutskottet": "Infoutskottet",
+  "Medaljelelekommitén": "Medaljkommittén",
+  "Trivselrådet": "Trivselutskottet",
+};
+const appUnitName = (sheet: string) => APP_UNIT_NAMES[sheet] ?? sheet;
+
+// A stable number in [0, 1) from a string, so a reseed books the same utfall.
+const hash01 = (s: string) =>
+  ([...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 2166136261) % 1000) / 1000;
+
+/**
+ * A year of bookkeeping against the adopted budget, as if it had come from
+ * Fortnox: one financial year, and a voucher per cost centre per month up to
+ * this one, each account's month booked against the bank (1930) so every
+ * voucher balances.
+ *
+ * Each cost centre spends at its own pace, from about half of what the year so
+ * far would allow to about half again as much, so the dashboard's budget card
+ * and the ledger reports have some units on track, some ahead and some over
+ * to show. Income follows the same pace. Returns how many rows it wrote.
+ */
+async function seedLedger(data: BudgetJson, budgetId: string): Promise<number> {
+  const year = data.year;
+  const today = new Date();
+  // A past year is a whole year; this year is up to this month.
+  const months = today.getFullYear() > year ? 12 : Math.max(1, today.getMonth() + 1);
+  const elapsed = months / 12;
+
+  const budget = await prisma.budget.findUniqueOrThrow({
+    where: { id: budgetId },
+    include: {
+      variables: true,
+      changes: { include: { entries: true } },
+      costCenters: { include: { costCenter: true, accounts: { include: { lineItems: true } } } },
+    },
+  });
+  const inputs = evaluatorInputs(budget);
+  const { accounts } = evaluate(inputs.variables, inputs.lineItems, [], inputs.adjustments, inputs.knownAccounts);
+
+  await prisma.fortnoxFinancialYear.create({
+    data: {
+      id: 1,
+      fromDate: new Date(Date.UTC(year, 0, 1)),
+      toDate: new Date(Date.UTC(year, 11, 31)),
+      lastSyncAt: today,
+    },
+  });
+
+  let number = 0;
+  let written = 0;
+  for (const cc of budget.costCenters) {
+    if (!cc.costCenter) continue;
+    const code = cc.costCenter.code;
+    const pace = 0.55 + hash01(code) * 0.95;
+    // Each account's whole-year figure in öre, signed as the ledger signs it.
+    const lines = cc.accounts.flatMap((a) => {
+      const ore = accounts.get(`${code}:${a.accountCode}`) ?? 0;
+      if (!ore) return [];
+      const income = effectiveKind(a.accountCode) === "INCOME";
+      return [{ account: a.accountCode, name: a.accountName, ore: Math.abs(ore), income }];
+    });
+    if (lines.length === 0) continue;
+
+    for (let m = 0; m < months; m++) {
+      const date = new Date(Date.UTC(year, m, 15));
+      const rows = lines
+        .map((l) => {
+          // The year so far at this unit's pace, spread over the months, a
+          // little uneven so the months are not twelve identical vouchers.
+          const wobble = 0.7 + hash01(`${code}${l.account}${m}`) * 0.6;
+          const amount = Math.round(((l.ore * pace * elapsed) / months) * wobble);
+          return { ...l, amount };
+        })
+        .filter((r) => r.amount > 0);
+      if (rows.length === 0) continue;
+      const net = rows.reduce((n, r) => n + (r.income ? -r.amount : r.amount), 0);
+      number += 1;
+      await prisma.ledgerVoucher.create({
+        data: {
+          financialYear: 1,
+          series: "A",
+          number,
+          date,
+          description: `${cc.costCenter.name} ${date.toLocaleString("sv-SE", { month: "long" })}`,
+          rows: {
+            create: [
+              ...rows.map((r) => ({
+                financialYear: 1,
+                date,
+                account: r.account,
+                accountName: r.name,
+                costCenterCode: code,
+                costCenterName: cc.costCenter!.name,
+                debit: r.income ? 0 : r.amount,
+                credit: r.income ? r.amount : 0,
+              })),
+              {
+                financialYear: 1,
+                date,
+                account: "1930",
+                accountName: "Företagskonto",
+                debit: net < 0 ? -net : 0,
+                credit: net > 0 ? net : 0,
+              },
+            ],
+          },
+        },
+      });
+      written += rows.length + 1;
+    }
+  }
+  return written;
+}
+
+/**
+ * The bar's stock: the products, a delivery, and two nights drawing on it.
+ *
+ * Written straight to the table rather than through the route, so what the
+ * route works out per movement is worked out here afterwards, the same way
+ * `pnpm stock:revalue` does: the product's whole log replayed in order
+ * (lib/stock/replay.ts), and each row given the value it settles at.
+ */
+async function seedStock(actorId: string) {
+  const productId = new Map<string, string>();
+  for (const p of STOCK_PRODUCTS) {
+    const row = await prisma.stockProduct.create({
+      data: {
+        name: p.name,
+        kind: p.kind,
+        category: p.category,
+        abv: p.abv,
+        unitMl: p.kind === "UNIT" ? p.ml : null,
+        nominalMl: p.kind === "VOLUME" ? p.ml : null,
+        costPriceOre: p.costPriceOre,
+        shelfLifeMonths: p.kind === "UNIT" ? 9 : null,
+        tags: p.tags ?? [],
+      },
+    });
+    productId.set(p.name, row.id);
+    await prisma.stockEntry.create({
+      data: {
+        productId: row.id,
+        kind: "PURCHASE",
+        units: p.delivered,
+        unitCostOre: p.costPriceOre,
+        occurredAt: new Date("2026-09-01"),
+        actorId,
+        note: "Leverans till terminsstarten",
+      },
+    });
+  }
+
+  for (const e of STOCK_EVENTS) {
+    const event = await prisma.stockEvent.create({
+      data: { name: e.name, date: new Date(e.date), actorId },
+    });
+    for (const m of e.moves) {
+      const id = productId.get(m.product);
+      if (!id) throw new Error(`STOCK_EVENTS names "${m.product}", which is not a product`);
+      const at = { productId: id, eventId: event.id, occurredAt: new Date(e.date), actorId };
+      await prisma.stockEntry.create({ data: { ...at, kind: "CHECKOUT", units: -m.out } });
+      if (m.back || m.backOpen) {
+        await prisma.stockEntry.create({
+          data: {
+            ...at,
+            kind: "RETURN",
+            units: m.back ?? 0,
+            open80: m.backOpen?.[80] ?? 0,
+            open60: m.backOpen?.[60] ?? 0,
+            open40: m.backOpen?.[40] ?? 0,
+            open20: m.backOpen?.[20] ?? 0,
+          },
+        });
+      }
+    }
+  }
+
+  // Each product's log, settled.
+  for (const id of productId.values()) {
+    const rows = await prisma.stockEntry.findMany({
+      where: { productId: id },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+    });
+    const settled = replay(
+      rows.map(
+        (r): ReplayRow => ({
+          id: r.id,
+          kind: r.kind,
+          level: r.level,
+          units: r.units,
+          open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
+          countedQty: r.countedQty,
+          valueDeltaOre: r.valueDeltaOre,
+          unitCostOre: r.unitCostOre,
+        }),
+      ),
+    );
+    for (const r of rows) {
+      const want = settled.get(r.id);
+      if (!want) continue;
+      await prisma.stockEntry.update({
+        where: { id: r.id },
+        data: {
+          units: want.units,
+          open80: want.open[80] ?? 0,
+          open60: want.open[60] ?? 0,
+          open40: want.open[40] ?? 0,
+          open20: want.open[20] ?? 0,
+          valueDeltaOre: want.valueDeltaOre,
+        },
+      });
+    }
+  }
+}
+
 async function main() {
-  // Clear in FK-safe order (allocations cascade from expenses).
+  // Clear in FK-safe order (allocations cascade from expenses). The stock
+  // first: its movements hold on to the people who wrote them.
+  await prisma.stockChange.deleteMany();
+  await prisma.stockEntry.deleteMany();
+  await prisma.stockEvent.deleteMany();
+  await prisma.stockProductChange.deleteMany();
+  await prisma.stockProduct.deleteMany();
   await prisma.expenseEvent.deleteMany();
   await prisma.receipt.deleteMany();
   await prisma.expense.deleteMany();
@@ -74,6 +309,7 @@ async function main() {
   await prisma.rentalItem.deleteMany();
   await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
+  await prisma.fortnoxFinancialYear.deleteMany(); // cascades → vouchers → ledger rows
   await prisma.costCenter.deleteMany();
   await prisma.user.deleteMany();
 
@@ -100,9 +336,8 @@ async function main() {
   // referenced defaults to ordinarie.
   const rolesByName = new Map<string, Role[]>();
   for (const u of Object.values(CURRENT_USERS)) rolesByName.set(u.name, u.roles);
-  for (const c of COST_CENTERS)
-    if (c.ownerName && !rolesByName.has(c.ownerName))
-      rolesByName.set(c.ownerName, ["RESULTATANSVARIG"]);
+  for (const owner of Object.keys(UNIT_OWNERS))
+    if (!rolesByName.has(owner)) rolesByName.set(owner, ["RESULTATANSVARIG"]);
   for (const e of EXPENSES) {
     if (!rolesByName.has(e.submitterName)) rolesByName.set(e.submitterName, ["ORDINARIE"]);
     for (const r of e.revisions)
@@ -132,67 +367,37 @@ async function main() {
     return id;
   };
 
-  // ── Cost centers (+ result units) ────────────────────────────────
-  // ResultUnit membership is derived from code prefixes, so each seeded
-  // result unit gets its cost centre's full code as its prefix, matching that
-  // one code and nothing else.
+  // ── Cost centres and result units, from the real budget ─────────
+  // Every cost centre the section's budget has (scripts/import/budget-2026.json,
+  // parsed from VTM-EXTRA.xlsx), and a result unit for each of
+  // the workbook's Rambudget headings. A unit's prefix is the letters its codes
+  // share (AKTU for AKTU01…AKTU08), which is how membership works for real:
+  // see lib/server/result-units.ts.
+  const budgetData = loadBudgetJson();
   const costCenterByCode = new Map<string, string>();
   const resultUnitByName = new Map<string, string>();
-  for (const c of COST_CENTERS) {
-    const cc = await prisma.costCenter.create({
-      data: { code: c.code, name: c.name },
-    });
+  const prefixesByUnit = new Map<string, Set<string>>();
+  for (const c of budgetData.costCenters) {
+    const cc = await prisma.costCenter.create({ data: { code: c.code, name: c.name } });
     costCenterByCode.set(c.code, cc.id);
     if (!c.resultUnit) continue;
-
-    let resultUnitId = resultUnitByName.get(c.resultUnit);
-    if (!resultUnitId) {
-      const resultUnit = await prisma.resultUnit.create({
-        data: {
-          name: c.resultUnit,
-          prefixes: { create: [{ value: c.code.toUpperCase() }] },
-        },
-      });
-      resultUnitId = resultUnit.id;
-      resultUnitByName.set(c.resultUnit, resultUnitId);
-    } else {
-      // A second cost centre under the same result unit adds its own prefix.
-      await prisma.resultUnitPrefix.create({
-        data: { resultUnitId, value: c.code.toUpperCase() },
-      });
-    }
+    const unit = appUnitName(c.resultUnit);
+    const prefix = c.code.replace(/\d+$/, "").toUpperCase();
+    prefixesByUnit.set(unit, (prefixesByUnit.get(unit) ?? new Set()).add(prefix));
   }
-
-  // Resultatansvar is held by result unit *name* on the user row, the shape
-  // the Authentik mapping writes (lib/server/authentik-roles.ts). A dev sign-in
-  // has no group list, so seeding the column is the only way the seeded
-  // resultatansvariga answer for anything.
-  const seededUnits = new Map<string, string[]>();
-  for (const c of COST_CENTERS) {
-    if (!c.ownerName || !c.resultUnit) continue;
-    const units = seededUnits.get(c.ownerName) ?? [];
-    if (!units.includes(c.resultUnit)) units.push(c.resultUnit);
-    seededUnits.set(c.ownerName, units);
-  }
-  for (const [name, units] of seededUnits) {
-    await prisma.user.update({
-      where: { id: userId(name) },
-      data: { resultUnits: units },
+  for (const [name, prefixes] of prefixesByUnit) {
+    const unit = await prisma.resultUnit.create({
+      data: { name, prefixes: { create: [...prefixes].map((value) => ({ value })) } },
     });
+    resultUnitByName.set(name, unit.id);
   }
 
-  // ── Authority ───────────────────────────────────────────────────
-  //
-  // Put back the state the section started from: which Authentik group confers
-  // which role and result unit, and what each role may do
-  // (lib/server/authority-defaults.ts).
-  //
-  // Rewritten from scratch rather than left alone, because a seed is supposed
-  // to produce one known database and these tables are editable. A dev who
-  // spent yesterday testing the settings screen should not start today holding
-  // whatever they left behind. The group → result unit rows have to be here in
-  // any case: they are foreign keys into ResultUnit, and the wipe above took
-  // them with it.
+  for (const [name, units] of Object.entries(UNIT_OWNERS)) {
+    for (const unit of units)
+      if (!resultUnitByName.has(unit)) throw new Error(`UNIT_OWNERS names "${unit}", which the budget has no unit for`);
+    await prisma.user.update({ where: { id: userId(name) }, data: { resultUnits: units } });
+  }
+
   await prisma.groupRole.deleteMany();
   await prisma.groupResultUnit.deleteMany();
   await prisma.roleCapability.deleteMany();
@@ -229,6 +434,7 @@ async function main() {
       data: {
         last4: card.last4,
         holderId: card.holderName ? userId(card.holderName) : null,
+        resultUnitId: card.resultUnit ? (resultUnitByName.get(card.resultUnit) ?? null) : null,
       },
     });
     for (const tid of card.transactionIds) {
@@ -288,6 +494,24 @@ async function main() {
   // one is the first thing to try on /contracts.
   await prisma.rentalItem.createMany({ data: [...RENTAL_ITEMS] });
 
+  // ── The budget, and a year of utfall against it ─────────────────
+  // Both columns of the workbook, as the importer makes them: the one the
+  // section voted through, sealed, so it is the year's budget everywhere a
+  // single one is wanted (resolveBudget), and the revision being written
+  // beside it.
+  const treasurer = userId(CURRENT_USERS.SKATTMASTARE.name);
+  const base = { createdById: treasurer, costCenterIds: costCenterByCode };
+  const adopted = await buildBudget(prisma, budgetData, {
+    ...base,
+    name: budgetData.previousName,
+    side: "orig",
+    lockedAt: new Date(`${budgetData.year}-03-20T18:00:00Z`),
+  });
+  await buildBudget(prisma, budgetData, { ...base, name: budgetData.name, side: "rev" });
+  const ledgerRows = await seedLedger(budgetData, adopted.id);
+  await seedStock(treasurer);
+
+
   const counts = {
     users: await prisma.user.count(),
     costCenters: await prisma.costCenter.count(),
@@ -297,6 +521,10 @@ async function main() {
     allocations: await prisma.expenseCostAllocation.count(),
     events: await prisma.expenseEvent.count(),
     rentalItems: await prisma.rentalItem.count(),
+    budgets: await prisma.budget.count(),
+    stockProducts: await prisma.stockProduct.count(),
+    stockEntries: await prisma.stockEntry.count(),
+    ledgerRows,
   };
   console.log("Seeded:", counts);
 }

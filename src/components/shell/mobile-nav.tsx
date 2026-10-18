@@ -36,6 +36,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { IconFortnox } from "./fortnox-mark";
 import { IconCheck, IconChevronRight } from "../ui/icons";
 import type { NavGroup, NavItem } from "./app-shell";
+import { NavCount } from "./nav-count";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
@@ -57,6 +58,7 @@ export function MobileNav({
   help,
   settings,
   isActive,
+  counts,
   user,
   fortnox,
 }: {
@@ -69,6 +71,8 @@ export function MobileNav({
    *  sorted into a group; see the same choice in app-shell.tsx. */
   settings: NavItem | null;
   isActive: (href: string) => boolean;
+  /** How much waits behind each link, by its href. */
+  counts: Record<string, number>;
   user: CurrentUser;
   fortnox?: { session: FortnoxStatus["session"] | null };
 }) {
@@ -109,6 +113,7 @@ export function MobileNav({
             itself to read as anything; in a list of cards the same fill would
             be a row that looks selected rather than a place you already are. */}
         {active && <IconCheck aria-hidden className="size-4 shrink-0 text-accent" />}
+        {(counts[item.href] ?? 0) > 0 && <NavCount count={counts[item.href]} />}
         <IconChevronRight aria-hidden className="size-4 shrink-0 text-faint" />
       </Link>
     );

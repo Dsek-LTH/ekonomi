@@ -33,6 +33,9 @@ export const bankDateColumn = (
   sortable: true,
   dateRange: true,
   className: "whitespace-nowrap text-muted",
+  // On a phone the second line is whose card and when, in that order.
+  mobile: "meta",
+  mobileOrder: 1,
   cell: (tx) => date(tx.transactionDate),
 });
 
@@ -53,6 +56,7 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
   header,
   hidden,
   className: "text-muted",
+  mobile: "meta",
   cell: (tx) => (tx.cardLast4 ? <span className="tabular-nums">····{tx.cardLast4}</span> : "–"),
 });
 
@@ -68,7 +72,7 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
  * as the dash every other empty cell in the app uses.
  */
 export function BankCardHolder({ tx }: { tx: BankTransaction }) {
-  if (!tx.cardLast4) return <span className="text-muted">–</span>;
+  if (!tx.cardLast4) return <span className="text-muted"></span>;
   // Spans rather than paragraphs: a screen that lets the card be changed wraps
   // this in a button, and a button may only hold phrasing content.
   return (
@@ -95,6 +99,11 @@ export const bankHolderColumn = (
   key: "holder",
   header,
   value: (tx) => tx.cardHolderName ?? "",
+  // The name alone on a phone, in the row's second line. The number under it
+  // and the picker are the table's; a page that needs the picker on a phone
+  // moves this column to `status` (see the bank page's list of cardless rows).
+  mobile: "meta",
+  mobileCell: (tx) => tx.cardHolderName ?? null,
   sortable: true,
   searchable: true,
   // A fixed width, and the name truncated inside it. The table lays itself out
@@ -111,8 +120,12 @@ export const bankHolderColumn = (
   // the row's height by those few pixels. A column box of exactly 36px holds
   // whichever it is, centred, and is the same height either way. A column and
   // not a row, because BankCardHolder is two lines handed over as siblings.
+  //
+  // From md only. On a phone the cell is an item in the row's line of small
+  // text (see DataTable's mobile card), and a 36px box there stood out of the
+  // line into the rows around it.
   cell: (tx) => (
-    <div className="flex h-9 flex-col justify-center">
+    <div className="flex flex-col justify-center md:h-9">
       {cell ? cell(tx) : <BankCardHolder tx={tx} />}
     </div>
   ),
@@ -138,9 +151,8 @@ export const bankAmountColumn = (header: string): Column<BankTransaction> => ({
 
 /**
  * The utlägg this purchase was accounted for as, as a link to it. The one
- * place on either bank table that answers "has this been dealt with, and by
- * what". Unaccounted rows are a dash, so a column of links reads as the work
- * that is done and the gaps as the work that isn't.
+ * place on the bank table that answers "has this been dealt with, and by
+ * what".
  *
  * `linked` names a match that has no reference yet: an utlägg is only numbered
  * when it is submitted for attest (see lib/domain/reference.ts), so a purchase
@@ -151,23 +163,19 @@ export const bankAmountColumn = (header: string): Column<BankTransaction> => ({
  * `unmatched` draws a row that has no utlägg yet, for a page that can offer to
  * make one there ("Redovisa"). It is the same question, has this been dealt
  * with, so its answer belongs in the same cell: a link where it has, the way to
- * do it where it hasn't. Without it, or where it draws nothing, the row reads
- * as the dash.
+ * do it where it hasn't. Where it draws nothing, the cell is empty.
  */
 export const bankMatchedColumn = (
   header: string,
-  {
-    dash = "–",
-    linked,
-    unmatched,
-  }: { dash?: string; linked?: string; unmatched?: (tx: BankTransaction) => ReactNode } = {},
+  { linked, unmatched }: { linked: string; unmatched: (tx: BankTransaction) => ReactNode },
 ): Column<BankTransaction> => ({
   key: "matched",
   header,
   // Sorted and searched on what the reader sees, not on the id behind the link.
-  value: (tx) => tx.matchedExpenseRef ?? (tx.matchedExpenseId ? linked ?? "" : ""),
+  value: (tx) => tx.matchedExpenseRef ?? (tx.matchedExpenseId ? linked : ""),
   sortable: true,
   searchable: true,
+  align: "right",
   className: "whitespace-nowrap tabular-nums",
   cell: (tx) =>
     tx.matchedExpenseId ? (
@@ -175,9 +183,9 @@ export const bankMatchedColumn = (
         href={`/expenses/${tx.matchedExpenseId}`}
         className="font-medium text-accent hover:underline"
       >
-        {tx.matchedExpenseRef ?? linked ?? dash}
+        {tx.matchedExpenseRef ?? linked}
       </Link>
     ) : (
-      unmatched?.(tx) ?? <span className="text-muted">{dash}</span>
+      unmatched(tx)
     ),
 });

@@ -485,12 +485,18 @@ function SectionRows({
                 by mouse alone: no tab stop, no Enter, and `aria-expanded` on a
                 row announces a state nothing can be operated to change. The row
                 keeps its hover, driven from the button's own focus too, so
-                nothing looks different and it can now be used. */}
+                nothing looks different and it can now be used.
+
+                The button's hit area is stretched over the whole row (its
+                `after:` box, against the row's `relative`), so a click on the
+                figures opens it as well as one on the name. It was the name
+                alone, and a row that lights up on hover and then ignores a
+                click on most of itself reads as broken. */}
             <div
               role="row"
               className={cn(
                 ROW,
-                "group border-t border-border hover:bg-hover focus-within:bg-surface",
+                "group relative cursor-pointer border-t border-border hover:bg-hover focus-within:bg-surface",
                 open && "bg-surface",
               )}
             >
@@ -499,7 +505,7 @@ function SectionRows({
                   type="button"
                   aria-expanded={open}
                   onClick={() => onToggle(group, a)}
-                  className="cursor-pointer text-left"
+                  className="cursor-pointer text-left after:absolute after:inset-0 after:content-['']"
                 >
                   <span className="font-medium tabular-nums">{a.account}</span>{" "}
                   <span className="text-muted">{a.accountName}</span>

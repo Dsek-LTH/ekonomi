@@ -78,7 +78,9 @@
     "empty": "No matches",
     "clear": "Clear",
     "nSelected": "{count} selected",
-    "create": "Create “{text}”"
+    "create": "Create “{text}”",
+    "cancel": "Cancel",
+    "done": "Done"
   },
   "action": {
     "goToProfile": "Go to My profile"

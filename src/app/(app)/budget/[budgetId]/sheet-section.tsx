@@ -10,8 +10,10 @@ import type { AccountKind } from "@/lib/budget";
 import type { JoinedAccount } from "@/lib/budget/compare";
 import { fmt } from "./budget-helpers";
 import { AccountBlock, AddAccountRow, GhostAccountBlock } from "./sheet-account";
-import { Hc } from "./sheet-cells";
+import { COMPARE_GROUP, Hc } from "./sheet-cells";
 import { useSheet } from "./sheet-context";
+import { useTranslations } from "next-intl";
+import { cn } from "@/lib/ui/utils";
 import type { Account } from "./budget-types";
 
 export function SectionCard({
@@ -36,8 +38,8 @@ export function SectionCard({
     showCompare,
     staticWidth,
     tCol,
-    tLedger,
   } = useSheet();
+  const tGroup = useTranslations("budget.compareGroups");
   // No longer a drop zone. An account used to be dragged onto the other card to
   // reclassify it; its number decides the side now, so the card is just a card.
   return (
@@ -52,11 +54,27 @@ export function SectionCard({
         <colgroup>
           <col style={{ width: gutWidth }} />
           {columns.map((col) => { const w = staticWidth(col); return <col key={col.key} style={w ? { width: w } : undefined} />; })}
-          {showCompare && <col style={{ width: 104 }} />}
-          {showCompare && <col style={{ width: 96 }} />}
+          {/* Wide enough for their headings on one line ("Utfall 2026",
+              "Jämfört med") and a six-figure amount with its sign. At 104 and
+              96 the headings wrapped. */}
+          {showCompare && <col style={{ width: 140 }} />}
+          {showCompare && <col style={{ width: 128 }} />}
           <col style={{ width: actionsWidth }} />
         </colgroup>
         <thead>
+          {/* The groups, over the columns: what this budget says, what it is
+              compared with, and the gap between the two. Only when there is a
+              comparison to group. */}
+          {showCompare && compare && (
+            <tr className="border-b border-border/60 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <th colSpan={columns.length + 1} className="px-2 py-1.5 text-left">
+                {tGroup("budget")}
+              </th>
+              <th className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right")}>{tGroup("other")}</th>
+              <th className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right")}>{tGroup("diff")}</th>
+              <th />
+            </tr>
+          )}
           <tr className="border-b border-border text-left text-xs font-medium text-muted">
             {narrow ? (
               <th className="p-0" />
@@ -66,8 +84,14 @@ export function SectionCard({
             {columns.map((col) => (
               <Hc key={col.key} letter={col.letter} align={col.kind === "number" ? "right" : undefined}>{col.custom ? col.name : tCol(col.name)}</Hc>
             ))}
-            {showCompare && compare && <th className="border-l border-border/60 px-2 py-2 text-right font-medium">{compare.label}</th>}
-            {showCompare && <th className="border-r border-border/60 px-2 py-2 text-right font-medium">{tLedger("col.diff")}</th>}
+            {showCompare && compare && (
+              <th className={cn(COMPARE_GROUP.other, "truncate whitespace-nowrap px-2 py-2 text-right font-medium")} title={compare.label}>{compare.label}</th>
+            )}
+            {showCompare && (
+              <th title={tGroup("diffHint")} className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-2 text-right font-medium")}>
+                {tGroup("diffColumn")}
+              </th>
+            )}
             <th className="border-l border-border/60" />
           </tr>
         </thead>
@@ -77,7 +101,9 @@ export function SectionCard({
         {ghosts.map((g) => (
           <GhostAccountBlock key={g.code} account={g} />
         ))}
-        <AddAccountRow kind={kind} />
+        {/* Adding an account is writing the budget, which the comparison's
+            reading view leaves for when it is switched off. */}
+        {!showCompare && <AddAccountRow kind={kind} />}
       </table>
     </div>
   );

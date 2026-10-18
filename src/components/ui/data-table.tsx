@@ -148,31 +148,42 @@ export interface Column<T> {
   /**
    * Where this column sits among the others in its phone slot. Lower first,
    * unset is 0, and equal values keep the order the columns are declared in.
-   *
-   * Only needed where a slot holds more than one column, which today is the
-   * utlägg list's `trailing`: the amount and the status stack there, and the
-   * amount reads first because it is the figure somebody is scanning a list of
-   * money for. Without this that order was whatever the *table's* column order
-   * happened to be, so moving a column on the desktop table silently reordered
-   * the phone card.
+   * Only needed where `meta` holds two columns and the table's own order is
+   * the wrong one for the sentence they make.
    */
   mobileOrder?: number;
+  /**
+   * What the column shows on a phone, where that differs from `cell`. For a
+   * cell that is two lines or a control in the table and has to be a few words
+   * in the row's second line: a card holder's name without the card number
+   * under it.
+   */
+  mobileCell?: (row: T) => React.ReactNode;
 }
 
-//   title    – the row's headline, on the left. Its header is not shown.
-//   trailing – the value opposite it: the amount, or the status.
-//   meta     – run together into the muted line under the headline, in column
-//              order, separated by dots. The header is announced to a screen
-//              reader and shown to nobody, so a cell in this slot has to read
-//              on its own: "24 st", not "24".
-//   actions  – buttons at the right-hand end, unlabelled.
-//   hide     – left out of the row; the column is desktop-only. This is the one
-//              to reach for on a wide table. The muted line holds two or three
-//              things before it starts truncating.
-// Unset means `meta`. If no column claims `title` the first one is used, so a
-// list that has not been annotated still reads as a card rather than a stack of
-// anonymous label/value pairs.
-type MobileSlot = "title" | "trailing" | "meta" | "actions" | "hide";
+// A row on a phone has one shape, whatever the table:
+//
+//   title     trailing        Kaffe till pubben           1 240 kr
+//   meta      status          Maja Holm, 12 okt            [Väntar]
+//
+//   title    – what the row is. One column.
+//   trailing – the figure opposite it, usually the amount. One column.
+//   meta     – who or what, and when: at most two columns, joined by a comma
+//              into the muted second line. The header is announced to a screen
+//              reader and shown to nobody, so a cell here has to read on its
+//              own: "24 st", not "24".
+//   status   – a tag opposite the second line. One column.
+//   actions  – a button at the right-hand end, for the one thing a row is
+//              waiting on ("Redovisa"). Rarely more than one.
+//   hide     – not on a phone. The default: everything else is on the page the
+//              row opens, or in the table on a wider screen.
+//
+// Unset means `hide`. It meant `meta`, and every column a table had not thought
+// about ran together into the second line, eight things to a line with nothing
+// to say which was which. A table now says what its phone row holds, and a
+// column added later stays off it until somebody decides it belongs. If no
+// column claims `title` the first one is used, so a row always has a headline.
+type MobileSlot = "title" | "trailing" | "meta" | "status" | "actions" | "hide";
 
 const alignCls = (a?: Column<unknown>["align"]) => a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
@@ -194,24 +205,27 @@ type MobileGroups<T> = {
   title: Column<T> | undefined;
   trailing: Column<T>[];
   meta: Column<T>[];
+  status: Column<T>[];
   actions: Column<T>[];
 };
 
 // Split the columns into the card's slots once per column set. `title` falls
 // back to the first column so an un-annotated list still has a headline.
 function mobileSlots<T>(cols: Column<T>[]): MobileGroups<T> {
-  const visible = cols.filter((c) => c.mobile !== "hide");
-  const title = visible.find((c) => c.mobile === "title") ?? visible[0];
+  const visible = cols.filter((c) => c.mobile && c.mobile !== "hide");
+  const title =
+    visible.find((c) => c.mobile === "title") ?? cols.find((c) => c.mobile !== "hide");
   // Sort is stable, so a slot where nobody has an opinion keeps the order the
   // columns were declared in, which is what every slot but one relies on.
   const inSlot = (slot: MobileSlot) =>
     visible
-      .filter((c) => c !== title && (c.mobile ?? "meta") === slot)
+      .filter((c) => c !== title && c.mobile === slot)
       .sort((a, b) => (a.mobileOrder ?? 0) - (b.mobileOrder ?? 0));
   return {
     title,
     trailing: inSlot("trailing"),
     meta: inSlot("meta"),
+    status: inSlot("status"),
     actions: inSlot("actions"),
   };
 }
@@ -740,31 +754,22 @@ export function DataTable<T>({
 }
 
 /**
- * One row on a phone: a list row, not a card.
+ * One row on a phone: a list row, not a card, in one shape for every table.
  *
- * It was a card: headline and value on top, then every remaining column as a
- * labelled line under a rule. Two things were wrong with it, and the first was
- * the one people actually hit. The rule *inside* a card was the same hairline
- * as the `divide-y` *between* cards, and the gaps inside (12px) were within four
- * pixels of the gap between (16px), so nothing on the screen said where one
- * record stopped and the next began, and a list of four read as a list of ten.
+ *   Kaffe till pubben                           1 240 kr
+ *   Maja Holm, 12 okt                          [Väntar]
  *
- * The second is that a column with no `mobile` set falls through to `meta`
- * (see `mobileSlots`), so a table that never thought about its phone layout put
- * *every* column on the card with its header restated beside it. The stock log
- * came to seven labelled lines per movement, a table transposed, which is the
- * one thing a narrow screen is worst at reading.
+ * The headline and its figure on the first line; who or what, and when, on the
+ * second with the status opposite. See MobileSlot for what goes where.
  *
- * So: a headline with its value, one muted line of everything else run together
- * under it, and a chevron. The labels go because they are the table's, not the
- * row's. A value that cannot be read without its header is a value whose cell
- * should say more (`24 st`, not `24`). Where that leaves something out, it is
- * on the page the row opens, which is the reading a phone was going to need
- * anyway.
+ * It was a headline with everything else run together under it, separated by
+ * dashes: a reference, a date, a payment type, a name, a cost centre and a
+ * status on one line of small grey text, nothing saying which was which, and
+ * every row wrapping to a different height. The same four places on every row,
+ * whatever the table, is what lets a list be read down rather than row by row.
  *
- * The headers are not lost to a screen reader: each one is still announced
- * before its value, which costs a sighted reader nothing and is the whole
- * difference between "Starköl – 24 st" and a list of unattributed figures.
+ * The headers are not lost to a screen reader: each value in the second line
+ * is still announced with its header.
  */
 function MobileRow<T>({
   row,
@@ -778,10 +783,13 @@ function MobileRow<T>({
   /** Where the row goes when opened. See `rowHref`. */
   href?: string;
 }) {
-  const cell = (c: Column<T>) => c.cell(row);
-  const meta = slots.meta.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
-  const actions = slots.actions.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
-  const trailing = slots.trailing.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
+  const cell = (c: Column<T>) => (c.mobileCell ?? c.cell)(row);
+  const filled = (cols: Column<T>[]) =>
+    cols.map((c) => [c, cell(c)] as const).filter(([, n]) => !isBlank(n));
+  const meta = filled(slots.meta);
+  const status = filled(slots.status);
+  const actions = filled(slots.actions);
+  const trailing = filled(slots.trailing);
 
   const title = slots.title && cell(slots.title);
   return (
@@ -796,103 +804,54 @@ function MobileRow<T>({
       )}
     >
       <div className="min-w-0 flex-1">
-        {/* Same arrangement as the table: the headline is the link, and its hit
-            area covers the row. The actions sit above it (they are later in the
-            stacking order), so a delete button on a row is still a delete
-            button and not a navigation. */}
-        {/* `truncate` twice over: on the box, for a cell that is plain text,
-            and on its children, for one that renders its own second line (an
-            utlägg's title over its reference). A block child starts a new line
-            box whatever the parent's `white-space` says, so both lines are
-            there and both end in an ellipsis rather than at the screen edge. */}
-        <div className="truncate text-sm font-medium *:truncate">
-          {href ? (
-            <Link href={href} className="before:absolute before:inset-0">
-              {title}
-            </Link>
-          ) : (
-            title
-          )}
+        <div className="flex items-baseline gap-3">
+          {/* The headline is the link, and its hit area covers the row. The
+              actions sit above it (later in the stacking order), so a button on
+              a row is still a button and not a navigation. `*:truncate` for a
+              cell that renders its own block. */}
+          <div className="min-w-0 flex-1 truncate text-sm font-medium *:truncate">
+            {href ? (
+              <Link href={href} className="before:absolute before:inset-0">
+                {title}
+              </Link>
+            ) : (
+              title
+            )}
+          </div>
+          {trailing.map(([c, node]) => (
+            <div key={c.key} className="shrink-0 text-sm font-semibold tabular-nums">
+              {node}
+            </div>
+          ))}
         </div>
 
-        {meta.length > 0 && (
-          // A flex row, and a <div>, for one reason each, both learned the hard
-          // way from the same cell.
-          //
-          // A <div> because a column's `cell` may return whatever it likes, and
-          // several return block elements. `<p>` cannot legally hold a <div>, so
-          // the browser hoists it out and hydration finds a tree it did not
-          // build. That is not the cell's fault: rendering anything at all is
-          // the contract everywhere else in this table, and it is the row that
-          // has to be able to hold it.
-          //
-          // A flex row because a block child inside ordinary inline flow starts
-          // a line of its own, which would quietly turn this one-line summary
-          // into two or three. As flex items they stay on the row whatever they
-          // are.
-          //
-          // Wrapping, though, which it did not do. It was one line, every item
-          // `shrink-0` but the last, and whatever ran past the edge was cut off
-          // by the `overflow-hidden` below: no ellipsis, because the clip is on
-          // the box and not on the text, so the last item or two simply were not
-          // there. On an utlägg that is a reference, a date, a payment type and
-          // a submitter against about 220px of phone, and two of the four were
-          // gone with nothing to say so. The design leaned on the row opening to
-          // show the rest, and a list that passes no `expansion` has no such
-          // thing to open.
-          //
-          // A second line costs a few pixels of row and is the only version of
-          // this that does not hide data. The row is already `min-h-16` rather
-          // than a fixed height for the same reason: a headline that wraps takes
-          // the room.
-          //
-          // `gap-x-1` as well as the dots: a single cell may itself render two
-          // blocks (a card holder's name over its last four digits), and as
-          // flex items those would meet with nothing between them.
-          //
-          // `relative`, and this is the one that is not obvious. Each item below
-          // carries an `sr-only` label, which is `position: absolute`, and an
-          // absolutely positioned box is only clipped by `overflow` on a box
-          // that is also its containing block or inside it. Without a positioned
-          // ancestor here the nearest one is the row itself, so those labels
-          // escaped the clip, sat at whatever x the unclipped flex line put them
-          // at, and pushed the *document* wider than the screen: every list in
-          // the app scrolled sideways on a phone as soon as one row had enough
-          // metadata to overflow. Making this the containing block puts them
-          // back inside the box that clips them.
-          <div className="relative mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-xs text-muted">
-            {meta.map(([c, node], i) => (
-              // The separator lives inside the item it precedes rather than
-              // beside it, so a wrap can never leave a dash stranded at the
-              // start of a line with nothing before it.
-              //
-              // `shrink` and `truncate`, not `shrink-0`: with room on the next
-              // line an item wraps rather than shrinking, and where there is no
-              // next line to take (one value longer than the whole row) it
-              // ellipsises instead of being cut mid-letter by the box.
-              <span key={c.key} className="flex min-w-0 shrink items-center gap-x-1">
-                {i > 0 && (
-                  <span aria-hidden className="shrink-0 text-muted">
-                    –
-                  </span>
-                )}
-                <span className="min-w-0 truncate">
+        {(meta.length > 0 || status.length > 0) && (
+          <div className="mt-1 flex items-center gap-3">
+            {/* One line, ending in an ellipsis rather than wrapping: the second
+                line is two short facts, and a row that grows a third line for
+                one long name is a list whose rows cannot be counted.
+                `relative` so the screen-reader labels, which are absolutely
+                positioned, are clipped here rather than widening the page.
+                A <div>, not a <p>: a cell may render a block, and a <p> cannot
+                hold one without the browser hoisting it out. A cell that is a
+                block in the table gives a `mobileCell` that is not. */}
+            <div className="relative min-w-0 flex-1 truncate text-xs text-muted">
+              {meta.map(([c, node], i) => (
+                <span key={c.key}>
+                  {i > 0 && ", "}
                   <span className="sr-only">{c.header}: </span>
                   {node}
                 </span>
-              </span>
+              ))}
+            </div>
+            {status.map(([c, node]) => (
+              <div key={c.key} className="shrink-0">
+                {node}
+              </div>
             ))}
           </div>
         )}
       </div>
-
-      {trailing.length > 0 && (
-        <div className="flex shrink-0 flex-col items-end gap-0.5 text-sm font-semibold tabular-nums">
-          {trailing.map(([c, node]) => (
-            <div key={c.key}>{node}</div>
-          ))}
-        </div>
-      )}
 
       {actions.length > 0 && (
         <div className="relative flex shrink-0 items-center gap-1">
@@ -902,10 +861,9 @@ function MobileRow<T>({
         </div>
       )}
 
-      {/* The one thing the old card never said: that this opens something. Its
-          cue was `hover:underline`, which a phone has no way to show. Dropped
-          where the row carries actions: two right-hand affordances on a 390px
-          row is a row you have to aim at. */}
+      {/* That this opens something: a phone has no hover to say so. Dropped
+          where the row carries actions, since two right-hand affordances on a
+          390px row is a row you have to aim at. */}
       {href && actions.length === 0 && (
         <IconChevronRight aria-hidden className="size-4 shrink-0 text-faint" />
       )}

@@ -1,15 +1,15 @@
 {
   "overview": "Overview",
-  "groupExpenses": "Expenses & Approval",
+  "groupExpenses": "Expenses",
   "expenses": "Expenses",
   "approvals": "To approve",
-  "groupBudget": "Budget",
+  "groupBudget": "Budget & outcome",
   "budget": "Budget",
-  "outcome": "Outcome",
+  "outcome": "Outcome & reports",
   "groupBookkeeping": "Bookkeeping",
-  "bookkeeping": "Bookkeeping",
+  "bookkeeping": "Expenses",
   "bank": "Bank transactions",
-  "groupAdmin": "Administration",
+  "groupAdmin": "Documents",
   "settings": "Settings",
   "fortnox": "Fortnox",
   "costCenters": "Cost centers",
@@ -32,8 +32,7 @@
   "mainNav": "Main navigation",
   "income": "Income",
   "stock": "Products",
-  "stockLog": "Stock log",
-  "stockStats": "Statistics",
+  "stockHistory": "History",
   "groupStock": "Stock",
   "stockEvents": "Occasions",
   "roles": "Roles & permissions",
@@ -48,5 +47,9 @@
     "placeholder": "Search for a page…",
     "empty": "No pages match."
   },
-  "email": "Email"
+  "email": "Email",
+  "more": "More",
+  "tabBar": "Shortcuts",
+  "closeNew": "Close",
+  "sectionTabs": "Pages in this section"
 }

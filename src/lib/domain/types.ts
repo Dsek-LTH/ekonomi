@@ -359,6 +359,9 @@ export interface Card {
   last4: string;
   holderId?: string;
   holderName?: string;
+  /** The result unit whose resultatansvarig may read this card's purchases. */
+  resultUnitId?: string;
+  resultUnitName?: string;
   active: boolean;
   txCount: number; // linked bank transactions, surfaced before deletion
 }

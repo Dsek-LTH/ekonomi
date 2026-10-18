@@ -50,6 +50,7 @@ export function CostCenterSheet(props: {
   const tRam = useTranslations("budget.rambudget");
   const tChanges = useTranslations("budget.changes");
   const tAlloc = useTranslations("allocation");
+  const tGroup = useTranslations("budget.compareGroups");
   const tBook = useTranslations("book");
   const tLedger = useTranslations("ledger");
   const { date } = useFormat();
@@ -652,15 +653,28 @@ export function CostCenterSheet(props: {
           <StatRow>
             {summary.map((s) => (
               <div key={s.label} className="rounded-panel border border-border bg-background px-4 py-3">
-                <p className="text-xs text-muted">{s.label}</p>
+                {/* With a comparison on, the big figure is said to be the
+                    budget, and the two figures under it each carry their name:
+                    they used to run together as "Utfall 2026 −3 000+4 546",
+                    the compared figure and the gap from the budget with
+                    nothing between them. */}
+                <p className="text-xs text-muted">
+                  {compare ? tGroup("ofBudget", { label: s.label }) : s.label}
+                </p>
                 <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
                   {s.signed ? fmtSigned(s.v) : fmt(s.v)}
                 </p>
                 {compare && (
-                  <p className="mt-1 text-xs text-muted">
-                    {compare.label} <span className="tabular-nums text-foreground">{fmt(s.a)}</span>
-                    <span className={cn("ml-2 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>{fmtSigned(s.a - s.v)}</span>
-                  </p>
+                  <dl className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 border-t border-border/60 pt-2 text-xs">
+                    <dt className="truncate text-muted">{compare.label}</dt>
+                    <dd className="text-right tabular-nums text-foreground">{fmt(s.a)}</dd>
+                    <dt className="text-muted" title={tGroup("diffHint")}>
+                      {tGroup("diffColumn")}
+                    </dt>
+                    <dd className={cn("text-right tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>
+                      {fmtSigned(s.a - s.v)}
+                    </dd>
+                  </dl>
                 )}
                 {/* The result is the one in force; this is how far it has moved from
                     the adopted one, and in which direction. */}

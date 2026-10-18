@@ -1,242 +1,291 @@
 "use client";
 
-// Picking the bank row that settles a card purchase.
+// Which card purchase an utlägg is: the bank rows on the member's card, ranked
+// for this claim by lib/domain/matching.ts.
 //
-// One component for the two screens that ask it: the wizard's match step, and
-// the detail page's picker for a claim that lost its match or never had one.
-// They used to be two, and they behaved differently at the same task. The
-// wizard ranked by the matching rule but showed only the five closest and had
-// no way to search; the detail page searched the lot but never ranked or told
-// the two directions apart. Whichever a member met first taught them something
-// untrue about the other.
+// Mostly there is one answer, so mostly that is all this shows. Once a row is
+// picked the list folds to that one line with a way to change it. Until then
+// it shows the rows that can be picked, then any that are very likely this
+// purchase with the amount typed wrong (each with the fix: take its amount),
+// and everything else behind one link, for looking. How matching works is
+// behind a "?" (MatchHelp) rather than written out above the list, where it
+// was three paragraphs on the smallest card of the form.
 //
-// What is drawn here is a list of *reasons*. Every row on the card is shown,
-// and one that cannot be picked says why: it points the wrong way, it is the
-// wrong size (and by how much), or another utlägg already claims it. The rule
-// itself is `matchCandidates` in lib/domain/matching.ts, which is where it can
-// be tested; nothing about which rows qualify is decided in this file.
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+// One line per row: day, text, why it cannot be picked, amount. They were two
+// lines each, with the reason as a sentence under the date.
+import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/amount";
+import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/info-hint";
+import { IconCheck } from "@/components/ui/icons";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
+import { Tag } from "@/components/ui/status-pill";
 import { formatSEK } from "@/lib/ui/format";
 import type { MatchCandidate } from "@/lib/domain/matching";
 import type { BankTransaction } from "@/lib/domain/types";
-import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+
+type Candidate = MatchCandidate<BankTransaction>;
+
+// Day, text, then whatever is at the end. The day is short and fixed-width so
+// a column of them lines up and the texts start in one place.
+//
+// Below sm the end goes onto a line of its own under the text. On one line it
+// took what it needed (a tag, "Använd beloppet", the amount) and the text was
+// left with nothing, while the end ran out over the card's edge.
+const ROW =
+  "grid grid-cols-[3.75rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[3.75rem_minmax(0,1fr)_auto]";
+/** The end of a row: under the text on a phone, its own column from sm. */
+const END = "col-start-2 flex flex-wrap items-center gap-x-3 gap-y-2 sm:col-start-3 sm:justify-end";
+/** The text: wraps on a phone, where there is a line for it, one line from sm. */
+const TEXT = "min-w-0 break-words sm:truncate";
 
 export function TransactionPicker({
   candidates,
   selectedId,
   onPick,
-  /** A match is being written; nothing may be picked meanwhile. */
+  amount,
+  onUseAmount,
   busy = false,
-  /** The row whose write is in flight, so the spinner lands on the one clicked. */
   pendingId = null,
 }: {
-  candidates: MatchCandidate<BankTransaction>[];
+  candidates: Candidate[];
   selectedId?: string | null;
   onPick: (id: string) => void;
+  /** The claim's amount, a magnitude, for the line said when nothing fits. */
+  amount: number;
+  /**
+   * Take a row's amount as the utlägg's and pick it. Offered on a row that is
+   * very likely this purchase typed wrong (see `fixable`). Left out where the
+   * amount cannot be changed from here.
+   */
+  onUseAmount?: (txn: BankTransaction) => void;
   busy?: boolean;
   pendingId?: string | null;
 }) {
   const t = useTranslations("expenses.match");
-  const { date } = useFormat();
+  const day = useShortDay();
   const [query, setQuery] = useState("");
-  const [othersOpen, setOthersOpen] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
+  // Folded to the picked row until asked to change it.
+  const [changing, setChanging] = useState(false);
+
+  const picked = candidates.find((c) => c.txn.id === selectedId && c.selectable);
+  const pickable = candidates.filter((c) => c.selectable);
+  const nearMisses = candidates.filter((c) => c.fixable);
+  const rest = candidates.filter((c) => !c.selectable && !c.fixable);
 
   const q = query.trim().toLowerCase();
-  // Searched, not ranked: the order is the rule's, and a search only narrows
-  // it. Matching on the amount as well as the description, because "250" is
-  // what somebody types when they are hunting for a figure they remember.
-  const shown = q
-    ? candidates.filter(
-        (c) =>
-          c.txn.description.toLowerCase().includes(q) ||
-          formatSEK(Math.abs(c.txn.amount)).includes(q) ||
-          String(Math.abs(c.txn.amount)).includes(q),
-      )
-    : candidates;
+  const searched = useMemo(
+    () =>
+      q
+        ? candidates.filter(
+            (c) =>
+              c.txn.description.toLowerCase().includes(q) ||
+              formatSEK(Math.abs(c.txn.amount)).includes(q) ||
+              String(Math.abs(c.txn.amount)).includes(q),
+          )
+        : null,
+    [candidates, q],
+  );
 
-  // Two lists, not one. The rows that can settle this claim are the choice,
-  // and there are rarely more than one or two of them. Everything else on the
-  // card is only there to answer "why is my purchase not here?", so it waits
-  // behind a toggle instead of burying the choice in a greyed-out scroll box.
-  // It opens by itself when that is the question being asked: nothing can be
-  // picked, or somebody is searching and would expect to see every hit.
-  const pickable = shown.filter((c) => c.selectable);
-  const others = shown.filter((c) => !c.selectable);
-  const showOthers = othersOpen || pickable.length === 0 || q !== "";
-
-  /** The one line that says why this row is not on offer. */
-  function reason(c: MatchCandidate<BankTransaction>): string | null {
-    switch (c.blocked) {
-      case null:
-        return null;
-      case "direction":
-        // The figure is right and the row still cannot serve, so saying
-        // "another amount" here would send somebody to check a correct number.
-        return c.txn.amount > 0 ? t("isIncoming") : t("isOutgoing");
-      case "amount":
-        return t(c.offBy > 0 ? "overBy" : "underBy", {
-          amount: formatSEK(Math.abs(c.offBy)),
-        });
-      case "taken":
-        // Named where there is a reference to name. A draft that has claimed it
-        // has no reference yet, and "redan redovisad" alone is still the answer
-        // to why this row cannot be taken.
-        return c.txn.matchedExpenseRef
-          ? t("takenBy", { reference: c.txn.matchedExpenseRef })
-          : t("taken");
-    }
+  if (picked && !changing) {
+    return (
+      <div className={cn(ROW, "rounded-panel border border-accent bg-accent-soft/40 px-3 py-2.5 text-sm")}>
+        <span className="tabular-nums text-muted">{day(picked.txn.transactionDate)}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <IconCheck className="size-4 shrink-0 text-success" />
+          <span className={cn(TEXT, "font-medium")}>{picked.txn.description}</span>
+        </span>
+        <span className={END}>
+          <Amount value={picked.txn.amount} />
+          <button
+            type="button"
+            onClick={() => setChanging(true)}
+            disabled={busy}
+            className="text-sm font-medium text-accent hover:underline disabled:opacity-40"
+          >
+            {t("change")}
+          </button>
+        </span>
+      </div>
+    );
   }
 
+  const row = (c: Candidate) => (
+    <CandidateRow
+      key={c.txn.id}
+      c={c}
+      day={day}
+      selected={selectedId === c.txn.id}
+      busy={busy}
+      pending={busy && pendingId === c.txn.id}
+      onPick={(id) => {
+        onPick(id);
+        setChanging(false);
+      }}
+      onUseAmount={onUseAmount}
+    />
+  );
+
   return (
-    <div className="space-y-3">
-      {/* Only where there is enough to make finding one work. Under a handful
-          of rows the box is a field to ignore above a list you can already
-          read. */}
-      {candidates.length > 6 && (
-        <SearchInput
-          placeholder={t("search")}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+    <div className="space-y-2">
+      {pickable.length === 0 && !searched && (
+        <p className="text-sm text-muted">{t("noneFits", { amount: formatSEK(amount) })}</p>
       )}
 
-      {pickable.length > 0 && (
+      {!searched && (pickable.length > 0 || nearMisses.length > 0) && (
         <ul className="divide-y divide-border rounded-panel border border-border">
-          {pickable.map((c, i) => {
-            const { txn } = c;
-            const selected = selectedId === txn.id;
-            // The best guess, and only where it is one: the rule ranks the
-            // closest first, and with nothing picked yet that is the row to
-            // point at.
-            const suggested = i === 0 && !selectedId && !q && pickable.length > 1;
-            return (
-              <li key={txn.id}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-pressed={selected}
-                  onClick={() => onPick(txn.id)}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:pointer-events-none",
-                    selected ? "bg-surface" : "hover:bg-hover",
-                  )}
-                >
-                  {/* A radio's dot: choosing one of these is choosing one. */}
-                  <span className="grid size-4 shrink-0 place-items-center">
-                    {busy && pendingId === txn.id ? (
-                      <Spinner size="sm" className="text-accent" />
-                    ) : (
-                      <span
-                        className={cn(
-                          "grid size-4 place-items-center rounded-full border",
-                          selected ? "border-accent" : "border-faint bg-background",
-                        )}
-                      >
-                        {selected && <span className="size-2 rounded-full bg-accent" />}
-                      </span>
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{txn.description}</span>
-                      {suggested && (
-                        <span className="shrink-0 text-xs text-success">{t("suggested")}</span>
-                      )}
-                    </span>
-                    <span className="block text-xs tabular-nums text-muted">
-                      {date(txn.transactionDate)}
-                    </span>
-                  </span>
-                  <span className="shrink-0">
-                    <Amount value={txn.amount} />
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {pickable.map(row)}
+          {nearMisses.map(row)}
         </ul>
       )}
 
-      {others.length > 0 && (
-        <div>
-          {/* No toggle while it is open by necessity: hiding the only list
-              there is would leave nothing to hide it in favour of. */}
-          {pickable.length > 0 && !q && (
-            <button
-              type="button"
-              aria-expanded={showOthers}
-              onClick={() => setOthersOpen((o) => !o)}
-              className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
-            >
-              {showOthers ? t("hideOthers") : t("showOthers", { count: others.length })}
-            </button>
+      {(allOpen || searched) && (
+        <>
+          {candidates.length > 6 && (
+            <SearchInput
+              placeholder={t("search")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           )}
-          {showOthers && (
-            <ul
-              className={cn(
-                "max-h-64 divide-y divide-border overflow-y-auto rounded-panel border border-border",
-                pickable.length > 0 && !q && "mt-2",
-              )}
-            >
-              {others.map((c) => {
-                const why = reason(c);
-                return (
-                  // Not buttons: nothing here can be picked, and a control that
-                  // does nothing when pressed is worse than plain text.
-                  <li key={c.txn.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-muted">{c.txn.description}</span>
-                      <span className="block text-xs text-muted">
-                        <span className="tabular-nums">{date(c.txn.transactionDate)}</span>
-                        {/* The reason last and in its own colour: it is what
-                            the eye is looking for on a row it expected to be
-                            able to pick. */}
-                        {why && <> - <span className="text-warning">{why}</span></>}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-muted">
-                      <Amount value={c.txn.amount} />
-                    </span>
-                  </li>
-                );
-              })}
+          {(searched ?? rest).length > 0 ? (
+            <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded-panel border border-border">
+              {(searched ?? rest).map(row)}
             </ul>
+          ) : (
+            <p className="px-1 text-sm text-muted">
+              {candidates.length === 0 ? t("noneAtAll") : t("noneMatchSearch")}
+            </p>
           )}
-        </div>
+        </>
       )}
 
-      {shown.length === 0 && (
-        <p className="rounded-panel border border-border px-4 py-6 text-center text-sm text-muted">
-          {candidates.length === 0 ? t("noneAtAll") : t("noneMatchSearch")}
-        </p>
+      {rest.length > 0 && !searched && (
+        <button
+          type="button"
+          aria-expanded={allOpen}
+          onClick={() => setAllOpen((o) => !o)}
+          className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {allOpen ? t("hideOthers") : t("showAll", { count: rest.length })}
+        </button>
       )}
+      {candidates.length === 0 && <p className="text-sm text-muted">{t("noneAtAll")}</p>}
     </div>
   );
 }
 
-/**
- * What to do when nothing in the list can be picked.
- *
- * Its own note rather than a line of hint text, because the situation it
- * describes is a dead end and the old copy did not say so: a card purchase
- * cannot be submitted without a match (see `submitBlocker`), so a member who
- * cannot find their row is stopped, not merely unassisted. The screen used to
- * offer a greyed-out "Fortsätt" and a paragraph guessing that the bank file was
- * unimported, which is one of four reasons and often the wrong one.
- */
-export function NoMatchNote({ hasRows }: { hasRows: boolean }) {
+function CandidateRow({
+  c,
+  day,
+  selected,
+  busy,
+  pending,
+  onPick,
+  onUseAmount,
+}: {
+  c: Candidate;
+  day: (iso: string) => string;
+  selected: boolean;
+  busy: boolean;
+  pending: boolean;
+  onPick: (id: string) => void;
+  onUseAmount?: (txn: BankTransaction) => void;
+}) {
+  const t = useTranslations("expenses.match");
+  const { txn } = c;
+
+  // Why it cannot be picked, as a tag rather than a sentence: what the eye
+  // looks for on a row it expected to be able to pick.
+  const tag =
+    c.blocked === "amount"
+      ? { tone: "warning" as const, text: `${c.offBy > 0 ? "+" : "−"}${formatSEK(Math.abs(c.offBy))}` }
+      : c.blocked === "direction"
+        ? { tone: "neutral" as const, text: txn.amount > 0 ? t("incoming") : t("outgoing") }
+        : c.blocked === "taken"
+          ? {
+              tone: "neutral" as const,
+              text: txn.matchedExpenseRef ? t("takenBy", { reference: txn.matchedExpenseRef }) : t("taken"),
+            }
+          : null;
+
+  const content = (
+    <>
+      <span className="tabular-nums text-muted">{day(txn.transactionDate)}</span>
+      <span className={cn(TEXT, c.selectable ? "font-medium" : "text-muted")}>
+        {txn.description}
+      </span>
+      <span className={END}>
+        {tag && (
+          <Tag tone={tag.tone} size="sm" className="tabular-nums">
+            {tag.text}
+          </Tag>
+        )}
+        {c.fixable && onUseAmount && (
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => onUseAmount(txn)}>
+            {t("useAmount", { amount: formatSEK(Math.abs(txn.amount)) })}
+          </Button>
+        )}
+        <span className={cn(!c.selectable && "text-muted")}>
+          <Amount value={txn.amount} />
+        </span>
+        {pending && <Spinner size="sm" className="text-accent" />}
+      </span>
+    </>
+  );
+
+  if (!c.selectable) {
+    return <li className={cn(ROW, "px-3 py-2 text-sm")}>{content}</li>;
+  }
+  return (
+    <li>
+      <button
+        type="button"
+        disabled={busy}
+        aria-pressed={selected}
+        onClick={() => onPick(txn.id)}
+        className={cn(
+          ROW,
+          "w-full px-3 py-2.5 text-left text-sm transition-colors disabled:pointer-events-none",
+          selected ? "bg-accent-soft/40" : "hover:bg-hover",
+        )}
+      >
+        {content}
+      </button>
+    </li>
+  );
+}
+
+// "12 okt", the day and the month and nothing else: every row is on the
+// member's card this year or last, and the year would be most of the width.
+function useShortDay() {
+  const locale = useLocale();
+  return useMemo(() => {
+    const f = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "sv-SE", {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    return (iso: string) => f.format(new Date(`${iso.slice(0, 10)}T00:00:00Z`)).replace(".", "");
+  }, [locale]);
+}
+
+/** How matching works, behind a "?" beside the heading rather than above the list. */
+export function MatchHelp() {
   const t = useTranslations("expenses.match");
   return (
-    <div className="rounded-control border border-border bg-surface px-4 py-3 text-xs text-muted">
-      <p className="font-medium text-foreground">{t("stuckTitle")}</p>
-      <p className="mt-1">{hasRows ? t("stuckWithRows") : t("stuckNoRows")}</p>
-      <p className="mt-1">{t("stuckDraft")}</p>
-    </div>
+    <InfoHint label={t("helpLabel")}>
+      <span className="block space-y-1.5">
+        <span className="block">{t("help1")}</span>
+        <span className="block">{t("help2")}</span>
+        <span className="block">{t("help3")}</span>
+        <span className="block">{t("help4")}</span>
+      </span>
+    </InfoHint>
   );
 }

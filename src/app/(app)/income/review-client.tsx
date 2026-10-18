@@ -29,7 +29,7 @@ import {
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { IconButton } from "@/components/ui/icon-button";
 import { Field } from "@/components/ui/field";
 import {
   IconAlert,
@@ -67,7 +67,7 @@ import {
 import { AlreadyBookedNotice, EmptyReportCard, VoucherCard } from "./report-detail";
 import { reviewColumns } from "./review-columns";
 import { useLineDrag } from "./use-line-drag";
-import { FetchPanel } from "./fetch-panel";
+import { FetchDialog, FetchPanel } from "./fetch-panel";
 import { incomeSections } from "./sections";
 import { MoveLinesDialog, accountOptions, suggestedAccount, type MoveRequest } from "./move-dialog";
 import {
@@ -120,7 +120,8 @@ export default function IncomeReviewClient({
   const [mode, setMode] = useState<"review" | "table">("review");
   // Whether the fetch panel is showing. Open on arrival when there is nothing
   // to review: an empty queue is a screen whose only next step is a fetch.
-  const [fetchOpen, setFetchOpen] = useState(drafts.length === 0);
+  // The fetch dialog. While nothing is waiting the form is the page instead.
+  const [fetchOpen, setFetchOpen] = useState(false);
   const controls = useTableControls({ sortKey: "date", sortDir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(
     initialReportId ?? drafts[0]?.id ?? null,
@@ -479,6 +480,19 @@ export default function IncomeReviewClient({
   // nothing it would do: a day that needs a cost centre or has been edited is
   // one somebody has to open anyway, and a permanently greyed control on a
   // screen you look at a hundred times is furniture.
+  // Which shape the queue is drawn in, beside it in either shape.
+  const viewToggle = (
+    <ViewToggle
+      value={mode}
+      onChange={(v) => setMode(v)}
+      aria-label={t("review.viewLabel")}
+      options={[
+        { value: "review", label: t("review.modeReview"), icon: IconViewSplit },
+        { value: "table", label: t("review.modeTable"), icon: IconViewTable },
+      ]}
+    />
+  );
+
   const bookAllButton = bookable.length > 0 && (
     <Button size="sm" variant="secondary" onClick={bookAll} loading={pending === "bookAll"}>
       {t("bookAll.action", { count: bookable.length })}
@@ -608,48 +622,29 @@ export default function IncomeReviewClient({
         }
       />
 
-      {/* The screen's own toolbar: what fills the queue, and how the queue is
-          drawn. Both are about this working set rather than about a report in
-          it, so they sit above the whole thing rather than in any list's
-          header, and the fetch button is here rather than in the page header
-          because what it does is reveal the panel directly below it.
-
-          The view toggle is the icon register (components/ui/view-toggle.tsx)
-          and is absent when there is nothing to draw; the fetch button never
-          is, because an empty queue is exactly when you want it. */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setFetchOpen((v) => !v)}
-          aria-expanded={fetchOpen}
-        >
-          <IconDownload className="size-4" />
-          {t("fetch.title")}
-        </Button>
-        {drafts.length > 0 && (
-          <ViewToggle
-            value={mode}
-            onChange={(v) => setMode(v)}
-            aria-label={t("review.viewLabel")}
-            options={[
-              { value: "review", label: t("review.modeReview"), icon: IconViewSplit },
-              { value: "table", label: t("review.modeTable"), icon: IconViewTable },
-            ]}
-          />
-        )}
-      </div>
-
-      {fetchOpen && <FetchPanel serviceConfigured={serviceConfigured} />}
-
       {drafts.length === 0 ? (
-        <EmptyState title={t("empty.title")} description={t("empty.description")} />
+        // Nothing to book, so fetching is the only thing to do here, and the
+        // form is the page rather than a dialog behind a button.
+        <FetchPanel
+          serviceConfigured={serviceConfigured}
+          title={t("empty.title")}
+          subtitle={t("empty.description")}
+        />
       ) : mode === "table" ? (
         <Card>
           <CardHeader
             title={t("review.modeTable")}
             subtitle={t("counts.reports", { count: drafts.length })}
-            action={bookAllButton}
+            action={
+              <div className="flex flex-wrap items-center gap-2">
+                {bookAllButton}
+                <Button variant="secondary" size="sm" onClick={() => setFetchOpen(true)}>
+                  <IconDownload className="size-4" />
+                  {t("fetch.title")}
+                </Button>
+                {viewToggle}
+              </div>
+            }
           />
           <ClientDataTable
             columns={tableColumns}
@@ -717,6 +712,15 @@ export default function IncomeReviewClient({
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
               <span className="text-sm font-medium">
                 {t("counts.reports", { count: drafts.length })}
+              </span>
+              {/* What fills the queue and how it is drawn, beside what it
+                  holds. As an icon here: the column is 16rem, and the table
+                  view's header has the room to spell it out. */}
+              <span className="flex items-center gap-1">
+                <IconButton label={t("fetch.title")} onClick={() => setFetchOpen(true)}>
+                  <IconDownload className="size-4" />
+                </IconButton>
+                {viewToggle}
               </span>
               {bookAllButton}
             </div>
@@ -1171,6 +1175,9 @@ export default function IncomeReviewClient({
           onCancel={() => setNewFor(null)}
           onCreate={createReport}
         />
+      )}
+      {fetchOpen && (
+        <FetchDialog serviceConfigured={serviceConfigured} onClose={() => setFetchOpen(false)} />
       )}
     </PageShell>
   );

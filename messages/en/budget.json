@@ -28,13 +28,12 @@
     "colAdopted": "Adopted",
     "notAdopted": "–",
     "compareAria": "Compare {year} {name}",
-    "budgets": "Budgets",
-    "budgetCount": "{count, plural, one {# budget} other {# budgets}}",
-    "compare": "Compare",
-    "compareCount": "Compare ({count})",
+    "compare": "Compare budgets",
+    "compareCount": "Compare {count} budgets",
     "searchPlaceholder": "Search budgets or years…",
     "emptyNone": "No budget has been created yet.",
-    "emptyNoMatch": "No budget matches the search."
+    "emptyNoMatch": "No budget matches the search.",
+    "compareHint": "Tick at least two budgets to compare them"
   },
   "compare": {
     "included": "Budgets compared",
@@ -58,11 +57,8 @@
     "lock": "Lock the budget",
     "unlock": "Unlock the budget",
     "nameRequired": "The budget needs a name.",
-    "changeName": "Rename the budget",
-    "changeAdoptedAt": "Change the date it was adopted",
     "adoptedOn": "Adopted",
     "notAdopted": "Not adopted",
-    "invalidAdoptedAt": "The date has to be written as YYYY-MM-DD.",
     "namePlaceholder": "The budget's name",
     "noComparison": "No comparison",
     "compareWith": "Compare with…",
@@ -126,7 +122,16 @@
     "totalCosts": "Total costs",
     "incompleteSum": "incomplete – a row could not be computed",
     "view": "View",
-    "detailBudget": "Detail budget"
+    "detailBudget": "Detail budget",
+    "actions": "More about the budget",
+    "edit": "Edit budget",
+    "editHint": "The name shows in the budget list and in comparisons. The adoption date decides which year the budget is for.",
+    "editSave": "Save",
+    "field": {
+      "name": "Name",
+      "adoptedAt": "Adopted",
+      "adoptedAtHint": "The day the meeting adopted the budget. Leave empty if it has not been adopted yet."
+    }
   },
   "col": {
     "konto": "Account",
@@ -202,5 +207,13 @@
   },
   "eval": {
     "circular": "The budget has circular dependencies. Some values may be wrong."
+  },
+  "compareGroups": {
+    "budget": "Budget",
+    "other": "Compared with",
+    "diff": "Difference",
+    "diffColumn": "Difference",
+    "diffHint": "The comparison minus the budget. Green is better than budgeted (more income or lower costs), red worse.",
+    "ofBudget": "{label} (budget)"
   }
 }

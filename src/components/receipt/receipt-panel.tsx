@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt-viewer";
+import { DocumentStrip } from "@/components/receipt/document-strip";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -123,7 +124,20 @@ type Source = {
    * whether a receipt happens to exist.
    */
   empty?: { title: string; description?: string };
+  /**
+   * Lets the reader put the documents in order and take them off, as a row of
+   * thumbnails along the panel's foot (document-strip.tsx). `keys` is one per
+   * entry in `docs`, in the same order.
+   */
+  arrange?: Arrange;
 };
+
+export interface Arrange {
+  keys: string[];
+  onReorder: (keys: string[]) => void;
+  onRemove: (key: string) => void;
+  disabled?: boolean;
+}
 
 type Ctx = {
   source: Source | null;
@@ -151,6 +165,15 @@ function usePanel(): Ctx {
 export function useReceiptTabShowing(): boolean {
   const { source, collapsed } = usePanel();
   return Boolean(source) && collapsed && !isAwaitingUpload(source);
+}
+
+/**
+ * Whether the open page has a receipt panel at all, folded or not. The phone's
+ * tab bar stands aside on such a page: the panel's own tab, and a form's action
+ * bar, both want the foot of the screen.
+ */
+export function useReceiptPanelActive(): boolean {
+  return Boolean(usePanel().source);
 }
 
 /**
@@ -228,6 +251,7 @@ export function ReceiptPanelSource({
   uploadCopy,
   emptyTitle,
   emptyDescription,
+  arrange,
 }: {
   /**
    * Everything to read, in reading order. An empty list is "there is nothing",
@@ -269,8 +293,32 @@ export function ReceiptPanelSource({
   /** Given, the panel stays when there is no receipt and says this instead. */
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Ordering and removing, with a key per document. See Source. */
+  arrange?: Arrange;
 }) {
   const { setSource } = usePanel();
+
+  // The same trick as `onFile`: the callbacks through a ref, so a page that
+  // writes them inline does not re-register the source on every render, and
+  // only the keys and the disabled flag decide when it does.
+  const arrangeRef = useRef(arrange);
+  useEffect(() => {
+    arrangeRef.current = arrange;
+  });
+  const arrangeKey = arrange ? JSON.stringify([arrange.keys, Boolean(arrange.disabled)]) : "";
+  const stableArrange = useMemo<Arrange | undefined>(
+    () => {
+      if (!arrangeKey) return undefined;
+      const [keys, disabled] = JSON.parse(arrangeKey) as [string[], boolean];
+      return {
+        keys,
+        disabled,
+        onReorder: (next) => arrangeRef.current?.onReorder(next),
+        onRemove: (key) => arrangeRef.current?.onRemove(key),
+      };
+    },
+    [arrangeKey],
+  );
 
   // Through a ref, so a handler redefined on every render of the page doesn't
   // re-register the source on every render, which would set state during
@@ -318,9 +366,10 @@ export function ReceiptPanelSource({
         ? { onFile: stableOnFile, uploading, copy: copyRef.current, multiple }
         : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
+      arrange: stableArrange,
     });
     return () => setSource(null);
-  }, [docsKey, copyKey, accepts, uploading, multiple, stableOnFile, emptyTitle, emptyDescription, setSource]);
+  }, [docsKey, copyKey, accepts, uploading, multiple, stableOnFile, emptyTitle, emptyDescription, stableArrange, setSource]);
 
   return null;
 }
@@ -333,6 +382,10 @@ export function ReceiptPanelColumn() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
+  // Which document the thumbnails mark as showing, and the last jump they asked
+  // the viewer for. Only read where the page lets documents be arranged.
+  const [currentDoc, setCurrentDoc] = useState(0);
+  const [jumpTo, setJumpTo] = useState<{ index: number; seq: number } | null>(null);
 
   // The fold, which is a piece of motion rather than a piece of state:
   // `leaving` keeps the panel on screen for as long as it takes to slide off
@@ -374,7 +427,16 @@ export function ReceiptPanelColumn() {
       // On a phone the panel is the whole screen, so it may only be open while
       // it's being *used*, waiting for an upload. Otherwise it folds to the
       // tab as soon as it appears, or as soon as a receipt lands in it.
+      //
+      // And a page that arrives waiting for one opens it, every time. The fold
+      // after an upload is state in the shell, which outlives the page, so the
+      // second utlägg made in a visit used to open folded: the picker that
+      // greeted the first one was gone, and the receipt was a tap on the tab
+      // that nobody knew to make. "Starts waiting" rather than "appears":
+      // going from an utlägg with a receipt straight to a new one swaps what
+      // the panel shows without it ever being empty in between.
       if ((appeared && !now.awaiting) || receiptArrived) setCollapsed(true, false);
+      else if (now.awaiting && !was.current.awaiting) setCollapsed(false, false);
     } else if (receiptArrived && was.current.awaiting) {
       // On a wide screen one you just uploaded stays up. The panel was open for
       // you to put it there; folding it the instant it lands is not what a
@@ -557,6 +619,7 @@ export function ReceiptPanelColumn() {
     setEntering(true);
     setCollapsed(false);
   };
+
   // Copied out of the FileList before anything else, because the input's own
   // list is live and emptied the moment its value is cleared for the next pick.
   const take = (list: FileList | null | undefined) => {
@@ -606,8 +669,32 @@ export function ReceiptPanelColumn() {
     </div>
   );
 
+  const arrange = source.arrange;
   const body = source.docs.length > 0 ? (
-    <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
+    arrange ? (
+      <>
+        <ReceiptViewer
+          documents={source.docs}
+          className="min-h-0 flex-1"
+          navigation={{ jumpTo, onCurrentChange: setCurrentDoc }}
+        />
+        <DocumentStrip
+          items={source.docs.map((d, i) => ({ ...d, key: arrange.keys[i] ?? d.src }))}
+          // Clamped, so taking off the last one never marks a tile that is gone.
+          current={Math.min(currentDoc, source.docs.length - 1)}
+          onSelect={(index) => {
+            setCurrentDoc(index);
+            setJumpTo((j) => ({ index, seq: (j?.seq ?? 0) + 1 }));
+          }}
+          onReorder={arrange.onReorder}
+          onRemove={arrange.onRemove}
+          onAdd={upload ? pick : undefined}
+          disabled={Boolean(arrange.disabled) || Boolean(upload?.uploading)}
+        />
+      </>
+    ) : (
+      <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
+    )
   ) : !upload ? (
     // Nothing to show and nowhere to put one: the panel stays and says so,
     // rather than vanishing and letting the page reflow around its absence.
@@ -717,6 +804,33 @@ export function ReceiptPanelColumn() {
   // of whatever the page put there. The bottom is where a phone keeps the thing
   // you can pull up, so that is where this goes: one element, laid out the way
   // each width wants it rather than one width's answer worn at both.
+  // A phone's way back to the panel: a round button in the bottom corner, the
+  // band a thumb reaches, taking a corner rather than the strip across the
+  // whole foot that this replaced. Gone while a text field has focus, which is
+  // while the keyboard is up and the corner it would take is the last of the
+  // screen. See the `typing` variant in globals.css.
+  const fab = (
+    <button
+      type="button"
+      onClick={unfold}
+      aria-label={t("expand")}
+      title={t("expand")}
+      aria-expanded={false}
+      // The corner inline rather than as utilities: a stylesheet that had not
+      // caught up with them (the dev server has served stale CSS before, see
+      // next.config.ts) left the button at a fixed element's static position,
+      // the top left of the frame. A position is the one thing a floating
+      // button cannot be without.
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)", right: "1rem" }}
+      className={cn(
+        "fixed z-30 flex size-12 typing:hidden items-center justify-center rounded-full border border-accent bg-background text-accent shadow-[var(--shadow-pop)] transition-colors hover:bg-accent-soft md:hidden print:hidden",
+        arriving && "receipt-tab-arriving",
+      )}
+    >
+      <IconReceipt className="size-5" />
+    </button>
+  );
+
   const tab = (
     <button
       ref={tabRef}
@@ -730,13 +844,12 @@ export function ReceiptPanelColumn() {
       // title carries the longer phrasing for a pointer.
       aria-expanded={false}
       className={cn(
-        "fixed z-30 flex items-center justify-center gap-2 print:hidden",
-        // A phone: a strip across the bottom, in the band a thumb reaches
-        // without the hand shifting its grip. The bottom padding clears the
-        // home indicator, the same way the phone's nav does
-        // (shell/mobile-nav.tsx). Without it the word sits under the bar iOS
-        // draws over the foot of the screen.
-        "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]",
+        // From md only. On a phone it was a strip fixed across the foot of
+        // the screen, a row of height over every form and over the keyboard
+        // while typing in one. The phone has the round button in the corner
+        // instead (`fab` above).
+        "fixed z-30 hidden items-center justify-center gap-2 md:flex print:hidden",
+        "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4",
         // From md: the tab on the right, beside the column it opens into.
         // Every override is same-family on purpose, because `cn` joins rather than
         // merges, so `md:bottom-auto` beating `bottom-0` is Tailwind's variant
@@ -800,7 +913,10 @@ export function ReceiptPanelColumn() {
           style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
           className={cn(
             // Below md it covers the screen; from md it's a column in the frame.
-            "flex flex-col bg-background print:hidden",
+            // Covering the screen, it keeps clear of the home indicator, so the
+            // document strip along its foot and the viewer's toolbar stay
+            // above it rather than under it.
+            "flex flex-col bg-background pb-[env(safe-area-inset-bottom)] md:pb-0 print:hidden",
             // The motion lives in globals.css beside its own keyframes: the
             // transition that folds it away, the animation that brings it back,
             // and the one duration both are timed to.
@@ -860,6 +976,7 @@ export function ReceiptPanelColumn() {
         </aside>
       )}
       {!open && tab}
+      {!open && fab}
     </>
   );
 }

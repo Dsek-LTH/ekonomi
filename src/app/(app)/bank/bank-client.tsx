@@ -34,14 +34,12 @@ import type { PatchBankTransaction } from "@/lib/api/schemas/bank";
 import { useFormat } from "@/lib/ui/use-format";
 import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
-
-/** Whose purchases are being read: the section's, or the reader's own. */
-export type BankScope = "mine" | "all";
+import { bankDefaultTab, type BankScope } from "./scope";
 
 export default function BankClient({
   page,
   scope,
-  canPickScope,
+  scopes,
   cards,
   allCards,
   cardless,
@@ -50,7 +48,8 @@ export default function BankClient({
   page: RowPage<BankTransaction>;
   /** Settled on the server, see page.tsx. Never decided here. */
   scope: BankScope;
-  canPickScope: boolean;
+  /** The scopes this reader may pick between, in track order. */
+  scopes: BankScope[];
   /** The reader's own cards, to decide whether the card column earns its width. */
   cards: SectionCard[];
   /**
@@ -75,7 +74,7 @@ export default function BankClient({
   const { pending, mutate } = useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const controls = useUrlTableControls(page.total, scope === "mine" ? "UNMATCHED" : "ALL");
+  const controls = useUrlTableControls(page.total, bankDefaultTab(scope));
   // The no-card list is every row it will ever hold, so it narrows in the
   // browser and keeps its state here rather than in the address, which is the
   // main list's.
@@ -112,7 +111,7 @@ export default function BankClient({
     // one's. Paging is dropped: page 4 of the section's feed is not page 4 of
     // your own.
     const tab = controls.tab;
-    const nextDefault = next === "mine" ? "UNMATCHED" : "ALL";
+    const nextDefault = bankDefaultTab(next as BankScope);
     if (tab && tab !== nextDefault) q.set("tab", tab);
     else q.delete("tab");
     q.delete("page");
@@ -192,7 +191,7 @@ export default function BankClient({
     bankDescriptionColumn(t("colTransaction")),
     // Whose card it sat on, or (when they are all yours) which of your cards.
     // The second only earns its width once somebody holds more than one.
-    scope === "all"
+    scope !== "mine"
       ? bankHolderColumn(
           t("colHolder"),
           canAssign
@@ -207,6 +206,7 @@ export default function BankClient({
             : undefined,
         )
       : bankCardColumn(t("colCard"), cards.length <= 1),
+    bankAmountColumn(t("colAmount")),
     // Was a status pill saying "Matchad – DEK26-0039". It said the same thing
     // this does, in more words and without going anywhere, and the tabs above
     // already sort matched from unmatched, which is the only part a pill was
@@ -233,20 +233,17 @@ export default function BankClient({
               <IconUpload className="size-4" />
               {t("account")}
             </ButtonLink>
-          ) : (
-            // The table's dash for "nothing here", but not in a phone card's
-            // action row, where a lone dash is a button that is not there.
-            <span className="hidden text-muted md:inline">–</span>
-          ),
+          ) : null,
       }),
       mobile: "actions",
     },
-    bankAmountColumn(t("colAmount")),
     {
       key: "actions",
       header: "",
       align: "right",
-      mobile: "actions",
+      // Not on a phone, where the row's one button is "Redovisa". Deleting a
+      // bank row is a treasurer's tidying, done at a desk.
+      mobile: "hide",
       // Only the delete now, so only for someone who may delete.
       hidden: !canImport,
       cell: (tx) => (
@@ -266,19 +263,23 @@ export default function BankClient({
     },
   ];
 
+  // The cardless rows are there to be put on a card, so on a phone the picker
+  // stands opposite the second line rather than the holder's name being in it,
+  // which these rows do not have.
+  const cardlessColumns = columns.map((c) =>
+    c.key === "holder" ? { ...c, mobile: "status" as const, mobileCell: undefined } : c,
+  );
+
   return (
     <PageShell
       title={t("title")}
       collections={
-        canPickScope
+        scopes.length > 1
           ? {
               label: t("scopeLabel"),
               value: scope,
               onChange: setScope,
-              options: [
-                { value: "mine", label: t("scope.mine") },
-                { value: "all", label: t("scope.all") },
-              ],
+              options: scopes.map((s) => ({ value: s, label: t(`scope.${s}`) })),
             }
           : undefined
       }
@@ -308,7 +309,7 @@ export default function BankClient({
       {cardless.length > 0 && showCardless && (
         <Card>
           <ClientDataTable
-            columns={columns}
+            columns={cardlessColumns}
             rows={cardless}
             controls={cardlessControls}
             searchPlaceholder={t("searchPlaceholder")}
@@ -449,7 +450,13 @@ function CardCell({
   return (
     <Combobox
       size="sm"
-      className="w-44"
+      className="md:w-44"
+      // On a phone a word opposite the row's second line rather than a field:
+      // a 44px control there overlapped the rows above and below it. The list
+      // it opens is a screen of its own on a phone, so the trigger only has to
+      // be something to tap. From md it is the field it always was.
+      buttonClassName="md:h-9 md:rounded-control md:border md:border-border md:bg-background md:px-2.5"
+      chevronClassName="text-accent md:text-faint"
       allowClear
       disabled={busy}
       value={row.cardId ?? ""}

@@ -111,7 +111,8 @@
     "deleteStorageFailed": "Kvittofilen kunde inte tas bort ur arkivet. Kvittot är kvar. Försök igen.",
     "unreadable": "Kunde inte läsa bildfilen",
     "unsupportedType": "Filtypen ’{type}’ stöds inte",
-    "sizeRange": "Filen måste vara mellan 1 byte och {max} byte"
+    "sizeRange": "Filen måste vara mellan 1 byte och {max} byte",
+    "orderMismatch": "Dokumentlistan har ändrats sedan sidan laddades. Ladda om och försök igen."
   },
   "bank": {
     "txnNotFound": "Transaktionen finns inte",
@@ -317,7 +318,12 @@
     "sizeRequired": "Volymen per styck behövs.",
     "eanTaken": "Streckkoden används redan av {name}.",
     "nameTaken": "Det finns redan en produkt som heter {name}.",
-    "noCheckOnRow": "Bara en leverans kan ha ett bäst före-datum att kolla."
+    "noCheckOnRow": "Bara en leverans kan ha ett bäst före-datum att kolla.",
+    "eanRequired": "Ange produktens streckkod, eller markera att den inte har någon.",
+    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen till produkter utan streckkod. Markera att produkten saknar streckkod i stället.",
+    "onlyStocktake": "Bara en inventering kan göras om till ett inköp.",
+    "stocktakeFoundNothing": "Inventeringen hittade inte fler oöppnade än loggen, så det finns inget inköp att göra av den.",
+    "costRequired": "Produkten behöver ett inköpspris innan inköpet kan värderas. Ange det på produkten först."
   },
   "mileage": {
     "noReadings": "Milersättningen saknar mätarställning före eller efter resan.",

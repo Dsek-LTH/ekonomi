@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 import { MAX_TAG, MAX_TAGS, cleanTags } from "@/lib/stock/tags";
+import { validGtin } from "@/lib/stock/barcode";
 
 export const StockKind = z.enum(["UNIT", "VOLUME"]);
 
@@ -35,8 +36,13 @@ export const StockEntryKind = z.enum([
 const Abv = z.number().min(0).max(100);
 
 /** POST /api/stock/products, and PATCH with everything optional. */
-/** A barcode as it is scanned or typed: digits only, EAN-8 through GTIN-14. */
-const Ean = Trimmed.regex(/^\d{8,14}$/, { error: "a barcode is 8 to 14 digits" });
+/**
+ * A barcode as it is scanned or typed: one GS1 issues, check digit and all
+ * (see lib/stock/barcode.ts). A number made up to get past the field does not
+ * add up, which is the point. The section's own codes for a product with
+ * none are valid ones too, so a product that has one can be saved again.
+ */
+const Ean = Trimmed.refine(validGtin, { error: "not a valid barcode" });
 
 /**
  * Systembolaget's article number, digits only.
@@ -87,7 +93,15 @@ const Tags = z
  */
 export const CreateStockProduct = z.object({
   name: NonEmpty,
-  ean: Ean,
+  // Required unless `noBarcode`, which the route checks: a refine here would
+  // have no `.partial()` for the PATCH below.
+  ean: Ean.optional(),
+  /**
+   * The product has no barcode at all (a keg, say), said on purpose. The route
+   * gives it one of the section's own codes instead of a number being made up
+   * for the field. See lib/stock/barcode.ts.
+   */
+  noBarcode: z.boolean().optional(),
   kind: StockKind,
   category: DrinkCategory,
   abv: Abv,

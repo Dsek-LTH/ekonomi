@@ -33,5 +33,10 @@
   "documentN": "Document {n}",
   "resize": "Resize the receipt panel",
   "coverLabel": "Expense report",
-  "underlagLabel": "Receipt"
+  "underlagLabel": "Receipt",
+  "documents": "Documents",
+  "showDocument": "Show document {n}: {name}",
+  "documentTileHint": "Click to show, drag to move",
+  "removeDocumentN": "Remove document {n}",
+  "stripHint": "Drag to reorder. This is the order sent to Fortnox."
 }

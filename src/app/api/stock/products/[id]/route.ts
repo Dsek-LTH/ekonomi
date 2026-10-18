@@ -10,7 +10,13 @@ import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchStockProduct } from "@/lib/api/schemas/stock";
 import { canManageStock } from "@/lib/domain/permissions";
-import { eanTaken, nameTaken } from "@/lib/server/stock-product-guard";
+import {
+  eanTaken,
+  nameTaken,
+  nextInternalCode,
+  typedInternalCode,
+} from "@/lib/server/stock-product-guard";
+import { isInternalCode } from "@/lib/stock/barcode";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -51,6 +57,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   // Excluding this product, so leaving its own barcode alone is not a clash
   // with itself.
+  // Marked as having no barcode: keep its own code if it has one, and give it
+  // one otherwise. Neither ever a code typed into the section's own range.
+  if (body.noBarcode) {
+    body.ean = isInternalCode(existing.ean) ? existing.ean! : await nextInternalCode();
+  } else if (typedInternalCode(body.ean, existing.ean)) {
+    return fail(422, "stock.internalCodeTyped");
+  }
+
   if (body.ean) {
     const clash = await eanTaken(body.ean, id);
     if (clash) return clash;

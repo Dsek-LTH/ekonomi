@@ -78,7 +78,9 @@
     "empty": "Inga träffar",
     "clear": "Rensa",
     "nSelected": "{count} valda",
-    "create": "Skapa ”{text}”"
+    "create": "Skapa ”{text}”",
+    "cancel": "Avbryt",
+    "done": "Klar"
   },
   "action": {
     "goToProfile": "Till Min profil"

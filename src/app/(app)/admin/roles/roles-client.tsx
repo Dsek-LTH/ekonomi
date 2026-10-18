@@ -282,6 +282,7 @@ function GroupsView({
     },
     {
       key: "holders",
+      mobile: "hide",
       header: t("colHolders"),
       value: (g) => g.holders,
       sortable: true,
@@ -291,6 +292,8 @@ function GroupsView({
     },
     {
       key: "roles",
+      mobile: "meta",
+      mobileCell: (g) => g.roles.map((r) => tRole(r)).join(", "),
       header: t("colRoles"),
       // Searchable by what it grants as well as by name: "who is Kassör" is
       // the same question from the other end, and the group answering it is
@@ -312,6 +315,8 @@ function GroupsView({
     },
     {
       key: "units",
+      mobile: "meta",
+      mobileCell: (g) => g.resultUnits.map((u) => u.name).join(", "),
       header: t("colResultUnits"),
       value: (g) => g.resultUnits.map((u) => u.name).join(" "),
       searchable: true,
