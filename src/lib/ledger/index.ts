@@ -44,7 +44,7 @@ interface LedgerRowView {
   voucher: string; // e.g. "A-42"
   description: string; // voucher text
   text: string | null; // transaction text
-  costCenter: string | null; // "code – name", for the summed grouping
+  costCenter: string | null; // "code - name", for the summed grouping
   debit: number; // SEK
   credit: number; // SEK
 }
@@ -83,7 +83,7 @@ export async function getLedgerRows(
     description: r.voucher.description,
     text: r.text,
     costCenter: r.costCenterCode
-      ? `${r.costCenterCode}${r.costCenterName ? ` – ${r.costCenterName}` : ""}`
+      ? `${r.costCenterCode}${r.costCenterName ? ` - ${r.costCenterName}` : ""}`
       : null,
     debit: oreToSEK(r.debit),
     credit: oreToSEK(r.credit),

@@ -38,6 +38,7 @@ import {
   IconGrid,
   IconHelp,
   IconKey,
+  IconLedger,
   IconList,
   IconMenu,
   IconReceipt,
@@ -45,7 +46,7 @@ import {
   IconUsers,
 } from "../ui/icons";
 import {
-  canAccessBookkeeping,
+  canViewBookkeeping,
   canAccessBudget,
   canAccessSettings,
   canManageRentals,
@@ -174,7 +175,7 @@ const NAV_GROUPS: NavGroup[] = [
         visible: (u) =>
           u.holdsCard ||
           u.roles.includes("RESULTATANSVARIG") ||
-          canAccessBookkeeping(u.capabilities),
+          canViewBookkeeping(u.capabilities),
       },
       { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.capabilities) },
     ],
@@ -209,13 +210,19 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/bookkeeping",
         label: "bookkeeping",
         icon: IconBook,
-        visible: (u) => canAccessBookkeeping(u.capabilities),
+        visible: (u) => canViewBookkeeping(u.capabilities),
       },
       {
         href: "/income",
         label: "income",
         icon: IconIncome,
-        visible: (u) => canAccessBookkeeping(u.capabilities),
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+      {
+        href: "/closing",
+        label: "closing",
+        icon: IconLedger,
+        visible: (u) => canViewBookkeeping(u.capabilities),
       },
     ],
   },

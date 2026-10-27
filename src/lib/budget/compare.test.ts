@@ -189,7 +189,7 @@ describe("sheetTotals", () => {
 describe("budgetLabel", () => {
   // Several budgets share a year, so the year alone doesn't identify one.
   it("leads with the year and then names the budget", () => {
-    expect(budgetLabel({ year: 2026, name: "Ursprunglig" })).toBe("2026 – Ursprunglig");
+    expect(budgetLabel({ year: 2026, name: "Ursprunglig" })).toBe("2026 - Ursprunglig");
   });
 
   it("names the financial year, not the year it was adopted in", () => {
@@ -197,6 +197,6 @@ describe("budgetLabel", () => {
     // are routinely different years, and the financial year is the one that
     // decides which ledger the budget is measured against.
     const budget = { year: 2026, name: "Ursprunglig", adoptedAt: "2025-11-14" };
-    expect(budgetLabel(budget)).toBe("2026 – Ursprunglig");
+    expect(budgetLabel(budget)).toBe("2026 - Ursprunglig");
   });
 });

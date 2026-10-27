@@ -142,7 +142,7 @@ describe("POST /api/expenses/[id]/transition: recall", () => {
       expect.anything(),
       "EXPENSE_RECALLED",
       ["chief"],
-      expect.objectContaining({ subject: "Tillbakadraget: DEK26-0042 – Kolsyra" }),
+      expect.objectContaining({ subject: "Tillbakadraget: DEK26-0042 - Kolsyra" }),
       { exclude: ["member"] },
     );
   });

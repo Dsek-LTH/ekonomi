@@ -9,7 +9,7 @@ import { fail, gate } from "@/lib/api/guard";
 import { intaktConfigFor } from "@/lib/api/intakt-route";
 import { parseBody } from "@/lib/api/parse";
 import { FetchIncome } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { createFeeBatch, createSalesBatch } from "@/lib/income/batch";
 import {
   fetchFeeReports,
@@ -20,7 +20,7 @@ import {
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
 
 export async function POST(req: Request) {
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, FetchIncome);

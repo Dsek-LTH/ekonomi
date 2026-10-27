@@ -73,7 +73,7 @@ export function RentalLinesCard({ rental }: { rental: RentalDetailRow }) {
                     </td>
                     {anyDiscount && (
                       <td className="py-2 pr-3 text-right tabular-nums text-muted">
-                        {priced.discountPercent > 0 ? `${priced.discountPercent} %` : "–"}
+                        {priced.discountPercent > 0 ? `${priced.discountPercent} %` : "-"}
                       </td>
                     )}
                     <td className="py-2 pr-3 text-right">
@@ -236,16 +236,16 @@ export function RentalRecordCard({
         <CardBody>
           <Facts>
             <Fact label={t("rental.conditionOut")}>
-              <span className="whitespace-pre-line">{rental.conditionOut ?? "–"}</span>
+              <span className="whitespace-pre-line">{rental.conditionOut ?? "-"}</span>
             </Fact>
             <Fact label={t("rental.conditionIn")}>
-              <span className="whitespace-pre-line">{rental.conditionIn ?? "–"}</span>
+              <span className="whitespace-pre-line">{rental.conditionIn ?? "-"}</span>
             </Fact>
             <Fact label={t("rental.returnedAt")}>
-              {rental.returnedAt ? date(rental.returnedAt) : "–"}
+              {rental.returnedAt ? date(rental.returnedAt) : "-"}
             </Fact>
             <Fact label={t("rental.checkedAt")}>
-              {rental.checkedAt ? date(rental.checkedAt) : "–"}
+              {rental.checkedAt ? date(rental.checkedAt) : "-"}
             </Fact>
           </Facts>
         </CardBody>

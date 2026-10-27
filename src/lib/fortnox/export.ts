@@ -46,6 +46,7 @@ interface LineWithCostCenter {
   credit: number;
   description: string | null;
   costCenter: { code: string; source: string; active: boolean } | null;
+  project?: string | null;
 }
 
 /**
@@ -69,6 +70,7 @@ export const voucherRows = (lines: readonly LineWithCostCenter[]): VoucherRowInp
       debit: oreToSEK(l.debit),
       credit: oreToSEK(l.credit),
       costCenter: sendable ? cc.code : undefined,
+      project: l.project || undefined,
       description: (cc && !sendable ? withCostCenterTag(text, cc.code) : text) || undefined,
     };
   });

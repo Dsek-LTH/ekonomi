@@ -4,7 +4,7 @@
 // lists. We only need the chart (#KONTO), cost-centre objects (#OBJEKT dim 1),
 // and the vouchers (#VER) with their postings (#TRANS).
 
-// CP437 high half (0x80–0xFF) → Unicode. The low half is ASCII. This is what
+// CP437 high half (0x80-0xFF) → Unicode. The low half is ASCII. This is what
 // turns "Kostnadsstlle" back into "Kostnadsställe".
 const CP437_HIGH =
   "ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
@@ -88,7 +88,7 @@ interface ParsedSie {
   vouchers: SieVoucher[];
   // Balance-sheet account balances for THIS financial year (#IB/#UB year index
   // 0). Same sign convention as transactions: positive = debit. Only balance
-  // accounts (1xxx–2xxx) carry these; result accounts start each year at zero.
+  // accounts (1xxx-2xxx) carry these; result accounts start each year at zero.
   //
   // Keyed `${account}|${costCenterCode}`, where an empty cost centre is the
   // account-level total from #IB/#UB. Per-cost-centre entries come from

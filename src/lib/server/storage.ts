@@ -13,6 +13,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { s3ClientOptions } from "@/lib/s3-config";
 import { serverEnv } from "@/lib/server/env";
+import { safeName } from "@/lib/storage-keys";
 
 const BUCKET = serverEnv("S3_BUCKET");
 
@@ -49,21 +50,9 @@ function ensureBucket(): Promise<void> {
   return bucketReady;
 }
 
-// Strip directories and unsafe characters from a user-supplied filename.
-function safeName(filename: string): string {
-  const base = filename.split(/[/\\]/).pop() ?? "file";
-  return base.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 120) || "file";
-}
-
-// Stable, collision-free key. The receiptId (a uuid) guarantees uniqueness;
-// the expenseId prefix keeps a receipt's objects grouped.
-export function receiptKey(
-  expenseId: string,
-  receiptId: string,
-  filename: string,
-): string {
-  return `receipts/${expenseId}/${receiptId}-${safeName(filename)}`;
-}
+// The receipt key and the filename cleaning it uses are shared with the seed.
+// See lib/storage-keys.ts.
+export { receiptKey } from "@/lib/storage-keys";
 
 // The rendered intäktsräkning for a day's takings. Kept under its own prefix
 // rather than alongside receipts because it is generated rather than uploaded:

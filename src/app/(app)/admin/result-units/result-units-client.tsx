@@ -159,7 +159,7 @@ export function ResultUnitsClient({
         u.income ? (
           <Tag tone="accent">{t("salesOn")}</Tag>
         ) : (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ),
     },
   ];
@@ -297,7 +297,7 @@ function UnitDialog({
     .filter((c) => ownCodes.has(c.code) || c.id === unit.income?.defaultCostCenterId)
     .map((c) => ({
       value: c.id,
-      label: `${c.code} – ${c.name}`,
+      label: `${c.code} - ${c.name}`,
       short: c.code,
     }));
 
@@ -649,7 +649,7 @@ function UnitDialog({
                         <span className="w-20 shrink-0 font-mono text-sm font-semibold">{p.code}</span>
                         <span className="min-w-0 flex-1 truncate text-sm">
                           <span className="font-mono tabular-nums">{p.account}</span>
-                          {p.accountName && <span className="text-muted"> – {p.accountName}</span>}
+                          {p.accountName && <span className="text-muted"> - {p.accountName}</span>}
                         </span>
                         {/* An account the chart has never heard of is a
                             voucher Fortnox will reject, but only at export, so

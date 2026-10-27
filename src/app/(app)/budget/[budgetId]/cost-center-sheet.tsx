@@ -221,7 +221,7 @@ export function CostCenterSheet(props: {
             isResultAccount(a.number) &&
             effectiveKind(a.number) === kind,
       )
-      .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number }));
+      .map((a) => ({ value: a.number, label: `${a.number} - ${a.name}`, short: a.number }));
 
   async function createAccount(kind: AccountKind, code: string) {
     if (!code.trim()) return;
@@ -566,7 +566,7 @@ export function CostCenterSheet(props: {
 
         {/* On a phone: one strip, pinned under the app bar.
             StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
-            one column, so the three tiles stacked to 266–362px, and most of the
+            one column, so the three tiles stacked to 266-362px, and most of the
             first screenful of a budget was three numbers. Here they are 56px, and
             they stay on screen while you scroll the rows that decide them, which
             is when the result is actually worth looking at. What the tiles said
@@ -606,7 +606,7 @@ export function CostCenterSheet(props: {
                   summary.map((s) => (
                     <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
                       <span className="truncate">
-                        {s.label} – {compare.label}
+                        {s.label} - {compare.label}
                       </span>
                       <span className="shrink-0 tabular-nums text-foreground">
                         {fmt(s.a)}

@@ -31,7 +31,7 @@ interface FetchResult {
   /** Days Fortnox already had a voucher for, which were not imported at all. */
   alreadyInFortnox: string[];
   fortnoxChecked: boolean;
-  fortnoxCheckSkipped: "notConnected" | "failed" | null;
+  fortnoxCheckSkipped: "notConnected" | "seriesUnset" | "failed" | null;
 }
 
 const SOURCES: IncomeSource[] = ["SWISH", "ZETTLE", "ZETTLE_FEE"];
@@ -115,7 +115,11 @@ function FetchForm({
     // Only when the check was meant to run and could not. Not being connected
     // to Fortnox at all is a way this app is run, not news.
     if (result.fortnoxCheckSkipped === "failed") parts.push(t("summary.fortnoxCheckFailed"));
-    notify.success(parts.join(" – "), t("fetchDone"));
+    // Connected, but with no series chosen there was nowhere to look.
+    if (result.fortnoxCheckSkipped === "seriesUnset") {
+      parts.push(t("summary.fortnoxCheckSeriesUnset"));
+    }
+    notify.success(parts.join(" - "), t("fetchDone"));
   }
 
   async function fetchRange() {

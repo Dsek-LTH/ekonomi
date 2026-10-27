@@ -80,7 +80,7 @@ export function VariablesSheet({ budget, ev, comparison, isAdmin, renderCell, re
           {ghosts.map((v) => (
             <tr key={`ghost-${v.name}`} className="border-b border-border/60 text-muted">
               <td className="border-r border-border/60 px-3 py-1.5 font-mono text-xs">{v.name}</td>
-              <td className="border-r border-border/60 px-3 py-1.5 text-xs">– {tRam("notInThisBudget")}</td>
+              <td className="border-r border-border/60 px-3 py-1.5 text-xs">- {tRam("notInThisBudget")}</td>
               <td />
               <td className="border-l border-border/40 px-3 py-1.5 text-right tabular-nums">{fmtScalar(v.values[1])}</td>
               {isAdmin && <td />}

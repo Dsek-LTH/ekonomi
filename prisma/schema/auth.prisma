@@ -60,6 +60,11 @@ enum Capability {
   /// the same kind of act as sealing the figures it set. See
   /// canWaiveFilingDeadline in lib/domain/permissions.ts.
   EXPENSE_DEADLINE_WAIVE
+  /// Bokföra an utlägg one konterade oneself. The two-person rule always
+  /// holds, and the roles holding this are its only exception. Held by the
+  /// skattmästare alone by default. See canReviewOwnBooking in
+  /// lib/domain/permissions.ts.
+  REVIEW_OWN_BOOKING
   /// May be named as the section's signatory on a contract.
   ///
   /// Firmateckning is a fact about the section's stadgar rather than a
@@ -90,6 +95,16 @@ enum Capability {
   /// attesters, or the submitter. From the utlägg itself, or several at once
   /// from the list. Held by the admins by default.
   SEND_REMINDERS
+  /// See what BOOKKEEPING sees (every utlägg, the section's card feed, the
+  /// bookkeeping list, booked income) and change none of it. Implied by
+  /// BOOKKEEPING. Exists for the revisorer, who are to read everything and
+  /// whose review would mean nothing if they could also edit what they review.
+  /// See canViewBookkeeping in lib/domain/permissions.ts.
+  BOOKKEEPING_VIEW
+  /// Review a financial year's vouchers as a revisor: pass them, question them
+  /// or make an anmärkning. The treasury's own pass is BOOKKEEPING's. See
+  /// canAuditReview in lib/domain/permissions.ts.
+  AUDIT_REVIEW
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -115,6 +130,10 @@ enum Role {
   // reaches is uthyrningsavtal and the gear catalogue, not the avtal archive.
   // A sponsoravtal's terms are none of its business. See contract-scope.ts.
   UTHYRNINGSANSVARIG
+  // The section's revisorer. Reads everything and changes nothing: every view
+  // capability, and none of the ones that act. Not a treasury role, since the
+  // point of a revisor is to stand outside the treasury.
+  REVISOR
   ORDINARIE
 }
 
@@ -193,6 +212,11 @@ model User {
   sentTestEmails       OutboundEmail[]          @relation("EmailSender")
   notificationPrefs    NotificationPreference[]
   expensePresence      ExpensePresence[]        @relation("ExpensePresenceUser")
+  voucherReviews       VoucherReview[]          @relation("VoucherReviewer")
+  voucherComments      VoucherComment[]         @relation("VoucherCommentAuthor")
+  checklistItemsDone   ChecklistItem[]          @relation("ChecklistItemDoneBy")
+  reconciliations      AccountReconciliation[]  @relation("AccountReconciler")
+  accountNotes         AccountNote[]            @relation("AccountNoteAuthor")
   exportClaims         Expense[]                @relation("ExpenseExportClaim")
 
   createdAt DateTime @default(now())

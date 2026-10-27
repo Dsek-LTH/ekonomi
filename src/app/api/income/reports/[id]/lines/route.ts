@@ -9,14 +9,14 @@ import { NextResponse } from "next/server";
 import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateIncomeLines } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { setLineAccounts } from "@/lib/income/lines";
 import { lineFailure } from "../line-failure";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, UpdateIncomeLines);

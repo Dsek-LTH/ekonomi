@@ -21,13 +21,19 @@ import { Field, Input } from "@/components/ui/field";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { UpdateStockSettings } from "@/lib/api/schemas/stock";
 
-export function StockSettingsClient({ settings }: { settings: { expiryLeadDays: number } }) {
+export function StockSettingsClient({ settings }: { settings: { expiryLeadDays: number | null } }) {
   const t = useTranslations("admin.stock");
   const { pending, mutate } = useMutation();
-  const [days, setDays] = useState(String(settings.expiryLeadDays));
+  // Empty until chosen. Nothing is filled in for the reader: the notice period
+  // is the section's decision, and no checks are raised until it is made.
+  const [days, setDays] = useState(
+    settings.expiryLeadDays === null ? "" : String(settings.expiryLeadDays),
+  );
 
   const parsed = Number(days.trim());
-  const valid = Number.isInteger(parsed) && parsed >= 0 && parsed <= 365;
+  // Not empty: Number("") is 0, and an empty box saved as 0 would be a choice
+  // nobody made.
+  const valid = days.trim() !== "" && Number.isInteger(parsed) && parsed >= 0 && parsed <= 365;
   const changed = valid && parsed !== settings.expiryLeadDays;
 
   async function save() {

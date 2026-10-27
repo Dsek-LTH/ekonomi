@@ -148,6 +148,7 @@ export const VoucherLineInput = z.object({
   // nullable. Only the schema disagreed.
   description: Clearable(Trimmed).optional(),
   costCenterCode: Clearable(Trimmed).optional(),
+  project: Clearable(Trimmed).optional(),
   debit: Ore.min(0).default(0),
   credit: Ore.min(0).default(0),
 });

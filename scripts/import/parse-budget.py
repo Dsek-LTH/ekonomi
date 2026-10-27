@@ -147,7 +147,7 @@ def collect_unnamed_params():
                 for m in re.finditer(r"Parametrar!\$?I\$?(\d+)", v):
                     r = int(m.group(1))
                     if r in PARAM_BY_ROW or r in seen or r <= 6:
-                        continue  # rows 1–6 are the sheet's own headings
+                        continue  # rows 1-6 are the sheet's own headings
                     seen.add(r)
                     UNNAMED_PARAMS.append((r, str(ws.cell(r, 1).value or "").strip()))
     UNNAMED_PARAMS.sort()

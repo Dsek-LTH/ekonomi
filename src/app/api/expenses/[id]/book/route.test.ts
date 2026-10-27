@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   verificationCreate: vi.fn(),
   verificationUpdate: vi.fn(),
   eventCreate: vi.fn(),
+  settings: { bankAccount: "1930", memberDebtAccount: "2890" } as Record<string, string | null>,
 }));
 
 const VERSION = "2026-05-02T09:14:03.512Z";
@@ -42,9 +43,10 @@ vi.mock("@/lib/server/db", () => {
     prisma: {
       expense: { findUnique: async () => h.expense },
       bookkeepingSettings: {
-        findUnique: async () => ({ bankAccount: "1930", memberDebtAccount: "2890" }),
+        findUnique: async () => h.settings,
       },
       costCenter: { findMany: async () => [] },
+      project: { findMany: async () => [{ number: "12" }] },
       $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
     },
   };
@@ -85,6 +87,7 @@ beforeEach(() => {
     title: "Kontorsmaterial",
     verification: null,
   };
+  h.settings = { bankAccount: "1930", memberDebtAccount: "2890" };
   h.updateMany.mockResolvedValue({ count: 1 });
   h.verificationCreate.mockResolvedValue({});
   h.verificationUpdate.mockResolvedValue({});
@@ -120,6 +123,51 @@ describe("POST /api/expenses/[id]/book", () => {
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toMatchObject({ error: "expense.changedMeanwhile" });
     expect(h.eventCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses while the payment account is not chosen, naming the setting", async () => {
+    h.settings = { bankAccount: "1930", memberDebtAccount: null };
+    const res = await send(POST, body());
+    expect(res.status).toBe(422);
+    await expect(res.json()).resolves.toMatchObject({ error: "settings.memberDebtAccountUnset" });
+    expect(h.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a row on a revenue account, and writes nothing", async () => {
+    const res = await send(
+      POST,
+      body({
+        lines: [
+          { account: "2890", accountName: "Skulder", debit: 0, credit: 12500 },
+          { account: "3010", accountName: "Försäljning", debit: 12500, credit: 0 },
+        ],
+      }),
+    );
+    expect(res.status).toBe(422);
+    await expect(res.json()).resolves.toMatchObject({ error: "voucher.revenueAccount" });
+    expect(h.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("stores the project a row names, and refuses one Fortnox does not have", async () => {
+    const withProject = (project: string) =>
+      body({
+        lines: [
+          { account: "2890", accountName: "Skulder", debit: 0, credit: 12500 },
+          { account: "5010", accountName: "Kontor", project, debit: 12500, credit: 0 },
+        ],
+      });
+
+    expect((await send(POST, withProject("12"))).status).toBe(201);
+    expect(h.verificationCreate.mock.calls[0][0].data.lines.create[1]).toMatchObject({
+      account: "5010",
+      project: "12",
+    });
+
+    vi.clearAllMocks();
+    h.updateMany.mockResolvedValue({ count: 1 });
+    const res = await send(POST, withProject("99"));
+    expect(res.status).toBe(422);
+    await expect(res.json()).resolves.toMatchObject({ error: "voucher.unknownProject" });
   });
 
   it("refuses a request that does not say which version it was made against", async () => {

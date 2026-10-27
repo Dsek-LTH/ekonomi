@@ -36,8 +36,9 @@ export type FortnoxAuthMode = "service" | "user";
 // The service account only ever reads, but `bookkeeping` is Fortnox's only
 // ledger scope so it necessarily carries write rights too. The personal login
 // additionally needs inbox + connectfile to upload a receipt and attach it to
-// the voucher it just created.
-const SERVICE_SCOPES = "bookkeeping costcenter companyinformation";
+// the voucher it just created. `project` is for the project list the voucher
+// rows pick from; a connection made before it was added syncs without it.
+const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation";
 const USER_SCOPES = "bookkeeping inbox connectfile companyinformation";
 
 const scopesFor = (mode: FortnoxAuthMode) =>
@@ -200,9 +201,18 @@ export async function saveConnection(
 ) {
   const expiresAt = new Date(Date.now() + token.expires_in * 1000);
   return prisma.$transaction(async (tx) => {
+    // The series somebody chose survives a reconnect to the same company. A
+    // reconnect is a new token, not a new decision, and it used to reset the
+    // series to "A" every time. A different company starts with none chosen.
+    const previous = await tx.fortnoxConnection.findFirst({
+      select: { voucherSeries: true, orgNumber: true },
+    });
+    const voucherSeries =
+      previous && previous.orgNumber === (opts.orgNumber ?? null) ? previous.voucherSeries : null;
     await tx.fortnoxConnection.deleteMany({});
     return tx.fortnoxConnection.create({
       data: {
+        voucherSeries,
         accessToken: encryptSecret(token.access_token),
         refreshToken: encryptSecret(token.refresh_token),
         expiresAt,
@@ -502,6 +512,40 @@ export async function listCostCenters(token: string): Promise<FortnoxCostCenter[
   }));
 }
 
+interface FortnoxProject {
+  number: string;
+  description: string;
+  active: boolean;
+}
+
+// List the company's projects (requires the `project` scope). A completed one
+// is listed as inactive rather than left out, so a voucher line already naming
+// it still resolves. Paginated like /3/accounts.
+export async function listProjects(token: string): Promise<FortnoxProject[]> {
+  interface Page {
+    Projects?: { ProjectNumber: string; Description?: string; Status?: string }[];
+    MetaInformation?: { "@TotalPages"?: number };
+  }
+
+  const out: FortnoxProject[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const data = await fortnoxGet<Page>(`/projects?page=${page}`, token);
+    for (const p of data.Projects ?? []) {
+      out.push({
+        number: String(p.ProjectNumber),
+        description: p.Description || String(p.ProjectNumber),
+        active: p.Status !== "COMPLETED",
+      });
+    }
+    totalPages = data.MetaInformation?.["@TotalPages"] ?? 1;
+    page++;
+  } while (page <= totalPages);
+
+  return out;
+}
+
 interface FortnoxAccount {
   number: string; // BAS account number, e.g. "6071"
   name: string;
@@ -594,6 +638,7 @@ export interface VoucherRowInput {
   debit: number; // SEK (decimal)
   credit: number; // SEK (decimal)
   costCenter?: string; // Fortnox cost-centre code
+  project?: string; // Fortnox project number
   description?: string;
 }
 
@@ -622,6 +667,7 @@ export async function createVoucher(
     if (r.debit > 0) row.Debit = r.debit;
     if (r.credit > 0) row.Credit = r.credit;
     if (r.costCenter) row.CostCenter = r.costCenter;
+    if (r.project) row.Project = r.project;
     if (r.description) row.TransactionInformation = r.description.slice(0, 100);
     return row;
   });

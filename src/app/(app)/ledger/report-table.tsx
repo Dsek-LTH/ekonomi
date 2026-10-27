@@ -362,7 +362,7 @@ export function ReportGroupCard({
             label={
               <span className="block truncate font-semibold">
                 {group.costCenterCode
-                  ? `${group.costCenterCode} – ${group.costCenterName ?? ""}`
+                  ? `${group.costCenterCode} - ${group.costCenterName ?? ""}`
                   : t("noCostCenter")}
               </span>
             }
@@ -587,7 +587,7 @@ function VoucherRows({
             </td>
             <td className="py-1 pr-3">{r.text || r.description}</td>
             {showCostCenter && (
-              <td className="py-1 pr-3 whitespace-nowrap">{r.costCenter ?? "–"}</td>
+              <td className="py-1 pr-3 whitespace-nowrap">{r.costCenter ?? "-"}</td>
             )}
             <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">
               {r.debit ? formatSEK(r.debit) : ""}

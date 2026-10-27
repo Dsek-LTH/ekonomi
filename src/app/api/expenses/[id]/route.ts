@@ -438,7 +438,7 @@ export async function DELETE(
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "free") {
     return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
-      values: { name: expense.exportClaimedBy?.name ?? "–" },
+      values: { name: expense.exportClaimedBy?.name ?? "-" },
     });
   }
 

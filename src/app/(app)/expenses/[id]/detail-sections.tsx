@@ -22,6 +22,7 @@ import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import { formatNumber } from "@/lib/ui/format";
+import { bookingTrail } from "@/lib/domain/review";
 
 /** The small capitals every label and column head on the card is set in. */
 const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted";
@@ -187,7 +188,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  */
 function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> }) {
   const t = useTranslations("mileage");
-  const reading = (km: number | null) => (km == null ? "–" : formatNumber(km, 1, 1));
+  const reading = (km: number | null) => (km == null ? "-" : formatNumber(km, 1, 1));
   // Only the stops that name a place. A draft saved with a blank row in the
   // middle would otherwise draw an arrow pointing at nothing.
   const stops = namedStops(journey.stops);
@@ -198,7 +199,7 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
           makes a longer distance make sense. */}
       <Fact label={t("route.label")}>
         {stops.length === 0 ? (
-          "–"
+          "-"
         ) : (
           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             {stops.map((stop, i) => (
@@ -224,7 +225,7 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
       </Fact>
       <Fact label={t("distance")}>
         <span className="tabular-nums">
-          {journey.km == null ? "–" : t("km", { km: formatNumber(journey.km, 0, 1) })}
+          {journey.km == null ? "-" : t("km", { km: formatNumber(journey.km, 0, 1) })}
           {journey.orePerKm != null && (
             <span className="ml-3 text-xs text-muted">
               {t("rates.perKm", { amount: formatNumber(journey.orePerKm / 100, 2, 2) })}
@@ -323,26 +324,43 @@ export function AllocationSection({ allocations }: { allocations: Expense["alloc
  *
  * Laid out the way a ledger prints one, a column per thing: account number,
  * account name, cost centre, debit, credit. They used to share one cell
- * ("5460 Förbrukningsinventarier – INFU", with the line's description under
+ * ("5460 Förbrukningsinventarier - INFU", with the line's description under
  * it), which made every row a sentence to read rather than a row to scan.
  *
  * A line's own description is shown only where it says something the voucher's
  * does not. Booked from an utlägg, almost every line repeats the voucher text
  * word for word, and printing it under each row was most of the clutter.
  */
+/**
+ * Who konterade the utlägg, and who amended the voucher since, from the
+ * history. Which events count is bookingTrail's rule, the same one the
+ * two-person rule counts by.
+ */
+function bookingPeople(revisions: Expense["revisions"]) {
+  const trail = bookingTrail(revisions.map((r) => ({ ...r, type: r.action })));
+  if (!trail) return null;
+  const booker = trail.booked.actor;
+  const amenders = [...new Set(trail.amended.map((r) => r.actor).filter((a) => a !== booker))];
+  return { booker, at: trail.booked.date, amenders };
+}
+
 export function VerificationSection({
   verification,
   expenseId,
   canEdit,
+  revisions,
 }: {
   verification: NonNullable<Expense["verification"]>;
   expenseId: string;
   canEdit: boolean;
+  revisions: Expense["revisions"];
 }) {
   const t = useTranslations("expenses.detail");
-  const { date } = useFormat();
+  const { date, list } = useFormat();
+  const people = bookingPeople(revisions);
   const ownText = (d: string | undefined) =>
     d && d.trim() !== verification.description.trim() ? d : undefined;
+  const hasProject = verification.lines.some((l) => l.project);
 
   return (
     <InspectorSection
@@ -360,7 +378,7 @@ export function VerificationSection({
         )
       }
       flush
-      endsInTable
+      endsInTable={!people}
       action={
         canEdit ? (
           <ButtonLink href={`/expenses/${expenseId}/book`} variant="secondary" size="sm">
@@ -381,12 +399,17 @@ export function VerificationSection({
 
           Hidden with `hidden`/`sm:table-cell` on both the head and the body,
           so every row shows the same set and the columns stay in step. */}
+      {/* The project column only when a line has one: most vouchers carry
+          none, and an empty column would take the name's room for nothing. */}
       <table className="w-full table-fixed text-sm">
         <thead>
           <tr className="text-left">
             <th className={cn(LABEL, "w-16 pb-2 pl-inset")}>{t("account")}</th>
             <th className={cn(LABEL, "pb-2 pl-3")}>{t("accountName")}</th>
             <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>{t("costCenterShort")}</th>
+            {hasProject && (
+              <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>{t("projectShort")}</th>
+            )}
             <th className={cn(LABEL, "w-28 pb-2 pl-3 pr-inset text-right sm:hidden")}>{t("amount")}</th>
             <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 text-right sm:table-cell")}>{t("debit")}</th>
             <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 pr-inset text-right sm:table-cell")}>
@@ -405,11 +428,19 @@ export function VerificationSection({
                   {l.costCenterCode && (
                     <span className="block text-xs text-muted sm:hidden">{l.costCenterCode}</span>
                   )}
+                  {l.project && (
+                    <span className="block text-xs text-muted sm:hidden">
+                      {t("projectShort")} {l.project}
+                    </span>
+                  )}
                   {text && <span className="block truncate text-xs text-muted">{text}</span>}
                 </td>
                 <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">
                   {l.costCenterCode}
                 </td>
+                {hasProject && (
+                  <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">{l.project}</td>
+                )}
                 <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums sm:hidden">
                   <Amount value={l.debit || l.credit} />
                   <span className="ml-1.5 text-[11px] text-muted">
@@ -427,6 +458,26 @@ export function VerificationSection({
           })}
         </tbody>
       </table>
+      {/* Who konterade it, signed at the foot the way a paper voucher is. The
+          person who bokför it next is not to be the same one, and before this
+          it was only to be found in the history. */}
+      {people && (
+        <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-border px-inset pt-3 text-xs">
+          <div className="flex items-baseline gap-2">
+            <dt className={LABEL}>{t("bookedBy")}</dt>
+            <dd>
+              <span className="font-medium">{people.booker}</span>
+              <span className="text-muted">, <span className="tabular-nums">{date(people.at)}</span></span>
+            </dd>
+          </div>
+          {people.amenders.length > 0 && (
+            <div className="flex items-baseline gap-2">
+              <dt className={LABEL}>{t("amendedBy")}</dt>
+              <dd className="font-medium">{list(people.amenders)}</dd>
+            </div>
+          )}
+        </dl>
+      )}
     </InspectorSection>
   );
 }
@@ -440,8 +491,8 @@ export function VerificationSection({
  * events that decide something keep their colour on the word itself.
  */
 const EVENT_TONE: Record<string, string> = {
-  COST_CENTER_APPROVED: "text-success",
-  APPROVED: "text-success",
+  COST_CENTER_APPROVED: "text-blue",
+  APPROVED: "text-blue",
   CHANGES_REQUESTED: "text-danger",
 };
 

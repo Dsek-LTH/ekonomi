@@ -6,9 +6,9 @@
     "adminDisconnectFortnox": "Endast administratörer kan koppla från Fortnox",
     "adminCreateCostCenter": "Endast administratörer kan skapa kostnadsställen",
     "adminEditCostCenter": "Endast administratörer kan ändra kostnadsställen",
-    "bookkeeperBook": "Endast bokförare kan bokföra utlägg",
+    "bookkeeperBook": "Endast bokförare kan kontera utlägg",
     "bookkeeperViewPayout": "Endast bokförare kan se kontouppgifter",
-    "bookkeeperExport": "Endast bokförare kan exportera till Fortnox",
+    "bookkeeperExport": "Endast bokförare kan bokföra i Fortnox",
     "bookkeeperSync": "Endast bokförare kan synka från Fortnox",
     "treasurerLockBudget": "Endast skattmästaren kan låsa en budget",
     "adminBookkeepingSettings": "Endast administratörer kan ändra bokföringsinställningar",
@@ -16,7 +16,8 @@
     "adminSyncCostCenters": "Endast administratörer kan synka kostnadsställen",
     "treasurerEditorialChanges": "Endast skattmästaren kan göra redaktionella ändringar",
     "treasurerConnectFortnox": "Endast skattmästaren kan ansluta sektionens Fortnox",
-    "treasuryLoginFortnox": "Endast skattmästare, vice skattmästare och skattförmän kan logga in mot Fortnox"
+    "treasuryLoginFortnox": "Endast skattmästare, vice skattmästare och skattförmän kan logga in mot Fortnox",
+    "adminSyncProjects": "Endast administratörer kan synka projekt"
   },
   "notFound": "Hittades inte",
   "request": {
@@ -38,12 +39,12 @@
     "noReceiptAccess": "Du har inte behörighet att lägga till kvitton på det här utlägget",
     "noRequestChangesAccess": "Du har inte behörighet att begära ändring på det här utlägget",
     "noReopenAccess": "Du har inte behörighet att återöppna attesterade utlägg",
-    "noUnexportAccess": "Du har inte behörighet att ångra en export",
+    "noUnexportAccess": "Du har inte behörighet att ångra en bokföring",
     "noApprovalToWithdraw": "Du har ingen attest att dra tillbaka på det här utlägget",
     "nothingToApprove": "Inga kostnadsställen att attestera för din behörighet",
     "commentRequired": "En kommentar krävs",
     "commentRequiredReopen": "En kommentar krävs för att återöppna",
-    "commentRequiredUnexport": "En kommentar krävs för att ångra en export",
+    "commentRequiredUnexport": "En kommentar krävs för att ångra en bokföring",
     "incomplete": "Fyll i beskrivning, kvittodatum och belopp innan du skickar in",
     "receiptRequired": "Ett kvitto krävs innan utlägget kan skickas in för attest",
     "matchRequired": "Kortköp måste matchas mot en banktransaktion innan de skickas in för attest",
@@ -52,9 +53,7 @@
     "costCenterRequired": "Minst ett kostnadsställe krävs innan utlägget kan skickas in",
     "allocationsUnbalanced": "Kostnadsfördelningen måste summera till totalt belopp",
     "noCard": "Du har inget sektionskort",
-    "noVoucherToExport": "Ingen verifikation att exportera",
-    "noVoucherToAmend": "Ingen verifikation att ändra",
-    "exportFailed": "Kunde inte exportera till Fortnox.",
+    "exportFailed": "Kunde inte bokföra i Fortnox.",
     "matchLocked": "Matchning kan bara ändras på utlägg som inte skickats in",
     "matchCardOnly": "Bara kortköp kan matchas mot banktransaktioner",
     "amountBeforeMatch": "Ange utläggets belopp innan du matchar mot en transaktion",
@@ -62,16 +61,16 @@
     "notChangeableInStatus": "Utlägg med status {status} kan inte ändras",
     "unknownCostCenter": "Okänt kostnadsställe: {code}",
     "cannotApproveFromStatus": "Kan inte attestera från status {status}",
-    "withdrawAfterBooked": "Utlägget är redan bokfört och attesten går inte längre att dra tillbaka",
+    "withdrawAfterBooked": "Utlägget är redan konterat och attesten går inte längre att dra tillbaka",
     "nothingToWithdraw": "Det finns ingen attest att dra tillbaka (status: {status})",
-    "reopenAfterBooked": "Utlägget är redan bokfört och kan inte återöppnas här",
+    "reopenAfterBooked": "Utlägget är redan konterat och kan inte återöppnas här",
     "reopenOnlyApproved": "Bara attesterade utlägg kan återöppnas (status: {status})",
-    "unexportOnlyExported": "Bara exporterade utlägg kan markeras som ej exporterade (status: {status})",
+    "unexportOnlyExported": "Bara bokförda utlägg kan markeras som ej bokförda (status: {status})",
     "actionNotFromStatus": "Åtgärden går inte från status {status}",
-    "exportOnlyBooked": "Bara bokförda utlägg kan exporteras (status: {status})",
-    "bookOnlyApproved": "Kan bara bokföra attesterade utlägg (status: {status})",
-    "amendOnlyBooked": "Bara bokförda verifikationer kan ändras (status: {status})",
-    "voucherExported": "Verifikationen är exporterad och kan inte ändras",
+    "exportOnlyBooked": "Bara konterade utlägg kan bokföras (status: {status})",
+    "bookOnlyApproved": "Kan bara kontera attesterade utlägg (status: {status})",
+    "amendOnlyBooked": "Bara konterade verifikationer kan ändras (status: {status})",
+    "voucherExported": "Verifikationen är bokförd och kan inte ändras",
     "deleteSignedAdminOnly": "Attesterade utlägg kan bara tas bort av en administratör",
     "noDeleteAccess": "Du har inte behörighet att ta bort det här utlägget",
     "receiptDeleteFailed": "Utläggets kvittofiler kunde inte tas bort ur arkivet. Utlägget är kvar. Försök igen.",
@@ -97,12 +96,12 @@
     "commentRequiredWaive": "Skriv ett skäl till dispensen. Det hamnar på utläggsräkningen.",
     "alreadyWaived": "Utlägget har redan dispens.",
     "noWaiverToRevoke": "Utlägget har ingen dispens att ta tillbaka.",
-    "exportInProgress": "{name} exporterar redan utlägget till Fortnox. Vänta tills det är klart.",
-    "exportUncertain": "Det är oklart om exporten skapade en verifikation i Fortnox. Utlägget är låst tills någon har kontrollerat i Fortnox.",
-    "exportUnrecorded": "Verifikationen {label} skapades i Fortnox men kunde inte sparas här. Utlägget är låst. Markera det som exporterat med {label}.",
-    "noExportResolveAccess": "Bara den som får ångra exporter kan lösa en oklar export.",
-    "nothingToResolve": "Utlägget har ingen oklar export att lösa.",
-    "voucherForExportNeeded": "Utlägget saknar verifikation och kan inte markeras som exporterat."
+    "exportInProgress": "{name} bokför redan utlägget i Fortnox. Vänta tills det är klart.",
+    "exportUncertain": "Det är oklart om bokföringen skapade en verifikation i Fortnox. Utlägget är låst tills någon har kontrollerat i Fortnox.",
+    "exportUnrecorded": "Verifikationen {label} skapades i Fortnox men kunde inte sparas här. Utlägget är låst. Markera det som bokfört med {label}.",
+    "noExportResolveAccess": "Bara den som får ångra bokföringar kan reda ut en oklar bokföring.",
+    "nothingToResolve": "Utlägget har ingen oklar bokföring att reda ut.",
+    "reviewOwnBooking": "Du har konterat utlägget själv. Någon annan behöver granska och bokföra det."
   },
   "receipt": {
     "notFound": "Kvittot hittades inte",
@@ -147,7 +146,7 @@
   },
   "costCenter": {
     "notFound": "Kostnadsstället finns inte",
-    "codeFormat": "Koden får bara innehålla bokstäver, siffror, - och _ (2–20 tecken).",
+    "codeFormat": "Koden får bara innehålla bokstäver, siffror, - och _ (2-20 tecken).",
     "fortnoxOwned": "{code} kommer från Fortnox och ändras där.",
     "inUse": "{code} används av {count, plural, one {# post} other {# poster}} och kan inte raderas.",
     "exists": "{code} finns redan.",
@@ -199,7 +198,8 @@
     "secretUnreadable": "Den sparade Fortnox-hemligheten går inte att läsa. Koppla från och anslut Fortnox igen.",
     "syncFailed": "Synkningen misslyckades",
     "missingScope": "Fortnox saknar behörighet för det här. Koppla från och anslut igen för att ge appen de scope den behöver.",
-    "missingCostCenterScope": "Fortnox saknar behörighet för kostnadsställen. Koppla från och anslut igen för att ge appen 'costcenter'-behörighet."
+    "missingCostCenterScope": "Fortnox saknar behörighet för kostnadsställen. Koppla från och anslut igen för att ge appen 'costcenter'-behörighet.",
+    "missingProjectScope": "Fortnox saknar behörighet för projekt. Koppla från och anslut igen för att ge appen 'project'-behörighet."
   },
   "database": "Databasfel",
   "budgetAccount": {
@@ -220,7 +220,9 @@
     "onePaymentLine": "Verifikationen måste ha exakt en rad på betalningskontot {account}",
     "paymentLineNoCostCenter": "Betalningsraden ({account}) kan inte ha ett kostnadsställe",
     "paymentLineFullAmount": "Betalningsraden ({account}) måste ha hela utläggsbeloppet, i kredit eller vid retur i debet",
-    "unknownCostCenter": "Kostnadsstället {code} finns inte"
+    "unknownCostCenter": "Kostnadsstället {code} finns inte",
+    "revenueAccount": "Ett utlägg kan inte konteras mot intäktskontot {account}",
+    "unknownProject": "Projektet {project} finns inte"
   },
   "income": {
     "serviceUnavailable": "Intäktstjänsten är inte tillgänglig.",
@@ -369,5 +371,23 @@
   "reminder": {
     "denied": "Du får inte skicka påminnelser.",
     "nobody": "Inget av utläggen väntar på någon som kan påminnas."
+  },
+  "settings": {
+    "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",
+    "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Fortnox.",
+    "voucherSeriesUnset": "Ingen verifikationsserie är vald. Välj den under Inställningar → Fortnox.",
+    "zettleClearingAccountUnset": "Inget konto är valt för Zettle-försäljning. Välj det under Inställningar → Intäkter.",
+    "swishClearingAccountUnset": "Inget konto är valt för Swish-försäljning. Välj det under Inställningar → Intäkter.",
+    "zettleFeeAccountUnset": "Inget konto är valt för Zettles avgifter. Välj det under Inställningar → Intäkter."
+  },
+  "closing": {
+    "voucherNotFound": "Verifikationen finns inte i huvudboken",
+    "voucherChanged": "Verifikationen har ändrats i Fortnox sedan sidan laddades. Ladda om och titta på den igen.",
+    "yearNotFound": "Räkenskapsåret finns inte",
+    "checklistStarted": "Checklistan för året är redan påbörjad",
+    "itemNotFound": "Punkten finns inte i årets checklista",
+    "itemHasCheck": "Den här punkten bockas av när appen ser att den är klar",
+    "accountNotFound": "Kontot har inget saldo i huvudboken för året",
+    "templateItemNotFound": "Punkten finns inte i mallen"
   }
 }

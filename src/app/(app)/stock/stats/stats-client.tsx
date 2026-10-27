@@ -289,7 +289,7 @@ export default function StockStatsClient({
                     </span>
                     <span className="ml-auto flex shrink-0 items-baseline gap-3">
                       <span className="w-20 text-right tabular-nums text-muted">
-                        {h.litres == null ? "–" : t("litres", { litres: formatLitreCount(h.litres) })}
+                        {h.litres == null ? "-" : t("litres", { litres: formatLitreCount(h.litres) })}
                       </span>
                       <span className="w-24 text-right font-medium tabular-nums">
                         {formatOreKr(h.valueOre)}

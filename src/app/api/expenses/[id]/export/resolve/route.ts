@@ -49,7 +49,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "uncertain") {
     return lock === "exporting"
-      ? fail(409, "expense.exportInProgress", { values: { name: "–" } })
+      ? fail(409, "expense.exportInProgress", { values: { name: "-" } })
       : fail(409, "expense.nothingToResolve");
   }
 
@@ -74,8 +74,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ id, status: "BOOKED" });
   }
 
+  // Only a BOOKED utlägg has an export lock to resolve, and a konterat one
+  // has its voucher.
   const verification = expense.verification;
-  if (!verification) return fail(409, "expense.voucherForExportNeeded");
+  if (!verification) throw new Error(`Expense ${id} is BOOKED but has no verification`);
 
   // Fortnox's financial-year id is not something anybody reads off a voucher,
   // so it is left unknown, which is what the export does when Fortnox omits it.

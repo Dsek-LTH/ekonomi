@@ -68,6 +68,7 @@ export default function StockProductClient({
   cellar,
   movements,
   checks,
+  expiryUnset,
   knownTags,
   canManage,
 }: {
@@ -88,6 +89,8 @@ export default function StockProductClient({
   /** What the rest of the shelf is tagged with, for the edit dialog's picker. */
   knownTags: string[];
   canManage: boolean;
+  /** No notice period has been chosen, so no checks are raised at all. */
+  expiryUnset: boolean;
 }) {
   const t = useTranslations("stock");
   const [editing, setEditing] = useState(false);
@@ -206,6 +209,16 @@ export default function StockProductClient({
       back="/stock"
       width="content"
     >
+      {expiryUnset && (
+        <Notice>
+          {t("expiryUnset")}{" "}
+          {canManage && (
+            <Link href="/admin/stock" className="font-medium underline">
+              {t("expiryUnsetAction")}
+            </Link>
+          )}
+        </Notice>
+      )}
       {/* Two columns from lg: what there is of it on the left, larger, with
           the three things you do to the shelf, and what the product is on the
           right. The history (its nights, and the cellar) runs across both
@@ -274,13 +287,13 @@ export default function StockProductClient({
               <Detail
                 label={t("product.totalVolume")}
                 value={
-                  onHand.totalMl == null ? "–" : t("litres", { litres: formatLitres(onHand.totalMl) })
+                  onHand.totalMl == null ? "-" : t("litres", { litres: formatLitres(onHand.totalMl) })
                 }
                 dim={onHand.totalMl == null}
               />
               <Detail
                 label={t("product.value")}
-                value={onHand.valueOre > 0 ? formatOreKr(onHand.valueOre) : "–"}
+                value={onHand.valueOre > 0 ? formatOreKr(onHand.valueOre) : "-"}
               />
             </CardBody>
           </Card>
@@ -363,7 +376,7 @@ export default function StockProductClient({
                 label={t("products.field.tags")}
                 value={
                   product.tags.length === 0 ? (
-                    <span className="text-muted">–</span>
+                    <span className="text-muted">-</span>
                   ) : (
                     <TagChips tags={product.tags} className="mt-0.5" />
                   )
@@ -418,7 +431,7 @@ export default function StockProductClient({
                 label={t("product.size")}
                 value={
                   size == null ? (
-                    <span className="text-muted">–</span>
+                    <span className="text-muted">-</span>
                   ) : (
                     t("ml", { ml: size })
                   )
@@ -428,7 +441,7 @@ export default function StockProductClient({
                 label={t("product.abv")}
                 value={
                   product.abv == null ? (
-                    <span className="text-muted">–</span>
+                    <span className="text-muted">-</span>
                   ) : (
                     `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(product.abv)} %`
                   )
@@ -448,7 +461,7 @@ export default function StockProductClient({
                 label={t("product.alcoholPerKrona")}
                 value={
                   alcoholPerKrona(product) == null ? (
-                    <span className="text-muted">–</span>
+                    <span className="text-muted">-</span>
                   ) : (
                     t("clPerKrona", { cl: formatClPerKrona(alcoholPerKrona(product)!) })
                   )
@@ -600,7 +613,7 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
     mobile: "hide" as const,
     cell: (r: ProductEventDto) =>
       pick(r) === 0 ? (
-        <span className="text-muted">–</span>
+        <span className="text-muted">-</span>
       ) : (
         <span className={strong ? "font-medium" : undefined}>{amount(pick(r))}</span>
       ),
@@ -627,7 +640,7 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
       value: (r) => r.date,
       sortable: true,
       mobile: "meta",
-      cell: (r) => r.date || <span className="text-muted">–</span>,
+      cell: (r) => r.date || <span className="text-muted">-</span>,
     },
     figure("out", (r) => r.out),
     figure("back", (r) => r.back),
@@ -713,7 +726,7 @@ function CellarTable({
         ) : r.units ? (
           formatSigned(r.units)
         ) : (
-          levelSummary(r.open ?? {}) || <span className="text-muted">–</span>
+          levelSummary(r.open ?? {}) || <span className="text-muted">-</span>
         ),
     },
     {
@@ -725,7 +738,7 @@ function CellarTable({
       sortable: true,
       mobile: "trailing",
       cell: (r) =>
-        r.valueDeltaOre ? formatOreKr(r.valueDeltaOre) : <span className="text-muted">–</span>,
+        r.valueDeltaOre ? formatOreKr(r.valueDeltaOre) : <span className="text-muted">-</span>,
     },
     {
       key: "actor",

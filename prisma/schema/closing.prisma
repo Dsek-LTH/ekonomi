@@ -1,0 +1,184 @@
+// Bokslut: the review of a financial year's vouchers, by the treasury and then
+// by the revisorer.
+//
+// Keyed on the voucher as Fortnox names it (financial year, series, number)
+// and not on LedgerVoucher's id, which a sync replaces every time it runs.
+// Not a foreign key for the same reason, and for one more: a review is a record
+// of what somebody said about the books, and it must outlive the mirror being
+// emptied and refilled, or a year being re-imported.
+
+/// Whose review it is. The two are kept apart so that the revisorer can see
+/// what the treasury already looked at, and neither can stand in for the other.
+enum VoucherReviewPass {
+  /// Skattmästeriet, going through its own books before handing them over.
+  PREPARER
+  /// Revisorerna.
+  AUDITOR
+}
+
+/// What a reviewer said about a voucher. There is no "unreviewed" value: that
+/// is the absence of a review, or a review of a different version.
+enum VoucherReviewStatus {
+  OK
+  /// Something to be answered before the voucher can be passed.
+  QUESTION
+  /// Anmärkning: something wrong that stands, and that the revisionsberättelse
+  /// may have to mention.
+  REMARK
+}
+
+// Append-only. A voucher's current review in a pass is its latest row there,
+// and the rows before it are its history. Nothing is updated in place, so that
+// "this was passed on 3 March, then changed in Fortnox, then passed again" is
+// still readable afterwards.
+model VoucherReview {
+  id String @id @default(cuid())
+
+  financialYear Int // FortnoxFinancialYear.id
+  series        String
+  number        Int
+
+  pass   VoucherReviewPass
+  status VoucherReviewStatus
+
+  /// LedgerVoucher.contentHash as the reviewer saw it. A review whose hash is
+  /// no longer the voucher's is a review of something else.
+  contentHash String
+
+  reviewedBy   User?    @relation("VoucherReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById String?
+  reviewedAt   DateTime @default(now())
+
+  // "The latest per voucher and pass" for a whole year, which is what every
+  // read asks.
+  @@index([financialYear, series, number, pass, reviewedAt])
+}
+
+// One thread per voucher, shared by both passes: a revisor's question and the
+// treasury's answer are one conversation.
+model VoucherComment {
+  id String @id @default(cuid())
+
+  financialYear Int
+  series        String
+  number        Int
+
+  /// The version of the voucher the comment was written about, so a thread
+  /// that runs across a change in Fortnox says which remarks came before it.
+  contentHash String
+
+  author   User?   @relation("VoucherCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId String?
+  body     String
+
+  createdAt DateTime @default(now())
+
+  @@index([financialYear, series, number, createdAt])
+}
+
+// ── The checklist ─────────────────────────────────────────────────
+//
+// What has to be done for a bokslut, kept in the app so that the next
+// skattmästare finds it here rather than in somebody's head. The template is
+// the handbook; each year gets its own copy to tick off, and what that year
+// learned is written back as a note to the next one.
+
+/// Which of the app's own facts decides an item, where the app can tell. An
+/// item with one is done when the check passes, and cannot be ticked by hand:
+/// a tick that says "every utlägg is exported" while three are not would be the
+/// checklist lying. See lib/closing/checks.ts.
+enum ClosingCheck {
+  EXPENSES_EXPORTED
+  CARD_PURCHASES_ACCOUNTED
+  INCOME_EXPORTED
+  LEDGER_SYNCED
+  STOCKTAKE_AT_YEAR_END
+  BALANCES_RECONCILED
+  TREASURY_REVIEWED
+  AUDITORS_REVIEWED
+}
+
+model ChecklistTemplateItem {
+  id String @id @default(cuid())
+
+  title String
+  /// How to do it: where to click in Fortnox, which document is needed, what
+  /// went wrong last time. Plain text, written for somebody doing it once a year.
+  howTo String @default("")
+
+  /// Who usually does it. A hint, not a gate: anybody who works the books can
+  /// tick any item.
+  ownerRole     Role?
+  /// When it is due, in days from the last day of the financial year. Negative
+  /// is before it. Null for no particular day.
+  dueOffsetDays Int?
+  check         ClosingCheck?
+
+  sortOrder Int     @default(0)
+  /// Retired rather than deleted, so a year that used it still says where its
+  /// item came from.
+  active    Boolean @default(true)
+
+  items ChecklistItem[]
+
+  updatedAt DateTime @updatedAt
+}
+
+// One year's copy of a template item. Copied rather than referred to, because
+// the template will be edited after this year is done, and this year's
+// checklist must keep saying what this year was asked to do.
+model ChecklistItem {
+  id String @id @default(cuid())
+
+  financialYear Int // FortnoxFinancialYear.id
+
+  template   ChecklistTemplateItem? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateId String?
+
+  title     String
+  howTo     String        @default("")
+  ownerRole Role?
+  dueDate   DateTime?     @db.Date
+  check     ClosingCheck?
+  sortOrder Int           @default(0)
+
+  /// Ticked by hand. Never set on an item with a `check`.
+  doneAt   DateTime?
+  doneBy   User?     @relation("ChecklistItemDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
+  doneById String?
+
+  /// What was done this year, for anybody reading the bokslut afterwards.
+  note           String @default("")
+  /// What the next person should know. Shown on next year's copy of the same
+  /// template item.
+  noteToNextYear String @default("")
+
+  @@index([financialYear, sortOrder])
+  @@index([templateId])
+}
+
+// "Avstämt i Fortnox": the reconciliation itself is done in Fortnox, and this
+// only records that it was, by whom, and anything worth saying about it.
+model AccountReconciliation {
+  financialYear Int
+  account       String
+
+  reconciledAt   DateTime @default(now())
+  reconciledBy   User?    @relation("AccountReconciler", fields: [reconciledById], references: [id], onDelete: SetNull)
+  reconciledById String?
+  note           String   @default("")
+
+  @@id([financialYear, account])
+}
+
+// What an account is and how it is reconciled. Not tied to a year: this is the
+// knowledge a new skattmästare is most often missing, and it stays true from
+// one year to the next until somebody changes it.
+model AccountNote {
+  account String @id
+
+  body        String
+  updatedBy   User?    @relation("AccountNoteAuthor", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}

@@ -505,7 +505,7 @@ export default function MileageClient({
                   ? t("total")
                   : t("sum", {
                       km: km(valued.km),
-                      rate: valued.orePerKm == null ? "–" : money(valued.orePerKm / 100),
+                      rate: valued.orePerKm == null ? "-" : money(valued.orePerKm / 100),
                     })}
               </span>
               <span className="text-lg font-semibold tabular-nums">{money(grossSEK)} kr</span>
@@ -592,22 +592,22 @@ export default function MileageClient({
               <DetailRow label={t("description")} value={title} />
               <DetailRow
                 label={t("journeyDate")}
-                value={journeyDate ? date(journeyDate) : "–"}
+                value={journeyDate ? date(journeyDate) : "-"}
               />
               <DetailRow
                 label={t("route.label")}
-                value={namedStops(stops).join(" → ") || "–"}
+                value={namedStops(stops).join(" → ") || "-"}
               />
               {/* The readings as well as the distance: the review step is the
                   last look before this becomes somebody else's to check, and
                   what they will be checking is these two numbers. */}
               <DetailRow
                 label={t("odometer.label")}
-                value={`${startText || "–"} → ${endText || "–"}`}
+                value={`${startText || "-"} → ${endText || "-"}`}
               />
               <DetailRow
                 label={t("distance")}
-                value={valued.km == null ? "–" : t("km", { km: km(valued.km) })}
+                value={valued.km == null ? "-" : t("km", { km: km(valued.km) })}
               />
               <DetailRow label={tWizard("amount")} value={<Amount value={grossSEK} />} />
               {allocations.map((a, i) => (
@@ -616,7 +616,7 @@ export default function MileageClient({
                   label={i === 0 ? tWizard("distribution") : ""}
                   value={
                     <>
-                      {a.costCenterCode} – <Amount value={parseSEK(a.amount)} signed />
+                      {a.costCenterCode} - <Amount value={parseSEK(a.amount)} signed />
                     </>
                   }
                 />
@@ -626,7 +626,7 @@ export default function MileageClient({
                 label={tWizard("payoutTo")}
                 value={
                   payoutClearing && payoutAccount
-                    ? `${payoutClearing} – ${payoutAccount}`
+                    ? `${payoutClearing} - ${payoutAccount}`
                     : tWizard("payoutMissing")
                 }
               />

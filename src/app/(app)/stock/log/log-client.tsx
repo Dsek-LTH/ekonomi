@@ -185,7 +185,7 @@ export default function StockLogClient({
       cell: (r) => {
         const n = r.kind === "WASTE" ? -r.spilledQty : r.units;
         return n === 0 ? (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ) : (
           <span className={toneFor(n)}>{formatSigned(n)}</span>
         );
@@ -199,7 +199,7 @@ export default function StockLogClient({
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       mobile: "hide",
-      cell: (r) => levelSummary(r.open) || <span className="text-muted">–</span>,
+      cell: (r) => levelSummary(r.open) || <span className="text-muted">-</span>,
     },
     {
       key: "value",
@@ -209,7 +209,7 @@ export default function StockLogClient({
       mobile: "trailing",
       cell: (r) =>
         r.valueDeltaOre === 0 ? (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ) : (
           <span className={toneFor(r.valueDeltaOre)}>{formatOreKrSigned(r.valueDeltaOre)}</span>
         ),
@@ -227,7 +227,7 @@ export default function StockLogClient({
             {r.tagName}
           </Link>
         ) : (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ),
     },
     {
@@ -332,7 +332,7 @@ export default function StockLogClient({
                   value={filter.from ?? ""}
                   onCommit={(v) => setParam("from", v)}
                 />
-                <span className="text-xs text-muted">–</span>
+                <span className="text-xs text-muted">-</span>
                 <DateFilter
                   label={t("log.filter.to")}
                   value={filter.to ?? ""}

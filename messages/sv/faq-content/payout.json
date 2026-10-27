@@ -34,8 +34,8 @@
           "v": [
             "Väntar på attest: den som har attesträtt för köpet granskar det. Behöver något rättas kommer den tillbaka som Behöver ändras, med en kommentar om vad.",
             "Attesterat: godkänd, och kön till bokföringen.",
-            "Bokfört: skattmästeriet har konterat den.",
-            "Exporterat: den ligger i Fortnox, och pengarna betalas ut."
+            "Konterat: skattmästeriet har konterat den.",
+            "Bokfört: den ligger i Fortnox, och pengarna betalas ut."
           ]
         },
         {

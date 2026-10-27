@@ -1,5 +1,5 @@
 // Fortnox-style reports over the local ledger mirror: a resultatrapport
-// (3000–8999) and a balansrapport (1000–2999), for a month range within a
+// (3000-8999) and a balansrapport (1000-2999), for a month range within a
 // financial year.
 //
 // Two groupings, per the report's own control:

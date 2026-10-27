@@ -3,7 +3,7 @@ import { getDashboardExpenses } from "@/lib/data/expenses";
 import { countUnaccountedPurchases } from "@/lib/data/bank";
 import { getBudgetOverview } from "@/lib/data/budget-overview";
 import { buildQueue } from "@/lib/domain/queue";
-import { canAccessBookkeeping, canAccessBudget } from "@/lib/domain/permissions";
+import { canViewBookkeeping, canAccessBudget } from "@/lib/domain/permissions";
 import { getMyMoney } from "@/lib/data/my-money";
 import { getPayoutAccount } from "@/lib/data/users";
 import { ownedResultUnits } from "@/lib/server/result-units";
@@ -54,7 +54,7 @@ export default async function DashboardPage({
   const views: DashboardView[] = readsBudget
     ? [
         ...(answersForUnits ? (["unit"] as const) : []),
-        ...(answersForUnits || canAccessBookkeeping(user.capabilities) ? (["section"] as const) : []),
+        ...(answersForUnits || canViewBookkeeping(user.capabilities) ? (["section"] as const) : []),
       ]
     : [];
   if (views.length === 0) views.push("personal");

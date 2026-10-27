@@ -263,7 +263,7 @@ function WhyPanel({ userId }: { userId: string }) {
                 </span>
               ) : (
                 <span className="text-muted">
-                  {" – "}
+                  {" - "}
                   {t("via")} <GroupNames groups={r.groups} />
                 </span>
               )}
@@ -293,7 +293,7 @@ function WhyPanel({ userId }: { userId: string }) {
                   </span>
                 ) : (
                   <span className="text-muted">
-                    {" – "}
+                    {" - "}
                     {t("via")} <GroupNames groups={u.groups} />
                   </span>
                 )}

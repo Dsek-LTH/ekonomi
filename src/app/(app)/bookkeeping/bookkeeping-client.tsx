@@ -17,14 +17,12 @@ import {
   expenseTitleColumn,
 } from "@/components/columns/expense-columns";
 import { expenseLabel } from "@/lib/domain/reference";
-import { useMutation } from "@/components/shell/use-mutation";
-import { useNotify } from "@/components/shell/notifications";
 import type { RowPage } from "@/lib/data/list-query";
-import type { Expense, FortnoxStatus } from "@/lib/domain/types";
+import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import type { PresentUser } from "@/lib/domain/presence";
 import type { ExportLockView } from "@/lib/domain/export-claim";
-import { canUnexport } from "@/lib/domain/permissions";
+import { canBookkeep, canUnexport } from "@/lib/domain/permissions";
 import { useRole } from "@/components/shell/role-context";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/ui/utils";
@@ -55,16 +53,15 @@ function CornerDot({ tone }: { tone: "warning" | "danger" }) {
 
 export default function BookkeepingClient({
   page,
-  fortnox,
+  reviewCount,
 }: {
   page: RowPage<Expense>;
-  fortnox: FortnoxStatus;
+  /** Konterade utlägg this viewer may bokföra. See getReviewQueue. */
+  reviewCount: number;
 }) {
-  const notify = useNotify();
   const t = useTranslations("bookkeeping");
   const tCol = useTranslations("expenses.col");
   const tList = useTranslations("expenses");
-  const tExpense = useTranslations("expenses.mutations");
   const tPayment = useTranslations("common.payment");
   const { date, list } = useFormat();
   const { user } = useRole();
@@ -82,9 +79,11 @@ export default function BookkeepingClient({
   // Looking into an export that ended without an answer is EXPORT_UNDO's, the
   // same authority as unexporting. See app/api/expenses/[id]/export/resolve.
   const mayResolve = canUnexport(user.capabilities);
+  // The list is readable by a revisor too. The buttons into booking and the
+  // review are not theirs; the row itself still opens the utlägg.
+  const mayBook = canBookkeep(user.capabilities);
   const [resolving, setResolving] = useState<Expense | null>(null);
   const controls = useUrlTableControls(page.total);
-  const { pending, mutate } = useMutation();
 
   // No predicates: the tab value is a status the server filters on, and the
   // page arrives already narrowed to it. "Bokföring picks up where approval
@@ -99,41 +98,6 @@ export default function BookkeepingClient({
   // The OAuth round-trip's result is surfaced globally, see FortnoxAuthResult
   // in the app layout, since the callback can return to any page.
 
-  // Keyed on the utlägg's id, spoken about by its reference. Anything
-  // exportable has been through attest, so it has one.
-  async function doExport(expense: Expense) {
-    const id = expense.id;
-    const name = expenseLabel(expense);
-    const data = await mutate<{
-      label: string;
-      attachWarning: string | null;
-      coverWarning: string | null;
-    }>(`/api/expenses/${id}/export`, {
-      key: id,
-      error: t("exportFailed", { id: name }),
-    });
-    if (!data) {
-      // Very likely refused because somebody else holds the lock. Ask now, so
-      // the button shows why instead of waiting for the next poll.
-      live.refresh();
-      return;
-    }
-    const done = t("exportDone", { id: name, label: data.label });
-    // The warning describes itself, so it's passed through verbatim.
-    if (data.attachWarning) {
-      notify.info(`${done}. ${tExpense("export.attachWarning", { detail: data.attachWarning })}`);
-    }
-    else notify.success(`${done}.`);
-  }
-
-  // The voucher is written under the bookkeeper's own Fortnox login, so an
-  // export needs both the org's connection and a live personal session. Without
-  // either the button stays visible but inert, and says which one is missing.
-  const exportBlocked = !fortnox.connected
-    ? t("connectFirst")
-    : !fortnox.session
-      ? t("loginFirst")
-      : null;
 
   const columns: Column<Expense>[] = [
     expenseReferenceColumn(tCol("verification")),
@@ -150,7 +114,7 @@ export default function BookkeepingClient({
       mobile: "actions",
       cell: (e) => (
         <div className="relative">
-          {e.status === "APPROVED" && (
+          {mayBook && e.status === "APPROVED" && (
             // Somebody else has it open for booking. Said, not enforced: the
             // button stays a button, and the booking screen asks before saving
             // over a colleague. See lib/domain/presence.ts.
@@ -165,13 +129,13 @@ export default function BookkeepingClient({
               {bookings[e.id] && <CornerDot tone="warning" />}
             </Tooltip>
           )}
-          {e.status === "BOOKED" &&
+          {mayBook && e.status === "BOOKED" &&
             (() => {
-              // Locked by an export, its own or anybody's. Not advisory like
-              // the booking dot: the server refuses a second export while the
-              // lock is held, so the button is dead to match. A disabled
-              // control takes no pointer events, which is why the hint hangs
-              // on the wrapper.
+              // Bokföring is done from the review, one utlägg at a time, and
+              // not from here: this opens the review at this one. A lock is
+              // still shown, as a dot, and one left uncertain is still resolved
+              // from here, since it is not bokföring but finding out whether it
+              // already happened.
               const locked = live.exporting[e.id];
               if (locked?.lock === "uncertain" && mayResolve) {
                 return (
@@ -183,18 +147,12 @@ export default function BookkeepingClient({
                   </Tooltip>
                 );
               }
-              const blocked = locked ? exportHint(locked) : exportBlocked;
               return (
-                <Tooltip label={blocked}>
-                  <Button
-                    size="sm"
-                    loading={pending === e.id}
-                    disabled={blocked !== null}
-                    aria-label={blocked ?? undefined}
-                    onClick={() => doExport(e)}
-                  >
-                    {t("export")}
-                  </Button>
+                <Tooltip label={locked ? exportHint(locked) : null}>
+                  <ButtonLink href={`/bookkeeping/review?id=${e.id}`} size="sm" variant="secondary">
+                    {t("review.open")}
+                    {locked && <span className="sr-only">{exportHint(locked)}</span>}
+                  </ButtonLink>
                   {locked && <CornerDot tone={locked.lock === "exporting" ? "warning" : "danger"} />}
                 </Tooltip>
               );
@@ -220,6 +178,11 @@ export default function BookkeepingClient({
           rowKey={(e) => e.id}
           rowHref={(e) => `/expenses/${e.id}`}
           empty={tList("noMatch")}
+          action={
+            reviewCount > 0 ? (
+              <ButtonLink href="/bookkeeping/review">{t("review.start", { count: reviewCount })}</ButtonLink>
+            ) : undefined
+          }
         />
       </Card>
       {resolving && (

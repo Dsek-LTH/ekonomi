@@ -50,7 +50,7 @@ export function ChangeFeed({
   const named = (c: StockChangeDto) =>
     c.level === 0
       ? t(`kind.${c.kind}`)
-      : `${t(`kind.${c.kind}`)} – ${t("event.level.rung", { level: c.level })}`;
+      : `${t(`kind.${c.kind}`)} - ${t("event.level.rung", { level: c.level })}`;
 
   const columns: Column<StockChangeDto>[] = [
     {

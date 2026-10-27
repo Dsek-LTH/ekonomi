@@ -12,7 +12,6 @@ import { tagTotals, type TagMovement } from "@/lib/stock/event";
 import { cellQty, cellTotals, type CellKind, type CellRow } from "@/lib/stock/cells";
 import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/types";
 import {
-  DEFAULT_LEAD_DAYS,
   checkOf,
   lastEmptied,
   soonestCheck,
@@ -932,10 +931,13 @@ export async function getProductMovementCount(productId: string): Promise<number
 }
 
 
-/** How much notice the section wants before a delivery's estimated date. */
-export async function getStockSettings(): Promise<{ expiryLeadDays: number }> {
+/**
+ * How much notice the section wants before a delivery's estimated date. Null
+ * until somebody chooses it, and no checks are raised until then.
+ */
+export async function getStockSettings(): Promise<{ expiryLeadDays: number | null }> {
   const row = await prisma.stockSettings.findUnique({ where: { id: "singleton" } });
-  return { expiryLeadDays: row?.expiryLeadDays ?? DEFAULT_LEAD_DAYS };
+  return { expiryLeadDays: row?.expiryLeadDays ?? null };
 }
 
 /**
@@ -954,8 +956,11 @@ export async function getStockSettings(): Promise<{ expiryLeadDays: number }> {
  * `bestBefore` is indexed, and the second query is over products the first one
  * named rather than over the whole log.
  */
-export async function getExpiryChecks(now: string = today()): Promise<Map<string, Check>> {
+export async function getExpiryChecks(now: string = today()): Promise<Map<string, Check> | null> {
   const { expiryLeadDays } = await getStockSettings();
+  // Not chosen, so there is no rule to apply. Null rather than an empty map,
+  // which would read as "nothing due" on a shelf nobody is watching.
+  if (expiryLeadDays === null) return null;
 
   // The window the rule can possibly fire in. Anything dated further out than
   // the lead time is not due, and asking the database that is cheaper than
@@ -1102,8 +1107,10 @@ const asDelivery = (
 export async function getProductChecks(
   productId: string,
   now: string = today(),
-): Promise<Check[]> {
+): Promise<Check[] | null> {
   const { expiryLeadDays } = await getStockSettings();
+  // Not chosen: see getExpiryChecks.
+  if (expiryLeadDays === null) return null;
 
   // No horizon, unlike the overview's query. This is one product and the page
   // wants what is coming as well as what is owed.

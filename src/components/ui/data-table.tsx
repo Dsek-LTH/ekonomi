@@ -166,16 +166,16 @@ export interface Column<T> {
 //   title     trailing        Kaffe till pubben           1 240 kr
 //   meta      status          Maja Holm, 12 okt            [Väntar]
 //
-//   title    – what the row is. One column.
-//   trailing – the figure opposite it, usually the amount. One column.
-//   meta     – who or what, and when: at most two columns, joined by a comma
+//   title    - what the row is. One column.
+//   trailing - the figure opposite it, usually the amount. One column.
+//   meta     - who or what, and when: at most two columns, joined by a comma
 //              into the muted second line. The header is announced to a screen
 //              reader and shown to nobody, so a cell here has to read on its
 //              own: "24 st", not "24".
-//   status   – a tag opposite the second line. One column.
-//   actions  – a button at the right-hand end, for the one thing a row is
+//   status   - a tag opposite the second line. One column.
+//   actions  - a button at the right-hand end, for the one thing a row is
 //              waiting on ("Redovisa"). Rarely more than one.
-//   hide     – not on a phone. The default: everything else is on the page the
+//   hide     - not on a phone. The default: everything else is on the page the
 //              row opens, or in the table on a wider screen.
 //
 // Unset means `hide`. It meant `meta`, and every column a table had not thought
@@ -484,7 +484,7 @@ export function DataTable<T>({
                   placeholder={t("dateFrom")}
                 />
               </div>
-              <span className="text-xs text-muted">–</span>
+              <span className="text-xs text-muted">-</span>
               <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
                 <DateInput
                   size="sm"
@@ -554,7 +554,7 @@ export function DataTable<T>({
                       placeholder={t("dateFrom")}
                     />
                   </div>
-                  <span className="text-xs text-muted">–</span>
+                  <span className="text-xs text-muted">-</span>
                   <div className="min-w-0 flex-1">
                     <DateInput
                       value={controls.dateTo}

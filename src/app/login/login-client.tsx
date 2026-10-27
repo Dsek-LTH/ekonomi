@@ -2,30 +2,24 @@
 
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
-
-// Seeded local accounts, one per role, so a developer can sign in as each of
-// them without Authentik. Keyed on student id, which is what the app keys a
-// user on everywhere else. `role` is a key under `login.dev`.
-const DEV_USERS = [
-  { studentId: "el1234li-s", name: "Elsa Lindqvist", role: "member" },
-  { studentId: "os5678be-s", name: "Oskar Berg", role: "approver" },
-  { studentId: "lu9012ge-s", name: "Ludwig Gehlsdorf", role: "treasurer" },
-  { studentId: "ma3456ho-s", name: "Maja Holm", role: "admin" },
-];
+import type { DevUser } from "./dev-users";
 
 export function LoginClient({
   callbackUrl,
   error,
+  devUsers,
 }: {
   /** Where to land after signing in. Already checked to be a local path. */
   callbackUrl: string;
   /** A key under `login.errors`, when the last attempt came back refused. */
   error: "denied" | "unknownUser" | "failed" | null;
+  /** Who the dev sign-in offers. Empty in production, where there is none. */
+  devUsers: DevUser[];
 }) {
-  const isDev = process.env.NODE_ENV !== "production";
 
   const t = useTranslations("login");
   const tDev = useTranslations("login.dev");
+  const tRole = useTranslations("common.role");
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
@@ -64,13 +58,13 @@ export function LoginClient({
           {t("loginPrompt")}
         </button>
 
-        {isDev && (
+        {devUsers.length > 0 && (
           <div className="mt-8 rounded-panel border border-dashed border-border p-4 text-left">
             <p className="mb-3 text-xs font-medium text-muted">
               {tDev("heading")}
             </p>
             <div className="space-y-2">
-              {DEV_USERS.map((u) => (
+              {devUsers.map((u) => (
                 <button
                   key={u.studentId}
                   onClick={() =>
@@ -78,7 +72,7 @@ export function LoginClient({
                   }
                   className="flex h-11 w-full items-center rounded-control border border-border bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-9"
                 >
-                  {u.name} – {tDev(u.role)}
+                  {u.name} - {u.roles.map((r) => tRole(r)).join(", ")}
                 </button>
               ))}
             </div>

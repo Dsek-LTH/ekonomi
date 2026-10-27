@@ -14,7 +14,7 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
 import {
   attachBestEffort,
@@ -26,12 +26,13 @@ import {
 import { fortnoxIncomeVouchers, incomeVoucherKey } from "@/lib/income/duplicate";
 import { incomeVoucherSeries } from "@/lib/income/voucher";
 import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import { getObjectBuffer } from "@/lib/server/storage";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.bookkeeperExport");
+  const g = await gate(canBookkeep, "auth.bookkeeperExport");
   if (!g.ok) return g.res;
 
   const report = await prisma.incomeReport.findUnique({
@@ -54,11 +55,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   // Which verifikationsserie takings are filed under: its own setting, falling
   // back to the connection's. The duplicate check below reads the same one
   // through the same function, which is the point of there being one.
-  const settings = await prisma.bookkeepingSettings.findUnique({
-    where: { id: "singleton" },
-    select: { incomeVoucherSeries: true },
-  });
+  const settings = await loadBookkeepingSettings();
   const series = incomeVoucherSeries(settings, conn.voucherSeries);
+  if (!series) return fail(409, "settings.voucherSeriesUnset");
 
   // The last gate before anything is written over there. Import already refuses
   // to bring in a day Fortnox has a voucher for, but that check ran against the

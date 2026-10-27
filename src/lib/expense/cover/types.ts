@@ -21,7 +21,7 @@
 
 /** One cost-centre slice of the utlägg, with the attest that cleared it. */
 interface ExpenseCoverAllocation {
-  /** "SEKT05 – Sexmästeriet": code and name, as the ledger writes it. */
+  /** "SEKT05 - Sexmästeriet": code and name, as the ledger writes it. */
   costCenter: string;
   amount: string;
   /** The submitter's note, or null. Rendered as a dash. */
@@ -85,6 +85,21 @@ export interface ExpenseCoverWaiver {
   lateness: string;
 }
 
+/**
+ * Who konterade the utlägg, as the page states it.
+ *
+ * On the cover because Fortnox names the voucher after whoever sent it, the
+ * bokförare. This page is filed with it, so it is where the kontering's author
+ * can be read.
+ */
+export interface ExpenseCoverBooking {
+  by: string;
+  /** ISO date. */
+  at: string;
+  /** "Cia Ceder och Dan Dahl", or null where nobody else amended it. */
+  amendedBy: string | null;
+}
+
 export interface ExpenseCoverData {
   /** "DEK26-0042". An utlägg with no reference yet falls back to its title. */
   reference: string;
@@ -115,6 +130,8 @@ export interface ExpenseCoverData {
   /** The dispens from the filing deadline, where one was given. Null
    *  otherwise. See above. */
   waiver: ExpenseCoverWaiver | null;
+  /** Who konterade it. Null on an utlägg not yet konterat. See above. */
+  booking: ExpenseCoverBooking | null;
 }
 
 /**

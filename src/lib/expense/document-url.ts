@@ -50,7 +50,7 @@ interface PanelDocument {
 /**
  * One underlag's caption: "Underlag" (numbered, once there is more than one
  * to tell apart) and the file it was uploaded as, where the caller has a name
- * for it. "Underlag 2 – kvitto_ica.jpg" over a bare "Underlag 2": a number
+ * for it. "Underlag 2 - kvitto_ica.jpg" over a bare "Underlag 2": a number
  * alone still leaves a reader to open the document to find out which
  * purchase it was.
  *
@@ -68,7 +68,7 @@ export function underlagCaption(
   const numbered = total > 1 ? `${base} ${index + 1}` : base;
   // The en dash the house style reserves for joining a label to what it
   // names on one line (see AGENTS.md).
-  return filename ? `${numbered} – ${filename}` : numbered;
+  return filename ? `${numbered} - ${filename}` : numbered;
 }
 
 /**

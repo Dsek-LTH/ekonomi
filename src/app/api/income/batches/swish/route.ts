@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
 import { intaktConfigFor } from "@/lib/api/intakt-route";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { createSalesBatch } from "@/lib/income/batch";
 import { fetchSwishReports, IntaktError, IntaktNotConfiguredError } from "@/lib/income/client";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
@@ -23,7 +23,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function POST(req: Request) {
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const url = new URL(req.url);

@@ -8,10 +8,6 @@
     "failed": "Sign-in failed. Please try again."
   },
   "dev": {
-    "heading": "Dev sign-in (local only)",
-    "member": "Member",
-    "approver": "Approver",
-    "treasurer": "Treasurer",
-    "admin": "Administrator"
+    "heading": "Dev sign-in (local only)"
   }
 }

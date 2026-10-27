@@ -985,7 +985,7 @@ export default function NewExpenseClient({
                       target="_blank"
                       className="font-medium text-accent hover:underline"
                     >
-                      {d.reference ? `${d.reference} – ` : ""}
+                      {d.reference ? `${d.reference} - ` : ""}
                       {d.title || t("duplicateUntitled")}
                     </Link>
                     <span className="text-muted">

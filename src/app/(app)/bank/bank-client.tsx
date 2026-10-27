@@ -152,7 +152,7 @@ export default function BankClient({
     const parts = counts
       .filter(([n], i) => i === 0 || n > 0)
       .map(([n, key]) => t(`summary.${key}`, { count: n }));
-    notify.success(parts.join(" – "), t("importDone"));
+    notify.success(parts.join(" - "), t("importDone"));
   }
 
   async function deleteTxn(id: string) {
@@ -207,7 +207,7 @@ export default function BankClient({
         )
       : bankCardColumn(t("colCard"), cards.length <= 1),
     bankAmountColumn(t("colAmount")),
-    // Was a status pill saying "Matchad – DEK26-0039". It said the same thing
+    // Was a status pill saying "Matchad - DEK26-0039". It said the same thing
     // this does, in more words and without going anywhere, and the tabs above
     // already sort matched from unmatched, which is the only part a pill was
     // adding. Same column as on Kortköp, so the two tables answer "which
@@ -468,7 +468,7 @@ function CardCell({
       // narrow for the name, which is the cell in most tables.
       options={cards.map((c) => ({
         value: c.id,
-        label: c.holderName ? `····${c.last4} – ${c.holderName}` : `····${c.last4}`,
+        label: c.holderName ? `····${c.last4} - ${c.holderName}` : `····${c.last4}`,
         short: `····${c.last4}`,
       }))}
     />

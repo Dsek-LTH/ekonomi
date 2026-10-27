@@ -108,7 +108,7 @@ export function ExpensesClient({
       mobile: "hide",
       cell: (e) =>
         e.allocations.length === 0 ? (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ) : (
           <div className="space-y-0.5">
             {e.allocations.map((a) => {
@@ -120,7 +120,7 @@ export function ExpensesClient({
                   title={
                     attested
                       ? t("attest.attestedBy", {
-                          name: a.approvedByName ?? "–",
+                          name: a.approvedByName ?? "-",
                           date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
                         })
                       : t("attest.waitingResultUnit", {

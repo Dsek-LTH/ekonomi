@@ -88,7 +88,7 @@ export function RentalsClient({
               )}
             </span>
           ) : (
-            <span className="text-muted">–</span>
+            <span className="text-muted">-</span>
           ),
       },
       {

@@ -48,6 +48,10 @@ export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
   // a group nobody holds grants nothing and is reported there as granting
   // nothing. Point it at the real group when you know which it is.
   { group: "dsek.km.uthyrning", role: "UTHYRNINGSANSVARIG" },
+
+  // Revisorerna. A guess at the group, safe for the same reason as the one
+  // above.
+  { group: "dsek.revisor", role: "REVISOR" },
 ];
 
 /**
@@ -111,6 +115,9 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTMASTARE", capability: "EXPORT_UNDO" },
   { role: "VICE_SKATTMASTARE", capability: "EXPORT_UNDO" },
   { role: "SKATTFORMAN", capability: "EXPORT_UNDO" },
+  // Past the two-person rule on bokföring: the skattmästare alone. See
+  // lib/domain/review.ts.
+  { role: "SKATTMASTARE", capability: "REVIEW_OWN_BOOKING" },
 
   // Inställningar is the treasurer's alone. The chair counts as an admin for
   // expense authority and has no business in here.
@@ -179,4 +186,14 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   // Not given CONTRACT_VIEW, which is the whole point of the role existing.
   { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_VIEW" },
   { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_MANAGE" },
+
+  // Revisorerna read everything and change nothing. Every view capability, and
+  // not ATTEST_VIEW: the attest queue is a list of work, and the utlägg in it
+  // are already readable through BOOKKEEPING_VIEW.
+  { role: "REVISOR", capability: "BOOKKEEPING_VIEW" },
+  { role: "REVISOR", capability: "BUDGET_VIEW" },
+  { role: "REVISOR", capability: "STOCK_VIEW" },
+  { role: "REVISOR", capability: "CONTRACT_VIEW" },
+  // The one thing a revisor writes: their review of the year's vouchers.
+  { role: "REVISOR", capability: "AUDIT_REVIEW" },
 ];

@@ -12,9 +12,9 @@ import { cn } from "@/lib/ui/utils";
 // create button rides its own toolbar (DataTable's `action`) and an object's
 // actions ride the header of the card that describes it.
 //
-//   form    – single-object forms / focused flows   (narrow)
-//   content – settings, reading-oriented lists       (medium)
-//   wide    – data tables, dashboards, detail grids  (full, inherits layout cap)
+//   form    - single-object forms / focused flows   (narrow)
+//   content - settings, reading-oriented lists       (medium)
+//   wide    - data tables, dashboards, detail grids  (full, inherits layout cap)
 export type PageWidth = "form" | "content" | "wide";
 
 // Exported so a route's loading skeleton renders at the same width as the page

@@ -64,7 +64,7 @@ const stockholmMinute = new Intl.DateTimeFormat("sv-SE", {
 /** What an utlägg is called in a mail: its reference and title, or only the
  *  title for a draft that has not been given a number yet. */
 export const mailLabel = (e: { reference: string | null; title: string }): string =>
-  e.reference ? `${e.reference} – ${e.title}` : e.title;
+  e.reference ? `${e.reference} - ${e.title}` : e.title;
 
 /** Why the reader got this mail, and the way out of getting more of them. */
 export function frame(
@@ -160,7 +160,7 @@ function expenseBlock(expense: ExpenseFacts): Block {
   const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
   if (expense.allocations?.length) {
     const centres = [
-      ...new Set(expense.allocations.map((a) => `${a.costCenter.code} – ${a.costCenter.name}`)),
+      ...new Set(expense.allocations.map((a) => `${a.costCenter.code} - ${a.costCenter.name}`)),
     ];
     facts.push({ label: emailT("fact.costCenter"), value: centres.join(", ") });
   }

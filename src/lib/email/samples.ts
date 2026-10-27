@@ -73,7 +73,7 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
       {
         actor: "Maja Holm",
         submitter: "Ludwig Gehlsdorf",
-        costCenter: "SEX01 – Sexmästeriet",
+        costCenter: "SEX01 - Sexmästeriet",
         days: 60,
       },
       expense.comment ? { author: "Maja Holm", text: expense.comment } : undefined,
@@ -136,12 +136,12 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
     ],
     attest: [
       {
-        title: "DEK26-0043 – Kolsyra till pubben",
+        title: "DEK26-0043 - Kolsyra till pubben",
         sub: "Från Ludwig Gehlsdorf, väntat i 5 dagar",
         amount: "450,00 kr",
       },
       {
-        title: "DEK26-0047 – Dekor till sittningen",
+        title: "DEK26-0047 - Dekor till sittningen",
         sub: "Från Elsa Lindqvist, väntat i 2 dagar",
         amount: "980,00 kr",
       },

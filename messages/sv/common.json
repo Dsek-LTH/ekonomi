@@ -8,8 +8,8 @@
     "PENDING_APPROVAL": "Väntar på attest",
     "CHANGES_REQUESTED": "Behöver ändras",
     "APPROVED": "Attesterat",
-    "BOOKED": "Bokfört",
-    "EXPORTED": "Exporterat"
+    "BOOKED": "Konterat",
+    "EXPORTED": "Bokfört"
   },
   "payment": {
     "CARD": {
@@ -33,7 +33,8 @@
     "RESULTATANSVARIG": "Resultatansvarig",
     "ORDINARIE": "Medlem",
     "STOCKARE": "Stockare",
-    "UTHYRNINGSANSVARIG": "Uthyrningsansvarig"
+    "UTHYRNINGSANSVARIG": "Uthyrningsansvarig",
+    "REVISOR": "Revisor"
   },
   "table": {
     "show": "Visa",
@@ -50,7 +51,7 @@
     "clearFilters": "Rensa",
     "dateRange": "Datum",
     "perPage": "per sida",
-    "showing": "Visar {from}–{to} av {total}",
+    "showing": "Visar {from}-{to} av {total}",
     "prevPage": "Föregående sida",
     "nextPage": "Nästa sida",
     "expand": "Visa rader bakom"
@@ -83,7 +84,8 @@
     "done": "Klar"
   },
   "action": {
-    "goToProfile": "Till Min profil"
+    "goToProfile": "Till Min profil",
+    "goToSettings": "Till inställningarna"
   },
   "capability": {
     "ADMIN": "Full behörighet",
@@ -91,7 +93,7 @@
     "SETTINGS": "Inställningar",
     "SETTINGS_hint": "Nå Inställningar, den här sidan inräknad.",
     "BOOKKEEPING": "Bokföring",
-    "BOOKKEEPING_hint": "Se alla utlägg och bokföra verifikaten. Skicka tillbaka det som attesterats fel.",
+    "BOOKKEEPING_hint": "Se alla utlägg och kontera verifikaten. Skicka tillbaka det som attesterats fel.",
     "ATTEST_VIEW": "Attestvyn",
     "ATTEST_VIEW_hint": "Se kön att attestera. Vad som faktiskt går att attestera avgörs per utlägg.",
     "BUDGET_VIEW": "Budget",
@@ -108,8 +110,8 @@
     "BUDGET_CHANGE_LOCKED_hint": "Föra in avsteg och förflyttningar i en låst budget.",
     "FORTNOX_LOGIN": "Fortnox-inloggning",
     "FORTNOX_LOGIN_hint": "Bokföra i Fortnox under sin egen inloggning.",
-    "EXPORT_UNDO": "Ångra export",
-    "EXPORT_UNDO_hint": "Markera ett exporterat utlägg som inte längre exporterat.",
+    "EXPORT_UNDO": "Ångra bokföring",
+    "EXPORT_UNDO_hint": "Markera ett bokfört utlägg som inte längre bokfört.",
     "CONTRACT_VIEW": "Läsa avtal",
     "CONTRACT_MANAGE": "Hantera avtal",
     "CONTRACT_VIEW_hint": "Se avtalsarkivet och öppna dokumenten i det.",
@@ -123,6 +125,12 @@
     "RENTAL_MANAGE": "Hantera uthyrning",
     "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
     "SEND_REMINDERS": "Skicka påminnelser",
-    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan."
+    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan.",
+    "REVIEW_OWN_BOOKING": "Granska egen kontering",
+    "REVIEW_OWN_BOOKING_hint": "Bokföra ett utlägg man har konterat själv. Annars måste någon annan granska och bokföra det.",
+    "BOOKKEEPING_VIEW": "Läsa bokföringen",
+    "BOOKKEEPING_VIEW_hint": "Se allt som Bokföring ser: alla utlägg, sektionens kortköp och bokförda intäkter. Utan att kunna ändra något.",
+    "AUDIT_REVIEW": "Granska bokslutet",
+    "AUDIT_REVIEW_hint": "Granska räkenskapsårets verifikationer som revisor: godkänna dem, ställa frågor och göra anmärkningar."
   }
 }

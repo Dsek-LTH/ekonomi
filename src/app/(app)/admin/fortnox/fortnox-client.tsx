@@ -26,7 +26,11 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import { sentence } from "@/lib/ui/format";
-import type { AccountSyncResult, CostCenterSyncResult } from "@/lib/fortnox/sync";
+import type {
+  AccountSyncResult,
+  CostCenterSyncResult,
+  ProjectSyncResult,
+} from "@/lib/fortnox/sync";
 import type {
   AccountRecord,
   BookkeepingSettings,
@@ -46,6 +50,7 @@ export function FortnoxClient({
   settings,
   ledgerYears,
   costCenters,
+  projects,
 }: {
   fortnox: FortnoxStatus;
   accounts: AccountRecord[];
@@ -53,6 +58,8 @@ export function FortnoxClient({
   ledgerYears: LedgerYear[];
   /** The Fortnox-owned cost centres: how many, and when the sync last ran. */
   costCenters: { count: number; lastSyncAt: string | null };
+  /** The mirrored Fortnox projects: how many, and when the sync last ran. */
+  projects: { count: number; lastSyncAt: string | null };
 }) {
   const t = useTranslations("admin.fortnox");
   const tCostCenters = useTranslations("admin.costCenters");
@@ -65,14 +72,14 @@ export function FortnoxClient({
   const { pending, mutate } = useMutation();
 
   const [accountQuery, setAccountQuery] = useState("");
-  const [series, setSeries] = useState(fortnox.voucherSeries ?? "A");
+  const [series, setSeries] = useState(fortnox.voucherSeries ?? "");
   const [showAccounts, setShowAccounts] = useState(false);
 
   const connected = fortnox.connected;
-  const savedSeries = fortnox.voucherSeries ?? "A";
+  const savedSeries = fortnox.voucherSeries ?? "";
   const accountOptions: ComboOption[] = accounts
     .filter((a) => a.active)
-    .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}` }));
+    .map((a) => ({ value: a.number, label: `${a.number} - ${a.name}` }));
 
   const q = accountQuery.trim().toLowerCase();
   const visibleAccounts = q
@@ -114,6 +121,21 @@ export function FortnoxClient({
         data.deactivated && t("chartSummary.retired", { count: data.deactivated }),
       ),
       t("chartSynced"),
+    );
+  }
+
+  async function syncProjects() {
+    const data = await mutate<ProjectSyncResult>("/api/fortnox/projects/sync", {
+      key: "projects",
+      error: t("projectsSyncFailed"),
+    });
+    if (!data) return;
+    notify.success(
+      sentence(
+        t("projectsSummary.fetched", { count: data.upserted }),
+        data.deactivated && t("projectsSummary.retired", { count: data.deactivated }),
+      ),
+      t("projectsSynced"),
     );
   }
 
@@ -220,7 +242,7 @@ export function FortnoxClient({
                 ? t("notConfigured")
                 : connected
                   ? t("connected", {
-                      company: fortnox.companyName ? ` – ${fortnox.companyName}` : "",
+                      company: fortnox.companyName ? ` - ${fortnox.companyName}` : "",
                     })
                   : t("notConnected")
             }
@@ -265,7 +287,7 @@ export function FortnoxClient({
             <FieldGroup label={t("bankAccount")} hint={t("bankAccountHint")}>
               <Combobox
                 options={accountOptions}
-                value={settings.bankAccount}
+                value={settings.bankAccount ?? ""}
                 onChange={(v) => saveSetting({ bankAccount: v }, t("bankAccountSaved"))}
                 placeholder={tBook("accountPlaceholder")}
                 searchPlaceholder={tBook("accountSearch")}
@@ -275,7 +297,7 @@ export function FortnoxClient({
             <FieldGroup label={t("debtAccount")} hint={t("debtAccountHint")}>
               <Combobox
                 options={accountOptions}
-                value={settings.memberDebtAccount}
+                value={settings.memberDebtAccount ?? ""}
                 onChange={(v) => saveSetting({ memberDebtAccount: v }, t("debtAccountSaved"))}
                 placeholder={tBook("accountPlaceholder")}
                 searchPlaceholder={tBook("accountSearch")}
@@ -369,6 +391,20 @@ export function FortnoxClient({
             }
           >
             {syncButton("costCenters", tCostCenters("sync"), syncCostCenters)}
+          </SyncRow>
+
+          <SyncRow
+            label={t("projects")}
+            meta={
+              projects.lastSyncAt
+                ? t("projectsSubtitle", {
+                    count: projects.count,
+                    time: dateTime(projects.lastSyncAt),
+                  })
+                : t("projectsSubtitleNever")
+            }
+          >
+            {syncButton("projects", t("syncProjects"), syncProjects)}
           </SyncRow>
         </SyncGroup>
 

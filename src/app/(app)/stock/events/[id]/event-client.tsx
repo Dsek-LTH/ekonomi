@@ -670,8 +670,8 @@ export default function EventClient({
    * A can is one row. A spirit is its name and then its ladder, one row per
    * rung, because bottles are not one quantity: five sealed and one at 40 %
    * are two different things, and a ladder of rows is how a sheet has always
-   * said that. What shares a row is the rung, not a pairing; `Hel – Ut 1` and
-   * `Hel – In 0` are independent facts that happen to both be about unopened
+   * said that. What shares a row is the rung, not a pairing; `Hel - Ut 1` and
+   * `Hel - In 0` are independent facts that happen to both be about unopened
    * bottles, since a bottle leaves sealed and comes home at whatever it comes
    * home at.
    *
@@ -805,8 +805,8 @@ export default function EventClient({
         onChange={(e) => type(key, e.target.value)}
         onBlur={() => setFocusKey((k) => (k === key ? null : k))}
         onKeyDown={(e) => onCellKey(e, key)}
-        aria-label={`${product.name} – ${t(`kind.${kind}`)}${
-          product.kind === "VOLUME" ? ` – ${rungName(level)}` : ""
+        aria-label={`${product.name} - ${t(`kind.${kind}`)}${
+          product.kind === "VOLUME" ? ` - ${rungName(level)}` : ""
         }`}
       />
     );
@@ -1078,7 +1078,7 @@ export default function EventClient({
                         <tr key={level} className="divide-x divide-border">
                           {/* The rung as the bottle it stands for, and how
                               many of those the night found on the shelf. It
-                              was "↳ 80 % – 3", which left the 3 to be
+                              was "↳ 80 % - 3", which left the 3 to be
                               guessed at. */}
                           <td className="py-1 pl-4 pr-2 align-middle">
                             <span className="flex items-center gap-1.5 text-xs text-muted">

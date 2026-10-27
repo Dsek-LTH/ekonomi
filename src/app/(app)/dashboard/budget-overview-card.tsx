@@ -75,7 +75,7 @@ export function BudgetOverviewCard({
 
   const subtitle = overview.budget
     ? t("subtitle", {
-        budget: `${overview.year} – ${overview.budget.name}`,
+        budget: `${overview.year} - ${overview.budget.name}`,
         synced: overview.lastSyncAt ? dateTime(overview.lastSyncAt) : t("neverSynced"),
       })
     : undefined;
@@ -200,7 +200,7 @@ function CostCenterLabel({ cc }: { cc: OverviewCostCenter }) {
   return (
     <span className="min-w-0 break-words">
       <span className="font-medium tabular-nums">{cc.code}</span>
-      {cc.name && <span className="text-muted"> – {cc.name}</span>}
+      {cc.name && <span className="text-muted"> - {cc.name}</span>}
     </span>
   );
 }

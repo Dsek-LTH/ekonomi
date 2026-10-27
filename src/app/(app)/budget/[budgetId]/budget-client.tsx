@@ -574,7 +574,7 @@ export default function BudgetClient({
               {/* Searchable, as in the sheet header: a section has scores of
                   cost centres and the one you want is found by typing its code. */}
               <Combobox
-                options={availableCc.map((c) => ({ value: c.id, label: `${c.code} – ${c.name}`, short: c.code }))}
+                options={availableCc.map((c) => ({ value: c.id, label: `${c.code} - ${c.name}`, short: c.code }))}
                 value={addCcId}
                 onChange={setAddCcId}
                 disabled={availableCc.length === 0}

@@ -10,7 +10,7 @@
     "products": "{count, plural, =1 {1 product} other {# products}}"
   },
   "holding": {
-    "volume": "{sealed} sealed – {open} open",
+    "volume": "{sealed} sealed - {open} open",
     "unit": "{units} units"
   },
   "flag": {
@@ -338,7 +338,7 @@
       "save": "Save",
       "discard": "Clear",
       "unsaved": "{count, plural, =1 {1 cell waiting to be saved} other {# cells waiting to be saved}}",
-      "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} – {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
+      "unsavedWithFaults": "{count, plural, =1 {1 cell waiting} other {# cells waiting}} - {faults, plural, =1 {1 cannot be booked} other {# cannot be booked}}",
       "nothingToSave": "Nothing to save yet.",
       "discardTitle": "Clear what has been filled in?",
       "discardMessage": "{count, plural, =1 {1 changed cell} other {# changed cells}} will be removed. Nothing has been booked, so there is no getting it back.",
@@ -519,5 +519,7 @@
     "viewLabel": "Show",
     "movements": "Movements",
     "stats": "Statistics"
-  }
+  },
+  "expiryUnset": "No best-before notice period is chosen, so no deliveries are being watched.",
+  "expiryUnsetAction": "Choose it under Settings → Stock."
 }

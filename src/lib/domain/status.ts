@@ -257,17 +257,18 @@ export const EXPENSE_STATUSES: readonly ExpenseStatus[] = [
 
 // Exported so a second family of states can be drawn in the same language;
 // see CONTRACT_STATUS_TONE in lib/contract/status.ts.
-export type Tone = "neutral" | "purple" | "accent" | "success" | "warning" | "danger";
+export type Tone = "neutral" | "purple" | "blue" | "accent" | "success" | "warning" | "danger";
 
 // How each status reads visually. The label itself is a translation,
 // `common.status.<STATUS>` in messages/*.json, so this stays language-neutral.
 //
-// Six statuses, five meanings, one colour each:
+// Six statuses, six meanings, one colour each:
 //   neutral  nobody is waiting on anything yet
 //   purple   waiting on the authority chain: an attestant has it
 //   danger   it came back; something is wrong
-//   success  settled
+//   blue     attested, waiting on the treasury
 //   accent   the treasury has taken it over
+//   success  settled, bokförd in Fortnox
 //
 // PENDING_APPROVAL is purple rather than the section's pink because pink is the
 // primary action everywhere else, and the most common status on the busiest
@@ -276,7 +277,7 @@ export const STATUS_TONE: Record<ExpenseStatus, Tone> = {
   DRAFT: "neutral",
   PENDING_APPROVAL: "purple",
   CHANGES_REQUESTED: "danger",
-  APPROVED: "success",
+  APPROVED: "blue",
   BOOKED: "accent",
   EXPORTED: "success",
 };
@@ -287,6 +288,7 @@ export const STATUS_TONE: Record<ExpenseStatus, Tone> = {
 export const TONE_CLASSES: Record<Tone, string> = {
   neutral: "bg-surface text-muted",
   purple: "bg-purple-soft text-purple",
+  blue: "bg-blue-soft text-blue",
   accent: "bg-accent-soft text-accent",
   success: "bg-success-soft text-success",
   warning: "bg-warning-soft text-warning",

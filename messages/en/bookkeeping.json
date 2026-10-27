@@ -7,7 +7,6 @@
     "exported": "Exported"
   },
   "book": "Book",
-  "export": "Export",
   "connectFirst": "Connect Fortnox first",
   "loginFirst": "Log in to Fortnox to export",
   "exportFailed": "{id}: the export failed",
@@ -19,7 +18,7 @@
   "exportUncertain": "The export {name} started got no clear answer from Fortnox. It has to be checked in Fortnox before the expense can be exported again.",
   "resolveExport": "Check",
   "resolve": {
-    "title": "Unclear export – {id}",
+    "title": "Unclear export - {id}",
     "explain": "The export {name} started got no clear answer from Fortnox, so the voucher may exist there. Look for it in Fortnox before you choose.",
     "explainUnknown": "The export got no clear answer from Fortnox, so the voucher may exist there. Look for it in Fortnox before you choose.",
     "exists": "The voucher exists",
@@ -38,5 +37,29 @@
     "failed": "Could not resolve the export",
     "markedExported": "The expense is marked as exported.",
     "released": "The lock is released. The expense can be exported again."
+  },
+  "review": {
+    "title": "Review and post",
+    "position": "{position} of {total} - {label}",
+    "open": "Review",
+    "start": "Review ({count})",
+    "emptyTitle": "Nothing to review",
+    "emptyDescription": "Every booked expense has been posted.",
+    "emptyWaitingOnOthers": "{count, plural, =1 {One expense you booked is} other {# expenses you booked are}} waiting for someone else to review.",
+    "toList": "To bookkeeping",
+    "ownBooking": "You booked this expense yourself, so someone else needs to review and post it.",
+    "bokfor": "Post",
+    "bokforNext": "Post and next",
+    "edit": "Change booking",
+    "skip": "Skip",
+    "warningsTitle": "Worth a look before you post",
+    "warning": {
+      "outsideFinancialYear": "The voucher date is outside the financial years fetched from Fortnox.",
+      "prefixOnlyText": "The voucher text says nothing beyond who paid.",
+      "inactiveAccount": "An account on the voucher is inactive in Fortnox.",
+      "inactiveCostCenter": "A cost centre on the voucher is inactive.",
+      "inactiveProject": "A project on the voucher is completed in Fortnox."
+    },
+    "shortcuts": "Enter posts, E changes the booking and → skips."
   }
 }

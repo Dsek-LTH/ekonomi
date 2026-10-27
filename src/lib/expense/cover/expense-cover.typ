@@ -79,7 +79,7 @@
 
 // An empty value is said, not left blank: a gap invites "did it not fit?", and
 // on a document that substantiates a voucher that is the wrong question.
-#let orDash(v) = if v == none or v == "" { text(fill: muted)[–] } else { v }
+#let orDash(v) = if v == none or v == "" { text(fill: muted)[-] } else { v }
 
 // One column heading, the same pairing as `field`, laid sideways.
 #let th(label) = text(size: label-size, fill: ink, tracking: 0.6pt, weight: "bold")[
@@ -252,6 +252,22 @@
   #text(size: label-size, fill: muted, tracking: 0.6pt, weight: "semibold")[#upper("Summa")]
   #h(10pt)
   #figures(text(size: 16pt, weight: "bold")[#data.total])
+]
+
+// ── Kontering ─────────────────────────────────────────────────────────
+//
+// Who konterade it. Fortnox names the voucher after whoever sent it, the
+// bokförare, so this page is where the kontering's author is on record. Not
+// on an utlägg previewed before it is konterat.
+#if data.booking != none [
+  #v(16pt)
+  #grid(
+    columns: (1fr, 1fr, 2fr),
+    column-gutter: 16pt,
+    field("Konterad av", data.booking.by),
+    field("Konterat", data.booking.at),
+    if data.booking.amendedBy != none { field("Ändrad av", data.booking.amendedBy) },
+  )
 ]
 
 // ── Underlag ──────────────────────────────────────────────────────────

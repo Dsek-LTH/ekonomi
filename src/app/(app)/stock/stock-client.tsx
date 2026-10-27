@@ -17,7 +17,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -49,6 +51,7 @@ import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
 export default function StockClient({
   levels,
   checks,
+  expiryUnset,
   asOf,
   today,
   canManage,
@@ -68,6 +71,8 @@ export default function StockClient({
   /** Today, in Stockholm, decided by the server. See the page. */
   today: string;
   canManage: boolean;
+  /** No notice period has been chosen, so no checks are raised at all. */
+  expiryUnset: boolean;
 }) {
   const t = useTranslations("stock");
   const router = useRouter();
@@ -229,7 +234,7 @@ export default function StockClient({
       mobile: "meta",
       cell: (p) => {
         const ml = unitVolume(p);
-        return ml == null ? <span className="text-muted">–</span> : t("ml", { ml });
+        return ml == null ? <span className="text-muted">-</span> : t("ml", { ml });
       },
     },
     {
@@ -249,7 +254,7 @@ export default function StockClient({
       cell: (p) => {
         const cl = alcoholPerKrona(p);
         return cl == null ? (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ) : (
           t("clPerKrona", { cl: formatClPerKrona(cl) })
         );
@@ -284,7 +289,7 @@ export default function StockClient({
       searchable: true,
       mobile: "hide",
       cell: (p) =>
-        p.tags.length === 0 ? <span className="text-muted">–</span> : <TagChips tags={p.tags} />,
+        p.tags.length === 0 ? <span className="text-muted">-</span> : <TagChips tags={p.tags} />,
     },
     {
       key: "onHand",
@@ -308,7 +313,7 @@ export default function StockClient({
       mobile: "hide",
       cell: (p) =>
         p.onHand.totalMl == null ? (
-          <span className="text-muted">–</span>
+          <span className="text-muted">-</span>
         ) : (
           t("litres", { litres: formatLitres(p.onHand.totalMl) })
         ),
@@ -324,7 +329,7 @@ export default function StockClient({
       // somebody opened this for.
       mobile: "trailing",
       cell: (p) =>
-        p.onHand.valueOre > 0 ? formatOreKr(p.onHand.valueOre) : <span className="text-muted">–</span>,
+        p.onHand.valueOre > 0 ? formatOreKr(p.onHand.valueOre) : <span className="text-muted">-</span>,
     },
     {
       key: "flags",
@@ -405,6 +410,16 @@ export default function StockClient({
         </div>
       }
     >
+      {expiryUnset && (
+        <Notice>
+          {t("expiryUnset")}{" "}
+          {canManage && (
+            <Link href="/admin/stock" className="font-medium underline">
+              {t("expiryUnsetAction")}
+            </Link>
+          )}
+        </Notice>
+      )}
       <Card>
         <ClientDataTable
           columns={columns}

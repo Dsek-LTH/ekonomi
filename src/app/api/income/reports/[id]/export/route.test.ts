@@ -147,6 +147,12 @@ describe("POST /api/income/reports/[id]/export", () => {
     expect(h.calls).toEqual([]);
   });
 
+  it("refuses a revisor, who may read the books and not work them", async () => {
+    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW", "CONTRACT_VIEW"];
+    expect((await exportIt()).status).toBe(403);
+    expect(h.calls).toEqual([]);
+  });
+
   it("refuses a report that has not been booked", async () => {
     for (const status of ["DRAFT", "EXPORTED"]) {
       h.status = status;

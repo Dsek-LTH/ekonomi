@@ -33,7 +33,8 @@
     "RESULTATANSVARIG": "Result unit owner",
     "ORDINARIE": "Member",
     "STOCKARE": "Stockare",
-    "UTHYRNINGSANSVARIG": "Rental manager"
+    "UTHYRNINGSANSVARIG": "Rental manager",
+    "REVISOR": "Auditor"
   },
   "table": {
     "show": "Show",
@@ -50,7 +51,7 @@
     "clearFilters": "Clear",
     "dateRange": "Date",
     "perPage": "per page",
-    "showing": "Showing {from}–{to} of {total}",
+    "showing": "Showing {from}-{to} of {total}",
     "prevPage": "Previous page",
     "nextPage": "Next page",
     "expand": "Show the rows behind"
@@ -83,7 +84,8 @@
     "done": "Done"
   },
   "action": {
-    "goToProfile": "Go to My profile"
+    "goToProfile": "Go to My profile",
+    "goToSettings": "To settings"
   },
   "capability": {
     "ADMIN": "Full authority",
@@ -123,6 +125,12 @@
     "RENTAL_MANAGE": "Manage rentals",
     "RENTAL_MANAGE_hint": "Draw rental contracts and keep the rental item catalogue.",
     "SEND_REMINDERS": "Send reminders",
-    "SEND_REMINDERS_hint": "Remind whoever an expense is waiting on, its approvers or the person who submitted it, by email. From the expense, or several at once from the list."
+    "SEND_REMINDERS_hint": "Remind whoever an expense is waiting on, its approvers or the person who submitted it, by email. From the expense, or several at once from the list.",
+    "REVIEW_OWN_BOOKING": "Review own booking",
+    "REVIEW_OWN_BOOKING_hint": "Post an expense you booked yourself. Otherwise someone else has to review and post it.",
+    "BOOKKEEPING_VIEW": "Read bookkeeping",
+    "BOOKKEEPING_VIEW_hint": "See everything Bookkeeping sees: every expense, the section's card purchases and booked income. Without being able to change anything.",
+    "AUDIT_REVIEW": "Audit the books",
+    "AUDIT_REVIEW_hint": "Review the financial year's vouchers as an auditor: pass them, ask questions and make remarks."
   }
 }

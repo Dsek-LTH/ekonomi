@@ -510,7 +510,7 @@ function CostCenterRanking({
     return { lo, hi, span: hi - lo || 1 };
   }, [costCenters]);
 
-  /** Where a value sits across the track, 0–100. */
+  /** Where a value sits across the track, 0-100. */
   const pos = (v: number) => ((v - extent.lo) / extent.span) * 100;
   const zero = pos(0);
 
@@ -631,7 +631,7 @@ function CostCenterStack({
     return [
       ...head.map((c, i) => ({
         key: c.code ?? "",
-        label: c.code ? `${c.code} – ${c.name ?? ""}` : noCostCenterLabel,
+        label: c.code ? `${c.code} - ${c.name ?? ""}` : noCostCenterLabel,
         color: c.code ? seriesColor(i) : CHART_NEUTRAL,
         codes: [c.code ?? ""],
       })),

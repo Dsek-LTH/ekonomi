@@ -1,4 +1,4 @@
-import { canAccessBookkeeping, hasAttestRole } from "./permissions";
+import { canBookkeep, hasAttestRole } from "./permissions";
 import type { Capability, Expense, Role } from "./types";
 
 // Exactly what deciding a queue needs: who is asking, and what they may do.
@@ -74,7 +74,7 @@ export function queueActionFor(
     return "ATTEST";
   }
 
-  if (canAccessBookkeeping(user.capabilities)) {
+  if (canBookkeep(user.capabilities)) {
     if (expense.status === "APPROVED") return "BOOK";
     if (expense.status === "BOOKED") return "EXPORT";
   }

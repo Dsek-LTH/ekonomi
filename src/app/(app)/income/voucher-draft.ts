@@ -76,8 +76,10 @@ export const documentUrl = (report: IncomeReportRow) =>
   `/api/income/reports/${report.id}/document?v=${encodeURIComponent(report.updatedAt)}`;
 
 /** Where the money landed, which is a property of how it was paid. */
+// Empty when the setting is not chosen yet: the row shows no account, the
+// voucher is blocked on it, and the booking route names the missing setting.
 const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
-  report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount;
+  (report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount) ?? "";
 
 /**
  * Which cost centre this day's rows start on.
@@ -115,7 +117,7 @@ export function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow
     // the locked row, is credited.
     return [
       makeVoucherRow({
-        account: settings.zettleFeeAccount,
+        account: settings.zettleFeeAccount ?? "",
         costCenterCode,
         debit: report.total.toFixed(2),
       }),

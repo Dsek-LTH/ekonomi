@@ -117,6 +117,13 @@
     --color-purple: #8b5fc7;
     --color-purple-soft: #f6f2fc;
 
+    /* Blue, for an utlägg that is attesterat and waiting on the treasury. It
+       used to share the green with bokförd, so the two ends of the last step
+       looked the same. A sky blue rather than the card chip's royal one, and
+       5.4:1 on its own tint. */
+    --color-blue: #0369a1;
+    --color-blue-soft: #ecf5fb;
+
     /* Semantic */
     --color-success: #248a3d;
     --color-success-soft: #f1f9f2;
@@ -341,6 +348,8 @@
   /* Purple, secondary meaning only */
   --color-purple: #a98bd8;
   --color-purple-soft: #302b38;
+  --color-blue: #5ab4ef;
+  --color-blue-soft: #1c2d3b;
 
 
   /* Semantic */
@@ -456,6 +465,8 @@
     /* Purple, secondary meaning only */
     --color-purple: #a98bd8;
     --color-purple-soft: #302b38;
+    --color-blue: #5ab4ef;
+    --color-blue-soft: #1c2d3b;
 
 
     /* Semantic */
@@ -760,7 +771,7 @@ summary {
   /* One exception, and it is the whole reason the rule above can be this blunt:
      a spinner that doesn't turn is not a quieter spinner, it is a ring with no
      meaning, and the app would be telling someone nothing is happening while a
-     request is in flight. So it keeps turning, slower, and it is a 14–28px
+     request is in flight. So it keeps turning, slower, and it is a 14-28px
      mark, not travel across the screen.
 
      The skeleton sweep gets no such exemption: a static block still says
@@ -885,7 +896,7 @@ summary {
   --color-border: var(--color-grid-line); /* outer frame + row-group separators */
 }
 /* One quiet hairline colour on every rule (keeps each utility's border WIDTH but
-   defeats the soft /40–/60 opacity tints used elsewhere). */
+   defeats the soft /40-/60 opacity tints used elsewhere). */
 .budget-grid :is(th, td, tr, tbody) {
   border-color: var(--color-grid-line);
 }
@@ -1084,6 +1095,8 @@ summary {
     --color-accent-soft: #fdf1f5;
     --color-purple: #8c4ccb;
     --color-purple-soft: #f6f2fc;
+    --color-blue: #035a8a;
+    --color-blue-soft: #ecf5fb;
     --color-success: #1d7b4f;
     --color-success-soft: #f1f9f2;
     --color-danger: #cb3227;

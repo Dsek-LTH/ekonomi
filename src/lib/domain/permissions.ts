@@ -31,14 +31,27 @@ const has = (caps: readonly Capability[], cap: Capability) => caps.includes(cap)
 /** Full authority over other people's utlägg. Woven into the attest rule. */
 export const isAdmin = (caps: readonly Capability[]) => has(caps, "ADMIN");
 
-/** May reach the bookkeeping system (bookkeeping page, bank & matching). */
-export const canAccessBookkeeping = (caps: readonly Capability[]) => has(caps, "BOOKKEEPING");
+/** May work the bookkeeping system: kontera and bokföra vouchers, import and
+ *  place the card feed, book income, sync the ledger. */
+export const canBookkeep = (caps: readonly Capability[]) => has(caps, "BOOKKEEPING");
 
-/** May create/amend vouchers. */
-export const canBookkeep = canAccessBookkeeping;
+/** May see what bookkeeping sees (every utlägg, the section's card feed, the
+ *  bookkeeping list and booked income) without doing any of it. What a revisor
+ *  holds. Implied by BOOKKEEPING, the way reading rentals is implied by reading
+ *  the archive.
+ *
+ *  This and canBookkeep used to be one helper. A call site asking "may they
+ *  see it" and one asking "may they change it" now have to say which. */
+export const canViewBookkeeping = (caps: readonly Capability[]) =>
+  has(caps, "BOOKKEEPING_VIEW") || canBookkeep(caps);
+
+/** May review a year's vouchers as a revisor. The treasury's own pass over the
+ *  same vouchers is canBookkeep's, and the two are kept apart: a review only
+ *  means something if it is not the reviewed reviewing themselves. */
+export const canAuditReview = (caps: readonly Capability[]) => has(caps, "AUDIT_REVIEW");
 
 /** May send a wrongly-approved expense back for changes. */
-export const canReturnApproved = canAccessBookkeeping;
+export const canReturnApproved = canBookkeep;
 
 /** Books in Fortnox under their own login. Drives the Fortnox status on
  *  /profile. */
@@ -48,6 +61,11 @@ export const canLogInToFortnox = (caps: readonly Capability[]) => has(caps, "FOR
  *  unwinds OUR record. The voucher stays in Fortnox, so it belongs to the
  *  people who can go clean that up. */
 export const canUnexport = (caps: readonly Capability[]) => has(caps, "EXPORT_UNDO");
+
+/** May bokföra an utlägg they konterade themselves, past the two-person rule.
+ *  Only matters while that rule is on. See lib/domain/review.ts. */
+export const canReviewOwnBooking = (caps: readonly Capability[]) =>
+  has(caps, "REVIEW_OWN_BOOKING");
 
 /** May reach Inställningar, and therefore edit authority itself, which is why
  *  lib/server/capabilities.ts refuses to let the last holder go. */
@@ -207,6 +225,7 @@ export const ROLES: readonly Role[] = [
   "RESULTATANSVARIG",
   "STOCKARE",
   "UTHYRNINGSANSVARIG",
+  "REVISOR",
   "ORDINARIE",
 ];
 
@@ -245,6 +264,9 @@ const CAPABILITY_ORDER = {
   RENTAL_MANAGE: 16,
   FIRMATECKNARE: 17,
   SEND_REMINDERS: 18,
+  REVIEW_OWN_BOOKING: 19,
+  BOOKKEEPING_VIEW: 20,
+  AUDIT_REVIEW: 21,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

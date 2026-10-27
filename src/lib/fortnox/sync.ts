@@ -11,9 +11,11 @@ import {
   listAccounts,
   listCostCenters,
   listFinancialYears,
+  listProjects,
   type FortnoxFinancialYear,
 } from "@/lib/fortnox";
 import { parseSie } from "@/lib/fortnox/sie";
+import { voucherFingerprint } from "@/lib/closing/fingerprint";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 const toOre = (sek: number) => Math.round(sek * 100);
@@ -209,6 +211,41 @@ export async function syncAccounts(
   return { upserted: accounts.length, deactivated };
 }
 
+export interface ProjectSyncResult {
+  upserted: number;
+  deactivated: number;
+}
+
+// Mirror the Fortnox project list, the way the chart of accounts is mirrored:
+// upserted, never deleted, and whatever Fortnox no longer lists is marked
+// inactive. A booked line may name a project that has since been closed.
+export async function syncProjects(token: string): Promise<ProjectSyncResult> {
+  const projects = await listProjects(token);
+  const now = new Date();
+
+  for (const chunk of chunks(lastByKey(projects, (p) => p.number), UPSERT_CHUNK)) {
+    const { sql, params } = valuesClause(
+      chunk.map((p) => [p.number, p.description, p.active, now]),
+    );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Project" ("number","name","active","updatedAt")
+       VALUES ${sql}
+       ON CONFLICT ("number") DO UPDATE SET
+         "name" = EXCLUDED."name",
+         "active" = EXCLUDED."active",
+         "updatedAt" = EXCLUDED."updatedAt"`,
+      ...params,
+    );
+  }
+
+  const { count: deactivated } = await prisma.project.updateMany({
+    where: { number: { notIn: projects.map((p) => p.number) }, active: true },
+    data: { active: false },
+  });
+
+  return { upserted: projects.length, deactivated };
+}
+
 interface YearSyncResult {
   financialYear: number;
   vouchers: number;
@@ -244,16 +281,9 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
   for (const v of parsed.vouchers) {
     const voucherId = randomUUID();
     const date = new Date(`${v.date}T00:00:00Z`);
-    voucherRecords.push({
-      id: voucherId,
-      financialYear: fyId,
-      series: v.series,
-      number: v.number,
-      date,
-      description: v.description,
-    });
+    const rows: Prisma.LedgerRowCreateManyInput[] = [];
     for (const tr of v.transactions) {
-      rowRecords.push({
+      rows.push({
         id: randomUUID(),
         voucherId,
         // Copied down from the voucher so a report can be answered without
@@ -271,6 +301,27 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
         credit: tr.amount < 0 ? toOre(-tr.amount) : 0,
       });
     }
+    voucherRecords.push({
+      id: voucherId,
+      financialYear: fyId,
+      series: v.series,
+      number: v.number,
+      date,
+      description: v.description,
+      // What a bokslut review is a review of. See lib/closing/fingerprint.ts.
+      contentHash: voucherFingerprint({
+        date: v.date,
+        description: v.description,
+        rows: rows.map((r) => ({
+          account: r.account,
+          costCenterCode: r.costCenterCode ?? null,
+          text: r.text ?? null,
+          debit: r.debit,
+          credit: r.credit,
+        })),
+      }),
+    });
+    rowRecords.push(...rows);
   }
 
   await prisma.$transaction(
@@ -325,6 +376,12 @@ export async function syncLedger(opts: {
     costCenters = await syncCostCenters(token);
   } catch {
     costCenters = undefined;
+  }
+  // The same for projects, which need the `project` scope.
+  try {
+    await syncProjects(token);
+  } catch {
+    // Best effort, as above.
   }
 
   let targets: FortnoxFinancialYear[];

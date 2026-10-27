@@ -360,7 +360,7 @@ export default function StocktakeClient({
                           inputMode="numeric"
                           value={draft.sealed[p.id] ?? ""}
                           onChange={(e) => typeSealed(p.id, e.target.value)}
-                          placeholder="–"
+                          placeholder="-"
                           aria-label={t("stocktakeSheet.countFor", { name: p.name })}
                           className={cn(cell, isCounted && "bg-warning-soft/40 font-medium")}
                         />

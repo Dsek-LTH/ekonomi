@@ -7,7 +7,7 @@ import { deliverSoon, notify } from "@/lib/server/notify";
 import { appUrl, emailT, frame, transactionsBlock } from "@/lib/email/content";
 import type { TxClient } from "@/lib/server/tx";
 import { prisma } from "@/lib/server/db";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { parseBankCsv } from "@/lib/domain/bank-csv";
 import { fail, gate } from "@/lib/api/guard";
 
@@ -64,7 +64,7 @@ async function notifyCardHolders(
 }
 
 export async function POST(req: Request) {
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const buf = Buffer.from(await req.arrayBuffer());

@@ -1,7 +1,11 @@
 // The write side of accounting: vouchers this app produces, and the
 // Fortnox connection they are exported through.
 
-// App-wide bookkeeping configuration. A single row (id "singleton"): these are
+// App-wide bookkeeping configuration. A single row (id "singleton"). Every
+// column is a decision somebody has to make, so none has a default: null is
+// "not chosen yet", and whatever needs the value refuses until it is. No row
+// at all means nothing has been chosen. See lib/server/bookkeeping-settings.ts.
+// These are
 // the accounts the booking view pre-fills, which used to be the ACCOUNT.BANK /
 // ACCOUNT.MEMBER_DEBT constants in lib/accounts.ts. Kept apart from
 // FortnoxConnection so that disconnecting Fortnox doesn't discard them.
@@ -9,9 +13,9 @@ model BookkeepingSettings {
   id String @id @default("singleton")
 
   // Debited when a card purchase is booked.
-  bankAccount       String @default("1930")
+  bankAccount       String?
   // Credited when a member is owed a reimbursement.
-  memberDebtAccount String @default("2890")
+  memberDebtAccount String?
 
   // ── Income (intäkter) ──
   // The other side of the same idea: where money *arrives*. An income report is
@@ -19,11 +23,11 @@ model BookkeepingSettings {
   // debiting the account the money actually landed in, which depends on how it
   // was paid. These are the app's own settings, not intakt's. The service
   // returns what was sold and never decides which account it clears through.
-  zettleClearingAccount String      @default("1930")
-  swishClearingAccount  String      @default("1931")
+  zettleClearingAccount String?
+  swishClearingAccount  String?
   // Zettle's own transaction fees are a cost, not income: debited here and
   // credited against the Zettle clearing account above.
-  zettleFeeAccount      String      @default("6570")
+  zettleFeeAccount      String?
   // Cost centre the fee vouchers carry. Fees are not attributable to a
   // committee the way sales are. They belong to whoever runs the terminal.
   zettleFeeCostCenter   CostCenter? @relation("ZettleFeeCostCenter", fields: [zettleFeeCostCenterId], references: [id], onDelete: SetNull)
@@ -97,7 +101,9 @@ model FortnoxConnection {
   expiresAt     DateTime // when the access token expires
   scopes        String // space-delimited granted scopes
   tokenType     String   @default("Bearer")
-  voucherSeries String   @default("A") // default verifikationsserie for exports
+  // The verifikationsserie exports land in. Null until somebody chooses one,
+  // and nothing is exported until then.
+  voucherSeries String?
   companyName   String? // from /3/companyinformation, for display
   orgNumber     String? // organisationsnummer, personal logins are checked against it
 
@@ -154,8 +160,8 @@ model FortnoxFinancialYear {
 }
 
 // ── One posting row (konteringsrad) ──────────────────────────────
-// One posting row (konteringsrad): an account, an optional cost center, and a
-// debit or credit amount (öre). A row normally has one of debit/credit set.
+// One posting row (konteringsrad): an account, an optional cost center and
+// project, and a debit or credit amount (öre). A row normally has one of debit/credit set.
 model VerificationLine {
   id             String       @id @default(cuid())
   verification   Verification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
@@ -167,6 +173,10 @@ model VerificationLine {
 
   costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   costCenterId String?
+
+  // Fortnox project number, or null. A plain number like `account`, not a
+  // relation: see Project.
+  project String?
 
   debit     Int @default(0) // öre
   credit    Int @default(0) // öre

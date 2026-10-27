@@ -11,12 +11,12 @@
   "save": "Spara",
   "saved": "Profil sparad.",
   "saveFailed": "Kunde inte spara profilen",
-  "fortnoxSubtitle": "Din personliga inloggning. Verifikationer du exporterar bokförs i ditt namn.",
+  "fortnoxSubtitle": "Din personliga inloggning. Verifikationer du bokför hamnar i Fortnox i ditt namn.",
   "signedInAs": "Inloggad som {name}",
   "signedIn": "Inloggad",
   "notSignedIn": "Inte inloggad",
   "validUntil": "Gäller till {time}",
-  "fortnoxRequired": "Krävs för att exportera verifikationer till Fortnox.",
+  "fortnoxRequired": "Krävs för att bokföra verifikationer i Fortnox.",
   "signInFortnox": "Logga in mot Fortnox",
   "signInAgain": "Logga in igen",
   "signOutFortnox": "Logga ut från Fortnox",
@@ -39,8 +39,8 @@
       "EXPENSE_DEADLINE_WAIVED": "Dispens beviljad",
       "EXPENSE_EXPORTED": "Ditt utlägg är klart",
       "EXPENSE_RECALLED": "Utlägg tillbakadraget från attest",
-      "EXPENSE_READY_TO_BOOK": "Utlägg att bokföra",
-      "EXPENSE_EXPORT_REVERTED": "Export ångrad",
+      "EXPENSE_READY_TO_BOOK": "Utlägg att kontera",
+      "EXPENSE_EXPORT_REVERTED": "Bokföring ångrad",
       "WEEKLY_DIGEST": "Veckosammanfattning",
       "EXPENSE_REMINDER": "Påminnelse"
     },
@@ -55,8 +55,8 @@
       "EXPENSE_DEADLINE_WAIVED": "När ditt sena utlägg får dispens från redovisningsfristen.",
       "EXPENSE_EXPORTED": "När ditt utlägg är bokfört och skickat till Fortnox.",
       "EXPENSE_RECALLED": "När någon drar tillbaka ett utlägg som väntade på din attest.",
-      "EXPENSE_READY_TO_BOOK": "När ett utlägg är attesterat och väntar på bokföring.",
-      "EXPENSE_EXPORT_REVERTED": "När någon markerar ett utlägg som ej exporterat."
+      "EXPENSE_READY_TO_BOOK": "När ett utlägg är attesterat och väntar på kontering.",
+      "EXPENSE_EXPORT_REVERTED": "När någon markerar ett utlägg som ej bokfört."
     }
   }
 }

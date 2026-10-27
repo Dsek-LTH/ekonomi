@@ -26,17 +26,19 @@ const data: ExpenseCoverData = {
   // In time, so there is no dispens to state. The one that is takes its own
   // test below.
   waiver: null,
+  // Konterad, and amended by somebody else since, so the whole line is drawn.
+  booking: { by: "Anna Andersson", at: "2026-04-03", amendedBy: "Bo Berg" },
   total: "1 069,00 kr",
   allocations: [
     {
-      costCenter: "SEKT05 – Sexmästeriet",
+      costCenter: "SEKT05 - Sexmästeriet",
       amount: "69,00 kr",
       comment: null,
       approvedBy: 'Ludwig "Alphan" Gehlsdorf',
       approvedAt: "2026-04-02",
     },
     {
-      costCenter: "SEKT12 – Näringslivsutskottet",
+      costCenter: "SEKT12 - Näringslivsutskottet",
       amount: "1 000,00 kr",
       comment: "Halva kostnaden delas med NLU enligt överenskommelse i styrelsen",
       approvedBy: null,
@@ -59,12 +61,13 @@ describe("renderCover", () => {
     // the shape most likely to blow up a template that assumed otherwise.
     const bytes = await renderCover({
       ...data,
-      reference: "–",
+      reference: "-",
       purchaseDate: null,
+      booking: null,
       submitter: { name: "Anon", studentId: null },
       allocations: [
         {
-          costCenter: "SEKT05 – Sexmästeriet",
+          costCenter: "SEKT05 - Sexmästeriet",
           amount: "69,00 kr",
           comment: null,
           approvedBy: null,
@@ -136,11 +139,11 @@ describe("renderCover", () => {
     const bytes = await renderCover({
       ...data,
       journey: {
-        route: "–",
+        route: "-",
         odometerStart: "12\u00a0300,0 km",
-        odometerEnd: "–",
-        distance: "–",
-        rate: "–",
+        odometerEnd: "-",
+        distance: "-",
+        rate: "-",
       },
     });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
@@ -150,7 +153,7 @@ describe("renderCover", () => {
     // The bounded-table argument only holds for realistic utlägg. A section
     // that splits one across forty cost centres should still get a document.
     const many = Array.from({ length: 40 }, (_, i) => ({
-      costCenter: `SEKT${String(i).padStart(2, "0")} – Verksamhet ${i}`,
+      costCenter: `SEKT${String(i).padStart(2, "0")} - Verksamhet ${i}`,
       amount: "1 234,00 kr",
       comment: "En kommentar som är tillräckligt lång för att brytas över rader",
       approvedBy: "Ludwig Gehlsdorf",

@@ -35,7 +35,7 @@ export async function priorYearComparison(
 
   // The same day, as many months into the prior year as this one is into its
   // own. To the day rather than to the month: the period is a range of days,
-  // and comparing 1–15 March with the whole of last March would be comparing
+  // and comparing 1-15 March with the whole of last March would be comparing
   // half a month with a month. A month's last day maps to the prior month's
   // last day, so a period ending 29 February is held against 28 February and a
   // whole month stays a whole month.

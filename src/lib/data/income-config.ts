@@ -6,6 +6,10 @@ import "server-only";
 
 import { oreToSEK } from "@/lib/domain/money";
 import { prisma } from "@/lib/server/db";
+import {
+  loadBookkeepingSettings,
+  type BookkeepingSettingsValues,
+} from "@/lib/server/bookkeeping-settings";
 
 interface IncomePrefixRow {
   id: string;
@@ -56,10 +60,11 @@ interface SwishFallbackRow {
   message: string;
 }
 
+// Null is "not chosen yet". See lib/server/bookkeeping-settings.ts.
 export interface IncomeSettingsRow {
-  zettleClearingAccount: string;
-  swishClearingAccount: string;
-  zettleFeeAccount: string;
+  zettleClearingAccount: string | null;
+  swishClearingAccount: string | null;
+  zettleFeeAccount: string | null;
   zettleFeeCostCenterId: string | null;
   /** The same cost centre as a code, what the booking screen's picker works in. */
   zettleFeeCostCenterCode: string | null;
@@ -87,25 +92,29 @@ export interface IncomeConfigView {
  * Where income lands, on its own: the four settings the booking screen needs
  * to build a voucher, without the whole routing table behind them.
  *
- * The defaults are the ones the booking route falls back to, spelled once here
- * so a screen cannot show a clearing account the server would not have used.
+ * Read from the same row the booking route reads, with no defaults of its own,
+ * so a screen cannot show a clearing account the server would not use.
  */
 export async function getIncomeSettings(): Promise<IncomeSettingsRow> {
   const [row, connection] = await Promise.all([
-    prisma.bookkeepingSettings.findUnique({
-      where: { id: "singleton" },
-      include: { zettleFeeCostCenter: { select: { code: true } } },
-    }),
+    loadBookkeepingSettings(),
     prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
   ]);
+  return incomeSettingsRow(row, connection?.voucherSeries ?? null);
+}
+
+function incomeSettingsRow(
+  row: BookkeepingSettingsValues,
+  connectionVoucherSeries: string | null,
+): IncomeSettingsRow {
   return {
-    zettleClearingAccount: row?.zettleClearingAccount ?? "1930",
-    swishClearingAccount: row?.swishClearingAccount ?? "1931",
-    zettleFeeAccount: row?.zettleFeeAccount ?? "6570",
-    zettleFeeCostCenterId: row?.zettleFeeCostCenterId ?? null,
-    zettleFeeCostCenterCode: row?.zettleFeeCostCenter?.code ?? null,
-    incomeVoucherSeries: row?.incomeVoucherSeries ?? null,
-    connectionVoucherSeries: connection?.voucherSeries ?? null,
+    zettleClearingAccount: row.zettleClearingAccount,
+    swishClearingAccount: row.swishClearingAccount,
+    zettleFeeAccount: row.zettleFeeAccount,
+    zettleFeeCostCenterId: row.zettleFeeCostCenterId,
+    zettleFeeCostCenterCode: row.zettleFeeCostCenterCode,
+    incomeVoucherSeries: row.incomeVoucherSeries,
+    connectionVoucherSeries,
   };
 }
 
@@ -126,10 +135,7 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
       },
     }),
     prisma.account.findMany({ select: { number: true, name: true } }),
-    prisma.bookkeepingSettings.findUnique({
-      where: { id: "singleton" },
-      include: { zettleFeeCostCenter: { select: { code: true } } },
-    }),
+    loadBookkeepingSettings(),
     // Only for what the income series falls back to when it is unset. See
     // IncomeSettingsRow.connectionVoucherSeries.
     prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
@@ -167,15 +173,7 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
       },
     })),
     fallbacks: fallbacks.map((f) => ({ amount: oreToSEK(f.amount), message: f.message })),
-    settings: {
-      zettleClearingAccount: settings?.zettleClearingAccount ?? "1930",
-      swishClearingAccount: settings?.swishClearingAccount ?? "1931",
-      zettleFeeAccount: settings?.zettleFeeAccount ?? "6570",
-      zettleFeeCostCenterId: settings?.zettleFeeCostCenterId ?? null,
-      zettleFeeCostCenterCode: settings?.zettleFeeCostCenter?.code ?? null,
-      incomeVoucherSeries: settings?.incomeVoucherSeries ?? null,
-      connectionVoucherSeries: connection?.voucherSeries ?? null,
-    },
+    settings: incomeSettingsRow(settings, connection?.voucherSeries ?? null),
     knownAccounts: accounts.map((a) => a.number),
   };
 }

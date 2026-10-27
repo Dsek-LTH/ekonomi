@@ -127,6 +127,7 @@ const RoleName = z.enum([
   "RESULTATANSVARIG",
   "STOCKARE",
   "UTHYRNINGSANSVARIG",
+  "REVISOR",
   "ORDINARIE",
 ]);
 
@@ -159,6 +160,9 @@ export const CapabilityName = z.enum([
   "RENTAL_VIEW",
   "RENTAL_MANAGE",
   "SEND_REMINDERS",
+  "REVIEW_OWN_BOOKING",
+  "BOOKKEEPING_VIEW",
+  "AUDIT_REVIEW",
 ]);
 
 /**

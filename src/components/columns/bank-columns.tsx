@@ -57,7 +57,7 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
   hidden,
   className: "text-muted",
   mobile: "meta",
-  cell: (tx) => (tx.cardLast4 ? <span className="tabular-nums">····{tx.cardLast4}</span> : "–"),
+  cell: (tx) => (tx.cardLast4 ? <span className="tabular-nums">····{tx.cardLast4}</span> : "-"),
 });
 
 /**

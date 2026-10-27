@@ -34,7 +34,8 @@
     "alreadyBooked": "{count} days were already booked and are flagged",
     "alreadyInFortnox": "{count} days are already in Fortnox and are flagged",
     "fortnoxCheckFailed": "Could not be checked against Fortnox",
-    "superseded": "{count} earlier reports were cleared out"
+    "superseded": "{count} earlier reports were cleared out",
+    "fortnoxCheckSeriesUnset": "Could not be checked against Fortnox because no voucher series is chosen"
   },
   "counts": {
     "reports": "{count} reports",
@@ -109,7 +110,7 @@
     "action": "New report",
     "actionFor": "New report for {date}",
     "title": "New report",
-    "subtitle": "{date} – {source}. An empty report to move sales onto.",
+    "subtitle": "{date} - {source}. An empty report to move sales onto.",
     "unit": "Committee",
     "unitHint": "Whose takings the report becomes.",
     "unitPlaceholder": "Pick a committee…",

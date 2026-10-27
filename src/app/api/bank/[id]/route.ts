@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchBankTransaction } from "@/lib/api/schemas/bank";
 import { expenseLabel } from "@/lib/domain/reference";
 
-const bookkeeping = () => gate(canAccessBookkeeping, "auth.denied");
+const bookkeeping = () => gate(canBookkeep, "auth.denied");
 
 /**
  * PATCH /api/bank/:id: body `{ cardId: string | null }`. Put a purchase on a

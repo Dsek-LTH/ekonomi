@@ -10,13 +10,13 @@ import { NextResponse } from "next/server";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateIncomeReport } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { createDraftReport } from "@/lib/income/draft";
 
 export async function POST(req: Request) {
   // The same gate the review screen and the move route are behind: this is
   // bookkeeping arranging its own working set before anything is booked.
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, CreateIncomeReport);

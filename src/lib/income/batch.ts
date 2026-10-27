@@ -9,6 +9,7 @@ import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import type { IncomeSource } from "@/lib/domain/types";
 import { incomeVoucherKey, type FortnoxIncomeVouchers } from "./duplicate";
 import type { IncomeFeeReportDto, IncomeReportDto } from "./types";
@@ -248,10 +249,14 @@ export async function createFeeBatch(
   reports: readonly IncomeFeeReportDto[],
   existing?: FortnoxIncomeVouchers,
 ): Promise<CreateBatchResult> {
-  const settings = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
-  const costCenterId = settings?.zettleFeeCostCenterId ?? null;
-  const feeAccount = settings?.zettleFeeAccount ?? "6570";
-  const account = await prisma.account.findUnique({ where: { number: feeAccount } });
+  const settings = await loadBookkeepingSettings();
+  const costCenterId = settings.zettleFeeCostCenterId;
+  const feeAccount = settings.zettleFeeAccount;
+  // Only for the name on the lines. An unchosen fee account leaves it blank,
+  // and booking the day is what refuses, naming the setting.
+  const account = feeAccount
+    ? await prisma.account.findUnique({ where: { number: feeAccount } })
+    : null;
 
   const resolved = reports.map((r) => ({ report: r, date: new Date(`${r.date}T00:00:00.000Z`) }));
 

@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/server/current-user";
 import { getExpensePage } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
-import { canAccessBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
+import { canViewBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
 import { ExpensesClient } from "./expenses-client";
 
 export default async function ExpensesPage({
@@ -19,7 +19,7 @@ export default async function ExpensesPage({
   // has. What the viewer may see at all is applied underneath it either way
   // (getExpensePage always intersects with the viewer's scope), so a hand-typed
   // ?view=ALL widens nothing for someone with no business seeing more.
-  const canToggleScope = canAccessBookkeeping(user.capabilities) || hasAttestRole(user.capabilities);
+  const canToggleScope = canViewBookkeeping(user.capabilities) || hasAttestRole(user.capabilities);
   const showOwnOnly = !canToggleScope || query.view !== "ALL";
 
   const page = await getExpensePage(user, { kind: showOwnOnly ? "mine" : "all" }, query);

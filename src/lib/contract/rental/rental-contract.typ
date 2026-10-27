@@ -222,7 +222,7 @@
     data.counterpartyPostalLine,
     (data.counterpartyEmail, data.counterpartyPhone)
       .filter(v => v != none and v != "")
-      .join(" – "),
+      .join(" - "),
   ),
 )
 

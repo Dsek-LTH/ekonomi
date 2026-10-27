@@ -31,6 +31,8 @@ export async function PATCH(req: Request) {
   }
 
   if (Object.keys(data).length) {
+    // Creating the row writes only what was chosen. No column has a default,
+    // so everything else stays unset. See lib/server/bookkeeping-settings.ts.
     await prisma.bookkeepingSettings.upsert({
       where: { id: "singleton" },
       create: { id: "singleton", ...data },

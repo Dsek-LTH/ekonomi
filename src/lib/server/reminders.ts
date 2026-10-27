@@ -18,7 +18,7 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { attestersOf, notify } from "@/lib/server/notify";
 import { expenseScopeOf, expenseScopeWhere } from "@/lib/data/expense-scope";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canViewBookkeeping } from "@/lib/domain/permissions";
 import {
   reminderTarget,
   type ReminderPreview,
@@ -172,7 +172,7 @@ async function planTransactions(
   const txns = await prisma.bankTransaction.findMany({
     where: {
       id: { in: [...transactionIds] },
-      ...(canAccessBookkeeping(actor.capabilities) ? {} : { card: { holderId: actor.id } }),
+      ...(canViewBookkeeping(actor.capabilities) ? {} : { card: { holderId: actor.id } }),
     },
     orderBy: { transactionDate: "asc" },
     select: {

@@ -27,7 +27,7 @@
   "attest": {
     "waiting": "Awaiting approval",
     "attestedBy": "Approved by {name}{date}",
-    "waitingResultUnit": "Awaiting approval – {resultUnit}",
+    "waitingResultUnit": "Awaiting approval - {resultUnit}",
     "noResultUnit": "no result unit"
   },
   "submitBlocker": {
@@ -79,11 +79,13 @@
     "creditShort": "Cr",
     "paymentType": "Payment type",
     "verification": "Voucher",
+    "bookedBy": "Booked",
+    "amendedBy": "Amended",
     "amend": "Amend",
     "account": "Account",
     "debit": "Debit",
     "credit": "Credit",
-    "exportedToFortnox": "Exported to Fortnox – voucher",
+    "exportedToFortnox": "Exported to Fortnox - voucher",
     "history": "History",
     "receipt": "Receipt",
     "noReceipt": "No receipt uploaded.",
@@ -92,7 +94,6 @@
     "noMatch": "No match.",
     "more": "More",
     "book": "Book",
-    "export": "Export to Fortnox",
     "fortnoxNotConnected": "Fortnox is not connected. Connect it under Bookkeeping first.",
     "fortnoxNotSignedIn": "You are not signed in to Fortnox. Sign in from your profile and you can export.",
     "submit": "Submit for approval",
@@ -138,22 +139,8 @@
     "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted.",
     "remind": "Send reminder",
     "reminderTo": "To {names}",
-    "queue": {
-      "next": "Next: {name}",
-      "skip": "Skip to next",
-      "approvals": {
-        "done": "Approved. {count, plural, =1 {1 more is} other {# more are}} waiting for your approval.",
-        "empty": "Approved. Nothing else is waiting for your approval.",
-        "waiting": "{count, plural, =1 {1 more} other {# more}} in the approval queue.",
-        "toList": "To approvals"
-      },
-      "bookkeeping": {
-        "done": "Done here. {count, plural, =1 {1 more is} other {# more are}} waiting to be booked.",
-        "empty": "Done here. Nothing else is waiting to be booked.",
-        "waiting": "{count, plural, =1 {1 more} other {# more}} to book.",
-        "toList": "To bookkeeping"
-      }
-    }
+    "projectShort": "Proj",
+    "review": "Review and post"
   },
   "mutations": {
     "transition": {
@@ -173,8 +160,6 @@
       "confirm": "Withdraw"
     },
     "export": {
-      "failed": "The export failed",
-      "done": "Exported to Fortnox (voucher {label})",
       "attachWarning": "The receipt was uploaded but could not be attached to the voucher: {detail}"
     },
     "match": {

@@ -83,3 +83,13 @@ export function voucherBlocker(lines: readonly VoucherLine[]): VoucherBlocker | 
   if (!voucherBalance(lines).balanced) return "unbalanced";
   return null;
 }
+
+/**
+ * A revenue account: BAS class 3, 3000 to 3999.
+ *
+ * An utlägg is money going out, so none of its rows may land on an intäktskonto.
+ * A cost posted there nets against the section's sales and hides both. The
+ * income side books against exactly these accounts, so this is a rule about
+ * utlägg and not part of `voucherBlocker`, which both sides share.
+ */
+export const isRevenueAccount = (account: string) => /^3\d{3}$/.test(account.trim());

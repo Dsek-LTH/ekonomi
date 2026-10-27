@@ -5,7 +5,7 @@ export type AccountKind = "INCOME" | "COST";
 /**
  * Whether a BAS code is something a budget has any business holding.
  *
- * 3xxx–8xxx are the resultaträkning: what the year earns and what it spends,
+ * 3xxx-8xxx are the resultaträkning: what the year earns and what it spends,
  * which is the whole of what a budget is about. 1xxx and 2xxx are the
  * balansräkning, what the section owns and owes, and those are not budgeted.
  * They are what a year *leaves behind*, and a section's bank balance sitting in
@@ -20,7 +20,7 @@ export function isResultAccount(accountCode: string): boolean {
 }
 
 /**
- * Which side of the sheet an account belongs on: 3xxx is income, 4xxx–8xxx is
+ * Which side of the sheet an account belongs on: 3xxx is income, 4xxx-8xxx is
  * cost.
  *
  * The code decides, and nothing else does. There used to be a per-account

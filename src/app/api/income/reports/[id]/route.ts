@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { fail, gate, orNotFound } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateIncomeReport } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping, canUnexport } from "@/lib/domain/permissions";
+import { canBookkeep, canUnexport } from "@/lib/domain/permissions";
 import { deleteIncomeReport } from "@/lib/income/lifecycle";
 import { prisma } from "@/lib/server/db";
 import { lifecycleFailure } from "./lifecycle-failure";
@@ -17,7 +17,7 @@ import { lifecycleFailure } from "./lifecycle-failure";
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, UpdateIncomeReport);
@@ -75,7 +75,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   if (!canUnexport(g.actor.capabilities)) {

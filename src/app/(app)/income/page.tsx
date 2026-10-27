@@ -1,5 +1,7 @@
 import { getIncomeReviewQueue } from "@/lib/data/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { redirect } from "next/navigation";
+
+import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
 import { intaktConfigured } from "@/lib/income/client";
 import { requirePage } from "@/lib/server/current-user";
 
@@ -13,7 +15,12 @@ export default async function IncomePage({
 }) {
   // The section's takings, day by day. The nav only offers this to bookkeeping;
   // this is what keeps the route from being reachable by URL regardless.
-  await requirePage(canAccessBookkeeping);
+  //
+  // This is the queue where days are booked, so it is the workers'. A reader
+  // (a revisor) is sent to what has already been booked, which is the part
+  // there is anything to read in.
+  const user = await requirePage(canViewBookkeeping);
+  if (!canBookkeep(user.capabilities)) redirect("/income/booked");
 
   const queue = await getIncomeReviewQueue();
   const context = await loadReviewContext(queue.reports);

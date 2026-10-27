@@ -5,7 +5,7 @@
 //
 // The income queue is the reason. Its rows are a verksamhet's name on the left
 // and the day's takings on the right, in a 16rem column beside the workbench,
-// and a native scrollbar is 11–15px of that column, permanently, so every row
+// and a native scrollbar is 11-15px of that column, permanently, so every row
 // was laid out inside a narrower box than the panel it sits in. macOS hides its
 // scrollbars until you scroll and has never had this problem; Windows and Linux
 // do, which is most of the section.

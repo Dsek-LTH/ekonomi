@@ -35,6 +35,23 @@ const base = {
 };
 
 describe("buildCoverData", () => {
+  it("states who konterade it, and anyone who amended it since", () => {
+    expect(buildCoverData(base, TODAY).booking).toBeNull();
+    const booking = {
+      by: "Anna Andersson",
+      at: new Date("2026-04-03T10:00:00Z"),
+      amendedBy: ["Bo Berg", "Cia Ceder"],
+    };
+    expect(buildCoverData({ ...base, booking }, TODAY).booking).toEqual({
+      by: "Anna Andersson",
+      at: "2026-04-03",
+      amendedBy: "Bo Berg och Cia Ceder",
+    });
+    expect(
+      buildCoverData({ ...base, booking: { ...booking, amendedBy: [] } }, TODAY).booking?.amendedBy,
+    ).toBeNull();
+  });
+
   it("states the utlägg in Swedish, formatted and ready to place", () => {
     const d = buildCoverData(base, TODAY);
     expect(d.reference).toBe("DEK26-0042");
@@ -119,7 +136,7 @@ describe("buildCoverData", () => {
       },
       TODAY,
     );
-    expect(d.reference).toBe("–");
+    expect(d.reference).toBe("-");
     expect(d.purchaseDate).toBeNull();
     expect(d.submitter.studentId).toBeNull();
   });
@@ -223,9 +240,9 @@ describe("buildCoverData, the journey", () => {
   });
 
   it("says nothing rather than drawing arrows between blanks", () => {
-    // A draft saved with rows still empty. "–" is the honest word for a route
+    // A draft saved with rows still empty. "-" is the honest word for a route
     // nobody has given; " → → " would look like data.
-    expect(buildCoverData(mileage({ journeyStops: [] }), TODAY).journey!.route).toBe("–");
+    expect(buildCoverData(mileage({ journeyStops: [] }), TODAY).journey!.route).toBe("-");
     expect(
       buildCoverData(mileage({ journeyStops: ["E-huset", "  ", ""] }), TODAY).journey!.route,
     ).toBe("E-huset");
@@ -247,12 +264,12 @@ describe("buildCoverData, the journey", () => {
 
   it("says a dash for a reading nobody has given yet", () => {
     const j = buildCoverData(mileage({ odometerEnd: null }), TODAY).journey!;
-    expect(j.odometerEnd).toBe("–");
-    expect(j.distance).toBe("–");
+    expect(j.odometerEnd).toBe("-");
+    expect(j.distance).toBe("-");
   });
 
   it("says a dash for a journey no rate covered", () => {
-    expect(buildCoverData(mileage({ mileageOrePerKm: null }), TODAY).journey!.rate).toBe("–");
+    expect(buildCoverData(mileage({ mileageOrePerKm: null }), TODAY).journey!.rate).toBe("-");
   });
 });
 

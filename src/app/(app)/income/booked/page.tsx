@@ -1,11 +1,11 @@
 import { getBookedIncome } from "@/lib/data/income";
-import { canAccessBookkeeping, canUnexport } from "@/lib/domain/permissions";
+import { canViewBookkeeping, canUnexport } from "@/lib/domain/permissions";
 import { requirePage } from "@/lib/server/current-user";
 
 import BookedClient from "./booked-client";
 
 export default async function BookedIncomePage() {
-  const user = await requirePage(canAccessBookkeeping);
+  const user = await requirePage(canViewBookkeeping);
 
   const reports = await getBookedIncome();
 

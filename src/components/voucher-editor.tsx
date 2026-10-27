@@ -29,7 +29,7 @@ import { isAmountInput } from "@/lib/domain/money";
 import { amountFieldProps } from "@/components/ui/amount-input";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
 import { retagRowText } from "@/lib/domain/cost-center-tag";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import { cn, uid } from "@/lib/ui/utils";
 
 export interface VoucherEditorRow {
@@ -37,6 +37,8 @@ export interface VoucherEditorRow {
   account: string;
   description: string;
   costCenterCode: string;
+  /** Fortnox project number. Only on pages that show the project column. */
+  project?: string;
   /** Kronor as typed, so "1 234,50" or "", never a number. See isAmountInput. */
   debit: string;
   credit: string;
@@ -47,6 +49,7 @@ export const makeVoucherRow = (patch: Partial<VoucherEditorRow> = {}): VoucherEd
   account: "",
   description: "",
   costCenterCode: "",
+  project: "",
   debit: "",
   credit: "",
   ...patch,
@@ -62,6 +65,7 @@ export const isBlankVoucherRow = (r: VoucherEditorRow) =>
   !r.account.trim() &&
   !r.description.trim() &&
   !r.costCenterCode.trim() &&
+  !(r.project ?? "").trim() &&
   !r.debit.trim() &&
   !r.credit.trim();
 
@@ -86,7 +90,7 @@ const BLANK_ROWS = 3;
 export interface VoucherLockedRow {
   account: string;
   accountName: string;
-  description: string;
+  description?: string;
   /** Kronor. Whichever side is zero is left empty. */
   debit: number;
   credit: number;
@@ -128,6 +132,7 @@ export function VoucherEditor({
   onChange,
   accounts,
   costCenters,
+  projects,
   locked,
   totalDebit,
   totalCredit,
@@ -137,6 +142,8 @@ export function VoucherEditor({
   onChange: (rows: VoucherEditorRow[]) => void;
   accounts: AccountRecord[];
   costCenters: CostCenter[];
+  /** Given, the table has a project column picking from these. */
+  projects?: ProjectRecord[];
   locked?: VoucherLockedRow;
   /** Kronor, including the locked row. The page has already built the payload. */
   totalDebit: number;
@@ -153,7 +160,7 @@ export function VoucherEditor({
 
   // `short` collapses the trigger to the bare code once picked, which is what
   // lets these columns stay narrow; search still matches the full
-  // "1931 – Företagskonto", and for accounts the name reappears in its own
+  // "1931 - Företagskonto", and for accounts the name reappears in its own
   // column.
   //
   // A value with no option to match it renders as the placeholder. The picker
@@ -172,12 +179,17 @@ export function VoucherEditor({
   };
 
   const accountOptions = withRowValues(
-    accounts.map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number })),
+    accounts.map((a) => ({ value: a.number, label: `${a.number} - ${a.name}`, short: a.number })),
     rows.map((r) => r.account),
   );
   const ccOptions = withRowValues(
-    costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}`, short: c.code })),
+    costCenters.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}`, short: c.code })),
     rows.map((r) => r.costCenterCode),
+  );
+  const showProjects = projects !== undefined;
+  const projectOptions = withRowValues(
+    (projects ?? []).map((p) => ({ value: p.number, label: `${p.number} - ${p.name}`, short: p.number })),
+    rows.map((r) => r.project ?? ""),
   );
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
@@ -358,7 +370,7 @@ export function VoucherEditor({
   // beside them don't already.
   const cell = (value: string, dash = true) => (
     <div className="truncate text-center text-sm text-muted" title={value || undefined}>
-      {value || (dash ? "–" : "")}
+      {value || (dash ? "-" : "")}
     </div>
   );
 
@@ -383,12 +395,19 @@ export function VoucherEditor({
         rows.map((r) => r.costCenterCode),
         (v) => costCenters.some((c) => c.code === v),
       );
+  const unknownProjects =
+    readOnly || !showProjects
+      ? []
+      : unknown(
+          rows.map((r) => r.project ?? ""),
+          (v) => (projects ?? []).some((p) => p.number === v),
+        );
   return (
     <>
       {/* Above the table, not below it: this is the reason the button at the
           bottom is dead, and it should be read before the reader gets there
           wondering why. */}
-      {(unknownAccounts.length > 0 || unknownCostCenters.length > 0) && (
+      {(unknownAccounts.length > 0 || unknownCostCenters.length > 0 || unknownProjects.length > 0) && (
         <div className="px-inset py-4">
           <Notice>
             {unknownAccounts.length > 0 && (
@@ -397,6 +416,9 @@ export function VoucherEditor({
             {unknownCostCenters.length > 0 && (
               <p>{t("unknownCostCenters", { list: unknownCostCenters.join(", ") })}</p>
             )}
+            {unknownProjects.length > 0 && (
+              <p>{t("unknownProjects", { list: unknownProjects.join(", ") })}</p>
+            )}
           </Notice>
         </div>
       )}
@@ -404,16 +426,21 @@ export function VoucherEditor({
       {/* TableScroll, not a bare overflow-x-auto, for the overscroll
           containment: a sideways swipe on the widest column here used to chain
           to the browser's back gesture. */}
-      <TableScroll minWidth="min-w-[600px]">
+      <TableScroll minWidth={showProjects ? "min-w-[720px]" : "min-w-[600px]"}>
         {/* table-fixed: the header percentages decide the columns, so a cell's
             content can never push the table wider than its container. */}
         <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+              {/* The project column takes its width from the name, cost
+                  centre and text columns, which have the most to spare. */}
               <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
-              <th className={cn(headerCell, "w-[18%]")}>{t("colAccountName")}</th>
-              <th className={cn(headerCell, "w-[18%]")}>{t("colCostCenter")}</th>
-              <th className={cn(headerCell, "w-[15%]")}>{t("colDescription")}</th>
+              <th className={cn(headerCell, showProjects ? "w-[15%]" : "w-[18%]")}>{t("colAccountName")}</th>
+              <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>{t("colCostCenter")}</th>
+              {showProjects && (
+                <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>
+              )}
+              <th className={cn(headerCell, showProjects ? "w-[10%]" : "w-[15%]")}>{t("colDescription")}</th>
               <th className={cn(headerCell, "w-[15%]")}>{t("colDebit")}</th>
               <th className={cn(headerCell, "w-[15%]")}>{t("colCredit")}</th>
               {/* Wide enough for the ✕ and the grip side by side. The name
@@ -429,9 +456,9 @@ export function VoucherEditor({
                 </td>
                 <td className="px-2 align-middle">{cell(locked.accountName, false)}</td>
                 <td className="px-2 text-center align-middle text-sm text-muted" />
-                <td className="px-2 text-center align-middle text-sm text-muted">
-                  {locked.description}
-                </td>
+                {showProjects && <td className="px-2 text-center align-middle text-sm text-muted" />}
+                {/* Truncated like the name, with the whole text on hover. */}
+                <td className="px-2 align-middle">{cell(locked.description ?? "", false)}</td>
                 <td className="px-2 text-center align-middle text-sm tabular-nums">
                   {locked.debit ? locked.debit.toFixed(2).replace(".", ",") : ""}
                 </td>
@@ -500,7 +527,7 @@ export function VoucherEditor({
               >
                 <td className={readOnly ? "px-2 py-3 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.account || "–"
+                    r.account || "-"
                   ) : (
                     <Combobox
                       options={accountOptions}
@@ -521,7 +548,7 @@ export function VoucherEditor({
                 <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
                 <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.costCenterCode || "–"
+                    r.costCenterCode || "-"
                   ) : (
                     <Combobox
                       options={ccOptions}
@@ -544,9 +571,30 @@ export function VoucherEditor({
                     />
                   )}
                 </td>
-                <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
+                {showProjects && (
+                  <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
+                    {readOnly ? (
+                      r.project || "-"
+                    ) : (
+                      <Combobox
+                        options={projectOptions}
+                        value={r.project ?? ""}
+                        onChange={(v) => patch(r.id, { project: v })}
+                        // Blank when unpicked, like the cost centre: most rows
+                        // carry no project.
+                        placeholder=""
+                        searchPlaceholder={t("projectSearch")}
+                        allowClear
+                        align="center"
+                        buttonClassName={cellCombo}
+                        aria-label={t("colProject")}
+                      />
+                    )}
+                  </td>
+                )}
+                <td className={readOnly ? "px-2 align-middle" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.description || "–"
+                    cell(r.description)
                   ) : (
                     // size=1 kills the ~180px default intrinsic width an <input>
                     // would otherwise contribute to the column.
@@ -568,7 +616,7 @@ export function VoucherEditor({
                 </td>
                 <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.debit || "–"
+                    r.debit || "-"
                   ) : (
                     <input
                       size={1}
@@ -587,7 +635,7 @@ export function VoucherEditor({
                 </td>
                 <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
-                    r.credit || "–"
+                    r.credit || "-"
                   ) : (
                     <input
                       size={1}
@@ -631,7 +679,7 @@ export function VoucherEditor({
             <tr className="border-t border-border font-medium">
               {/* No "add row": there are always three waiting below the last
                   one, and a fourth appears as each is used. */}
-              <td colSpan={4} className="px-3 py-3" />
+              <td colSpan={showProjects ? 5 : 4} className="px-3 py-3" />
               <td className="px-2 py-3 text-center">
                 <Amount value={totalDebit} size="md" />
               </td>

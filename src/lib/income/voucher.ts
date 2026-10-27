@@ -60,8 +60,8 @@ export function incomeVoucherDescription(
  */
 export function incomeVoucherSeries(
   settings: { incomeVoucherSeries: string | null } | null,
-  connectionSeries: string,
-): string {
+  connectionSeries: string | null,
+): string | null {
   return settings?.incomeVoucherSeries?.trim() || connectionSeries;
 }
 

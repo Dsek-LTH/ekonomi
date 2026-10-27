@@ -26,7 +26,10 @@ export default async function StockPage({
       levels={levels}
       // A plain object rather than the Map the loader returns: this crosses the
       // server boundary, and a Map does not.
-      checks={Object.fromEntries(checks)}
+      checks={checks ? Object.fromEntries(checks) : {}}
+      // No notice period chosen, so nothing is being watched. Said on the
+      // page, so an empty column of flags is not read as "nothing is due".
+      expiryUnset={checks === null}
       asOf={asOf}
       // Settled on the server, so the two renders agree. Computed in the
       // browser it is whatever that machine's clock says, which near midnight
