@@ -4,7 +4,7 @@
 // through the same loader the invoice's own routes use.
 import { prisma } from "@/lib/server/db";
 import { deleteObject, getObjectStream } from "@/lib/server/storage";
-import { isInvoiceEditable } from "@/lib/domain/supplier-invoice";
+import { awaitsKontering } from "@/lib/domain/supplier-invoice";
 import { fail, gate } from "@/lib/api/guard";
 import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
 
@@ -61,7 +61,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const access = await loadInvoiceFor(g.actor, doc.invoiceId);
   if (!access.ok) return fail(404, "supplierInvoice.documentNotFound");
   const { invoice, can } = access;
-  if (!can.canEditDocuments) return refuseChange(invoice, isInvoiceEditable(invoice.status));
+  if (!can.canEditDocuments) return refuseChange(invoice, invoice.status === "INBOX" || awaitsKontering(invoice.status));
 
   // Bytes first, and the row only once they are gone, for the reason the
   // receipt route gives: a file that outlives its row is one nobody can find.

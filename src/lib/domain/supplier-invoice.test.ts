@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  attestBlocker,
+  daysUntilDue,
+  exportBlocker,
   invoiceCapabilities,
-  invoiceWaitsOn,
-  submitBlocker,
+  invoiceQueue,
   type InvoiceFacts,
   type InvoiceViewer,
 } from "./supplier-invoice";
@@ -12,12 +14,14 @@ const viewer = (
   capabilities: Capability[] = [],
   ownedResultUnitIds: string[] = [],
   roles: Role[] = ownedResultUnitIds.length ? ["RESULTATANSVARIG"] : ["ORDINARIE"],
-): InvoiceViewer => ({ id: "v", roles, capabilities, ownedResultUnitIds });
+  id = "v",
+): InvoiceViewer => ({ id, roles, capabilities, ownedResultUnitIds });
 
 const triage = viewer(["INVOICE_TRIAGE"]);
+const treasurer = viewer(["INVOICE_TRIAGE", "BOOKKEEPING"]);
 const sexm = viewer(["ATTEST_VIEW"], ["unit-sex"]);
-const other = viewer(["ATTEST_VIEW"], ["unit-cafe"]);
-const bookkeeper = viewer(["BOOKKEEPING"]);
+const cafe = viewer(["ATTEST_VIEW"], ["unit-cafe"]);
+const revisor = viewer(["BOOKKEEPING_VIEW"]);
 
 const invoice = (over: Partial<InvoiceFacts> = {}): InvoiceFacts => ({
   status: "ASSIGNED",
@@ -26,143 +30,165 @@ const invoice = (over: Partial<InvoiceFacts> = {}): InvoiceFacts => ({
   ...over,
 });
 
-describe("submitBlocker", () => {
-  const ready = {
-    supplierName: "Lunds Släp AB",
-    dueDate: "2026-11-10",
-    amount: 125000,
-    documentCount: 1,
-    allocations: [{ amount: 125000, account: "5615" }],
-  };
-
-  it("lets a complete invoice through", () => {
-    expect(submitBlocker(ready)).toBeNull();
+describe("attestBlocker", () => {
+  it("lets one row through without an amount: it is the whole invoice", () => {
+    expect(attestBlocker({ documentCount: 1, rows: [{ amount: null }], invoiceAmount: null })).toBeNull();
   });
 
-  it("asks for the PDF before anything else", () => {
-    expect(submitBlocker({ ...ready, documentCount: 0, supplierName: null })).toBe(
+  it("wants the PDF first", () => {
+    expect(attestBlocker({ documentCount: 0, rows: [{ amount: null }], invoiceAmount: null })).toBe(
       "supplierInvoice.noDocument",
     );
   });
 
-  it.each([
-    [{ supplierName: "  " }, "supplierInvoice.noSupplier"],
-    [{ amount: null }, "supplierInvoice.noAmount"],
-    [{ amount: 0 }, "supplierInvoice.noAmount"],
-    [{ dueDate: null }, "supplierInvoice.noDueDate"],
-    [{ allocations: [] }, "supplierInvoice.noAllocations"],
-    [{ allocations: [{ amount: 125000, account: "" }] }, "supplierInvoice.allocationNoAccount"],
-    [
-      { allocations: [{ amount: 125000, account: "5615" }, { amount: 0, account: "5615" }] },
-      "supplierInvoice.allocationNotPositive",
-    ],
-    [{ allocations: [{ amount: 120000, account: "5615" }] }, "supplierInvoice.allocationSumMismatch"],
-  ])("refuses %o", (change, code) => {
-    expect(submitBlocker({ ...ready, ...change })).toBe(code);
+  it("wants a share on every row of a split", () => {
+    expect(
+      attestBlocker({ documentCount: 1, rows: [{ amount: 50000 }, { amount: null }], invoiceAmount: null }),
+    ).toBe("supplierInvoice.splitNeedsAmounts");
   });
 
-  it("accepts a split that adds up to the öre", () => {
+  it("holds a split to the total when the total is known", () => {
+    const rows = [{ amount: 50000 }, { amount: 40000 }];
+    expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 100000 })).toBe(
+      "supplierInvoice.allocationSumMismatch",
+    );
+    expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000 })).toBeNull();
+  });
+
+  it("lets a split through while the total is unknown, for the export to check", () => {
     expect(
-      submitBlocker({
-        ...ready,
-        allocations: [
-          { amount: 100050, account: "5615" },
-          { amount: 24950, account: "4010" },
-        ],
-      }),
+      attestBlocker({ documentCount: 1, rows: [{ amount: 50000 }, { amount: 40000 }], invoiceAmount: null }),
     ).toBeNull();
   });
 });
 
-describe("invoiceCapabilities", () => {
-  it("keeps the inkorg to triage", () => {
-    const inbox = invoice({ status: "INBOX", resultUnitId: null });
-    expect(invoiceCapabilities(triage, inbox)).toMatchObject({
-      canEdit: true,
-      canAssign: true,
-      canDiscard: true,
-      canSubmit: false,
-    });
-    expect(invoiceCapabilities(sexm, inbox).canEdit).toBe(false);
+describe("exportBlocker", () => {
+  const ready = {
+    fortnoxSupplierNumber: "12",
+    invoiceNumber: "20417",
+    invoiceDate: "2026-10-20",
+    dueDate: "2026-11-10",
+    amount: 125000,
+    rows: [{ amount: null, account: "5615" }],
+  };
+
+  it("lets a complete invoice through", () => {
+    expect(exportBlocker(ready)).toBeNull();
   });
 
-  it("lets the unit's resultatansvarig kontera and send, and nobody else's", () => {
-    expect(invoiceCapabilities(sexm, invoice())).toMatchObject({
-      canEdit: true,
-      canSubmit: true,
-      canAssign: false,
-      canDiscard: false,
-    });
-    expect(invoiceCapabilities(other, invoice())).toMatchObject({ canEdit: false, canSubmit: false });
-  });
-
-  it("freezes the kontering while it is out for attest", () => {
-    const pending = invoice({ status: "PENDING_APPROVAL" });
-    expect(invoiceCapabilities(sexm, pending)).toMatchObject({
-      canEdit: false,
-      canSubmit: false,
-      canRecall: true,
-      canAssign: false,
-    });
-  });
-
-  it("offers the attest only on rows still waiting for this viewer", () => {
-    const pending = invoice({
-      status: "PENDING_APPROVAL",
-      allocations: [
-        { approved: true, viewerMayAttest: true },
-        { approved: false, viewerMayAttest: false },
-      ],
-    });
-    expect(invoiceCapabilities(sexm, pending)).toMatchObject({
-      canApprove: false,
-      canRequestChanges: true,
-    });
-    const mine = invoice({
-      status: "PENDING_APPROVAL",
-      allocations: [{ approved: false, viewerMayAttest: true }],
-    });
-    expect(invoiceCapabilities(sexm, mine).canApprove).toBe(true);
-  });
-
-  it("lets the treasury send back an attested invoice, and no one else", () => {
-    const approved = invoice({
-      status: "APPROVED",
-      allocations: [{ approved: true, viewerMayAttest: true }],
-    });
-    expect(invoiceCapabilities(bookkeeper, approved).canRequestChanges).toBe(true);
-    expect(invoiceCapabilities(sexm, approved).canRequestChanges).toBe(false);
-  });
-
-  it("restores a discarded invoice for triage only", () => {
-    const gone = invoice({ status: "DISCARDED" });
-    expect(invoiceCapabilities(triage, gone)).toMatchObject({ canRestore: true, canEdit: false });
-    expect(invoiceCapabilities(sexm, gone).canRestore).toBe(false);
+  it.each([
+    [{ fortnoxSupplierNumber: null }, "supplierInvoice.noSupplier"],
+    [{ invoiceNumber: " " }, "supplierInvoice.noInvoiceNumber"],
+    [{ invoiceDate: null }, "supplierInvoice.noInvoiceDate"],
+    [{ dueDate: null }, "supplierInvoice.noDueDate"],
+    [{ amount: null }, "supplierInvoice.noAmount"],
+    [{ rows: [{ amount: null, account: null }] }, "supplierInvoice.allocationNoAccount"],
+    [
+      { rows: [{ amount: 100000, account: "5615" }, { amount: 20000, account: "5615" }] },
+      "supplierInvoice.allocationSumMismatch",
+    ],
+  ])("refuses %o", (change, code) => {
+    expect(exportBlocker({ ...ready, ...change })).toBe(code);
   });
 });
 
-describe("invoiceWaitsOn", () => {
-  it("puts the inkorg on triage's list", () => {
-    expect(invoiceWaitsOn(triage, invoice({ status: "INBOX", resultUnitId: null }))).toBe(true);
-    expect(invoiceWaitsOn(sexm, invoice({ status: "INBOX", resultUnitId: null }))).toBe(false);
+describe("invoiceCapabilities", () => {
+  it("keeps the inkorg to triage, who may also delete from it", () => {
+    const inbox = invoice({ status: "INBOX", resultUnitId: null });
+    expect(invoiceCapabilities(triage, inbox)).toMatchObject({ canAssign: true, canDelete: true, canKontera: false });
+    expect(invoiceCapabilities(sexm, inbox)).toMatchObject({ canAssign: false, canKontera: false });
   });
 
-  it("puts an assigned invoice on its unit's list, not triage's", () => {
-    expect(invoiceWaitsOn(sexm, invoice())).toBe(true);
-    expect(invoiceWaitsOn(triage, invoice())).toBe(false);
-    expect(invoiceWaitsOn(sexm, invoice({ status: "CHANGES_REQUESTED" }))).toBe(true);
+  it("lets the unit kontera, attest and decline in one place", () => {
+    expect(invoiceCapabilities(sexm, invoice())).toMatchObject({
+      canKontera: true,
+      canDecline: true,
+      canAssign: false,
+      canDelete: false,
+      canEditDetails: false,
+    });
+    expect(invoiceCapabilities(cafe, invoice())).toMatchObject({ canKontera: false, canDecline: false });
   });
 
-  it("puts an invoice out for attest on whoever still has a row to sign", () => {
-    const pending = invoice({
+  it("lets triage kontera on a unit's behalf, but not decline for it", () => {
+    expect(invoiceCapabilities(triage, invoice())).toMatchObject({ canKontera: true, canDecline: false });
+  });
+
+  it("never deletes an invoice anybody has signed", () => {
+    for (const status of ["PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED", "EXPORTED"] as const) {
+      expect(invoiceCapabilities(triage, invoice({ status })).canDelete).toBe(false);
+    }
+  });
+
+  it("asks another unit only for its unsigned share", () => {
+    const split = invoice({
       status: "PENDING_APPROVAL",
-      allocations: [{ approved: false, viewerMayAttest: true }],
+      allocations: [
+        { approved: true, approvedById: "klara", viewerMayAttest: false },
+        { approved: false, viewerMayAttest: true },
+      ],
     });
-    expect(invoiceWaitsOn(other, pending)).toBe(true);
-    const signed = invoice({
+    expect(invoiceCapabilities(cafe, split)).toMatchObject({ canAttest: true, canRequestChanges: true, canKontera: false });
+    // From Sexmästeriet's side the unsigned row is not theirs to sign.
+    const fromSex = invoice({
       status: "PENDING_APPROVAL",
-      allocations: [{ approved: true, viewerMayAttest: true }],
+      allocations: [
+        { approved: true, approvedById: "klara", viewerMayAttest: true },
+        { approved: false, viewerMayAttest: false },
+      ],
     });
-    expect(invoiceWaitsOn(other, signed)).toBe(false);
+    expect(invoiceCapabilities(sexm, fromSex).canAttest).toBe(false);
+  });
+
+  it("lets a signer take their own signature back until it is in Fortnox", () => {
+    const signed = { approved: true, approvedById: "klara", viewerMayAttest: true };
+    const klara = viewer(["ATTEST_VIEW"], ["unit-sex"], ["RESULTATANSVARIG"], "klara");
+    expect(invoiceCapabilities(klara, invoice({ status: "APPROVED", allocations: [signed] })).canWithdrawAttest).toBe(true);
+    expect(invoiceCapabilities(klara, invoice({ status: "EXPORTED", allocations: [signed] })).canWithdrawAttest).toBe(false);
+    expect(invoiceCapabilities(sexm, invoice({ status: "APPROVED", allocations: [signed] })).canWithdrawAttest).toBe(false);
+  });
+
+  it("gives the details to the treasury until export, and never to a revisor", () => {
+    expect(invoiceCapabilities(treasurer, invoice({ status: "APPROVED" }))).toMatchObject({
+      canEditDetails: true,
+      canRequestChanges: true,
+    });
+    expect(invoiceCapabilities(treasurer, invoice({ status: "EXPORTED" })).canEditDetails).toBe(false);
+    expect(invoiceCapabilities(revisor, invoice({ status: "APPROVED" }))).toMatchObject({
+      canEditDetails: false,
+      canRequestChanges: false,
+      canKontera: false,
+    });
+  });
+});
+
+describe("invoiceQueue", () => {
+  it("sorts each invoice into the section of whoever has to act", () => {
+    expect(invoiceQueue(triage, invoice({ status: "INBOX", resultUnitId: null }))).toBe("sort");
+    expect(invoiceQueue(sexm, invoice())).toBe("attest");
+    expect(invoiceQueue(triage, invoice())).toBe("elsewhere");
+    expect(invoiceQueue(treasurer, invoice({ status: "APPROVED" }))).toBe("export");
+    expect(invoiceQueue(sexm, invoice({ status: "APPROVED" }))).toBe("elsewhere");
+    expect(invoiceQueue(sexm, invoice({ status: "EXPORTED" }))).toBe("done");
+  });
+
+  it("puts a split on whoever still has a row to sign", () => {
+    const split = invoice({
+      status: "PENDING_APPROVAL",
+      allocations: [
+        { approved: true, viewerMayAttest: false },
+        { approved: false, viewerMayAttest: true },
+      ],
+    });
+    expect(invoiceQueue(cafe, split)).toBe("attest");
+  });
+});
+
+describe("daysUntilDue", () => {
+  it("counts whole days, negative once passed", () => {
+    expect(daysUntilDue("2026-11-10", "2026-11-07")).toBe(3);
+    expect(daysUntilDue("2026-11-10", "2026-11-10")).toBe(0);
+    expect(daysUntilDue("2026-11-10", "2026-11-12")).toBe(-2);
+    expect(daysUntilDue(null, "2026-11-12")).toBeNull();
   });
 });

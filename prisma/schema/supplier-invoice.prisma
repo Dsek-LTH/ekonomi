@@ -16,29 +16,30 @@
 
 /// Where an invoice is. The path through it is
 ///
-///   INBOX → ASSIGNED → PENDING_APPROVAL → APPROVED → EXPORTED
+///   INBOX → ASSIGNED → APPROVED → EXPORTED
 ///
-/// with CHANGES_REQUESTED as the way back from the attest, and DISCARDED as
-/// the way out of the inkorg for something that was never an invoice to pay.
+/// The resultatansvarig konterar and attests in one step: picking the cost
+/// centre and pressing Attestera is both. PENDING_APPROVAL is only for an
+/// invoice split with another unit, waiting for that unit's signature, and
+/// CHANGES_REQUESTED is the way back with a comment.
+///
+/// Something that was never an invoice to pay is deleted from the inkorg, not
+/// kept under a status of its own. See the DELETE handler in
+/// api/supplier-invoices/[id].
 enum SupplierInvoiceStatus {
   /// Arrived and nobody has said whose it is yet. Only triage sees it here.
   INBOX
-  /// Given to a result unit, whose resultatansvarig konterar it.
+  /// Given to a result unit, whose resultatansvarig attests it.
   ASSIGNED
-  /// Konterad and sent for attest. Nothing about it can change until every
-  /// allocation is signed or somebody sends it back.
+  /// Attested for some of its rows, waiting for another unit to sign the rest.
   PENDING_APPROVAL
-  /// Sent back from the attest with a comment. Editable again, like ASSIGNED.
+  /// Sent back with a comment, to be attested again.
   CHANGES_REQUESTED
-  /// Every allocation attested. Ready to go to Fortnox.
+  /// Every row attested. The treasurer completes it and exports it.
   APPROVED
   /// Created in Fortnox as an unbooked supplier invoice. Booking it and paying
   /// it happen there.
   EXPORTED
-  /// Taken out of the inkorg: a duplicate, a reminder for an invoice already
-  /// here, or mail that was never an invoice. Kept, not deleted, so the
-  /// question "did we ever get that invoice" still has an answer.
-  DISCARDED
 }
 
 /// How the invoice got here.
@@ -57,17 +58,18 @@ enum SupplierInvoiceEventType {
   /// Given to a result unit, or moved from one to another. `diff` is
   /// `{ from: string | null, to: string }`, the unit names as they were then.
   ASSIGNED
-  /// Taken back to the inkorg, unassigned.
+  /// Taken back to the inkorg by triage.
   UNASSIGNED
-  SUBMITTED
-  /// Taken back out of the attest by whoever konterade it, to change something.
-  RECALLED
+  /// Sent back to the inkorg by the unit it was given to: "Inte vår".
+  /// `comment` is what they wrote.
+  DECLINED
+  /// Some rows signed. `diff` is `{ costCenters: string[] }`, the codes.
   COST_CENTER_APPROVED
+  /// A signature taken back, before the invoice went to Fortnox.
+  ATTEST_WITHDRAWN
   CHANGES_REQUESTED
+  /// The last row signed.
   APPROVED
-  DISCARDED
-  /// Brought back from DISCARDED to the inkorg.
-  RESTORED
 }
 
 model SupplierInvoice {
@@ -86,8 +88,8 @@ model SupplierInvoice {
   // ── What the invoice says ────────────────────────────────────────
   //
   // All nullable, because an invoice arrives as a PDF and nothing else. These
-  // are filled in by hand from it, and the submit is what requires them
-  // (lib/domain/supplier-invoice.ts, submitBlocker). Free text where the
+  // are the treasurer's to complete, not the attester's, and the export is
+  // what requires them (lib/domain/supplier-invoice.ts). Free text where the
   // supplier writes free text: an org number, an OCR and a bankgiro are what is
   // printed on the invoice, and checking their shape here would only refuse an
   // invoice the section still has to pay.
@@ -138,13 +140,11 @@ model SupplierInvoice {
   @@index([dueDate, id])
 }
 
-/// One konteringsrad: a cost centre, the account it is booked on, and how much.
-/// The rows of one invoice add up to its amount.
+/// One konteringsrad: a cost centre, how much, and the account it is booked on.
 ///
-/// An utlägg's allocation leaves the account to the bookkeeper. This one names
-/// it, because the resultatansvarig is the one who knows what was bought and
-/// the bookkeeper may never see the invoice before it is in Fortnox. The
-/// bookkeeper still checks it there before booking.
+/// The cost centre is the attester's, and the account the treasurer's: the
+/// resultatansvarig knows where the cost belongs, the treasurer knows the
+/// chart of accounts. So the account is empty until the export step fills it.
 model SupplierInvoiceAllocation {
   id           String          @id @default(cuid())
   invoice      SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -153,10 +153,14 @@ model SupplierInvoiceAllocation {
   costCenterId String
   /// BAS account number, e.g. "5410". A plain number like VerificationLine's,
   /// not a relation: Fortnox retires accounts, and a row must outlive that.
-  account      String
+  /// Null until the treasurer sets it.
+  account      String?
   /// Fortnox project number, or null. See Project.
   project      String?
-  amount       Int // öre
+  /// Öre. Null on an invoice with one row, which is the whole of it, whatever
+  /// the amount turns out to be. A split names every row's share, and is the
+  /// only time an attester types an amount.
+  amount       Int?
   comment      String?
 
   approvedBy   User?     @relation("SupplierInvoiceAllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)

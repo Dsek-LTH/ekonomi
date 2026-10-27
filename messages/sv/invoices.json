@@ -1,27 +1,58 @@
 {
   "title": "Leverantörsfakturor",
   "upload": "Lägg in faktura",
+  "unnamed": "Faktura",
   "empty": "Inga leverantörsfakturor",
   "emptyTriage": "Fakturor som mejlas in hamnar här. Du kan också lägga in en PDF för hand.",
-  "emptyDescription": "Här hamnar leverantörsfakturor som din enhet ska kontera eller attestera.",
+  "emptyDescription": "Här hamnar leverantörsfakturor som din enhet ska attestera.",
   "searchPlaceholder": "Sök leverantör, fakturanummer eller enhet",
   "noMatch": "Inga fakturor matchar.",
-  "unnamed": "Okänd leverantör",
   "tab": {
-    "todo": "Att göra",
-    "inbox": "Inkorg",
-    "active": "Pågående",
-    "done": "Klara",
-    "discarded": "Kasserade",
-    "all": "Alla"
+    "all": "Alla",
+    "open": "Pågående",
+    "exported": "I Fortnox"
   },
   "col": {
     "supplier": "Leverantör",
     "invoiceNumber": "Fakturanr",
     "unit": "Resultatenhet",
+    "received": "Inkom",
     "dueDate": "Förfaller",
     "status": "Status",
     "amount": "Belopp"
+  },
+  "archive": {
+    "link": "Arkiv",
+    "title": "Arkiv",
+    "toInbox": "Till inkorgen"
+  },
+  "inbox": {
+    "emptyTitle": "Inget att göra",
+    "emptyDescription": "Det finns inga leverantörsfakturor som väntar.",
+    "backToList": "Till listan",
+    "nothingOpen": "Välj en faktura i listan.",
+    "listLabel": "Leverantörsfakturor",
+    "via": "via {name}",
+    "section": {
+      "sort": "Att sortera",
+      "attest": "Att attestera",
+      "export": "Att exportera",
+      "elsewhere": "Hos enheterna"
+    }
+  },
+  "focus": {
+    "emptyTitle": "Inget väntar på dig",
+    "emptyDescription": "Du har inga leverantörsfakturor att attestera just nu.",
+    "position": "{n} av {total}",
+    "previous": "Föregående",
+    "next": "Nästa"
+  },
+  "due": {
+    "none": "Inget förfallodatum",
+    "overdue": "{days, plural, one {Förföll för # dag sedan} other {Förföll för # dagar sedan}}",
+    "today": "Förfaller idag",
+    "inDays": "{days, plural, one {Förfaller imorgon} other {Förfaller om # dagar}}",
+    "on": "Förfaller {date}"
   },
   "field": {
     "supplierName": "Leverantör",
@@ -36,20 +67,9 @@
     "description": "Vad gäller fakturan?"
   },
   "detail": {
-    "missingTitle": "Fakturan finns inte",
-    "missingDescription": "Den kan ha kasserats, eller så har du inte tillgång till den.",
-    "missingAction": "Till leverantörsfakturor",
-    "unnamed": "Okänd leverantör",
     "invoiceNo": "Faktura {number}",
     "save": "Spara",
     "saved": "Sparat",
-    "unit": "Resultatenhet",
-    "noUnit": "Inte tilldelad än",
-    "assignTo": "Ge till",
-    "assignHint": "Resultatansvarig för enheten får ett mejl och konterar fakturan.",
-    "pickUnit": "Välj resultatenhet",
-    "searchUnit": "Sök resultatenhet",
-    "unassign": "Tillbaka till inkorgen",
     "documents": "Dokument",
     "removeDocument": "Ta bort dokument",
     "removeDocumentConfirm": "{filename} tas bort från fakturan.",
@@ -62,88 +82,79 @@
       "add": "Lägg till dokument"
     },
     "history": "Historik",
-    "returnedTitle": "{name} vill att något ändras:",
-    "backToList": "Till listan",
-    "blocker": {
-      "noDocument": "Bifoga fakturans PDF först.",
-      "noSupplier": "Fyll i leverantör för att skicka på attest.",
-      "noAmount": "Fyll i belopp för att skicka på attest.",
-      "noDueDate": "Fyll i förfallodag för att skicka på attest.",
-      "noAllocations": "Kontera fakturan för att skicka på attest.",
-      "allocationNoAccount": "Varje konteringsrad behöver ett konto.",
-      "allocationNotPositive": "Varje konteringsrad behöver ett belopp.",
-      "allocationSumMismatch": "Konteringen går inte jämnt ut med beloppet."
-    },
-    "suggestion": "Förra fakturan från {sender} gick till {unit}.",
-    "assignSuggested": "Ge till {unit}"
+    "returnedTitle": "{name} vill att något ändras:"
   },
-  "kontering": {
-    "title": "Kontering",
-    "none": "Inte konterad än.",
+  "workspace": {
+    "assignTitle": "Vems är fakturan?",
+    "assign": "Ge till enheten",
+    "assignHint": "Resultatansvarig för enheten får ett mejl och attesterar fakturan.",
+    "suggestion": "Förra fakturan från {sender} gick till {unit}.",
+    "pickUnit": "Välj resultatenhet",
+    "searchUnit": "Sök resultatenhet",
+    "konteraTitle": "Vart ska kostnaden?",
     "costCenter": "Kostnadsställe",
-    "account": "Konto",
-    "amount": "Belopp",
-    "comment": "Kommentar",
-    "commentPlaceholder": "Valfritt",
     "pickCostCenter": "Välj kostnadsställe",
-    "pickAccount": "Välj konto",
-    "search": "Sök",
-    "addRow": "Lägg till rad",
+    "searchCostCenter": "Sök kostnadsställe",
+    "split": "Dela upp på flera kostnadsställen",
+    "addRow": "Lägg till kostnadsställe",
     "removeRow": "Ta bort raden",
-    "noTotal": "Fyll i fakturans belopp",
-    "balanced": "{sum}, går jämnt ut",
-    "unbalanced": "{sum} av {total}",
-    "attestedBy": "Attesterad av {name}, {when}",
-    "yoursToAttest": "Väntar på din attest",
-    "awaitingAttest": "Väntar på attest från {unit}"
+    "share": "Andel",
+    "splitOfTotal": "{sum} av {total}",
+    "splitSum": "Totalt {sum}",
+    "comment": "Kommentar",
+    "commentPlaceholder": "Vad gäller fakturan? (valfritt)",
+    "othersSign": "Kostnadsställen utanför din enhet attesteras av deras resultatansvarig.",
+    "shareTitle": "Din del av fakturan",
+    "exportTitle": "Gör klar för Fortnox",
+    "accounts": "Konto per kostnadsställe",
+    "pickAccount": "Välj konto",
+    "searchAccount": "Sök konto",
+    "details": "Fakturauppgifter",
+    "editDetails": "Ändra",
+    "closeDetails": "Stäng",
+    "noDetails": "Inga uppgifter ifyllda än. De fylls i innan fakturan exporteras.",
+    "noDocumentReadOnly": "Fakturan har ingen PDF.",
+    "move": "Byt enhet",
+    "moveTo": "Ge till en annan enhet",
+    "unassign": "Tillbaka till inkorgen",
+    "waiting": {
+      "inbox": "Fakturan ligger i inkorgen och väntar på att sorteras.",
+      "unit": "Väntar på att {unit} attesterar.",
+      "share": "Väntar på attest från {units}.",
+      "export": "Attesterad. Väntar på att exporteras till Fortnox.",
+      "exported": "Fakturan finns i Fortnox."
+    }
   },
   "action": {
-    "submit": "Skicka på attest",
-    "approve": "Attestera",
+    "attest": "Attestera",
+    "sendForAttest": "Skicka på attest",
+    "decline": "Inte vår",
+    "declineLabel": "Vems är den, eller vad är fel?",
     "request_changes": "Begär ändring",
-    "recall": "Ta tillbaka",
-    "restore": "Återställ till inkorgen",
-    "discard": "Kassera",
+    "withdraw_attest": "Ångra attest",
+    "delete": "Ta bort",
     "commentLabel": "Kommentar",
     "confirm": {
+      "decline": "Fakturan går tillbaka till inkorgen, så att den kan ges till rätt enhet.",
       "request_changes": "Fakturan går tillbaka till resultatenheten, och alla attester på den tas bort.",
-      "discard": "Fakturan tas ur inkorgen. Den finns kvar under Kasserade och kan återställas."
+      "withdraw_attest": "Din attest tas bort och fakturan går tillbaka till att vänta på attest.",
+      "delete": "Fakturan och dess PDF tas bort helt. Det går inte att ångra."
     },
     "done": {
       "assign": "Fakturan har tilldelats",
-      "discard": "Fakturan är kasserad",
-      "restore": "Fakturan ligger i inkorgen igen",
-      "submit": "Fakturan är skickad på attest",
-      "recall": "Fakturan är tillbakatagen",
-      "approve": "Attesterat",
-      "request_changes": "Fakturan är skickad tillbaka"
+      "attest": "Attesterat",
+      "decline": "Fakturan är tillbaka i inkorgen",
+      "withdraw_attest": "Attesten är borttagen",
+      "request_changes": "Fakturan är skickad tillbaka",
+      "delete": "Fakturan är borttagen"
     }
   },
-  "event": {
-    "RECEIVED": "Inkommen",
-    "EDITED": "Ändrad",
-    "DOCUMENT_UPLOADED": "Dokument tillagt",
-    "DOCUMENT_REMOVED": "Dokument borttaget",
-    "ASSIGNED": "Given till {unit}",
-    "UNASSIGNED": "Tillbaka i inkorgen",
-    "SUBMITTED": "Skickad på attest",
-    "RECALLED": "Tillbakatagen från attest",
-    "COST_CENTER_APPROVED": "Attesterad för kostnadsställe",
-    "CHANGES_REQUESTED": "Ändring begärd",
-    "APPROVED": "Helt attesterad",
-    "DISCARDED": "Kasserad",
-    "RESTORED": "Återställd till inkorgen",
-    "auto": {
-      "costCenter": "Automatiskt: mejlet nämnde {match}",
-      "unitName": "Automatiskt: mejlet nämnde {match}",
-      "forwarder": "Automatiskt: avsändaren är resultatansvarig för {match}"
-    }
-  },
-  "mail": {
-    "title": "Inkommen via mejl",
-    "from": "Från",
-    "subject": "Ämne",
-    "originalFrom": "Ursprungligen från"
+  "kontering": {
+    "title": "Kontering",
+    "whole": "Hela beloppet",
+    "attestedBy": "Attesterad av {name}, {when}",
+    "yoursToAttest": "Väntar på din attest",
+    "awaitingAttest": "Väntar på attest från {unit}"
   },
   "mailbox": {
     "title": "Inkorgens mejlkonto",
@@ -157,6 +168,24 @@
       "noSender": "ingen avsändare",
       "foreignDomain": "inte från dsek.se",
       "notAuthenticated": "avsändaren kunde inte verifieras"
+    }
+  },
+  "event": {
+    "RECEIVED": "Inkommen",
+    "EDITED": "Ändrad",
+    "DOCUMENT_UPLOADED": "Dokument tillagt",
+    "DOCUMENT_REMOVED": "Dokument borttaget",
+    "ASSIGNED": "Given till {unit}",
+    "UNASSIGNED": "Tillbaka i inkorgen",
+    "DECLINED": "Inte vår, tillbaka i inkorgen",
+    "COST_CENTER_APPROVED": "Attesterad",
+    "ATTEST_WITHDRAWN": "Attest ångrad",
+    "CHANGES_REQUESTED": "Ändring begärd",
+    "APPROVED": "Helt attesterad",
+    "auto": {
+      "costCenter": "Automatiskt: mejlet nämnde {match}",
+      "unitName": "Automatiskt: mejlet nämnde {match}",
+      "forwarder": "Automatiskt: avsändaren är resultatansvarig för {match}"
     }
   }
 }

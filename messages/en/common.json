@@ -141,7 +141,6 @@
     "PENDING_APPROVAL": "Awaiting attest",
     "CHANGES_REQUESTED": "Changes requested",
     "APPROVED": "Attested",
-    "EXPORTED": "In Fortnox",
-    "DISCARDED": "Discarded"
+    "EXPORTED": "In Fortnox"
   }
 }

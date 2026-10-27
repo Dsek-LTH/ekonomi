@@ -141,7 +141,6 @@
     "PENDING_APPROVAL": "Väntar på attest",
     "CHANGES_REQUESTED": "Ändring begärd",
     "APPROVED": "Attesterad",
-    "EXPORTED": "I Fortnox",
-    "DISCARDED": "Kasserad"
+    "EXPORTED": "I Fortnox"
   }
 }

@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, supplierInvoiceDocumentKey } from "@/lib/server/storage";
 import { readDocumentUpload } from "@/lib/server/document-upload";
-import { isInvoiceEditable } from "@/lib/domain/supplier-invoice";
+import { awaitsKontering } from "@/lib/domain/supplier-invoice";
 import { gate } from "@/lib/api/guard";
 import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
 
@@ -21,7 +21,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
   const { invoice, can } = access;
-  if (!can.canEditDocuments) return refuseChange(invoice, isInvoiceEditable(invoice.status));
+  if (!can.canEditDocuments) return refuseChange(invoice, invoice.status === "INBOX" || awaitsKontering(invoice.status));
 
   const read = await readDocumentUpload(req);
   if (!read.ok) return read.res;

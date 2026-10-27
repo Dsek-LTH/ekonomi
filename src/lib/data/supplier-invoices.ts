@@ -30,7 +30,9 @@ import {
 } from "@/lib/domain/permissions";
 import {
   invoiceCapabilities,
+  invoiceQueue,
   invoiceWaitsOn,
+  type InvoiceQueue,
   type InvoiceCapabilities,
   type InvoiceViewer,
 } from "@/lib/domain/supplier-invoice";
@@ -82,6 +84,17 @@ export async function invoiceViewerOf(viewer: Viewer): Promise<InvoiceViewerCtx>
   };
 }
 
+/** Which result units the viewer may attest for, as the screens need it:
+ *  every one for an admin, otherwise the units they answer for. */
+export interface AttestReach {
+  all: boolean;
+  units: string[];
+}
+
+export function attestReachOf(v: InvoiceViewerCtx): AttestReach {
+  return { all: isAdmin(v.capabilities), units: v.ownedResultUnitNames };
+}
+
 /** Whether the viewer sees every invoice there is. */
 const seesEverything = (v: InvoiceViewer) =>
   canTriageInvoices(v.capabilities) ||
@@ -102,14 +115,13 @@ export function invoiceScopeWhere(v: InvoiceViewerCtx): Prisma.SupplierInvoiceWh
     OR.push({ allocations: { some: { costCenter: costCentreWhereForPrefixes(v.ownedPrefixes) } } });
   }
   if (OR.length === 0) return { id: { in: [] } };
-  // The inkorg and what was thrown out of it are triage's business. An
-  // invoice discarded after it was given to a unit is still not theirs to
-  // read about.
-  return { AND: [{ status: { notIn: ["INBOX", "DISCARDED"] } }, { OR }] };
+  // The inkorg is triage's business. An invoice sent back to it by its unit
+  // ("Inte vår") is nobody's until it is given again.
+  return { AND: [{ status: { not: "INBOX" } }, { OR }] };
 }
 
 /** Whether the viewer may attest one allocation, by the utlägg rule. */
-function mayAttest(v: InvoiceViewerCtx, costCenterCode: string): boolean {
+export function mayAttest(v: InvoiceViewerCtx, costCenterCode: string): boolean {
   return canAttestAllocation({
     actorCapabilities: v.capabilities,
     actorRoles: v.roles,
@@ -135,6 +147,7 @@ export function invoiceFactsOf(
     resultUnitId: inv.resultUnitId,
     allocations: inv.allocations.map((a) => ({
       approved: a.approvedById !== null,
+      approvedById: a.approvedById,
       viewerMayAttest: mayAttest(v, a.costCenter.code),
     })),
   };
@@ -154,7 +167,9 @@ export interface SupplierInvoiceRow {
   receivedAt: string; // ISO
   receivedByName: string | null;
   resultUnitName: string | null;
-  /** Something the viewer has to do: sort it, kontera it, or sign it. */
+  /** Where it stands for this viewer: the inbox section it goes in. */
+  queue: InvoiceQueue;
+  /** Something the viewer has to do: sort it, attest it, or export it. */
   waitsOnViewer: boolean;
 }
 
@@ -200,6 +215,7 @@ export async function getInvoiceRows(viewer: Viewer): Promise<SupplierInvoiceRow
     receivedAt: r.createdAt.toISOString(),
     receivedByName: r.receivedBy?.name ?? null,
     resultUnitName: r.resultUnit?.name ?? null,
+    queue: invoiceQueue(v, invoiceFactsOf(v, r)),
     waitsOnViewer: invoiceWaitsOn(v, invoiceFactsOf(v, r)),
   }));
 }
@@ -211,10 +227,12 @@ export interface SupplierInvoiceAllocationView {
   costCenterCode: string;
   costCenterName: string;
   resultUnit: string | null;
-  account: string;
+  /** Null until the treasurer sets it at the export. */
+  account: string | null;
   accountName: string | null;
   project: string | null;
-  amount: number; // SEK
+  /** SEK. Null on an invoice with one row, which is the whole of it. */
+  amount: number | null;
   comment: string | null;
   approvedByName: string | null;
   approvedAt: string | null; // ISO
@@ -269,6 +287,13 @@ export interface SupplierInvoiceView {
    * one supplier often serves several units. See autoAssign.
    */
   suggestedUnit: { id: string; name: string } | null;
+  /**
+   * The cost centre the attest card opens on, for an invoice waiting for its
+   * kontering: one named in the forwarded mail, failing that the one the same
+   * supplier's last invoice went to, failing that the unit's only one. Null
+   * when none of them settles it.
+   */
+  suggestedCostCenter: string | null;
   allocations: SupplierInvoiceAllocationView[];
   documents: { id: string; filename: string; mimeType: string }[];
   events: SupplierInvoiceEventView[];
@@ -301,13 +326,57 @@ async function suggestionFor(
     where: {
       id: { not: invoiceId },
       resultUnitId: { not: null },
-      status: { not: "DISCARDED" },
       inboundMail: { originalFrom },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: { resultUnit: { select: { id: true, name: true } } },
   });
   return prior?.resultUnit ?? null;
+}
+
+/**
+ * Which cost centre to offer for the kontering. See suggestedCostCenter on
+ * SupplierInvoiceView for the order. Only ever one belonging to the invoice's
+ * unit: a suggestion from another unit's history would be a suggestion to
+ * charge somebody else.
+ */
+async function costCenterSuggestionFor(inv: {
+  id: string;
+  resultUnitId: string | null;
+  supplierName: string | null;
+  inboundMail: { note: string | null; subject: string | null; originalFrom: string | null } | null;
+}): Promise<string | null> {
+  if (!inv.resultUnitId) return null;
+  const prefixes = (await getPrefixes()).filter((p) => p.resultUnitId === inv.resultUnitId);
+  if (prefixes.length === 0) return null;
+  const centres = await prisma.costCenter.findMany({
+    where: { active: true, ...costCentreWhereForPrefixes(prefixes.map((p) => p.value)) },
+    orderBy: [{ code: "asc" }],
+    select: { code: true },
+  });
+  const codes = new Set(centres.map((c) => c.code));
+
+  const text = [inv.inboundMail?.note, inv.inboundMail?.subject].filter(Boolean).join("\n").toUpperCase();
+  const named = (text.match(/\b[A-ZÅÄÖ]{2,8}\d{1,4}\b/g) ?? []).find((c) => codes.has(c));
+  if (named) return named;
+
+  const from = inv.inboundMail?.originalFrom;
+  const sameSupplier: Prisma.SupplierInvoiceWhereInput[] = [];
+  if (from) sameSupplier.push({ inboundMail: { originalFrom: from } });
+  if (inv.supplierName) sameSupplier.push({ supplierName: inv.supplierName });
+  if (sameSupplier.length) {
+    const prior = await prisma.supplierInvoiceAllocation.findFirst({
+      where: {
+        invoice: { id: { not: inv.id }, OR: sameSupplier },
+        costCenter: { code: { in: [...codes] } },
+      },
+      orderBy: [{ invoice: { createdAt: "desc" } }, { position: "asc" }],
+      select: { costCenter: { select: { code: true } } },
+    });
+    if (prior) return prior.costCenter.code;
+  }
+
+  return centres.length === 1 ? centres[0].code : null;
 }
 
 /**
@@ -357,7 +426,9 @@ export async function getInvoice(
   // The account names, for showing what a number means. One lookup for every
   // row rather than a relation, because the column is a plain number. See
   // SupplierInvoiceAllocation.account.
-  const numbers = [...new Set(inv.allocations.map((a) => a.account).filter(Boolean))];
+  const numbers = [
+    ...new Set(inv.allocations.flatMap((a) => (a.account ? [a.account] : []))),
+  ];
   const accounts = numbers.length
     ? await prisma.account.findMany({
         where: { number: { in: numbers } },
@@ -372,6 +443,8 @@ export async function getInvoice(
   // Only where it would be acted on: triage, with the invoice still nobody's.
   const suggestedUnit =
     can.canAssign && !inv.resultUnitId ? await suggestionFor(inv.id, m?.originalFrom ?? null) : null;
+  const suggestedCostCenter =
+    can.canKontera && inv.allocations.length === 0 ? await costCenterSuggestionFor(inv) : null;
   return {
     can,
     invoice: {
@@ -404,15 +477,16 @@ export async function getInvoice(
           }
         : null,
       suggestedUnit,
+      suggestedCostCenter,
       allocations: inv.allocations.map((a, i) => ({
         id: a.id,
         costCenterCode: a.costCenter.code,
         costCenterName: a.costCenter.name,
         resultUnit: resultUnitNameForCode(a.costCenter.code, v.prefixes),
         account: a.account,
-        accountName: accountName.get(a.account) ?? null,
+        accountName: a.account ? (accountName.get(a.account) ?? null) : null,
         project: a.project,
-        amount: ore(a.amount),
+        amount: a.amount == null ? null : ore(a.amount),
         comment: a.comment,
         approvedByName: a.approvedBy?.name ?? null,
         approvedAt: a.approvedAt?.toISOString() ?? null,

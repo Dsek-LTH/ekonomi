@@ -166,7 +166,7 @@ async function invoiceEmail(
   if (!user) return null;
   const scope = invoiceScopeWhere(await invoiceViewerOf({ id: recipient.id, ...user }));
   const inv = await prisma.supplierInvoice.findFirst({
-    where: { AND: [scope, { status: { notIn: ["INBOX", "DISCARDED"] } }] },
+    where: { AND: [scope, { status: { not: "INBOX" } }] },
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
     include: {
       resultUnit: { select: { name: true } },

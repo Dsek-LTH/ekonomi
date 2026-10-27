@@ -1,27 +1,58 @@
 {
   "title": "Supplier invoices",
   "upload": "Add invoice",
+  "unnamed": "Invoice",
   "empty": "No supplier invoices",
   "emptyTriage": "Invoices sent in by email end up here. You can also add a PDF by hand.",
-  "emptyDescription": "Supplier invoices your unit is to code or attest end up here.",
+  "emptyDescription": "Supplier invoices your unit is to attest end up here.",
   "searchPlaceholder": "Search supplier, invoice number or unit",
   "noMatch": "No invoices match.",
-  "unnamed": "Unknown supplier",
   "tab": {
-    "todo": "To do",
-    "inbox": "Inbox",
-    "active": "In progress",
-    "done": "Done",
-    "discarded": "Discarded",
-    "all": "All"
+    "all": "All",
+    "open": "In progress",
+    "exported": "In Fortnox"
   },
   "col": {
     "supplier": "Supplier",
     "invoiceNumber": "Invoice no.",
     "unit": "Result unit",
+    "received": "Received",
     "dueDate": "Due",
     "status": "Status",
     "amount": "Amount"
+  },
+  "archive": {
+    "link": "Archive",
+    "title": "Archive",
+    "toInbox": "To the inbox"
+  },
+  "inbox": {
+    "emptyTitle": "Nothing to do",
+    "emptyDescription": "There are no supplier invoices waiting.",
+    "backToList": "To the list",
+    "nothingOpen": "Pick an invoice in the list.",
+    "listLabel": "Supplier invoices",
+    "via": "via {name}",
+    "section": {
+      "sort": "To sort",
+      "attest": "To attest",
+      "export": "To export",
+      "elsewhere": "With the units"
+    }
+  },
+  "focus": {
+    "emptyTitle": "Nothing is waiting for you",
+    "emptyDescription": "You have no supplier invoices to attest right now.",
+    "position": "{n} of {total}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "due": {
+    "none": "No due date",
+    "overdue": "{days, plural, one {Overdue by # day} other {Overdue by # days}}",
+    "today": "Due today",
+    "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}",
+    "on": "Due {date}"
   },
   "field": {
     "supplierName": "Supplier",
@@ -36,20 +67,9 @@
     "description": "What is the invoice for?"
   },
   "detail": {
-    "missingTitle": "The invoice does not exist",
-    "missingDescription": "It may have been discarded, or you do not have access to it.",
-    "missingAction": "To supplier invoices",
-    "unnamed": "Unknown supplier",
     "invoiceNo": "Invoice {number}",
     "save": "Save",
     "saved": "Saved",
-    "unit": "Result unit",
-    "noUnit": "Not assigned yet",
-    "assignTo": "Give to",
-    "assignHint": "The unit's resultatansvarig gets an email and codes the invoice.",
-    "pickUnit": "Pick a result unit",
-    "searchUnit": "Search result units",
-    "unassign": "Back to the inbox",
     "documents": "Documents",
     "removeDocument": "Remove document",
     "removeDocumentConfirm": "{filename} will be removed from the invoice.",
@@ -62,88 +82,79 @@
       "add": "Add document"
     },
     "history": "History",
-    "returnedTitle": "{name} wants something changed:",
-    "backToList": "To the list",
-    "blocker": {
-      "noDocument": "Attach the invoice PDF first.",
-      "noSupplier": "Fill in the supplier to send it for attest.",
-      "noAmount": "Fill in the amount to send it for attest.",
-      "noDueDate": "Fill in the due date to send it for attest.",
-      "noAllocations": "Code the invoice to send it for attest.",
-      "allocationNoAccount": "Every coding row needs an account.",
-      "allocationNotPositive": "Every coding row needs an amount.",
-      "allocationSumMismatch": "The coding does not add up to the amount."
-    },
-    "suggestion": "The last invoice from {sender} went to {unit}.",
-    "assignSuggested": "Give to {unit}"
+    "returnedTitle": "{name} wants something changed:"
   },
-  "kontering": {
-    "title": "Coding",
-    "none": "Not coded yet.",
+  "workspace": {
+    "assignTitle": "Whose invoice is it?",
+    "assign": "Give to the unit",
+    "assignHint": "The unit's resultatansvarig gets an email and attests the invoice.",
+    "suggestion": "The last invoice from {sender} went to {unit}.",
+    "pickUnit": "Pick a result unit",
+    "searchUnit": "Search result units",
+    "konteraTitle": "Where does the cost go?",
     "costCenter": "Cost centre",
-    "account": "Account",
-    "amount": "Amount",
-    "comment": "Comment",
-    "commentPlaceholder": "Optional",
     "pickCostCenter": "Pick a cost centre",
-    "pickAccount": "Pick an account",
-    "search": "Search",
-    "addRow": "Add row",
+    "searchCostCenter": "Search cost centres",
+    "split": "Split across several cost centres",
+    "addRow": "Add cost centre",
     "removeRow": "Remove the row",
-    "noTotal": "Fill in the invoice amount",
-    "balanced": "{sum}, adds up",
-    "unbalanced": "{sum} of {total}",
-    "attestedBy": "Attested by {name}, {when}",
-    "yoursToAttest": "Waiting for your attest",
-    "awaitingAttest": "Waiting for attest from {unit}"
+    "share": "Share",
+    "splitOfTotal": "{sum} of {total}",
+    "splitSum": "Total {sum}",
+    "comment": "Comment",
+    "commentPlaceholder": "What is the invoice for? (optional)",
+    "othersSign": "Cost centres outside your unit are attested by their resultatansvarig.",
+    "shareTitle": "Your share of the invoice",
+    "exportTitle": "Make ready for Fortnox",
+    "accounts": "Account per cost centre",
+    "pickAccount": "Pick an account",
+    "searchAccount": "Search accounts",
+    "details": "Invoice details",
+    "editDetails": "Edit",
+    "closeDetails": "Close",
+    "noDetails": "No details filled in yet. They are completed before the invoice is exported.",
+    "noDocumentReadOnly": "The invoice has no PDF.",
+    "move": "Change unit",
+    "moveTo": "Give to another unit",
+    "unassign": "Back to the inbox",
+    "waiting": {
+      "inbox": "The invoice is in the inbox, waiting to be sorted.",
+      "unit": "Waiting for {unit} to attest.",
+      "share": "Waiting for attest from {units}.",
+      "export": "Attested. Waiting to be exported to Fortnox.",
+      "exported": "The invoice is in Fortnox."
+    }
   },
   "action": {
-    "submit": "Send for attest",
-    "approve": "Attest",
+    "attest": "Attest",
+    "sendForAttest": "Send for attest",
+    "decline": "Not ours",
+    "declineLabel": "Whose is it, or what is wrong?",
     "request_changes": "Request changes",
-    "recall": "Take back",
-    "restore": "Restore to the inbox",
-    "discard": "Discard",
+    "withdraw_attest": "Withdraw attest",
+    "delete": "Delete",
     "commentLabel": "Comment",
     "confirm": {
+      "decline": "The invoice goes back to the inbox, so it can be given to the right unit.",
       "request_changes": "The invoice goes back to the result unit, and every attest on it is removed.",
-      "discard": "The invoice is taken out of the inbox. It stays under Discarded and can be restored."
+      "withdraw_attest": "Your attest is removed and the invoice goes back to waiting for attest.",
+      "delete": "The invoice and its PDF are deleted completely. This cannot be undone."
     },
     "done": {
       "assign": "The invoice has been assigned",
-      "discard": "The invoice is discarded",
-      "restore": "The invoice is back in the inbox",
-      "submit": "The invoice is sent for attest",
-      "recall": "The invoice is taken back",
-      "approve": "Attested",
-      "request_changes": "The invoice is sent back"
+      "attest": "Attested",
+      "decline": "The invoice is back in the inbox",
+      "withdraw_attest": "The attest is withdrawn",
+      "request_changes": "The invoice is sent back",
+      "delete": "The invoice is deleted"
     }
   },
-  "event": {
-    "RECEIVED": "Received",
-    "EDITED": "Edited",
-    "DOCUMENT_UPLOADED": "Document added",
-    "DOCUMENT_REMOVED": "Document removed",
-    "ASSIGNED": "Given to {unit}",
-    "UNASSIGNED": "Back in the inbox",
-    "SUBMITTED": "Sent for attest",
-    "RECALLED": "Taken back from attest",
-    "COST_CENTER_APPROVED": "Attested for cost centre",
-    "CHANGES_REQUESTED": "Changes requested",
-    "APPROVED": "Fully attested",
-    "DISCARDED": "Discarded",
-    "RESTORED": "Restored to the inbox",
-    "auto": {
-      "costCenter": "Automatically: the email mentioned {match}",
-      "unitName": "Automatically: the email mentioned {match}",
-      "forwarder": "Automatically: the sender answers for {match}"
-    }
-  },
-  "mail": {
-    "title": "Received by email",
-    "from": "From",
-    "subject": "Subject",
-    "originalFrom": "Originally from"
+  "kontering": {
+    "title": "Coding",
+    "whole": "The whole amount",
+    "attestedBy": "Attested by {name}, {when}",
+    "yoursToAttest": "Waiting for your attest",
+    "awaitingAttest": "Waiting for attest from {unit}"
   },
   "mailbox": {
     "title": "Inbox mail account",
@@ -157,6 +168,24 @@
       "noSender": "no sender",
       "foreignDomain": "not from dsek.se",
       "notAuthenticated": "the sender could not be verified"
+    }
+  },
+  "event": {
+    "RECEIVED": "Received",
+    "EDITED": "Edited",
+    "DOCUMENT_UPLOADED": "Document added",
+    "DOCUMENT_REMOVED": "Document removed",
+    "ASSIGNED": "Given to {unit}",
+    "UNASSIGNED": "Back in the inbox",
+    "DECLINED": "Not ours, back in the inbox",
+    "COST_CENTER_APPROVED": "Attested",
+    "ATTEST_WITHDRAWN": "Attest withdrawn",
+    "CHANGES_REQUESTED": "Changes requested",
+    "APPROVED": "Fully attested",
+    "auto": {
+      "costCenter": "Automatically: the email mentioned {match}",
+      "unitName": "Automatically: the email mentioned {match}",
+      "forwarder": "Automatically: the sender answers for {match}"
     }
   }
 }

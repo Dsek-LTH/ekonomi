@@ -386,13 +386,16 @@
     "alreadyAttested": "Someone else attested at the same time. Reload the page.",
     "documentNotFound": "The document was not found",
     "noDocument": "The invoice has no PDF.",
-    "noSupplier": "Fill in the supplier.",
+    "noSupplier": "Pick the supplier.",
     "noAmount": "Fill in the amount.",
     "noDueDate": "Fill in the due date.",
     "noAllocations": "Code the invoice to at least one cost centre.",
     "allocationNoAccount": "Every coding row needs an account.",
-    "allocationNotPositive": "Every coding row needs an amount above zero.",
-    "allocationSumMismatch": "The coding does not add up to the invoice amount."
+    "allocationSumMismatch": "The coding does not add up to the invoice amount.",
+    "splitNeedsAmounts": "Give how much goes to each cost centre.",
+    "noInvoiceNumber": "Fill in the invoice number.",
+    "noInvoiceDate": "Fill in the invoice date.",
+    "unknownAllocation": "A coding row no longer exists. Reload the page."
   },
   "settings": {
     "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",

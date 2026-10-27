@@ -386,13 +386,16 @@
     "alreadyAttested": "Någon annan attesterade samtidigt. Ladda om sidan.",
     "documentNotFound": "Dokumentet hittades inte",
     "noDocument": "Fakturan saknar PDF.",
-    "noSupplier": "Fyll i leverantör.",
+    "noSupplier": "Välj leverantör.",
     "noAmount": "Fyll i belopp.",
     "noDueDate": "Fyll i förfallodag.",
     "noAllocations": "Kontera fakturan på minst ett kostnadsställe.",
     "allocationNoAccount": "Varje konteringsrad behöver ett konto.",
-    "allocationNotPositive": "Varje konteringsrad behöver ett belopp över noll.",
-    "allocationSumMismatch": "Konteringen går inte jämnt ut med fakturans belopp."
+    "allocationSumMismatch": "Konteringen går inte jämnt ut med fakturans belopp.",
+    "splitNeedsAmounts": "Ange hur mycket som ska till varje kostnadsställe.",
+    "noInvoiceNumber": "Fyll i fakturanummer.",
+    "noInvoiceDate": "Fyll i fakturadatum.",
+    "unknownAllocation": "En konteringsrad finns inte längre. Ladda om sidan."
   },
   "settings": {
     "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",

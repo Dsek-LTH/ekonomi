@@ -1,11 +1,12 @@
-// Change what a levfaktura says and how it is konterad.
+// One levfaktura: the treasurer's details on it, and deleting it.
 //
-// Who may, and when, is invoiceCapabilities' canEdit: triage while it sits in
-// the inkorg, and the unit's resultatansvarig (or triage, or an admin) once it
-// has been given to one, until it goes for attest. Nothing is changed under
-// an attester who is reading it.
+// The details (supplier, amount, dates, OCR, the account on each row) are the
+// treasurer's to complete, at any point until it is in Fortnox
+// (canEditDetails). The kontering is not changed here: that is the attest's,
+// and is sent with it (./transition).
 import { prisma } from "@/lib/server/db";
-import { isInvoiceEditable } from "@/lib/domain/supplier-invoice";
+import { deleteObject } from "@/lib/server/storage";
+import { isInvoiceDeletable } from "@/lib/domain/supplier-invoice";
 import { isoToDate } from "@/lib/domain/date";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
@@ -38,7 +39,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
   const { invoice, can } = access;
-  if (!can.canEdit) return refuseChange(invoice, isInvoiceEditable(invoice.status));
+  if (!can.canEditDetails) return refuseChange(invoice, invoice.status !== "EXPORTED");
 
   // What changed, by field name, for the history. The values themselves are
   // on the invoice, and a log of every keystroke's worth of old text says less
@@ -63,77 +64,81 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     changed.push("amount");
   }
 
-  // The kontering, resolved from codes to rows. A retired cost centre is
-  // refused unless it is already on this invoice, so retiring one does not
-  // strand an invoice konterad onto it before it was retired.
-  let allocations: {
-    costCenterId: string;
-    account: string;
-    project: string | null;
-    amount: number;
-    comment: string | null;
-    position: number;
-  }[] | null = null;
-  if (body.allocations) {
-    const codes = [...new Set(body.allocations.map((a) => a.costCenterCode.toUpperCase()))];
-    const onInvoice = new Set(invoice.allocations.map((a) => a.costCenter.code));
-    const centres = await prisma.costCenter.findMany({
-      where: { code: { in: codes } },
-      select: { id: true, code: true, active: true },
-    });
-    const byCode = new Map(centres.map((c) => [c.code, c]));
-    for (const code of codes) {
-      const c = byCode.get(code);
-      if (!c || (!c.active && !onInvoice.has(code))) {
-        return fail(422, "supplierInvoice.unknownCostCenter", { values: { code } });
-      }
-    }
-    allocations = body.allocations.map((a, position) => ({
-      costCenterId: byCode.get(a.costCenterCode.toUpperCase())!.id,
-      account: a.account,
-      project: a.project ?? null,
-      amount: a.amount,
-      comment: a.comment ?? null,
-      position,
-    }));
-    const before = invoice.allocations
-      .map((a) => [a.costCenterId, a.account, a.project, a.amount, a.comment].join("|"))
-      .join("\n");
-    const after = allocations
-      .map((a) => [a.costCenterId, a.account, a.project, a.amount, a.comment].join("|"))
-      .join("\n");
-    if (before !== after) changed.push("allocations");
+  // The account per row. Only rows of this invoice, and only where it moved.
+  const rows = new Map(invoice.allocations.map((a) => [a.id, a]));
+  const accounts = (body.accounts ?? []).filter((a) => {
+    const row = rows.get(a.allocationId);
+    return row !== undefined && row.account !== a.account;
+  });
+  if ((body.accounts ?? []).some((a) => !rows.has(a.allocationId))) {
+    return fail(422, "supplierInvoice.unknownAllocation");
   }
+  if (accounts.length) changed.push("accounts");
 
   if (changed.length === 0) return new Response(null, { status: 204 });
 
   const result = await commit(() =>
     prisma.$transaction(async (tx) => {
-      // Still in the state it was judged editable in. Sent for attest in
-      // another tab a moment ago, it is not this request's to change.
+      // Still in the state it was judged editable in. Exported in another tab
+      // a moment ago, it is not this request's to change.
       applied(
-        await tx.supplierInvoice.updateMany({
-          where: { id: invoice.id, status: invoice.status },
-          data,
-        }),
+        await tx.supplierInvoice.updateMany({ where: { id: invoice.id, status: invoice.status }, data }),
         "supplierInvoice.changedMeanwhile",
       );
-      if (allocations && changed.includes("allocations")) {
-        await tx.supplierInvoiceAllocation.deleteMany({ where: { invoiceId: invoice.id } });
-        await tx.supplierInvoiceAllocation.createMany({
-          data: allocations.map((a) => ({ ...a, invoiceId: invoice.id })),
+      for (const a of accounts) {
+        await tx.supplierInvoiceAllocation.update({
+          where: { id: a.allocationId },
+          data: { account: a.account },
         });
       }
       await tx.supplierInvoiceEvent.create({
-        data: {
-          invoiceId: invoice.id,
-          type: "EDITED",
-          actorId: g.actor.id,
-          diff: { fields: changed },
-        },
+        data: { invoiceId: invoice.id, type: "EDITED", actorId: g.actor.id, diff: { fields: changed } },
       });
     }),
   );
+  if (result instanceof Response) return result;
+  return new Response(null, { status: 204 });
+}
+
+// DELETE /api/supplier-invoices/:id
+//
+// Something that was never an invoice to pay goes, entirely: the row, its
+// documents, its history. Only before anybody has attested it
+// (isInvoiceDeletable). The mail it came in stays, as the record that the mail
+// was read, which is also what stops the next Gmail sync bringing it back.
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const g = await gate();
+  if (!g.ok) return g.res;
+
+  const access = await loadInvoiceFor(g.actor, id);
+  if (!access.ok) return access.res;
+  const { invoice, can } = access;
+  if (!can.canDelete) return refuseChange(invoice, isInvoiceDeletable(invoice.status));
+
+  const documents = await prisma.supplierInvoiceDocument.findMany({
+    where: { invoiceId: invoice.id },
+    select: { id: true, objectKey: true },
+  });
+
+  // Files before the row, as everywhere else: a row kept beside a deleted file
+  // is recoverable by trying again, a file left behind with no row is not
+  // findable at all.
+  for (const d of documents) {
+    try {
+      await deleteObject(d.objectKey);
+    } catch (e) {
+      console.error(`[supplier-invoices] ${invoice.id}: could not delete ${d.objectKey}, keeping row`, e);
+      return fail(503, "receipt.deleteStorageFailed");
+    }
+  }
+
+  const result = await commit(async () => {
+    applied(
+      await prisma.supplierInvoice.deleteMany({ where: { id: invoice.id, status: invoice.status } }),
+      "supplierInvoice.changedMeanwhile",
+    );
+  });
   if (result instanceof Response) return result;
   return new Response(null, { status: 204 });
 }
