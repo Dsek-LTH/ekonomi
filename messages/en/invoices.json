@@ -1,0 +1,162 @@
+{
+  "title": "Supplier invoices",
+  "upload": "Add invoice",
+  "empty": "No supplier invoices",
+  "emptyTriage": "Invoices sent in by email end up here. You can also add a PDF by hand.",
+  "emptyDescription": "Supplier invoices your unit is to code or attest end up here.",
+  "searchPlaceholder": "Search supplier, invoice number or unit",
+  "noMatch": "No invoices match.",
+  "unnamed": "Unknown supplier",
+  "tab": {
+    "todo": "To do",
+    "inbox": "Inbox",
+    "active": "In progress",
+    "done": "Done",
+    "discarded": "Discarded",
+    "all": "All"
+  },
+  "col": {
+    "supplier": "Supplier",
+    "invoiceNumber": "Invoice no.",
+    "unit": "Result unit",
+    "dueDate": "Due",
+    "status": "Status",
+    "amount": "Amount"
+  },
+  "field": {
+    "supplierName": "Supplier",
+    "supplierOrgNo": "Organisation number",
+    "amount": "Amount",
+    "invoiceNumber": "Invoice number",
+    "invoiceDate": "Invoice date",
+    "dueDate": "Due date",
+    "ocr": "OCR",
+    "bankgiro": "Bankgiro",
+    "plusgiro": "Plusgiro",
+    "description": "What is the invoice for?"
+  },
+  "detail": {
+    "missingTitle": "The invoice does not exist",
+    "missingDescription": "It may have been discarded, or you do not have access to it.",
+    "missingAction": "To supplier invoices",
+    "unnamed": "Unknown supplier",
+    "invoiceNo": "Invoice {number}",
+    "save": "Save",
+    "saved": "Saved",
+    "unit": "Result unit",
+    "noUnit": "Not assigned yet",
+    "assignTo": "Give to",
+    "assignHint": "The unit's resultatansvarig gets an email and codes the invoice.",
+    "pickUnit": "Pick a result unit",
+    "searchUnit": "Search result units",
+    "unassign": "Back to the inbox",
+    "documents": "Documents",
+    "removeDocument": "Remove document",
+    "removeDocumentConfirm": "{filename} will be removed from the invoice.",
+    "noDocumentTitle": "Invoice",
+    "noDocument": "No PDF attached yet.",
+    "upload": {
+      "lead": "Drop the invoice here",
+      "leadShort": "Add the invoice",
+      "action": "Choose file",
+      "add": "Add document"
+    },
+    "history": "History",
+    "returnedTitle": "{name} wants something changed:",
+    "backToList": "To the list",
+    "blocker": {
+      "noDocument": "Attach the invoice PDF first.",
+      "noSupplier": "Fill in the supplier to send it for attest.",
+      "noAmount": "Fill in the amount to send it for attest.",
+      "noDueDate": "Fill in the due date to send it for attest.",
+      "noAllocations": "Code the invoice to send it for attest.",
+      "allocationNoAccount": "Every coding row needs an account.",
+      "allocationNotPositive": "Every coding row needs an amount.",
+      "allocationSumMismatch": "The coding does not add up to the amount."
+    },
+    "suggestion": "The last invoice from {sender} went to {unit}.",
+    "assignSuggested": "Give to {unit}"
+  },
+  "kontering": {
+    "title": "Coding",
+    "none": "Not coded yet.",
+    "costCenter": "Cost centre",
+    "account": "Account",
+    "amount": "Amount",
+    "comment": "Comment",
+    "commentPlaceholder": "Optional",
+    "pickCostCenter": "Pick a cost centre",
+    "pickAccount": "Pick an account",
+    "search": "Search",
+    "addRow": "Add row",
+    "removeRow": "Remove the row",
+    "noTotal": "Fill in the invoice amount",
+    "balanced": "{sum}, adds up",
+    "unbalanced": "{sum} of {total}",
+    "attestedBy": "Attested by {name}, {when}",
+    "yoursToAttest": "Waiting for your attest",
+    "awaitingAttest": "Waiting for attest from {unit}"
+  },
+  "action": {
+    "submit": "Send for attest",
+    "approve": "Attest",
+    "request_changes": "Request changes",
+    "recall": "Take back",
+    "restore": "Restore to the inbox",
+    "discard": "Discard",
+    "commentLabel": "Comment",
+    "confirm": {
+      "request_changes": "The invoice goes back to the result unit, and every attest on it is removed.",
+      "discard": "The invoice is taken out of the inbox. It stays under Discarded and can be restored."
+    },
+    "done": {
+      "assign": "The invoice has been assigned",
+      "discard": "The invoice is discarded",
+      "restore": "The invoice is back in the inbox",
+      "submit": "The invoice is sent for attest",
+      "recall": "The invoice is taken back",
+      "approve": "Attested",
+      "request_changes": "The invoice is sent back"
+    }
+  },
+  "event": {
+    "RECEIVED": "Received",
+    "EDITED": "Edited",
+    "DOCUMENT_UPLOADED": "Document added",
+    "DOCUMENT_REMOVED": "Document removed",
+    "ASSIGNED": "Given to {unit}",
+    "UNASSIGNED": "Back in the inbox",
+    "SUBMITTED": "Sent for attest",
+    "RECALLED": "Taken back from attest",
+    "COST_CENTER_APPROVED": "Attested for cost centre",
+    "CHANGES_REQUESTED": "Changes requested",
+    "APPROVED": "Fully attested",
+    "DISCARDED": "Discarded",
+    "RESTORED": "Restored to the inbox",
+    "auto": {
+      "costCenter": "Automatically: the email mentioned {match}",
+      "unitName": "Automatically: the email mentioned {match}",
+      "forwarder": "Automatically: the sender answers for {match}"
+    }
+  },
+  "mail": {
+    "title": "Received by email",
+    "from": "From",
+    "subject": "Subject",
+    "originalFrom": "Originally from"
+  },
+  "mailbox": {
+    "title": "Inbox mail account",
+    "lastSync": "Last read {when}",
+    "neverSynced": "Not read yet",
+    "error": "The last read failed: {error}",
+    "noneRejected": "No mail has been refused in the last 30 days.",
+    "rejectedLead": "Refused in the last 30 days:",
+    "unknownSender": "Unknown sender",
+    "reason": {
+      "noSender": "no sender",
+      "foreignDomain": "not from dsek.se",
+      "notAuthenticated": "the sender could not be verified"
+    }
+  }
+}

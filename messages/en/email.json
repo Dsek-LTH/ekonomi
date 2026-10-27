@@ -165,5 +165,36 @@
       "button": "Open the expense",
       "short": "Draft, not submitted"
     }
+  },
+  "invoice": {
+    "untitled": "Supplier invoice",
+    "fact": {
+      "dueDate": "Due date"
+    },
+    "reason": {
+      "unitOwner": "You get this email because you answer for the result unit the invoice belongs to.",
+      "attester": "You get this email because you can attest the invoice."
+    },
+    "assigned": {
+      "subject": "To code: {label}",
+      "eyebrow": "To code",
+      "heading": "{actor} has given {unit} a supplier invoice",
+      "intro": "Code it and send it for attest.",
+      "button": "Open and code"
+    },
+    "returned": {
+      "subject": "Changes requested: {label}",
+      "eyebrow": "Needs changes",
+      "heading": "A supplier invoice came back",
+      "intro": "{actor} wants something changed before it can be attested. Change it and send it for attest again.",
+      "button": "Open the invoice"
+    },
+    "submitted": {
+      "subject": "To attest: {label}",
+      "eyebrow": "To attest",
+      "heading": "{actor} has coded a supplier invoice",
+      "intro": "It is waiting for your attest.",
+      "button": "Open and attest"
+    }
   }
 }

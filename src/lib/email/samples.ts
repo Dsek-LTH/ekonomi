@@ -10,6 +10,7 @@ import {
   emailT,
   expenseNotice,
   frame,
+  invoiceNotice,
   reminderEmail,
   transactionsBlock,
 } from "./content";
@@ -23,6 +24,16 @@ export const SAMPLE_EXPENSE = {
   grossAmount: 45000,
   purchaseDate: new Date("2026-10-08"),
   paymentType: "REIMBURSEMENT" as const,
+  allocations: [{ costCenter: { code: "SEX01", name: "Sexmästeriet" } }],
+};
+
+export const SAMPLE_INVOICE = {
+  id: "preview",
+  supplierName: "Lunds Släpvagnsuthyrning AB",
+  invoiceNumber: "20417",
+  description: "Släp till nollningen",
+  amount: 125000,
+  dueDate: new Date("2026-11-10"),
   allocations: [{ costCenter: { code: "SEX01", name: "Sexmästeriet" } }],
 };
 
@@ -96,6 +107,14 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
       orOpen: emailT("orOpen", { url }),
       ...frame(emailT("reason.cardHolder", { cards })),
     };
+  }
+
+  if (kind === "SUPPLIER_INVOICE_ASSIGNED" || kind === "SUPPLIER_INVOICE_SUBMITTED") {
+    return invoiceNotice(
+      kind === "SUPPLIER_INVOICE_ASSIGNED" ? "assigned" : "submitted",
+      SAMPLE_INVOICE,
+      { actor: "Maja Holm", unit: "Sexmästeriet" },
+    );
   }
 
   if (kind === "EXPENSE_REMINDER") {

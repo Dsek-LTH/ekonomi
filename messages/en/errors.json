@@ -364,10 +364,32 @@
     "notRetryable": "The email has already been sent.",
     "noExpense": "{name} has no expenses the email can be built from.",
     "noCardTransactions": "{name} has no transactions on their cards.",
-    "nothingWaiting": "Nothing is waiting on {name} right now, so no weekly summary would be sent."
+    "nothingWaiting": "Nothing is waiting on {name} right now, so no weekly summary would be sent.",
+    "noInvoice": "{name} has no supplier invoices the email can be built on."
   },
   "reminder": {
     "denied": "You may not send reminders.",
     "nobody": "None of the expenses is waiting on anyone who can be reminded."
+  },
+  "supplierInvoice": {
+    "notFound": "The invoice was not found",
+    "denied": "You may not do that with this invoice.",
+    "notChangeableInStatus": "An invoice with status ‘{status}’ cannot be changed",
+    "changedMeanwhile": "Someone else changed the invoice in the meantime. Reload the page and try again.",
+    "noResultUnit": "Pick a result unit.",
+    "unknownResultUnit": "The result unit does not exist.",
+    "unknownCostCenter": "The cost centre {code} does not exist.",
+    "commentRequired": "Write what needs to change.",
+    "nothingToApprove": "There is nothing on the invoice you can attest.",
+    "alreadyAttested": "Someone else attested at the same time. Reload the page.",
+    "documentNotFound": "The document was not found",
+    "noDocument": "The invoice has no PDF.",
+    "noSupplier": "Fill in the supplier.",
+    "noAmount": "Fill in the amount.",
+    "noDueDate": "Fill in the due date.",
+    "noAllocations": "Code the invoice to at least one cost centre.",
+    "allocationNoAccount": "Every coding row needs an account.",
+    "allocationNotPositive": "Every coding row needs an amount above zero.",
+    "allocationSumMismatch": "The coding does not add up to the invoice amount."
   }
 }

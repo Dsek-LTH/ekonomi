@@ -67,6 +67,7 @@ const AREA_OF: Record<Capability, Area> = {
   BOOKKEEPING: "bookkeeping",
   FORTNOX_LOGIN: "bookkeeping",
   EXPORT_UNDO: "bookkeeping",
+  INVOICE_TRIAGE: "bookkeeping",
   BUDGET_VIEW: "budget",
   BUDGET_COMMENT: "budget",
   BUDGET_LOCK: "budget",

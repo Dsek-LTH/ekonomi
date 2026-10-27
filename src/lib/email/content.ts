@@ -184,6 +184,81 @@ function expenseBlock(expense: ExpenseFacts): Block {
   };
 }
 
+// ── Leverantörsfakturor ───────────────────────────────────────────
+
+type InvoiceKind = "assigned" | "returned" | "submitted";
+
+const INVOICE_KINDS: Record<InvoiceKind, { tone: Tone; reason: "unitOwner" | "attester" }> = {
+  assigned: { tone: "action", reason: "unitOwner" },
+  returned: { tone: "warning", reason: "unitOwner" },
+  submitted: { tone: "action", reason: "attester" },
+};
+
+/** What a mail about a levfaktura can say about it. */
+export interface InvoiceFacts {
+  id: string;
+  supplierName: string | null;
+  invoiceNumber: string | null;
+  description: string | null;
+  amount: number | null; // öre
+  dueDate: Date | null;
+  allocations?: { costCenter: { code: string; name: string } }[];
+}
+
+/** What a levfaktura is called in a mail: the supplier and what it was for,
+ *  or whichever of them is known. An invoice fresh from the inkorg may have
+ *  neither yet. */
+const invoiceLabel = (i: InvoiceFacts): string =>
+  [i.supplierName, i.description].filter(Boolean).join(" - ") || emailT("invoice.untitled");
+
+/**
+ * The mail about one levfaktura, the same shape as an utlägg's: what happened,
+ * which invoice, and the button to it. The invoice is drawn as the utlägg card
+ * is, with its number where an utlägg's reference goes.
+ */
+export function invoiceNotice(
+  key: InvoiceKind,
+  invoice: InvoiceFacts,
+  values: Record<string, string | number> = {},
+  comment?: { author: string; text: string | null },
+): Email {
+  const { tone, reason } = INVOICE_KINDS[key];
+  const label = invoiceLabel(invoice);
+  const url = appUrl(`/invoices/${invoice.id}`);
+
+  const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
+  if (invoice.dueDate) {
+    facts.push({ label: emailT("invoice.fact.dueDate"), value: isoDay(invoice.dueDate) });
+  }
+  if (invoice.allocations?.length) {
+    const centres = [
+      ...new Set(invoice.allocations.map((a) => `${a.costCenter.code} - ${a.costCenter.name}`)),
+    ];
+    facts.push({ label: emailT("fact.costCenter"), value: centres.join(", ") });
+  }
+
+  return {
+    subject: emailT(`invoice.${key}.subject`, { label }),
+    tone,
+    eyebrow: emailT(`invoice.${key}.eyebrow`),
+    heading: emailT(`invoice.${key}.heading`, values),
+    intro: emailT(`invoice.${key}.intro`, values),
+    blocks: [
+      ...commentBlock(comment),
+      {
+        kind: "expense",
+        reference: invoice.invoiceNumber,
+        title: label,
+        amount: formatOre(invoice.amount ?? 0),
+        facts,
+      },
+    ],
+    action: { label: emailT(`invoice.${key}.button`), url },
+    orOpen: emailT("orOpen", { url }),
+    ...frame(emailT(`invoice.reason.${reason}`)),
+  };
+}
+
 /** What somebody wrote when they acted, quoted as of now. Nothing without text. */
 function commentBlock(comment?: { author: string; text: string | null }): Block[] {
   if (!comment?.text) return [];

@@ -1,0 +1,212 @@
+// Leverantörsfakturor: an invoice the section has been sent and has to pay,
+// from the moment it lands in the inkorg until it has been attested and handed
+// to Fortnox.
+//
+// Its own model rather than a fourth PaymentType on Expense. An utlägg is a
+// member's claim on the section, and most of what Expense holds is about that
+// member: who is owed, by when they must file, whose card it was on. An
+// invoice has none of it. A supplier is owed, nobody files it, and it is paid
+// through Fortnox's leverantörsreskontra rather than as a payout. What the two
+// do share is the attest, which is why the allocation below has the same shape
+// as ExpenseCostAllocation and is decided by the same rule
+// (canAttestAllocation in lib/domain/permissions.ts).
+//
+// The section is momsbefriad, so there is no VAT anywhere in here. An amount is
+// what the supplier asks for, and every krona of it is cost.
+
+/// Where an invoice is. The path through it is
+///
+///   INBOX → ASSIGNED → PENDING_APPROVAL → APPROVED → EXPORTED
+///
+/// with CHANGES_REQUESTED as the way back from the attest, and DISCARDED as
+/// the way out of the inkorg for something that was never an invoice to pay.
+enum SupplierInvoiceStatus {
+  /// Arrived and nobody has said whose it is yet. Only triage sees it here.
+  INBOX
+  /// Given to a result unit, whose resultatansvarig konterar it.
+  ASSIGNED
+  /// Konterad and sent for attest. Nothing about it can change until every
+  /// allocation is signed or somebody sends it back.
+  PENDING_APPROVAL
+  /// Sent back from the attest with a comment. Editable again, like ASSIGNED.
+  CHANGES_REQUESTED
+  /// Every allocation attested. Ready to go to Fortnox.
+  APPROVED
+  /// Created in Fortnox as an unbooked supplier invoice. Booking it and paying
+  /// it happen there.
+  EXPORTED
+  /// Taken out of the inkorg: a duplicate, a reminder for an invoice already
+  /// here, or mail that was never an invoice. Kept, not deleted, so the
+  /// question "did we ever get that invoice" still has an answer.
+  DISCARDED
+}
+
+/// How the invoice got here.
+enum SupplierInvoiceSource {
+  /// Somebody holding INVOICE_TRIAGE put the PDF in by hand.
+  UPLOAD
+  /// Forwarded by mail to the inkorg address.
+  EMAIL
+}
+
+enum SupplierInvoiceEventType {
+  RECEIVED
+  EDITED
+  DOCUMENT_UPLOADED
+  DOCUMENT_REMOVED
+  /// Given to a result unit, or moved from one to another. `diff` is
+  /// `{ from: string | null, to: string }`, the unit names as they were then.
+  ASSIGNED
+  /// Taken back to the inkorg, unassigned.
+  UNASSIGNED
+  SUBMITTED
+  /// Taken back out of the attest by whoever konterade it, to change something.
+  RECALLED
+  COST_CENTER_APPROVED
+  CHANGES_REQUESTED
+  APPROVED
+  DISCARDED
+  /// Brought back from DISCARDED to the inkorg.
+  RESTORED
+}
+
+model SupplierInvoice {
+  id     String                @id @default(cuid())
+  status SupplierInvoiceStatus @default(INBOX)
+  source SupplierInvoiceSource
+
+  /// Who put it here: the uploader, or the member whose mail it came from.
+  receivedBy   User?   @relation("SupplierInvoiceReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+  receivedById String?
+
+  /// What it is for, in a line, written by whoever knows. "Hyra av släp till
+  /// nollningen" says more to an attester than a supplier's name does.
+  description String?
+
+  // ── What the invoice says ────────────────────────────────────────
+  //
+  // All nullable, because an invoice arrives as a PDF and nothing else. These
+  // are filled in by hand from it, and the submit is what requires them
+  // (lib/domain/supplier-invoice.ts, submitBlocker). Free text where the
+  // supplier writes free text: an org number, an OCR and a bankgiro are what is
+  // printed on the invoice, and checking their shape here would only refuse an
+  // invoice the section still has to pay.
+  supplierName  String?
+  supplierOrgNo String?
+  invoiceNumber String?
+  invoiceDate   DateTime? @db.Date
+  dueDate       DateTime? @db.Date
+  amount        Int? // öre
+  currency      String    @default("SEK")
+  ocr           String?
+  bankgiro      String?
+  plusgiro      String?
+
+  // ── Whose it is ──────────────────────────────────────────────────
+  //
+  // The result unit answering for it, which is who konterar it. Not who attests
+  // it. That is still decided per allocation from the cost centre's code, the
+  // same as an utlägg, so an invoice split with another unit is signed for by
+  // both. Null in the inkorg.
+  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
+  resultUnitId String?
+  /// Null when it was given to a unit automatically, from what the forwarded
+  /// mail said. The ASSIGNED event's `diff.auto` says why.
+  assignedBy   User?       @relation("SupplierInvoiceAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById String?
+  assignedAt   DateTime?
+
+  /// The mail it came in, for an invoice that was forwarded rather than
+  /// uploaded. One mail with three PDFs is three invoices pointing here.
+  inboundMail   InboundMail? @relation(fields: [inboundMailId], references: [id], onDelete: SetNull)
+  inboundMailId String?
+
+  allocations SupplierInvoiceAllocation[]
+  documents   SupplierInvoiceDocument[]
+  events      SupplierInvoiceEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([inboundMailId])
+  // The list is a status tab in arrival order, and a resultatansvarig's list is
+  // that narrowed to their units. Each ends in `id` for the reason the indexes
+  // on Expense do: a page is a window onto an ordering, and an ordering with
+  // ties can show one row twice.
+  @@index([status, createdAt, id])
+  @@index([resultUnitId, status])
+  @@index([dueDate, id])
+}
+
+/// One konteringsrad: a cost centre, the account it is booked on, and how much.
+/// The rows of one invoice add up to its amount.
+///
+/// An utlägg's allocation leaves the account to the bookkeeper. This one names
+/// it, because the resultatansvarig is the one who knows what was bought and
+/// the bookkeeper may never see the invoice before it is in Fortnox. The
+/// bookkeeper still checks it there before booking.
+model SupplierInvoiceAllocation {
+  id           String          @id @default(cuid())
+  invoice      SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId    String
+  costCenter   CostCenter      @relation(fields: [costCenterId], references: [id])
+  costCenterId String
+  /// BAS account number, e.g. "5410". A plain number like VerificationLine's,
+  /// not a relation: Fortnox retires accounts, and a row must outlive that.
+  account      String
+  /// Fortnox project number, or null. See Project.
+  project      String?
+  amount       Int // öre
+  comment      String?
+
+  approvedBy   User?     @relation("SupplierInvoiceAllocationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  approvedAt   DateTime?
+
+  /// Where it comes among the invoice's rows, as the konterare wrote them.
+  position Int @default(0)
+
+  @@index([invoiceId])
+  // "Every invoice touching one of these cost centres", which is how a
+  // resultatansvarig's attest queue is resolved, as on ExpenseCostAllocation.
+  @@index([costCenterId])
+}
+
+/// The invoice itself, as a file. Usually one PDF, sometimes a PDF and a
+/// specification that only makes sense beside it, so zero or more, like Receipt.
+model SupplierInvoiceDocument {
+  id        String          @id @default(cuid())
+  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+
+  objectKey String
+  filename  String
+  mimeType  String
+  byteSize  Int?
+
+  uploadedBy   User?   @relation("SupplierInvoiceDocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+
+  position Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model SupplierInvoiceEvent {
+  id        String                   @id @default(cuid())
+  invoice   SupplierInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+  type      SupplierInvoiceEventType
+
+  actor   User?   @relation("SupplierInvoiceEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+
+  comment String?
+  diff    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}

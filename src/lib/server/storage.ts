@@ -103,6 +103,17 @@ export function contractFileKey(
   return `contracts/${contractId}/${fileId}-${safeName(filename)}`;
 }
 
+// A levfaktura's PDF, or a specification beside it. Uploaded, like a receipt,
+// so the documentId (a uuid) carries uniqueness and two invoices both called
+// faktura.pdf never collide.
+export function supplierInvoiceDocumentKey(
+  invoiceId: string,
+  documentId: string,
+  filename: string,
+): string {
+  return `supplier-invoices/${invoiceId}/${documentId}-${safeName(filename)}`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

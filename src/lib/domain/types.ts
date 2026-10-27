@@ -81,6 +81,13 @@ export type ExpenseStatus = Schema.ExpenseStatus;
 /** How far an export to Fortnox has got. See lib/domain/export-claim.ts. */
 export type ExportClaimState = Schema.ExportClaimState;
 
+// Leverantörsfakturor. What each status means is in
+// prisma/schema/supplier-invoice.prisma, and the rules over them in
+// lib/domain/supplier-invoice.ts.
+export type SupplierInvoiceStatus = Schema.SupplierInvoiceStatus;
+export type SupplierInvoiceSource = Schema.SupplierInvoiceSource;
+export type SupplierInvoiceEventType = Schema.SupplierInvoiceEventType;
+
 export interface User {
   id: string;
   name: string;

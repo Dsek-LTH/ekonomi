@@ -39,6 +39,7 @@ import {
   IconHelp,
   IconKey,
   IconList,
+  IconMail,
   IconMenu,
   IconReceipt,
   IconSearch,
@@ -49,6 +50,7 @@ import {
   canAccessBudget,
   canAccessSettings,
   canManageRentals,
+  canSeeInvoices,
   canViewContracts,
   canViewRentals,
   canViewStock,
@@ -177,6 +179,16 @@ const NAV_GROUPS: NavGroup[] = [
           canAccessBookkeeping(u.capabilities),
       },
       { href: "/approvals", label: "approvals", icon: IconCheck, visible: (u) => hasAttestRole(u.capabilities) },
+      // Beside the attest queue rather than under Bokföring: for most of the
+      // people who open it, a resultatansvarig, it is the same errand, an
+      // invoice to kontera or to sign. Triage is the treasury's, and finds it
+      // here too.
+      {
+        href: "/invoices",
+        label: "invoices",
+        icon: IconMail,
+        visible: (u) => canSeeInvoices(u.capabilities),
+      },
     ],
   },
   {

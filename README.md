@@ -124,8 +124,13 @@ of failing.
   ```
 - **Email** (`SMTP_*`, `MAIL_FROM`, `APP_URL`): without `SMTP_HOST`,
   notifications are written to the server log.
-- **Scheduled jobs** (`CRON_SECRET`): `POST /api/cron/weekly-digest` and
-  `/api/cron/deliver-mail`, called with `Authorization: Bearer <CRON_SECRET>`.
+- **Levfakturor by mail** (`GMAIL_*`): supplier invoices forwarded to a
+  Google Workspace mailbox land in the inkorg. Setup in
+  [docs/gmail-inbound.md](docs/gmail-inbound.md). Without it, invoices are
+  added by hand.
+- **Scheduled jobs** (`CRON_SECRET`): `POST /api/cron/weekly-digest`,
+  `/api/cron/deliver-mail` and, with the Gmail inkorg, hourly
+  `/api/cron/gmail-sync`, called with `Authorization: Bearer <CRON_SECRET>`.
   Without the secret they answer 404.
 
 ## Running the whole stack in Docker

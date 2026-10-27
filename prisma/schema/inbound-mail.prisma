@@ -1,0 +1,78 @@
+// Levfakturor that arrive by mail: a member forwards the invoice to the
+// inkorg mailbox (fakturor@dsek.se), Gmail tells Google Cloud Pub/Sub, Pub/Sub
+// calls /api/inbound/gmail, and the app reads the mail through the Gmail API.
+// See lib/server/gmail.ts and lib/server/inbound-mail.ts.
+//
+// The mailbox itself stays the archive of what was sent. What is kept here is
+// what the app decided about each mail, and enough of it to show beside the
+// invoices it became: who sent it, what they wrote, and why it was refused if
+// it was.
+
+enum InboundMailStatus {
+  /// From a dsek.se sender whose mail passed DKIM/DMARC. Turned into one
+  /// invoice per PDF, or a single invoice without a document when it had none.
+  ACCEPTED
+  /// Refused. `rejectReason` says why. No invoice was made.
+  REJECTED
+}
+
+model InboundMail {
+  id String @id @default(cuid())
+
+  /// Gmail's id for the message in the inkorg mailbox. Unique, which is what
+  /// makes a notification that arrives twice, or a sync that overlaps a push,
+  /// a no-op the second time.
+  gmailId String @unique
+
+  /// The RFC 822 Message-ID, for finding the mail again in Gmail by hand.
+  messageId String?
+
+  /// The address in From, lower-cased, and the name beside it.
+  fromAddress String
+  fromName    String?
+  /// The member that address belongs to, when there is one.
+  sender      User?   @relation("InboundMailSender", fields: [senderId], references: [id], onDelete: SetNull)
+  senderId    String?
+
+  subject String?
+  /// What the forwarder wrote above the forwarded message. Where "SEX01" or
+  /// "till Sexmästeriet" is read from for the automatic assignment.
+  note    String?
+  /// Who the forwarded message was originally from, as the forward quotes it:
+  /// the supplier's address, usually. What the supplier-history suggestion is
+  /// matched on.
+  originalFrom String?
+
+  status       InboundMailStatus
+  rejectReason String?
+
+  receivedAt DateTime
+
+  invoices SupplierInvoice[]
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([originalFrom])
+}
+
+/// Where the app has read the inkorg mailbox up to, and when Gmail's watch on
+/// it runs out. One row, id "singleton", the same as BookkeepingSettings.
+///
+/// Gmail's push notifications say only "something changed after history id N".
+/// The app keeps the last history id it read and asks for everything since,
+/// so a notification that is lost costs nothing: the next one, or the cron
+/// sync, picks up from the same place.
+model GmailSync {
+  id String @id @default("singleton")
+
+  /// Gmail history ids are 64-bit and arrive as strings. Kept as one.
+  historyId      String?
+  /// A watch lasts seven days and has to be renewed. The cron job does it
+  /// daily (api/cron/gmail-sync).
+  watchExpiresAt DateTime?
+  lastSyncAt     DateTime?
+  lastError      String?
+
+  updatedAt DateTime @updatedAt
+}

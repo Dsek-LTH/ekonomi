@@ -159,6 +159,7 @@ export const CapabilityName = z.enum([
   "RENTAL_VIEW",
   "RENTAL_MANAGE",
   "SEND_REMINDERS",
+  "INVOICE_TRIAGE",
 ]);
 
 /**

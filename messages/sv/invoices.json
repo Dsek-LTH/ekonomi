@@ -1,0 +1,162 @@
+{
+  "title": "Leverantörsfakturor",
+  "upload": "Lägg in faktura",
+  "empty": "Inga leverantörsfakturor",
+  "emptyTriage": "Fakturor som mejlas in hamnar här. Du kan också lägga in en PDF för hand.",
+  "emptyDescription": "Här hamnar leverantörsfakturor som din enhet ska kontera eller attestera.",
+  "searchPlaceholder": "Sök leverantör, fakturanummer eller enhet",
+  "noMatch": "Inga fakturor matchar.",
+  "unnamed": "Okänd leverantör",
+  "tab": {
+    "todo": "Att göra",
+    "inbox": "Inkorg",
+    "active": "Pågående",
+    "done": "Klara",
+    "discarded": "Kasserade",
+    "all": "Alla"
+  },
+  "col": {
+    "supplier": "Leverantör",
+    "invoiceNumber": "Fakturanr",
+    "unit": "Resultatenhet",
+    "dueDate": "Förfaller",
+    "status": "Status",
+    "amount": "Belopp"
+  },
+  "field": {
+    "supplierName": "Leverantör",
+    "supplierOrgNo": "Organisationsnummer",
+    "amount": "Belopp",
+    "invoiceNumber": "Fakturanummer",
+    "invoiceDate": "Fakturadatum",
+    "dueDate": "Förfallodag",
+    "ocr": "OCR",
+    "bankgiro": "Bankgiro",
+    "plusgiro": "Plusgiro",
+    "description": "Vad gäller fakturan?"
+  },
+  "detail": {
+    "missingTitle": "Fakturan finns inte",
+    "missingDescription": "Den kan ha kasserats, eller så har du inte tillgång till den.",
+    "missingAction": "Till leverantörsfakturor",
+    "unnamed": "Okänd leverantör",
+    "invoiceNo": "Faktura {number}",
+    "save": "Spara",
+    "saved": "Sparat",
+    "unit": "Resultatenhet",
+    "noUnit": "Inte tilldelad än",
+    "assignTo": "Ge till",
+    "assignHint": "Resultatansvarig för enheten får ett mejl och konterar fakturan.",
+    "pickUnit": "Välj resultatenhet",
+    "searchUnit": "Sök resultatenhet",
+    "unassign": "Tillbaka till inkorgen",
+    "documents": "Dokument",
+    "removeDocument": "Ta bort dokument",
+    "removeDocumentConfirm": "{filename} tas bort från fakturan.",
+    "noDocumentTitle": "Faktura",
+    "noDocument": "Ingen PDF är bifogad än.",
+    "upload": {
+      "lead": "Dra hit fakturan",
+      "leadShort": "Lägg till fakturan",
+      "action": "Välj fil",
+      "add": "Lägg till dokument"
+    },
+    "history": "Historik",
+    "returnedTitle": "{name} vill att något ändras:",
+    "backToList": "Till listan",
+    "blocker": {
+      "noDocument": "Bifoga fakturans PDF först.",
+      "noSupplier": "Fyll i leverantör för att skicka på attest.",
+      "noAmount": "Fyll i belopp för att skicka på attest.",
+      "noDueDate": "Fyll i förfallodag för att skicka på attest.",
+      "noAllocations": "Kontera fakturan för att skicka på attest.",
+      "allocationNoAccount": "Varje konteringsrad behöver ett konto.",
+      "allocationNotPositive": "Varje konteringsrad behöver ett belopp.",
+      "allocationSumMismatch": "Konteringen går inte jämnt ut med beloppet."
+    },
+    "suggestion": "Förra fakturan från {sender} gick till {unit}.",
+    "assignSuggested": "Ge till {unit}"
+  },
+  "kontering": {
+    "title": "Kontering",
+    "none": "Inte konterad än.",
+    "costCenter": "Kostnadsställe",
+    "account": "Konto",
+    "amount": "Belopp",
+    "comment": "Kommentar",
+    "commentPlaceholder": "Valfritt",
+    "pickCostCenter": "Välj kostnadsställe",
+    "pickAccount": "Välj konto",
+    "search": "Sök",
+    "addRow": "Lägg till rad",
+    "removeRow": "Ta bort raden",
+    "noTotal": "Fyll i fakturans belopp",
+    "balanced": "{sum}, går jämnt ut",
+    "unbalanced": "{sum} av {total}",
+    "attestedBy": "Attesterad av {name}, {when}",
+    "yoursToAttest": "Väntar på din attest",
+    "awaitingAttest": "Väntar på attest från {unit}"
+  },
+  "action": {
+    "submit": "Skicka på attest",
+    "approve": "Attestera",
+    "request_changes": "Begär ändring",
+    "recall": "Ta tillbaka",
+    "restore": "Återställ till inkorgen",
+    "discard": "Kassera",
+    "commentLabel": "Kommentar",
+    "confirm": {
+      "request_changes": "Fakturan går tillbaka till resultatenheten, och alla attester på den tas bort.",
+      "discard": "Fakturan tas ur inkorgen. Den finns kvar under Kasserade och kan återställas."
+    },
+    "done": {
+      "assign": "Fakturan har tilldelats",
+      "discard": "Fakturan är kasserad",
+      "restore": "Fakturan ligger i inkorgen igen",
+      "submit": "Fakturan är skickad på attest",
+      "recall": "Fakturan är tillbakatagen",
+      "approve": "Attesterat",
+      "request_changes": "Fakturan är skickad tillbaka"
+    }
+  },
+  "event": {
+    "RECEIVED": "Inkommen",
+    "EDITED": "Ändrad",
+    "DOCUMENT_UPLOADED": "Dokument tillagt",
+    "DOCUMENT_REMOVED": "Dokument borttaget",
+    "ASSIGNED": "Given till {unit}",
+    "UNASSIGNED": "Tillbaka i inkorgen",
+    "SUBMITTED": "Skickad på attest",
+    "RECALLED": "Tillbakatagen från attest",
+    "COST_CENTER_APPROVED": "Attesterad för kostnadsställe",
+    "CHANGES_REQUESTED": "Ändring begärd",
+    "APPROVED": "Helt attesterad",
+    "DISCARDED": "Kasserad",
+    "RESTORED": "Återställd till inkorgen",
+    "auto": {
+      "costCenter": "Automatiskt: mejlet nämnde {match}",
+      "unitName": "Automatiskt: mejlet nämnde {match}",
+      "forwarder": "Automatiskt: avsändaren är resultatansvarig för {match}"
+    }
+  },
+  "mail": {
+    "title": "Inkommen via mejl",
+    "from": "Från",
+    "subject": "Ämne",
+    "originalFrom": "Ursprungligen från"
+  },
+  "mailbox": {
+    "title": "Inkorgens mejlkonto",
+    "lastSync": "Senast läst {when}",
+    "neverSynced": "Inte läst än",
+    "error": "Senaste läsningen misslyckades: {error}",
+    "noneRejected": "Inga mejl har avvisats de senaste 30 dagarna.",
+    "rejectedLead": "Avvisade de senaste 30 dagarna:",
+    "unknownSender": "Okänd avsändare",
+    "reason": {
+      "noSender": "ingen avsändare",
+      "foreignDomain": "inte från dsek.se",
+      "notAuthenticated": "avsändaren kunde inte verifieras"
+    }
+  }
+}

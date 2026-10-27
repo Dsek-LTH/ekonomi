@@ -19,6 +19,8 @@ const DEFAULT_ON: readonly NotificationKind[] = [
   "EXPENSE_CHANGES_REQUESTED",
   "EXPENSE_DEADLINE_WAIVER_REVOKED",
   "CARD_TRANSACTIONS_IMPORTED",
+  "SUPPLIER_INVOICE_ASSIGNED",
+  "SUPPLIER_INVOICE_SUBMITTED",
 ];
 
 /** Off unless switched on. */
@@ -75,6 +77,10 @@ export const AUDIENCE: Record<NotificationKind, NotificationAudience> = {
   EXPENSE_READY_TO_BOOK: "bookkeepers",
   EXPENSE_EXPORT_REVERTED: "bookkeepers",
   CARD_TRANSACTIONS_IMPORTED: "cardHolders",
+  // A resultatansvarig holds the attest view, which is the nearest thing a
+  // profile knows to "answers for a unit".
+  SUPPLIER_INVOICE_ASSIGNED: "attesters",
+  SUPPLIER_INVOICE_SUBMITTED: "attesters",
   EXPENSE_CHANGES_REQUESTED: "everyone",
   EXPENSE_DEADLINE_WAIVER_REVOKED: "everyone",
   EXPENSE_COST_CENTER_APPROVED: "everyone",

@@ -108,6 +108,11 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTMASTARE", capability: "FORTNOX_LOGIN" },
   { role: "VICE_SKATTMASTARE", capability: "FORTNOX_LOGIN" },
   { role: "SKATTFORMAN", capability: "FORTNOX_LOGIN" },
+  // The levfaktura inkorg is the treasury's too: every invoice in it ends up
+  // in Fortnox, in front of the same people.
+  { role: "SKATTMASTARE", capability: "INVOICE_TRIAGE" },
+  { role: "VICE_SKATTMASTARE", capability: "INVOICE_TRIAGE" },
+  { role: "SKATTFORMAN", capability: "INVOICE_TRIAGE" },
   { role: "SKATTMASTARE", capability: "EXPORT_UNDO" },
   { role: "VICE_SKATTMASTARE", capability: "EXPORT_UNDO" },
   { role: "SKATTFORMAN", capability: "EXPORT_UNDO" },

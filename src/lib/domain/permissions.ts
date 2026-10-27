@@ -127,6 +127,23 @@ export const canManageContracts = (caps: readonly Capability[]) =>
 /** May remind whoever an utlägg is waiting on, by mail. See lib/server/reminders.ts. */
 export const canSendReminders = (caps: readonly Capability[]) => has(caps, "SEND_REMINDERS");
 
+// ── Leverantörsfakturor ───────────────────────────────────────────
+
+/** May keep the levfaktura inkorg: see what has arrived, put an invoice in by
+ *  hand, give it to a result unit or take it back, and discard what is not an
+ *  invoice to pay. Deciding whose an invoice is says nothing about whether it
+ *  should be paid, so this is not the attest, which stays
+ *  canAttestAllocation's per row. */
+export const canTriageInvoices = (caps: readonly Capability[]) => has(caps, "INVOICE_TRIAGE");
+
+/** May open the levfaktura pages at all. Triage and the treasury see every
+ *  invoice; anyone with the attest view may be a resultatansvarig with
+ *  invoices to kontera or sign. Which invoices each of them actually sees is
+ *  lib/data/supplier-invoices.ts's to say, this only decides whether the page
+ *  exists for them, the way hasAttestRole does for the attest queue. */
+export const canSeeInvoices = (caps: readonly Capability[]) =>
+  canTriageInvoices(caps) || canAccessBookkeeping(caps) || hasAttestRole(caps);
+
 // ── Dispens från redovisningsfristen ──────────────────────────────
 
 /**
@@ -245,6 +262,7 @@ const CAPABILITY_ORDER = {
   RENTAL_MANAGE: 16,
   FIRMATECKNARE: 17,
   SEND_REMINDERS: 18,
+  INVOICE_TRIAGE: 19,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

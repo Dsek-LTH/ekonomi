@@ -23,9 +23,10 @@ model CostCenter {
   active Boolean          @default(true)
   source CostCenterSource @default(FORTNOX)
 
-  allocations       ExpenseCostAllocation[]
-  verificationLines VerificationLine[]
-  budgetCostCenters BudgetCostCenter[]
+  allocations        ExpenseCostAllocation[]
+  invoiceAllocations SupplierInvoiceAllocation[]
+  verificationLines  VerificationLine[]
+  budgetCostCenters  BudgetCostCenter[]
 
   incomeUnits       ResultUnitIncome[]    @relation("IncomeDefaultCostCenter")
   incomeReports     IncomeReport[]
@@ -77,6 +78,9 @@ model ResultUnit {
   // Section cards spent from on this unit's behalf. The unit's resultatansvarig
   // reads their purchases on /bank, see Card.resultUnit.
   cards Card[]
+
+  // Levfakturor given to this unit to kontera. See SupplierInvoice.resultUnit.
+  supplierInvoices SupplierInvoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

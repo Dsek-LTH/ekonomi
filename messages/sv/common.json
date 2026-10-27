@@ -123,6 +123,17 @@
     "RENTAL_MANAGE": "Hantera uthyrning",
     "RENTAL_MANAGE_hint": "Skriva uthyrningsavtal och sköta katalogen över uthyrningsobjekt.",
     "SEND_REMINDERS": "Skicka påminnelser",
-    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan."
+    "SEND_REMINDERS_hint": "Påminna den ett utlägg väntar på, attestanterna eller den som skickade in det, med ett mejl. Från utlägget eller flera åt gången från listan.",
+    "INVOICE_TRIAGE": "Sortera levfakturor",
+    "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet att kontera eller kassera den. Ger inte rätt att attestera."
+  },
+  "invoiceStatus": {
+    "INBOX": "I inkorgen",
+    "ASSIGNED": "Att kontera",
+    "PENDING_APPROVAL": "Väntar på attest",
+    "CHANGES_REQUESTED": "Ändring begärd",
+    "APPROVED": "Attesterad",
+    "EXPORTED": "I Fortnox",
+    "DISCARDED": "Kasserad"
   }
 }

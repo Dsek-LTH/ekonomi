@@ -165,5 +165,36 @@
       "button": "Öppna utlägget",
       "short": "Utkast, inte inskickat"
     }
+  },
+  "invoice": {
+    "untitled": "Leverantörsfaktura",
+    "fact": {
+      "dueDate": "Förfallodag"
+    },
+    "reason": {
+      "unitOwner": "Du får det här mejlet eftersom du är resultatansvarig för enheten fakturan gäller.",
+      "attester": "Du får det här mejlet eftersom du kan attestera fakturan."
+    },
+    "assigned": {
+      "subject": "Att kontera: {label}",
+      "eyebrow": "Att kontera",
+      "heading": "{actor} har gett {unit} en leverantörsfaktura",
+      "intro": "Kontera den och skicka den på attest.",
+      "button": "Öppna och kontera"
+    },
+    "returned": {
+      "subject": "Ändring begärd: {label}",
+      "eyebrow": "Behöver ändras",
+      "heading": "En leverantörsfaktura kom tillbaka",
+      "intro": "{actor} vill att något ändras innan den kan attesteras. Ändra det och skicka den på attest igen.",
+      "button": "Öppna fakturan"
+    },
+    "submitted": {
+      "subject": "Att attestera: {label}",
+      "eyebrow": "Att attestera",
+      "heading": "{actor} har konterat en leverantörsfaktura",
+      "intro": "Den väntar på din attest.",
+      "button": "Öppna och attestera"
+    }
   }
 }

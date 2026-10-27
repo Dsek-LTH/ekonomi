@@ -17,7 +17,16 @@ import { prisma } from "@/lib/server/db";
 import { attestersOf, holdersOf } from "@/lib/server/notify";
 import { digestFor } from "@/lib/server/weekly-digest";
 import { renderHtml, renderText, type Email } from "@/lib/email/render";
-import { appUrl, emailT, expenseNotice, frame, transactionsBlock } from "@/lib/email/content";
+import {
+  appUrl,
+  emailT,
+  expenseNotice,
+  frame,
+  invoiceNotice,
+  transactionsBlock,
+} from "@/lib/email/content";
+import { loadUser } from "@/lib/server/current-user";
+import { invoiceScopeWhere, invoiceViewerOf } from "@/lib/data/supplier-invoices";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import type { NotificationKind } from "@/lib/domain/types";
 
@@ -143,10 +152,38 @@ async function cardEmail(userId: string): Promise<Email | null> {
   };
 }
 
+/**
+ * A levfaktura mail about the newest invoice this member may open. Only one
+ * they could open, for the same reason pickExpense keeps to their own: a test
+ * must not carry somebody else's business to them.
+ */
+async function invoiceEmail(
+  kind: "SUPPLIER_INVOICE_ASSIGNED" | "SUPPLIER_INVOICE_SUBMITTED",
+  recipient: { id: string },
+  sender: { name: string },
+): Promise<Email | null> {
+  const user = await loadUser(recipient.id);
+  if (!user) return null;
+  const scope = invoiceScopeWhere(await invoiceViewerOf({ id: recipient.id, ...user }));
+  const inv = await prisma.supplierInvoice.findFirst({
+    where: { AND: [scope, { status: { notIn: ["INBOX", "DISCARDED"] } }] },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    include: {
+      resultUnit: { select: { name: true } },
+      allocations: { select: { costCenter: { select: { code: true, name: true } } } },
+    },
+  });
+  if (!inv) return null;
+  return invoiceNotice(kind === "SUPPLIER_INVOICE_ASSIGNED" ? "assigned" : "submitted", inv, {
+    actor: sender.name,
+    unit: inv.resultUnit?.name ?? "",
+  });
+}
+
 export type TestEmailResult =
   | { ok: true; id: string; subject: string }
   /** Nothing real to build this kind from, as an error code under `email.`. */
-  | { ok: false; error: "noExpense" | "noCardTransactions" | "nothingWaiting" };
+  | { ok: false; error: "noExpense" | "noCardTransactions" | "noInvoice" | "nothingWaiting" };
 
 /**
  * Build a mail of `kind` for one member from their real data, and write it to
@@ -188,6 +225,9 @@ export async function sendTestEmail(
   } else if (kind === "CARD_TRANSACTIONS_IMPORTED") {
     email = await cardEmail(recipient.id);
     if (!email) return { ok: false, error: "noCardTransactions" };
+  } else if (kind === "SUPPLIER_INVOICE_ASSIGNED" || kind === "SUPPLIER_INVOICE_SUBMITTED") {
+    email = await invoiceEmail(kind, recipient, sender);
+    if (!email) return { ok: false, error: "noInvoice" };
   } else {
     email = await digestFor(recipient);
     if (!email) return { ok: false, error: "nothingWaiting" };

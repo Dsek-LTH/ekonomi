@@ -90,6 +90,11 @@ enum Capability {
   /// attesters, or the submitter. From the utlägg itself, or several at once
   /// from the list. Held by the admins by default.
   SEND_REMINDERS
+  /// Keep the levfaktura inkorg: see what has arrived, put an invoice in by
+  /// hand, give it to a result unit, move it, or discard it. Not the attest,
+  /// and not the export to Fortnox, which is BOOKKEEPING and FORTNOX_LOGIN as
+  /// for an utlägg. See canTriageInvoices in lib/domain/permissions.ts.
+  INVOICE_TRIAGE
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -194,6 +199,13 @@ model User {
   notificationPrefs    NotificationPreference[]
   expensePresence      ExpensePresence[]        @relation("ExpensePresenceUser")
   exportClaims         Expense[]                @relation("ExpenseExportClaim")
+
+  receivedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceReceiver")
+  assignedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceAssigner")
+  supplierInvoiceApprovals SupplierInvoiceAllocation[] @relation("SupplierInvoiceAllocationApprover")
+  supplierInvoiceDocuments SupplierInvoiceDocument[]   @relation("SupplierInvoiceDocumentUploader")
+  supplierInvoiceEvents    SupplierInvoiceEvent[]      @relation("SupplierInvoiceEventActor")
+  inboundMails             InboundMail[]               @relation("InboundMailSender")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

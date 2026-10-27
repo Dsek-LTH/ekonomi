@@ -42,7 +42,9 @@
       "EXPENSE_READY_TO_BOOK": "Utlägg att bokföra",
       "EXPENSE_EXPORT_REVERTED": "Export ångrad",
       "WEEKLY_DIGEST": "Veckosammanfattning",
-      "EXPENSE_REMINDER": "Påminnelse"
+      "EXPENSE_REMINDER": "Påminnelse",
+      "SUPPLIER_INVOICE_ASSIGNED": "Leverantörsfakturor att kontera",
+      "SUPPLIER_INVOICE_SUBMITTED": "Leverantörsfakturor att attestera"
     },
     "hint": {
       "EXPENSE_SUBMITTED": "När någon skickar in ett utlägg som du ska attestera.",
@@ -56,7 +58,9 @@
       "EXPENSE_EXPORTED": "När ditt utlägg är bokfört och skickat till Fortnox.",
       "EXPENSE_RECALLED": "När någon drar tillbaka ett utlägg som väntade på din attest.",
       "EXPENSE_READY_TO_BOOK": "När ett utlägg är attesterat och väntar på bokföring.",
-      "EXPENSE_EXPORT_REVERTED": "När någon markerar ett utlägg som ej exporterat."
+      "EXPENSE_EXPORT_REVERTED": "När någon markerar ett utlägg som ej exporterat.",
+      "SUPPLIER_INVOICE_ASSIGNED": "När en leverantörsfaktura ges till en enhet du är resultatansvarig för, eller kommer tillbaka från attesten.",
+      "SUPPLIER_INVOICE_SUBMITTED": "När en leverantörsfaktura som du ska attestera skickas på attest."
     }
   }
 }

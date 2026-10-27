@@ -27,6 +27,11 @@ enum NotificationKind {
   EXPENSE_DEADLINE_WAIVER_REVOKED
   /// New card transactions after a bank import. To the card holder.
   CARD_TRANSACTIONS_IMPORTED
+  /// A levfaktura was given to a result unit to kontera, or sent back to it
+  /// from the attest. To that unit's resultatansvarig.
+  SUPPLIER_INVOICE_ASSIGNED
+  /// A levfaktura came in for attest. To whoever may attest it.
+  SUPPLIER_INVOICE_SUBMITTED
 
   // ── Opt-in ──
   /// One cost centre attested, others still waiting. To the submitter.

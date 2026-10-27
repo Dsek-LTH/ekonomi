@@ -42,7 +42,9 @@
       "EXPENSE_READY_TO_BOOK": "Expenses to book",
       "EXPENSE_EXPORT_REVERTED": "Export undone",
       "WEEKLY_DIGEST": "Weekly summary",
-      "EXPENSE_REMINDER": "Reminder"
+      "EXPENSE_REMINDER": "Reminder",
+      "SUPPLIER_INVOICE_ASSIGNED": "Supplier invoices to code",
+      "SUPPLIER_INVOICE_SUBMITTED": "Supplier invoices to attest"
     },
     "hint": {
       "EXPENSE_SUBMITTED": "When someone submits an expense for you to attest.",
@@ -56,7 +58,9 @@
       "EXPENSE_EXPORTED": "When your expense is booked and sent to Fortnox.",
       "EXPENSE_RECALLED": "When someone recalls an expense that was waiting for your attest.",
       "EXPENSE_READY_TO_BOOK": "When an expense is attested and waiting to be booked.",
-      "EXPENSE_EXPORT_REVERTED": "When someone marks an expense as not exported."
+      "EXPENSE_EXPORT_REVERTED": "When someone marks an expense as not exported.",
+      "SUPPLIER_INVOICE_ASSIGNED": "When a supplier invoice is given to a unit you answer for, or comes back from attest.",
+      "SUPPLIER_INVOICE_SUBMITTED": "When a supplier invoice you are to attest is sent for attest."
     }
   }
 }

@@ -364,10 +364,32 @@
     "notRetryable": "Mejlet är redan skickat.",
     "noExpense": "{name} har inga utlägg som mejlet kan byggas på.",
     "noCardTransactions": "{name} har inga korttransaktioner på sina kort.",
-    "nothingWaiting": "Inget väntar på {name} just nu, så ingen veckosammanfattning skulle skickas."
+    "nothingWaiting": "Inget väntar på {name} just nu, så ingen veckosammanfattning skulle skickas.",
+    "noInvoice": "{name} har inga leverantörsfakturor som mejlet kan byggas på."
   },
   "reminder": {
     "denied": "Du får inte skicka påminnelser.",
     "nobody": "Inget av utläggen väntar på någon som kan påminnas."
+  },
+  "supplierInvoice": {
+    "notFound": "Fakturan hittades inte",
+    "denied": "Du får inte göra det med den här fakturan.",
+    "notChangeableInStatus": "En faktura med status ’{status}’ kan inte ändras",
+    "changedMeanwhile": "Fakturan ändrades av någon annan under tiden. Ladda om sidan och försök igen.",
+    "noResultUnit": "Välj en resultatenhet.",
+    "unknownResultUnit": "Resultatenheten finns inte.",
+    "unknownCostCenter": "Kostnadsstället {code} finns inte.",
+    "commentRequired": "Skriv vad som behöver ändras.",
+    "nothingToApprove": "Det finns inget på fakturan som du kan attestera.",
+    "alreadyAttested": "Någon annan attesterade samtidigt. Ladda om sidan.",
+    "documentNotFound": "Dokumentet hittades inte",
+    "noDocument": "Fakturan saknar PDF.",
+    "noSupplier": "Fyll i leverantör.",
+    "noAmount": "Fyll i belopp.",
+    "noDueDate": "Fyll i förfallodag.",
+    "noAllocations": "Kontera fakturan på minst ett kostnadsställe.",
+    "allocationNoAccount": "Varje konteringsrad behöver ett konto.",
+    "allocationNotPositive": "Varje konteringsrad behöver ett belopp över noll.",
+    "allocationSumMismatch": "Konteringen går inte jämnt ut med fakturans belopp."
   }
 }
