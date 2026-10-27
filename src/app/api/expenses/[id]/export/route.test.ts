@@ -24,6 +24,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   capabilities: ["BOOKKEEPING"] as string[],
+  /** The two-person rule's answer. See lib/server/review.ts. */
+  reviewBlocker: null as "ownBooking" | null,
   status: "BOOKED" as string,
   verification: {
     id: "v1",
@@ -168,6 +170,11 @@ vi.mock("@/lib/server/pdf-merge", () => ({
   PdfMergeError: class extends Error {},
 }));
 
+vi.mock("@/lib/server/review", () => ({
+  exportReviewBlocker: async () => h.reviewBlocker,
+
+}));
+
 const { POST } = await import("./route");
 
 const exportIt = () =>
@@ -179,6 +186,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.calls = [];
   h.capabilities = ["BOOKKEEPING"];
+  h.reviewBlocker = null;
   h.status = "BOOKED";
   h.getUserToken.mockResolvedValue("tok");
   h.uploadInboxFile.mockResolvedValue("file-1");
@@ -201,6 +209,23 @@ describe("POST /api/expenses/[id]/export", () => {
     const res = await exportIt();
     expect(res.status).toBe(403);
     expect(h.calls).toEqual([]);
+  });
+
+  it("refuses a revisor, who may read the books and not work them", async () => {
+    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW", "CONTRACT_VIEW"];
+    const res = await exportIt();
+    expect(res.status).toBe(403);
+    expect(h.calls).toEqual([]);
+  });
+
+  it("refuses whoever konterade it, before taking the lock or calling Fortnox", async () => {
+    h.reviewBlocker = "ownBooking";
+    const res = await exportIt();
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toMatchObject({ error: "expense.reviewOwnBooking" });
+    expect(h.calls).toEqual([]);
+    expect(h.claimWrite).not.toHaveBeenCalled();
+    expect(h.createVoucher).not.toHaveBeenCalled();
   });
 
   it("refuses an utlägg that has not been booked", async () => {

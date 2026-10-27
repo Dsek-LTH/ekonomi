@@ -57,7 +57,7 @@ export function formatSEK(amount: number): string {
  */
 export function formatDate(iso: string, locale: string = DEFAULT_LOCALE): string {
   const d = new Date(iso);
-  if (!iso || isNaN(d.getTime())) return "–";
+  if (!iso || isNaN(d.getTime())) return "-";
   return formatter(dateCache, locale, {
     year: "numeric",
     month: "short",
@@ -67,7 +67,7 @@ export function formatDate(iso: string, locale: string = DEFAULT_LOCALE): string
 
 export function formatDateTime(iso: string, locale: string = DEFAULT_LOCALE): string {
   const d = new Date(iso);
-  if (!iso || isNaN(d.getTime())) return "–";
+  if (!iso || isNaN(d.getTime())) return "-";
   return formatter(dateTimeCache, locale, {
     dateStyle: "medium",
     timeStyle: "short",

@@ -96,8 +96,8 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
               { value: "", label: t("unlinked") },
               // The one it already points at stays in the list, so the current
               // value has a label to render; the rest are the free ones.
-              ...(linked ? [{ value: linked.id, label: `${linked.code} – ${linked.name}`, short: linked.code }] : []),
-              ...available.map((c) => ({ value: c.id, label: `${c.code} – ${c.name}`, short: c.code })),
+              ...(linked ? [{ value: linked.id, label: `${linked.code} - ${linked.name}`, short: linked.code }] : []),
+              ...available.map((c) => ({ value: c.id, label: `${c.code} - ${c.name}`, short: c.code })),
             ]}
             value={linked?.id ?? ""}
             onChange={(v) => api(url, "PATCH", { costCenterId: v || null })}

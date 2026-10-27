@@ -5,7 +5,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
-import { canAccessBookkeeping, hasAttestRole } from "@/lib/domain/permissions";
+import { canBookkeep, hasAttestRole } from "@/lib/domain/permissions";
 import { attestScopeWhere } from "./attest-scope";
 import { countUnaccountedPurchases } from "./bank";
 import type { Viewer } from "./expense-scope";
@@ -33,7 +33,7 @@ export async function getNavCounts(viewer: Viewer): Promise<NavCounts> {
           prisma.expense.count({ where: { AND: [scope, { status: "PENDING_APPROVAL" }] } }),
         )
       : 0,
-    canAccessBookkeeping(viewer.capabilities)
+    canBookkeep(viewer.capabilities)
       ? prisma.expense.count({ where: { status: { in: ["APPROVED", "BOOKED"] } } })
       : 0,
   ]);

@@ -8,7 +8,7 @@ function blockText(b: Block): string[] {
   switch (b.kind) {
     case "expense":
       return [
-        b.reference ? `${b.reference} – ${b.title}` : b.title,
+        b.reference ? `${b.reference} - ${b.title}` : b.title,
         b.amount,
         ...b.facts.map((f) => `${f.label}: ${f.value}`),
       ];
@@ -17,7 +17,7 @@ function blockText(b: Block): string[] {
     case "transactions":
       return [
         ...b.rows.map(
-          (r) => `${r.date} – ${r.description} – ${r.amount}${r.refund ? ` (${b.refundLabel})` : ""}`,
+          (r) => `${r.date} - ${r.description} - ${r.amount}${r.refund ? ` (${b.refundLabel})` : ""}`,
         ),
         ...(b.more ? [b.more] : []),
       ];

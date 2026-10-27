@@ -27,7 +27,7 @@
   "attest": {
     "waiting": "Väntar på attest",
     "attestedBy": "Attesterad av {name}{date}",
-    "waitingResultUnit": "Väntar på attest – {resultUnit}",
+    "waitingResultUnit": "Väntar på attest - {resultUnit}",
     "noResultUnit": "utan resultatenhet"
   },
   "submitBlocker": {
@@ -52,10 +52,10 @@
     "COST_CENTER_APPROVED": "Attesterade kostnadsställe",
     "ATTEST_WITHDRAWN": "Drog tillbaka sin attest",
     "APPROVED": "Attesterade utlägget",
-    "BOOKED": "Bokförde utlägget",
-    "EXPORTED": "Exporterade till Fortnox",
-    "EXPORT_REVERTED": "Markerade som ej exporterad",
-    "EXPORT_RELEASED": "Släppte exportlåset efter kontroll i Fortnox",
+    "BOOKED": "Konterade utlägget",
+    "EXPORTED": "Bokförde i Fortnox",
+    "EXPORT_REVERTED": "Markerade som ej bokförd",
+    "EXPORT_RELEASED": "Släppte bokföringslåset efter kontroll i Fortnox",
     "RECALLED": "Drog tillbaka inlämningen",
     "DEADLINE_WAIVED": "Beviljade dispens från fristen",
     "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen",
@@ -79,11 +79,13 @@
     "creditShort": "K",
     "paymentType": "Betalsätt",
     "verification": "Verifikation",
+    "bookedBy": "Konterad",
+    "amendedBy": "Ändrad",
     "amend": "Ändra",
     "account": "Konto",
     "debit": "Debet",
     "credit": "Kredit",
-    "exportedToFortnox": "Exporterad till Fortnox – verifikat",
+    "exportedToFortnox": "Bokförd i Fortnox - verifikat",
     "history": "Historik",
     "receipt": "Kvitto",
     "noReceipt": "Inget kvitto uppladdat.",
@@ -91,17 +93,16 @@
     "removeMatch": "Ta bort matchning",
     "noMatch": "Ingen matchning.",
     "more": "Mer",
-    "book": "Bokför",
-    "export": "Exportera till Fortnox",
+    "book": "Kontera",
     "fortnoxNotConnected": "Fortnox är inte anslutet. Anslut det under Bokföring först.",
-    "fortnoxNotSignedIn": "Du är inte inloggad mot Fortnox. Logga in via din profil, så går det att exportera.",
+    "fortnoxNotSignedIn": "Du är inte inloggad mot Fortnox. Logga in via din profil, så går det att bokföra.",
     "submit": "Skicka in för attest",
     "approve": "Attestera",
     "withdrawAttest": "Dra tillbaka min attest",
     "requestChanges": "Begär ändring",
     "reopen": "Återöppna för ändring",
-    "unexport": "Markera som ej exporterad",
-    "unexportWarning": "Verifikationen ligger kvar i Fortnox. Ta bort eller makulera den där, annars blir det en dubblett nästa gång du exporterar.",
+    "unexport": "Markera som ej bokförd",
+    "unexportWarning": "Verifikationen ligger kvar i Fortnox. Ta bort eller makulera den där, annars blir det en dubblett nästa gång du bokför.",
     "edit": "Redigera",
     "delete": "Ta bort utlägg",
     "comment": {
@@ -116,9 +117,9 @@
         "submit": "Skicka tillbaka"
       },
       "unexport": {
-        "label": "Varför är utlägget inte exporterat längre?",
+        "label": "Varför är utlägget inte bokfört längre?",
         "placeholder": "T.ex. verifikationen makulerades i Fortnox…",
-        "submit": "Markera som ej exporterad"
+        "submit": "Markera som ej bokförd"
       },
       "waive_deadline": {
         "label": "Varför beviljas dispens?",
@@ -138,22 +139,8 @@
     "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in.",
     "remind": "Skicka påminnelse",
     "reminderTo": "Till {names}",
-    "queue": {
-      "next": "Nästa: {name}",
-      "skip": "Hoppa till nästa",
-      "approvals": {
-        "done": "Attesterat. {count, plural, =1 {1 till väntar} other {# till väntar}} på din attest.",
-        "empty": "Attesterat. Inget mer väntar på din attest.",
-        "waiting": "{count, plural, =1 {1 till} other {# till}} i attestkön.",
-        "toList": "Till attest"
-      },
-      "bookkeeping": {
-        "done": "Klart här. {count, plural, =1 {1 till väntar} other {# till väntar}} på att bokföras.",
-        "empty": "Klart här. Inget mer väntar på att bokföras.",
-        "waiting": "{count, plural, =1 {1 till} other {# till}} att bokföra.",
-        "toList": "Till bokföring"
-      }
-    }
+    "projectShort": "Proj",
+    "review": "Granska och bokför"
   },
   "mutations": {
     "transition": {
@@ -162,7 +149,7 @@
       "withdraw_attest": "Din attest drogs tillbaka.",
       "request_changes": "Återsänt med begäran om ändring.",
       "return_approved": "Utlägget återöppnades för ändring.",
-      "unexport": "Utlägget är markerat som ej exporterat.",
+      "unexport": "Utlägget är markerat som ej bokfört.",
       "recall": "Utlägget är tillbaka som utkast",
       "waive_deadline": "Dispens beviljad. Utlägget går att skicka in.",
       "revoke_deadline_waiver": "Dispensen är tillbakatagen."
@@ -173,8 +160,6 @@
       "confirm": "Dra tillbaka"
     },
     "export": {
-      "failed": "Exporten misslyckades",
-      "done": "Exporterat till Fortnox (verifikat {label})",
       "attachWarning": "Kvittot laddades upp men kunde inte kopplas till verifikationen: {detail}"
     },
     "match": {

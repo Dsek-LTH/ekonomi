@@ -10,7 +10,7 @@
     "step2Title": "Den resultatansvariga attesterar",
     "step2Body": "Den som ansvarar för kostnadsstället godkänner utlägget. Du ser hela tiden var det ligger och vem det väntar på.",
     "step3Title": "Skattmästeriet bokför",
-    "step3Body": "Utlägget blir en verifikation och exporteras till Fortnox.",
+    "step3Body": "Utlägget konteras och bokförs i Fortnox.",
     "step4Title": "Pengarna kommer",
     "step4Body": "Utbetalning till ditt konto. Lägg in clearing- och kontonummer under Min profil, annars fastnar utlägget där.",
     "cta": "Skapa ditt första utlägg"
@@ -20,8 +20,8 @@
     "FIX": "{count, plural, one {utlägg att åtgärda} other {utlägg att åtgärda}}",
     "SUBMIT": "{count, plural, one {utkast att skicka in} other {utkast att skicka in}}",
     "ATTEST": "att attestera",
-    "BOOK": "att bokföra",
-    "EXPORT": "att exportera till Fortnox",
+    "BOOK": "att kontera",
+    "EXPORT": "att bokföra i Fortnox",
     "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}"
   },
   "budget": {

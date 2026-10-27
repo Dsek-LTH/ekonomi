@@ -10,7 +10,7 @@
     "products": "{count, plural, =1 {1 produkt} other {# produkter}}"
   },
   "holding": {
-    "volume": "{sealed} oöppnade – {open} öppnade",
+    "volume": "{sealed} oöppnade - {open} öppnade",
     "unit": "{units} st"
   },
   "flag": {
@@ -338,7 +338,7 @@
       "save": "Spara",
       "discard": "Rensa",
       "unsaved": "{count, plural, =1 {1 ruta väntar på att sparas} other {# rutor väntar på att sparas}}",
-      "unsavedWithFaults": "{count, plural, =1 {1 ruta väntar} other {# rutor väntar}} – {faults, plural, =1 {1 går inte att bokföra} other {# går inte att bokföra}}",
+      "unsavedWithFaults": "{count, plural, =1 {1 ruta väntar} other {# rutor väntar}} - {faults, plural, =1 {1 går inte att bokföra} other {# går inte att bokföra}}",
       "nothingToSave": "Inget att spara ännu.",
       "discardTitle": "Rensa det ifyllda?",
       "discardMessage": "{count, plural, =1 {1 ändrad ruta} other {# ändrade rutor}} tas bort. Inget är bokfört, så det går inte att få tillbaka.",
@@ -519,5 +519,7 @@
     "viewLabel": "Visa",
     "movements": "Rörelser",
     "stats": "Statistik"
-  }
+  },
+  "expiryUnset": "Ingen framförhållning för bäst före är vald, så inga leveranser bevakas.",
+  "expiryUnsetAction": "Välj den under Inställningar → Lager."
 }

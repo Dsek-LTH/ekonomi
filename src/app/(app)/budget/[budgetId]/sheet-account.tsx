@@ -321,7 +321,7 @@ export function AccountBlock({ account }: { account: Account }) {
           {gut(undefined)}
           {columns.map((col) => (
             <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-              {col.key === "beskrivning" && <span className="pl-3">{l.description || "–"}</span>}
+              {col.key === "beskrivning" && <span className="pl-3">{l.description || "-"}</span>}
             </td>
           ))}
           <CompareCells other={l.values[1]} own={undefined} incomeLike={incomeLike} />
@@ -459,7 +459,7 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
         </td>
         <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
           {account.name}
-          <span className="ml-2 text-xs font-normal">– {tRam("notInThisBudget")}</span>
+          <span className="ml-2 text-xs font-normal">- {tRam("notInThisBudget")}</span>
         </td>
         <CompareCells other={account.totals[1]} own={undefined} incomeLike={incomeLike} strong />
         <td />

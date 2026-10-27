@@ -25,7 +25,7 @@
     "end": "At the end"
   },
   "total": "Compensation",
-  "sum": "{km} km – {rate} kr/km",
+  "sum": "{km} km - {rate} kr/km",
   "distance": "Distance",
   "km": "{km} km",
   "otherType": "Was it something else?",

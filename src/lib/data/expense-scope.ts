@@ -1,7 +1,8 @@
 // Which utlägg a person may see. One rule, stated once:
 //
 //   • a bookkeeping role (skattmästare, ordförande, vice, skattförman) sees
-//     everything;
+//     everything, and so does a revisor, who may read the books but not work
+//     them;
 //   • a resultatansvarig sees expenses touching a result unit they answer for;
 //   • everyone sees their own.
 //
@@ -16,7 +17,7 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { costCentreWhereForPrefixes, ownedResultUnits } from "@/lib/server/result-units";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canViewBookkeeping } from "@/lib/domain/permissions";
 import type { Capability, Role } from "@/lib/domain/types";
 
 /** Who is asking. Both a page's session user and an API `Actor` fit this. */
@@ -33,7 +34,7 @@ export type ExpenseScope =
 
 /** Resolve `viewer` to their scope. This is the only place the policy lives. */
 export async function expenseScopeOf(viewer: Viewer): Promise<ExpenseScope> {
-  if (canAccessBookkeeping(viewer.capabilities)) return { everything: true };
+  if (canViewBookkeeping(viewer.capabilities)) return { everything: true };
   const { prefixes } = await ownedResultUnits(viewer);
   return { everything: false, userId: viewer.id, resultUnitPrefixes: prefixes };
 }

@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { MoveIncomeLines } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { moveIncomeLines } from "@/lib/income/lines";
 import { lineFailure } from "../line-failure";
 
@@ -18,7 +18,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // The same gate the review screen is behind: this is bookkeeping correcting
   // its own working set before anything is booked.
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, MoveIncomeLines);

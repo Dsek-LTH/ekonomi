@@ -423,18 +423,18 @@ export default function LedgerClient({
   // The column header stays short ("Budget"); everything that describes the
   // report as a whole names the budget, since which one was compared against is
   // the whole point of being able to choose. The year is part of the name here:
-  // the budget need not be this year's, and a report that says only "Budget –
+  // the budget need not be this year's, and a report that says only "Budget -
   // Ursprunglig" over a 2023 budget is a report that misleads.
   const compared = data?.budgets.find((b) => b.id === data.budget);
-  const budgetName = compared && `${compared.year} – ${compared.name}`;
+  const budgetName = compared && `${compared.year} - ${compared.name}`;
   const comparisonFull =
     data?.comparison === "BUDGET" && budgetName
-      ? `${t("budget")} – ${budgetName}`
+      ? `${t("budget")} - ${budgetName}`
       : comparisonLabel;
   // Mid-sentence ("compared with …"), so the leading word is lowercased.
   // Only that word: a budget is named "2026 REV", not "2026 rev".
   const comparisonPhrase = `${comparisonLabel.toLowerCase()}${
-    budgetName ? ` – ${budgetName}` : ""
+    budgetName ? ` - ${budgetName}` : ""
   }`;
 
   // Asked for a comparison the data can't supply. Say so rather than silently
@@ -468,7 +468,7 @@ export default function LedgerClient({
   const ccBucket = (code: string) =>
     code === "" ? t("noCostCenter") : code === "*" ? t("withCostCenter") : null;
   const ccName = (code: string) =>
-    ccBucket(code) ?? `${code} – ${costCenters.find((c) => c.code === code)?.name ?? ""}`;
+    ccBucket(code) ?? `${code} - ${costCenters.find((c) => c.code === code)?.name ?? ""}`;
   const costCenterLabel =
     query.costCenters.length === 0
       ? t("allCostCenters")
@@ -480,7 +480,7 @@ export default function LedgerClient({
     query.from && query.to
       ? query.from === query.to
         ? date(query.from)
-        : `${date(query.from)} – ${date(query.to)}`
+        : `${date(query.from)} - ${date(query.to)}`
       : "";
 
   function exportCsv() {
@@ -661,7 +661,7 @@ export default function LedgerClient({
           <div className={cn("hidden", charting && "print:block")}>
             <h2 className="text-lg font-semibold">
               {documentTitle}
-              {fortnox.companyName ? ` – ${fortnox.companyName}` : ""}
+              {fortnox.companyName ? ` - ${fortnox.companyName}` : ""}
             </h2>
             <p className="mt-0.5 text-sm text-muted">
               {[
@@ -671,7 +671,7 @@ export default function LedgerClient({
                 summaryComparison ? t("comparedWith", { comparison: comparisonPhrase }) : null,
               ]
                 .filter(Boolean)
-                .join(" – ")}
+                .join(" - ")}
             </p>
             <p className="mt-0.5 text-xs text-muted">
               {t("printedAt", { time: dateTime(new Date().toISOString()) })}

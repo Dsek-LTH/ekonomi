@@ -34,7 +34,8 @@
     "alreadyBooked": "{count} dagar var redan bokförda och är markerade",
     "alreadyInFortnox": "{count} dagar finns redan i Fortnox och är markerade",
     "fortnoxCheckFailed": "Kunde inte kontrolleras mot Fortnox",
-    "superseded": "{count} tidigare rapporter rensades bort"
+    "superseded": "{count} tidigare rapporter rensades bort",
+    "fortnoxCheckSeriesUnset": "Kunde inte kontrolleras mot Fortnox eftersom ingen verifikationsserie är vald"
   },
   "counts": {
     "reports": "{count} rapporter",
@@ -109,7 +110,7 @@
     "action": "Ny rapport",
     "actionFor": "Ny rapport för {date}",
     "title": "Ny rapport",
-    "subtitle": "{date} – {source}. En tom rapport att flytta försäljning till.",
+    "subtitle": "{date} - {source}. En tom rapport att flytta försäljning till.",
     "unit": "Verksamhet",
     "unitHint": "Vems intäkter rapporten blir.",
     "unitPlaceholder": "Välj verksamhet…",

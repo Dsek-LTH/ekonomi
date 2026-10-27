@@ -51,7 +51,7 @@ function costCenterOptions(
     { value: "*", label: anyLabel },
     ...costCenters.map((c, i) => ({
       value: c.code,
-      label: `${c.code} – ${c.name}`,
+      label: `${c.code} - ${c.name}`,
       // The two buckets above are sides of the line; these are the cost
       // centres themselves, and the rule says the list changes kind here.
       dividerBefore: i === 0,
@@ -231,7 +231,7 @@ function PeriodRows({
         </Field>
         {/* The height of a control, so the dash sits level with the two. */}
         <span aria-hidden className="flex h-11 items-center text-muted sm:h-9">
-          –
+          -
         </span>
         <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
           <PeriodDate

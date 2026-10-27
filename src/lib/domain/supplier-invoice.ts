@@ -10,7 +10,7 @@
 // by the same function (canAttestAllocation in permissions.ts). An invoice has
 // no submitter claiming money, so the "never your own" clause never applies:
 // the resultatansvarig who konterade it is exactly who is expected to sign it.
-import { canAccessBookkeeping, canTriageInvoices, isAdmin } from "./permissions";
+import { canBookkeep, canTriageInvoices, isAdmin } from "./permissions";
 import type { Tone } from "./status";
 import type { Capability, Role, SupplierInvoiceStatus } from "./types";
 
@@ -178,7 +178,7 @@ export function invoiceCapabilities(
     canApprove: s === "PENDING_APPROVAL" && pendingMine,
     canRequestChanges:
       (s === "PENDING_APPROVAL" && mayAttestSome) ||
-      (s === "APPROVED" && canAccessBookkeeping(viewer.capabilities)),
+      (s === "APPROVED" && canBookkeep(viewer.capabilities)),
   };
 }
 

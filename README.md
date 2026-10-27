@@ -63,6 +63,7 @@ users:
 | `os5678be-s` | Resultatansvarig | The approval queue for their result unit |
 | `lu9012ge-s` | Skattförman | Bookkeeping and the ledger |
 | `ma3456ho-s` | Skattmästare | Everything, including Inställningar |
+| `re7890vi-s` | Revisor | Everything, read-only |
 
 ## Commands
 

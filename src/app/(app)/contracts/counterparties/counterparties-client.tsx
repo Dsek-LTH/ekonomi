@@ -57,7 +57,7 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
         mobile: "meta",
         value: (c) => c.orgNo ?? "",
         sortable: true,
-        cell: (c) => c.orgNo ?? <span className="text-muted">–</span>,
+        cell: (c) => c.orgNo ?? <span className="text-muted">-</span>,
       },
       {
         key: "usedBy",
@@ -68,7 +68,7 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
         sortable: true,
         cell: (c) =>
           c.usedBy === 0 ? (
-            <span className="text-muted">–</span>
+            <span className="text-muted">-</span>
           ) : (
             <span className="tabular-nums text-muted">{c.usedBy}</span>
           ),

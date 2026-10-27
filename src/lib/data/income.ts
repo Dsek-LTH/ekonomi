@@ -216,7 +216,7 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
   return units
     .map((u) => {
       // One entry per distinct account, carrying the prefixes that route to it
-      // "3011 – öl, öl2" says more about what the account is for than its
+      // "3011 - öl, öl2" says more about what the account is for than its
       // name from the chart does.
       const byAccount = new Map<string, string[]>();
       for (const p of u.prefixes) {

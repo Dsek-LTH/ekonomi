@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
+import { getDevUsers } from "./dev-users";
 import { LoginClient } from "./login-client";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
@@ -39,5 +40,11 @@ export default async function LoginPage({
   const id = await resolveUserId();
   if (id && (await loadUser(id))) redirect(callbackUrl);
 
-  return <LoginClient callbackUrl={callbackUrl} error={errorKey(params.error)} />;
+  return (
+    <LoginClient
+      callbackUrl={callbackUrl}
+      error={errorKey(params.error)}
+      devUsers={await getDevUsers()}
+    />
+  );
 }

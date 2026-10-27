@@ -78,7 +78,7 @@ export function StatusStrip({
 
   const contact = [contract.counterpartyEmail, contract.counterpartyPhone]
     .filter(Boolean)
-    .join(" – ");
+    .join(" - ");
 
   return (
     <Card>
@@ -96,7 +96,7 @@ export function StatusStrip({
 
         <Facts>
           <Fact label={rental ? t("rental.counterparty") : t("col.counterparty")}>
-            <span className="block font-medium">{contract.counterparty ?? "–"}</span>
+            <span className="block font-medium">{contract.counterparty ?? "-"}</span>
             {contract.counterpartyOrgNo && (
               <span className="block text-muted">{contract.counterpartyOrgNo}</span>
             )}

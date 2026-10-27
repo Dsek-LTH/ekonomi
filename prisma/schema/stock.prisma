@@ -535,7 +535,10 @@ model StockSettings {
   /// Folding it into the product's own figure would have been the cheaper
   /// schema and the wrong one: changing your mind about how much warning you
   /// want would then mean editing every product on the shelf.
-  expiryLeadDays Int @default(30)
+  ///
+  /// Null until somebody chooses it. Until then no checks are raised, and the
+  /// stock pages say so rather than showing a shelf with nothing due.
+  expiryLeadDays Int?
 
   updatedAt DateTime @updatedAt
 }

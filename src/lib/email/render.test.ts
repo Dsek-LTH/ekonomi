@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LOGO_CID, renderHtml, renderText, type Email } from "./render";
 
 const base: Email = {
-  subject: "Att attestera: DEK26-0043 – Kolsyra",
+  subject: "Att attestera: DEK26-0043 - Kolsyra",
   tone: "action",
   eyebrow: "Att attestera",
   heading: "Ludwig har skickat in ett utlägg",
@@ -54,7 +54,7 @@ describe("renderHtml", () => {
 describe("renderText", () => {
   it("says everything the HTML does, links spelled out", () => {
     const text = renderText(base);
-    expect(text).toContain("DEK26-0043 – Kolsyra");
+    expect(text).toContain("DEK26-0043 - Kolsyra");
     expect(text).toContain("Betalning: Eget utlägg");
     expect(text).toContain("Öppna och attestera: https://example.test/expenses/e1");
     expect(text).toContain("Välj vilka mejl du får under Profil. https://example.test/profile");
@@ -72,6 +72,6 @@ describe("renderText", () => {
         },
       ],
     });
-    expect(text).toContain("2026-10-06 – Q*nelly.com – +1 144,00 kr (Återbetalning)");
+    expect(text).toContain("2026-10-06 - Q*nelly.com - +1 144,00 kr (Återbetalning)");
   });
 });

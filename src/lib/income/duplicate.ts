@@ -28,7 +28,7 @@ import {
   listVouchers,
 } from "@/lib/fortnox";
 
-import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import { incomeVoucherKey, incomeVoucherSeries } from "./voucher";
 
 export { incomeVoucherKey };
@@ -39,7 +39,7 @@ export { incomeVoucherKey };
  * connected is a decision, a failed call is an outage, and only the second is
  * worth putting in front of anyone.
  */
-type IncomeCheckSkip = "notConnected" | "failed";
+type IncomeCheckSkip = "notConnected" | "seriesUnset" | "failed";
 
 export interface FortnoxIncomeVouchers {
   /** False means nothing was compared. Treat every day as unknown, not free. */
@@ -75,11 +75,10 @@ export async function fortnoxIncomeVouchers(
   // The series income is filed under, which is a setting of its own. See
   // incomeVoucherSeries. Read here rather than assumed, because looking in the
   // wrong series answers "nothing booked" for a day that is.
-  const settings = await prisma.bookkeepingSettings.findUnique({
-    where: { id: "singleton" },
-    select: { incomeVoucherSeries: true },
-  });
+  const settings = await loadBookkeepingSettings();
   const series = incomeVoucherSeries(settings, conn.voucherSeries);
+  // No series chosen, so there is nowhere to look. Said, not taken as "clear".
+  if (!series) return empty("seriesUnset", null);
 
   try {
     const token = await getServiceToken();

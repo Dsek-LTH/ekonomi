@@ -29,7 +29,7 @@ import { cn } from "@/lib/ui/utils";
 function Cell({ value, className }: { value: number | undefined; className?: string }) {
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", className)}>
-      {value !== undefined ? fmt(value) : <span className="text-muted">–</span>}
+      {value !== undefined ? fmt(value) : <span className="text-muted">-</span>}
     </td>
   );
 }
@@ -39,7 +39,7 @@ function Cell({ value, className }: { value: number | undefined; className?: str
 // two budgets and not otherwise.
 function Diff({ values, className }: { values: (number | undefined)[]; className?: string }) {
   const diff = (values[1] ?? 0) - (values[0] ?? 0);
-  if (diff === 0) return <td className={cn("px-4 py-2 text-right tabular-nums text-muted", className)}>–</td>;
+  if (diff === 0) return <td className={cn("px-4 py-2 text-right tabular-nums text-muted", className)}>-</td>;
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", diff > 0 ? "text-success" : "text-danger", className)}>
       {fmtSigned(diff)}
@@ -176,7 +176,7 @@ function SheetRows({ sheet, n, cols, showDiff }: {
   // The result (income − cost) per side, which is the only sheet-level figure
   // that means the same thing whichever accounts each side happens to hold.
   const results = Array.from({ length: n }, (_, i) => sheetTotals(sheet, i).result);
-  const label = /^[@#]/.test(sheet.key) ? sheet.name : `${sheet.key} – ${sheet.name}`;
+  const label = /^[@#]/.test(sheet.key) ? sheet.name : `${sheet.key} - ${sheet.name}`;
 
   return (
     <>
@@ -206,7 +206,7 @@ function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: 
       </tr>
       {account.lines.map((line) => (
         <tr key={line.key} className={cn("text-muted hover:bg-hover", differs(line.values) && "bg-warning/5")}>
-          <td className="px-4 py-2 pl-14 text-xs">{line.description || "–"}</td>
+          <td className="px-4 py-2 pl-14 text-xs">{line.description || "-"}</td>
           {line.values.map((v, i) => <Cell key={i} value={v} className="text-xs" />)}
           {showDiff && <Diff values={line.values} className="text-xs" />}
         </tr>

@@ -52,7 +52,7 @@ export function ContractsClient({
 
   // How a contract's period reads in one cell. Four cases rather than a range
   // with dashes standing in for the missing halves: an archived contract often
-  // states one end or neither, and "– 2027-06-30" makes a reader work out which
+  // states one end or neither, and "- 2027-06-30" makes a reader work out which
   // end is missing.
   //
   // A lean document (PROTOCOL/OTHER) has no period to state, only the one
@@ -83,7 +83,7 @@ export function ContractsClient({
         key: "counterparty",
         mobile: "meta",
         header: t("col.counterparty"),
-        cell: (c) => c.counterparty ?? <span className="text-muted">–</span>,
+        cell: (c) => c.counterparty ?? <span className="text-muted">-</span>,
       },
       {
         key: "kind",
@@ -105,7 +105,7 @@ export function ContractsClient({
         mobile: "hide",
         cell: (c) =>
           c.tags.length === 0 ? (
-            <span className="text-muted">–</span>
+            <span className="text-muted">-</span>
           ) : (
             <span className="flex flex-wrap gap-1">
               {c.tags.map((tag) => (
@@ -125,7 +125,7 @@ export function ContractsClient({
           // is judged on the same day. Null for PROTOCOL/OTHER, which carry
           // no status at all: filed or it doesn't exist.
           const status = displayStatus(c, today);
-          if (status === null) return <span className="text-muted">–</span>;
+          if (status === null) return <span className="text-muted">-</span>;
           return <Tag tone={CONTRACT_STATUS_TONE[status]}>{t(`status.${status}`)}</Tag>;
         },
       },

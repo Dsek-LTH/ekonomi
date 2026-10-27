@@ -105,7 +105,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange([...value, row]);
   }
 
-  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} – ${c.name}`, short: c.code }));
+  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}`, short: c.code }));
 
   const comment = (cell: boolean) =>
     cn(

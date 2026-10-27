@@ -3,6 +3,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import type { AccountRecord, BookkeepingSettings } from "@/lib/domain/types";
 
@@ -41,19 +42,22 @@ export function getAccounts(): Promise<AccountRecord[]> {
 // numbers in even when retired, so an existing voucher that references one (or
 // a bookkeeping setting still pointing at one) stays valid and re-savable.
 // Fortnox retires accounts routinely, so this is the normal case, not an edge.
-export function getActiveAccounts(keep: readonly string[] = []): Promise<AccountRecord[]> {
-  const numbers = [...new Set(keep.filter(Boolean))];
+// A setting nobody has chosen yet is null, and simply keeps nothing in.
+export function getActiveAccounts(
+  keep: readonly (string | null)[] = [],
+): Promise<AccountRecord[]> {
+  const numbers = [...new Set(keep.filter((n): n is string => Boolean(n)))];
   return loadAccounts(
     numbers.length ? { OR: [{ active: true }, { number: { in: numbers } }] } : { active: true },
   );
 }
 
-// The accounts the booking view pre-fills. Falls back to the BAS defaults when
-// the settings row is somehow missing, so booking never breaks on config.
+// The accounts the booking view pre-fills. No defaults: see
+// lib/server/bookkeeping-settings.ts.
 export async function getBookkeepingSettings(): Promise<BookkeepingSettings> {
-  const row = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
+  const row = await loadBookkeepingSettings();
   return {
-    bankAccount: row?.bankAccount ?? "1930",
-    memberDebtAccount: row?.memberDebtAccount ?? "2890",
+    bankAccount: row.bankAccount,
+    memberDebtAccount: row.memberDebtAccount,
   };
 }

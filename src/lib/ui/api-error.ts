@@ -32,6 +32,14 @@ const isKeyRef = (v: ErrorValue): v is { key: string } =>
  */
 const API_ERROR_ACTIONS: Readonly<Record<string, { href: string; label: string }>> = {
   "expense.payoutRequired": { href: "/profile", label: "common.action.goToProfile" },
+  // A setting nobody has chosen yet. Choosing it is the whole fix, so the error
+  // goes straight to where it is chosen.
+  "settings.bankAccountUnset": { href: "/admin/fortnox", label: "common.action.goToSettings" },
+  "settings.memberDebtAccountUnset": { href: "/admin/fortnox", label: "common.action.goToSettings" },
+  "settings.voucherSeriesUnset": { href: "/admin/fortnox", label: "common.action.goToSettings" },
+  "settings.zettleClearingAccountUnset": { href: "/admin/income", label: "common.action.goToSettings" },
+  "settings.swishClearingAccountUnset": { href: "/admin/income", label: "common.action.goToSettings" },
+  "settings.zettleFeeAccountUnset": { href: "/admin/income", label: "common.action.goToSettings" },
 };
 
 /**

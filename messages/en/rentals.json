@@ -6,7 +6,7 @@
   "searchPlaceholder": "Search contract, renter or equipment",
   "noMatch": "No rentals match",
   "notChecked": "not inspected",
-  "period": "{from} – {to}",
+  "period": "{from} - {to}",
   "itemCount": "{count, plural, one {1 item} other {# items}}",
   "tab": {
     "todo": "To do",

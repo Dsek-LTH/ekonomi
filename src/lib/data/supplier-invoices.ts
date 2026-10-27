@@ -23,7 +23,7 @@ import {
   type PrefixRow,
 } from "@/lib/server/result-units";
 import {
-  canAccessBookkeeping,
+  canViewBookkeeping,
   canAttestAllocation,
   canTriageInvoices,
   isAdmin,
@@ -85,7 +85,7 @@ export async function invoiceViewerOf(viewer: Viewer): Promise<InvoiceViewerCtx>
 /** Whether the viewer sees every invoice there is. */
 const seesEverything = (v: InvoiceViewer) =>
   canTriageInvoices(v.capabilities) ||
-  canAccessBookkeeping(v.capabilities) ||
+  canViewBookkeeping(v.capabilities) ||
   isAdmin(v.capabilities);
 
 /**

@@ -11,7 +11,7 @@
 // them off the end of a URL by eye, which is the same error-prone transcription
 // the barcode scanner exists to avoid one field further up.
 
-/** What a stored article number may look like. Systembolaget's are 4–7 digits
+/** What a stored article number may look like. Systembolaget's are 4-7 digits
  *  today; the range is loose because the format is theirs to change. */
 const ARTICLE_NUMBER = /^\d{3,10}$/;
 

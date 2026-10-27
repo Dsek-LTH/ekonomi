@@ -19,9 +19,8 @@ export async function PATCH(req: Request) {
     if (!cc) return fail(422, "income.unknownCostCenter");
   }
 
-  // Upsert rather than update: the row is created by the seed, but an
-  // installation that never ran it would otherwise fail here rather than simply
-  // storing the setting.
+  // Creating the row writes only what was chosen. No column has a default, so
+  // everything else stays unset. See lib/server/bookkeeping-settings.ts.
   await prisma.bookkeepingSettings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },

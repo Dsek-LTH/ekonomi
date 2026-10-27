@@ -25,7 +25,7 @@
     "end": "Vid slut"
   },
   "total": "Ersättning",
-  "sum": "{km} km – {rate} kr/km",
+  "sum": "{km} km - {rate} kr/km",
   "distance": "Sträcka",
   "km": "{km} km",
   "otherType": "Gällde det något annat?",

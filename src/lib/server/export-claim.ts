@@ -55,7 +55,7 @@ export function claimExport(expenseId: string, userId: string): Promise<Taken> {
     }
 
     const lock = exportLock(row.exportClaimState, row.exportClaimedAt, Date.now());
-    const name = row.claimer ?? "–";
+    const name = row.claimer ?? "-";
     if (lock === "exporting") {
       return { ok: false, res: fail(409, "expense.exportInProgress", { values: { name } }) };
     }

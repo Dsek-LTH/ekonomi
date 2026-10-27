@@ -65,9 +65,12 @@ const AREA_OF: Record<Capability, Area> = {
   EXPENSE_DEADLINE_WAIVE: "expenses",
   SEND_REMINDERS: "expenses",
   BOOKKEEPING: "bookkeeping",
+  BOOKKEEPING_VIEW: "bookkeeping",
+  AUDIT_REVIEW: "bookkeeping",
   FORTNOX_LOGIN: "bookkeeping",
   EXPORT_UNDO: "bookkeeping",
   INVOICE_TRIAGE: "bookkeeping",
+  REVIEW_OWN_BOOKING: "bookkeeping",
   BUDGET_VIEW: "budget",
   BUDGET_COMMENT: "budget",
   BUDGET_LOCK: "budget",
@@ -543,7 +546,7 @@ function CapabilitiesView({
                         <Checkbox
                           checked={ticked.has(`${role}\u0000${capability}`)}
                           onChange={() => void toggleCapability(role, capability)}
-                          label={`${tCap(capability)} – ${tRole(role)}`}
+                          label={`${tCap(capability)} - ${tRole(role)}`}
                         />
                       </td>
                     ))}

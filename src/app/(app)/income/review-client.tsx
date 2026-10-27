@@ -560,7 +560,7 @@ export default function IncomeReviewClient({
   // The chart of cost centres, as the picker beside the verksamhet offers them.
   const costCentreOptions = costCenters.map((c) => ({
     value: c.code,
-    label: `${c.code} – ${c.name}`,
+    label: `${c.code} - ${c.name}`,
     short: c.code,
   }));
 
@@ -618,7 +618,7 @@ export default function IncomeReviewClient({
         documentUrl={selected && !isEmpty ? documentUrl(selected) : null}
         mimeType="application/pdf"
         filename={
-          selected ? `${t(`source.${selected.source}`)} – ${formatDate(selected.date)}` : undefined
+          selected ? `${t(`source.${selected.source}`)} - ${formatDate(selected.date)}` : undefined
         }
       />
 
@@ -804,10 +804,10 @@ export default function IncomeReviewClient({
                             in the list so it can be found without opening every
                             day to look. A day standing on its committee's
                             default is not one of them. */}
-                        {!costCentreFor(report, settings) && ` – ${t("review.noCostCenter")}`}
-                        {isEdited(report) && ` – ${t("review.edited")}`}
-                        {report.duplicateOf && ` – ${t("review.alreadyBookedShort")}`}
-                        {report.existingVoucher && ` – ${report.existingVoucher}`}
+                        {!costCentreFor(report, settings) && ` - ${t("review.noCostCenter")}`}
+                        {isEdited(report) && ` - ${t("review.edited")}`}
+                        {report.duplicateOf && ` - ${t("review.alreadyBookedShort")}`}
+                        {report.existingVoucher && ` - ${report.existingVoucher}`}
                       </p>
                     </SidebarItem>
                   ))}
@@ -1002,7 +1002,7 @@ export default function IncomeReviewClient({
                                 room to spare.
 
                                 The menu does not shrink with it: it floors at
-                                240px of its own, so the full "3001 – Försäljning
+                                240px of its own, so the full "3001 - Försäljning
                                 (prefixes)" is still what you pick from. */}
                             <th className="w-28 px-3 py-2 font-medium">{t("lines.account")}</th>
                             <th className="px-3 py-2 text-right font-medium">{t("lines.quantity")}</th>

@@ -908,7 +908,7 @@ function JumpBar({
         >
           {items.map((item, i) => (
             <option key={item.key} value={i}>
-              {`${i + 1}/${items.length} – ${item.name}`}
+              {`${i + 1}/${items.length} - ${item.name}`}
             </option>
           ))}
         </select>

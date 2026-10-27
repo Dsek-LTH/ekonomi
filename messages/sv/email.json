@@ -69,11 +69,11 @@
     "button": "Öppna utlägget"
   },
   "readyToBook": {
-    "subject": "Att bokföra: {label}",
-    "eyebrow": "Att bokföra",
+    "subject": "Att kontera: {label}",
+    "eyebrow": "Att kontera",
     "heading": "Ett utlägg från {submitter} är attesterat",
-    "intro": "Det väntar på att bokföras.",
-    "button": "Öppna och bokför"
+    "intro": "Det väntar på att konteras.",
+    "button": "Öppna och kontera"
   },
   "attestWithdrawn": {
     "subject": "Attesten drogs tillbaka: {label}",
@@ -97,9 +97,9 @@
     "button": "Öppna utlägget"
   },
   "exportReverted": {
-    "subject": "Export ångrad: {label}",
-    "eyebrow": "Export ångrad",
-    "heading": "{actor} har markerat utlägget som ej exporterat",
+    "subject": "Bokföring ångrad: {label}",
+    "eyebrow": "Bokföring ångrad",
+    "heading": "{actor} har markerat utlägget som ej bokfört",
     "intro": "Verifikationen ligger kvar i Fortnox och kan behöva rättas där.",
     "button": "Öppna utlägget"
   },

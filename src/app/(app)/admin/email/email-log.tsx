@@ -163,7 +163,7 @@ function LogRow({
         <span className="mt-0.5 block truncate text-xs text-muted">
           {[showRecipient ? row.recipient.name : null, tKind(row.kind), dateTime(row.createdAt)]
             .filter(Boolean)
-            .join(" – ")}
+            .join(" - ")}
         </span>
         {row.lastError && row.status !== "SENT" && (
           <span className="mt-1 block truncate font-mono text-xs text-danger">{row.lastError}</span>

@@ -41,6 +41,7 @@ export const MESSAGE_NAMESPACES = [
   "rentals",
   "email",
   "invoices",
+  "closing",
 ] as const;
 
 const isLocale = (v: string | undefined): v is Locale =>

@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { BookIncomeReport } from "@/lib/api/schemas/income";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
 import { storeIncomeDocument } from "@/lib/income/document";
 import { toFeeReportDto, toReportDto } from "@/lib/income/report";
@@ -34,11 +34,12 @@ import {
 } from "@/lib/income/voucher";
 import { loadUser } from "@/lib/server/current-user";
 import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, BookIncomeReport);
@@ -62,7 +63,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   }
 
-  const settings = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
+  const settings = await loadBookkeepingSettings();
   const accounts = await prisma.account.findMany({ select: { number: true, name: true } });
   const accountName = new Map(accounts.map((a) => [a.number, a.name]));
   const nameFor = (n: string) => accountName.get(n) ?? "";
@@ -78,14 +79,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const costCenterId =
     report.costCenterId ??
     (isFee
-      ? (settings?.zettleFeeCostCenterId ?? null)
+      ? settings.zettleFeeCostCenterId
       : (report.resultUnit?.income?.defaultCostCenterId ?? null));
 
-  const clearingAccount = isFee
-    ? (settings?.zettleClearingAccount ?? "1930")
-    : report.source === "SWISH"
-      ? (settings?.swishClearingAccount ?? "1931")
-      : (settings?.zettleClearingAccount ?? "1930");
+  const clearingAccount =
+    report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount;
+  // Where the money landed is a choice made in the settings. Until it is made
+  // there is no voucher to write.
+  if (!clearingAccount) {
+    return fail(
+      409,
+      report.source === "SWISH"
+        ? "settings.swishClearingAccountUnset"
+        : "settings.zettleClearingAccountUnset",
+    );
+  }
 
   // ── The voucher, decided before anything is stored or written ──
 
@@ -123,7 +131,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return fail(422, "income.voucherTotalMismatch");
     }
   } else if (isFee) {
-    const feeAccount = settings?.zettleFeeAccount ?? "6570";
+    const feeAccount = settings.zettleFeeAccount;
+    if (!feeAccount) return fail(409, "settings.zettleFeeAccountUnset");
     if (!costCenterId) return fail(422, "income.costCenterRequired");
     lines = buildFeeVoucherLines({
       report: toFeeReportDto(report),

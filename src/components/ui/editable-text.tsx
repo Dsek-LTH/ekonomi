@@ -173,7 +173,7 @@ export function EditableText({
     // holds and grows as it is typed into. No measuring, no ref, no resize
     // observer. The browser does it as ordinary layout.
     <span
-      // Baseline, not bottom: this sits inline in a sentence ("Antagen … –
+      // Baseline, not bottom: this sits inline in a sentence ("Antagen … -
       // skapad av …"), and an inline-grid takes its baseline from the first
       // item in its first row, the sizer, which carries exactly the text
       // metrics of the value. Aligning by the box instead would drop it by the

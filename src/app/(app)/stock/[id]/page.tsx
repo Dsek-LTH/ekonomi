@@ -48,7 +48,8 @@ export default async function StockProductPage({
       events={events}
       cellar={cellar}
       movements={movements}
-      checks={checks}
+      checks={checks ?? []}
+      expiryUnset={checks === null}
       // What the rest of the shelf calls things, for the edit dialog's tag
       // picker. Off the levels this page already has rather than a query of
       // its own.

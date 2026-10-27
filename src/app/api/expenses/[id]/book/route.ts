@@ -15,9 +15,10 @@
 // amend used to simply win.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { canBookkeep } from "@/lib/domain/permissions";
-import { voucherBlocker } from "@/lib/domain/voucher";
+import { isRevenueAccount, voucherBlocker } from "@/lib/domain/voucher";
 import type { PaymentType } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
 import { StaleWrite, applied, commit } from "@/lib/api/stale-write";
@@ -31,6 +32,7 @@ interface NormLine {
   accountName: string;
   description: string | null;
   costCenterCode: string | null;
+  project: string | null;
   debit: number; // öre
   credit: number; // öre
 }
@@ -49,6 +51,7 @@ function prepareLines(
       accountName: l.accountName,
       description: l.description || null,
       costCenterCode: l.costCenterCode ?? null,
+      project: l.project ?? null,
       debit: l.debit,
       credit: l.credit,
     }))
@@ -59,6 +62,25 @@ function prepareLines(
   const blocker = voucherBlocker(lines);
   if (blocker) return { ok: false, error: `voucher.${blocker}`, status: 422 };
   return { ok: true, lines };
+}
+
+// The first row on an intäktskonto, if any. See isRevenueAccount.
+function revenueLine(lines: NormLine[]): NormLine | undefined {
+  return lines.find((l) => isRevenueAccount(l.account));
+}
+
+// The first project number no synced project has, if any. Fortnox would reject
+// the whole voucher on export for it, so it is refused here, at booking, where
+// it can still be fixed. Closed projects still count: see getActiveProjects.
+async function unknownProject(lines: NormLine[]): Promise<string | undefined> {
+  const numbers = [...new Set(lines.map((l) => l.project).filter(Boolean))] as string[];
+  if (numbers.length === 0) return undefined;
+  const known = await prisma.project.findMany({
+    where: { number: { in: numbers } },
+    select: { number: true },
+  });
+  const have = new Set(known.map((p) => p.number));
+  return numbers.find((n) => !have.has(n));
 }
 
 // The payment row is not the bookkeeper's to choose: a card purchase already
@@ -75,11 +97,17 @@ async function checkPaymentLine(
   lines: NormLine[],
   expense: { paymentType: PaymentType; grossAmount: number | null },
 ): Promise<{ code: string; account: string } | null> {
-  const settings = await prisma.bookkeepingSettings.findUnique({ where: { id: "singleton" } });
-  const account =
-    expense.paymentType === "CARD"
-      ? (settings?.bankAccount ?? "1930")
-      : (settings?.memberDebtAccount ?? "2890");
+  const settings = await loadBookkeepingSettings();
+  const account = expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
+  // Not chosen yet, so there is no payment row to book. Said as such, rather
+  // than as a voucher that is somehow missing its payment line.
+  if (!account) {
+    return {
+      code:
+        expense.paymentType === "CARD" ? "settings.bankAccountUnset" : "settings.memberDebtAccountUnset",
+      account: "",
+    };
+  }
 
   const onAccount = lines.filter((l) => l.account === account);
   if (onAccount.length !== 1) {
@@ -132,6 +160,7 @@ const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
     accountName: l.accountName,
     description: l.description,
     costCenterId: l.costCenterCode ? idByCode.get(l.costCenterCode) ?? null : null,
+    project: l.project,
     debit: l.debit,
     credit: l.credit,
     sortOrder: i,
@@ -160,6 +189,14 @@ async function prepareVoucher(
   const prepared = prepareLines(body);
   if (!prepared.ok) return { ok: false as const, res: fail(prepared.status, prepared.error) };
 
+  const revenue = revenueLine(prepared.lines);
+  if (revenue) {
+    return {
+      ok: false as const,
+      res: fail(422, "voucher.revenueAccount", { values: { account: revenue.account } }),
+    };
+  }
+
   const paymentError = await checkPaymentLine(prepared.lines, expense);
   if (paymentError) {
     return {
@@ -173,6 +210,14 @@ async function prepareVoucher(
     return {
       ok: false as const,
       res: fail(422, "voucher.unknownCostCenter", { values: { code: resolved.code } }),
+    };
+  }
+
+  const project = await unknownProject(prepared.lines);
+  if (project) {
+    return {
+      ok: false as const,
+      res: fail(422, "voucher.unknownProject", { values: { project } }),
     };
   }
 
@@ -297,11 +342,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "free") {
     return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
-      values: { name: expense.exportClaimedBy?.name ?? "–" },
+      values: { name: expense.exportClaimedBy?.name ?? "-" },
     });
   }
+  // BOOKED, checked above, is the status konteringen sets with its voucher.
   const verification = expense.verification;
-  if (!verification) return fail(404, "expense.noVoucherToAmend");
+  if (!verification) throw new Error(`Expense ${id} is BOOKED but has no verification`);
 
   const parsed = await parseBody(req, BookVoucher);
   if (!parsed.ok) return parsed.res;

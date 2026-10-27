@@ -90,7 +90,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
         // different answers, and the contract prints them differently.
         cell: (i) =>
           i.dailyPriceOre === null ? (
-            <span className="text-muted">–</span>
+            <span className="text-muted">-</span>
           ) : (
             <Amount value={oreToSEK(i.dailyPriceOre)} />
           ),
@@ -113,7 +113,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
         sortable: true,
         cell: (i) =>
           i.usedBy === 0 ? (
-            <span className="text-muted">–</span>
+            <span className="text-muted">-</span>
           ) : (
             <span className="tabular-nums text-muted">{i.usedBy}</span>
           ),

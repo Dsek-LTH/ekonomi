@@ -96,7 +96,7 @@ export const expensePaymentTypeColumn = (
 //
 // A dash until it has one: the number is handed out when the utlägg is
 // submitted for attest, so anything still with its submitter shows nothing here.
-export const expenseReferenceColumn = (header: string, dash = "–"): Column<Expense> => ({
+export const expenseReferenceColumn = (header: string, dash = "-"): Column<Expense> => ({
   key: "reference",
   header,
   value: (e) => e.reference ?? "",

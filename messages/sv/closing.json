@@ -1,0 +1,199 @@
+{
+  "title": "Bokslut",
+  "never": "Aldrig",
+  "years": {
+    "empty": "Inga räkenskapsår är synkade från Fortnox ännu.",
+    "col": {
+      "year": "Räkenskapsår",
+      "period": "Period",
+      "vouchers": "Verifikationer",
+      "synced": "Senast synkad"
+    }
+  },
+  "yearTitle": "Bokslut {year}",
+  "lastSync": "Huvudboken senast synkad {when}",
+  "neverSynced": "Huvudboken är inte synkad",
+  "search": "Sök verifikation, text eller utlägg",
+  "noMatch": "Inga verifikationer matchar.",
+  "tab": {
+    "all": "Alla",
+    "expense": "Utlägg",
+    "income": "Intäkter",
+    "none": "Utan underlag",
+    "disagrees": "Stämmer inte"
+  },
+  "col": {
+    "voucher": "Verifikation",
+    "date": "Datum",
+    "description": "Text",
+    "evidence": "Underlag",
+    "amount": "Belopp",
+    "comments": "Kommentarer"
+  },
+  "evidence": {
+    "expense": "Utlägg {reference}",
+    "expenseNoRef": "Utlägg",
+    "income": "Intäkter {date}",
+    "none": "Inget i appen",
+    "disagrees": "Stämmer inte",
+    "disagreesHint": "Appen exporterade en verifikation med det här numret, men beloppen stämmer inte överens. Numret kan ha återanvänts i Fortnox efter att en verifikation togs bort."
+  },
+  "voucher": {
+    "evidenceTitle": "Underlag",
+    "noneBody": "Appen har inget underlag för den här verifikationen. Den bokfördes direkt i Fortnox, så underlaget finns där eller någon annanstans.",
+    "receipts": "{count, plural, =0 {(inga kvitton)} one {(# kvitto)} other {(# kvitton)}}",
+    "openExpense": "Öppna utlägget",
+    "incomeDay": "Intäktsräkning för {date}",
+    "openIncome": "Öppna intäktsräkningen",
+    "rows": "Konteringar",
+    "noRows": "Verifikationen har inga rader.",
+    "row": {
+      "account": "Konto",
+      "costCenter": "Kostnadsställe",
+      "project": "Projekt",
+      "text": "Text",
+      "debit": "Debet",
+      "credit": "Kredit"
+    },
+    "reviewFailed": "Granskningen kunde inte sparas",
+    "commentFailed": "Kommentaren kunde inte skickas",
+    "thread": "Frågor och svar",
+    "threadEmpty": "Inga kommentarer än.",
+    "commentLabel": "Ny kommentar",
+    "commentPlaceholder": "Skriv en fråga eller ett svar",
+    "commentSend": "Skicka"
+  },
+  "commentCount": "{count, plural, one {# kommentar} other {# kommentarer}}",
+  "review": {
+    "title": "Granskning",
+    "pass": {
+      "PREPARER": "Skattmästeriet",
+      "AUDITOR": "Revisorerna"
+    },
+    "status": {
+      "unreviewed": "Ej granskad",
+      "changed": "Ändrad efter granskning",
+      "changedHint": "Verifikationen har ändrats i Fortnox sedan den granskades, eller numret har getts till en annan verifikation. Den behöver granskas igen.",
+      "OK": "Godkänd",
+      "QUESTION": "Fråga",
+      "REMARK": "Anmärkning"
+    },
+    "action": {
+      "OK": "Godkänn",
+      "QUESTION": "Ställ en fråga",
+      "REMARK": "Gör en anmärkning"
+    },
+    "filter": "Granskning ({pass}): alla",
+    "progress": "{pass}: {settled} av {total} klara",
+    "openQuestions": "{count, plural, one {# öppen fråga} other {# öppna frågor}}",
+    "orphaned": "{count, plural, one {En granskning gäller en verifikation} other {# granskningar gäller verifikationer}} som inte längre finns i huvudboken. De kan ha tagits bort i Fortnox.",
+    "by": "{name}, {when}",
+    "someone": "Okänd",
+    "history": "{count, plural, one {Visa historiken (# granskning)} other {Visa historiken (# granskningar)}}",
+    "earlierVersion": "Tidigare version"
+  },
+  "flag": {
+    "filter": "Alla flaggor",
+    "outsideYear": "Utanför året",
+    "outsideYearHint": "Verifikationen är daterad utanför räkenskapsåret.",
+    "possibleDuplicate": "Möjlig dubblett",
+    "possibleDuplicateHint": "En annan verifikation samma dag har samma belopp.",
+    "deadlineWaived": "Dispens",
+    "deadlineWaivedHint": "Utlägget redovisades efter fristen och fick dispens.",
+    "ownBooking": "Egen kontering",
+    "ownBookingHint": "Samma person konterade och bokförde utlägget."
+  },
+  "sections": {
+    "label": "Delar av bokslutet",
+    "checklist": "Checklista",
+    "vouchers": "Verifikationer",
+    "accounts": "Avstämningar"
+  },
+  "check": {
+    "EXPENSES_EXPORTED": "Alla utlägg exporterade",
+    "CARD_PURCHASES_ACCOUNTED": "Alla kortköp redovisade",
+    "INCOME_EXPORTED": "Alla intäkter exporterade",
+    "LEDGER_SYNCED": "Huvudboken synkad",
+    "STOCKTAKE_AT_YEAR_END": "Inventering vid årsskiftet",
+    "BALANCES_RECONCILED": "Balanskonton avstämda",
+    "TREASURY_REVIEWED": "Skattmästeriets granskning klar",
+    "AUDITORS_REVIEWED": "Revisorernas granskning klar"
+  },
+  "checklist": {
+    "notStarted": "Checklistan är inte påbörjad",
+    "notStartedBody": "Starta den när bokslutet börjar. Den kopieras från mallen som den ser ut då, och det som förra året skrev till i år visas vid varje punkt.",
+    "start": "Starta checklistan",
+    "startFailed": "Checklistan kunde inte startas",
+    "progress": "{done} av {total} klara",
+    "editTemplate": "Redigera mallen",
+    "done": "Klar",
+    "open": "Inte klar",
+    "due": "Senast {date}",
+    "checkDone": "Klart enligt appen",
+    "checkRemaining": "{count} kvar enligt appen",
+    "doneBy": "Klar, {name} {when}",
+    "someone": "okänd",
+    "hasNoteFromLastYear": "Anteckning från förra året",
+    "fromLastYear": "Från förra årets bokslut",
+    "goToCheck": "Visa det som är kvar",
+    "note": "Anteckning",
+    "noteHint": "Vad som gjordes i år, för den som läser bokslutet efteråt.",
+    "noteToNextYear": "Till nästa år",
+    "noteToNextYearHint": "Det nästa skattmästare behöver veta. Visas på samma punkt nästa år.",
+    "saveFailed": "Det gick inte att spara"
+  },
+  "accounts": {
+    "tab": {
+      "all": "Alla",
+      "open": "Ej avstämda",
+      "done": "Avstämda"
+    },
+    "col": {
+      "account": "Konto",
+      "opening": "Ingående",
+      "closing": "Utgående",
+      "status": "Avstämning"
+    },
+    "reconciled": "Avstämt i Fortnox",
+    "notReconciled": "Ej avstämt",
+    "by": "{name}, {when}",
+    "someone": "Okänd",
+    "search": "Sök konto",
+    "empty": "Huvudboken har inga balanskonton med saldo för året.",
+    "accountNote": "Om kontot",
+    "accountNoteHint": "Vad kontot är och hur det stäms av. Gäller alla år.",
+    "note": "Anteckning för i år",
+    "noteHint": "Något värt att veta om årets avstämning.",
+    "mark": "Markera som avstämt i Fortnox",
+    "markAgain": "Markera igen",
+    "unmark": "Ta bort markeringen",
+    "saveFailed": "Det gick inte att spara"
+  },
+  "template": {
+    "title": "Mall för checklistan",
+    "intro": "Stegen varje års checklista börjar från. Ett år som redan är påbörjat ändras inte när mallen gör det.",
+    "retired": "Borttagna ur mallen",
+    "retire": "Ta bort ur mallen",
+    "restore": "Lägg tillbaka",
+    "offset": "{days, plural, =0 {Årets sista dag} =1 {1 dag efter årsskiftet} =-1 {1 dag före årsskiftet} other {{days} dagar från årsskiftet}}",
+    "save": "Spara",
+    "saveFailed": "Det gick inte att spara",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ner",
+    "add": "Nytt steg",
+    "addSubmit": "Lägg till",
+    "field": {
+      "title": "Rubrik",
+      "howTo": "Så här gör du",
+      "howToHint": "Var i Fortnox, vilket underlag som behövs, vad som brukar gå fel.",
+      "ownerRole": "Brukar göras av",
+      "noOwner": "Ingen särskild",
+      "dueOffsetDays": "Senast, dagar från årsskiftet",
+      "dueOffsetDaysHint": "Negativt är före. Tomt för inget datum.",
+      "dueOffsetDaysInvalid": "Ett heltal, till exempel 14 eller -21",
+      "check": "Bockas av av appen",
+      "checkHint": "Lämna tomt för att bocka av för hand.",
+      "noCheck": "Nej, för hand"
+    }
+  }
+}

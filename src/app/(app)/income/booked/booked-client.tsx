@@ -208,7 +208,7 @@ export default function BookedClient({
       sortable: true,
       searchable: true,
       className: "tabular-nums",
-      cell: (r) => r.costCenterCode ?? "–",
+      cell: (r) => r.costCenterCode ?? "-",
     },
     {
       key: "status",
@@ -225,7 +225,7 @@ export default function BookedClient({
       value: (r) => r.voucherLabel ?? "",
       sortable: true,
       searchable: true,
-      cell: (r) => (r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "–"),
+      cell: (r) => (r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "-"),
     },
     {
       key: "total",
@@ -309,7 +309,7 @@ export default function BookedClient({
       <ReceiptPanelSource
         documentUrl={viewing ? `/api/income/reports/${viewing}/document` : null}
         mimeType="application/pdf"
-        filename={viewed ? `${t(`source.${viewed.source}`)} – ${formatDate(viewed.date)}` : undefined}
+        filename={viewed ? `${t(`source.${viewed.source}`)} - ${formatDate(viewed.date)}` : undefined}
       />
 
       <Card>

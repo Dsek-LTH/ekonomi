@@ -8,7 +8,14 @@
 //
 // The reading is where this legitimately differs from the app. A script takes
 // the development fallback and gets on with it; the server refuses to start.
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  DeleteObjectsCommand,
+  HeadBucketCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { S3_DEFAULTS, s3ClientOptions, type S3Var } from "../src/lib/s3-config";
 
 const env = (name: S3Var) => process.env[name] || S3_DEFAULTS[name];
@@ -70,4 +77,22 @@ export async function deleteKeys(keys: string[]): Promise<{ key: string; message
     }
   }
   return failures;
+}
+
+// The bucket, created when it is missing, as the app does on its first write.
+// A fresh checkout's MinIO starts empty, and the seed is the first thing to
+// write to it.
+export async function ensureBucket(): Promise<void> {
+  try {
+    await s3().send(new HeadBucketCommand({ Bucket: bucket() }));
+  } catch {
+    await s3().send(new CreateBucketCommand({ Bucket: bucket() }));
+  }
+}
+
+// Write one object. The seed's receipts go up through this.
+export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
+  await s3().send(
+    new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }),
+  );
 }

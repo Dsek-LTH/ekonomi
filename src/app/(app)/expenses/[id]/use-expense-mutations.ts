@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useNotify } from "@/components/shell/notifications";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useReturnTo } from "@/components/shell/route-history";
@@ -29,7 +28,6 @@ export function useExpenseMutations(expenseId: string) {
   // opens it and the button that confirms it say the same thing.
   const tDetail = useTranslations("expenses.detail");
   const returnTo = useReturnTo();
-  const notify = useNotify();
   const confirm = useConfirm();
   const action = useMutation();
   const matcher = useMutation();
@@ -97,20 +95,6 @@ export function useExpenseMutations(expenseId: string) {
     if (ok) await transition("recall");
   }
 
-  // Export to Fortnox is a real API call (its own route), not a status flip, and
-  // it can half-succeed: the voucher lands but the receipt doesn't attach.
-  async function exportToFortnox() {
-    const data = await action.mutate(url("/export"), { error: t("export.failed") });
-    if (!data) return;
-    const done = t("export.done", { label: String(data.label) });
-    // The warning describes itself, pass it through rather than wrapping it in
-    // a summary that leaves the bookkeeper with nothing to act on.
-    if (data.attachWarning) {
-      notify.info(`${done}. ${t("export.attachWarning", { detail: String(data.attachWarning) })}`);
-    }
-    else notify.success(`${done}.`);
-  }
-
   async function match(transactionId: string | null) {
     await matcher.mutate(url("/match"), {
       body: { transactionId },
@@ -146,7 +130,6 @@ export function useExpenseMutations(expenseId: string) {
     withdrawAttest,
     recall,
     revokeDeadlineWaiver,
-    exportToFortnox,
     match,
     remove,
   };

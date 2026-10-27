@@ -279,7 +279,7 @@ export async function getEvaluatedBudget(
 //
 // Two things are deliberately left out: postings with no cost centre (they
 // belong to no sheet, and are mostly balance-sheet movements), and accounts
-// outside the result range 3–8, which no budget holds either way.
+// outside the result range 3-8, which no budget holds either way.
 async function actualSheets(
   year: number,
   budgeted: {

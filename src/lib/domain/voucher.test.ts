@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { voucherBalance, voucherBlocker, type VoucherLine } from "./voucher";
+import { isRevenueAccount, voucherBalance, voucherBlocker, type VoucherLine } from "./voucher";
 
 // Amounts are öre throughout. That is the point of the rule living here.
 const line = (account: string, debit: number, credit: number): VoucherLine => ({
@@ -124,5 +124,12 @@ describe("voucherBalance", () => {
     const lines = [line("1930", 25000, 25000)];
     expect(voucherBalance(lines).balanced).toBe(true);
     expect(voucherBlocker(lines)).toBe("twoLines");
+  });
+});
+
+describe("isRevenueAccount", () => {
+  it("is the whole 3000 range and nothing either side of it", () => {
+    expect(["3000", "3010", "3999", " 3041 "].every(isRevenueAccount)).toBe(true);
+    expect(["2999", "4000", "5010", "1930", "30", "30000", ""].some(isRevenueAccount)).toBe(false);
   });
 });

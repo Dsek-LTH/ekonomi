@@ -9,6 +9,11 @@ model LedgerVoucher {
   number        Int // VoucherNumber within the series+year
   date          DateTime             @db.Date // transaction date
   description   String
+  // What the voucher said, hashed: see lib/closing/fingerprint.ts. A bokslut
+  // review records the one it saw, so that a number Fortnox has since given to
+  // a different voucher reads as unreviewed. Null on rows synced before it
+  // existed, until the next sync or the first read that fills it in.
+  contentHash   String?
 
   rows       LedgerRow[]
   importedAt DateTime    @default(now())

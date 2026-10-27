@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/server/db";
 import { requireUser } from "@/lib/server/current-user";
 import {
-  canAccessBookkeeping,
+  canBookkeep,
   canLogInToFortnox,
   hasAttestRole,
   isAdmin,
@@ -35,7 +35,7 @@ export default async function ProfilePage() {
   const reaches = {
     everyone: true,
     attesters: hasAttestRole(user.capabilities) || isAdmin(user.capabilities),
-    bookkeepers: canAccessBookkeeping(user.capabilities),
+    bookkeepers: canBookkeep(user.capabilities),
     cardHolders: holdsCard,
   };
   const choices = new Map(saved.map((p) => [p.kind, p.enabled]));

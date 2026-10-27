@@ -41,7 +41,7 @@ export interface CompareSheet {
 /** One side of a comparison: a budget, or a year's outcome from the ledger. */
 export interface Snapshot {
   id: string;
-  label: string; // the column heading, e.g. "2025 – Ursprunglig" or "Utfall 2026"
+  label: string; // the column heading, e.g. "2025 - Ursprunglig" or "Utfall 2026"
   sheets: CompareSheet[];
   /** Variables are not money. See the units note in lib/budget/eval.ts. */
   vars: Record<string, number>;
@@ -92,7 +92,7 @@ export function lineKeys(lines: { description: string }[]): string[] {
 }
 
 /**
- * How a budget names itself as a column: "2026 – Ursprunglig". Several budgets
+ * How a budget names itself as a column: "2026 - Ursprunglig". Several budgets
  * share a year, so the year alone doesn't identify one, and inside a
  * comparison the year is the first thing you look for, so it leads.
  *
@@ -109,7 +109,7 @@ export function lineKeys(lines: { description: string }[]): string[] {
 // screen under the wrong year, and the year is the half that decides which
 // ledger the figures are compared against. The adoption date is shown where it
 // answers a different question: the list's own column, and the budget page.
-export const budgetLabel = (b: { year: number; name: string }) => `${b.year} – ${b.name}`;
+export const budgetLabel = (b: { year: number; name: string }) => `${b.year} - ${b.name}`;
 
 // The shape both the budget view and the compare page already hold: the API
 // payload for one budget. Declared structurally so neither has to convert.

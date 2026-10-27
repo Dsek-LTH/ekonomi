@@ -40,7 +40,7 @@ describe("expenseDocuments", () => {
       cover: "Utläggsräkning",
       underlag: "Underlag",
     });
-    expect(docs.map((d) => d.label)).toEqual(["Utläggsräkning", "Underlag – kvitto.jpg"]);
+    expect(docs.map((d) => d.label)).toEqual(["Utläggsräkning", "Underlag - kvitto.jpg"]);
   });
 
   it("numbers the underlag only once there is more than one", () => {
@@ -60,8 +60,8 @@ describe("expenseDocuments", () => {
     );
     expect(docs.map((d) => d.label)).toEqual([
       "Utläggsräkning",
-      "Underlag 1 – kvitto1.png",
-      "Underlag 2 – faktura.pdf",
+      "Underlag 1 - kvitto1.png",
+      "Underlag 2 - faktura.pdf",
     ]);
     expect(docs.map((d) => d.src)).toEqual([
       "/api/expenses/exp1/document",
@@ -89,7 +89,7 @@ describe("expenseDocuments", () => {
   });
 
   it("names the underlag for a reader who cannot see it", () => {
-    expect(expenseDocuments(submitted, "Kvitto – Tejp")[1].filename).toBe("Kvitto – Tejp");
+    expect(expenseDocuments(submitted, "Kvitto - Tejp")[1].filename).toBe("Kvitto - Tejp");
   });
 
   it("leaves the panel to say there is no underlag", () => {
@@ -148,12 +148,12 @@ describe("expenseDocuments", () => {
 
 describe("underlagCaption", () => {
   it("names the file without a number when it is the only one", () => {
-    expect(underlagCaption("Underlag", 0, 1, "kvitto.jpg")).toBe("Underlag – kvitto.jpg");
+    expect(underlagCaption("Underlag", 0, 1, "kvitto.jpg")).toBe("Underlag - kvitto.jpg");
   });
 
   it("numbers each one once there is more than one", () => {
-    expect(underlagCaption("Underlag", 0, 2, "kvitto1.jpg")).toBe("Underlag 1 – kvitto1.jpg");
-    expect(underlagCaption("Underlag", 1, 2, "kvitto2.jpg")).toBe("Underlag 2 – kvitto2.jpg");
+    expect(underlagCaption("Underlag", 0, 2, "kvitto1.jpg")).toBe("Underlag 1 - kvitto1.jpg");
+    expect(underlagCaption("Underlag", 1, 2, "kvitto2.jpg")).toBe("Underlag 2 - kvitto2.jpg");
   });
 
   it("drops the dash rather than naming an empty file", () => {

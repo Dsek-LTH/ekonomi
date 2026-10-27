@@ -7,7 +7,7 @@
 // past, and thrown away. Reviewing a term of takings therefore stores nothing,
 // which is the point (see lib/income/document.ts).
 import { fail, gate } from "@/lib/api/guard";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canViewBookkeeping } from "@/lib/domain/permissions";
 import { renderIncomeDocument, type DocumentFailure } from "@/lib/income/document";
 import { loadUser } from "@/lib/server/current-user";
 import { prisma } from "@/lib/server/db";
@@ -38,7 +38,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   // The whole section's takings, day by day: bookkeeping's business, and the
   // same gate the pages that link here are behind.
-  const g = await gate(canAccessBookkeeping, "auth.denied");
+  const g = await gate(canViewBookkeeping, "auth.denied");
   if (!g.ok) return g.res;
 
   const report = await prisma.incomeReport.findUnique({

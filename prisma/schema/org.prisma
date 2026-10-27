@@ -54,6 +54,22 @@ model Account {
   @@index([active])
 }
 
+// Fortnox projects (/3/projects), the second dimension a voucher row can carry
+// beside the cost centre. Mirrored the same way as the chart of accounts: by
+// upsert, never deleted, because a booked verification line may name a project
+// Fortnox has since closed. Lines refer to it by number (VerificationLine.project),
+// as they do to accounts.
+model Project {
+  number String  @id // Fortnox ProjectNumber, e.g. "12"
+  name   String
+  active Boolean @default(true) // false once Fortnox lists it as COMPLETED or drops it
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
 // Resultatenhet: Styrelsen, Sexmästeriet, and the rest. Which cost centres
 // belong to it is decided entirely by its prefixes: a cost centre whose code
 // starts with one of them is part of the result unit. Nothing is stored on

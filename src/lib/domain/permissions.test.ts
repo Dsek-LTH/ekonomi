@@ -5,14 +5,16 @@ import {
   ASSIGNABLE_ROLES,
   CAPABILITIES,
   ROLES,
-  canAccessBookkeeping,
   canAccessBudget,
   canAccessSettings,
   canAttestAllocation,
+  canAuditReview,
+  canBookkeep,
   canChangeLockedBudget,
   canCommentBudget,
   canLockBudget,
   canUnexport,
+  canViewBookkeeping,
   hasAttestRole,
   isAdmin,
 } from "./permissions";
@@ -49,10 +51,48 @@ describe("the defaults the section starts from", () => {
       "VICE_SKATTMASTARE",
       "SKATTFORMAN",
     ] as Role[]) {
-      expect(canAccessBookkeeping(defaults(role))).toBe(true);
+      expect(canBookkeep(defaults(role))).toBe(true);
+      // Working the books implies reading them.
+      expect(canViewBookkeeping(defaults(role))).toBe(true);
     }
-    expect(canAccessBookkeeping(defaults("RESULTATANSVARIG"))).toBe(false);
-    expect(canAccessBookkeeping(defaults("ORDINARIE"))).toBe(false);
+    expect(canBookkeep(defaults("RESULTATANSVARIG"))).toBe(false);
+    expect(canBookkeep(defaults("ORDINARIE"))).toBe(false);
+    expect(canViewBookkeeping(defaults("ORDINARIE"))).toBe(false);
+  });
+
+  it("lets a revisor read everything and change nothing", () => {
+    const revisor = defaults("REVISOR");
+    expect(canViewBookkeeping(revisor)).toBe(true);
+    expect(canAccessBudget(revisor)).toBe(true);
+    // Every capability that acts, written out so that a new one has to be
+    // placed on one side of this line by somebody deciding to.
+    const acting: Capability[] = [
+      "ADMIN",
+      "SETTINGS",
+      "BOOKKEEPING",
+      "FORTNOX_LOGIN",
+      "EXPORT_UNDO",
+      "REVIEW_OWN_BOOKING",
+      "EXPENSE_DEADLINE_WAIVE",
+      "SEND_REMINDERS",
+      "STOCK_MANAGE",
+      "BUDGET_COMMENT",
+      "BUDGET_LOCK",
+      "BUDGET_CHANGE_LOCKED",
+      "CONTRACT_MANAGE",
+      "RENTAL_MANAGE",
+      "FIRMATECKNARE",
+    ];
+    for (const cap of acting) expect(revisor).not.toContain(cap);
+    expect(canBookkeep(revisor)).toBe(false);
+    // The one thing a revisor writes is their own review of the books.
+    expect(canAuditReview(revisor)).toBe(true);
+  });
+
+  it("keeps the treasury out of the revisorer's pass", () => {
+    for (const role of ["SKATTMASTARE", "ORDFORANDE", "VICE_SKATTMASTARE", "SKATTFORMAN"] as Role[]) {
+      expect(canAuditReview(defaults(role))).toBe(false);
+    }
   });
 
   it("keeps the chair out of settings, despite counting as an admin elsewhere", () => {
@@ -128,7 +168,8 @@ describe("the helpers themselves", () => {
     const none: Capability[] = [];
     expect(isAdmin(none)).toBe(false);
     expect(canAccessSettings(none)).toBe(false);
-    expect(canAccessBookkeeping(none)).toBe(false);
+    expect(canBookkeep(none)).toBe(false);
+    expect(canViewBookkeeping(none)).toBe(false);
     expect(canAccessBudget(none)).toBe(false);
   });
 });

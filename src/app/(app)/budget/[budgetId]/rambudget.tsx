@@ -107,7 +107,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
                         : <><span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}{row.sheet.name}</>}
                       {/* Only the other side has this one. There is no sheet
                           here to open, and nothing budgeted to put beside it. */}
-                      {!id && <span className="ml-2 text-xs">– {t("notInThisBudget")}</span>}
+                      {!id && <span className="ml-2 text-xs">- {t("notInThisBudget")}</span>}
                     </td>
                     <Amounts own={row.own} other={row.other} impact={row.impact} showCompare={showCompare} showImpact={showImpact} soft />
                   </tr>

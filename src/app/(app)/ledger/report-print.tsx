@@ -66,9 +66,9 @@ export function ReportPrint({
   latestVouchers: string[];
   financialYear: { from: string; to: string } | null;
   period: { from: string; to: string } | null;
-  /** "SKT02 – Skattmästeriet", when the report is narrowed to one. */
+  /** "SKT02 - Skattmästeriet", when the report is narrowed to one. */
   costCenter: string | null;
-  /** The comparison named in full, e.g. "Budget – 2026 – Ursprunglig". */
+  /** The comparison named in full, e.g. "Budget - 2026 - Ursprunglig". */
   comparedWith: string | null;
 }) {
   const t = useTranslations("ledger");
@@ -221,13 +221,13 @@ export function ReportPrint({
         {financialYear && (
           <>
             <dt>{t("printout.financialYear")}:</dt>
-            <dd>{`${financialYear.from} – ${financialYear.to}`}</dd>
+            <dd>{`${financialYear.from} - ${financialYear.to}`}</dd>
           </>
         )}
         {period && (
           <>
             <dt>{t("printout.period")}:</dt>
-            <dd>{`${period.from} – ${period.to}`}</dd>
+            <dd>{`${period.from} - ${period.to}`}</dd>
           </>
         )}
         {costCenter && (
@@ -264,7 +264,7 @@ export function ReportPrint({
                 <tr>
                   <td colSpan={2 + columns.length} className="pt-4 text-[11pt] font-semibold">
                     {g.costCenterCode
-                      ? `${g.costCenterCode} – ${g.costCenterName ?? ""}`
+                      ? `${g.costCenterCode} - ${g.costCenterName ?? ""}`
                       : t("noCostCenter")}
                   </td>
                 </tr>

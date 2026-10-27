@@ -4,7 +4,7 @@
 // "all" backfills every financial year and can take a while; prefer the CLI
 // (pnpm fortnox:sync) or the scheduled job for that.
 import { NextResponse } from "next/server";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { syncLedger } from "@/lib/fortnox/sync";
 import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -14,7 +14,7 @@ import { denyNoFortnox, fortnoxFailure } from "@/lib/api/fortnox-route";
 export const maxDuration = 300; // allow long backfills on platforms that honour it
 
 export async function POST(req: Request) {
-  const g = await gate(canAccessBookkeeping, "auth.bookkeeperSync");
+  const g = await gate(canBookkeep, "auth.bookkeeperSync");
   if (!g.ok) return g.res;
   // syncLedger fetches its own service token, so this only has to know there is
   // a connection for it to find.

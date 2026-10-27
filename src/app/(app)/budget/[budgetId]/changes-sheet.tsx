@@ -84,7 +84,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
   // the section has, and the code is what the treasurer knows one by.
   const sheetOptions = sheets.map((cc) => ({
     value: cc.id,
-    label: cc.costCenter ? `${cc.costCenter.code} – ${cc.costCenter.name}` : sheetName(cc, tSheet("unnamed")),
+    label: cc.costCenter ? `${cc.costCenter.code} - ${cc.costCenter.name}` : sheetName(cc, tSheet("unnamed")),
     short: cc.costCenter?.code ?? sheetName(cc, tSheet("unnamed")),
   }));
 
@@ -306,7 +306,7 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                 <p>
                   {t("effectOnFrame")}{" "}
                   <span className={cn("font-semibold tabular-nums", net !== 0 && (net > 0 ? "text-success" : "text-danger"))}>
-                    {resolved.length === 0 ? "–" : `${fmtSigned(net)} kr`}
+                    {resolved.length === 0 ? "-" : `${fmtSigned(net)} kr`}
                   </span>
                 </p>
                 {!check.ok && resolved.length > 0 && (
@@ -378,7 +378,7 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
               <Tag>{t("revoked")}</Tag>
             )}
             <span className="text-xs text-muted">
-              {date(change.createdAt)} – {change.createdBy.name}
+              {date(change.createdAt)} - {change.createdBy.name}
             </span>
           </p>
           <p className={cn("mt-1 text-sm", revoked ? "text-muted line-through" : "text-foreground")}>
@@ -413,7 +413,7 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
                 {e.found ? e.found.sheetLabel : <span className="text-muted">{t("removedEntry")}</span>}
               </td>
               <td className="px-4 py-1.5 text-muted">
-                {e.found ? `${e.found.accountCode} – ${e.found.accountName}` : ""}
+                {e.found ? `${e.found.accountCode} - ${e.found.accountName}` : ""}
               </td>
               <td className={cn("px-inset py-1.5 text-right tabular-nums", revoked && "line-through")}>
                 {fmtSigned(e.amount)}
@@ -449,12 +449,12 @@ function findAccount(sheets: BudgetCC[], accountId: string) {
 function accountOptions(sheet: BudgetCC | undefined, chart: AccountRecord[], notOnSheet: string) {
   const own = (sheet?.accounts ?? []).map((a) => ({
     value: a.accountCode,
-    label: `${a.accountCode} – ${a.accountName}`,
+    label: `${a.accountCode} - ${a.accountName}`,
     short: a.accountCode,
   }));
   const taken = new Set(own.map((o) => o.value));
   const rest = chart
     .filter((a) => a.active && !taken.has(a.number))
-    .map((a) => ({ value: a.number, label: `${a.number} – ${a.name} (${notOnSheet})`, short: a.number }));
+    .map((a) => ({ value: a.number, label: `${a.number} - ${a.name} (${notOnSheet})`, short: a.number }));
   return [...own, ...rest];
 }

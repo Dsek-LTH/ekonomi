@@ -8,10 +8,6 @@
     "failed": "Inloggningen misslyckades. Försök igen."
   },
   "dev": {
-    "heading": "Dev-inloggning (endast lokalt)",
-    "member": "Medlem",
-    "approver": "Attestant",
-    "treasurer": "Kassör",
-    "admin": "Administratör"
+    "heading": "Dev-inloggning (endast lokalt)"
   }
 }

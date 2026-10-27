@@ -28,6 +28,10 @@ export type Capability = Schema.Capability;
 
 export type PaymentType = Schema.PaymentType;
 
+// Which of the app's own facts decides a bokslut checklist item. See the enum
+// in prisma/schema/closing.prisma and lib/closing/checklist.ts.
+export type ClosingCheck = Schema.ClosingCheck;
+
 // What an email is about, and what a member switches on or off in their
 // profile. Defaults and which ones can be switched: lib/domain/notifications.ts.
 export type NotificationKind = Schema.NotificationKind;
@@ -206,6 +210,7 @@ export interface VerificationLine {
   accountName: string;
   description?: string;
   costCenterCode?: string;
+  project?: string; // Fortnox project number
   debit: number; // SEK
   credit: number; // SEK
 }
@@ -228,11 +233,19 @@ export interface AccountRecord {
   lastSyncAt?: string; // ISO
 }
 
+// One Fortnox project, mirrored like the chart of accounts.
+export interface ProjectRecord {
+  number: string;
+  name: string;
+  active: boolean;
+}
+
 // The accounts the booking view pre-fills, configurable, previously the
 // ACCOUNT.* constants in lib/accounts.ts.
+// Null is "not chosen yet": nothing that needs the value works until it is.
 export interface BookkeepingSettings {
-  bankAccount: string;
-  memberDebtAccount: string;
+  bankAccount: string | null;
+  memberDebtAccount: string | null;
 }
 
 // Status of the org's single Fortnox OAuth connection (no secrets exposed).

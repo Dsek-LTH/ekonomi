@@ -45,7 +45,7 @@ export async function resolveBudgetAccount(
   if (!isResultAccount(account.number)) {
     return { ok: false, error: "budgetAccount.notResultAccount", values: { code: account.number } };
   }
-  // And on the side its number puts it on. 3xxx is income, 4xxx–8xxx is cost,
+  // And on the side its number puts it on. 3xxx is income, 4xxx-8xxx is cost,
   // and that is what the ledger will report whatever a budget says about it.
   if (expect && effectiveKind(account.number) !== expect) {
     return {

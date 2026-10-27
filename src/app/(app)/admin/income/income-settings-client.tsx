@@ -47,14 +47,14 @@ export function IncomeSettingsClient({
 
   const ccOptions = costCenters.map((c) => ({
     value: c.id,
-    label: `${c.code} – ${c.name}`,
+    label: `${c.code} - ${c.name}`,
     short: c.code,
   }));
   // The number alone on the closed picker: it sits in a narrow column, and
   // the number is what a treasurer reads an account by.
   const accountOptions: ComboOption[] = accounts.map((a) => ({
     value: a.number,
-    label: `${a.number} – ${a.name}`,
+    label: `${a.number} - ${a.name}`,
     short: a.number,
   }));
 
@@ -119,7 +119,8 @@ export function IncomeSettingsClient({
       <Combobox
         size="sm"
         options={accountOptions}
-        value={settings[key]}
+        // Empty until chosen: there is no account here to show until then.
+        value={settings[key] ?? ""}
         onChange={(v) => pickAccount(key, v)}
         placeholder={tBook("accountPlaceholder")}
         searchPlaceholder={tBook("accountSearch")}

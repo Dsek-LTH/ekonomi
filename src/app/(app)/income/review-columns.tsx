@@ -67,8 +67,8 @@ export function reviewColumns({
           </span>
           <span className="block text-xs text-muted">
             {t(`source.${r.source}`)}
-            {r.duplicateOf && ` – ${t("review.alreadyBookedShort")}`}
-            {r.existingVoucher && ` – ${t("review.inFortnox", { voucher: r.existingVoucher })}`}
+            {r.duplicateOf && ` - ${t("review.alreadyBookedShort")}`}
+            {r.existingVoucher && ` - ${t("review.inFortnox", { voucher: r.existingVoucher })}`}
           </span>
         </div>
       ),

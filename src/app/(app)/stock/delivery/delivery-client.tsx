@@ -349,7 +349,7 @@ export default function DeliveryClient({
         onChange={(e) => type(id, e.target.value)}
         onBlur={() => setFocusKey((k) => (k === id ? null : k))}
         onKeyDown={(e) => onCellKey(e, id)}
-        aria-label={`${product.name} – ${t("delivery.col.in")}`}
+        aria-label={`${product.name} - ${t("delivery.col.in")}`}
       />
     );
   }

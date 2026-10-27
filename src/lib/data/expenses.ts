@@ -15,7 +15,7 @@ import {
 import { oreToSEK as ore } from "@/lib/domain/money";
 import { journeyKm } from "@/lib/mileage/claim";
 import {
-  canAccessBookkeeping,
+  canBookkeep,
   canAttestAllocation,
   canReturnApproved,
   hasAttestRole,
@@ -167,7 +167,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     deadlineWaiver:
       e.deadlineWaivedAt && e.deadlineWaiverReason
         ? {
-            by: e.deadlineWaivedBy?.name ?? "–",
+            by: e.deadlineWaivedBy?.name ?? "-",
             at: e.deadlineWaivedAt.toISOString(),
             reason: e.deadlineWaiverReason,
           }
@@ -445,7 +445,7 @@ export async function getDashboardExpenses(
       AND: [await attestScopeWhere(viewer), { status: { in: ["PENDING_APPROVAL"] } }],
     });
   }
-  if (canAccessBookkeeping(viewer.capabilities)) {
+  if (canBookkeep(viewer.capabilities)) {
     candidates.push({ status: { in: ["APPROVED", "BOOKED"] } });
   }
 
@@ -514,6 +514,7 @@ export async function getExpense(
             accountName: l.accountName,
             description: l.description ?? undefined,
             costCenterCode: l.costCenter?.code,
+            project: l.project ?? undefined,
             debit: ore(l.debit),
             credit: ore(l.credit),
           })),

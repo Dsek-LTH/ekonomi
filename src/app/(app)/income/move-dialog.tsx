@@ -63,7 +63,7 @@ export function accountOptions(
 ): ComboOption[] {
   const own = (unit?.accounts ?? []).map((a) => ({
     value: a.account,
-    label: `${a.account} – ${a.accountName || unknownName}${
+    label: `${a.account} - ${a.accountName || unknownName}${
       a.prefixes.length ? ` (${a.prefixes.join(", ")})` : ""
     }`,
     short: a.account,
@@ -73,7 +73,7 @@ export function accountOptions(
     ...own,
     ...accounts
       .filter((a) => !ownNumbers.has(a.number))
-      .map((a) => ({ value: a.number, label: `${a.number} – ${a.name}`, short: a.number })),
+      .map((a) => ({ value: a.number, label: `${a.number} - ${a.name}`, short: a.number })),
   ];
 }
 

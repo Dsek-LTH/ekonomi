@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
 import { getBankTransactionPage, getCardlessTransactions, getCards } from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
@@ -36,7 +36,7 @@ export default async function BankPage({
   const user = await requireUser();
   const params = await searchParams;
 
-  const canSeeAll = canAccessBookkeeping(user.capabilities);
+  const canSeeAll = canViewBookkeeping(user.capabilities);
   const [holdsCard, owned] = await Promise.all([
     userHoldsCard(user.id),
     ownedResultUnits(user),
@@ -60,9 +60,10 @@ export default async function BankPage({
 
   const query = parseListQuery(params, { defaultTab: bankDefaultTab(scope) });
 
-  // Purchases on no card are bookkeeping's to place, and only on the section's
-  // feed, since they are on nobody's own.
-  const canPlaceCards = canSeeAll && scope === "all";
+  // Purchases on no card are only on the section's feed, since they are on
+  // nobody's own. Placing them is bookkeeping's; a revisor sees them unplaced.
+  const showsCardless = canSeeAll && scope === "all";
+  const canPlaceCards = showsCardless && canBookkeep(user.capabilities);
 
   const [page, cards, allCards, cardless] = await Promise.all([
     getBankTransactionPage(
@@ -80,7 +81,7 @@ export default async function BankPage({
     // on is on nobody's own feed, so putting it on one is bookkeeping's job and
     // only the section-wide reading shows those rows at all.
     canPlaceCards ? getCards() : Promise.resolve([]),
-    canPlaceCards ? getCardlessTransactions() : Promise.resolve([]),
+    showsCardless ? getCardlessTransactions() : Promise.resolve([]),
   ]);
 
   return (

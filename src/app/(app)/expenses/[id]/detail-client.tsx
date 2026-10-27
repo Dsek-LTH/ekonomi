@@ -26,15 +26,12 @@ import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
 import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
-import { QueueBar } from "./queue-bar";
-import type { ExpenseQueue, QueueNext } from "@/lib/data/expense-queue";
 
 export default function ExpenseDetailClient({
   expense,
   can,
   bankTransactions,
   fortnox,
-  queues,
 }: {
   expense: Expense | null;
   // Null exactly when `expense` is: there is nothing to be capable of. The two
@@ -42,7 +39,6 @@ export default function ExpenseDetailClient({
   can: ExpenseCapabilities | null;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
-  queues: Partial<Record<ExpenseQueue, QueueNext>>;
 }) {
   if (!expense || !can) {
     return <ExpenseMissing />;
@@ -53,7 +49,6 @@ export default function ExpenseDetailClient({
       can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
-      queues={queues}
     />
   );
 }
@@ -74,14 +69,12 @@ function ExpenseDetail({
   can,
   bankTransactions,
   fortnox,
-  queues,
 }: {
   expense: Expense;
   /** Decided on the server. See expenseCapabilities. */
   can: ExpenseCapabilities;
   bankTransactions: BankTransaction[];
   fortnox: FortnoxStatus;
-  queues: Partial<Record<ExpenseQueue, QueueNext>>;
 }) {
   const t = useTranslations("expenses.detail");
   const tReceipt = useTranslations("receipt");
@@ -89,7 +82,7 @@ function ExpenseDetail({
   const [reminding, setReminding] = useState(false);
   const documents = expenseDocuments(
     expense,
-    `${tReceipt("alt")} – ${expense.title}`,
+    `${tReceipt("alt")} - ${expense.title}`,
     // The panel stacks the two into one scroll, so each is captioned.
     { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
   );
@@ -106,7 +99,7 @@ function ExpenseDetail({
       // would be.
       subtitle={
         expense.reference
-          ? `${expense.reference} – ${expense.submitterName}`
+          ? `${expense.reference} - ${expense.submitterName}`
           : expense.submitterName
       }
       back="/expenses"
@@ -134,13 +127,6 @@ function ExpenseDetail({
         emptyDescription={t("noReceipt")}
       />
 
-      <QueueBar
-        queues={queues}
-        // Whether this one still waits on the viewer in each queue. Once it
-        // does not, the bar is the way on rather than a way to skip it.
-        waiting={{ approvals: can.canApprove, bookkeeping: can.canBook }}
-      />
-
       <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
       {/* The inspector. One card, read top to bottom; see detail-sections.tsx
@@ -152,7 +138,6 @@ function ExpenseDetail({
             <ExpenseActions
               expenseId={expense.id}
               can={can}
-              fortnox={fortnox}
               busy={mutations.busy}
               onTransition={mutations.transition}
               onWithdrawAttest={mutations.withdrawAttest}
@@ -162,7 +147,6 @@ function ExpenseDetail({
                 mutations.recall(expense.allocations.filter((a) => a.approvedById).length)
               }
               onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
-              onExport={mutations.exportToFortnox}
               onRemind={() => setReminding(true)}
               onDelete={mutations.remove}
             />
@@ -194,6 +178,7 @@ function ExpenseDetail({
           <VerificationSection
             verification={expense.verification}
             expenseId={expense.id}
+            revisions={expense.revisions}
             canEdit={can.canEditVerification}
           />
         )}

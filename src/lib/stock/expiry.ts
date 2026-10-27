@@ -35,9 +35,6 @@
 
 import { addMonths, daysAgo, today } from "@/lib/domain/date";
 
-/** How much notice to give, when nothing has been configured. */
-export const DEFAULT_LEAD_DAYS = 30;
-
 /**
  * A delivery, as this file needs it.
  *

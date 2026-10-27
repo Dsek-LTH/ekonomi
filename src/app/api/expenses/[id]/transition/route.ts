@@ -199,7 +199,7 @@ export async function POST(
           "EXPENSE_COST_CENTER_APPROVED",
           [expense.submitterId],
           about("costCenterApproved", {
-            costCenter: mine.map((a) => `${a.costCenter.code} – ${a.costCenter.name}`).join(", "),
+            costCenter: mine.map((a) => `${a.costCenter.code} - ${a.costCenter.name}`).join(", "),
           }),
           { exclude: [actorId] },
         );

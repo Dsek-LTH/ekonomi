@@ -124,7 +124,7 @@ export async function GET(req: Request) {
     years,
     year: selected,
     period: periodOf(period),
-    // The period as days, for the printed header ("2026-01-01 – 2026-03-31").
+    // The period as days, for the printed header ("2026-01-01 - 2026-03-31").
     periodDates: {
       from: period.from.toISOString().slice(0, 10),
       to: period.to.toISOString().slice(0, 10),

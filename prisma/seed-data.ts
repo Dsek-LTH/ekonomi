@@ -1,32 +1,78 @@
 // Seed fixtures for a fresh database. These were the frontend mock dataset
 // (the UI now reads from the DB instead). The seed maps these into real rows;
 // amounts are in plain SEK here and converted to öre on insert.
-import type { BankTransaction, User } from "../src/lib/domain/types";
+import type { User } from "../src/lib/domain/types";
 
 /** A seeded person: the User columns that are actually inserted. */
 export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
 
-export interface SeedExpense {
-  // The human reference. Null for an utlägg that hasn't been submitted for
-  // attest yet. That is when the number is handed out, so a draft has none.
-  reference: string | null;
-  title: string;
-  submitterName: string;
-  allocations: { costCenterCode: string; amount: number }[]; // SEK, must sum to grossAmount
-  paymentType: "CARD" | "REIMBURSEMENT";
-  status: "DRAFT" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
-  purchaseDate: string;
-  grossAmount: number;
-  currency: string;
-  matchedTransactionId?: string;
-  revisions: { id: string; actor: string; action: string; comment?: string; date: string }[];
+export type SeedStatus =
+  | "DRAFT"
+  | "PENDING_APPROVAL"
+  | "CHANGES_REQUESTED"
+  | "APPROVED"
+  | "BOOKED"
+  | "EXPORTED";
+
+/**
+ * One cost-centre row of an utlägg, and what happened to it: who attested it,
+ * and where the kontering put it.
+ */
+export interface SeedAllocation {
+  costCenterCode: string;
+  /** SEK, negative on a return. Omitted on a milersättning, which is valued from its journey. */
+  amount?: number;
+  /** Who signed this row. Every row from APPROVED on; some rows while pending. */
+  attestedBy?: string;
+  /** The BAS account the kontering put it on. Every row from BOOKED on. */
+  account?: string;
+  /** Fortnox project number on the kontering row, if any. */
+  project?: string;
 }
 
-// The four people the dev sign-in offers, one per role. `studentId` is what
-// the app keys a user on (Authentik's `preferred_username`), so these are
-// fixed rather than generated. app/login/page.tsx names them, and a reseed
-// must not move them. Everyone else referenced in the fixtures gets a derived
-// one; see `studentIdFor` in seed.ts.
+/**
+ * An utlägg, as what the people involved did with it. Everything the app would
+ * have written down along the way (the history, the reference, the voucher,
+ * the bank row it was matched to) is derived from this by the seed, so the
+ * pieces cannot disagree with each other. prisma/seed-expenses.ts checks the
+ * result against the app's own rules and refuses to seed anything they would
+ * not have allowed.
+ */
+export interface SeedExpense {
+  title: string;
+  submitterName: string;
+  paymentType: "CARD" | "REIMBURSEMENT" | "MILEAGE";
+  status: SeedStatus;
+  /** How many days before the seed runs the purchase was made. Relative, so
+   *  nothing drifts past the filing deadline as the calendar moves on. */
+  daysAgo: number;
+  allocations: SeedAllocation[];
+  /** The till slip. Every utlägg but a milersättning has one. */
+  receipt?: {
+    merchant: string;
+    address: string;
+    time: string;
+    /** SEK. They sum to the utlägg's amount. */
+    lines: { name: string; amount: number }[];
+    /** An eget utlägg's own way of paying, as the slip says it. A card
+     *  purchase prints the section card it was made on. */
+    paidWith?: string;
+  };
+  /** A milersättning's route and odometer readings. */
+  journey?: { stops: string[]; odometerStart: number; odometerEnd: number };
+  /** Who sent it back, and why. CHANGES_REQUESTED only. */
+  changesRequested?: { by: string; comment: string };
+  /** Who konterade it. BOOKED and later. */
+  bookedBy?: string;
+  /** Who bokförde it in Fortnox. EXPORTED only. */
+  exportedBy?: string;
+}
+
+// Five fixed accounts, one per role. `studentId` is what the app keys a user on
+// (Authentik's `preferred_username`), so these are fixed rather than generated,
+// and a reseed must not move them. The dev sign-in lists whoever is in the
+// table (app/login/dev-users.ts). Everyone else referenced in the fixtures gets
+// a derived one; see `studentIdFor` in seed.ts.
 // `capabilities` is not among them: it is resolved from the RoleCapability
 // table per request (lib/server/capabilities.ts), never stored on a row, so a
 // fixture that carried one would be stating something the database has no
@@ -64,6 +110,14 @@ export const CURRENT_USERS: Record<string, SeedUser> = {
     roles: ["SKATTMASTARE"],
     initials: "MH",
   },
+  REVISOR: {
+    id: "u5",
+    studentId: "re7890vi-s",
+    name: "Rebecka Vik",
+    email: "rebecka.vik@user.dsek.se",
+    roles: ["REVISOR"],
+    initials: "RV",
+  },
 };
 
 /**
@@ -77,177 +131,376 @@ export const UNIT_OWNERS: Record<string, string[]> = {
   "Klara Ström": ["Sexmästeriet", "Aktivitetsutskottet"],
 };
 
+// One of each status, and the cases a bookkeeper meets in a term: a split
+// across result units, a row attested while the other still waits, a return,
+// two milersättningar, a kontering with a project on it, and the skattmästare
+// bokföring their own kontering (the one role exempt from the two-person rule).
 export const EXPENSES: SeedExpense[] = [
+  // ── Drafts ──
   {
-    reference: null,
     title: "Fika till sektionsmöte",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "NARU01", amount: 845.5 }],
     paymentType: "REIMBURSEMENT",
     status: "DRAFT",
-    purchaseDate: "2026-06-12",
-    grossAmount: 845.5,
-    currency: "SEK",
-    revisions: [
-      { id: "r1", actor: "Elsa Lindqvist", action: "Skapade utlägget", date: "2026-06-12T09:14:00" },
-    ],
+    daysAgo: 3,
+    allocations: [{ costCenterCode: "SEKT02", amount: 845.5 }],
+    receipt: {
+      merchant: "ICA Supermarket Tuna",
+      address: "Tunavägen 39, Lund",
+      time: "16:41",
+      paidWith: "BANKKORT ****4419",
+      lines: [
+        { name: "Kanelbullar 24 st", amount: 287 },
+        { name: "Bryggkaffe 4x500 g", amount: 239.8 },
+        { name: "Mjölk 6 l", amount: 89.7 },
+        { name: "Frukt", amount: 229 },
+      ],
+    },
   },
   {
-    reference: null,
+    // Started from the card purchase on /bank, so it is matched already.
     title: "Banderoll till mottagningen",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "INFU01", amount: 1290 }],
     paymentType: "CARD",
     status: "DRAFT",
-    purchaseDate: "2026-06-10",
-    grossAmount: 1290,
-    currency: "SEK",
-    revisions: [
-      { id: "r1", actor: "Elsa Lindqvist", action: "Skapade utlägget", date: "2026-06-10T16:02:00" },
-      { id: "r2", actor: "Elsa Lindqvist", action: "Fyllde i kvittouppgifter", date: "2026-06-10T16:05:00" },
-    ],
+    daysAgo: 4,
+    allocations: [{ costCenterCode: "NOLL02", amount: 1290 }],
+    receipt: {
+      merchant: "Tryckeriet i Lund",
+      address: "Bankgatan 7, Lund",
+      time: "11:05",
+      lines: [
+        { name: "Banderoll 3x1 m", amount: 1090 },
+        { name: "Öljetter, montering", amount: 200 },
+      ],
+    },
   },
+
+  // ── Waiting for attest ──
   {
-    reference: "DEK26-0039",
+    // Split between two result units, and one of the two has signed.
     title: "Pizza till arbetskväll",
     submitterName: "Anton Falk",
-    // Multi-cost-centre example: shared between two result units.
-    allocations: [
-      { costCenterCode: "SEX02", amount: 1000 },
-      { costCenterCode: "NARU01", amount: 560 },
-    ],
     paymentType: "CARD",
     status: "PENDING_APPROVAL",
-    purchaseDate: "2026-06-08",
-    grossAmount: 1560,
-    currency: "SEK",
-    matchedTransactionId: "t3",
-    revisions: [
-      { id: "r1", actor: "Anton Falk", action: "Skapade utlägget", date: "2026-06-08T20:11:00" },
-      { id: "r2", actor: "Anton Falk", action: "Matchade mot banktransaktion", date: "2026-06-09T10:00:00" },
-      { id: "r3", actor: "Anton Falk", action: "Skickade in för attest", date: "2026-06-09T10:01:00" },
+    daysAgo: 6,
+    allocations: [
+      { costCenterCode: "SEX02", amount: 1000 },
+      { costCenterCode: "NARU01", amount: 560, attestedBy: "Oskar Berg" },
     ],
+    receipt: {
+      merchant: "Pizzeria Roma",
+      address: "Stortorget 4, Lund",
+      time: "19:22",
+      lines: [
+        { name: "Capricciosa x8", amount: 960 },
+        { name: "Vegetariana x4", amount: 500 },
+        { name: "Läsk 1,5 l x4", amount: 100 },
+      ],
+    },
   },
   {
-    reference: "DEK26-0038",
+    title: "Material till nollningen",
+    submitterName: "Sara Nyberg",
+    paymentType: "REIMBURSEMENT",
+    status: "PENDING_APPROVAL",
+    daysAgo: 5,
+    allocations: [{ costCenterCode: "NOLL02", amount: 612.4 }],
+    receipt: {
+      merchant: "Panduro Hobby",
+      address: "Mårtenstorget 3, Lund",
+      time: "13:18",
+      paidWith: "SWISH",
+      lines: [
+        { name: "Akrylfärg 4 burkar", amount: 316 },
+        { name: "Penslar", amount: 89 },
+        { name: "Kartong 20 ark", amount: 207.4 },
+      ],
+    },
+  },
+  {
+    title: "Hämtning av ölbord",
+    submitterName: "Jonas Ek",
+    paymentType: "MILEAGE",
+    status: "PENDING_APPROVAL",
+    daysAgo: 8,
+    allocations: [{ costCenterCode: "SEX03" }],
+    journey: {
+      stops: ["E-huset, Lund", "Hyrmaskiner Syd, Malmö", "E-huset, Lund"],
+      odometerStart: 48210.4,
+      odometerEnd: 48252.9,
+    },
+  },
+
+  // ── Sent back ──
+  {
     title: "Priser till idrottsdagen",
     submitterName: "Sara Nyberg",
-    allocations: [{ costCenterCode: "AKTU07", amount: 2340 }],
     paymentType: "REIMBURSEMENT",
     status: "CHANGES_REQUESTED",
-    purchaseDate: "2026-06-05",
-    grossAmount: 2340,
-    currency: "SEK",
-    revisions: [
-      { id: "r1", actor: "Sara Nyberg", action: "Skapade utlägget", date: "2026-06-05T13:20:00" },
-      { id: "r2", actor: "Sara Nyberg", action: "Skickade in för attest", date: "2026-06-06T09:00:00" },
-      {
-        id: "r3",
-        actor: "Klara Ström",
-        action: "Begärde ändring",
-        comment: "Kvittot är otydligt – ladda upp en skarpare bild tack.",
-        date: "2026-06-06T15:42:00",
-      },
-    ],
+    daysAgo: 12,
+    allocations: [{ costCenterCode: "AKTU07", amount: 2340 }],
+    changesRequested: {
+      by: "Klara Ström",
+      comment: "Kvittot är otydligt. Ladda upp en skarpare bild, tack.",
+    },
+    receipt: {
+      merchant: "Intersport",
+      address: "Nova Lund, Lund",
+      time: "10:47",
+      paidWith: "BANKKORT ****7720",
+      lines: [
+        { name: "Medaljer 30 st", amount: 1290 },
+        { name: "Pokal", amount: 650 },
+        { name: "Presentkort", amount: 400 },
+      ],
+    },
   },
+
+  // ── Attested, waiting for kontering ──
   {
-    reference: "DEK26-0036",
     title: "Kontorsmaterial",
     submitterName: "Elsa Lindqvist",
-    allocations: [{ costCenterCode: "STYR01", amount: 432 }],
     paymentType: "CARD",
     status: "APPROVED",
-    purchaseDate: "2026-06-02",
-    grossAmount: 432,
-    currency: "SEK",
-    matchedTransactionId: "t6",
-    revisions: [
-      { id: "r1", actor: "Elsa Lindqvist", action: "Skapade utlägget", date: "2026-06-02T11:00:00" },
-      { id: "r2", actor: "Elsa Lindqvist", action: "Matchade mot banktransaktion", date: "2026-06-02T11:10:00" },
-      { id: "r3", actor: "Elsa Lindqvist", action: "Skickade in för attest", date: "2026-06-02T11:11:00" },
-      { id: "r4", actor: "Maja Holm", action: "Attesterade utlägget", date: "2026-06-03T08:30:00" },
-    ],
+    daysAgo: 14,
+    allocations: [{ costCenterCode: "SEKT06", amount: 432, attestedBy: "Maja Holm" }],
+    receipt: {
+      merchant: "Clas Ohlson",
+      address: "Nova Lund, Lund",
+      time: "14:32",
+      lines: [
+        { name: "Kollegieblock A4 5-pack", amount: 149 },
+        { name: "Whiteboardpennor 4 st", amount: 89 },
+        { name: "Gaffatejp svart 50 m", amount: 194 },
+      ],
+    },
   },
   {
-    reference: "DEK26-0034",
+    title: "Dekor till sittningen",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "APPROVED",
+    daysAgo: 10,
+    allocations: [{ costCenterCode: "SEX02", amount: 1187, attestedBy: "Klara Ström" }],
+    receipt: {
+      merchant: "Panduro Hobby",
+      address: "Mårtenstorget 3, Lund",
+      time: "15:02",
+      paidWith: "BANKKORT ****2051",
+      lines: [
+        { name: "Ballonger 100 st", amount: 249 },
+        { name: "Servetter guld 6 fp", amount: 354 },
+        { name: "Ljusslingor 3 st", amount: 584 },
+      ],
+    },
+  },
+  {
+    // A return: the money came back onto the card, so the amount is negative
+    // and the kontering will run the other way round.
+    title: "Retur: förlängningssladdar",
+    submitterName: "Ludwig Gehlsdorf",
+    paymentType: "CARD",
+    status: "APPROVED",
+    daysAgo: 9,
+    allocations: [{ costCenterCode: "INFU01", amount: -349, attestedBy: "Oskar Berg" }],
+    receipt: {
+      merchant: "Clas Ohlson",
+      address: "Nova Lund, Lund",
+      time: "12:10",
+      lines: [{ name: "Retur förlängningssladd 5 m", amount: -349 }],
+    },
+  },
+
+  // ── Konterat, waiting to be bokfört ──
+  {
     title: "Förtäring styrelsemöte",
     submitterName: "Anton Falk",
-    allocations: [{ costCenterCode: "STYR01", amount: 318 }],
     paymentType: "CARD",
     status: "BOOKED",
-    purchaseDate: "2026-05-28",
-    grossAmount: 318,
-    currency: "SEK",
-    matchedTransactionId: "t8",
-    revisions: [
-      { id: "r1", actor: "Anton Falk", action: "Skapade utlägget", date: "2026-05-28T09:00:00" },
-      { id: "r2", actor: "Maja Holm", action: "Attesterade utlägget", date: "2026-05-29T08:30:00" },
-      { id: "r3", actor: "Ludwig Gehlsdorf", action: "Bokförde utlägget", date: "2026-05-30T14:00:00" },
+    daysAgo: 20,
+    allocations: [
+      { costCenterCode: "STYR01", amount: 318, attestedBy: "Maja Holm", account: "4002" },
     ],
+    bookedBy: "Ludwig Gehlsdorf",
+    receipt: {
+      merchant: "Espresso House",
+      address: "Bantorget 2, Lund",
+      time: "17:55",
+      lines: [
+        { name: "Kaffe 6 st", amount: 210 },
+        { name: "Kanelbulle 6 st", amount: 108 },
+      ],
+    },
   },
   {
-    reference: "DEK26-0031",
+    // Split, konterat with a project, and konterat by the skattmästare:
+    // somebody else bokför it, though she would be allowed to.
+    title: "Inköp till nollegasquen",
+    submitterName: "Klara Ström",
+    paymentType: "REIMBURSEMENT",
+    status: "BOOKED",
+    daysAgo: 22,
+    allocations: [
+      { costCenterCode: "SEX04", amount: 1800, attestedBy: "Maja Holm", account: "4310", project: "1" },
+      { costCenterCode: "NOLL04", amount: 950, attestedBy: "Maja Holm", account: "4310", project: "1" },
+    ],
+    bookedBy: "Maja Holm",
+    receipt: {
+      merchant: "Partykungen",
+      address: "Stora Varvsgatan 11, Malmö",
+      time: "12:36",
+      paidWith: "BANKKORT ****6604",
+      lines: [
+        { name: "Bordsdukar 20 st", amount: 900 },
+        { name: "Kronljus 200 st", amount: 900 },
+        { name: "Bordsdekoration", amount: 950 },
+      ],
+    },
+  },
+  {
+    title: "Körning till företagsmässan",
+    submitterName: "Oskar Berg",
+    paymentType: "MILEAGE",
+    status: "BOOKED",
+    daysAgo: 25,
+    allocations: [{ costCenterCode: "NARU02", attestedBy: "Maja Holm", account: "7331" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    journey: {
+      stops: ["E-huset, Lund", "Malmömässan, Malmö", "E-huset, Lund"],
+      odometerStart: 61204,
+      odometerEnd: 61316,
+    },
+  },
+
+  // ── Bokfört in Fortnox ──
+  {
     title: "Trycksaker phadderverksamhet",
     submitterName: "Sara Nyberg",
-    allocations: [{ costCenterCode: "INFU01", amount: 4120 }],
     paymentType: "REIMBURSEMENT",
     status: "EXPORTED",
-    purchaseDate: "2026-05-20",
-    grossAmount: 4120,
-    currency: "SEK",
-    matchedTransactionId: "t10",
-    revisions: [
-      { id: "r1", actor: "Sara Nyberg", action: "Skapade utlägget", date: "2026-05-20T10:00:00" },
-      { id: "r2", actor: "Oskar Berg", action: "Attesterade utlägget", date: "2026-05-21T08:30:00" },
-      { id: "r3", actor: "Ludwig Gehlsdorf", action: "Bokförde utlägget", date: "2026-05-22T14:00:00" },
-      { id: "r4", actor: "Ludwig Gehlsdorf", action: "Exporterade till Fortnox", date: "2026-05-22T14:05:00" },
+    daysAgo: 35,
+    allocations: [
+      { costCenterCode: "INFU01", amount: 4120, attestedBy: "Oskar Berg", account: "6150" },
     ],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Tryckeriet i Lund",
+      address: "Bankgatan 7, Lund",
+      time: "09:40",
+      paidWith: "BANKKORT ****7720",
+      lines: [
+        { name: "Affischer A2 200 st", amount: 2400 },
+        { name: "Flyers A5 1000 st", amount: 1720 },
+      ],
+    },
+  },
+  {
+    title: "Pubinköp",
+    submitterName: "Elsa Lindqvist",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 30,
+    allocations: [
+      { costCenterCode: "SEX03", amount: 642, attestedBy: "Klara Ström", account: "4101" },
+    ],
+    bookedBy: "Maja Holm",
+    exportedBy: "Ludwig Gehlsdorf",
+    receipt: {
+      merchant: "Willys",
+      address: "Mobilvägen 10, Lund",
+      time: "18:12",
+      lines: [
+        { name: "Chips 20 påsar", amount: 290 },
+        { name: "Läsk 24 st", amount: 240 },
+        { name: "Nötter", amount: 112 },
+      ],
+    },
+  },
+  {
+    // Konterat and bokfört by the same person, which only the skattmästare
+    // may do.
+    title: "Kaffe till Skattmästeriet",
+    submitterName: "Ludwig Gehlsdorf",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 28,
+    allocations: [
+      { costCenterCode: "SKT01", amount: 189, attestedBy: "Maja Holm", account: "7603" },
+    ],
+    bookedBy: "Maja Holm",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "ICA Supermarket Tuna",
+      address: "Tunavägen 39, Lund",
+      time: "08:58",
+      lines: [
+        { name: "Bryggkaffe 2x500 g", amount: 119.8 },
+        { name: "Mjölk 2 l", amount: 39.9 },
+        { name: "Te 20 påsar", amount: 29.3 },
+      ],
+    },
   },
 ];
 
-export const BANK_TRANSACTIONS: BankTransaction[] = [
-  { id: "t1", transactionDate: "2026-06-11", description: "STORDBOOSTER AB", amount: -1290 },
-  { id: "t2", transactionDate: "2026-06-11", description: "SWISH inbetalning", amount: 500 },
-  { id: "t3", transactionDate: "2026-06-08", description: "PIZZERIA ROMA", amount: -1560, matchedExpenseId: "DEK26-0039" },
-  { id: "t4", transactionDate: "2026-06-07", description: "WILLYS LUND", amount: -642 },
-  { id: "t5", transactionDate: "2026-06-04", description: "SYSTEMBOLAGET", amount: -980 },
-  { id: "t6", transactionDate: "2026-06-02", description: "CLAS OHLSON 0421", amount: -432, matchedExpenseId: "DEK26-0036" },
-  { id: "t7", transactionDate: "2026-05-30", description: "BANKAVGIFT", amount: -75 },
-  { id: "t8", transactionDate: "2026-05-28", description: "ESPRESSO HOUSE", amount: -318, matchedExpenseId: "DEK26-0034" },
-  { id: "t9", transactionDate: "2026-05-25", description: "ÅTERBETALNING medlem", amount: -4120 },
-  { id: "t10", transactionDate: "2026-05-22", description: "TRYCKERI LUND AB", amount: -4120, matchedExpenseId: "DEK26-0031" },
+/**
+ * Bank rows nothing has claimed. The card purchases utlägg were matched to are
+ * not here: the seed writes those from the utlägg themselves, so the amount,
+ * the date and the card always agree with what they settle.
+ */
+export interface SeedBankTransaction {
+  daysAgo: number;
+  description: string;
+  /** SEK, negative going out. */
+  amount: number;
+  /** On this section card, or null for a row on the account itself. */
+  cardLast4: string | null;
+}
+
+export const BANK_TRANSACTIONS: SeedBankTransaction[] = [
+  // A card purchase still waiting for somebody to redovisa it.
+  { daysAgo: 7, description: "SYSTEMBOLAGET LUND", amount: -980, cardLast4: "8842" },
+  { daysAgo: 11, description: "SWISH INBETALNING", amount: 500, cardLast4: null },
+  { daysAgo: 27, description: "BANKAVGIFT", amount: -75, cardLast4: null },
 ];
 
-// Section cards ("sektionskort"). Only some members hold one. `transactionIds`
-// are the mock bank-transaction ids this card paid for (tagged on the txn so
-// the holder can see which card purchases still need a receipt).
+// Section cards ("sektionskort"). Only some members hold one, and a card
+// purchase is redovisad by whoever holds the card it was made on.
 export interface SeedCard {
   last4: string;
   holderName: string | null; // null = unassigned (admin to assign)
   /** The result unit the card is spent for, so its resultatansvarig reads
    *  its purchases on /bank. By the unit's name in the app. */
   resultUnit?: string;
-  transactionIds: string[];
 }
 
 export const CARDS: SeedCard[] = [
-  {
-    last4: "8842",
-    holderName: "Elsa Lindqvist",
-    resultUnit: "Sexmästeriet",
-    transactionIds: ["t1", "t4", "t8"], // t8 is already matched → not "missing"
-  },
-  {
-    last4: "3310",
-    holderName: "Ludwig Gehlsdorf",
-    resultUnit: "Infoutskottet",
-    transactionIds: ["t5"],
-  },
-  {
-    last4: "9001",
-    holderName: null, // unassigned, appears in admin to be assigned
-    transactionIds: [],
-  },
+  { last4: "8842", holderName: "Elsa Lindqvist", resultUnit: "Sexmästeriet" },
+  { last4: "5517", holderName: "Anton Falk", resultUnit: "Näringslivsutskottet" },
+  { last4: "3310", holderName: "Ludwig Gehlsdorf", resultUnit: "Infoutskottet" },
+  { last4: "9001", holderName: null }, // unassigned, appears in admin to be assigned
+];
+
+/**
+ * Fortnox projects the konteringar can carry. Mirrored from Fortnox for real
+ * (lib/fortnox/sync.ts); a fresh checkout has no Fortnox, so the seed makes
+ * the ones its fixtures name.
+ */
+export const PROJECTS = [
+  { number: "1", name: "Nollningen" },
+  { number: "2", name: "Sittningar" },
+];
+
+/**
+ * Accounts the fixtures post to that the budget does not already name. The
+ * rest of the chart comes from the budget's own accounts.
+ */
+export const EXTRA_ACCOUNTS = [
+  { number: "1580", name: "Fordringar för kontokort och kuponger" },
+  { number: "1930", name: "Företagskonto" },
+  { number: "2890", name: "Övriga kortfristiga skulder" },
+  { number: "7331", name: "Skattefria bilersättningar" },
 ];
 
 // ── Uthyrningsobjekt ──────────────────────────────────────────────

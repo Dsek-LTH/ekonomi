@@ -8,9 +8,7 @@
   "notBookableDescription": "Only approved expenses can be booked.",
   "toExpense": "To the expense",
   "createTitle": "Book {id}",
-  "editTitle": "Amend voucher – {id}",
-  "paymentCard": "Guild card",
-  "paymentPrivate": "Out of pocket",
+  "editTitle": "Amend voucher - {id}",
   "saveFailed": "The voucher could not be saved",
   "voucherDate": "Voucher date",
   "voucherText": "Voucher text",
@@ -29,10 +27,7 @@
   "accountSearch": "Search accounts…",
   "lockedRow": "Locked row",
   "lockedRowHint": "The payment row is locked and cannot be removed",
-  "noReceiptTitle": "No receipt",
-  "noReceiptDescription": "This expense has no documentation attached.",
   "dragRow": "Drag to move the row (or Alt + arrow key)",
-  "notSet": "(not set)",
   "unknownPaymentAccount": "The payment account {account} is not in the chart of accounts. Fix it under Settings → Fortnox before booking.",
   "balanced": "Balanced",
   "difference": "Difference {amount}",
@@ -51,5 +46,11 @@
     "staleBanner": "This expense has changed since you opened it. Reload before saving.",
     "reload": "Reload",
     "close": "Close"
-  }
+  },
+  "unknownProjects": "These projects do not exist: {list}. Sync projects under Settings → Fortnox or pick others.",
+  "revenueAccounts": "An expense cannot be booked against a revenue account in the 3000 range: {list}. Pick a cost account instead.",
+  "colProject": "Project",
+  "projectSearch": "Search projects…",
+  "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox before booking.",
+  "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox before booking."
 }

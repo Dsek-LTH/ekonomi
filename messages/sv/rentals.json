@@ -6,7 +6,7 @@
   "searchPlaceholder": "Sök avtal, hyrestagare eller utrustning",
   "noMatch": "Inga uthyrningar matchar",
   "notChecked": "okontrollerad",
-  "period": "{from} – {to}",
+  "period": "{from} - {to}",
   "itemCount": "{count, plural, one {1 sak} other {# saker}}",
   "tab": {
     "todo": "Att göra",

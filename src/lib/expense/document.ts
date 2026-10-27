@@ -22,7 +22,9 @@ import { expenseDocumentKey, putObject } from "@/lib/server/storage";
 import { journeyKm, namedStops } from "@/lib/mileage/claim";
 import { daysAgo } from "@/lib/domain/date";
 import { CoverRenderError, renderCover } from "./cover/typst";
+import { bookingNamesOf, type BookingNames } from "@/lib/server/review";
 import type {
+  ExpenseCoverBooking,
   ExpenseCoverData,
   ExpenseCoverJourney,
   ExpenseCoverWaiver,
@@ -66,7 +68,7 @@ function kr(ore: number): string {
 const km = (n: number): string => `${nf(1).format(n)} km`;
 
 /** An absent value is said, not left blank. Matches `orDash` in the template. */
-const DASH = "–";
+const DASH = "-";
 
 const isoDate = (d: Date | null | undefined): string | null =>
   d ? d.toISOString().slice(0, 10) : null;
@@ -116,6 +118,8 @@ type ExpenseForCover = {
     costCenter: { code: string; name: string };
     approvedBy: { name: string } | null;
   }[];
+  /** Who konterade it, from its history. Absent or null before it is. */
+  booking?: BookingNames | null;
 };
 
 /**
@@ -128,7 +132,7 @@ type ExpenseForCover = {
  *
  * A half-filled draft is stated in dashes rather than refused. Such a claim
  * cannot be submitted (`claimBlocker` sees to that), but it can be looked at,
- * and "–" is the honest word for a reading nobody has given.
+ * and "-" is the honest word for a reading nobody has given.
  */
 function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
   if (expense.paymentType !== "MILEAGE") return null;
@@ -177,6 +181,17 @@ function buildWaiver(expense: ExpenseForCover): ExpenseCoverWaiver | null {
   };
 }
 
+/** The kontering, worded for the page. Names joined the Swedish way. */
+function buildBooking(booking: BookingNames | null | undefined): ExpenseCoverBooking | null {
+  if (!booking) return null;
+  return {
+    by: booking.by,
+    at: isoDate(booking.at)!,
+    amendedBy:
+      booking.amendedBy.length > 0 ? new Intl.ListFormat("sv").format(booking.amendedBy) : null,
+  };
+}
+
 /**
  * An utlägg as the cover page states it.
  *
@@ -194,7 +209,7 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
   return {
     // A booked utlägg always has a reference (it is assigned at submission), so
     // the fallback is for a draft being previewed before it has one.
-    reference: expense.reference ?? "–",
+    reference: expense.reference ?? "-",
     title: expense.title,
     purchaseDate: isoDate(expense.purchaseDate),
     // What that date *is*, which is not the same question for all three types.
@@ -223,6 +238,7 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
     })),
     journey: buildJourney(expense),
     waiver: buildWaiver(expense),
+    booking: buildBooking(expense.booking),
   };
 }
 
@@ -271,12 +287,14 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
     },
   });
   if (!expense) return { ok: false, reason: "expenseNotFound" };
+  const booking = await bookingNamesOf(expenseId);
 
   try {
     const bytes = await renderCover(
       buildCoverData(
         {
           ...expense,
+          booking,
           // Decimal(9,1) columns, and `buildCoverData` is written over plain
           // data so it can be tested with a plain object.
           odometerStart: expense.odometerStart == null ? null : Number(expense.odometerStart),

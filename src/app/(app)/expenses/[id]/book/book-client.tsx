@@ -22,12 +22,13 @@ import {
   VoucherEditor,
   type VoucherEditorRow,
 } from "@/components/voucher-editor";
-import type { AccountRecord, BookkeepingSettings } from "@/lib/domain/types";
+import type { AccountRecord, BookkeepingSettings, ProjectRecord } from "@/lib/domain/types";
 // The out-of-balance difference is set inside a sentence, so that one stays a
 // string. Everything else on this page is an Amount.
 import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
-import { voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
+import { isRevenueAccount, voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
+import { voucherTextPrefix } from "@/lib/domain/review";
 import { expenseLabel } from "@/lib/domain/reference";
 import { DateInput, Field } from "@/components/ui/field";
 import { uid } from "@/lib/ui/utils";
@@ -50,8 +51,9 @@ type Row = VoucherEditorRow;
 // Which account the money moves from. A card purchase already left the section's
 // bank; a private outlay is a debt to the member until it's paid back. That
 // follows from the payment type, so it is not the bookkeeper's to choose. See
-// the locked credit row in the table below.
-function paymentAccountFor(expense: Expense, settings: BookkeepingSettings): string {
+// the locked credit row in the table below. Null when the setting has not been
+// chosen, and then nothing can be konterat.
+function paymentAccountFor(expense: Expense, settings: BookkeepingSettings): string | null {
   return expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
 }
 
@@ -84,6 +86,7 @@ function defaultDebitRows(expense: Expense | undefined, costCenters: CostCenter[
       account: "",
       description: isLocal(a.costCenterCode) ? withCostCenterTag("", a.costCenterCode) : "",
       costCenterCode: a.costCenterCode,
+      project: "",
       debit: "",
       credit: "",
     }));
@@ -94,6 +97,7 @@ function defaultDebitRows(expense: Expense | undefined, costCenters: CostCenter[
       account: "",
       description: "",
       costCenterCode: "",
+      project: "",
       debit: isReturn ? "" : amount,
       credit: isReturn ? amount : "",
     },
@@ -113,6 +117,7 @@ function debitRowsFromVerification(expense: Expense, paymentAccount: string): Ro
       account: l.account,
       description: l.description ?? "",
       costCenterCode: l.costCenterCode ?? "",
+      project: l.project ?? "",
       debit: l.debit ? l.debit.toFixed(2) : "",
       credit: l.credit ? l.credit.toFixed(2) : "",
     }));
@@ -122,11 +127,16 @@ export default function BookExpenseClient({
   expense,
   costCenters,
   accounts,
+  projects,
   settings,
+  returnHref,
 }: {
   expense: Expense | null;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
+  projects: ProjectRecord[];
+  /** Where saving, and the back arrow, lead: the utlägg, or the review. */
+  returnHref: string;
   settings: BookkeepingSettings;
 }) {
   const returnTo = useReturnTo();
@@ -143,7 +153,7 @@ export default function BookExpenseClient({
   // down, and expenseDocuments takes that; the alt text has to as well.
   const documents = expenseDocuments(
     expense,
-    `${tReceipt("alt")} – ${expense?.title ?? ""}`,
+    `${tReceipt("alt")} - ${expense?.title ?? ""}`,
     // The panel stacks the two into one scroll, so each is captioned.
     { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
   );
@@ -168,9 +178,7 @@ export default function BookExpenseClient({
   // submitter's StiL id for a card purchase, "PU <stilid>" for a reimbursement.
   // The user can only append free text after it.
   const textPrefix = expense
-    ? expense.paymentType === "CARD"
-      ? expense.submitterStudentId
-      : `PU ${expense.submitterStudentId}`
+    ? voucherTextPrefix(expense.paymentType, expense.submitterStudentId)
     : "";
 
   // Amending: the voucher's own date. Booking: the day of the purchase, which
@@ -203,7 +211,10 @@ export default function BookExpenseClient({
   const voucherText = textSuffix.trim() ? `${textPrefix} ${textSuffix.trim()}` : textPrefix;
   // `rows` holds every row but the payment one. That row is derived from the
   // expense and rendered separately, which is what makes it unremovable.
-  const paymentAccount = expense ? paymentAccountFor(expense, settings) : "";
+  const paymentAccountSetting = expense ? paymentAccountFor(expense, settings) : null;
+  // The row still has to be drawn while the setting is unchosen. It is drawn
+  // with no account, and the notice below says which setting is missing.
+  const paymentAccount = paymentAccountSetting ?? "";
   const [rows, setRows] = useState<Row[]>(() =>
     expense?.status === "BOOKED"
       ? debitRowsFromVerification(expense, paymentAccount)
@@ -247,7 +258,6 @@ export default function BookExpenseClient({
   // The locked payment row is always the full gross. The other rows are what
   // have to be made to match it, never the other way round.
   const payment = paymentSides(expense.grossAmount);
-  const paymentText = t(expense.paymentType === "CARD" ? "paymentCard" : "paymentPrivate");
 
   // The voucher exactly as it will be posted, built once: the locked payment row
   // (kept out of `rows` so there is no state the UI could let anyone edit it
@@ -262,8 +272,12 @@ export default function BookExpenseClient({
     {
       account: paymentAccount,
       accountName: accountName(paymentAccount),
-      description: paymentText,
+      // No row text of its own. The account says what the row is, and the
+      // voucher text's prefix says card or private ("PU" in front), so
+      // "Sektionskort" or "Privat utlägg" on the row only repeated them.
+      description: null,
       costCenterCode: null as string | null,
+      project: null as string | null,
       debit: sekToOre(payment.debit),
       credit: sekToOre(payment.credit),
     },
@@ -272,6 +286,7 @@ export default function BookExpenseClient({
       accountName: accountName(r.account),
       description: r.description || null,
       costCenterCode: r.costCenterCode || null,
+      project: r.project?.trim() || null,
       debit: parseOre(r.debit),
       credit: parseOre(r.credit),
     })),
@@ -296,6 +311,15 @@ export default function BookExpenseClient({
   const allValidCostCenters = typedRows.every(
     (r) => !r.costCenterCode.trim() || costCenterExists(r.costCenterCode),
   );
+  const allValidProjects = typedRows.every(
+    (r) => !r.project?.trim() || projects.some((p) => p.number === r.project!.trim()),
+  );
+  // Intäktskonton the voucher already carries. The picker no longer offers
+  // them, so these can only come from a voucher written before the rule. The
+  // server refuses them too. See isRevenueAccount.
+  const revenueAccounts = [
+    ...new Set(typedRows.map((r) => r.account.trim()).filter(isRevenueAccount)),
+  ];
   // A payment account that isn't in the chart is a settings problem, not
   // something to book around. See the banner below.
   const paymentAccountKnown = accountExists(paymentAccount);
@@ -305,6 +329,8 @@ export default function BookExpenseClient({
     !blocker &&
     allValidAccounts &&
     allValidCostCenters &&
+    allValidProjects &&
+    revenueAccounts.length === 0 &&
     paymentAccountKnown &&
     !submitting &&
     !presence.stale;
@@ -350,7 +376,7 @@ export default function BookExpenseClient({
     // press land in the booking form for an already-booked utlägg. `returnTo`
     // refreshes the utlägg once it is reached, which is what shows the voucher
     // that was just written.
-    returnTo(`/expenses/${expense!.id}`);
+    returnTo(returnHref);
   }
 
   // Anything bookable has been through attest, so it has a reference; the
@@ -360,7 +386,7 @@ export default function BookExpenseClient({
   return (
     <PageShell
       title={mode === "edit" ? t("editTitle", { id: label }) : t("createTitle", { id: label })}
-      back={`/expenses/${expense.id}`}
+      back={returnHref}
       width="wide"
     >
 
@@ -375,19 +401,10 @@ export default function BookExpenseClient({
           rather than half of it. It opens on the receipt, since that is the
           document the voucher is being written from; the attest trail is the
           page behind. See lib/expense/document-url.ts. */}
-      <ReceiptPanelSource
-        documents={documents}
-        // Said in the panel, not in the page. A voucher with no underlag is
-        // something the bookkeeper has to know about, and it belongs where the
-        // underlag would have been, so the voucher table sits in the same
-        // place whether there's a receipt beside it or not.
-        //
-        // It is also why the cover is not stood here on its own when there is
-        // no receipt: it would fill the panel with a document and take away the
-        // one thing the panel is here to say.
-        emptyTitle={t("noReceiptTitle")}
-        emptyDescription={t("noReceiptDescription")}
-      />
+      {/* Never empty: only an attested utlägg is konterat, and it was
+          submitted with its receipt (or, a milersättning, with the journey on
+          its cover). */}
+      <ReceiptPanelSource documents={documents} />
 
       <div className="grid gap-6">
         <div className="min-w-0 space-y-4">
@@ -444,13 +461,13 @@ export default function BookExpenseClient({
           onChange={setRows}
           accounts={accounts}
           costCenters={costCenters}
+          projects={projects}
           // The payment row. Which account the money comes from follows from
           // the payment type, and the amount is the expense's, so there is
           // nothing here to choose, and no ✕ to remove it with.
           locked={{
             account: paymentAccount,
             accountName: accountName(paymentAccount),
-            description: paymentText,
             debit: payment.debit,
             credit: payment.credit,
             hint: t("lockedRowHint"),
@@ -460,10 +477,18 @@ export default function BookExpenseClient({
           totalCredit={totalCredit}
         />
 
+        {revenueAccounts.length > 0 && (
+          <div className="px-inset pb-4">
+            <Notice>{t("revenueAccounts", { list: revenueAccounts.join(", ") })}</Notice>
+          </div>
+        )}
+
         {!paymentAccountKnown && (
           <div className="px-inset pb-4">
             <Notice>
-              {t("unknownPaymentAccount", { account: paymentAccount || t("notSet") })}
+              {paymentAccountSetting === null
+                ? t(expense.paymentType === "CARD" ? "bankAccountUnset" : "memberDebtAccountUnset")
+                : t("unknownPaymentAccount", { account: paymentAccount })}
             </Notice>
           </div>
         )}

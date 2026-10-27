@@ -114,7 +114,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
 
   /** Who entered it and why, on one quiet line. */
   function details(r: MileageRateRow) {
-    return [r.note, r.createdBy && `${t("col.createdBy")} ${r.createdBy}`].filter(Boolean).join(" – ");
+    return [r.note, r.createdBy && `${t("col.createdBy")} ${r.createdBy}`].filter(Boolean).join(" - ");
   }
 
   function row(r: MileageRateRow, label: string) {
@@ -150,7 +150,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
               <Tag tone="success">{t("current")}</Tag>
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              {[t("since", { date: date(current.validFrom) }), details(current)].filter(Boolean).join(" – ")}
+              {[t("since", { date: date(current.validFrom) }), details(current)].filter(Boolean).join(" - ")}
             </p>
           </div>
         ) : (

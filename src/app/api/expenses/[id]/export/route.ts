@@ -12,7 +12,7 @@
 // a bookkeeper has looked in Fortnox and said which.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canBookkeep } from "@/lib/domain/permissions";
 import { fail, gate, type Actor } from "@/lib/api/guard";
 import { applied } from "@/lib/api/stale-write";
 import {
@@ -43,12 +43,20 @@ import { voucherText } from "@/lib/fortnox/voucher-text";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
 import { RECEIPT_ORDER } from "@/lib/data/receipt-order";
+import { exportReviewBlocker } from "@/lib/server/review";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const g = await gate(canAccessBookkeeping, "auth.bookkeeperExport");
+  const g = await gate(canBookkeep, "auth.bookkeeperExport");
   if (!g.ok) return g.res;
+
+  // The two-person rule: whoever konterade it does not also bokföra it, unless
+  // their role is exempt. Before the lock, so a refusal leaves nothing behind.
+  // See lib/domain/review.ts.
+  if ((await exportReviewBlocker(id, g.actor)) === "ownBooking") {
+    return fail(403, "expense.reviewOwnBooking");
+  }
 
   // The status check is the lock's, made with the row held, so that it is
   // still true when the lock is written.
@@ -90,11 +98,17 @@ async function exportHolding(
     },
   });
   if (!expense) return fail(404, "expense.notFound");
+  // The lock was only taken because it is BOOKED, and konterat means it has a
+  // voucher. One without is a broken row, not a case to word for the user.
   const verification = expense.verification;
-  if (!verification) return fail(409, "expense.noVoucherToExport");
+  if (!verification) throw new Error(`Expense ${id} is BOOKED but has no verification`);
 
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
+  // Which series the voucher is filed under is a choice, and nobody has made
+  // it. Refused here, before anything has gone to Fortnox.
+  const series = conn.voucherSeries;
+  if (!series) return fail(409, "settings.voucherSeriesUnset");
 
   const rows = voucherRows(verification.lines);
 
@@ -110,8 +124,8 @@ async function exportHolding(
   // harmless. Getting the fragile half out of the way first means a failed
   // upload costs nothing but a retry.
   //
-  // An expense with no receipt at all still exports; that's a bookkeeping
-  // judgement made when it was booked, not something to relitigate here.
+  // Every utlägg but a milersättning was submitted with a receipt
+  // (submitBlocker), and a milersättning's journey is on its cover.
   //
   // What goes up is the utläggsräkning: the cover page naming who attested each
   // cost-centre slice, with the receipt behind it. That is the whole point of
@@ -207,7 +221,7 @@ async function exportHolding(
   let created;
   try {
     created = await createVoucher(token, {
-      series: conn.voucherSeries,
+      series,
       date: verification.date.toISOString().slice(0, 10),
       description: voucherText(verification.description, expense.reference),
       rows,

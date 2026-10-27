@@ -172,7 +172,7 @@ type CellFault =
  * what is on the shelf now, because the same sheet has been changing that.
  *
  * Without this the ladder mutates as you fill it in: bring two bottles back at
- * 60 %, and Ut – 60 % lights up offering you the two you have just carried in.
+ * 60 %, and Ut - 60 % lights up offering you the two you have just carried in.
  * Which is not only confusing but pointless, since a return followed by a
  * re-checkout of the same bottles cancels out. Two out full, back at 60 %, out
  * again at 60 % is 1 400 ml gone, exactly what two out and never returned

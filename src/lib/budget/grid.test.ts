@@ -11,13 +11,13 @@ const KONTO = columns.find((c) => c.key === "konto")!.letter;
 
 // SEX02: an income account with one row, then a cost account with two. Rows are
 // numbered from 1 with a section header before each kind:
-//   1 section (income) – 2 account 3010 – 3 line li1
-//   4 section (cost)   – 5 account 4010 – 6 line li2 – 7 line li3
+//   1 section (income) - 2 account 3010 - 3 line li1
+//   4 section (cost)   - 5 account 4010 - 6 line li2 - 7 line li3
 //
 // KM01 has no income at all, and is here for the subtlety that follows from
 // that: both section rows are emitted regardless, so a cost-only sheet still
 // starts its accounts at row 3 rather than row 2.
-//   1 section (income, empty) – 2 section (cost) – 3 account 4010 – 4 line li9
+//   1 section (income, empty) - 2 section (cost) - 3 account 4010 - 4 line li9
 const sheets: GridSheet[] = [
   {
     code: "SEX02",

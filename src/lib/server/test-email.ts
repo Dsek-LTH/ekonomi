@@ -216,7 +216,7 @@ export async function sendTestEmail(
         actor,
         submitter: e.submitter.name,
         costCenter: [
-          ...new Set(e.allocations.map((a) => `${a.costCenter.code} – ${a.costCenter.name}`)),
+          ...new Set(e.allocations.map((a) => `${a.costCenter.code} - ${a.costCenter.name}`)),
         ].join(", "),
         days: REIMBURSEMENT_DEADLINE_DAYS,
       },

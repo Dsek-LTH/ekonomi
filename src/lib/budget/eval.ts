@@ -57,7 +57,7 @@ type KnownAccounts = ReadonlySet<string>;
 type TokKind = "num" | "id" | "ref" | "acct" | "op" | "lparen" | "rparen" | "comma" | "bad" | "eof";
 interface Tok { kind: TokKind; val: string }
 
-// What may start / continue a name. Any letter, not just A–Z: variable names are
+// What may start / continue a name. Any letter, not just A-Z: variable names are
 // typed by hand and never validated (see POST /api/budgets/[id]/variables), so a
 // budget is free to call one ÅRSAVGIFT. Lexing that as `RSAVGIFT` would not fail
 // It would resolve to a different, missing variable.

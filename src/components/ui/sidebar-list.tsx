@@ -23,7 +23,7 @@ const BANDS = {
 /** Told to close by a row that has just been picked. See `SidebarItem`. */
 const PickedCtx = createContext<(() => void) | null>(null);
 
-// The master column of a master–detail screen (the result unit list under
+// The master column of a master-detail screen (the result unit list under
 // Inställningar, the cost-centre list in a budget): a fixed-width
 // panel of selectable rows, sections and inline footers.
 //
@@ -120,7 +120,7 @@ export function SidebarPanel({
   }
 
   return (
-    // Until the breakpoint the master–detail screens stack, so the panel is a
+    // Until the breakpoint the master-detail screens stack, so the panel is a
     // full-width list above the detail rather than a 16rem column beside it.
     <aside className={cn("w-full shrink-0", band.column, className)}>
       {/* A Card, not a lookalike: this panel stands beside the detail card on

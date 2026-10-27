@@ -33,6 +33,12 @@ type MutateOptions = {
    * already happened here".
    */
   refresh?: boolean;
+  /**
+   * Also handed the failure's message, for a screen that says it in place as
+   * well as in the toast: the review keeps a failed bokföring on the utlägg
+   * it belongs to.
+   */
+  onError?: (message: string) => void;
 };
 
 const isRawBody = (b: unknown): b is BodyInit =>
@@ -73,7 +79,8 @@ export function useMutation() {
       url: string,
       opts: MutateOptions = {},
     ): Promise<T | null> => {
-      const { key = url, method = "POST", body, contentType, error, success, refresh = true } = opts;
+      const { key = url, method = "POST", body, contentType, error, success, refresh = true, onError } =
+        opts;
       const raw = isRawBody(body);
       const type = raw ? contentType : body === undefined ? undefined : "application/json";
       setPending(key);
@@ -87,9 +94,11 @@ export function useMutation() {
         if (!res.ok) {
           // The status is only worth showing when the server gave no reason of
           // its own; then it is the only clue anyone has.
+          const message =
+            resolveApiError(t, data) ?? `${error ?? t("common.error.action")} (${res.status})`;
+          onError?.(message);
           notify.error(
-            resolveApiError(t, data) ??
-              `${error ?? t("common.error.action")} (${res.status})`,
+            message,
             // Some codes name somewhere to go; the banner offers it as a button
             // rather than leaving the reader to find it. Undefined for the rest,
             // which is every other failure in the app.
@@ -101,6 +110,7 @@ export function useMutation() {
         if (refresh) router.refresh();
         return data as T;
       } catch {
+        onError?.(t("common.error.network"));
         notify.error(t("common.error.network"));
         return null;
       } finally {

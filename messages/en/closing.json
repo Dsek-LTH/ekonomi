@@ -1,0 +1,199 @@
+{
+  "title": "Year-end closing",
+  "never": "Never",
+  "years": {
+    "empty": "No financial years have been synced from Fortnox yet.",
+    "col": {
+      "year": "Financial year",
+      "period": "Period",
+      "vouchers": "Vouchers",
+      "synced": "Last synced"
+    }
+  },
+  "yearTitle": "Closing {year}",
+  "lastSync": "Ledger last synced {when}",
+  "neverSynced": "The ledger has not been synced",
+  "search": "Search voucher, text or expense",
+  "noMatch": "No vouchers match.",
+  "tab": {
+    "all": "All",
+    "expense": "Expenses",
+    "income": "Income",
+    "none": "No evidence",
+    "disagrees": "Mismatch"
+  },
+  "col": {
+    "voucher": "Voucher",
+    "date": "Date",
+    "description": "Text",
+    "evidence": "Evidence",
+    "amount": "Amount",
+    "comments": "Comments"
+  },
+  "evidence": {
+    "expense": "Expense {reference}",
+    "expenseNoRef": "Expense",
+    "income": "Income {date}",
+    "none": "Nothing in the app",
+    "disagrees": "Mismatch",
+    "disagreesHint": "The app exported a voucher with this number, but the amounts do not agree. The number may have been reused in Fortnox after a voucher was deleted."
+  },
+  "voucher": {
+    "evidenceTitle": "Evidence",
+    "noneBody": "The app holds no evidence for this voucher. It was booked directly in Fortnox, so its evidence is there or somewhere else.",
+    "receipts": "{count, plural, =0 {(no receipts)} one {(# receipt)} other {(# receipts)}}",
+    "openExpense": "Open the expense",
+    "incomeDay": "Income report for {date}",
+    "openIncome": "Open the income report",
+    "rows": "Entries",
+    "noRows": "The voucher has no rows.",
+    "row": {
+      "account": "Account",
+      "costCenter": "Cost centre",
+      "project": "Project",
+      "text": "Text",
+      "debit": "Debit",
+      "credit": "Credit"
+    },
+    "reviewFailed": "The review could not be saved",
+    "commentFailed": "The comment could not be sent",
+    "thread": "Questions and answers",
+    "threadEmpty": "No comments yet.",
+    "commentLabel": "New comment",
+    "commentPlaceholder": "Write a question or an answer",
+    "commentSend": "Send"
+  },
+  "commentCount": "{count, plural, one {# comment} other {# comments}}",
+  "review": {
+    "title": "Review",
+    "pass": {
+      "PREPARER": "Treasury",
+      "AUDITOR": "Auditors"
+    },
+    "status": {
+      "unreviewed": "Not reviewed",
+      "changed": "Changed since review",
+      "changedHint": "The voucher has changed in Fortnox since it was reviewed, or its number has been given to another voucher. It needs reviewing again.",
+      "OK": "Passed",
+      "QUESTION": "Question",
+      "REMARK": "Remark"
+    },
+    "action": {
+      "OK": "Pass",
+      "QUESTION": "Ask a question",
+      "REMARK": "Make a remark"
+    },
+    "filter": "Review ({pass}): all",
+    "progress": "{pass}: {settled} of {total} done",
+    "openQuestions": "{count, plural, one {# open question} other {# open questions}}",
+    "orphaned": "{count, plural, one {One review is for a voucher} other {# reviews are for vouchers}} no longer in the ledger. They may have been deleted in Fortnox.",
+    "by": "{name}, {when}",
+    "someone": "Unknown",
+    "history": "{count, plural, one {Show history (# review)} other {Show history (# reviews)}}",
+    "earlierVersion": "Earlier version"
+  },
+  "flag": {
+    "filter": "All flags",
+    "outsideYear": "Outside the year",
+    "outsideYearHint": "The voucher is dated outside the financial year.",
+    "possibleDuplicate": "Possible duplicate",
+    "possibleDuplicateHint": "Another voucher on the same day has the same amount.",
+    "deadlineWaived": "Exemption",
+    "deadlineWaivedHint": "The expense was filed after the deadline on an exemption.",
+    "ownBooking": "Own booking",
+    "ownBookingHint": "The same person booked and posted the expense."
+  },
+  "sections": {
+    "label": "Parts of the closing",
+    "checklist": "Checklist",
+    "vouchers": "Vouchers",
+    "accounts": "Reconciliations"
+  },
+  "check": {
+    "EXPENSES_EXPORTED": "All expenses exported",
+    "CARD_PURCHASES_ACCOUNTED": "All card purchases accounted for",
+    "INCOME_EXPORTED": "All income exported",
+    "LEDGER_SYNCED": "Ledger synced",
+    "STOCKTAKE_AT_YEAR_END": "Stocktake at year end",
+    "BALANCES_RECONCILED": "Balance accounts reconciled",
+    "TREASURY_REVIEWED": "Treasury review done",
+    "AUDITORS_REVIEWED": "Auditors' review done"
+  },
+  "checklist": {
+    "notStarted": "The checklist has not been started",
+    "notStartedBody": "Start it when the closing begins. It is copied from the template as it is then, and what last year wrote to this year is shown on each item.",
+    "start": "Start the checklist",
+    "startFailed": "The checklist could not be started",
+    "progress": "{done} of {total} done",
+    "editTemplate": "Edit the template",
+    "done": "Done",
+    "open": "Not done",
+    "due": "Due {date}",
+    "checkDone": "Done according to the app",
+    "checkRemaining": "{count} left according to the app",
+    "doneBy": "Done, {name} {when}",
+    "someone": "unknown",
+    "hasNoteFromLastYear": "Note from last year",
+    "fromLastYear": "From last year's closing",
+    "goToCheck": "Show what is left",
+    "note": "Note",
+    "noteHint": "What was done this year, for whoever reads the closing afterwards.",
+    "noteToNextYear": "To next year",
+    "noteToNextYearHint": "What the next treasurer needs to know. Shown on the same item next year.",
+    "saveFailed": "Could not save"
+  },
+  "accounts": {
+    "tab": {
+      "all": "All",
+      "open": "Not reconciled",
+      "done": "Reconciled"
+    },
+    "col": {
+      "account": "Account",
+      "opening": "Opening",
+      "closing": "Closing",
+      "status": "Reconciliation"
+    },
+    "reconciled": "Reconciled in Fortnox",
+    "notReconciled": "Not reconciled",
+    "by": "{name}, {when}",
+    "someone": "Unknown",
+    "search": "Search account",
+    "empty": "The ledger has no balance accounts with a balance for the year.",
+    "accountNote": "About the account",
+    "accountNoteHint": "What the account is and how it is reconciled. Applies to every year.",
+    "note": "Note for this year",
+    "noteHint": "Anything worth knowing about this year's reconciliation.",
+    "mark": "Mark as reconciled in Fortnox",
+    "markAgain": "Mark again",
+    "unmark": "Remove the mark",
+    "saveFailed": "Could not save"
+  },
+  "template": {
+    "title": "Checklist template",
+    "intro": "The steps every year's checklist starts from. A year already started does not change when the template does.",
+    "retired": "Removed from the template",
+    "retire": "Remove from the template",
+    "restore": "Put back",
+    "offset": "{days, plural, =0 {Last day of the year} =1 {1 day after year end} =-1 {1 day before year end} other {{days} days from year end}}",
+    "save": "Save",
+    "saveFailed": "Could not save",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "add": "New step",
+    "addSubmit": "Add",
+    "field": {
+      "title": "Title",
+      "howTo": "How to do it",
+      "howToHint": "Where in Fortnox, which evidence is needed, what tends to go wrong.",
+      "ownerRole": "Usually done by",
+      "noOwner": "Nobody in particular",
+      "dueOffsetDays": "Due, days from year end",
+      "dueOffsetDaysHint": "Negative is before. Empty for no date.",
+      "dueOffsetDaysInvalid": "A whole number, for example 14 or -21",
+      "check": "Ticked off by the app",
+      "checkHint": "Leave empty to tick it off by hand.",
+      "noCheck": "No, by hand"
+    }
+  }
+}

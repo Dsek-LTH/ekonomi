@@ -1,7 +1,7 @@
 import { requirePage } from "@/lib/server/current-user";
 import { getExpensePage } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
-import { canAccessBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
+import { canViewBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
 import { ApprovalsClient } from "./approvals-client";
 import { APPROVALS_DEFAULT_TAB } from "./tabs";
 
@@ -25,7 +25,7 @@ export default async function ApprovalsPage({
   // stuck utlägg wherever it sits. It widens nothing: `expenseScopeOf` already
   // resolves these roles to "everything", so this is a different question about
   // the same set, not a reach past it. Anyone else isn't offered the toggle.
-  const canToggleScope = canAccessBookkeeping(user.capabilities);
+  const canToggleScope = canViewBookkeeping(user.capabilities);
   const showOwnOnly = !canToggleScope || query.view !== "ALL";
 
   // Two different questions, each asked of the database directly.

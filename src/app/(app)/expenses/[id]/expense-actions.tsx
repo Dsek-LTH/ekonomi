@@ -70,19 +70,16 @@ type Action = {
 export function ExpenseActions({
   expenseId,
   can,
-  fortnox,
   busy,
   onTransition,
   onWithdrawAttest,
   onRecall,
   onRevokeDeadlineWaiver,
-  onExport,
   onRemind,
   onDelete,
 }: {
   expenseId: string;
   can: ExpenseCapabilities;
-  fortnox: FortnoxStatus;
   busy: boolean;
   onTransition: (
     action: "submit" | "approve" | Explained,
@@ -91,7 +88,6 @@ export function ExpenseActions({
   onWithdrawAttest: () => void;
   onRecall: () => void;
   onRevokeDeadlineWaiver: () => void;
-  onExport: () => void;
   onRemind: () => void;
   onDelete: () => void;
 }) {
@@ -128,11 +124,13 @@ export function ExpenseActions({
       label: t("book"),
       href: `/expenses/${expenseId}/book`,
     },
+    // Bokföring is done from the review, one utlägg at a time, so this opens
+    // the review at this one. Whether it can go through (Fortnox, the
+    // two-person rule) is said there. See app/(app)/bookkeeping/review.
     can.canExport && {
       key: "export",
-      label: t("export"),
-      onClick: onExport,
-      disabled: !canExportNow(fortnox),
+      label: t("review"),
+      href: `/bookkeeping/review?id=${expenseId}`,
     },
     // Ahead of "Skicka in", because on a late utlägg it is what stands between
     // the two: nobody can submit until the dispens is given, and the person

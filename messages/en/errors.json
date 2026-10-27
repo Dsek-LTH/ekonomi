@@ -16,7 +16,8 @@
     "adminSyncCostCenters": "Only administrators can sync cost centers",
     "treasurerEditorialChanges": "Only the treasurer can make editorial changes",
     "treasurerConnectFortnox": "Only the treasurer can connect the guild's Fortnox",
-    "treasuryLoginFortnox": "Only the treasurer, vice treasurer and assistant treasurers can sign in to Fortnox"
+    "treasuryLoginFortnox": "Only the treasurer, vice treasurer and assistant treasurers can sign in to Fortnox",
+    "adminSyncProjects": "Only administrators can sync projects"
   },
   "notFound": "Not found",
   "request": {
@@ -52,8 +53,6 @@
     "costCenterRequired": "At least one cost center is required before the expense can be submitted",
     "allocationsUnbalanced": "The cost distribution has to add up to the total amount",
     "noCard": "You have no guild card",
-    "noVoucherToExport": "No voucher to export",
-    "noVoucherToAmend": "No voucher to amend",
     "exportFailed": "Could not export to Fortnox.",
     "matchLocked": "The match can only be changed on an expense that has not been submitted",
     "matchCardOnly": "Only card purchases can be matched against bank transactions",
@@ -102,7 +101,7 @@
     "exportUnrecorded": "Voucher {label} was created in Fortnox but could not be saved here. The expense is locked. Mark it as exported with {label}.",
     "noExportResolveAccess": "Only someone who may undo exports can resolve an unclear export.",
     "nothingToResolve": "This expense has no unclear export to resolve.",
-    "voucherForExportNeeded": "This expense has no voucher and cannot be marked as exported."
+    "reviewOwnBooking": "You booked this expense yourself. Someone else needs to review and post it."
   },
   "receipt": {
     "notFound": "The receipt was not found",
@@ -147,7 +146,7 @@
   },
   "costCenter": {
     "notFound": "The cost center does not exist",
-    "codeFormat": "The code may only contain letters, digits, - and _ (2–20 characters).",
+    "codeFormat": "The code may only contain letters, digits, - and _ (2-20 characters).",
     "fortnoxOwned": "{code} comes from Fortnox and is changed there.",
     "inUse": "{code} is used by {count, plural, one {# entry} other {# entries}} and cannot be deleted.",
     "exists": "{code} already exists.",
@@ -199,7 +198,8 @@
     "secretUnreadable": "The stored Fortnox secret cannot be read. Disconnect and connect Fortnox again.",
     "syncFailed": "The sync failed",
     "missingScope": "Fortnox is missing permission for this. Disconnect and connect again to grant the app the scopes it needs.",
-    "missingCostCenterScope": "Fortnox is missing permission for cost centers. Disconnect and connect again to grant the app the 'costcenter' scope."
+    "missingCostCenterScope": "Fortnox is missing permission for cost centers. Disconnect and connect again to grant the app the 'costcenter' scope.",
+    "missingProjectScope": "Fortnox is missing permission for projects. Disconnect and connect again to grant the app the 'project' scope."
   },
   "database": "Database error",
   "budgetAccount": {
@@ -220,7 +220,9 @@
     "onePaymentLine": "The voucher has to have exactly one line on the payment account {account}",
     "paymentLineNoCostCenter": "The payment line ({account}) cannot have a cost center",
     "paymentLineFullAmount": "The payment line ({account}) has to carry the whole expense amount, as a credit or as a debit for a return",
-    "unknownCostCenter": "Cost centre {code} does not exist"
+    "unknownCostCenter": "Cost centre {code} does not exist",
+    "revenueAccount": "An expense cannot be booked against revenue account {account}",
+    "unknownProject": "Project {project} does not exist"
   },
   "income": {
     "serviceUnavailable": "The income service is unavailable.",
@@ -391,5 +393,23 @@
     "allocationNoAccount": "Every coding row needs an account.",
     "allocationNotPositive": "Every coding row needs an amount above zero.",
     "allocationSumMismatch": "The coding does not add up to the invoice amount."
+  },
+  "settings": {
+    "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",
+    "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox.",
+    "voucherSeriesUnset": "No voucher series is chosen. Choose it under Settings → Fortnox.",
+    "zettleClearingAccountUnset": "No account is chosen for Zettle sales. Choose it under Settings → Income.",
+    "swishClearingAccountUnset": "No account is chosen for Swish sales. Choose it under Settings → Income.",
+    "zettleFeeAccountUnset": "No account is chosen for Zettle's fees. Choose it under Settings → Income."
+  },
+  "closing": {
+    "voucherNotFound": "The voucher is not in the ledger",
+    "voucherChanged": "The voucher has changed in Fortnox since the page loaded. Reload and look at it again.",
+    "yearNotFound": "The financial year does not exist",
+    "checklistStarted": "The checklist for the year has already been started",
+    "itemNotFound": "The item is not on this year's checklist",
+    "itemHasCheck": "This item is ticked off when the app sees that it is done",
+    "accountNotFound": "The account has no balance in the ledger for the year",
+    "templateItemNotFound": "The item is not in the template"
   }
 }

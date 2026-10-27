@@ -234,7 +234,7 @@ export function RentalLines({
                             label:
                               left === undefined
                                 ? i.name
-                                : `${i.name} – ${t("free", { free: left, owned: i.quantity })}`,
+                                : `${i.name} - ${t("free", { free: left, owned: i.quantity })}`,
                           };
                         })}
                         value={row.itemId ?? ""}
@@ -293,7 +293,7 @@ export function RentalLines({
                     ) : row.unitPrice ? (
                       <Amount value={oreToSEK(toOre(row.unitPrice))} />
                     ) : (
-                      "–"
+                      "-"
                     )}
                   </td>
                   <td className="p-0 align-middle">
@@ -368,7 +368,7 @@ export function RentalLines({
                     ) : row.replacementValue ? (
                       <Amount value={oreToSEK(toOre(row.replacementValue))} />
                     ) : (
-                      "–"
+                      "-"
                     )}
                   </td>
                   <td className="text-center align-middle">

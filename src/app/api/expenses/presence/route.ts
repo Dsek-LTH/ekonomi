@@ -8,14 +8,14 @@
 //               refuses a second export while one is held, and the list
 //               disables the button to match. See lib/domain/export-claim.ts.
 import { NextResponse } from "next/server";
-import { canAccessBookkeeping } from "@/lib/domain/permissions";
+import { canViewBookkeeping } from "@/lib/domain/permissions";
 import { gate } from "@/lib/api/guard";
 import { activeBookings } from "@/lib/server/presence";
 import { activeExports } from "@/lib/server/export-claim";
 import type { LiveBookkeeping } from "@/lib/domain/presence";
 
 export async function GET() {
-  const g = await gate(canAccessBookkeeping);
+  const g = await gate(canViewBookkeeping);
   if (!g.ok) return g.res;
 
   const [booking, exporting] = await Promise.all([activeBookings(g.actor.id), activeExports()]);
