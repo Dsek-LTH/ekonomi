@@ -69,6 +69,12 @@ describe("parseInvoiceText", () => {
     expect(parseInvoiceText(["Summa 1 000,00"]).amount).toBe(100000);
   });
 
+  it("reads a due date whose label lost its ö", () => {
+    // Some suppliers' PDFs draw their text with a font that lacks the
+    // Swedish letters, and the text layer has "Forfallodatum".
+    expect(parseInvoiceText(["Forfallodatum 2026-11-10"]).dueDate).toBe("2026-11-10");
+  });
+
   it("reads a value that stands on the line under its label", () => {
     expect(parseInvoiceText(["Förfallodag", "2026-11-10"]).dueDate).toBe("2026-11-10");
   });

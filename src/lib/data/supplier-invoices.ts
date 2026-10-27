@@ -280,6 +280,19 @@ export interface SupplierInvoiceView {
   yourReference: string | null;
   /** Which fields were read from the PDF rather than typed. */
   prefilled: string[];
+  fortnoxSupplierNumber: string | null;
+  /** Fortnox's number for it, once exported. */
+  fortnoxGivenNumber: string | null;
+  exportedAt: string | null;
+  /** Set while an export holds the lock. UNCERTAIN is the one to act on: the
+   *  treasurer has to look in Fortnox and say whether it was made. */
+  exportState: "CLAIMED" | "SENT" | "UNCERTAIN" | null;
+  /**
+   * An account to start each row on, by allocation id, for an attested
+   * invoice whose rows have none yet: whatever the same supplier's last
+   * invoice was booked on, for the same cost centre if it had one.
+   */
+  suggestedAccounts: Record<string, string>;
   resultUnitId: string | null;
   resultUnitName: string | null;
   receivedByName: string | null;
@@ -387,6 +400,34 @@ async function costCenterSuggestionFor(inv: {
   return centres.length === 1 ? centres[0].code : null;
 }
 
+/** See suggestedAccounts on SupplierInvoiceView. Matched on the Fortnox
+ *  supplier when one is picked, else the org number, else the name. */
+async function accountSuggestionsFor(inv: {
+  id: string;
+  fortnoxSupplierNumber: string | null;
+  supplierOrgNo: string | null;
+  supplierName: string | null;
+  allocations: { id: string; account: string | null; costCenterId: string }[];
+}): Promise<Record<string, string>> {
+  const open = inv.allocations.filter((a) => !a.account);
+  if (open.length === 0) return {};
+  const same: Prisma.SupplierInvoiceWhereInput[] = [];
+  if (inv.fortnoxSupplierNumber) same.push({ fortnoxSupplierNumber: inv.fortnoxSupplierNumber });
+  if (inv.supplierOrgNo) same.push({ supplierOrgNo: inv.supplierOrgNo });
+  if (inv.supplierName) same.push({ supplierName: inv.supplierName });
+  if (same.length === 0) return {};
+  const prior = await prisma.supplierInvoiceAllocation.findMany({
+    where: { account: { not: null }, invoice: { id: { not: inv.id }, OR: same } },
+    orderBy: [{ invoice: { createdAt: "desc" } }, { position: "asc" }],
+    take: 50,
+    select: { account: true, costCenterId: true },
+  });
+  if (prior.length === 0) return {};
+  return Object.fromEntries(
+    open.map((a) => [a.id, (prior.find((p) => p.costCenterId === a.costCenterId) ?? prior[0]).account!]),
+  );
+}
+
 /**
  * One invoice and what the viewer may do with it, or null when there is no
  * such invoice or it is outside what they may see. The two are the same
@@ -453,6 +494,8 @@ export async function getInvoice(
     can.canAssign && !inv.resultUnitId ? await suggestionFor(inv.id, m?.originalFrom ?? null) : null;
   const suggestedCostCenter =
     can.canKontera && inv.allocations.length === 0 ? await costCenterSuggestionFor(inv) : null;
+  const suggestedAccounts =
+    inv.status === "APPROVED" && can.canEditDetails ? await accountSuggestionsFor(inv) : {};
   return {
     can,
     invoice: {
@@ -472,6 +515,11 @@ export async function getInvoice(
       plusgiro: inv.plusgiro,
       yourReference: inv.yourReference,
       prefilled: inv.prefilled,
+      fortnoxSupplierNumber: inv.fortnoxSupplierNumber,
+      fortnoxGivenNumber: inv.fortnoxGivenNumber,
+      exportedAt: inv.exportedAt?.toISOString() ?? null,
+      exportState: inv.exportClaimState,
+      suggestedAccounts,
       resultUnitId: inv.resultUnitId,
       resultUnitName: inv.resultUnit?.name ?? null,
       receivedByName: inv.receivedBy?.name ?? null,

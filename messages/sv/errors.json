@@ -199,7 +199,8 @@
     "syncFailed": "Synkningen misslyckades",
     "missingScope": "Fortnox saknar behörighet för det här. Koppla från och anslut igen för att ge appen de scope den behöver.",
     "missingCostCenterScope": "Fortnox saknar behörighet för kostnadsställen. Koppla från och anslut igen för att ge appen 'costcenter'-behörighet.",
-    "missingProjectScope": "Fortnox saknar behörighet för projekt. Koppla från och anslut igen för att ge appen 'project'-behörighet."
+    "missingProjectScope": "Fortnox saknar behörighet för projekt. Koppla från och anslut igen för att ge appen 'project'-behörighet.",
+    "missingScopeLogin": "Din Fortnox-inloggning saknar behörighet för leverantörsfakturor. Logga in mot Fortnox igen."
   },
   "database": "Databasfel",
   "budgetAccount": {
@@ -395,7 +396,12 @@
     "splitNeedsAmounts": "Ange hur mycket som ska till varje kostnadsställe.",
     "noInvoiceNumber": "Fyll i fakturanummer.",
     "noInvoiceDate": "Fyll i fakturadatum.",
-    "unknownAllocation": "En konteringsrad finns inte längre. Ladda om sidan."
+    "unknownAllocation": "En konteringsrad finns inte längre. Ladda om sidan.",
+    "supplierGone": "Leverantören finns inte längre i Fortnox. Välj en annan.",
+    "giroMismatch": "Fakturans {field} {invoice} är inte det som står på leverantören i Fortnox ({register}).",
+    "exportInProgress": "Fakturan exporteras redan.",
+    "exportUncertain": "Fortnox svarade inte säkert. Kontrollera i Fortnox om leverantörsfakturan skapades innan du försöker igen.",
+    "nothingToRelease": "Det finns ingen osäker export att reda ut."
   },
   "settings": {
     "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",

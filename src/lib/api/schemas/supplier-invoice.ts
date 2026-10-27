@@ -42,6 +42,8 @@ export const PatchSupplierInvoice = z.object({
   ocr: Text(40),
   bankgiro: Text(20),
   plusgiro: Text(20),
+  /** The supplier in Fortnox's register, as picked at the export step. */
+  fortnoxSupplierNumber: Text(20),
   accounts: z
     .array(z.object({ allocationId: Id, account: Clearable(AccountNumber) }))
     .max(50)

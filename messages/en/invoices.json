@@ -123,9 +123,26 @@
       "unit": "Waiting for {unit} to attest.",
       "share": "Waiting for attest from {units}.",
       "export": "Attested. Waiting to be exported to Fortnox.",
-      "exported": "The invoice is in Fortnox."
+      "exported": "The invoice is in Fortnox as supplier invoice {number}."
     },
-    "fromPdf": "From the PDF"
+    "fromPdf": "From the PDF",
+    "supplier": "Supplier in Fortnox",
+    "supplierHint": "Pick the supplier from Fortnox's supplier register, or add it.",
+    "loadingSuppliers": "Fetching suppliers…",
+    "pickSupplier": "Pick a supplier",
+    "searchSupplier": "Search name, organisation number or bankgiro",
+    "createSupplier": "Add {name} to Fortnox",
+    "supplierCreated": "The supplier is added to Fortnox",
+    "exported": "Exported to Fortnox",
+    "giroWarningTitle": "Check who is being paid",
+    "giroWarning": "The invoice gives {field} {invoice}, but Fortnox has {register} for the supplier. A new bankgiro on an invoice from a known supplier is the commonest way to steal a payment.",
+    "giroNone": "none",
+    "giroConfirm": "I have checked with the supplier that the number is right",
+    "uncertainTitle": "The export is uncertain",
+    "uncertainBody": "Fortnox did not answer for certain when invoice {number} was sent. Look in Fortnox for the supplier invoice before doing anything else.",
+    "uncertainNotCreated": "It is not there, try again",
+    "uncertainGivenNumber": "Number in Fortnox",
+    "uncertainCreated": "It is in Fortnox"
   },
   "action": {
     "attest": "Attest",
@@ -149,7 +166,8 @@
       "withdraw_attest": "The attest is withdrawn",
       "request_changes": "The invoice is sent back",
       "delete": "The invoice is deleted"
-    }
+    },
+    "export": "Export to Fortnox"
   },
   "kontering": {
     "title": "Coding",
@@ -188,6 +206,8 @@
       "costCenter": "Automatically: the email mentioned {match}",
       "unitName": "Automatically: the email mentioned {match}",
       "forwarder": "Automatically: the sender answers for {match}"
-    }
+    },
+    "EXPORTED": "Exported to Fortnox",
+    "EXPORT_RELEASED": "Uncertain export released"
   }
 }

@@ -230,6 +230,8 @@ model User {
   supplierInvoiceDocuments SupplierInvoiceDocument[]   @relation("SupplierInvoiceDocumentUploader")
   supplierInvoiceEvents    SupplierInvoiceEvent[]      @relation("SupplierInvoiceEventActor")
   inboundMails             InboundMail[]               @relation("InboundMailSender")
+  exportedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceExporter")
+  supplierInvoiceExports   SupplierInvoice[]           @relation("SupplierInvoiceExportClaim")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

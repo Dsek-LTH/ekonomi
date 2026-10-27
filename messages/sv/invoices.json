@@ -123,9 +123,26 @@
       "unit": "Väntar på att {unit} attesterar.",
       "share": "Väntar på attest från {units}.",
       "export": "Attesterad. Väntar på att exporteras till Fortnox.",
-      "exported": "Fakturan finns i Fortnox."
+      "exported": "Fakturan finns i Fortnox som leverantörsfaktura {number}."
     },
-    "fromPdf": "Från PDF"
+    "fromPdf": "Från PDF",
+    "supplier": "Leverantör i Fortnox",
+    "supplierHint": "Välj leverantören ur Fortnox leverantörsregister, eller lägg till den.",
+    "loadingSuppliers": "Hämtar leverantörer…",
+    "pickSupplier": "Välj leverantör",
+    "searchSupplier": "Sök namn, organisationsnummer eller bankgiro",
+    "createSupplier": "Lägg till {name} i Fortnox",
+    "supplierCreated": "Leverantören är tillagd i Fortnox",
+    "exported": "Exporterad till Fortnox",
+    "giroWarningTitle": "Kontrollera betalningsmottagaren",
+    "giroWarning": "Fakturan anger {field} {invoice}, men Fortnox har {register} för leverantören. Ett nytt bankgiro på en faktura från en känd leverantör är det vanligaste sättet att lura till sig en betalning.",
+    "giroNone": "inget",
+    "giroConfirm": "Jag har kontrollerat med leverantören att numret stämmer",
+    "uncertainTitle": "Exporten blev osäker",
+    "uncertainBody": "Fortnox svarade inte säkert när faktura {number} skickades. Titta i Fortnox om leverantörsfakturan finns innan du gör något mer.",
+    "uncertainNotCreated": "Den finns inte, försök igen",
+    "uncertainGivenNumber": "Löpnummer i Fortnox",
+    "uncertainCreated": "Den finns i Fortnox"
   },
   "action": {
     "attest": "Attestera",
@@ -149,7 +166,8 @@
       "withdraw_attest": "Attesten är borttagen",
       "request_changes": "Fakturan är skickad tillbaka",
       "delete": "Fakturan är borttagen"
-    }
+    },
+    "export": "Exportera till Fortnox"
   },
   "kontering": {
     "title": "Kontering",
@@ -188,6 +206,8 @@
       "costCenter": "Automatiskt: mejlet nämnde {match}",
       "unitName": "Automatiskt: mejlet nämnde {match}",
       "forwarder": "Automatiskt: avsändaren är resultatansvarig för {match}"
-    }
+    },
+    "EXPORTED": "Exporterad till Fortnox",
+    "EXPORT_RELEASED": "Osäker export släppt"
   }
 }

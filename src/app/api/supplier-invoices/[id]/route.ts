@@ -24,6 +24,7 @@ const TEXT_FIELDS = [
   "ocr",
   "bankgiro",
   "plusgiro",
+  "fortnoxSupplierNumber",
 ] as const;
 
 // PATCH /api/supplier-invoices/:id

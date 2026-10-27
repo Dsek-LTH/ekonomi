@@ -70,6 +70,11 @@ enum SupplierInvoiceEventType {
   CHANGES_REQUESTED
   /// The last row signed.
   APPROVED
+  /// Created in Fortnox. `comment` is the GivenNumber Fortnox gave it.
+  EXPORTED
+  /// An export whose outcome was unknown was looked up in Fortnox by the
+  /// treasurer, found not to have made an invoice, and let go to try again.
+  EXPORT_RELEASED
 }
 
 model SupplierInvoice {
@@ -111,6 +116,27 @@ model SupplierInvoice {
   /// typed, so the page can say so and the treasurer knows what to check.
   /// A field typed over afterwards is taken off the list.
   prefilled String[] @default([])
+
+  // ── Fortnox ──────────────────────────────────────────────────────
+  //
+  // The supplier in Fortnox's register it is billed by, chosen by the
+  // treasurer, and the number Fortnox gave the supplier invoice once made.
+  fortnoxSupplierNumber String?
+  fortnoxGivenNumber    String?
+  exportedAt            DateTime?
+  exportedBy            User?     @relation("SupplierInvoiceExporter", fields: [exportedById], references: [id], onDelete: SetNull)
+  exportedById          String?
+
+  // The export lock, the same as an utlägg's and for the same reason: Fortnox
+  // has no delete for a supplier invoice made through the API, so one must
+  // never be made twice. Taken before anything is sent, let go when the
+  // export is recorded or certainly failed, and kept, UNCERTAIN, when Fortnox
+  // did not say either way, until the treasurer has looked. See
+  // api/supplier-invoices/[id]/export.
+  exportClaimedBy   User?             @relation("SupplierInvoiceExportClaim", fields: [exportClaimedById], references: [id], onDelete: SetNull)
+  exportClaimedById String?
+  exportClaimedAt   DateTime?
+  exportClaimState  ExportClaimState?
 
   // ── Whose it is ──────────────────────────────────────────────────
   //

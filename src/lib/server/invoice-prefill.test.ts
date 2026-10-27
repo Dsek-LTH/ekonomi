@@ -13,13 +13,13 @@ async function invoicePdf(): Promise<Uint8Array> {
   const page = doc.addPage([595, 842]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const at = (text: string, x: number, y: number) => page.drawText(text, { x, y, size: 10, font });
-  at("Lunds Slapvagnsuthyrning AB", 50, 800);
+  at("Lunds Släpvagnsuthyrning AB", 50, 800);
   at("Org.nr 556677-8899", 50, 785);
   at("Fakturanummer", 350, 760);
   at("20417", 480, 760);
   at("Fakturadatum", 350, 745);
   at("2026-10-20", 480, 745);
-  at("Forfallodatum", 350, 730);
+  at("Förfallodatum", 350, 730);
   at("2026-11-10", 480, 730);
   at("Kund: D-sektionen inom TLTH, org.nr 845003-2878", 50, 700);
   at("Er referens: SEX01", 50, 685);
@@ -33,14 +33,12 @@ async function invoicePdf(): Promise<Uint8Array> {
 describe("reading an invoice PDF", () => {
   it("gives its lines in reading order, label and value on one line", async () => {
     const lines = await pdfLines(await invoicePdf());
-    expect(lines[0]).toBe("Lunds Slapvagnsuthyrning AB");
+    expect(lines[0]).toBe("Lunds Släpvagnsuthyrning AB");
     expect(lines).toContain("Att betala 1 250,00");
     expect(lines).toContain("Fakturanummer 20417");
   });
 
   it("finds the fields", async () => {
-    // Helvetica in pdf-lib has no å, ä or ö, so "Förfallodatum" is spelled
-    // without them above, which is also what some suppliers' PDFs do.
     const fields = await readInvoicePdf(await invoicePdf(), "application/pdf");
     expect(fields).toEqual({
       amount: 125000,

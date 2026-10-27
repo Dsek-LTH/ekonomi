@@ -28,8 +28,11 @@ import { IconCheck, IconX } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useQuery } from "@/components/shell/use-query";
 import { commaForm, parseOre, parseSEK } from "@/lib/domain/money";
-import { attestBlocker, type InvoiceCapabilities } from "@/lib/domain/supplier-invoice";
+import { attestBlocker, exportBlocker, type InvoiceCapabilities } from "@/lib/domain/supplier-invoice";
+import { giroMismatch } from "@/lib/domain/payment-ref";
+import type { FortnoxSupplier } from "@/lib/fortnox";
 import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn, uid } from "@/lib/ui/utils";
@@ -529,7 +532,7 @@ function WaitingPanel({ invoice }: { invoice: SupplierInvoiceView }) {
           ? t("waiting.share", { units: waitingOn.join(", ") })
           : invoice.status === "APPROVED"
             ? t("waiting.export")
-            : t("waiting.exported");
+            : t("waiting.exported", { number: invoice.fortnoxGivenNumber ?? "-" });
   return (
     <div className="rounded-control bg-surface px-4 py-3 text-sm text-muted">{text}</div>
   );
@@ -625,42 +628,157 @@ function FactsForm({
   );
 }
 
-/** Attested: the treasurer completes what Fortnox needs. The export itself is
- *  the next step; this is where the invoice is made ready for it. */
-function ExportPanel({ invoice, accounts }: WorkspaceProps) {
+/**
+ * Attested: the treasurer completes what Fortnox needs and exports it.
+ *
+ * Mostly confirming rather than typing. The supplier is picked from Fortnox's
+ * own register, matched to the invoice's org number or bankgiro where it can
+ * be, and the accounts start on what the same supplier was booked on last
+ * time. A bankgiro the register does not know is said out loud and has to be
+ * ticked off before the export goes, because that is what invoice fraud looks
+ * like. Exporting saves first, so nothing typed is left behind.
+ */
+function ExportPanel({ invoice, accounts, onDone }: WorkspaceProps) {
   const t = useTranslations("invoices.workspace");
   const tDetail = useTranslations("invoices.detail");
+  const tAction = useTranslations("invoices.action");
+  const tFields = useTranslations("invoices.field");
+  const tErr = useTranslations("errors");
   const save = useMutation();
+  const exporter = useMutation();
+  const creator = useMutation();
+  const suppliers = useQuery<FortnoxSupplier[]>("/api/fortnox/suppliers");
+
   const initialFacts = useMemo(() => factsOf(invoice), [invoice]);
   const initialAccounts = useMemo(
-    () => Object.fromEntries(invoice.allocations.map((a) => [a.id, a.account ?? ""])),
+    () =>
+      Object.fromEntries(
+        invoice.allocations.map((a) => [a.id, a.account ?? invoice.suggestedAccounts[a.id] ?? ""]),
+      ),
     [invoice],
   );
   const [facts, setFacts] = useState(initialFacts);
   const [accountOf, setAccountOf] = useState<Record<string, string>>(initialAccounts);
+  const [supplierNo, setSupplierNo] = useState(invoice.fortnoxSupplierNumber ?? "");
+  const [giroChecked, setGiroChecked] = useState(false);
   const [seen, setSeen] = useState(invoice.updatedAt);
   if (seen !== invoice.updatedAt) {
     setSeen(invoice.updatedAt);
     setFacts(initialFacts);
     setAccountOf(initialAccounts);
+    setSupplierNo(invoice.fortnoxSupplierNumber ?? "");
   }
+
+  // The register's match for this invoice, picked once the list arrives and
+  // nothing has been picked by hand: the org number first, the bankgiro after.
+  const list = useMemo(() => suppliers.data ?? [], [suppliers.data]);
+  const [matched, setMatched] = useState(false);
+  if (!matched && list.length && !supplierNo) {
+    setMatched(true);
+    const digits = (s: string | null) => (s ?? "").replace(/\D/g, "");
+    const org = digits(facts.supplierOrgNo);
+    const bg = digits(facts.bankgiro);
+    const hit =
+      (org && list.find((s) => digits(s.orgNo) === org)) || (bg && list.find((s) => digits(s.bankgiro) === bg));
+    if (hit) setSupplierNo(hit.number);
+  }
+  const supplier = list.find((s) => s.number === supplierNo) ?? null;
+  const mismatch = supplier ? giroMismatch(facts, supplier) : null;
 
   const body: PatchSupplierInvoice = {
     ...patchOf(facts),
+    // The register's name for the supplier, once one is picked: it is the
+    // name Fortnox will print, so it is the one the archive should show.
+    supplierName: supplier?.name ?? facts.supplierName,
+    fortnoxSupplierNumber: supplierNo || null,
     accounts: invoice.allocations.map((a) => ({ allocationId: a.id, account: accountOf[a.id] || null })),
   };
   const initialBody: PatchSupplierInvoice = {
     ...patchOf(initialFacts),
-    accounts: invoice.allocations.map((a) => ({ allocationId: a.id, account: initialAccounts[a.id] || null })),
+    supplierName: initialFacts.supplierName,
+    fortnoxSupplierNumber: invoice.fortnoxSupplierNumber,
+    accounts: invoice.allocations.map((a) => ({ allocationId: a.id, account: a.account })),
   };
   const dirty = JSON.stringify(body) !== JSON.stringify(initialBody);
 
+  const blocker = exportBlocker({
+    fortnoxSupplierNumber: supplierNo || null,
+    invoiceNumber: facts.invoiceNumber,
+    invoiceDate: facts.invoiceDate || null,
+    dueDate: facts.dueDate || null,
+    amount: facts.amount.trim() ? parseOre(facts.amount) : null,
+    rows: invoice.allocations.map((a) => ({
+      amount: invoice.allocations.length === 1 ? null : a.amount == null ? null : Math.round(a.amount * 100),
+      account: accountOf[a.id] || null,
+    })),
+  });
+  const exportReady = !blocker;
+
+  async function createInFortnox() {
+    const created = await creator.mutate<FortnoxSupplier>("/api/fortnox/suppliers", {
+      body: {
+        name: facts.supplierName,
+        orgNo: facts.supplierOrgNo || null,
+        bankgiro: facts.bankgiro || null,
+        plusgiro: facts.plusgiro || null,
+      },
+      success: t("supplierCreated"),
+      refresh: false,
+    });
+    if (created) {
+      suppliers.reload();
+      setSupplierNo(created.number);
+    }
+  }
+
+  async function exportNow() {
+    if (dirty) {
+      const ok = await save.mutate(`/api/supplier-invoices/${invoice.id}`, { method: "PATCH", body, refresh: false });
+      if (ok === null) return;
+    }
+    const res = await exporter.mutate<{ givenNumber: string; attachFailed: string | null }>(
+      `/api/supplier-invoices/${invoice.id}/export`,
+      { body: { confirmGiro: giroChecked }, refresh: !onDone, success: t("exported") },
+    );
+    if (res && onDone) onDone("EXPORTED");
+  }
+
   const accountOptions = accounts.map((a) => ({ value: a.number, label: `${a.number} - ${a.name}`, short: a.number }));
+  const supplierOptions = list.map((s) => ({
+    value: s.number,
+    label: [s.name, s.orgNo, s.bankgiro && `BG ${s.bankgiro}`].filter(Boolean).join(" - "),
+    short: s.name,
+  }));
+
+  if (invoice.exportState === "UNCERTAIN") return <UncertainExport invoice={invoice} />;
 
   return (
     <Card>
       <div className="space-y-4 px-inset py-4">
         <h3 className={LABEL}>{t("exportTitle")}</h3>
+
+        <FieldGroup label={t("supplier")} hint={supplier ? undefined : t("supplierHint")}>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-64 flex-1">
+              <Combobox
+                size="sm"
+                options={supplierOptions}
+                value={supplierNo}
+                onChange={setSupplierNo}
+                placeholder={suppliers.loading ? t("loadingSuppliers") : t("pickSupplier")}
+                searchPlaceholder={t("searchSupplier")}
+                aria-label={t("supplier")}
+              />
+            </div>
+            {!supplier && facts.supplierName.trim() && !suppliers.loading && (
+              <Button size="sm" variant="secondary" loading={creator.busy} onClick={() => void createInFortnox()}>
+                {t("createSupplier", { name: facts.supplierName })}
+              </Button>
+            )}
+          </div>
+        </FieldGroup>
+        {suppliers.error && <p className="text-sm text-danger">{suppliers.error}</p>}
+
         <FactsForm facts={facts} set={(p) => setFacts((f) => ({ ...f, ...p }))} prefilled={invoice.prefilled} />
 
         <div className="space-y-2">
@@ -684,10 +802,35 @@ function ExportPanel({ invoice, accounts }: WorkspaceProps) {
           ))}
         </div>
 
+        {mismatch && (
+          <Notice tone="warning">
+            <p className="font-medium">{t("giroWarningTitle")}</p>
+            <p>
+              {t("giroWarning", {
+                field: tField(mismatch.field),
+                invoice: mismatch.invoice,
+                register: mismatch.register ?? t("giroNone"),
+              })}
+            </p>
+            <label className="mt-2 flex items-center gap-2">
+              <input type="checkbox" checked={giroChecked} onChange={(e) => setGiroChecked(e.target.checked)} />
+              <span>{t("giroConfirm")}</span>
+            </label>
+          </Notice>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
+            disabled={!exportReady || (Boolean(mismatch) && !giroChecked) || exporter.busy}
+            loading={exporter.busy}
+            onClick={() => void exportNow()}
+          >
+            {tAction("export")}
+          </Button>
+          <Button
+            variant="secondary"
             disabled={!dirty}
-            loading={save.busy}
+            loading={save.busy && !exporter.busy}
             onClick={() =>
               void save.mutate(`/api/supplier-invoices/${invoice.id}`, {
                 method: "PATCH",
@@ -698,6 +841,54 @@ function ExportPanel({ invoice, accounts }: WorkspaceProps) {
           >
             {tDetail("save")}
           </Button>
+          {blocker && <span className="text-xs text-muted">{tErr(blocker)}</span>}
+        </div>
+      </div>
+    </Card>
+  );
+
+  function tField(field: "bankgiro" | "plusgiro") {
+    return tFields(field).toLowerCase();
+  }
+}
+
+/**
+ * An export whose outcome nobody knows: the request went to Fortnox and no
+ * clear answer came back. Only a look in Fortnox settles it, so the panel asks
+ * for exactly that, and offers the two answers.
+ */
+function UncertainExport({ invoice }: { invoice: SupplierInvoiceView }) {
+  const t = useTranslations("invoices.workspace");
+  const m = useMutation();
+  const [number, setNumber] = useState("");
+  const url = `/api/supplier-invoices/${invoice.id}/export/release`;
+  return (
+    <Card>
+      <div className="space-y-3 px-inset py-4">
+        <Notice tone="warning">
+          <p className="font-medium">{t("uncertainTitle")}</p>
+          <p>{t("uncertainBody", { number: invoice.invoiceNumber ?? "-" })}</p>
+        </Notice>
+        <div className="flex flex-wrap items-end gap-2">
+          <Button
+            variant="secondary"
+            loading={m.pending === "not_created"}
+            onClick={() => void m.mutate(url, { key: "not_created", body: { outcome: "not_created" } })}
+          >
+            {t("uncertainNotCreated")}
+          </Button>
+          <div className="flex items-end gap-2">
+            <Field label={t("uncertainGivenNumber")}>
+              <Input size="sm" inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} />
+            </Field>
+            <Button
+              disabled={!/^\d+$/.test(number)}
+              loading={m.pending === "created"}
+              onClick={() => void m.mutate(url, { key: "created", body: { outcome: "created", givenNumber: number } })}
+            >
+              {t("uncertainCreated")}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

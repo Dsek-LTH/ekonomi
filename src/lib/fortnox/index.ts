@@ -38,8 +38,13 @@ export type FortnoxAuthMode = "service" | "user";
 // additionally needs inbox + connectfile to upload a receipt and attach it to
 // the voucher it just created. `project` is for the project list the voucher
 // rows pick from; a connection made before it was added syncs without it.
+//
+// `supplierinvoice` and `supplier` are for exporting a levfaktura: making the
+// supplier invoice, and reading (or adding to) the supplier register it is
+// billed against. A personal login made before they were added has to log in
+// again, which is a prompt the export answers with rather than a failure.
 const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation";
-const USER_SCOPES = "bookkeeping inbox connectfile companyinformation";
+const USER_SCOPES = "bookkeeping inbox connectfile companyinformation supplierinvoice supplier";
 
 const scopesFor = (mode: FortnoxAuthMode) =>
   mode === "service" ? SERVICE_SCOPES : USER_SCOPES;
@@ -690,12 +695,15 @@ export async function createVoucher(
   return { series: v.VoucherSeries, number: v.VoucherNumber, year: v.Year ?? null };
 }
 
-// Upload a receipt to the Fortnox inbox, returning the new File id.
+// Upload a receipt to the Fortnox inbox, returning the new File id. Into the
+// voucher folder unless told otherwise: a levfaktura goes to inbox_s, the
+// supplier invoice folder, lower-cased for the reason given below.
 export async function uploadInboxFile(
   token: string,
   bytes: Buffer,
   filename: string,
   contentType: string,
+  folder: "inbox_v" | "inbox_s" = "inbox_v",
 ): Promise<string> {
   const form = new FormData();
   form.append("file", new Blob([new Uint8Array(bytes)], { type: contentType }), filename);
@@ -703,7 +711,7 @@ export async function uploadInboxFile(
   // voucher guide writes it "Inbox_v", but that capitalisation is rejected with
   // 400 "Försöker att skapa en fil under ogiltig sökväg". The lowercase form
   // is what their client libraries use.
-  const res = await fetch(`${API_BASE}/inbox?path=inbox_v`, {
+  const res = await fetch(`${API_BASE}/inbox?path=${folder}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     body: form,
@@ -713,6 +721,161 @@ export async function uploadInboxFile(
   const id = json.File?.Id ?? json.Id;
   if (!id) throw new FortnoxError("Fortnox returnerade inget fil-id vid uppladdning.");
   return id;
+}
+
+// ── Suppliers and supplier invoices ───────────────────────────────
+
+export interface FortnoxSupplier {
+  number: string;
+  name: string;
+  orgNo: string | null;
+  bankgiro: string | null;
+  plusgiro: string | null;
+  active: boolean;
+}
+
+// The supplier register, every page of it. A section's register is a few
+// hundred suppliers at most, and the export picker filters it in the browser.
+export async function listSuppliers(token: string): Promise<FortnoxSupplier[]> {
+  const out: FortnoxSupplier[] = [];
+  for (let page = 1; ; page++) {
+    const data = await fortnoxGet<{
+      Suppliers?: {
+        SupplierNumber?: string;
+        Name?: string;
+        OrganisationNumber?: string;
+        BG?: string;
+        PG?: string;
+        Active?: boolean;
+      }[];
+      MetaInformation?: { "@TotalPages"?: number };
+    }>(`/suppliers?limit=500&page=${page}`, token);
+    for (const s of data.Suppliers ?? []) {
+      if (!s.SupplierNumber) continue;
+      out.push({
+        number: s.SupplierNumber,
+        name: s.Name ?? s.SupplierNumber,
+        orgNo: s.OrganisationNumber || null,
+        bankgiro: s.BG || null,
+        plusgiro: s.PG || null,
+        active: s.Active !== false,
+      });
+    }
+    if (page >= (data.MetaInformation?.["@TotalPages"] ?? 1)) return out;
+  }
+}
+
+/** One supplier, as the register has it now. */
+export async function getSupplier(token: string, number: string): Promise<FortnoxSupplier> {
+  const data = await fortnoxGet<{
+    Supplier?: { SupplierNumber?: string; Name?: string; OrganisationNumber?: string; BG?: string; PG?: string; Active?: boolean };
+  }>(`/suppliers/${encodeURIComponent(number)}`, token);
+  const s = data.Supplier;
+  if (!s?.SupplierNumber) throw new FortnoxError("Leverantören finns inte i Fortnox.", 404);
+  return {
+    number: s.SupplierNumber,
+    name: s.Name ?? s.SupplierNumber,
+    orgNo: s.OrganisationNumber || null,
+    bankgiro: s.BG || null,
+    plusgiro: s.PG || null,
+    active: s.Active !== false,
+  };
+}
+
+/** Add a supplier to the register, returning the number Fortnox gave it. */
+export async function createSupplier(
+  token: string,
+  input: { name: string; orgNo?: string | null; bankgiro?: string | null; plusgiro?: string | null },
+): Promise<FortnoxSupplier> {
+  const data = await fortnoxPost<{ Supplier?: { SupplierNumber?: string; Name?: string } }>(
+    "/suppliers",
+    token,
+    {
+      Supplier: {
+        Name: input.name,
+        ...(input.orgNo && { OrganisationNumber: input.orgNo }),
+        ...(input.bankgiro && { BG: input.bankgiro }),
+        ...(input.plusgiro && { PG: input.plusgiro }),
+      },
+    },
+  );
+  const number = data.Supplier?.SupplierNumber;
+  if (!number) throw new FortnoxError("Fortnox returnerade inget leverantörsnummer.");
+  return {
+    number,
+    name: data.Supplier?.Name ?? input.name,
+    orgNo: input.orgNo ?? null,
+    bankgiro: input.bankgiro ?? null,
+    plusgiro: input.plusgiro ?? null,
+    active: true,
+  };
+}
+
+export interface SupplierInvoiceInput {
+  supplierNumber: string;
+  invoiceNumber: string;
+  invoiceDate: string; // YYYY-MM-DD
+  dueDate: string;
+  total: number; // SEK
+  ocr?: string | null;
+  yourReference?: string | null;
+  comments?: string | null;
+  /** The cost rows, each debited. */
+  rows: { account: number; amount: number; costCenter?: string; project?: string; text?: string }[];
+  /** The leverantörsskuld account the total is credited to. */
+  payableAccount: number;
+}
+
+/**
+ * Make an unbooked supplier invoice, returning its GivenNumber.
+ *
+ * The rows are sent whole: each cost row debited, and the total credited to
+ * the supplier-debt account as the TOT row, so what Fortnox books is exactly
+ * the kontering that was attested. No VAT: the section is momsbefriad, so the
+ * invoice's VAT is zero and every krona is cost.
+ */
+export async function createSupplierInvoice(token: string, input: SupplierInvoiceInput): Promise<string> {
+  const rows: Record<string, unknown>[] = input.rows.map((r) => ({
+    Account: r.account,
+    Debit: r.amount,
+    ...(r.costCenter && { CostCenter: r.costCenter }),
+    ...(r.project && { Project: r.project }),
+    ...(r.text && { TransactionInformation: r.text.slice(0, 100) }),
+  }));
+  rows.push({ Account: input.payableAccount, Code: "TOT", Credit: input.total });
+
+  const data = await fortnoxPost<{ SupplierInvoice?: { GivenNumber?: string | number } }>(
+    "/supplierinvoices",
+    token,
+    {
+      SupplierInvoice: {
+        SupplierNumber: input.supplierNumber,
+        InvoiceNumber: input.invoiceNumber,
+        InvoiceDate: input.invoiceDate,
+        DueDate: input.dueDate,
+        Total: input.total.toFixed(2),
+        VAT: "0",
+        ...(input.ocr && { OCR: input.ocr }),
+        ...(input.yourReference && { YourReference: input.yourReference.slice(0, 50) }),
+        ...(input.comments && { Comments: input.comments.slice(0, 1000) }),
+        SupplierInvoiceRows: rows,
+      },
+    },
+  );
+  const given = data.SupplierInvoice?.GivenNumber;
+  if (given == null || given === "") throw new FortnoxError("Fortnox returnerade ingen leverantörsfaktura.");
+  return String(given);
+}
+
+/** Attach an uploaded inbox file to a supplier invoice. */
+export async function connectFileToSupplierInvoice(
+  token: string,
+  fileId: string,
+  givenNumber: string,
+): Promise<void> {
+  await fortnoxPost("/supplierinvoicefileconnections", token, {
+    SupplierInvoiceFileConnection: { FileId: fileId, SupplierInvoiceNumber: givenNumber },
+  });
 }
 
 // Attach an uploaded file to a created voucher. Series + number only identify a
