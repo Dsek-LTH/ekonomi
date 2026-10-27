@@ -133,7 +133,7 @@
     "AUDIT_REVIEW": "Audit the books",
     "AUDIT_REVIEW_hint": "Review the financial year's vouchers as an auditor: pass them, ask questions and make remarks.",
     "INVOICE_TRIAGE": "Sort supplier invoices",
-    "INVOICE_TRIAGE_hint": "See the supplier invoice inbox, add an invoice by hand, give it to a result unit to code, or discard it. Does not grant approval."
+    "INVOICE_TRIAGE_hint": "See the supplier invoice inbox, add an invoice by hand, give it to a result unit, or delete it. Does not grant approval."
   },
   "invoiceStatus": {
     "INBOX": "In the inbox",

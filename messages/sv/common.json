@@ -133,7 +133,7 @@
     "AUDIT_REVIEW": "Granska bokslutet",
     "AUDIT_REVIEW_hint": "Granska räkenskapsårets verifikationer som revisor: godkänna dem, ställa frågor och göra anmärkningar.",
     "INVOICE_TRIAGE": "Sortera levfakturor",
-    "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet att kontera eller kassera den. Ger inte rätt att attestera."
+    "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet eller ta bort den. Ger inte rätt att attestera."
   },
   "invoiceStatus": {
     "INBOX": "I inkorgen",
