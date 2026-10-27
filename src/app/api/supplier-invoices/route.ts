@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, supplierInvoiceDocumentKey } from "@/lib/server/storage";
 import { readDocumentUpload } from "@/lib/server/document-upload";
+import { prefillData, readInvoicePdf } from "@/lib/server/invoice-prefill";
 import { canTriageInvoices } from "@/lib/domain/permissions";
 import { gate } from "@/lib/api/guard";
 
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
   const invoiceId = randomUUID();
   const documentId = randomUUID();
   const objectKey = supplierInvoiceDocumentKey(invoiceId, documentId, doc.filename);
+  // What the PDF says, into a row that has nothing yet. See invoice-prefill.ts.
+  const prefill = prefillData({}, await readInvoicePdf(doc.body, doc.mimeType));
 
   try {
     await putObject(objectKey, doc.body, doc.mimeType);
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
         id: invoiceId,
         source: "UPLOAD",
         receivedById: g.actor.id,
+        ...prefill,
         documents: {
           create: {
             id: documentId,

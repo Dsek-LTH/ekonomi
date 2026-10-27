@@ -64,7 +64,8 @@
     "ocr": "OCR",
     "bankgiro": "Bankgiro",
     "plusgiro": "Plusgiro",
-    "description": "Vad gäller fakturan?"
+    "description": "Vad gäller fakturan?",
+    "yourReference": "Er referens"
   },
   "detail": {
     "invoiceNo": "Faktura {number}",
@@ -123,7 +124,8 @@
       "share": "Väntar på attest från {units}.",
       "export": "Attesterad. Väntar på att exporteras till Fortnox.",
       "exported": "Fakturan finns i Fortnox."
-    }
+    },
+    "fromPdf": "Från PDF"
   },
   "action": {
     "attest": "Attestera",

@@ -26,6 +26,8 @@ import {
 } from "@/lib/server/storage";
 import { getPrefixes, ownedResultUnits, resultUnitForCode } from "@/lib/server/result-units";
 import { deliverSoon, notify } from "@/lib/server/notify";
+import { prefillData, readInvoicePdf } from "@/lib/server/invoice-prefill";
+import type { InvoiceTextFields } from "@/lib/domain/invoice-text";
 import { invoiceNotice } from "@/lib/email/content";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import {
@@ -166,7 +168,14 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
   try {
     // The documents first, into storage, each fetched and checked against its
     // own bytes. Something called faktura.pdf that is not one is left out.
-    const docs: { invoiceId: string; documentId: string; key: string; filename: string; size: number }[] = [];
+    const docs: {
+      invoiceId: string;
+      documentId: string;
+      key: string;
+      filename: string;
+      size: number;
+      fields: InvoiceTextFields;
+    }[] = [];
     for (const part of pdfParts(top)) {
       const bytes = part.body?.attachmentId
         ? await getAttachment(c, gmailId, part.body.attachmentId)
@@ -177,18 +186,39 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
       const key = supplierInvoiceDocumentKey(invoiceId, documentId, part.filename!);
       await putObject(key, bytes, "application/pdf");
       written.push(key);
-      docs.push({ invoiceId, documentId, key, filename: part.filename!, size: bytes.length });
+      docs.push({
+        invoiceId,
+        documentId,
+        key,
+        filename: part.filename!,
+        size: bytes.length,
+        fields: await readInvoicePdf(bytes, "application/pdf"),
+      });
     }
 
     // A mail with no PDF still becomes one invoice, to be completed by hand.
-    const invoices = docs.length ? docs : [{ invoiceId: randomUUID(), documentId: null, key: null, filename: null, size: 0 }];
+    const invoices = docs.length
+      ? docs
+      : [
+          {
+            invoiceId: randomUUID(),
+            documentId: null,
+            key: null,
+            filename: null,
+            size: 0,
+            fields: {} as InvoiceTextFields,
+          },
+        ];
 
     const owned = sender ? await ownedResultUnits({ id: sender.id, roles: sender.roles }) : null;
     const forwarderUnitIds = owned
       ? ctx.units.filter((u) => owned.names.includes(u.name)).map((u) => u.id)
       : [];
+    // "Er referens" counts as something the forwarder said: a supplier asked
+    // to put the cost centre there has done the routing for us.
+    const references = invoices.map((d) => d.fields.reference).filter(Boolean);
     const auto: AutoAssignment | null = autoAssign({
-      text: [note, subject].filter(Boolean).join("\n"),
+      text: [note, subject, ...references].filter(Boolean).join("\n"),
       units: ctx.units,
       costCenters: ctx.costCenters,
       forwarderUnitIds,
@@ -209,6 +239,7 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
         await tx.supplierInvoice.create({
           data: {
             id: d.invoiceId,
+            ...prefillData({}, d.fields),
             source: "EMAIL",
             status: unit ? "ASSIGNED" : "INBOX",
             receivedById: sender?.id ?? null,

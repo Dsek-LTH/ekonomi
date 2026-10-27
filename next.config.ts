@@ -48,7 +48,11 @@ const nextConfig: NextConfig = {
   //
   // sharp normalises uploaded receipts; the typst compiler typesets the
   // utläggsräkning (src/lib/expense/cover/typst.ts).
-  serverExternalPackages: ["sharp", "@myriaddreamin/typst-ts-node-compiler"],
+  //
+  // pdfjs-dist reads an invoice's text layer on the server
+  // (src/lib/server/pdf-text.ts). Bundled, its worker module is split from it
+  // and the fake worker it starts in Node cannot find it again.
+  serverExternalPackages: ["sharp", "@myriaddreamin/typst-ts-node-compiler", "pdfjs-dist"],
   experimental: {
     // Turbopack's on-disk dev cache, on by default in Next 16. Off here because
     // it has handed us a stale stylesheet: a new route's utilities never made it

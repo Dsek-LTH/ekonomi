@@ -64,7 +64,8 @@
     "ocr": "OCR",
     "bankgiro": "Bankgiro",
     "plusgiro": "Plusgiro",
-    "description": "What is the invoice for?"
+    "description": "What is the invoice for?",
+    "yourReference": "Your reference"
   },
   "detail": {
     "invoiceNo": "Invoice {number}",
@@ -123,7 +124,8 @@
       "share": "Waiting for attest from {units}.",
       "export": "Attested. Waiting to be exported to Fortnox.",
       "exported": "The invoice is in Fortnox."
-    }
+    },
+    "fromPdf": "From the PDF"
   },
   "action": {
     "attest": "Attest",

@@ -77,6 +77,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   if (changed.length === 0) return new Response(null, { status: 204 });
 
+  // A field typed over is the treasurer's now, not the PDF's.
+  if (invoice.prefilled.some((f) => changed.includes(f))) {
+    data.prefilled = invoice.prefilled.filter((f) => !changed.includes(f));
+  }
+
   const result = await commit(() =>
     prisma.$transaction(async (tx) => {
       // Still in the state it was judged editable in. Exported in another tab

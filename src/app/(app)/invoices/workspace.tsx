@@ -577,12 +577,23 @@ const patchOf = (f: Facts): PatchSupplierInvoice => ({
 });
 
 /** The fields the treasurer completes, as a grid. Shared by the export step
- *  and by the details section while it is still editable. */
-function FactsForm({ facts, set }: { facts: Facts; set: (p: Partial<Facts>) => void }) {
+ *  and by the details section while it is still editable. A field read off
+ *  the PDF says so, which is what the treasurer checks against it. */
+function FactsForm({
+  facts,
+  set,
+  prefilled,
+}: {
+  facts: Facts;
+  set: (p: Partial<Facts>) => void;
+  prefilled: readonly string[];
+}) {
   const t = useTranslations("invoices.field");
+  const tWs = useTranslations("invoices.workspace");
+  const hint = (key: keyof Facts) => (prefilled.includes(key) ? tWs("fromPdf") : undefined);
   const text = (key: keyof Facts, opts: { wide?: boolean; numeric?: boolean } = {}) => (
     <div className={cn(opts.wide && "sm:col-span-2")}>
-      <Field label={t(key)}>
+      <Field label={t(key)} hint={hint(key)}>
         <Input
           size="sm"
           value={facts[key]}
@@ -596,14 +607,14 @@ function FactsForm({ facts, set }: { facts: Facts; set: (p: Partial<Facts>) => v
     <div className="grid gap-3 sm:grid-cols-2">
       {text("supplierName")}
       {text("supplierOrgNo")}
-      <Field label={t("amount")}>
+      <Field label={t("amount")} hint={hint("amount")}>
         <AmountInput size="sm" suffix="kr" value={facts.amount} onChange={(v) => set({ amount: v })} />
       </Field>
       {text("invoiceNumber")}
-      <Field label={t("invoiceDate")}>
+      <Field label={t("invoiceDate")} hint={hint("invoiceDate")}>
         <DateInput size="sm" value={facts.invoiceDate} onChange={(e) => set({ invoiceDate: e.target.value })} />
       </Field>
-      <Field label={t("dueDate")}>
+      <Field label={t("dueDate")} hint={hint("dueDate")}>
         <DateInput size="sm" value={facts.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
       </Field>
       {text("ocr", { numeric: true })}
@@ -650,7 +661,7 @@ function ExportPanel({ invoice, accounts }: WorkspaceProps) {
     <Card>
       <div className="space-y-4 px-inset py-4">
         <h3 className={LABEL}>{t("exportTitle")}</h3>
-        <FactsForm facts={facts} set={(p) => setFacts((f) => ({ ...f, ...p }))} />
+        <FactsForm facts={facts} set={(p) => setFacts((f) => ({ ...f, ...p }))} prefilled={invoice.prefilled} />
 
         <div className="space-y-2">
           <p className={LABEL}>{t("accounts")}</p>
@@ -721,6 +732,7 @@ function DetailsSection({ invoice, editable }: { invoice: SupplierInvoiceView; e
     [t("ocr"), invoice.ocr],
     [t("bankgiro"), invoice.bankgiro],
     [t("plusgiro"), invoice.plusgiro],
+    [t("yourReference"), invoice.yourReference],
   ];
   const anything = shown.some(([, v]) => v) || invoice.description;
 
@@ -736,7 +748,7 @@ function DetailsSection({ invoice, editable }: { invoice: SupplierInvoiceView; e
       </div>
       {editable && open ? (
         <div className="mt-3 space-y-3">
-          <FactsForm facts={facts} set={(p) => setFacts((f) => ({ ...f, ...p }))} />
+          <FactsForm facts={facts} set={(p) => setFacts((f) => ({ ...f, ...p }))} prefilled={invoice.prefilled} />
           <Button
             size="sm"
             disabled={!dirty}

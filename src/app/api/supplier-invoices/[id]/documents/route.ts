@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, supplierInvoiceDocumentKey } from "@/lib/server/storage";
 import { readDocumentUpload } from "@/lib/server/document-upload";
+import { prefillData, readInvoicePdf } from "@/lib/server/invoice-prefill";
 import { awaitsKontering } from "@/lib/domain/supplier-invoice";
 import { gate } from "@/lib/api/guard";
 import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
@@ -29,6 +30,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const documentId = randomUUID();
   const objectKey = supplierInvoiceDocumentKey(invoice.id, documentId, doc.filename);
+  // The PDF for a mail that came without one fills what the invoice still
+  // lacks, the same as a first upload would have.
+  const prefill = prefillData(invoice, await readInvoicePdf(doc.body, doc.mimeType));
 
   try {
     await putObject(objectKey, doc.body, doc.mimeType);
@@ -50,6 +54,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         },
         select: { id: true, filename: true, mimeType: true },
       });
+      if (Object.keys(prefill).length) {
+        await tx.supplierInvoice.update({ where: { id: invoice.id }, data: prefill });
+      }
       await tx.supplierInvoiceEvent.create({
         data: { invoiceId: invoice.id, type: "DOCUMENT_UPLOADED", actorId: g.actor.id },
       });

@@ -103,6 +103,14 @@ model SupplierInvoice {
   ocr           String?
   bankgiro      String?
   plusgiro      String?
+  /// "Er referens" as printed: a name, or the cost centre code a supplier was
+  /// asked to put there. Read for the automatic assignment as well as shown.
+  yourReference String?
+
+  /// Which of the fields above were read from the PDF's text rather than
+  /// typed, so the page can say so and the treasurer knows what to check.
+  /// A field typed over afterwards is taken off the list.
+  prefilled String[] @default([])
 
   // ── Whose it is ──────────────────────────────────────────────────
   //

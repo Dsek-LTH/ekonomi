@@ -276,6 +276,10 @@ export interface SupplierInvoiceView {
   ocr: string | null;
   bankgiro: string | null;
   plusgiro: string | null;
+  /** "Er referens", as the PDF printed it. */
+  yourReference: string | null;
+  /** Which fields were read from the PDF rather than typed. */
+  prefilled: string[];
   resultUnitId: string | null;
   resultUnitName: string | null;
   receivedByName: string | null;
@@ -344,6 +348,7 @@ async function costCenterSuggestionFor(inv: {
   id: string;
   resultUnitId: string | null;
   supplierName: string | null;
+  yourReference: string | null;
   inboundMail: { note: string | null; subject: string | null; originalFrom: string | null } | null;
 }): Promise<string | null> {
   if (!inv.resultUnitId) return null;
@@ -356,7 +361,10 @@ async function costCenterSuggestionFor(inv: {
   });
   const codes = new Set(centres.map((c) => c.code));
 
-  const text = [inv.inboundMail?.note, inv.inboundMail?.subject].filter(Boolean).join("\n").toUpperCase();
+  const text = [inv.inboundMail?.note, inv.inboundMail?.subject, inv.yourReference]
+    .filter(Boolean)
+    .join("\n")
+    .toUpperCase();
   const named = (text.match(/\b[A-ZÅÄÖ]{2,8}\d{1,4}\b/g) ?? []).find((c) => codes.has(c));
   if (named) return named;
 
@@ -462,6 +470,8 @@ export async function getInvoice(
       ocr: inv.ocr,
       bankgiro: inv.bankgiro,
       plusgiro: inv.plusgiro,
+      yourReference: inv.yourReference,
+      prefilled: inv.prefilled,
       resultUnitId: inv.resultUnitId,
       resultUnitName: inv.resultUnit?.name ?? null,
       receivedByName: inv.receivedBy?.name ?? null,
