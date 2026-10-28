@@ -395,7 +395,7 @@ export default function DeliveryClient({
           fields only, and the total and Spara ride the sheet's sticky footer
           instead, at the bottom of a phone's screen where the thumb is. */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <Card className="w-full shrink-0 lg:sticky lg:top-0 lg:order-2 lg:w-72">
+      <Card className="w-full shrink-0 lg:sticky lg:top-14 lg:order-2 lg:w-72">
         {/* Once for the delivery rather than on every row, because an invoice
             is one date however many products it lists. */}
         <div className="grid gap-3 px-inset py-4 sm:grid-cols-2 lg:grid-cols-1">

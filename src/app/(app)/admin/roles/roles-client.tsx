@@ -34,7 +34,7 @@ import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-da
 import { Combobox, MultiCombobox } from "@/components/ui/combobox";
 import { type Column } from "@/components/ui/data-table";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconPlus, IconShield, IconTrash, IconUsers } from "@/components/ui/icons";
 import { InfoHint } from "@/components/ui/info-hint";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
@@ -103,14 +103,14 @@ export function RolesClient({
   return (
     <PageShell
       title={t("title")}
-      // Two views of the same authority, so the header's own switch, the
-      // way Mina / Alla is elsewhere.
-      collections={{
+      // Two views of the same authority: by who, or by what. A view toggle,
+      // not the scope switch, which only ever says whose (docs/navigation.md).
+      views={{
         label: t("viewLabel"),
         value: view,
         options: [
-          { value: "groups", label: t("view.groups") },
-          { value: "capabilities", label: t("view.capabilities") },
+          { value: "groups", label: t("view.groups"), icon: IconUsers },
+          { value: "capabilities", label: t("view.capabilities"), icon: IconShield },
         ],
         onChange: (v) => setView(v as View),
       }}

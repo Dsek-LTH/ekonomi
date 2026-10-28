@@ -16,7 +16,7 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { startRouteProgress } from "@/components/shell/route-progress";
-import { IconDots, IconLock, IconLockOpen, IconPencil } from "@/components/ui/icons";
+import { IconDots, IconGrid, IconList, IconLock, IconLockOpen, IconPencil } from "@/components/ui/icons";
 import { Tag } from "@/components/ui/status-pill";
 
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
@@ -24,9 +24,8 @@ import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
 import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { useFormat } from "@/lib/ui/use-format";
-import { cn } from "@/lib/ui/utils";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
-import { CHANGES, RAMBUDGET, VARS, adjustmentRows, ccTotals, changeImpactBySheet, resultUnitLabel, resultUnitOf, fmtSigned, groupByResultUnit } from "./budget-helpers";
+import { CHANGES, RAMBUDGET, VARS, adjustmentRows, changeImpactBySheet, resultUnitLabel, resultUnitOf, groupByResultUnit } from "./budget-helpers";
 import { recomputeBudget } from "./recompute";
 import { BudgetDialog } from "./budget-dialog";
 import type { PatchBudget } from "@/lib/api/schemas/budget";
@@ -39,6 +38,8 @@ import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
 import type { Budget, BudgetClip } from "./budget-types";
 import { SearchInput } from "@/components/ui/search-input";
+import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
+import { ViewToggle } from "@/components/ui/view-toggle";
 
 export default function BudgetClient({
   initialBudget,
@@ -260,6 +261,7 @@ export default function BudgetClient({
   // filter() already copied, so sorting in place doesn't touch the budget.
   const filteredCc = budget.costCenters.filter((c) =>
     !q || sheetName(c, t("unnamed")).toLowerCase().includes(q) ||
+    (c.costCenter?.shortName?.toLowerCase().includes(q) ?? false) ||
     (c.costCenter?.code.toLowerCase().includes(q) ?? false))
     .sort((a, b) => {
       const ca = a.costCenter?.code, cb = b.costCenter?.code;
@@ -336,66 +338,27 @@ export default function BudgetClient({
 
   return (
     <PageShell
-      // The year is not shown: it follows the antagen date, which is the
-      // subtitle. The lock chip in purple, not grey: a lock is not an absence of
-      // state, it is the authority chain saying this is adopted and only the
-      // treasurer moves it now.
+      // The name, the lock and the antagen date on one line: what the budget
+      // is. The year is not shown: it follows the antagen date. The lock chip
+      // in purple, not grey: a lock is not an absence of state, it is the
+      // authority chain saying this is adopted and only the treasurer moves it
+      // now. The date is a decision (the möte that passed it), so it is shown
+      // even unset, because "Inte antagen" says the budget is missing one. It
+      // was a subtitle on a row of its own under the name, a whole line of
+      // header for four words.
       title={
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {budget.name}
           {locked && (
             <Tag tone="purple">{tList("locked")}</Tag>
           )}
+          <span className="text-sm font-medium tracking-normal text-muted">{adopted}</span>
         </span>
       }
-      // When the möte adopted it, under the name rather than among the
-      // controls on the right, where it read as one of them.
-      subtitle={adopted}
-      // The budget as a whole, or one sheet of it at a time. Variabler and
-      // Ändringar change the sheets, so they belong to the second.
-      collections={{
-        label: t("view"),
-        value: view,
-        options: [
-          { value: "DETAIL", label: t("detailBudget") },
-          { value: "FRAME", label: t("frameBudget") },
-        ],
-        onChange: (v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget),
-      }}
-      // What acts on the budget whichever view is open, on the title's line:
-      // what it is held against, and the lock.
+      // Only what edits the line it stands on. Everything that steers the
+      // budget is on the toolbar under it.
       aside={
         <>
-          <Combobox
-            size="sm"
-            options={[
-              { value: "", label: t("noComparison") },
-              ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
-            ]}
-            value={compareTarget}
-            onChange={setCompareTarget}
-            placeholder={t("compareWith")}
-            searchPlaceholder={tList("searchPlaceholder")}
-            emptyText={t("nothingToCompare")}
-            aria-label={t("compareWith")}
-            // The rest of the row on a phone, beside the lock and the menu.
-            className="min-w-0 flex-1 md:w-64 md:flex-none"
-          />
-          {canLock && (
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={locking}
-              onClick={() => setLocked(!locked)}
-              // The padlock alone on a phone, where the row is shared with the
-              // comparison picker. The words stay as its name.
-              aria-label={locked ? t("unlock") : t("lock")}
-              title={locked ? t("unlock") : t("lock")}
-            >
-              {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
-              <span className="hidden md:inline">{locked ? t("unlock") : t("lock")}</span>
-            </Button>
-          )}
           {/* Renaming and dating the budget, as an event is renamed and
               moved: behind a menu, in a dialog. They were edited in place,
               and a title that turns into a text box on a click is one that
@@ -426,6 +389,57 @@ export default function BudgetClient({
           onClose={() => setEditing(false)}
         />
       )}
+      {/* The toolbar: which view on the left, with its words, since two grid
+          icons alone did not say which was which; on the right what the
+          budget is held against, and the lock. One row whichever view is
+          open. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <ViewToggle
+          labels
+          aria-label={t("view")}
+          value={view}
+          options={[
+            { value: "DETAIL", label: t("detailBudget"), icon: IconList },
+            { value: "FRAME", label: t("frameBudget"), icon: IconGrid },
+          ]}
+          onChange={(v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget)}
+          className="shrink-0"
+        />
+        {/* The whole row under the switch on a phone, the picker taking what
+            the lock leaves. */}
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <Combobox
+            size="sm"
+            options={[
+              { value: "", label: t("noComparison") },
+              ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+            ]}
+            value={compareTarget}
+            onChange={setCompareTarget}
+            placeholder={t("compareWith")}
+            searchPlaceholder={tList("searchPlaceholder")}
+            emptyText={t("nothingToCompare")}
+            aria-label={t("compareWith")}
+            // The rest of the row on a phone, beside the lock.
+            className="min-w-0 flex-1 md:w-64 md:flex-none"
+          />
+          {canLock && (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={locking}
+              onClick={() => setLocked(!locked)}
+              // The padlock alone on a phone, where the row is shared with the
+              // comparison picker. The words stay as its name.
+              aria-label={locked ? t("unlock") : t("lock")}
+              title={locked ? t("unlock") : t("lock")}
+            >
+              {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
+              <span className="hidden md:inline">{locked ? t("unlock") : t("lock")}</span>
+            </Button>
+          )}
+        </div>
+      </div>
       {/* A formula that does not evaluate is a problem with the budget, not
           a fact about it, so it stays on screen. */}
       {ev.errors.length > 0 && <p className="text-sm text-warning">{tEval(ev.errors[0])}</p>}
@@ -459,37 +473,23 @@ export default function BudgetClient({
           cardClassName="lg:flex lg:min-h-0 lg:flex-col"
           sheetLabel={t("pickCostCenter")}
           // What the collapsed bar says: whichever sheet this pane is showing.
-          // A cost centre brings its result with it, because that is the figure
-          // you came to the sheet for and one the bar can carry for free.
+          // Its name only, like the list: the result is on the sheet's own
+          // summary strip.
           bar={
             selected === VARS ? (
               t("variables")
             ) : selected === CHANGES ? (
               t("changes")
             ) : cc ? (
-              <span className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate">
-                  {cc.costCenter ? (
-                    <>
-                      <span className="font-mono text-xs text-muted">{cc.costCenter.code}</span>{" "}
-                      {cc.costCenter.name}
-                    </>
-                  ) : (
-                    sheetName(cc, t("unnamed"))
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 text-xs tabular-nums",
-                    ccTotals(cc, ev).result > 0
-                      ? "text-success"
-                      : ccTotals(cc, ev).result < 0
-                        ? "text-danger"
-                        : "text-muted",
-                  )}
-                >
-                  {fmtSigned(ccTotals(cc, ev).result)}
-                </span>
+              <span className="block min-w-0 truncate">
+                {cc.costCenter ? (
+                  <>
+                    <span className="font-mono text-xs text-muted">{cc.costCenter.code}</span>{" "}
+                    {cc.costCenter.name}
+                  </>
+                ) : (
+                  sheetName(cc, t("unnamed"))
+                )}
               </span>
             ) : (
               t("pickCostCenter")
@@ -526,8 +526,7 @@ export default function BudgetClient({
           </div>
           {/* The scrollbar floats over the rows instead of taking a column from
               them, the same as the income queue and for the same reason: these
-              rows are a cost centre's name against its result, in a 16rem
-              panel. See components/ui/overlay-scroll.tsx. */}
+              rows are a cost centre's code and name, in a 16rem panel. See components/ui/overlay-scroll.tsx. */}
           {/* A budget runs to scores of cost centres, so the list scrolls
               inside the panel rather than making it as long as it likes. Below
               lg, where the panel opens as a sheet, it is capped; from lg it
@@ -541,26 +540,26 @@ export default function BudgetClient({
               <div key={g.resultUnit}>
                 <SidebarGroupLabel>{resultUnitLabel(g.resultUnit, tGroup)}</SidebarGroupLabel>
                 <ul>
-                  {g.items.map((c) => {
-                    const { result } = ccTotals(c, ev);
-                    return (
-                      <li key={c.id}>
-                        <SidebarItem
-                          active={selected === c.id}
-                          onClick={() => setSelected(c.id)}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span className="min-w-0 truncate">
-                            {c.costCenter
-                              ? <><span className="font-mono text-xs text-muted">{c.costCenter.code}</span>{" "}{c.costCenter.name}</>
-                              : sheetName(c, t("unnamed"))}
-                          </span>
-                          <span className={cn("shrink-0 text-xs tabular-nums",
-                            result > 0 ? "text-success" : result < 0 ? "text-danger" : "text-muted")}>{fmtSigned(result)}</span>
-                        </SidebarItem>
-                      </li>
-                    );
-                  })}
+                  {/* The code and the name only. Each row used to end in its
+                      result, which is the sheet's to say: it is on the summary
+                      strip the moment the sheet is open, and in the rambudget
+                      for all of them at once. */}
+                  {g.items.map((c) => (
+                    <li key={c.id}>
+                      {/* Under its result unit's heading, so the short name
+                          where one is set, with the full name on hover. */}
+                      <SidebarItem
+                        active={selected === c.id}
+                        onClick={() => setSelected(c.id)}
+                        title={c.costCenter?.shortName ? c.costCenter.name : undefined}
+                        className="truncate"
+                      >
+                        {c.costCenter
+                          ? <><span className="font-mono text-xs text-muted">{c.costCenter.code}</span>{" "}{nameUnderUnit(c.costCenter)}</>
+                          : sheetName(c, t("unnamed"))}
+                      </SidebarItem>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ))}

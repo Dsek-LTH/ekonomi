@@ -1,11 +1,5 @@
 {
   "title": "Bokföring",
-  "tab": {
-    "all": "Alla",
-    "toBook": "Att kontera",
-    "toExport": "Att bokföra",
-    "exported": "Bokfört"
-  },
   "book": "Kontera",
   "connectFirst": "Anslut Fortnox först",
   "loginFirst": "Logga in mot Fortnox för att bokföra",

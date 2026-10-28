@@ -4,10 +4,8 @@
 // the invoice is waiting for from them, first and on its own, and everything
 // else under it.
 //
-// Used in both shapes of the page: the treasurer's inbox, where it is the
-// right-hand pane beside the list, and the resultatansvarig's one-at-a-time
-// view, where it is the whole page. The PDF is not in here. It goes in the
-// app's document panel beside the page (ReceiptPanelSource), the way an
+// The body of an invoice's own page (./[id]). The PDF is not in here. It goes
+// in the app's document panel beside the page (ReceiptPanelSource), the way an
 // utlägg's receipt does.
 //
 // What each stage asks:
@@ -42,7 +40,7 @@ import type {
 } from "@/lib/api/schemas/supplier-invoice";
 import type { AccountRecord, CostCenter, SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { AttestReach, SupplierInvoiceView } from "@/lib/data/supplier-invoices";
-import { DueLabel, InvoiceStatusPill, useInvoiceTitle } from "./invoice-bits";
+import { DueLabel, InvoiceStatusPill } from "./invoice-bits";
 
 /** The small capitals every label on the card is set in, as on the utlägg page. */
 const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted";
@@ -62,22 +60,18 @@ export interface WorkspaceProps {
   accounts: AccountRecord[];
   resultUnits: { id: string; name: string }[];
   /**
-   * Called after an action that finishes the viewer's part, with the status it
-   * left the invoice in. The inbox moves on to the next invoice; without it the
-   * page simply refreshes in place.
+   * Called after an action, with the status it left the invoice in, or
+   * RETURNED when it went back to the Inkorg and there is no invoice left.
+   * Without it the page refreshes in place, which is wrong only for that.
    */
-  onDone?: (status: SupplierInvoiceStatus | "DELETED") => void;
-  /** Above the title: the one-at-a-time view's "1 av 3". */
-  header?: React.ReactNode;
+  onDone?: (status: SupplierInvoiceStatus | "RETURNED") => void;
 }
 
 export function InvoiceWorkspace(props: WorkspaceProps) {
-  const { invoice, can, onDone, header } = props;
+  const { invoice, can, onDone } = props;
   const t = useTranslations("invoices.workspace");
   const tDetail = useTranslations("invoices.detail");
-  const title = useInvoiceTitle();
   const docs = useMutation();
-  const confirm = useConfirm();
   const url = `/api/supplier-invoices/${invoice.id}`;
 
   async function uploadDocument(file: File) {
@@ -86,14 +80,13 @@ export function InvoiceWorkspace(props: WorkspaceProps) {
     await docs.mutate(`${url}/documents`, { body: form, key: "upload" });
   }
 
-  async function removeDocument(id: string, filename: string) {
-    const ok = await confirm({
-      title: tDetail("removeDocument"),
-      message: tDetail("removeDocumentConfirm", { filename }),
-      confirmLabel: tDetail("removeDocument"),
-      tone: "danger",
+  // Off the invoice and back to the Inkorg, never away: a document is only
+  // deleted from there. So it needs no confirming, since nothing is lost.
+  async function removeDocument(id: string) {
+    await docs.mutate(`/api/supplier-invoice-documents/${id}/detach`, {
+      key: id,
+      success: tDetail("documentToInbox"),
     });
-    if (ok) await docs.mutate(`/api/supplier-invoice-documents/${id}`, { method: "DELETE", key: id });
   }
 
   return (
@@ -118,12 +111,9 @@ export function InvoiceWorkspace(props: WorkspaceProps) {
         emptyDescription={tDetail("noDocument")}
       />
 
-      {header}
-
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">{title(invoice)}</h2>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <DueLabel dueDate={invoice.dueDate} />
             {invoice.resultUnitName && <span className="text-muted">{invoice.resultUnitName}</span>}
             {invoice.invoiceNumber && (
@@ -174,7 +164,7 @@ export function InvoiceWorkspace(props: WorkspaceProps) {
                       type="button"
                       aria-label={tDetail("removeDocument")}
                       disabled={docs.busy}
-                      onClick={() => void removeDocument(d.id, d.filename)}
+                      onClick={() => void removeDocument(d.id)}
                       className="shrink-0 rounded-control p-1 text-muted hover:bg-hover hover:text-danger disabled:opacity-40"
                     >
                       <IconX className="size-4" />
@@ -227,77 +217,39 @@ function useTransition(invoiceId: string, onDone?: WorkspaceProps["onDone"]) {
   return { ...m, run };
 }
 
+/**
+ * Sending the invoice back to the Inkorg, with the reason asked for first. It
+ * stops being an invoice (see the return route), so the page it was on has
+ * nothing left to show, which onDone answers.
+ */
+function useReturnToInbox(invoiceId: string, onDone?: WorkspaceProps["onDone"]) {
+  const tAction = useTranslations("invoices.action");
+  const confirm = useConfirm();
+  const m = useMutation();
+  async function run(title: string) {
+    const ok = await confirm({
+      title,
+      message: tAction("confirm.return"),
+      confirmLabel: title,
+      comment: { label: tAction("returnLabel"), required: true },
+    });
+    if (!ok) return;
+    const res = await m.mutate(`/api/supplier-invoices/${invoiceId}/return`, {
+      body: { reason: ok.comment },
+      success: tAction("done.return"),
+      refresh: !onDone,
+    });
+    if (res && onDone) onDone("RETURNED");
+  }
+  return { run, busy: m.busy };
+}
+
 function StagePanel(props: WorkspaceProps) {
   const { invoice, can } = props;
-  if (invoice.status === "INBOX" && can.canAssign) return <AssignPanel {...props} />;
   if (can.canKontera) return <KonteraPanel {...props} />;
   if (can.canAttest) return <SharePanel {...props} />;
   if (invoice.status === "APPROVED" && can.canEditDetails) return <ExportPanel {...props} />;
   return <WaitingPanel invoice={invoice} />;
-}
-
-/** The inkorg: whose is it. */
-function AssignPanel({ invoice, can, resultUnits, onDone }: WorkspaceProps) {
-  const t = useTranslations("invoices.workspace");
-  const tAction = useTranslations("invoices.action");
-  const tr = useTransition(invoice.id, onDone);
-  const del = useMutation();
-  const confirm = useConfirm();
-  const [unit, setUnit] = useState(invoice.suggestedUnit?.id ?? "");
-
-  async function remove() {
-    const ok = await confirm({
-      title: tAction("delete"),
-      message: tAction("confirm.delete"),
-      confirmLabel: tAction("delete"),
-      tone: "danger",
-    });
-    if (!ok) return;
-    const res = await del.mutate(`/api/supplier-invoices/${invoice.id}`, {
-      method: "DELETE",
-      success: tAction("done.delete"),
-      refresh: !onDone,
-    });
-    if (res && onDone) onDone("DELETED");
-  }
-
-  return (
-    <Card>
-      <div className="space-y-3 px-inset py-4">
-        <h3 className={LABEL}>{t("assignTitle")}</h3>
-        {invoice.suggestedUnit && (
-          <p className="text-sm text-muted">
-            {t("suggestion", { sender: invoice.mail?.originalFrom ?? "", unit: invoice.suggestedUnit.name })}
-          </p>
-        )}
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-56 flex-1">
-            <Combobox
-              options={resultUnits.map((u) => ({ value: u.id, label: u.name }))}
-              value={unit}
-              onChange={setUnit}
-              placeholder={t("pickUnit")}
-              searchPlaceholder={t("searchUnit")}
-              aria-label={t("assignTitle")}
-            />
-          </div>
-          <Button
-            disabled={!unit || tr.busy}
-            loading={tr.pending === "assign"}
-            onClick={() => void tr.run({ action: "assign", resultUnitId: unit })}
-          >
-            {t("assign")}
-          </Button>
-          {can.canDelete && (
-            <Button variant="dangerOutline" loading={del.busy} onClick={() => void remove()}>
-              {tAction("delete")}
-            </Button>
-          )}
-        </div>
-        <p className="text-xs text-muted">{t("assignHint")}</p>
-      </div>
-    </Card>
-  );
 }
 
 interface Row {
@@ -313,7 +265,6 @@ function KonteraPanel({ invoice, can, reach, costCenters, onDone }: WorkspacePro
   const tAction = useTranslations("invoices.action");
   const tErr = useTranslations("errors");
   const tr = useTransition(invoice.id, onDone);
-  const confirm = useConfirm();
 
   const initial: Row[] =
     invoice.allocations.length > 0
@@ -358,15 +309,10 @@ function KonteraPanel({ invoice, can, reach, costCenters, onDone }: WorkspacePro
   const update = (id: string, patch: Partial<Row>) =>
     setRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  async function decline() {
-    const ok = await confirm({
-      title: tAction("decline"),
-      message: tAction("confirm.decline"),
-      confirmLabel: tAction("decline"),
-      comment: { label: tAction("declineLabel"), required: true },
-    });
-    if (ok) await tr.run({ action: "decline", comment: ok.comment });
-  }
+  // The unit's "Inte vår" and triage's "Tillbaka till inkorgen" are the same
+  // act, named for who does it. Triage is whoever may also move it.
+  const back = useReturnToInbox(invoice.id, onDone);
+  const backLabel = can.canMove ? tAction("return") : tAction("decline");
 
   const sum = rows.reduce((s, r) => s + parseSEK(r.amount), 0);
 
@@ -456,9 +402,9 @@ function KonteraPanel({ invoice, can, reach, costCenters, onDone }: WorkspacePro
             {allMine && <IconCheck className="size-4" />}
             {allMine ? tAction("attest") : tAction("sendForAttest")}
           </Button>
-          {can.canDecline && (
-            <Button variant="secondary" disabled={tr.busy} onClick={() => void decline()}>
-              {tAction("decline")}
+          {can.canReturnToInbox && (
+            <Button variant="secondary" disabled={tr.busy || back.busy} onClick={() => void back.run(backLabel)}>
+              {backLabel}
             </Button>
           )}
           {blocker && <span className="text-xs text-muted">{tErr(blocker)}</span>}
@@ -524,15 +470,13 @@ function WaitingPanel({ invoice }: { invoice: SupplierInvoiceView }) {
     ...new Set(invoice.allocations.filter((a) => !a.approvedByName).map((a) => a.resultUnit ?? a.costCenterCode)),
   ];
   const text =
-    invoice.status === "INBOX"
-      ? t("waiting.inbox")
-      : invoice.status === "ASSIGNED" || invoice.status === "CHANGES_REQUESTED"
-        ? t("waiting.unit", { unit: invoice.resultUnitName ?? "-" })
-        : invoice.status === "PENDING_APPROVAL"
-          ? t("waiting.share", { units: waitingOn.join(", ") })
-          : invoice.status === "APPROVED"
-            ? t("waiting.export")
-            : t("waiting.exported", { number: invoice.fortnoxGivenNumber ?? "-" });
+    invoice.status === "ASSIGNED" || invoice.status === "CHANGES_REQUESTED"
+      ? t("waiting.unit", { unit: invoice.resultUnitName ?? "-" })
+      : invoice.status === "PENDING_APPROVAL"
+        ? t("waiting.share", { units: waitingOn.join(", ") })
+        : invoice.status === "APPROVED"
+          ? t("waiting.export")
+          : t("waiting.exported", { number: invoice.fortnoxGivenNumber ?? "-" });
   return (
     <div className="rounded-control bg-surface px-4 py-3 text-sm text-muted">{text}</div>
   );
@@ -1016,8 +960,9 @@ function RowsSection({ invoice }: { invoice: SupplierInvoiceView }) {
   );
 }
 
-/** The actions that are not the stage's own: moving it, taking a signature
- *  back, sending an attested one back, deleting it. Quiet, at the card's foot. */
+/** The actions that are not the stage's own: moving it to another unit,
+ *  taking a signature back, sending an attested one back. Quiet, at the
+ *  card's foot. */
 function SecondaryActions({
   invoice,
   can,
@@ -1032,12 +977,11 @@ function SecondaryActions({
   const t = useTranslations("invoices.workspace");
   const tAction = useTranslations("invoices.action");
   const tr = useTransition(invoice.id, onDone);
-  const del = useMutation();
   const confirm = useConfirm();
   const [moving, setMoving] = useState(false);
 
-  const assigned = invoice.status !== "INBOX";
-  const show = (can.canAssign && assigned) || can.canWithdrawAttest || (can.canRequestChanges && invoice.status === "APPROVED") || (can.canDelete && assigned);
+  const show =
+    can.canMove || can.canWithdrawAttest || (can.canRequestChanges && invoice.status === "APPROVED");
   if (!show) return null;
 
   async function explained(action: "request_changes" | "withdraw_attest") {
@@ -1050,34 +994,13 @@ function SecondaryActions({
     if (ok) await tr.run({ action, comment: ok.comment || undefined });
   }
 
-  async function remove() {
-    const ok = await confirm({
-      title: tAction("delete"),
-      message: tAction("confirm.delete"),
-      confirmLabel: tAction("delete"),
-      tone: "danger",
-    });
-    if (!ok) return;
-    const res = await del.mutate(`/api/supplier-invoices/${invoice.id}`, {
-      method: "DELETE",
-      success: tAction("done.delete"),
-      refresh: !onDone,
-    });
-    if (res && onDone) onDone("DELETED");
-  }
-
   return (
     <section className="space-y-3 border-t border-border px-inset py-3">
       <div className="flex flex-wrap gap-2">
-        {can.canAssign && assigned && (
-          <>
-            <Button size="sm" variant="secondary" onClick={() => setMoving(!moving)}>
-              {t("move")}
-            </Button>
-            <Button size="sm" variant="secondary" disabled={tr.busy} onClick={() => void tr.run({ action: "assign", resultUnitId: null })}>
-              {t("unassign")}
-            </Button>
-          </>
+        {can.canMove && (
+          <Button size="sm" variant="secondary" onClick={() => setMoving(!moving)}>
+            {t("move")}
+          </Button>
         )}
         {can.canWithdrawAttest && (
           <Button size="sm" variant="secondary" disabled={tr.busy} onClick={() => void explained("withdraw_attest")}>
@@ -1087,11 +1010,6 @@ function SecondaryActions({
         {can.canRequestChanges && invoice.status === "APPROVED" && (
           <Button size="sm" variant="secondary" disabled={tr.busy} onClick={() => void explained("request_changes")}>
             {tAction("request_changes")}
-          </Button>
-        )}
-        {can.canDelete && assigned && (
-          <Button size="sm" variant="dangerOutline" loading={del.busy} onClick={() => void remove()}>
-            {tAction("delete")}
           </Button>
         )}
       </div>
@@ -1118,7 +1036,6 @@ const EVENT_TONE: Partial<Record<SupplierInvoiceView["events"][number]["type"], 
   APPROVED: "text-success",
   COST_CENTER_APPROVED: "text-success",
   CHANGES_REQUESTED: "text-danger",
-  DECLINED: "text-danger",
 };
 
 function Timeline({ invoice }: { invoice: SupplierInvoiceView }) {

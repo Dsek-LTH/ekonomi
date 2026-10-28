@@ -1,0 +1,28 @@
+Make fiscal year selector smaller
+Bug with fiscal year and the inkorg upload. That should not be fiscal year dependant.
+With fiscal years, make sure people can only create stuff in their selected fiscal year.
+Improve empty states, ie not utlägg in the list or no faktura exists. perhaps with a large icon and helpful text to check scope settings?
+Go over light mode so its easier on the eyes and increase contrast
+Review action buttons for utlägg. Currently the granska button shows for all page tabs, even though its only relevant for att kontera
+Get intäkter up an running
+Finish implemntation of bokslut page:
+* Revisor should be able to granska all utlägg
+* Perhaps improve report feature to let revisor make reports themselves?
+* Finish the checklists
+* Create a guide on how to bokslut
+Create cron job that uses fortnox to system token to pull data daily from fortnox.
+Currently page is very inconsistent in regards to editing titles, text etc. Sometimes you do it inplace, sometimes with a modal, sometimes with an icon, sometimes save and cancel buttons dissappear. Try to unify
+Go over stale and bad comments. Many comments explain why a previous feature was removed or explains unnesseccary reasoning behind a decision.
+Go over components and code to see if anything is unused. Components used by only a few places, 1-2 can be done inline instead. Basically go over the codebase to idenity bloat and dumb code.
+Work through an optimal avtal / hyrnings flow. This whole system is wack currently.
+Ensure email reminders work for now levfakt
+Try to make the design of the webpage be more "proffesional" and "serious"
+Find a better design for datatables filter tab selector
+Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
+Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
+View kvitto button is ugly
+Revise milersättnings view so it reflects design in utlägg view.
+Fix deadspace in header at utfall & rapporter. 
+Make utfall & rapporter intuitive to use. Perhaps a guide?
+Add fun stats such as total spent, how many utlägg done etc
+Add a score system based on how long it takes for people to upload their receipts and other metrics

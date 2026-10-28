@@ -10,9 +10,9 @@ import { useRole } from "@/components/shell/role-context";
 import { canRemindAboutExpense } from "@/lib/domain/reminders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconCheck } from "@/components/ui/icons";
-import type { CollectionOption } from "@/components/ui/collection-switch";
-import { DataTable, type Column, type SelectFilter } from "@/components/ui/data-table";
-import { useUrlTableControls } from "@/lib/data/use-list-query";
+import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
+import { ButtonLink } from "@/components/ui/button";
+import { useScopeSwitch, useUrlTableControls } from "@/lib/data/use-list-query";
 import {
   expenseAmountColumn,
   expenseDateColumn,
@@ -22,33 +22,44 @@ import {
   expenseSubmitterColumn,
   expenseTitleColumn,
 } from "@/components/columns/expense-columns";
-import { EXPENSE_STATUSES } from "@/lib/domain/status";
 import type { RowPage } from "@/lib/data/list-query";
 
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
+import { useBookingColumn } from "./booking-column";
+import { EXPENSE_TABS, expenseDefaultTab, type ExpenseScope } from "./scope";
 
 
 export function ExpensesClient({
   page,
-  canToggleScope,
-  showOwnOnly,
+  scope,
+  scopes,
+  reviewCount,
   canRemind,
 }: {
   page: RowPage<Expense>;
-  canToggleScope: boolean;
-  showOwnOnly: boolean;
+  /** Whose utlägg these are, settled by the server. See page.tsx. */
+  scope: ExpenseScope;
+  /** The scopes this reader has, in the order the track draws them. */
+  scopes: ExpenseScope[];
+  /** Konterade utlägg this viewer may bokföra. See getReviewQueue. */
+  reviewCount: number;
   /** Holds SEND_REMINDERS, so the rows can be ticked and reminded about. */
   canRemind: boolean;
 }) {
   const t = useTranslations("expenses");
+  const tBookkeeping = useTranslations("bookkeeping");
   const tPayment = useTranslations("common.payment");
-  const tStatus = useTranslations("common.status");
   const { date } = useFormat();
   // The list's state lives in the URL, because the query behind it runs on the
   // server. See useUrlTableControls. `page.rows` is already the page.
-  const controls = useUrlTableControls(page.total);
+  const defaultTab = expenseDefaultTab(scope);
+  const controls = useUrlTableControls(page.total, defaultTab);
+  const setScope = useScopeSwitch(controls.tab, (s) => expenseDefaultTab(s as ExpenseScope));
   const { user } = useRole();
+  const showOwnOnly = scope === "mine";
+  // What bookkeeping adds on the section's reading. See booking-column.tsx.
+  const booking = useBookingColumn(scope === "all");
 
   // Bulk reminders: tick the utlägg, then "Påminn". See useReminderPicks.
   const picks = useReminderPicks({
@@ -60,34 +71,27 @@ export function ExpensesClient({
     rowLabel: (e) => e.reference ?? e.title,
   });
 
-  // `t` is stable per locale, so these are built once rather than per render,
-  // a fresh `columns` array would also defeat DataTable's memo.
-  const SCOPE_OPTS: CollectionOption[] = useMemo(() => [
-    { value: "MINE", label: t("scope.mine") },
-    { value: "ALL", label: t("scope.all") },
-  ], [t]);
-
-  // Replaces the old Pågående/Klara/Alla tabs. Those were one coarse cut of a
-  // list whose whole point is where in the chain an utlägg has got to. "klara"
-  // covered attesterat, bokfört and exporterat alike, and there was no way to
-  // ask for one of them. Every status is offered here instead, several at a
-  // time; picking none is the old "Alla".
+  // Stage is a tab, the same six on every scope, so a stage is where you left
+  // it when you switch whose list you are reading. They replace a dropdown of
+  // every status: that answered "which status" and nothing else, and stage is
+  // a tab on every other list. The exact status is still in its column.
   //
   // No predicates: these are names the server matches on (STATUS_TAB in
   // lib/data/expenses.ts), so the rows arrive already narrowed.
-  const STATUS_FILTER: SelectFilter = useMemo(() => ({
-    label: t("statusFilter.all"),
-    options: EXPENSE_STATUSES.map((s) => ({ value: s, label: tStatus(s) })),
-  }), [t, tStatus]);
+  const tabs: TabFilter = useMemo(
+    () => EXPENSE_TABS.map((value) => ({ value, label: t(`tab.${value}`) })),
+    [t],
+  );
 
   // "Nothing here at all" and "nothing matching what you asked for" are
   // different things and read differently. With the filtering done in the
   // database the row count alone can no longer tell them apart, so the question
   // is asked of the controls: an empty list nobody has narrowed is the first.
-  // `view` is deliberately not in this. Showing your own and having none is
-  // still an empty list, not a fruitless search.
+  // The scope is deliberately not in this. Showing your own and having none is
+  // still an empty list, not a fruitless search. Only Mina draws it at all:
+  // the other two are somebody else's work, and an empty one is just done.
   const narrowed = Boolean(
-    controls.query || controls.picks.length || controls.dateFrom || controls.dateTo,
+    controls.query || controls.dateFrom || controls.dateTo || controls.tab !== "all",
   );
 
   const columns: Column<Expense>[] = useMemo(() => [
@@ -148,7 +152,8 @@ export function ExpensesClient({
         ),
     },
     expenseAmountColumn(t("col.amount")),
-  ], [t, tPayment, showOwnOnly, date, picks.column]);
+    ...(booking.column ? [booking.column] : []),
+  ], [t, tPayment, showOwnOnly, date, picks.column, booking.column]);
 
   return (
     <PageShell
@@ -163,17 +168,17 @@ export function ExpensesClient({
       // costing more than it said.
 
       collections={
-        canToggleScope
+        scopes.length > 1
           ? {
               label: t("scopeLabel"),
-              value: showOwnOnly ? "MINE" : "ALL",
-              options: SCOPE_OPTS,
-              onChange: (v) => controls.setView(v),
+              value: scope,
+              options: scopes.map((s) => ({ value: s, label: t(`scope.${s}`) })),
+              onChange: setScope,
             }
           : undefined
       }
     >
-      {page.total === 0 && !narrowed ? (
+      {showOwnOnly && page.total === 0 && !narrowed ? (
         <EmptyState
           title={t("emptyTitle")}
           description={t("emptyDescription")}
@@ -187,12 +192,17 @@ export function ExpensesClient({
             columns={columns}
             rows={page.rows}
             controls={controls}
-            filter={STATUS_FILTER}
+            tabs={tabs}
             // On the list's own toolbar rather than in the page header: it adds
             // a row to what is below it, so that is where it lives.
             action={
               <>
                 {picks.button}
+                {reviewCount > 0 && (
+                  <ButtonLink href="/expenses/review" variant="secondary">
+                    {tBookkeeping("review.start", { count: reviewCount })}
+                  </ButtonLink>
+                )}
                 {/* Filled: making an utlägg is the main thing this page is for,
                     so it is drawn as the page's primary action even on a bar it
                     shares with the search and the status filter. The empty
@@ -210,6 +220,7 @@ export function ExpensesClient({
       )}
 
       {picks.dialog}
+      {booking.dialog}
     </PageShell>
   );
 }

@@ -7,11 +7,17 @@
   "noMatch": "No expenses match the filter.",
   "emptyTitle": "No expenses here",
   "emptyDescription": "Create your first expense by uploading a receipt.",
-  "statusFilter": {
-    "all": "All statuses"
-  },
   "scope": {
     "mine": "Mine",
+    "unit": "My result unit",
+    "all": "All"
+  },
+  "tab": {
+    "draft": "Drafts",
+    "attest": "To attest",
+    "book": "To book",
+    "export": "To export",
+    "done": "Exported",
     "all": "All"
   },
   "col": {

@@ -3,14 +3,19 @@
   "upload": "Lägg in faktura",
   "unnamed": "Faktura",
   "empty": "Inga leverantörsfakturor",
-  "emptyTriage": "Fakturor som mejlas in hamnar här. Du kan också lägga in en PDF för hand.",
-  "emptyDescription": "Här hamnar leverantörsfakturor som din enhet ska attestera.",
+  "emptyDescription": "Leverantörsfakturor hamnar här när de har getts till en resultatenhet från inkorgen.",
   "searchPlaceholder": "Sök leverantör, fakturanummer eller enhet",
   "noMatch": "Inga fakturor matchar.",
+  "scopeLabel": "Omfattning",
+  "scope": {
+    "unit": "Min resultatenhet",
+    "all": "Alla"
+  },
   "tab": {
-    "all": "Alla",
-    "open": "Pågående",
-    "exported": "I Fortnox"
+    "attest": "Att attestera",
+    "book": "Att bokföra",
+    "exported": "I Fortnox",
+    "all": "Alla"
   },
   "col": {
     "supplier": "Leverantör",
@@ -20,32 +25,6 @@
     "dueDate": "Förfaller",
     "status": "Status",
     "amount": "Belopp"
-  },
-  "archive": {
-    "link": "Arkiv",
-    "title": "Arkiv",
-    "toInbox": "Till inkorgen"
-  },
-  "inbox": {
-    "emptyTitle": "Inget att göra",
-    "emptyDescription": "Det finns inga leverantörsfakturor som väntar.",
-    "backToList": "Till listan",
-    "nothingOpen": "Välj en faktura i listan.",
-    "listLabel": "Leverantörsfakturor",
-    "via": "via {name}",
-    "section": {
-      "sort": "Att sortera",
-      "attest": "Att attestera",
-      "export": "Att exportera",
-      "elsewhere": "Hos enheterna"
-    }
-  },
-  "focus": {
-    "emptyTitle": "Inget väntar på dig",
-    "emptyDescription": "Du har inga leverantörsfakturor att attestera just nu.",
-    "position": "{n} av {total}",
-    "previous": "Föregående",
-    "next": "Nästa"
   },
   "due": {
     "none": "Inget förfallodatum",
@@ -72,8 +51,7 @@
     "save": "Spara",
     "saved": "Sparat",
     "documents": "Dokument",
-    "removeDocument": "Ta bort dokument",
-    "removeDocumentConfirm": "{filename} tas bort från fakturan.",
+    "removeDocument": "Till inkorgen",
     "noDocumentTitle": "Faktura",
     "noDocument": "Ingen PDF är bifogad än.",
     "upload": {
@@ -83,13 +61,13 @@
       "add": "Lägg till dokument"
     },
     "history": "Historik",
-    "returnedTitle": "{name} vill att något ändras:"
+    "returnedTitle": "{name} vill att något ändras:",
+    "documentToInbox": "Dokumentet är tillbaka i inkorgen",
+    "missingTitle": "Fakturan finns inte",
+    "missingDescription": "Den kan ha tagits bort, eller så har du inte tillgång till den.",
+    "missingAction": "Till fakturor"
   },
   "workspace": {
-    "assignTitle": "Vems är fakturan?",
-    "assign": "Ge till enheten",
-    "assignHint": "Resultatansvarig för enheten får ett mejl och attesterar fakturan.",
-    "suggestion": "Förra fakturan från {sender} gick till {unit}.",
     "pickUnit": "Välj resultatenhet",
     "searchUnit": "Sök resultatenhet",
     "konteraTitle": "Vart ska kostnaden?",
@@ -117,9 +95,7 @@
     "noDocumentReadOnly": "Fakturan har ingen PDF.",
     "move": "Byt enhet",
     "moveTo": "Ge till en annan enhet",
-    "unassign": "Tillbaka till inkorgen",
     "waiting": {
-      "inbox": "Fakturan ligger i inkorgen och väntar på att sorteras.",
       "unit": "Väntar på att {unit} attesterar.",
       "share": "Väntar på attest från {units}.",
       "export": "Attesterad. Väntar på att exporteras till Fortnox.",
@@ -148,26 +124,24 @@
     "attest": "Attestera",
     "sendForAttest": "Skicka på attest",
     "decline": "Inte vår",
-    "declineLabel": "Vems är den, eller vad är fel?",
     "request_changes": "Begär ändring",
     "withdraw_attest": "Ångra attest",
-    "delete": "Ta bort",
     "commentLabel": "Kommentar",
     "confirm": {
-      "decline": "Fakturan går tillbaka till inkorgen, så att den kan ges till rätt enhet.",
       "request_changes": "Fakturan går tillbaka till resultatenheten, och alla attester på den tas bort.",
       "withdraw_attest": "Din attest tas bort och fakturan går tillbaka till att vänta på attest.",
-      "delete": "Fakturan och dess PDF tas bort helt. Det går inte att ångra."
+      "return": "Fakturan tas bort och dess dokument går tillbaka till inkorgen, med ditt svar som förklaring."
     },
     "done": {
       "assign": "Fakturan har tilldelats",
       "attest": "Attesterat",
-      "decline": "Fakturan är tillbaka i inkorgen",
       "withdraw_attest": "Attesten är borttagen",
       "request_changes": "Fakturan är skickad tillbaka",
-      "delete": "Fakturan är borttagen"
+      "return": "Dokumenten är tillbaka i inkorgen"
     },
-    "export": "Exportera till Fortnox"
+    "export": "Exportera till Fortnox",
+    "return": "Tillbaka till inkorgen",
+    "returnLabel": "Varför?"
   },
   "kontering": {
     "title": "Kontering",
@@ -187,17 +161,16 @@
     "reason": {
       "noSender": "ingen avsändare",
       "foreignDomain": "inte från dsek.se",
-      "notAuthenticated": "avsändaren kunde inte verifieras"
+      "notAuthenticated": "avsändaren kunde inte verifieras",
+      "noPdf": "ingen PDF bifogad"
     }
   },
   "event": {
     "RECEIVED": "Inkommen",
     "EDITED": "Ändrad",
     "DOCUMENT_UPLOADED": "Dokument tillagt",
-    "DOCUMENT_REMOVED": "Dokument borttaget",
+    "DOCUMENT_REMOVED": "Dokument tillbaka i inkorgen",
     "ASSIGNED": "Given till {unit}",
-    "UNASSIGNED": "Tillbaka i inkorgen",
-    "DECLINED": "Inte vår, tillbaka i inkorgen",
     "COST_CENTER_APPROVED": "Attesterad",
     "ATTEST_WITHDRAWN": "Attest ångrad",
     "CHANGES_REQUESTED": "Ändring begärd",
@@ -208,6 +181,33 @@
       "forwarder": "Automatiskt: avsändaren är resultatansvarig för {match}"
     },
     "EXPORTED": "Exporterad till Fortnox",
-    "EXPORT_RELEASED": "Osäker export släppt"
+    "EXPORT_RELEASED": "Osäker export släppt",
+    "DOCUMENT_ATTACHED": "Dokument tillagt från inkorgen"
+  },
+  "inkorg": {
+    "title": "Inkorg",
+    "upload": "Lägg till dokument",
+    "uploaded": "{name} ligger i inkorgen",
+    "emptyTitle": "Inkorgen är tom",
+    "emptyDescription": "Fakturor som mejlas in hamnar här, och dokument som tas bort från en faktura. Du kan också lägga till PDF:er själv.",
+    "uploadedByUnknown": "Okänd",
+    "createTitle": "Gör till en faktura",
+    "createUnit": "Skicka till",
+    "createUnitPlaceholder": "Skicka till…",
+    "searchUnit": "Sök resultatenhet",
+    "create": "Skapa faktura",
+    "delete": "Ta bort",
+    "deleteConfirm": "{name} tas bort helt. Det går inte att ångra.",
+    "deleted": "Dokumentet är borttaget",
+    "col": {
+      "document": "Dokument",
+      "from": "Från",
+      "note": "Kommentar",
+      "received": "Inkom"
+    },
+    "searchPlaceholder": "Sök ämne, avsändare eller kommentar",
+    "noMatch": "Inga dokument matchar.",
+    "created": "Fakturan är skapad och skickad",
+    "returned": "Tillbaka från {unit}: {reason}"
   }
 }

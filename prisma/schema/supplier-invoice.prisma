@@ -16,19 +16,18 @@
 
 /// Where an invoice is. The path through it is
 ///
-///   INBOX → ASSIGNED → APPROVED → EXPORTED
+///   ASSIGNED → APPROVED → EXPORTED
+///
+/// Every invoice is born belonging to a result unit. Anything nobody has yet
+/// said is whose is not an invoice at all but a document in the Inkorg (see
+/// SupplierInvoiceDocument), and an invoice sent back there stops being one:
+/// its documents return to the Inkorg and the invoice goes.
 ///
 /// The resultatansvarig konterar and attests in one step: picking the cost
 /// centre and pressing Attestera is both. PENDING_APPROVAL is only for an
 /// invoice split with another unit, waiting for that unit's signature, and
 /// CHANGES_REQUESTED is the way back with a comment.
-///
-/// Something that was never an invoice to pay is deleted from the inkorg, not
-/// kept under a status of its own. See the DELETE handler in
-/// api/supplier-invoices/[id].
 enum SupplierInvoiceStatus {
-  /// Arrived and nobody has said whose it is yet. Only triage sees it here.
-  INBOX
   /// Given to a result unit, whose resultatansvarig attests it.
   ASSIGNED
   /// Attested for some of its rows, waiting for another unit to sign the rest.
@@ -58,11 +57,6 @@ enum SupplierInvoiceEventType {
   /// Given to a result unit, or moved from one to another. `diff` is
   /// `{ from: string | null, to: string }`, the unit names as they were then.
   ASSIGNED
-  /// Taken back to the inkorg by triage.
-  UNASSIGNED
-  /// Sent back to the inkorg by the unit it was given to: "Inte vår".
-  /// `comment` is what they wrote.
-  DECLINED
   /// Some rows signed. `diff` is `{ costCenters: string[] }`, the codes.
   COST_CENTER_APPROVED
   /// A signature taken back, before the invoice went to Fortnox.
@@ -70,6 +64,9 @@ enum SupplierInvoiceEventType {
   CHANGES_REQUESTED
   /// The last row signed.
   APPROVED
+  /// A document from the Inkorg added to it. Its counterpart, a document
+  /// taken off, is DOCUMENT_REMOVED, and the document goes back to the Inkorg.
+  DOCUMENT_ATTACHED
   /// Created in Fortnox. `comment` is the GivenNumber Fortnox gave it.
   EXPORTED
   /// An export whose outcome was unknown was looked up in Fortnox by the
@@ -79,7 +76,7 @@ enum SupplierInvoiceEventType {
 
 model SupplierInvoice {
   id     String                @id @default(cuid())
-  status SupplierInvoiceStatus @default(INBOX)
+  status SupplierInvoiceStatus @default(ASSIGNED)
   source SupplierInvoiceSource
 
   /// Who put it here: the uploader, or the member whose mail it came from.
@@ -210,12 +207,30 @@ model SupplierInvoiceAllocation {
   @@index([costCenterId])
 }
 
-/// The invoice itself, as a file. Usually one PDF, sometimes a PDF and a
-/// specification that only makes sense beside it, so zero or more, like Receipt.
+/// A file that is, or may become, part of a levfaktura: usually its PDF,
+/// sometimes a specification that only makes sense beside it.
+///
+/// With no invoice it is in the Inkorg. Everything that arrives lands there
+/// first (forwarded mail, a hand upload), and triage makes an invoice from it,
+/// adds it to one, or deletes it. Taking a document off an invoice puts it back
+/// there, and so does deleting the invoice: a file is only ever thrown away
+/// from the Inkorg, by somebody who has looked at it.
 model SupplierInvoiceDocument {
-  id        String          @id @default(cuid())
-  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
+  id        String           @id @default(cuid())
+  invoice   SupplierInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  invoiceId String?
+
+  /// The mail it came in, for a forwarded one: who sent it and what they wrote,
+  /// shown beside it in the Inkorg.
+  inboundMail   InboundMail? @relation(fields: [inboundMailId], references: [id], onDelete: SetNull)
+  inboundMailId String?
+
+  /// For a document back in the Inkorg from an invoice: which unit it came
+  /// back from, and why, as whoever sent it back wrote it ("Det här är
+  /// Caféets"). The invoice it was on is gone, so this is where the reason
+  /// lives. Cleared when it is made into an invoice again.
+  returnedFrom String?
+  returnNote   String?
 
   objectKey String
   filename  String
@@ -229,7 +244,8 @@ model SupplierInvoiceDocument {
 
   createdAt DateTime @default(now())
 
-  @@index([invoiceId])
+  @@index([invoiceId, createdAt])
+  @@index([inboundMailId])
 }
 
 model SupplierInvoiceEvent {

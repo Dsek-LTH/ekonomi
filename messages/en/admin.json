@@ -134,7 +134,22 @@
       "madeLocal": "made {count} local since they are not in Fortnox"
     },
     "rename": "Rename",
-    "rowActions": "Actions for {code}"
+    "rowActions": "Actions for {code}",
+    "colShortName": "Short name",
+    "shortNameHint": "What the cost center is called under its result unit's heading, for example in the budget. Empty shows the full name.",
+    "shortNameNone": "None",
+    "editShortName": "Change the short name of {code}",
+    "shortNameSaved": "{code} is now called {name} under its result unit.",
+    "shortNameCleared": "{code} is shown with its full name.",
+    "shortNameFailed": "Could not save the short name",
+    "suggest": "Suggest short names",
+    "suggestSubtitle": "The result unit's name is taken off the start of the name. Check the suggestions before you save. Nothing changes in Fortnox.",
+    "suggestInclude": "Include {code}",
+    "suggestAll": "All suggestions",
+    "suggestSave": "Save {count} short names",
+    "suggestSaved": "{count} short names saved.",
+    "suggestFailed": "Could not save the short names",
+    "suggestBlocked": "Pick at least one suggestion, and give each one you pick a name."
   },
   "resultUnits": {
     "title": "Result units",

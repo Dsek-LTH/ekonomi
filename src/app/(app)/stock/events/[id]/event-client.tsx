@@ -46,14 +46,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-  IconDots,
-  IconLock,
-  IconPencil,
-  IconSwap,
-  IconTrash,
-  IconX,
-} from "@/components/ui/icons";
+import { IconDots, IconList, IconLock, IconPencil, IconSwap, IconTrash, IconViewTable, IconX } from "@/components/ui/icons";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
@@ -830,12 +823,12 @@ export default function EventClient({
       // Two readings of one night: where the figures ended up, and how they got
       // there. The second was a card under the sheet that only mattered when
       // something looked wrong, and pushed the sheet's foot further down.
-      collections={{
+      views={{
         label: t("event.view.label"),
         value: view,
         options: [
-          { value: "sheet", label: t("event.view.sheet") },
-          { value: "changes", label: t("event.view.changes") },
+          { value: "sheet", label: t("event.view.sheet"), icon: IconViewTable },
+          { value: "changes", label: t("event.view.changes"), icon: IconList },
         ],
         onChange: (v) => setView(v as "sheet" | "changes"),
       }}

@@ -22,8 +22,8 @@ import {
   IconBudget,
   IconCar,
   IconCard,
-  IconCheck,
   IconGrid,
+  IconInvoice,
   IconMenu,
   IconPlus,
   IconReceipt,
@@ -51,8 +51,10 @@ export function TabBar({
   const router = useProgressRouter();
   const [choosing, setChoosing] = useState(false);
 
+  // An attester's other list: their utlägg to attest are on Utlägg already,
+  // and the levfakturor are the rest of what they sign.
   const fourth: Tab | null = hasAttestRole(user.capabilities)
-    ? { href: "/approvals", label: "approvals", icon: IconCheck }
+    ? { href: "/invoices", label: "invoices", icon: IconInvoice }
     : user.holdsCard
       ? { href: "/bank", label: "bank", icon: IconCard }
       : canAccessBudget(user.capabilities)

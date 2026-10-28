@@ -103,6 +103,14 @@ export function supplierInvoiceDocumentKey(
   return `supplier-invoices/${invoiceId}/${documentId}-${safeName(filename)}`;
 }
 
+// A levfaktura document that arrived before any invoice was made from it: an
+// upload to the Inkorg, or a PDF from a forwarded mail. Its key is kept when it
+// is later put on an invoice, since a key is never rewritten (that would mean
+// copying the bytes), so the prefix says only where a file started.
+export function supplierInvoiceInboxKey(documentId: string, filename: string): string {
+  return `supplier-invoices/inbox/${documentId}-${safeName(filename)}`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

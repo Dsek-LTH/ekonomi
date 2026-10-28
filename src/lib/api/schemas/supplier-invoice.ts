@@ -54,16 +54,20 @@ export type PatchSupplierInvoice = z.infer<typeof PatchSupplierInvoice>;
 /**
  * POST /api/supplier-invoices/[id]/transition.
  *
- * `assign` takes a result unit, and `null` for it takes the invoice back to the
- * inkorg. `attest` carries the kontering when the invoice is waiting for one,
- * and nothing when another unit is signing its share of a split.
- * `request_changes` and `decline` require a comment, which the route checks:
- * it is the only thing the person it goes back to has to go on.
+ * `assign` moves it to another result unit. `attest` carries the kontering
+ * when the invoice is waiting for one, and nothing when another unit is
+ * signing its share of a split. `request_changes` requires a comment, which
+ * the route checks: it is the only thing the person it goes back to has to go
+ * on. Sending it back to the Inkorg is its own route (../return).
  */
 export const TransitionSupplierInvoice = z.object({
-  action: z.enum(["assign", "attest", "decline", "withdraw_attest", "request_changes"]),
-  resultUnitId: z.union([Id, z.null()]).optional(),
+  action: z.enum(["assign", "attest", "withdraw_attest", "request_changes"]),
+  resultUnitId: Id.optional(),
   rows: z.array(KonteringRow).min(1).max(20).optional(),
   comment: Trimmed.max(1000).optional(),
 });
 export type TransitionSupplierInvoice = z.infer<typeof TransitionSupplierInvoice>;
+
+/** POST /api/supplier-invoices/[id]/return: back to the Inkorg, and why. */
+export const ReturnSupplierInvoice = z.object({ reason: Trimmed.min(1).max(500) });
+export type ReturnSupplierInvoice = z.infer<typeof ReturnSupplierInvoice>;

@@ -4,7 +4,7 @@
 // contract can pick instead of retyping.
 //
 // The same shape as the rental item catalogue's screen
-// (uthyrning/utrustning/rental-items-client.tsx): a table for comparing rows,
+// (rentals/equipment/rental-items-client.tsx): a table for comparing rows,
 // editing as a dialog. See item-dialog.tsx's sibling here, counterparty-dialog.tsx.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";

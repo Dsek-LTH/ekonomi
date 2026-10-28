@@ -226,6 +226,7 @@ export async function getEvaluatedBudget(
             id: cc.costCenter.id,
             code: cc.costCenter.code,
             name: cc.costCenter.name,
+            shortName: cc.costCenter.shortName,
             resultUnit: resultUnitNameForCode(cc.costCenter.code, prefixes),
           }
         : null,
@@ -299,11 +300,11 @@ async function actualSheets(
   }
 
   const [costCenters, chart, prefixes] = await Promise.all([
-    prisma.costCenter.findMany({ select: { code: true, name: true } }),
+    prisma.costCenter.findMany({ select: { code: true, name: true, shortName: true } }),
     prisma.account.findMany({ select: { number: true, name: true } }),
     getPrefixes(),
   ]);
-  const ccName = new Map(costCenters.map((c) => [c.code, c.name]));
+  const ccByCode = new Map(costCenters.map((c) => [c.code, c]));
   const acctName = new Map(chart.map((a) => [a.number, a.name]));
 
   const sheets = new Map<string, CompareSheet>();
@@ -317,7 +318,8 @@ async function actualSheets(
       // this line up with the budget without either side arranging it.
       sheet = {
         key: code,
-        name: ccName.get(code) ?? code,
+        name: ccByCode.get(code)?.name ?? code,
+        shortName: ccByCode.get(code)?.shortName ?? null,
         resultUnit: resultUnitNameForCode(code, prefixes),
         accounts: [],
       };

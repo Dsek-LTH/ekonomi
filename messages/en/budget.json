@@ -32,6 +32,7 @@
     "compareCount": "Compare {count} budgets",
     "searchPlaceholder": "Search budgets or years…",
     "emptyNone": "No budget has been created yet.",
+    "emptyYear": "No budget for {year} yet.",
     "emptyNoMatch": "No budget matches the search.",
     "compareHint": "Tick at least two budgets to compare them"
   },

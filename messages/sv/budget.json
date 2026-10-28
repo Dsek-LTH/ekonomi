@@ -32,6 +32,7 @@
     "compareCount": "Jämför {count} budgetar",
     "searchPlaceholder": "Sök budget eller år…",
     "emptyNone": "Ingen budget har skapats ännu.",
+    "emptyYear": "Ingen budget för {year} än.",
     "emptyNoMatch": "Ingen budget matchar sökningen.",
     "compareHint": "Kryssa i minst två budgetar för att jämföra dem"
   },

@@ -347,3 +347,61 @@ export function useUrlTableControls(
     total,
   };
 }
+
+/**
+ * The scope switch's `onChange` for a list whose scope is in the URL as
+ * `?scope=` (Utlägg, Fakturor, Bankhändelser). One function so every list
+ * switches the same way. See docs/navigation.md.
+ *
+ * The stage you were on comes along, so flipping scope compares the same slice
+ * of both. It is written out even where it was the old default, because the
+ * defaults differ per scope and leaving it unstated would open the other one's.
+ * Paging is dropped: page 4 of the section's list is not page 4 of your own.
+ *
+ * `push`, not `replace`, unlike the controls above: whose list you are reading
+ * is a place you went, and Back should take you to the other one.
+ */
+export function useScopeSwitch(
+  tab: string,
+  defaultTab: (scope: string) => string,
+): (scope: string) => void {
+  const router = useProgressRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  return (next) => {
+    const q = new URLSearchParams(params.toString());
+    q.set("scope", next);
+    if (tab && tab !== defaultTab(next)) q.set("tab", tab);
+    else q.delete("tab");
+    q.delete("page");
+    router.push(`${pathname}?${q.toString()}`);
+  };
+}
+
+/**
+ * Client-side controls whose tab is in the URL too, for a list whose rows
+ * arrive whole and are cut in the browser (Fakturor, Intäkter). The page reads
+ * `?tab=` and hands it in as the controls' first tab; this writes every change
+ * back, so Back, a reload and a link all land on the same stage, the same as a
+ * server list. See docs/navigation.md.
+ *
+ * `replace`: changing stage is adjusting the view, not going somewhere (see
+ * useUrlTableControls). The scope's own default is left out of the address.
+ */
+export function useUrlTab<C extends ClientControls>(local: C, defaultTab: string): C {
+  const router = useProgressRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  return {
+    ...local,
+    setTab: (v: string) => {
+      local.setTab(v);
+      const q = new URLSearchParams(params.toString());
+      if (v === defaultTab) q.delete("tab");
+      else q.set("tab", v);
+      q.delete("page");
+      const search = q.toString();
+      router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
+    },
+  };
+}

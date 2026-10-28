@@ -68,7 +68,6 @@ import { AlreadyBookedNotice, EmptyReportCard, VoucherCard } from "./report-deta
 import { reviewColumns } from "./review-columns";
 import { useLineDrag } from "./use-line-drag";
 import { FetchDialog, FetchPanel } from "./fetch-panel";
-import { incomeSections } from "./sections";
 import { MoveLinesDialog, accountOptions, suggestedAccount, type MoveRequest } from "./move-dialog";
 import {
   NewReportDialog,
@@ -594,13 +593,10 @@ export default function IncomeReviewClient({
 
   return (
     <PageShell
-      title={t("title")}
-      collections={incomeSections({
-        active: "review",
-        label: t("nav.label"),
-        labels: { review: t("nav.review"), booked: t("nav.booked") },
-        counts: { review: drafts.length },
-      })}
+      title={t("reviewTitle")}
+      // A work surface, entered from the list rather than a tab of it (see
+      // docs/navigation.md), so it has a way back instead of a switch.
+      back="/income"
     >
       {!serviceConfigured && (
         <Card>

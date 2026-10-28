@@ -1,9 +1,10 @@
 {
   "title": "Bankhändelser",
   "tab": {
-    "all": "Alla",
-    "matched": "Matchade",
-    "unmatched": "Ej matchade"
+    "unaccounted": "Att redovisa",
+    "accounted": "Redovisade",
+    "nocard": "Utan kort",
+    "all": "Alla"
   },
   "pickCsv": "Välj CSV-fil",
   "importFailed": "Importen misslyckades",
@@ -47,10 +48,5 @@
   "account": "Redovisa",
   "assignCard": "Välj kort",
   "changeCard": "Byt kort",
-  "assignFailed": "Kunde inte koppla transaktionen till kortet",
-  "noCard": {
-    "count": "{count} köp saknar kort och syns därför inte i någons egen lista.",
-    "show": "Visa dem",
-    "hide": "Dölj"
-  }
+  "assignFailed": "Kunde inte koppla transaktionen till kortet"
 }

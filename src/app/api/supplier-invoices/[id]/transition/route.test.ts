@@ -48,9 +48,9 @@ vi.mock("@/lib/server/db", () => ({
     supplierInvoice: {
       findFirst: async () => ({
         id: "inv1",
-        status: "INBOX",
-        resultUnitId: null,
-        resultUnit: null,
+        status: "ASSIGNED",
+        resultUnitId: "unit-cafe",
+        resultUnit: { name: "Caféutskottet" },
         supplierName: null,
         invoiceNumber: null,
         description: "Släp",
@@ -149,16 +149,22 @@ beforeEach(() => {
 
 const assigned = { status: "ASSIGNED", resultUnitId: "unit-sex", resultUnit: { name: "Sexmästeriet" } };
 
-describe("assign", () => {
-  it("gives an inkorg invoice to a unit and mails its resultatansvarig", async () => {
+describe("assign, to another unit", () => {
+  it("moves it and mails the new unit's resultatansvarig, keeping where it was", async () => {
     h.capabilities = ["INVOICE_TRIAGE"];
     const res = await call({ action: "assign", resultUnitId: "unit-sex" });
     expect(res.status).toBe(200);
     expect(h.invoiceUpdate).toHaveBeenCalledWith({
-      where: { id: "inv1", status: "INBOX" },
+      where: { id: "inv1", status: "ASSIGNED" },
       data: expect.objectContaining({ status: "ASSIGNED", resultUnitId: "unit-sex", assignedById: "actor" }),
     });
+    expect(h.event.mock.calls[0][0].data.diff).toEqual({ from: "Caféutskottet", to: "Sexmästeriet" });
     expect(h.notify.mock.calls[0][1]).toBe("SUPPLIER_INVOICE_ASSIGNED");
+  });
+
+  it("needs a unit to move it to", async () => {
+    h.capabilities = ["INVOICE_TRIAGE"];
+    expect((await call({ action: "assign" })).status).toBe(422);
   });
 
   it("is triage's alone", async () => {
@@ -255,18 +261,6 @@ describe("attest, another unit's share", () => {
       data: expect.objectContaining({ approvedById: "actor" }),
     });
     expect(h.allocationCreate).not.toHaveBeenCalled();
-  });
-});
-
-describe("decline", () => {
-  it("sends it back to the inkorg, with a comment", async () => {
-    asSexmastare();
-    h.invoice = assigned;
-    expect((await call({ action: "decline" })).status).toBe(422);
-    const res = await call({ action: "decline", comment: "Det här är Caféets" });
-    expect((await res.json()).status).toBe("INBOX");
-    expect(h.invoiceUpdate.mock.calls[0][0].data).toMatchObject({ status: "INBOX", resultUnitId: null });
-    expect(h.event.mock.calls[0][0].data).toMatchObject({ type: "DECLINED", comment: "Det här är Caféets" });
   });
 });
 

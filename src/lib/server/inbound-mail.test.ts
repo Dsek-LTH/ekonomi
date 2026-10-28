@@ -17,8 +17,10 @@ const h = vi.hoisted(() => ({
   existing: new Set<string>(),
   claimFails: false,
   invoiceCreate: vi.fn(),
+  docCreate: vi.fn(),
   mailCreate: vi.fn(),
   mailDelete: vi.fn(),
+  mailUpdate: vi.fn(),
   syncUpdate: vi.fn(),
   put: vi.fn(),
   del: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock("@/lib/server/db", () => ({
         return { id: "mail1" };
       },
       delete: h.mailDelete,
+      update: h.mailUpdate,
     },
     user: {
       findFirst: async () => h.sender,
@@ -79,6 +82,7 @@ vi.mock("@/lib/server/db", () => ({
       upsert: async () => ({ historyId: "100" }),
       update: h.syncUpdate,
     },
+    supplierInvoiceDocument: { createMany: h.docCreate },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({ supplierInvoice: { create: h.invoiceCreate } }),
   },
@@ -87,7 +91,7 @@ vi.mock("@/lib/server/db", () => ({
 vi.mock("@/lib/server/storage", () => ({
   putObject: h.put,
   deleteObjectBestEffort: h.del,
-  supplierInvoiceDocumentKey: (i: string, d: string, f: string) => `supplier-invoices/${i}/${d}-${f}`,
+  supplierInvoiceInboxKey: (d: string, f: string) => `supplier-invoices/inbox/${d}-${f}`,
 }));
 
 vi.mock("@/lib/server/result-units", () => ({
@@ -148,7 +152,7 @@ beforeEach(() => {
   h.claimFails = false;
   h.sender = { id: "klara", name: "Klara Ström", roles: ["RESULTATANSVARIG"] };
   h.owned = ["Sexmästeriet"];
-  for (const fn of [h.invoiceCreate, h.mailCreate, h.mailDelete, h.syncUpdate, h.put, h.del, h.notify, h.getMessage]) {
+  for (const fn of [h.invoiceCreate, h.docCreate, h.mailCreate, h.mailDelete, h.mailUpdate, h.syncUpdate, h.put, h.del, h.notify, h.getMessage]) {
     fn.mockReset();
   }
   h.mailDelete.mockResolvedValue({});
@@ -173,8 +177,7 @@ describe("one mail", () => {
     expect(h.invoiceCreate).not.toHaveBeenCalled();
   });
 
-  it("makes one invoice per PDF, and leaves out what only claims to be one", async () => {
-    h.owned = [];
+  it("puts several PDFs in the Inkorg, and leaves out what only claims to be one", async () => {
     h.getMessage.mockResolvedValue(
       mail({
         attachments: [
@@ -187,23 +190,31 @@ describe("one mail", () => {
     );
     expect(await syncInbox()).toEqual({ accepted: 1, rejected: 0, skipped: 0 });
     expect(h.put).toHaveBeenCalledTimes(2);
-    expect(created()).toHaveLength(2);
-    expect(created()[0]).toMatchObject({
-      source: "EMAIL",
-      status: "INBOX",
-      receivedById: "klara",
-      inboundMailId: "mail1",
-      description: "Faktura 20417",
-    });
-    expect(created()[0].documents.create.filename).toBe("faktura.pdf");
+    // Several PDFs may be one invoice and its specification: no invoice is
+    // guessed, even with a unit to give it to.
+    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    const rows = h.docCreate.mock.calls[0][0].data;
+    expect(rows.map((r: { filename: string }) => r.filename)).toEqual(["faktura.pdf", "specifikation.pdf"]);
+    expect(rows[0]).toMatchObject({ inboundMailId: "mail1", uploadedById: "klara" });
+    expect(rows[0].invoiceId).toBeUndefined();
   });
 
-  it("still makes an invoice for a mail without a PDF, to be completed by hand", async () => {
+  it("puts a single PDF in the Inkorg when nothing says whose it is", async () => {
     h.owned = [];
-    h.getMessage.mockResolvedValue(mail({ text: "Länk till fakturan: https://..." }));
     await syncInbox();
-    expect(created()).toHaveLength(1);
-    expect(created()[0].documents).toBeUndefined();
+    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.docCreate.mock.calls[0][0].data).toHaveLength(1);
+  });
+
+  it("refuses a mail without a PDF, saying so", async () => {
+    h.getMessage.mockResolvedValue(mail({ text: "Länk till fakturan: https://..." }));
+    expect(await syncInbox()).toEqual({ accepted: 0, rejected: 1, skipped: 0 });
+    expect(h.mailUpdate).toHaveBeenCalledWith({
+      where: { id: "mail1" },
+      data: { status: "REJECTED", rejectReason: "noPdf" },
+    });
+    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.docCreate).not.toHaveBeenCalled();
   });
 
   it("gives it to the unit a cost centre code in the note belongs to, and says why", async () => {
@@ -219,7 +230,9 @@ describe("one mail", () => {
       note: "Till CAFE01 tack",
       originalFrom: "order@grossisten.se",
     });
-    expect(created()[0]).toMatchObject({ status: "ASSIGNED", resultUnitId: "cafe" });
+    expect(created()[0]).toMatchObject({ status: "ASSIGNED", resultUnitId: "cafe", inboundMailId: "mail1" });
+    expect(created()[0].documents.create).toMatchObject({ filename: "f.pdf", inboundMailId: "mail1" });
+    expect(h.docCreate).not.toHaveBeenCalled();
     expect(created()[0].events.create[1]).toMatchObject({
       type: "ASSIGNED",
       diff: { from: null, to: "Caféutskottet", auto: "costCenter", match: "CAFE01" },

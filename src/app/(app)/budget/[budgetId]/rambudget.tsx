@@ -11,6 +11,7 @@ import { cn } from "@/lib/ui/utils";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet, type Totals } from "@/lib/budget/compare";
 import { resultUnitLabel, resultUnitOfSheet, diffClass, fmt, fmtSigned, groupByResultUnit } from "./budget-helpers";
 import type { Comparison } from "./use-comparison";
+import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
 
 const numCls = "px-3 py-1.5 text-right tabular-nums";
 
@@ -101,10 +102,12 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
                     )}
                     onClick={id ? () => onPick(id) : undefined}
                   >
-                    <td className="px-3 py-1.5">
+                    {/* Under its result unit's heading, so the short name where
+                        one is set, with the full name on hover. */}
+                    <td className="px-3 py-1.5" title={row.sheet.shortName ? row.sheet.name : undefined}>
                       {/^[@#]/.test(row.sheet.key)
                         ? row.sheet.name
-                        : <><span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}{row.sheet.name}</>}
+                        : <><span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}{nameUnderUnit(row.sheet)}</>}
                       {/* Only the other side has this one. There is no sheet
                           here to open, and nothing budgeted to put beside it. */}
                       {!id && <span className="ml-2 text-xs">- {t("notInThisBudget")}</span>}

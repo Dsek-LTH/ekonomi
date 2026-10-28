@@ -35,9 +35,16 @@ export async function GET(req: Request) {
   const state = decodeState(jar.get(STATE_COOKIE)?.value);
   jar.delete(STATE_COOKIE);
 
-  const returnTo = state?.returnTo ?? "/bookkeeping";
+  const returnTo = state?.returnTo ?? "/expenses?scope=all";
 
   if (error) {
+    // Fortnox says why in `error_description` (which scope, and whether it is
+    // the app, the licence or the user's own rights), and the banner only has
+    // room for the code. Logged so the reason is not lost along with it.
+    console.warn(
+      `[fortnox] ${state?.mode ?? "unknown"} login refused: ${error}`,
+      url.searchParams.get("error_description") ?? "(no description)",
+    );
     return back(returnTo, { fortnox: "error", reason: error });
   }
   if (!code || !stateParam || !state || stateParam !== state.nonce) {

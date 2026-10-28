@@ -3,14 +3,19 @@
   "upload": "Add invoice",
   "unnamed": "Invoice",
   "empty": "No supplier invoices",
-  "emptyTriage": "Invoices sent in by email end up here. You can also add a PDF by hand.",
-  "emptyDescription": "Supplier invoices your unit is to attest end up here.",
+  "emptyDescription": "Supplier invoices land here once they have been given to a result unit from the inbox.",
   "searchPlaceholder": "Search supplier, invoice number or unit",
   "noMatch": "No invoices match.",
+  "scopeLabel": "Scope",
+  "scope": {
+    "unit": "My result unit",
+    "all": "All"
+  },
   "tab": {
-    "all": "All",
-    "open": "In progress",
-    "exported": "In Fortnox"
+    "attest": "To attest",
+    "book": "To book",
+    "exported": "In Fortnox",
+    "all": "All"
   },
   "col": {
     "supplier": "Supplier",
@@ -20,32 +25,6 @@
     "dueDate": "Due",
     "status": "Status",
     "amount": "Amount"
-  },
-  "archive": {
-    "link": "Archive",
-    "title": "Archive",
-    "toInbox": "To the inbox"
-  },
-  "inbox": {
-    "emptyTitle": "Nothing to do",
-    "emptyDescription": "There are no supplier invoices waiting.",
-    "backToList": "To the list",
-    "nothingOpen": "Pick an invoice in the list.",
-    "listLabel": "Supplier invoices",
-    "via": "via {name}",
-    "section": {
-      "sort": "To sort",
-      "attest": "To attest",
-      "export": "To export",
-      "elsewhere": "With the units"
-    }
-  },
-  "focus": {
-    "emptyTitle": "Nothing is waiting for you",
-    "emptyDescription": "You have no supplier invoices to attest right now.",
-    "position": "{n} of {total}",
-    "previous": "Previous",
-    "next": "Next"
   },
   "due": {
     "none": "No due date",
@@ -72,8 +51,7 @@
     "save": "Save",
     "saved": "Saved",
     "documents": "Documents",
-    "removeDocument": "Remove document",
-    "removeDocumentConfirm": "{filename} will be removed from the invoice.",
+    "removeDocument": "To the inbox",
     "noDocumentTitle": "Invoice",
     "noDocument": "No PDF attached yet.",
     "upload": {
@@ -83,13 +61,13 @@
       "add": "Add document"
     },
     "history": "History",
-    "returnedTitle": "{name} wants something changed:"
+    "returnedTitle": "{name} wants something changed:",
+    "documentToInbox": "The document is back in the inbox",
+    "missingTitle": "The invoice does not exist",
+    "missingDescription": "It may have been deleted, or you do not have access to it.",
+    "missingAction": "To invoices"
   },
   "workspace": {
-    "assignTitle": "Whose invoice is it?",
-    "assign": "Give to the unit",
-    "assignHint": "The unit's resultatansvarig gets an email and attests the invoice.",
-    "suggestion": "The last invoice from {sender} went to {unit}.",
     "pickUnit": "Pick a result unit",
     "searchUnit": "Search result units",
     "konteraTitle": "Where does the cost go?",
@@ -117,9 +95,7 @@
     "noDocumentReadOnly": "The invoice has no PDF.",
     "move": "Change unit",
     "moveTo": "Give to another unit",
-    "unassign": "Back to the inbox",
     "waiting": {
-      "inbox": "The invoice is in the inbox, waiting to be sorted.",
       "unit": "Waiting for {unit} to attest.",
       "share": "Waiting for attest from {units}.",
       "export": "Attested. Waiting to be exported to Fortnox.",
@@ -148,26 +124,24 @@
     "attest": "Attest",
     "sendForAttest": "Send for attest",
     "decline": "Not ours",
-    "declineLabel": "Whose is it, or what is wrong?",
     "request_changes": "Request changes",
     "withdraw_attest": "Withdraw attest",
-    "delete": "Delete",
     "commentLabel": "Comment",
     "confirm": {
-      "decline": "The invoice goes back to the inbox, so it can be given to the right unit.",
       "request_changes": "The invoice goes back to the result unit, and every attest on it is removed.",
       "withdraw_attest": "Your attest is removed and the invoice goes back to waiting for attest.",
-      "delete": "The invoice and its PDF are deleted completely. This cannot be undone."
+      "return": "The invoice is removed and its documents go back to the inbox, with your answer as the reason."
     },
     "done": {
       "assign": "The invoice has been assigned",
       "attest": "Attested",
-      "decline": "The invoice is back in the inbox",
       "withdraw_attest": "The attest is withdrawn",
       "request_changes": "The invoice is sent back",
-      "delete": "The invoice is deleted"
+      "return": "The documents are back in the inbox"
     },
-    "export": "Export to Fortnox"
+    "export": "Export to Fortnox",
+    "return": "Back to the inbox",
+    "returnLabel": "Why?"
   },
   "kontering": {
     "title": "Coding",
@@ -187,17 +161,16 @@
     "reason": {
       "noSender": "no sender",
       "foreignDomain": "not from dsek.se",
-      "notAuthenticated": "the sender could not be verified"
+      "notAuthenticated": "the sender could not be verified",
+      "noPdf": "no PDF attached"
     }
   },
   "event": {
     "RECEIVED": "Received",
     "EDITED": "Edited",
     "DOCUMENT_UPLOADED": "Document added",
-    "DOCUMENT_REMOVED": "Document removed",
+    "DOCUMENT_REMOVED": "Document back in the inbox",
     "ASSIGNED": "Given to {unit}",
-    "UNASSIGNED": "Back in the inbox",
-    "DECLINED": "Not ours, back in the inbox",
     "COST_CENTER_APPROVED": "Attested",
     "ATTEST_WITHDRAWN": "Attest withdrawn",
     "CHANGES_REQUESTED": "Changes requested",
@@ -208,6 +181,33 @@
       "forwarder": "Automatically: the sender answers for {match}"
     },
     "EXPORTED": "Exported to Fortnox",
-    "EXPORT_RELEASED": "Uncertain export released"
+    "EXPORT_RELEASED": "Uncertain export released",
+    "DOCUMENT_ATTACHED": "Document added from the inbox"
+  },
+  "inkorg": {
+    "title": "Inbox",
+    "upload": "Add documents",
+    "uploaded": "{name} is in the inbox",
+    "emptyTitle": "The inbox is empty",
+    "emptyDescription": "Invoices sent in by email end up here, and documents taken off an invoice. You can also add PDFs yourself.",
+    "uploadedByUnknown": "Unknown",
+    "createTitle": "Make it an invoice",
+    "createUnit": "Send to",
+    "createUnitPlaceholder": "Send to…",
+    "searchUnit": "Search result units",
+    "create": "Create invoice",
+    "delete": "Delete",
+    "deleteConfirm": "{name} is deleted completely. This cannot be undone.",
+    "deleted": "The document is deleted",
+    "col": {
+      "document": "Document",
+      "from": "From",
+      "note": "Comment",
+      "received": "Received"
+    },
+    "searchPlaceholder": "Search subject, sender or comment",
+    "noMatch": "No documents match.",
+    "created": "The invoice is created and sent",
+    "returned": "Back from {unit}: {reason}"
   }
 }

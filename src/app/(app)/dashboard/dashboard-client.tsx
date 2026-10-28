@@ -1,5 +1,6 @@
 "use client";
 
+import { expensesHref } from "@/app/(app)/expenses/scope";
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -46,11 +47,11 @@ const ACTION_TONE: Record<QueueAction, React.ComponentProps<typeof Tag>["tone"]>
 // Where each action is done. A count and the way there is what the dashboard
 // owes: the lists of the utlägg themselves are those pages.
 const ACTION_HREF: Record<QueueAction, string> = {
-  FIX: "/expenses",
-  SUBMIT: "/expenses",
-  ATTEST: "/approvals",
-  BOOK: "/bookkeeping",
-  EXPORT: "/bookkeeping",
+  FIX: expensesHref("mine", "draft"),
+  SUBMIT: expensesHref("mine", "draft"),
+  ATTEST: expensesHref("unit", "attest"),
+  BOOK: expensesHref("all", "book"),
+  EXPORT: expensesHref("all", "export"),
 };
 
 const ACTION_ORDER: QueueAction[] = ["FIX", "SUBMIT", "ATTEST", "BOOK", "EXPORT"];
@@ -91,7 +92,8 @@ export function DashboardClient({
 
   function setView(next: string) {
     const q = new URLSearchParams(params.toString());
-    q.set("view", next);
+    // `scope`, as on every list: which reading of the page is whose.
+    q.set("scope", next);
     router.push(`${pathname}?${q.toString()}`);
   }
 

@@ -1,11 +1,5 @@
 {
   "title": "Bookkeeping",
-  "tab": {
-    "all": "All",
-    "toBook": "To book",
-    "toExport": "To export",
-    "exported": "Exported"
-  },
   "book": "Book",
   "connectFirst": "Connect Fortnox first",
   "loginFirst": "Log in to Fortnox to export",

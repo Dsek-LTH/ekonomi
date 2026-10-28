@@ -1,13 +1,24 @@
 import { requirePage } from "@/lib/server/current-user";
-import { canViewBookkeeping } from "@/lib/domain/permissions";
-import { getClosingYears } from "@/lib/data/closing";
-import ClosingYearsClient from "./years-client";
+import { canAccessSettings, canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
+import { getChecklist } from "@/lib/data/closing-checklist";
+import ChecklistClient from "./checklist-client";
+import { NoClosingYear, getOpenClosingYear } from "./year";
 
-// Bokslut: one per financial year Fortnox has, as far as the ledger has been
-// synced. Readable by whoever may read the books, which is the treasury and
+// Bokslut, for the header's räkenskapsår, opened on its checklist: what is
+// left to do, how to do it, and what last year's skattmästare wanted this one
+// to know. Readable by whoever may read the books, which is the treasury and
 // the revisorer.
 export default async function ClosingPage() {
-  await requirePage(canViewBookkeeping);
-  const years = await getClosingYears();
-  return <ClosingYearsClient years={years} />;
+  const user = await requirePage(canViewBookkeeping);
+  const year = await getOpenClosingYear();
+  if (!year) return <NoClosingYear />;
+
+  return (
+    <ChecklistClient
+      year={year}
+      items={await getChecklist(year)}
+      canWork={canBookkeep(user.capabilities)}
+      canEditTemplate={canAccessSettings(user.capabilities)}
+    />
+  );
 }

@@ -1,7 +1,6 @@
 "use client";
 
-// The section a page belongs to: its name, and its pages as tabs across the
-// top. Drawn by the shell (SectionBand), once, above whichever page is open.
+// The section a page belongs to: its pages as tabs across the top. Drawn by the shell (SectionBand), once, above whichever page is open.
 //
 // It used to be drawn by every page's own header. That put the band inside the
 // page, so a click on a tab replaced the band along with everything else: the
@@ -60,9 +59,9 @@ export function useActiveSection(): string | null {
 }
 
 /**
- * The band at the top of the main column, for a page in a section: the
- * section's name on its own pages, its tabs, and a slot at the end of the tabs'
- * line for the page's switch (see PageHeader). Sticky, blurred behind, the way
+ * The band at the top of the main column, for a page in a section: its tabs,
+ * and a slot at the end of the tabs' line for the page's switch (see
+ * PageHeader). Sticky, blurred behind, the way
  * the utlägg form's action bar sits at the foot.
  */
 export function SectionBand({
@@ -71,7 +70,7 @@ export function SectionBand({
   slotRef,
 }: {
   section: SectionNav;
-  /** One of the section's own pages: the name is the heading. */
+  /** One of the section's own pages: the lit tab's name is the heading. */
   own: boolean;
   slotRef: (el: HTMLElement | null) => void;
 }) {
@@ -80,30 +79,43 @@ export function SectionBand({
     <div
       className={cn(
         // Out to the main column's edges, so what scrolls under it does not
-        // show beside it, and below the phone's own top bar.
+        // show beside it, and below the phone's own top bar. From md the
+        // header is outside the scrollport, so it sticks to the very top.
         // z-20, above the page's own raised bits: a table's expand chevron
         // and a row's buttons sit at z-10 over their row, and at the band's
         // own z-10 they came later in the page and were drawn over it as they
         // scrolled under.
-        "sticky top-14 z-20 -ml-4 -mr-6 mb-6 bg-canvas/85 pl-4 pr-6 backdrop-blur-xl backdrop-saturate-150 md:top-0 md:-mx-6 md:px-6",
-        // The main column's top padding, given back, so the band reaches the
-        // top of the column when it sticks rather than stopping short of it.
-        "-mt-6 pt-6 md:-mt-8 md:pt-8",
+        "sticky top-14 z-20 md:top-0 -ml-4 -mr-6 mb-6 bg-canvas/85 pl-4 pr-6 backdrop-blur-xl backdrop-saturate-150 md:-mx-6 md:px-6",
+        // The main column's top padding, taken back, so the band starts right
+        // under the header. The tabs are the first thing there, with no title
+        // above them, and the row's own height is all the room it needs.
+        "-mt-6 md:-mt-8",
       )}
     >
-      {/* The section's name, on every page in it. On its own pages it is the
-          page's heading; under them (a budget, an utlägg) the page has a
-          heading of its own below, so this one is not an h1 there, only the
-          same words in the same place, which is where they are looked for. */}
-      {own ? (
-        <h1 className="mb-1 text-2xl font-semibold tracking-tight">{section.label}</h1>
-      ) : (
-        <p className="mb-1 text-2xl font-semibold tracking-tight">{section.label}</p>
-      )}
-      {/* One row of a fixed height whatever stands at its end. 52px: the
-          switch is 42 (a 32px option in a padded, bordered track) and wants
-          room above and below it. */}
-      <div className="flex h-13 items-stretch justify-between gap-4 border-b border-border">
+      {/* No visible title. The lit tab already says which page this is, and
+          the section's name above it mostly repeated one of the tabs
+          ("Utlägg" over "Utlägg"). A section's own page still needs an h1,
+          so it is the lit tab's name, for a screen reader only. Under one (a
+          budget, an utlägg) the page has a heading of its own below. */}
+      {own && <h1 className="sr-only">{section.tabs.find((tab) => tab.active)?.label ?? section.label}</h1>}
+      {/* One row of a fixed height whatever stands at its end. The switch is
+          42px (a 32px option in a padded, bordered track), and 62 leaves it
+          10px from the header above and 10 from the divider below.
+          `box-content` and `pb-px`, so the divider is drawn under the 62
+          rather than taking a pixel of it, which put the switch half a pixel
+          off centre. */}
+      <div className="relative box-content flex h-15.5 items-stretch justify-between gap-4 border-b border-border pb-0 md:border-b-0 md:pb-px">
+        {/* The divider, edge to edge of the main column from md, the way the
+            header's rule above it is. Drawn as a border it stopped at the
+            page's content width, and two rules of different lengths one above
+            the other read as an accident. A viewport wide and centred on the
+            page, which is centred in the column, so it always covers the
+            column; the column clips what is left over (app-shell.tsx). Below
+            md the page is the width of the screen and the border does it. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 left-1/2 hidden h-px w-screen -translate-x-1/2 bg-border md:block"
+        />
         <SectionTabs label={section.tabsLabel} tabs={section.tabs} />
         <div ref={slotRef} className="flex shrink-0 items-center empty:hidden" />
       </div>

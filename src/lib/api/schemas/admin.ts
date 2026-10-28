@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
 import { ALL_KINDS, SWITCHABLE_KINDS } from "@/lib/domain/notifications";
+import { SHORT_NAME_MAX } from "@/lib/domain/cost-center-short-name";
 import type { NotificationKind } from "@/lib/domain/types";
 
 /** POST /api/cards: register a section card. */
@@ -40,6 +41,26 @@ export const PatchCostCenter = z.object({
   active: z.boolean().optional(),
 });
 export type PatchCostCenter = z.infer<typeof PatchCostCenter>;
+
+/**
+ * PUT /api/cost-centers/short-names: the short names of one or more cost
+ * centres, Fortnox ones included, since a short name is this app's own and the
+ * sync never writes it. Blank clears one, back to the full name.
+ */
+export const PutCostCenterShortNames = z.object({
+  names: z
+    .array(
+      z.object({
+        id: Id,
+        shortName: Trimmed.max(SHORT_NAME_MAX)
+          .nullable()
+          .transform((v) => v || null),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
+export type PutCostCenterShortNames = z.infer<typeof PutCostCenterShortNames>;
 
 /** POST /api/result-units, PATCH /api/result-units/[id]. */
 export const ResultUnitBody = z.object({

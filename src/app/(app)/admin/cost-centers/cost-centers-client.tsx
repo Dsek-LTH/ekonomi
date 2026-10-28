@@ -6,7 +6,7 @@
 // changed here. The local ones are this app's own and fully editable. Which is
 // which is a mark on the code, not a column and a tab: it decides what you can
 // do to a row, not what kind of thing the row is.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,9 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
+import { SHORT_NAME_MAX, suggestShortName } from "@/lib/domain/cost-center-short-name";
 import type { CostCenter } from "@/lib/domain/types";
+import { ShortNamesDialog, type Suggestion } from "./short-names-dialog";
 
 // Retired cost centres stay in the list. Seeing that SEX02 exists but is
 // inactive is what explains why it isn't in the picker, but the default filter
@@ -45,6 +47,23 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
   const [draft, setDraft] = useState({ code: "", name: "" });
   // The row being renamed, and the name being typed for it.
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  // The row whose short name is being typed. Any row, Fortnox ones included:
+  // the short name is this app's own, so the next sync leaves it alone.
+  const [shortening, setShortening] = useState<{ id: string; name: string } | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+
+  // What the rule would set, for the cost centres with no short name yet. Only
+  // ever offered, see ShortNamesDialog. A section whose names do not start with
+  // their unit's gets none, and never sees the button.
+  const suggestions = useMemo<Suggestion[]>(
+    () =>
+      costCenters.flatMap((cc) => {
+        if (cc.shortName) return [];
+        const shortName = suggestShortName(cc.name, cc.resultUnit);
+        return shortName ? [{ cc, shortName }] : [];
+      }),
+    [costCenters],
+  );
 
   async function add() {
     const code = draft.code.trim().toUpperCase();
@@ -70,6 +89,21 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       success: t("renamed", { code: cc.code, name }),
     });
     if (data) setRenaming(null);
+  }
+
+  async function saveShortName(cc: CostCenter) {
+    if (!shortening) return;
+    const shortName = shortening.name.trim() || null;
+    const data = await mutate("/api/cost-centers/short-names", {
+      key: `short-${cc.id}`,
+      method: "PUT",
+      body: { names: [{ id: cc.id, shortName }] },
+      error: t("shortNameFailed"),
+      success: shortName
+        ? t("shortNameSaved", { code: cc.code, name: shortName })
+        : t("shortNameCleared", { code: cc.code }),
+    });
+    if (data) setShortening(null);
   }
 
   // Retiring is the reversible half of removing one: it drops out of the
@@ -167,6 +201,57 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         ),
     },
     {
+      key: "shortName",
+      mobile: "meta",
+      header: <span title={t("shortNameHint")}>{t("colShortName")}</span>,
+      value: (c) => c.shortName ?? "",
+      sortable: true,
+      searchable: true,
+      cell: (c) =>
+        shortening?.id === c.id ? (
+          // Saved on Enter, as the rename above. Emptied and saved, it goes
+          // back to the full name.
+          <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
+            <Input
+              size="sm"
+              autoFocus
+              value={shortening.name}
+              maxLength={SHORT_NAME_MAX}
+              onChange={(e) => setShortening({ id: c.id, name: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveShortName(c);
+                if (e.key === "Escape") setShortening(null);
+              }}
+              aria-label={t("editShortName", { code: c.code })}
+              className="min-w-32 flex-1 text-left"
+            />
+            <Button size="sm" loading={pending === `short-${c.id}`} onClick={() => saveShortName(c)}>
+              {t("save")}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShortening(null)}>
+              {tCommon("cancel")}
+            </Button>
+          </div>
+        ) : (
+          // The value itself is the way in, on every row: there is no menu
+          // on a Fortnox row to put "Ändra kortnamn" in.
+          <button
+            type="button"
+            onClick={() => setShortening({ id: c.id, name: c.shortName ?? "" })}
+            aria-label={t("editShortName", { code: c.code })}
+            className="group/short inline-flex max-w-full items-center gap-1.5 rounded-control text-left hover:underline"
+          >
+            <span className={cn("truncate", !c.shortName && "text-faint")}>
+              {c.shortName ?? t("shortNameNone")}
+            </span>
+            <IconPencil
+              aria-hidden
+              className="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/short:opacity-100"
+            />
+          </button>
+        ),
+    },
+    {
       key: "resultUnit",
       mobile: "meta",
       mobileCell: (c) => c.resultUnit ?? t("noResultUnit"),
@@ -244,6 +329,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
 
   return (
     <Card>
+      {suggesting && <ShortNamesDialog suggestions={suggestions} onClose={() => setSuggesting(false)} />}
       <ClientDataTable
         columns={columns}
         rows={costCenters}
@@ -297,12 +383,22 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         // There is no card header: what the Fortnox mark means is in the page
         // description, and a header holding only this button was a row spent
         // on nothing.
+        // The suggestions only when there are any: for a section whose names
+        // do not follow the pattern, the button would only ever say "none".
         action={
           !adding && (
-            <Button size="sm" onClick={() => setAdding(true)}>
-              <IconPlus className="size-4" />
-              {t("newLocal")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {suggestions.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => setSuggesting(true)}>
+                  {t("suggest")}
+                  <span className="tabular-nums text-muted">{suggestions.length}</span>
+                </Button>
+              )}
+              <Button size="sm" onClick={() => setAdding(true)}>
+                <IconPlus className="size-4" />
+                {t("newLocal")}
+              </Button>
+            </div>
           )
         }
         searchPlaceholder={t("searchPlaceholder")}

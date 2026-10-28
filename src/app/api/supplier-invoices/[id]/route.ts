@@ -5,8 +5,6 @@
 // (canEditDetails). The kontering is not changed here: that is the attest's,
 // and is sent with it (./transition).
 import { prisma } from "@/lib/server/db";
-import { deleteObject } from "@/lib/server/storage";
-import { isInvoiceDeletable } from "@/lib/domain/supplier-invoice";
 import { isoToDate } from "@/lib/domain/date";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
@@ -102,49 +100,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       });
     }),
   );
-  if (result instanceof Response) return result;
-  return new Response(null, { status: 204 });
-}
-
-// DELETE /api/supplier-invoices/:id
-//
-// Something that was never an invoice to pay goes, entirely: the row, its
-// documents, its history. Only before anybody has attested it
-// (isInvoiceDeletable). The mail it came in stays, as the record that the mail
-// was read, which is also what stops the next Gmail sync bringing it back.
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await ctx.params;
-  const g = await gate();
-  if (!g.ok) return g.res;
-
-  const access = await loadInvoiceFor(g.actor, id);
-  if (!access.ok) return access.res;
-  const { invoice, can } = access;
-  if (!can.canDelete) return refuseChange(invoice, isInvoiceDeletable(invoice.status));
-
-  const documents = await prisma.supplierInvoiceDocument.findMany({
-    where: { invoiceId: invoice.id },
-    select: { id: true, objectKey: true },
-  });
-
-  // Files before the row, as everywhere else: a row kept beside a deleted file
-  // is recoverable by trying again, a file left behind with no row is not
-  // findable at all.
-  for (const d of documents) {
-    try {
-      await deleteObject(d.objectKey);
-    } catch (e) {
-      console.error(`[supplier-invoices] ${invoice.id}: could not delete ${d.objectKey}, keeping row`, e);
-      return fail(503, "receipt.deleteStorageFailed");
-    }
-  }
-
-  const result = await commit(async () => {
-    applied(
-      await prisma.supplierInvoice.deleteMany({ where: { id: invoice.id, status: invoice.status } }),
-      "supplierInvoice.changedMeanwhile",
-    );
-  });
   if (result instanceof Response) return result;
   return new Response(null, { status: 204 });
 }

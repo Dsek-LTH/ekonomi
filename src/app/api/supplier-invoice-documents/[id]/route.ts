@@ -1,18 +1,30 @@
-// Serve or remove one levfaktura document. The bytes stream browser ← Next ←
-// storage, so every read is authorised here, and a document is only ever as
-// visible as the invoice it belongs to: both handlers ask about the invoice,
-// through the same loader the invoice's own routes use.
+// Serve one levfaktura document, or delete one from the Inkorg. The bytes
+// stream browser ← Next ← storage, so every read is authorised here.
+//
+// A document on an invoice is as visible as the invoice, asked through the
+// same loader the invoice's own routes use. One in the Inkorg belongs to no
+// invoice yet, and is triage's alone.
+//
+// Deleting is only ever from the Inkorg. A document on an invoice is taken off
+// it first (./detach), which puts it back in the Inkorg, so a file is never
+// thrown away by somebody who was only tidying an invoice.
 import { prisma } from "@/lib/server/db";
 import { deleteObject, getObjectStream } from "@/lib/server/storage";
-import { awaitsKontering } from "@/lib/domain/supplier-invoice";
-import { fail, gate } from "@/lib/api/guard";
-import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
+import { canTriageInvoices } from "@/lib/domain/permissions";
+import { fail, gate, type Actor } from "@/lib/api/guard";
+import { loadInvoiceFor } from "@/lib/api/supplier-invoice-access";
 
 async function findDocument(id: string) {
   return prisma.supplierInvoiceDocument.findUnique({
     where: { id },
     select: { id: true, invoiceId: true, objectKey: true, filename: true },
   });
+}
+
+/** Whether the actor may see this document at all. */
+async function maySee(actor: Actor, doc: { invoiceId: string | null }): Promise<boolean> {
+  if (doc.invoiceId === null) return canTriageInvoices(actor.capabilities);
+  return (await loadInvoiceFor(actor, doc.invoiceId)).ok;
 }
 
 // GET /api/supplier-invoice-documents/:id: the file, inline.
@@ -22,9 +34,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!g.ok) return g.res;
 
   const doc = await findDocument(id);
-  if (!doc) return fail(404, "supplierInvoice.documentNotFound");
-  const access = await loadInvoiceFor(g.actor, doc.invoiceId);
-  if (!access.ok) return fail(404, "supplierInvoice.documentNotFound");
+  if (!doc || !(await maySee(g.actor, doc))) return fail(404, "supplierInvoice.documentNotFound");
 
   // Storage being down and an object gone missing are told apart, for the
   // reason the receipt route gives: the second is a verifikat lost.
@@ -50,33 +60,37 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return new Response(obj.body, { headers });
 }
 
-// DELETE /api/supplier-invoice-documents/:id
+// DELETE /api/supplier-invoice-documents/:id: from the Inkorg, for good.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate();
+  const g = await gate(canTriageInvoices);
   if (!g.ok) return g.res;
 
   const doc = await findDocument(id);
   if (!doc) return fail(404, "supplierInvoice.documentNotFound");
-  const access = await loadInvoiceFor(g.actor, doc.invoiceId);
-  if (!access.ok) return fail(404, "supplierInvoice.documentNotFound");
-  const { invoice, can } = access;
-  if (!can.canEditDocuments) return refuseChange(invoice, invoice.status === "INBOX" || awaitsKontering(invoice.status));
+  if (doc.invoiceId !== null) return fail(409, "supplierInvoice.documentOnInvoice");
 
-  // Bytes first, and the row only once they are gone, for the reason the
-  // receipt route gives: a file that outlives its row is one nobody can find.
-  try {
-    await deleteObject(doc.objectKey);
-  } catch (e) {
-    console.error(`[supplier-invoices] document ${doc.id}: could not delete object, keeping row`, e);
-    return fail(503, "receipt.deleteStorageFailed");
-  }
-
-  await prisma.$transaction(async (tx) => {
+  // The row is held while it goes, so it cannot be attached to an invoice
+  // between the check and the delete: attached in another tab a moment ago, it
+  // is an invoice's now and not this request's to delete. Bytes first, and the
+  // row only once they are gone, for the reason the receipt route gives: a
+  // file that outlives its row is one nobody can find.
+  const outcome = await prisma.$transaction(async (tx) => {
+    const [row] = await tx.$queryRaw<{ invoiceId: string | null }[]>`
+      SELECT "invoiceId" FROM "SupplierInvoiceDocument" WHERE "id" = ${doc.id} FOR UPDATE`;
+    if (!row) return "gone" as const;
+    if (row.invoiceId !== null) return "attached" as const;
+    try {
+      await deleteObject(doc.objectKey);
+    } catch (e) {
+      console.error(`[supplier-invoices] document ${doc.id}: could not delete object, keeping row`, e);
+      return "storage" as const;
+    }
     await tx.supplierInvoiceDocument.delete({ where: { id: doc.id } });
-    await tx.supplierInvoiceEvent.create({
-      data: { invoiceId: invoice.id, type: "DOCUMENT_REMOVED", actorId: g.actor.id },
-    });
+    return "deleted" as const;
   });
+  if (outcome === "gone") return fail(404, "supplierInvoice.documentNotFound");
+  if (outcome === "attached") return fail(409, "supplierInvoice.documentOnInvoice");
+  if (outcome === "storage") return fail(503, "receipt.deleteStorageFailed");
   return new Response(null, { status: 204 });
 }

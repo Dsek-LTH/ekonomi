@@ -1,18 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
-import { Notice } from "@/components/ui/notice";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconUpload, IconTrash } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { ClientDataTable } from "@/components/ui/client-data-table";
-import { useTableControls, useUrlTableControls } from "@/lib/data/use-list-query";
+import { useScopeSwitch, useUrlTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
 import { canBookkeep, canSendReminders } from "@/lib/domain/permissions";
 import { canRemindAboutTransaction } from "@/lib/domain/reminders";
@@ -34,7 +31,7 @@ import type { PatchBankTransaction } from "@/lib/api/schemas/bank";
 import { useFormat } from "@/lib/ui/use-format";
 import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
-import { bankDefaultTab, type BankScope } from "./scope";
+import { BANK_TABS, bankDefaultTab, type BankScope } from "./scope";
 
 export default function BankClient({
   page,
@@ -60,15 +57,14 @@ export default function BankClient({
    */
   allCards: SectionCard[];
   /** The purchases on no card. Empty for anybody who cannot place them. */
-  cardless: BankTransaction[];
+  /** Purchases on no card, on the section's reading. "Utan kort" is a tab
+   *  only while this is above zero. */
+  cardless: number;
   viewerId: string;
 }) {
   const t = useTranslations("bank");
   const { user } = useRole();
   const { date } = useFormat();
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
@@ -78,8 +74,6 @@ export default function BankClient({
   // The no-card list is every row it will ever hold, so it narrows in the
   // browser and keeps its state here rather than in the address, which is the
   // main list's.
-  const cardlessControls = useTableControls();
-  const [showCardless, setShowCardless] = useState(false);
   const canImport = canBookkeep(user.capabilities);
   // The register is only sent to somebody the server would let write it, so
   // having one is the permission (see page.tsx).
@@ -101,34 +95,24 @@ export default function BankClient({
 
   // In the URL, like every other filter on a list: which purchases you were
   // looking at is a thing people send each other, and it is the same parameter
-  // the server reads to decide what to fetch.
-  function setScope(next: string) {
-    const q = new URLSearchParams(params.toString());
-    q.set("scope", next);
-    // The tab you were on comes along, so flipping scope compares the same
-    // slice of both. Written out even where it was the old default, since the
-    // defaults differ per scope and leaving it unstated would open the other
-    // one's. Paging is dropped: page 4 of the section's feed is not page 4 of
-    // your own.
-    const tab = controls.tab;
-    const nextDefault = bankDefaultTab(next as BankScope);
-    if (tab && tab !== nextDefault) q.set("tab", tab);
-    else q.delete("tab");
-    q.delete("page");
-    router.push(`${pathname}?${q.toString()}`);
-  }
+  // the server reads to decide what to fetch. See useScopeSwitch.
+  const setScope = useScopeSwitch(controls.tab, (s) => bankDefaultTab(s as BankScope));
 
-  // Unaccounted first, because on either scope it is the only tab with anything
-  // to do in it. Which means neither scope may leave the default unstated:
-  // DataTable falls back to its first tab, and the server to no filter at all,
-  // and the two would describe different lists. See parseListQuery.
-  const tabs: TabFilter = [
-    // No predicates. The tab is a filter the server applies (see
-    // getBankTransactionPage), so the rows arrive already narrowed to it.
-    { value: "UNMATCHED", label: t("tab.unmatched") },
-    { value: "MATCHED", label: t("tab.matched") },
-    { value: "ALL", label: t("tab.all") },
-  ];
+  // Stage, named for who acts next. "Utan kort" only on the section's reading
+  // and only while there is one: those purchases are on nobody's own feed, and
+  // placing them is bookkeeping's. It used to be a notice with a second table
+  // under it, because as a tab it sat empty most of the time. A tab that is
+  // hidden when empty has no such cost (see docs/navigation.md).
+  //
+  // No predicates. The tab is a filter the server applies (see
+  // getBankTransactionPage), so the rows arrive already narrowed to it. The
+  // default differs per scope, so it is always passed (see bankDefaultTab).
+  const tabs: TabFilter = BANK_TABS.filter((v) => v !== "nocard" || cardless > 0).map((value) => ({
+    value,
+    label: t(`tab.${value}`),
+    badge: value === "nocard" ? cardless : undefined,
+  }));
+
 
 
   async function upload(file: File) {
@@ -284,45 +268,10 @@ export default function BankClient({
           : undefined
       }
     >
-      {/* The purchases the export named no card on are a job, not a slice of
-          the feed: a warning while there are any, gone once the last is
-          placed, and their own table under it when asked for. Not a tab, where
-          it read as a fourth match status and sat there empty most of the
-          time, and not a filter on the list below, which narrowed it without
-          the tabs saying so. Same columns, so the card picker is right there
-          on every row. */}
-      {cardless.length > 0 && (
-        <Notice>
-          <p>
-            {t("noCard.count", { count: cardless.length })}{" "}
-            <button
-              type="button"
-              onClick={() => setShowCardless(!showCardless)}
-              aria-expanded={showCardless}
-              className="font-medium text-accent hover:underline"
-            >
-              {showCardless ? t("noCard.hide") : t("noCard.show")}
-            </button>
-          </p>
-        </Notice>
-      )}
-      {cardless.length > 0 && showCardless && (
-        <Card>
-          <ClientDataTable
-            columns={cardlessColumns}
-            rows={cardless}
-            controls={cardlessControls}
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(tx) => tx.id}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
-
       {/* Transaction list */}
       <Card>
         <DataTable
-          columns={[picks.column, ...columns]}
+          columns={[picks.column, ...(controls.tab === "nocard" ? cardlessColumns : columns)]}
           rows={page.rows}
           controls={controls}
           tabs={tabs}

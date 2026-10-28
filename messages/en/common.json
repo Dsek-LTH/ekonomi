@@ -136,7 +136,6 @@
     "INVOICE_TRIAGE_hint": "See the supplier invoice inbox, add an invoice by hand, give it to a result unit, or delete it. Does not grant approval."
   },
   "invoiceStatus": {
-    "INBOX": "In the inbox",
     "ASSIGNED": "To code",
     "PENDING_APPROVAL": "Awaiting attest",
     "CHANGES_REQUESTED": "Changes requested",

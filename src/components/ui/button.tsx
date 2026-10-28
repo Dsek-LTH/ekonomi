@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 
-type Variant = "primary" | "secondary" | "ghost" | "accentOutline" | "danger" | "dangerOutline";
+type Variant = "primary" | "secondary" | "ghost" | "quiet" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
 // The section's pink, flat and unmodified, with a white label. The same button
@@ -27,6 +27,9 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     "bg-background text-foreground border border-border hover:bg-hover active:scale-[0.98]",
   ghost: "text-accent hover:bg-accent-soft",
+  // No edge and no colour of its own: a control in the header's row, which
+  // reads as part of the bar until it is hovered.
+  quiet: "text-foreground hover:bg-hover",
   // The section's pink as an edge rather than a fill: a create button that sits
   // in a toolbar beside a search box, where a filled one is the loudest thing on
   // a page whose subject is the list under it. Same shape as the dashed "add"

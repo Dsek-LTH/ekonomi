@@ -1,6 +1,7 @@
 {
   "costCentreFailed": "Kunde inte ändra kostnadsstället.",
   "title": "Intäkter",
+  "reviewTitle": "Granska och bokför",
   "description": "Hämta försäljning från Zettle och Swish. Granska och bokför.",
   "serviceUnavailable": "Intäktstjänsten är inte konfigurerad. Sätt INTAKT_URL och INTAKT_TOKEN för att kunna hämta och rendera rapporter.",
   "source": {
@@ -38,9 +39,7 @@
     "fortnoxCheckSeriesUnset": "Kunde inte kontrolleras mot Fortnox eftersom ingen verifikationsserie är vald"
   },
   "counts": {
-    "reports": "{count} rapporter",
-    "toBook": "{count} att bokföra",
-    "toExport": "{count} att exportera"
+    "reports": "{count} rapporter"
   },
   "empty": {
     "description": "Hämta en period från Zettle, eller ladda upp en Swish-rapport.",
@@ -165,16 +164,18 @@
   },
   "searchPlaceholder": "Sök källa, fil eller period…",
   "tab": {
+    "review": "Att bokföra",
+    "booked": "Att exportera",
+    "exported": "Exporterade",
     "all": "Alla"
+  },
+  "list": {
+    "reviewStart": "Granska och bokför ({count})",
+    "empty": "Inga intäkter än."
   },
   "batches": {
     "title": "Hämtningar",
     "count": "{count} hämtningar"
-  },
-  "nav": {
-    "label": "Avsnitt",
-    "review": "Att bokföra",
-    "booked": "Bokfört / exporterat"
   },
   "review": {
     "viewLabel": "Visning",
@@ -201,8 +202,6 @@
     "done": "{count} av {total} exporterade"
   },
   "booked": {
-    "title": "Bokfört och exporterat",
-    "searchPlaceholder": "Sök verksamhet, kostnadsställe eller verifikation…",
-    "empty": "Inget är bokfört än."
+    "searchPlaceholder": "Sök verksamhet, kostnadsställe eller verifikation…"
   }
 }

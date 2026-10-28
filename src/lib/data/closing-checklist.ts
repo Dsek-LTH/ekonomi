@@ -137,7 +137,7 @@ async function runChecks(
               status: { in: ["PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED", "BOOKED"] },
             },
           });
-          results.set(key, { remaining, href: "/bookkeeping" });
+          results.set(key, { remaining, href: "/expenses?scope=all" });
           break;
         }
         case "CARD_PURCHASES_ACCOUNTED": {
@@ -180,7 +180,7 @@ async function runChecks(
           const accounts = await getBalanceAccounts(year);
           results.set(key, {
             remaining: accounts.filter((a) => !a.reconciled).length,
-            href: `/closing/${year.id}/accounts`,
+            href: "/closing/accounts",
           });
           break;
         }
@@ -192,7 +192,7 @@ async function runChecks(
   ]);
 
   if (progress) {
-    const href = `/closing/${year.id}/vouchers`;
+    const href = "/closing/vouchers";
     if (keys.has("TREASURY_REVIEWED")) {
       results.set("TREASURY_REVIEWED", { remaining: progress.total - progress.settled.PREPARER, href });
     }

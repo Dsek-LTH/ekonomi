@@ -23,6 +23,17 @@ model CostCenter {
   active Boolean          @default(true)
   source CostCenterSource @default(FORTNOX)
 
+  // What the cost centre is called where its result unit's name is already on
+  // screen above it: "Funktionärer" under Aktivitetsutskottet, for a Fortnox
+  // name of "Aktivitetsutskottet - Funktionärer". Optional, chosen by a person
+  // (Settings → Cost centres can suggest it, but saves nothing unasked), and
+  // this app's own: the sync writes `name` and never this.
+  //
+  // Written with raw SQL, never `update`, so that setting one does not touch
+  // `updatedAt`, which is how the Fortnox page tells when the sync last ran.
+  // See setCostCenterShortNames in lib/data/cost-centers.ts.
+  shortName String?
+
   allocations        ExpenseCostAllocation[]
   invoiceAllocations SupplierInvoiceAllocation[]
   verificationLines  VerificationLine[]

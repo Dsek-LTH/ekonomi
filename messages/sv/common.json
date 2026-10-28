@@ -136,7 +136,6 @@
     "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet eller ta bort den. Ger inte rätt att attestera."
   },
   "invoiceStatus": {
-    "INBOX": "I inkorgen",
     "ASSIGNED": "Att kontera",
     "PENDING_APPROVAL": "Väntar på attest",
     "CHANGES_REQUESTED": "Ändring begärd",

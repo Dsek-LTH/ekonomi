@@ -340,7 +340,7 @@ export function reminderEmail(
       kind: "section",
       title: emailT("digest.attest"),
       blocks: [capped(attest.map(row))],
-      button: { label: emailT("digest.attestButton"), url: appUrl("/approvals") },
+      button: { label: emailT("digest.attestButton"), url: appUrl("/expenses?scope=unit") },
     });
   }
   if (own.length) {
@@ -455,7 +455,7 @@ export function digestEmail(name: string, week: string, w: Waiting): Email {
       title: emailT("digest.attest"),
       hint: emailT("digest.attestHint"),
       blocks: [capped(attest)],
-      button: { label: emailT("digest.attestButton"), url: appUrl("/approvals") },
+      button: { label: emailT("digest.attestButton"), url: appUrl("/expenses?scope=unit") },
     });
   }
 

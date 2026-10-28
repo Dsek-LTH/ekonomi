@@ -1,4 +1,6 @@
 import { CollectionSwitch, type Collections } from "@/components/ui/collection-switch";
+import { PageTabs, type PageTabsProps } from "@/components/ui/page-tabs";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { PageHeader } from "@/components/shell/section-nav";
 import { cn } from "@/lib/ui/utils";
 
@@ -25,10 +27,23 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
   wide: "",
 };
 
+/** The view toggle's content. See `views` on PageShell. */
+export interface Views {
+  /** Names the toggle for a screen reader. */
+  label: string;
+  value: string;
+  options: { value: string; label: string; icon: (p: { className?: string }) => React.ReactNode }[];
+  onChange: (value: string) => void;
+  /** Keep the toggle's room but not the toggle, as `collectionsHidden`. */
+  hidden?: boolean;
+}
+
 export function PageShell({
   title,
   subtitle,
   collections,
+  pages,
+  views,
   view,
   collectionsHidden = false,
   back,
@@ -70,6 +85,20 @@ export function PageShell({
    * once, which is why every page put a different kind of thing in it.
    */
   collections?: Collections;
+  /**
+   * The parts of one record, for a nested page whose record has parts of its
+   * own (a bokslut year). Underlined links under the title, each part its own
+   * page. Not `collections`, which only ever says whose. See
+   * docs/navigation.md.
+   */
+  pages?: PageTabsProps;
+  /**
+   * How the same content is drawn: Tabell or Diagram, detail or frame. Icons,
+   * on a strip of its own at the top of the page, above what it redraws. Never
+   * in the band, where the scope switch is: a toggle there read as one more
+   * "whose", which it is not. See docs/navigation.md.
+   */
+  views?: Views;
   /**
    * Which moment the page describes, for a page whose every figure moves with
    * it: the stock list's "per datum", which re-prices the whole shelf and every
@@ -131,6 +160,22 @@ export function PageShell({
           )
         }
       />
+
+      {(pages || views) && (
+        <div className={cn("mb-4 flex items-end justify-between gap-4", pages && "border-b border-border")}>
+          {pages ? <PageTabs {...pages} /> : <span />}
+          {views && (
+            <div className={cn("pb-1.5", views.hidden && "invisible")} inert={views.hidden}>
+              <ViewToggle
+                aria-label={views.label}
+                value={views.value}
+                options={views.options}
+                onChange={views.onChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">{children}</div>
     </div>

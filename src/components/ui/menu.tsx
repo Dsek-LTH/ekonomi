@@ -33,6 +33,9 @@ export function Menu({
   align = "end",
   compact = false,
   iconOnly = false,
+  accessibleName,
+  trigger,
+  triggerClassName,
   className,
   children,
 }: {
@@ -62,11 +65,23 @@ export function Menu({
    */
   iconOnly?: boolean;
   /**
+   * The trigger's name for a screen reader, where the drawn label leans on
+   * what is around it: the header's year picker draws "2026" and is named
+   * "Räkenskapsår 2026".
+   */
+  accessibleName?: string;
+  /**
    * An action picked from this menu is still running. The trigger carries the
    * spinner because the item that started it is gone. The menu closes on
    * choosing, so the trigger is the only thing left to say so.
    */
   loading?: boolean;
+  /**
+   * Draw this instead of a button, for a menu whose trigger is not an action:
+   * the avatar in the header. `label` stays its accessible name.
+   */
+  trigger?: React.ReactNode;
+  triggerClassName?: string;
   /** Which edge the panel lines up with, "end" hangs it left of the button. */
   align?: "start" | "end";
   className?: string;
@@ -114,40 +129,56 @@ export function Menu({
 
   return (
     <div ref={boxRef} className={cn("relative", className)}>
-      <Button
-        ref={triggerRef}
-        variant={variant}
-        size={size}
-        disabled={disabled}
-        loading={loading}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        // Named even when the word is not drawn.
-        aria-label={compact || iconOnly ? label : undefined}
-        title={compact || iconOnly ? label : undefined}
-        onClick={toggle}
-        // The wrapper decides how wide this is, not the label. Everywhere a
-        // menu currently stands it is a flex item that shrinks to its content,
-        // so `w-full` is that same width, and where a caller does stretch it
-        // (the table toolbar makes its action fill the row on a phone) the
-        // trigger goes with it instead of sitting a third of the way across.
-        className="w-full"
-      >
-        {icon}
-        {!iconOnly && <span className={cn(compact && "hidden sm:inline")}>{label}</span>}
-        {!iconOnly && (
-          <IconChevronDown
-            className={cn(
-              "size-4 transition-transform duration-150",
-              open && "rotate-180",
-              // Nothing to point at once the label is gone. The icon is the
-              // whole button, and a chevron beside it is half the width again
-              // for no more meaning.
-              compact && "hidden sm:block",
-            )}
-          />
-        )}
-      </Button>
+      {trigger ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          disabled={disabled}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={label}
+          title={label}
+          onClick={toggle}
+          className={triggerClassName}
+        >
+          {trigger}
+        </button>
+      ) : (
+        <Button
+          ref={triggerRef}
+          variant={variant}
+          size={size}
+          disabled={disabled}
+          loading={loading}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          // Named even when the word is not drawn.
+          aria-label={accessibleName ?? (compact || iconOnly ? label : undefined)}
+          title={compact || iconOnly ? label : undefined}
+          onClick={toggle}
+          // The wrapper decides how wide this is, not the label. Everywhere a
+          // menu currently stands it is a flex item that shrinks to its content,
+          // so `w-full` is that same width, and where a caller does stretch it
+          // (the table toolbar makes its action fill the row on a phone) the
+          // trigger goes with it instead of sitting a third of the way across.
+          className="w-full"
+        >
+          {icon}
+          {!iconOnly && <span className={cn(compact && "hidden sm:inline")}>{label}</span>}
+          {!iconOnly && (
+            <IconChevronDown
+              className={cn(
+                "size-4 transition-transform duration-150",
+                open && "rotate-180",
+                // Nothing to point at once the label is gone. The icon is the
+                // whole button, and a chevron beside it is half the width again
+                // for no more meaning.
+                compact && "hidden sm:block",
+              )}
+            />
+          )}
+        </Button>
+      )}
 
       {/* Portalled to the body, with fixed positioning, so that no ancestor can
           crop it. As an absolutely positioned child it was cut off by any

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/server/db";
 import { canReviewOwnBooking } from "@/lib/domain/permissions";
 import { reviewBlocker } from "@/lib/domain/review";
 import { bookedByOf } from "@/lib/server/review";
+import type { During } from "@/lib/server/fiscal-year";
 import type { Capability } from "@/lib/domain/types";
 
 export interface ReviewQueue {
@@ -15,12 +16,17 @@ export interface ReviewQueue {
   waitingOnOthers: number;
 }
 
-export async function getReviewQueue(viewer: {
-  id: string;
-  capabilities: readonly Capability[];
-}): Promise<ReviewQueue> {
+export async function getReviewQueue(
+  viewer: {
+    id: string;
+    capabilities: readonly Capability[];
+  },
+  /** The räkenskapsår, by purchase date, as the Utlägg list it is reached
+   *  from. See docs/navigation.md. */
+  { during }: { during?: During } = {},
+): Promise<ReviewQueue> {
   const booked = await prisma.expense.findMany({
-    where: { status: "BOOKED" },
+    where: { status: "BOOKED", ...(during ? { purchaseDate: during } : {}) },
     // The order they were konterade in, so the queue is worked oldest first.
     orderBy: [{ verification: { createdAt: "asc" } }, { id: "asc" }],
     select: { id: true },

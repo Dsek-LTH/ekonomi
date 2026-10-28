@@ -118,16 +118,6 @@ function toYear(
   };
 }
 
-/** Every synced financial year, newest first. */
-export async function getClosingYears(): Promise<ClosingYear[]> {
-  const [years, counts] = await Promise.all([
-    prisma.fortnoxFinancialYear.findMany({ orderBy: { fromDate: "desc" } }),
-    prisma.ledgerVoucher.groupBy({ by: ["financialYear"], _count: { _all: true } }),
-  ]);
-  const byYear = new Map(counts.map((c) => [c.financialYear, c._count._all]));
-  return years.map((y) => toYear(y, byYear.get(y.id) ?? 0));
-}
-
 export async function getClosingYear(id: number): Promise<ClosingYear | null> {
   const [y, vouchers] = await Promise.all([
     prisma.fortnoxFinancialYear.findUnique({ where: { id } }),

@@ -443,7 +443,7 @@ export function NewRentalClient({
     <PageShell
       title={existing ? t("rental.editTitle") : t("rental.newTitle")}
       width="content"
-      back={existing ? `/contracts/${existing.id}` : "/uthyrning"}
+      back={existing ? `/contracts/${existing.id}` : "/rentals"}
     >
       {/* The contract, beside the form that describes it. No `onFile`: there is
           nothing to upload here, the document is drawn rather than attached,
@@ -758,7 +758,7 @@ export function NewRentalClient({
                 // the word says. An edit has no draft, and the key it would
                 // remove belongs to a new rental somebody may be drawing.
                 if (!existing) forgetDraft();
-                router.push(existing ? `/contracts/${existing.id}` : "/uthyrning");
+                router.push(existing ? `/contracts/${existing.id}` : "/rentals");
               }}
             >
               {t("form.cancel")}

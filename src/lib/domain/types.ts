@@ -126,6 +126,9 @@ export interface CostCenter {
   id: string;
   code: string;
   name: string;
+  /** What it is called under its result unit's heading, when somebody has
+   *  chosen one. See lib/domain/cost-center-short-name.ts. */
+  shortName: string | null;
   resultUnit?: string;
   active: boolean;
   source: CostCenterSource;

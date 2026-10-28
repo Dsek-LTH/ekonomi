@@ -4,6 +4,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import type { During } from "@/lib/server/fiscal-year";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { oreToSEK as ore } from "@/lib/domain/money";
 import type { BankTransaction, Card } from "@/lib/domain/types";
@@ -131,8 +132,11 @@ const BANK_DEFAULT_ORDER: Prisma.BankTransactionOrderByWithRelationInput[] = [
 export async function getBankTransactionPage(
   scope: { cardHolderId?: string; resultUnitNames?: readonly string[] },
   q: ListQuery,
+  /** The räkenskapsår, by transaction date. See docs/navigation.md. */
+  { during }: { during?: During } = {},
 ): Promise<RowPage<BankTransaction>> {
   const and: Prisma.BankTransactionWhereInput[] = [];
+  if (during) and.push({ transactionDate: during });
   if (scope.cardHolderId) and.push({ card: { holderId: scope.cardHolderId } });
   // The cards spent for these result units. An empty list is no cards, not
   // every card: it narrows to nothing rather than falling through to the feed.
@@ -142,8 +146,10 @@ export async function getBankTransactionPage(
 
   // `is: null` / `isNot: null` on a one-to-one relation, which is how "has an
   // utlägg against it" is asked of the database rather than of a loaded row.
-  if (q.tab === "MATCHED" || q.tab === "matched") and.push({ matchedExpense: { isNot: null } });
-  if (q.tab === "UNMATCHED" || q.tab === "unmatched") and.push({ matchedExpense: { is: null } });
+  if (q.tab === "accounted") and.push({ matchedExpense: { isNot: null } });
+  if (q.tab === "unaccounted") and.push({ matchedExpense: { is: null } });
+  // On no card: on nobody's own feed, so only ever asked for on the section's.
+  if (q.tab === "nocard") and.push({ cardId: null });
   const date = dateRangeFilter(q, { dateOnly: true });
   if (date) and.push({ transactionDate: date });
 
@@ -182,19 +188,20 @@ export async function getBankTransactionPage(
  * whose they were. Every one of them, not a page: it is a job that is worked
  * down to nothing, so the list is short whenever anyone is keeping up with it.
  */
-export async function getCardlessTransactions(): Promise<BankTransaction[]> {
-  const txns = await prisma.bankTransaction.findMany({
-    where: { cardId: null },
-    orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
-    include: { matchedExpense: true, card: { include: { holder: true } } },
+/** How many purchases the export named no card on, for bookkeeping to place. */
+export async function countCardlessTransactions({ during }: { during?: During } = {}): Promise<number> {
+  return prisma.bankTransaction.count({
+    where: { cardId: null, ...(during ? { transactionDate: during } : {}) },
   });
-  return txns.map(toBankTransaction);
 }
 
 /** How many of a member's own card purchases have no utlägg yet. */
-export async function countUnaccountedPurchases(holderId: string): Promise<number> {
+export async function countUnaccountedPurchases(
+  holderId: string,
+  { during }: { during?: During } = {},
+): Promise<number> {
   return prisma.bankTransaction.count({
-    where: { card: { holderId }, matchedExpense: { is: null } },
+    where: { card: { holderId }, matchedExpense: { is: null }, ...(during ? { transactionDate: during } : {}) },
   });
 }
 

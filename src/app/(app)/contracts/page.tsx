@@ -12,7 +12,7 @@ export default async function ContractsPage({
   searchParams: Promise<SearchParams>;
 }) {
   // The archive list is for whoever may read the archive. An uthyrningsansvarig
-  // has /uthyrning, which is the same rows read for their job, and sending them
+  // has /rentals, which is the same rows read for their job, and sending them
   // here would be a second list showing them the subset they already have.
   //
   // The scope is still applied underneath, because a gate is a decision about a

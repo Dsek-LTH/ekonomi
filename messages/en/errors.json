@@ -401,7 +401,9 @@
     "giroMismatch": "The invoice's {field} {invoice} is not what Fortnox has for the supplier ({register}).",
     "exportInProgress": "The invoice is already being exported.",
     "exportUncertain": "Fortnox did not answer for certain. Check in Fortnox whether the supplier invoice was made before trying again.",
-    "nothingToRelease": "There is no uncertain export to settle."
+    "nothingToRelease": "There is no uncertain export to settle.",
+    "documentOnInvoice": "The document is already on an invoice.",
+    "documentNotOnInvoice": "The document is not on an invoice."
   },
   "settings": {
     "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",

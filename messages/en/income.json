@@ -1,6 +1,7 @@
 {
   "costCentreFailed": "The cost centre could not be changed.",
   "title": "Income",
+  "reviewTitle": "Review and book",
   "description": "Fetch sales from Zettle and Swish. Look them over and book them.",
   "serviceUnavailable": "The income service is not configured. Set INTAKT_URL and INTAKT_TOKEN to fetch and render reports.",
   "source": {
@@ -38,9 +39,7 @@
     "fortnoxCheckSeriesUnset": "Could not be checked against Fortnox because no voucher series is chosen"
   },
   "counts": {
-    "reports": "{count} reports",
-    "toBook": "{count} to book",
-    "toExport": "{count} to export"
+    "reports": "{count} reports"
   },
   "empty": {
     "description": "Fetch a period from Zettle, or upload a Swish report.",
@@ -165,16 +164,18 @@
   },
   "searchPlaceholder": "Search source, file or period…",
   "tab": {
+    "review": "To book",
+    "booked": "To export",
+    "exported": "Exported",
     "all": "All"
+  },
+  "list": {
+    "reviewStart": "Review and book ({count})",
+    "empty": "No income yet."
   },
   "batches": {
     "title": "Fetches",
     "count": "{count} fetches"
-  },
-  "nav": {
-    "label": "Section",
-    "review": "To book",
-    "booked": "Booked / exported"
   },
   "review": {
     "viewLabel": "View",
@@ -201,8 +202,6 @@
     "done": "{count} of {total} exported"
   },
   "booked": {
-    "title": "Booked and exported",
-    "searchPlaceholder": "Search committee, cost centre or voucher…",
-    "empty": "Nothing is booked yet."
+    "searchPlaceholder": "Search committee, cost centre or voucher…"
   }
 }

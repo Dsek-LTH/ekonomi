@@ -10,6 +10,7 @@ type CostCenterRow = {
   id: string;
   code: string;
   name: string;
+  shortName: string | null;
   active: boolean;
   source: CostCenter["source"];
 };
@@ -18,6 +19,7 @@ const toCostCenter = (c: CostCenterRow, prefixes: PrefixRow[]): CostCenter => ({
   id: c.id,
   code: c.code,
   name: c.name,
+  shortName: c.shortName,
   // Derived from the code, never stored, see lib/server/result-units.ts.
   resultUnit: resultUnitNameForCode(c.code, prefixes) ?? undefined,
   active: c.active,
@@ -37,6 +39,27 @@ async function loadCostCenters(where: Prisma.CostCenterWhereInput): Promise<Cost
 /** Every cost centre, retired ones included, for the settings list. */
 export function getCostCenters(): Promise<CostCenter[]> {
   return loadCostCenters({});
+}
+
+/**
+ * Set (or clear, with null) the short names of several cost centres at once:
+ * the settings page's suggestions, saved together, or one edited by hand.
+ *
+ * Raw SQL rather than `update`, which would stamp `updatedAt` and so make the
+ * Fortnox page report a sync that never ran (see getCostCenterSyncStatus). A
+ * short name is not a change to the mirrored row; it is this app's own note on
+ * it. One transaction, so a batch of suggestions lands whole or not at all.
+ * Returns how many rows there were to set.
+ */
+export async function setCostCenterShortNames(
+  names: { id: string; shortName: string | null }[],
+): Promise<number> {
+  const counts = await prisma.$transaction(
+    names.map(
+      (n) => prisma.$executeRaw`UPDATE "CostCenter" SET "shortName" = ${n.shortName} WHERE "id" = ${n.id}`,
+    ),
+  );
+  return counts.reduce((a, b) => a + b, 0);
 }
 
 /**

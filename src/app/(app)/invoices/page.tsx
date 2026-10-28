@@ -1,51 +1,49 @@
 import { requirePage } from "@/lib/server/current-user";
-import { getInboxHealth, getInvoiceRows } from "@/lib/data/supplier-invoices";
-import { canSeeInvoices, canTriageInvoices } from "@/lib/domain/permissions";
-import { InboxClient } from "./inbox-client";
-import { FocusClient } from "./focus-client";
-import { focusQueue, orderedQueue } from "./queue";
-import { isTreasury, loadWorkspace } from "./load";
+import { getInvoiceRows } from "@/lib/data/supplier-invoices";
+import type { SearchParams } from "@/lib/data/list-query";
+import { canSeeInvoices, canTriageInvoices, canViewBookkeeping } from "@/lib/domain/permissions";
+import { ownedResultUnits } from "@/lib/server/result-units";
+import { getFiscalYear } from "@/lib/server/fiscal-year";
+import { InvoicesClient } from "./invoices-client";
+import { INVOICE_TABS, invoiceDefaultTab, type InvoiceScope, type InvoiceTab } from "./scope";
 
-// Leverantörsfakturor. Two shapes of the same page, by what the reader does
-// with invoices:
+// Fakturor: every levfaktura the reader may see, from the moment it is given
+// to a unit until it is in Fortnox, with the stage as a tab. See
+// docs/navigation.md.
 //
-//   • the treasury works a stream of them, so it gets an inbox: the list by
-//     what each needs, the selected one beside it, the next one opening when
-//     this one is done;
-//   • a resultatansvarig has one or two to attest now and then, so they get
-//     them one at a time, the PDF and the one question.
-//
-// Searching the history is neither, and is the archive (./arkiv).
+// It used to be the booking half only, with the attest half on Att attestera
+// beside the utlägg. That left an invoice sitting with its unit listed nowhere
+// under Leverantörsfakturor at all. Both halves are tabs here now, and the
+// resultatansvarig reads the same list on their own units.
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const user = await requirePage(canSeeInvoices);
-  const { id } = await searchParams;
-  const rows = await getInvoiceRows(user);
+  const params = await searchParams;
+  const owned = await ownedResultUnits(user);
 
-  if (isTreasury(user)) {
-    const canTriage = canTriageInvoices(user.capabilities);
-    // The one asked for, or the first that needs doing.
-    const selectedId = id ?? orderedQueue(rows).find((r) => r.waitsOnViewer)?.id ?? null;
-    const [selected, health] = await Promise.all([
-      selectedId ? loadWorkspace(selectedId, user) : null,
-      canTriage ? getInboxHealth() : null,
-    ]);
-    return (
-      <InboxClient
-        rows={rows}
-        selected={selected}
-        explicit={Boolean(id)}
-        canUpload={canTriage}
-        health={health}
-      />
-    );
-  }
+  // Narrowest first, as the track draws them. A scope that is not the
+  // reader's is answered with the one they would have landed on, as on Utlägg.
+  const scopes: InvoiceScope[] = [
+    ...(owned.names.length > 0 ? (["unit"] as const) : []),
+    ...(canViewBookkeeping(user.capabilities) || canTriageInvoices(user.capabilities)
+      ? (["all"] as const)
+      : []),
+  ];
+  // An attester who answers for no unit (an admin, say) still has the page,
+  // and reads it as the section's: that is what they attest on.
+  if (scopes.length === 0) scopes.push("all");
+  const scope = scopes.find((s) => s === params.scope) ?? scopes[scopes.length - 1];
+  const tab: InvoiceTab =
+    INVOICE_TABS.find((t) => t === params.tab) ?? invoiceDefaultTab(scope);
 
-  const queue = focusQueue(rows);
-  const currentId = id ?? queue[0]?.id ?? null;
-  const current = currentId ? await loadWorkspace(currentId, user) : null;
-  return <FocusClient queue={queue} current={current} />;
+  const [rows, fiscal] = await Promise.all([
+    getInvoiceRows(user, { ownUnits: scope === "unit" }),
+    getFiscalYear(),
+  ]);
+  // Keyed by scope: the table holds its tab in state, and a new scope is a
+  // new reading of the list rather than the old one re-cut.
+  return <InvoicesClient key={scope} rows={rows} scope={scope} scopes={scopes} tab={tab} fiscal={fiscal} />;
 }

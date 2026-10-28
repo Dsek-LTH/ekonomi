@@ -107,6 +107,7 @@ export function ClientDataTable<T>({
   rowKey,
   rowClassName,
   rowHref,
+  rowScroll,
   expansion,
   expandAll,
   empty,
@@ -127,6 +128,8 @@ export function ClientDataTable<T>({
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
+  /** See DataTable's `rowScroll`. */
+  rowScroll?: boolean;
   /** What sits under a row when opened, see DataTable's own `expansion`. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
@@ -183,6 +186,7 @@ export function ClientDataTable<T>({
       rowKey={rowKey}
       rowClassName={rowClassName}
       rowHref={rowHref}
+      rowScroll={rowScroll}
       expansion={expansion}
       expandAll={expandAll}
       empty={empty}

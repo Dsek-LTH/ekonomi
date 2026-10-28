@@ -22,6 +22,7 @@
 // does *not* get from the table is its filters: which product, which kind and
 // which dates are narrowed on the server and live in the URL, because this is
 // the screen people send each other links to.
+import { IconChart, IconList } from "@/components/ui/icons";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -268,14 +269,14 @@ export default function StockLogClient({
       width="wide"
       // The other view of the same history, for the same period. See
       // ../history/views.ts.
-      collections={{
+      views={{
         label: t("history.viewLabel"),
         value: "movements",
         options: [
-          { value: "movements", label: t("history.movements") },
-          { value: "stats", label: t("history.stats") },
+          { value: "movements", label: t("history.movements"), icon: IconList },
+          { value: "stats", label: t("history.stats"), icon: IconChart },
         ],
-        href: (v) => historyHref(v as HistoryView, filter.from, filter.to),
+        onChange: (v) => router.push(historyHref(v as HistoryView, filter.from, filter.to)),
       }}
     >
       <Card>

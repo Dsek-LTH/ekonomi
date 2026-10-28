@@ -248,6 +248,7 @@ export function DataTable<T>({
   rowKey,
   rowClassName,
   rowHref,
+  rowScroll = true,
   expansion,
   expandAll,
   empty,
@@ -319,6 +320,13 @@ export function DataTable<T>({
    * the link underneath is doing the actual work.
    */
   rowHref?: (row: T) => string;
+  /**
+   * Whether following a row's link scrolls to the top, as a navigation to
+   * another page does. Off for a row that opens something beside the list on
+   * the same page (the levfaktura Inkorg's document panel), where jumping to
+   * the top would lose the row that was just clicked.
+   */
+  rowScroll?: boolean;
   /**
    * What sits underneath a row when it is opened, or nothing for a row with
    * nothing behind it.
@@ -594,6 +602,7 @@ export function DataTable<T>({
                     slots={slots}
                     className={rowClassName?.(row)}
                     href={rowHref?.(row)}
+                    scroll={rowScroll}
                   />
                   {under && (
                     <button
@@ -698,6 +707,7 @@ export function DataTable<T>({
                         {href && c === slots.title ? (
                           <Link
                             href={href}
+                            scroll={rowScroll}
                             className="before:absolute before:inset-0 hover:underline focus-visible:underline"
                           >
                             {c.cell(row)}
@@ -776,12 +786,15 @@ function MobileRow<T>({
   slots,
   className,
   href,
+  scroll = true,
 }: {
   row: T;
   slots: MobileGroups<T>;
   className?: string;
   /** Where the row goes when opened. See `rowHref`. */
   href?: string;
+  /** See `rowScroll`. */
+  scroll?: boolean;
 }) {
   const cell = (c: Column<T>) => (c.mobileCell ?? c.cell)(row);
   const filled = (cols: Column<T>[]) =>
@@ -811,7 +824,7 @@ function MobileRow<T>({
               cell that renders its own block. */}
           <div className="min-w-0 flex-1 truncate text-sm font-medium *:truncate">
             {href ? (
-              <Link href={href} className="before:absolute before:inset-0">
+              <Link href={href} scroll={scroll} className="before:absolute before:inset-0">
                 {title}
               </Link>
             ) : (

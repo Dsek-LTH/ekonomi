@@ -5,6 +5,7 @@
 // The list answers "what have we got"; this answers what it has been worth,
 // what it is made of, and what went through it. Every figure is read off the
 // same log the list reads, so the two cannot disagree about anything.
+import { IconChart, IconList } from "@/components/ui/icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -141,14 +142,14 @@ export default function StockStatsClient({
       width="wide"
       // The other view of the same history, for the same period. See
       // ../history/views.ts.
-      collections={{
+      views={{
         label: t("history.viewLabel"),
         value: "stats",
         options: [
-          { value: "movements", label: t("history.movements") },
-          { value: "stats", label: t("history.stats") },
+          { value: "movements", label: t("history.movements"), icon: IconList },
+          { value: "stats", label: t("history.stats"), icon: IconChart },
         ],
-        href: (v) => historyHref(v as HistoryView, from, to),
+        onChange: (v) => router.push(historyHref(v as HistoryView, from, to)),
       }}
     >
       <div className="space-y-5">

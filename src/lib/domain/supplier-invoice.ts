@@ -21,7 +21,6 @@ import type { Capability, Role, SupplierInvoiceStatus } from "./types";
 
 /** Every status, in the order an invoice passes through them. */
 export const INVOICE_STATUSES: readonly SupplierInvoiceStatus[] = [
-  "INBOX",
   "ASSIGNED",
   "PENDING_APPROVAL",
   "CHANGES_REQUESTED",
@@ -32,11 +31,9 @@ export const INVOICE_STATUSES: readonly SupplierInvoiceStatus[] = [
 /**
  * How each status reads, in the colours an utlägg's do (STATUS_TONE): neutral
  * while it waits on its unit, purple while another unit still has to sign,
- * danger when it came back, success when it is through. The inkorg is accent,
- * the treasury's colour, because it is the treasury's to sort.
+ * danger when it came back, success when it is through.
  */
 export const INVOICE_STATUS_TONE: Record<SupplierInvoiceStatus, Tone> = {
-  INBOX: "accent",
   ASSIGNED: "neutral",
   PENDING_APPROVAL: "purple",
   CHANGES_REQUESTED: "danger",
@@ -48,19 +45,17 @@ export const INVOICE_STATUS_TONE: Record<SupplierInvoiceStatus, Tone> = {
 const ATTESTABLE: readonly SupplierInvoiceStatus[] = ["ASSIGNED", "CHANGES_REQUESTED"];
 export const awaitsKontering = (s: SupplierInvoiceStatus): boolean => ATTESTABLE.includes(s);
 
-/** Where triage can still give it to somebody else, or take it back. Once a
- *  row is signed, moving it would move it out from under a signature. */
-const ASSIGNABLE: readonly SupplierInvoiceStatus[] = ["INBOX", "ASSIGNED", "CHANGES_REQUESTED"];
-export const isInvoiceAssignable = (s: SupplierInvoiceStatus): boolean => ASSIGNABLE.includes(s);
-
 /**
- * Where it can be deleted from: the inkorg, or given to a unit that has not
- * attested it. Never once anybody has signed it, even if that signature was
- * later sent back. From then on it is the record of an attest, and if it
- * should not be paid it is sent back, not removed.
+ * Where it can still be moved to another unit, or sent back to the Inkorg:
+ * while nothing on it is signed. Once a row is, either would move it out from
+ * under a signature.
+ *
+ * Back to the Inkorg means it stops being an invoice. Its documents return
+ * there, with the reason it was sent back, and the invoice goes, since every
+ * invoice belongs to a unit and this one has none any more. Whatever history
+ * it had is from before anybody signed it.
  */
-const DELETABLE: readonly SupplierInvoiceStatus[] = ["INBOX", "ASSIGNED"];
-export const isInvoiceDeletable = (s: SupplierInvoiceStatus): boolean => DELETABLE.includes(s);
+export const isInvoiceReturnable = awaitsKontering;
 
 // ── The attest ────────────────────────────────────────────────────
 
@@ -159,16 +154,16 @@ export interface InvoiceCapabilities {
   canKontera: boolean;
   /** Sign the rows this viewer may attest on an invoice waiting for them. */
   canAttest: boolean;
-  /** "Inte vår": the unit sends it back to the inkorg. */
-  canDecline: boolean;
+  /** Send it back to the Inkorg, with a reason: the unit's "Inte vår", or
+   *  triage taking it back. See isInvoiceReturnable. */
+  canReturnToInbox: boolean;
   /** Take your own signature back, before it reaches Fortnox. */
   canWithdrawAttest: boolean;
   /** Send it back to the unit with a comment: by another unit's attester
    *  while it waits on them, or by the treasury once it is attested. */
   canRequestChanges: boolean;
-  /** Give it to a result unit, move it, or take it back to the inkorg. */
-  canAssign: boolean;
-  canDelete: boolean;
+  /** Give it to another result unit instead. Triage's. */
+  canMove: boolean;
   /** Complete what the invoice says: supplier, amount, dates, OCR, and the
    *  account on each row. The treasury's, until it is in Fortnox. */
   canEditDetails: boolean;
@@ -194,22 +189,19 @@ export function invoiceCapabilities(
   return {
     canKontera: kontera,
     canAttest: s === "PENDING_APPROVAL" && pendingMine,
-    canDecline: awaitsKontering(s) && owner,
+    canReturnToInbox: isInvoiceReturnable(s) && (owner || triage),
     canWithdrawAttest: (s === "PENDING_APPROVAL" || s === "APPROVED") && signedByMe,
     canRequestChanges:
       (s === "PENDING_APPROVAL" && pendingMine) || (s === "APPROVED" && canBookkeep(viewer.capabilities)),
-    canAssign: triage && isInvoiceAssignable(s),
-    canDelete: triage && isInvoiceDeletable(s),
+    canMove: triage && isInvoiceReturnable(s),
     canEditDetails: treasury && s !== "EXPORTED",
-    // The PDF is what is attested, so it is fixed once anybody has signed. In
-    // the inkorg it is nobody's yet, so triage's alone.
-    canEditDocuments: s === "INBOX" ? triage : kontera,
+    // The PDF is what is attested, so it is fixed once anybody has signed.
+    canEditDocuments: kontera,
   };
 }
 
-/** Where the viewer's work on an invoice stands, for the inbox's sections. */
+/** Where the viewer's work on an invoice stands. */
 export type InvoiceQueue =
-  | "sort" // in the inkorg, for triage
   | "attest" // waiting for this viewer's attest
   | "export" // attested, for the treasury to complete and export
   | "elsewhere" // waiting on somebody else
@@ -218,7 +210,6 @@ export type InvoiceQueue =
 export function invoiceQueue(viewer: InvoiceViewer, invoice: InvoiceFacts): InvoiceQueue {
   const s = invoice.status;
   if (s === "EXPORTED") return "done";
-  if (s === "INBOX") return canTriageInvoices(viewer.capabilities) ? "sort" : "elsewhere";
   if (s === "APPROVED") return canBookkeep(viewer.capabilities) ? "export" : "elsewhere";
   // The unit's own people, not everyone who could step in. Triage and the
   // admins may kontera anything, and a list of everything is not a to-do.
@@ -229,7 +220,7 @@ export function invoiceQueue(viewer: InvoiceViewer, invoice: InvoiceFacts): Invo
 /** Whether the viewer has something to do with this invoice. */
 export const invoiceWaitsOn = (viewer: InvoiceViewer, invoice: InvoiceFacts): boolean => {
   const q = invoiceQueue(viewer, invoice);
-  return q === "sort" || q === "attest" || q === "export";
+  return q === "attest" || q === "export";
 };
 
 /** Whole days from `today` until `dueDate`, negative once it has passed, or

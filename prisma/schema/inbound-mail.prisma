@@ -34,10 +34,10 @@ model InboundMail {
   sender      User?   @relation("InboundMailSender", fields: [senderId], references: [id], onDelete: SetNull)
   senderId    String?
 
-  subject String?
+  subject      String?
   /// What the forwarder wrote above the forwarded message. Where "SEX01" or
   /// "till Sexmästeriet" is read from for the automatic assignment.
-  note    String?
+  note         String?
   /// Who the forwarded message was originally from, as the forward quotes it:
   /// the supplier's address, usually. What the supplier-history suggestion is
   /// matched on.
@@ -48,7 +48,9 @@ model InboundMail {
 
   receivedAt DateTime
 
-  invoices SupplierInvoice[]
+  invoices  SupplierInvoice[]
+  /// The PDFs it carried, whether still in the Inkorg or on an invoice by now.
+  documents SupplierInvoiceDocument[]
 
   createdAt DateTime @default(now())
 

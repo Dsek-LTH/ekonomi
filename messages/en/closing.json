@@ -2,13 +2,7 @@
   "title": "Year-end closing",
   "never": "Never",
   "years": {
-    "empty": "No financial years have been synced from Fortnox yet.",
-    "col": {
-      "year": "Financial year",
-      "period": "Period",
-      "vouchers": "Vouchers",
-      "synced": "Last synced"
-    }
+    "empty": "No financial years have been synced from Fortnox yet."
   },
   "yearTitle": "Closing {year}",
   "lastSync": "Ledger last synced {when}",

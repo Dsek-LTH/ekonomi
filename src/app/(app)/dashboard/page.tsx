@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/server/current-user";
+import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
 import { getDashboardExpenses } from "@/lib/data/expenses";
 import { countUnaccountedPurchases } from "@/lib/data/bank";
 import { getBudgetOverview } from "@/lib/data/budget-overview";
@@ -32,8 +33,9 @@ const MINE_PREVIEW = 5;
 //   • skattmästeriet: every result unit.
 //
 // Somebody with both of the last two picks between them, the way Mina and Alla
-// are picked on Utlägg and Bank. The choice is in the URL (`?view=`), and one
-// they may not have falls back to the first they do.
+// are picked on Utlägg and Bank. The choice is in the URL as `?scope=`, the
+// same as on every list, and one they may not have falls back to the first
+// they do.
 //
 // It used to be one queue table for everyone, then a budget card for everyone.
 // The second was right that people did not know the budget existed and wrong
@@ -41,12 +43,16 @@ const MINE_PREVIEW = 5;
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ scope?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
   const now = new Date();
-  const year = now.getFullYear();
+  // The header's räkenskapsår, as the calendar year the budget is kept in.
+  // Without a synced year, this one.
+  const fiscal = await getFiscalYear();
+  const year = fiscal ? Number(fiscal.fromDate.slice(0, 4)) : now.getFullYear();
+  const during = fiscal ? fiscalYearWhere(fiscal) : undefined;
 
   const owned = await ownedResultUnits(user);
   const answersForUnits = owned.names.length > 0;
@@ -58,12 +64,14 @@ export default async function DashboardPage({
       ]
     : [];
   if (views.length === 0) views.push("personal");
-  const view = views.find((v) => v === params.view) ?? views[0];
+  const view = views.find((v) => v === params.scope) ?? views[0];
 
   const [{ queueCandidates, mine }, unaccountedPurchases, payout, overview, money] =
     await Promise.all([
-      getDashboardExpenses(user, MINE_PREVIEW),
-      countUnaccountedPurchases(user.id),
+      // What waits on you and your own latest, in the year too: Översikt
+      // reads the same year as every list it links to. See docs/navigation.md.
+      getDashboardExpenses(user, MINE_PREVIEW, { during }),
+      countUnaccountedPurchases(user.id, { during }),
       getPayoutAccount(user.id),
       view === "personal" ? null : getBudgetOverview(year),
       view === "personal" ? getMyMoney(user.id, year) : null,
@@ -71,9 +79,10 @@ export default async function DashboardPage({
 
   // Decided here rather than in the browser, so the marker does not move
   // between the server's render and the client's.
-  const start = new Date(year, 0, 1).getTime();
-  const end = new Date(year + 1, 0, 1).getTime();
-  const yearElapsed = (now.getTime() - start) / (end - start);
+  // A past year is all gone, a future one not begun.
+  const start = fiscal ? Date.parse(`${fiscal.fromDate}T00:00:00`) : new Date(year, 0, 1).getTime();
+  const end = fiscal ? Date.parse(`${fiscal.toDate}T23:59:59`) : new Date(year + 1, 0, 1).getTime();
+  const yearElapsed = Math.min(1, Math.max(0, (now.getTime() - start) / (end - start)));
 
   return (
     <DashboardClient

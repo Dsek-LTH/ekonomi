@@ -93,30 +93,30 @@ describe("exportBlocker", () => {
 });
 
 describe("invoiceCapabilities", () => {
-  it("keeps the inkorg to triage, who may also delete from it", () => {
-    const inbox = invoice({ status: "INBOX", resultUnitId: null });
-    expect(invoiceCapabilities(triage, inbox)).toMatchObject({ canAssign: true, canDelete: true, canKontera: false });
-    expect(invoiceCapabilities(sexm, inbox)).toMatchObject({ canAssign: false, canKontera: false });
-  });
-
-  it("lets the unit kontera, attest and decline in one place", () => {
+  it("lets the unit kontera, attest and send it back in one place", () => {
     expect(invoiceCapabilities(sexm, invoice())).toMatchObject({
       canKontera: true,
-      canDecline: true,
-      canAssign: false,
-      canDelete: false,
+      canReturnToInbox: true,
+      canMove: false,
       canEditDetails: false,
     });
-    expect(invoiceCapabilities(cafe, invoice())).toMatchObject({ canKontera: false, canDecline: false });
+    expect(invoiceCapabilities(cafe, invoice())).toMatchObject({ canKontera: false, canReturnToInbox: false });
   });
 
-  it("lets triage kontera on a unit's behalf, but not decline for it", () => {
-    expect(invoiceCapabilities(triage, invoice())).toMatchObject({ canKontera: true, canDecline: false });
+  it("lets triage kontera on a unit's behalf, move it, or take it back", () => {
+    expect(invoiceCapabilities(triage, invoice())).toMatchObject({
+      canKontera: true,
+      canMove: true,
+      canReturnToInbox: true,
+    });
   });
 
-  it("never deletes an invoice anybody has signed", () => {
-    for (const status of ["PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED", "EXPORTED"] as const) {
-      expect(invoiceCapabilities(triage, invoice({ status })).canDelete).toBe(false);
+  it("never moves or returns an invoice anybody has signed", () => {
+    for (const status of ["PENDING_APPROVAL", "APPROVED", "EXPORTED"] as const) {
+      expect(invoiceCapabilities(triage, invoice({ status }))).toMatchObject({
+        canMove: false,
+        canReturnToInbox: false,
+      });
     }
   });
 
@@ -164,7 +164,6 @@ describe("invoiceCapabilities", () => {
 
 describe("invoiceQueue", () => {
   it("sorts each invoice into the section of whoever has to act", () => {
-    expect(invoiceQueue(triage, invoice({ status: "INBOX", resultUnitId: null }))).toBe("sort");
     expect(invoiceQueue(sexm, invoice())).toBe("attest");
     expect(invoiceQueue(triage, invoice())).toBe("elsewhere");
     expect(invoiceQueue(treasurer, invoice({ status: "APPROVED" }))).toBe("export");

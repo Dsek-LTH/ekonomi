@@ -125,14 +125,14 @@ export function ContractClient({
       key: "delete",
       refresh: false,
     });
-    if (gone !== null) router.push(contract.rental ? "/uthyrning" : "/contracts");
+    if (gone !== null) router.push(contract.rental ? "/rentals" : "/contracts");
   }
 
   return (
     <PageShell
       title={contract.title}
       subtitle={contract.counterparty}
-      back={contract.rental ? "/uthyrning" : "/contracts"}
+      back={contract.rental ? "/rentals" : "/contracts"}
       width="content"
     >
       {/* The contract itself, in the panel that exists for reading a document

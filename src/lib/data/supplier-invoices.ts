@@ -106,8 +106,13 @@ const seesEverything = (v: InvoiceViewer) =>
  * that matches nothing, rather than an empty `OR`, which Prisma reads as no
  * filter and so as everything.
  */
-export function invoiceScopeWhere(v: InvoiceViewerCtx): Prisma.SupplierInvoiceWhereInput {
-  if (seesEverything(v)) return {};
+export function invoiceScopeWhere(
+  v: InvoiceViewerCtx,
+  /** Only the reader's own result units', even for one who sees everything:
+   *  the Min resultatenhet reading of Fakturor. */
+  { ownUnits = false }: { ownUnits?: boolean } = {},
+): Prisma.SupplierInvoiceWhereInput {
+  if (!ownUnits && seesEverything(v)) return {};
 
   const OR: Prisma.SupplierInvoiceWhereInput[] = [];
   if (v.ownedResultUnitIds.length) OR.push({ resultUnitId: { in: [...v.ownedResultUnitIds] } });
@@ -115,9 +120,7 @@ export function invoiceScopeWhere(v: InvoiceViewerCtx): Prisma.SupplierInvoiceWh
     OR.push({ allocations: { some: { costCenter: costCentreWhereForPrefixes(v.ownedPrefixes) } } });
   }
   if (OR.length === 0) return { id: { in: [] } };
-  // The inkorg is triage's business. An invoice sent back to it by its unit
-  // ("Inte vår") is nobody's until it is given again.
-  return { AND: [{ status: { not: "INBOX" } }, { OR }] };
+  return { OR };
 }
 
 /** Whether the viewer may attest one allocation, by the utlägg rule. */
@@ -164,6 +167,7 @@ export interface SupplierInvoiceRow {
   description: string | null;
   amount: number | null; // SEK
   dueDate: string; // YYYY-MM-DD, or "" when not filled in
+  invoiceDate: string; // YYYY-MM-DD, or "" when not filled in
   receivedAt: string; // ISO
   receivedByName: string | null;
   resultUnitName: string | null;
@@ -182,6 +186,7 @@ const ROW_SELECT = {
   description: true,
   amount: true,
   dueDate: true,
+  invoiceDate: true,
   createdAt: true,
   resultUnitId: true,
   receivedBy: { select: { name: true } },
@@ -196,10 +201,13 @@ const ROW_SELECT = {
  * browser (ClientDataTable) the way the other lists of that size do. When
  * that stops being true it is this function that changes.
  */
-export async function getInvoiceRows(viewer: Viewer): Promise<SupplierInvoiceRow[]> {
+export async function getInvoiceRows(
+  viewer: Viewer,
+  opts: { ownUnits?: boolean } = {},
+): Promise<SupplierInvoiceRow[]> {
   const v = await invoiceViewerOf(viewer);
   const rows = await prisma.supplierInvoice.findMany({
-    where: invoiceScopeWhere(v),
+    where: invoiceScopeWhere(v, opts),
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: ROW_SELECT,
   });
@@ -212,6 +220,7 @@ export async function getInvoiceRows(viewer: Viewer): Promise<SupplierInvoiceRow
     description: r.description,
     amount: r.amount == null ? null : ore(r.amount),
     dueDate: isoDate(r.dueDate),
+    invoiceDate: isoDate(r.invoiceDate),
     receivedAt: r.createdAt.toISOString(),
     receivedByName: r.receivedBy?.name ?? null,
     resultUnitName: r.resultUnit?.name ?? null,
@@ -299,12 +308,6 @@ export interface SupplierInvoiceView {
   receivedAt: string;
   mail: InvoiceMailView | null;
   /**
-   * Where the last invoice from the same original sender went, offered to
-   * triage for one still in the inkorg. A suggestion, never an assignment:
-   * one supplier often serves several units. See autoAssign.
-   */
-  suggestedUnit: { id: string; name: string } | null;
-  /**
    * The cost centre the attest card opens on, for an invoice waiting for its
    * kontering: one named in the forwarded mail, failing that the one the same
    * supplier's last invoice went to, failing that the unit's only one. Null
@@ -331,24 +334,6 @@ function autoOf(diff: unknown): { rule: AutoRule; match: string } | null {
   return AUTO_RULES.includes(d?.auto as AutoRule) && typeof d?.match === "string"
     ? { rule: d.auto as AutoRule, match: d.match }
     : null;
-}
-
-/** Where the newest earlier invoice from this original sender was given. */
-async function suggestionFor(
-  invoiceId: string,
-  originalFrom: string | null,
-): Promise<{ id: string; name: string } | null> {
-  if (!originalFrom) return null;
-  const prior = await prisma.supplierInvoice.findFirst({
-    where: {
-      id: { not: invoiceId },
-      resultUnitId: { not: null },
-      inboundMail: { originalFrom },
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: { resultUnit: { select: { id: true, name: true } } },
-  });
-  return prior?.resultUnit ?? null;
 }
 
 /**
@@ -489,9 +474,6 @@ export async function getInvoice(
   const facts = invoiceFactsOf(v, inv);
   const can = invoiceCapabilities(v, facts);
   const m = inv.inboundMail;
-  // Only where it would be acted on: triage, with the invoice still nobody's.
-  const suggestedUnit =
-    can.canAssign && !inv.resultUnitId ? await suggestionFor(inv.id, m?.originalFrom ?? null) : null;
   const suggestedCostCenter =
     can.canKontera && inv.allocations.length === 0 ? await costCenterSuggestionFor(inv) : null;
   const suggestedAccounts =
@@ -534,7 +516,6 @@ export async function getInvoice(
             receivedAt: m.receivedAt.toISOString(),
           }
         : null,
-      suggestedUnit,
       suggestedCostCenter,
       allocations: inv.allocations.map((a, i) => ({
         id: a.id,

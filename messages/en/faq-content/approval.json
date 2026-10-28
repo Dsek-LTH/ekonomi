@@ -13,7 +13,7 @@
         {
           "t": "action",
           "v": "To approvals",
-          "href": "/approvals"
+          "href": "/expenses?scope=unit"
         }
       ]
     },

@@ -4,6 +4,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import type { During } from "@/lib/server/fiscal-year";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import type { ExpenseStatus as DbExpenseStatus } from "@/lib/generated/prisma/enums";
 import {
@@ -254,31 +255,18 @@ export type ExpenseListScope =
   /** Only the viewer's own. */
   | { kind: "mine" }
   /** What the viewer may attest. See attest-scope.ts. */
-  | { kind: "attestable" }
-  /** The whole section's attest queue, for a bookkeeping role looking wider. */
-  | { kind: "attestChain" }
-  /** Signed and beyond: what bookkeeping works on. */
-  | { kind: "signed" };
+  | { kind: "attestable" };
 
-// The status tabs, as the database spells them, which is now the same way the
-// interface spells them, since REJECTED was migrated away. A tab is one status
-// unless the page's question genuinely covers several.
+// The stage tabs (see app/(app)/expenses/scope.ts), as the database spells the
+// statuses behind them. Utkast holds the returned ones too: the submitter acts
+// next on both. "all" is not here, and so narrows nothing.
 const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
-  DRAFT: ["DRAFT"],
-  PENDING_APPROVAL: ["PENDING_APPROVAL"],
-  CHANGES_REQUESTED: ["CHANGES_REQUESTED"],
-  APPROVED: ["APPROVED"],
-  BOOKED: ["BOOKED"],
-  EXPORTED: ["EXPORTED"],
-  // The attest page names its two tabs after the question it asks rather than
-  // after a status ("waiting on someone" and "signed") and the second covers
-  // three. Distinct from the names above, so one table serves every list.
-  PENDING: ["PENDING_APPROVAL"],
-  ATTESTED: ["APPROVED", "BOOKED", "EXPORTED"],
+  draft: ["DRAFT", "CHANGES_REQUESTED"],
+  attest: ["PENDING_APPROVAL"],
+  book: ["APPROVED"],
+  export: ["BOOKED"],
+  done: ["EXPORTED"],
 };
-
-const SIGNED: DbExpenseStatus[] = ["APPROVED", "BOOKED", "EXPORTED"];
-const ATTEST_CHAIN: DbExpenseStatus[] = ["PENDING_APPROVAL", ...SIGNED];
 
 // What each sortable column on the list is, as an order the database can take.
 // Every one ends in `id`: a page is a window onto an ordering, so an ordering
@@ -313,10 +301,6 @@ async function listScopeWhere(
       return { submitterId: viewer.id };
     case "attestable":
       return attestScopeWhere(viewer);
-    case "attestChain":
-      return { status: { in: ATTEST_CHAIN } };
-    case "signed":
-      return { status: { in: SIGNED } };
   }
 }
 
@@ -324,11 +308,9 @@ async function listScopeWhere(
 function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
   const and: Prisma.ExpenseWhereInput[] = [];
 
-  // The tab is one status; the dropdown is any number of them, OR-ed, and
-  // picking none narrows nothing. A list uses one or the other, never both.
-  const statuses = q.picks.length
-    ? q.picks.flatMap((p) => STATUS_TAB[p] ?? [])
-    : STATUS_TAB[q.tab];
+  // The tab is a stage, one or more statuses. Stage is only ever a tab, so
+  // the dropdown's picks are not read here.
+  const statuses = STATUS_TAB[q.tab];
   if (statuses?.length) and.push({ status: { in: statuses } });
 
   const date = dateRangeFilter(q, { dateOnly: true });
@@ -374,6 +356,8 @@ export async function getExpensePage(
   viewer: Viewer,
   scope: ExpenseListScope,
   q: ListQuery,
+  /** The räkenskapsår, by purchase date. See docs/navigation.md. */
+  { during }: { during?: During } = {},
 ): Promise<RowPage<Expense>> {
   // Two filters, both always applied: what this screen is about, and what the
   // viewer is allowed to see at all. The second is not the first's business.
@@ -384,6 +368,7 @@ export async function getExpensePage(
       expenseScopeWhere(await expenseScopeOf(viewer)),
       await listScopeWhere(scope, viewer),
       ...listQueryWhere(q),
+      ...(during ? [{ purchaseDate: during }] : []),
     ],
   };
 
@@ -430,8 +415,11 @@ export async function getExpensePage(
 export async function getDashboardExpenses(
   viewer: Viewer,
   minePreview: number,
+  /** The räkenskapsår, by purchase date, for both halves. See docs/navigation.md. */
+  { during }: { during?: During } = {},
 ): Promise<{ queueCandidates: Expense[]; mine: Expense[] }> {
   const scope = expenseScopeWhere(await expenseScopeOf(viewer));
+  const inYear: Prisma.ExpenseWhereInput = during ? { purchaseDate: during } : {};
 
   // Waiting on you as the person who sent it in.
   const waitingOnSubmitter: Prisma.ExpenseWhereInput = {
@@ -451,13 +439,13 @@ export async function getDashboardExpenses(
 
   const [queueRows, mineRows, ctx, prefixes] = await Promise.all([
     prisma.expense.findMany({
-      where: { AND: [scope, { OR: candidates }] },
+      where: { AND: [scope, inYear, { OR: candidates }] },
       orderBy: EXPENSE_DEFAULT_ORDER,
       include: summaryInclude,
     }),
     // The dashboard shows a handful, so it asks for a handful.
     prisma.expense.findMany({
-      where: { submitterId: viewer.id },
+      where: { submitterId: viewer.id, ...inYear },
       orderBy: [{ purchaseDate: "desc" }, { id: "desc" }],
       take: minePreview,
       include: summaryInclude,

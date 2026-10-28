@@ -84,7 +84,7 @@ export function SidebarPanel({
             rather than as the geometry it is. Canvas is the page's own colour
             (body, globals.css), so the arcs go on showing exactly what they
             show when nothing is scrolling. */}
-        <div className="sticky top-14 z-10 bg-canvas md:top-0">
+        <div className="sticky top-14 z-10 bg-canvas">
           <Card className="overflow-hidden">
             <button
               type="button"

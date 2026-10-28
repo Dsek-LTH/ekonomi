@@ -8,9 +8,19 @@
 export type BankScope = "mine" | "unit" | "all";
 
 /**
- * The tab a scope opens on. Your own purchases open on the ones still to
- * account for, the only thing in the list you can act on. A unit's and the
- * section's open on all of it. The server and the table have to agree on what
- * an unstated tab means.
+ * The stages, as `?tab=` values, named for who acts next: the purchases still
+ * to turn into an utlägg, the ones that have been, and on the section's
+ * reading the ones on no card, which bookkeeping puts on one. See
+ * docs/navigation.md.
  */
-export const bankDefaultTab = (scope: BankScope) => (scope === "mine" ? "UNMATCHED" : "ALL");
+export const BANK_TABS = ["unaccounted", "accounted", "nocard", "all"] as const;
+export type BankTab = (typeof BANK_TABS)[number];
+
+/**
+ * The tab a scope opens on: the stage that needs the reader there. Your own
+ * and the section's open on what is still to account for. A unit's is read,
+ * not worked, so it opens on all of it. The server and the table have to agree
+ * on what an unstated tab means.
+ */
+export const bankDefaultTab = (scope: BankScope): BankTab =>
+  scope === "unit" ? "all" : "unaccounted";

@@ -2,13 +2,7 @@
   "title": "Bokslut",
   "never": "Aldrig",
   "years": {
-    "empty": "Inga räkenskapsår är synkade från Fortnox ännu.",
-    "col": {
-      "year": "Räkenskapsår",
-      "period": "Period",
-      "vouchers": "Verifikationer",
-      "synced": "Senast synkad"
-    }
+    "empty": "Inga räkenskapsår är synkade från Fortnox ännu."
   },
   "yearTitle": "Bokslut {year}",
   "lastSync": "Huvudboken senast synkad {when}",

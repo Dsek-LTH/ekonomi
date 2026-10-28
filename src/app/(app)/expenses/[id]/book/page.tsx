@@ -64,7 +64,7 @@ export default async function BookExpensePage({
       )}
       projects={projects}
       settings={settings}
-      returnHref={fromReview ? `/bookkeeping/review?id=${id}` : `/expenses/${id}`}
+      returnHref={fromReview ? `/expenses/review?id=${id}` : `/expenses/${id}`}
     />
   );
 }

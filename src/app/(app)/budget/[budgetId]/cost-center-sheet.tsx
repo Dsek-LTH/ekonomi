@@ -14,7 +14,6 @@ import { cn } from "@/lib/ui/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconTrash } from "@/components/ui/icons";
-import { StatRow } from "./stat-row";
 import { resultImpact } from "@/lib/budget/changes";
 
 import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
@@ -565,8 +564,9 @@ export function CostCenterSheet(props: {
             changes have moved the result. */}
 
         {/* On a phone: one strip, pinned under the app bar.
-            StatRow auto-fits at `minmax(200px, 1fr)`, which on 361px of screen is
-            one column, so the three tiles stacked to 266-362px, and most of the
+            The tiles this replaced auto-fit at `minmax(200px, 1fr)`, which on
+            361px of screen is one column, so the three tiles stacked to
+            266-362px, and most of the
             first screenful of a budget was three numbers. Here they are 56px, and
             they stay on screen while you scroll the rows that decide them, which
             is when the result is actually worth looking at. What the tiles said
@@ -648,49 +648,62 @@ export function CostCenterSheet(props: {
           </div>
         </div>
 
-        {/* From md: the three tiles, exactly as they were. */}
-        <div className="hidden md:block">
-          <StatRow>
-            {summary.map((s) => (
-              <div key={s.label} className="rounded-panel border border-border bg-background px-4 py-3">
-                {/* With a comparison on, the big figure is said to be the
-                    budget, and the two figures under it each carry their name:
-                    they used to run together as "Utfall 2026 −3 000+4 546",
-                    the compared figure and the gap from the budget with
-                    nothing between them. */}
-                <p className="text-xs text-muted">
+        {/* From md: one strip of three cells, each label on its figure's
+            line and whatever qualifies the figure (the compared side, what the
+            changes have done) on one small line under it. They were three
+            tiles, label over figure with the comparison stacked under a rule,
+            and with a comparison on that came to some 120px of header above
+            every sheet for three numbers. */}
+        <div className="hidden grid-cols-3 divide-x divide-border rounded-panel border border-border bg-background md:grid">
+          {summary.map((s) => (
+            <div key={s.label} className="min-w-0 px-4 py-2.5">
+              <p className="flex items-baseline justify-between gap-3">
+                {/* With a comparison on, the figure is said to be the budget's,
+                    since the line under it carries another one. */}
+                <span className="truncate text-xs text-muted">
                   {compare ? tGroup("ofBudget", { label: s.label }) : s.label}
-                </p>
-                <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""))}>
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 text-base font-semibold tabular-nums",
+                    s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
+                  )}
+                >
                   {s.signed ? fmtSigned(s.v) : fmt(s.v)}
-                </p>
-                {compare && (
-                  <dl className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 border-t border-border/60 pt-2 text-xs">
-                    <dt className="truncate text-muted">{compare.label}</dt>
-                    <dd className="text-right tabular-nums text-foreground">{fmt(s.a)}</dd>
-                    <dt className="text-muted" title={tGroup("diffHint")}>
-                      {tGroup("diffColumn")}
-                    </dt>
-                    <dd className={cn("text-right tabular-nums", diffClass(s.a - s.v, s.incomeLike))}>
+                </span>
+              </p>
+              {/* The compared figure and the gap to it, each with its name:
+                  run together they read as "Utfall 2026 −3 000+4 546". */}
+              {compare && (
+                <p className="mt-1 flex items-baseline justify-between gap-3 text-xs">
+                  <span className="truncate text-muted">{compare.label}</span>
+                  <span className="shrink-0 tabular-nums">
+                    {fmt(s.a)}
+                    <span
+                      className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}
+                      title={tGroup("diffHint")}
+                    >
                       {fmtSigned(s.a - s.v)}
-                    </dd>
-                  </dl>
-                )}
-                {/* The result is the one in force; this is how far it has moved from
-                    the adopted one, and in which direction. */}
-                {s.impact !== undefined && s.impact !== 0 && (
-                  <p className="mt-1 text-xs text-muted">
-                    {tRam("changes")}{" "}
-                    <span className={cn("tabular-nums", diffClass(s.impact, true))}>{fmtSigned(s.impact)}</span>
+                    </span>
+                  </span>
+                </p>
+              )}
+              {/* The result is the one in force; this is how far it has moved
+                  from the adopted one, and in which direction. */}
+              {s.impact !== undefined && s.impact !== 0 && (
+                <p className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted">
+                  <span className="truncate">{tRam("changes")}</span>
+                  <span className="shrink-0 tabular-nums">
+                    <span className={diffClass(s.impact, true)}>{fmtSigned(s.impact)}</span>
                     <span className="ml-2">
                       {t("originallyLabel")}{" "}
-                      <span className="tabular-nums text-foreground">{fmtSigned(s.v - s.impact)}</span>
+                      <span className="text-foreground">{fmtSigned(s.v - s.impact)}</span>
                     </span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </StatRow>
+                  </span>
+                </p>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* What is ticked, and what it can be made into. It appears only once

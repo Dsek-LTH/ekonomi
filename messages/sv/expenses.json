@@ -7,11 +7,17 @@
   "noMatch": "Inga utlägg matchar filtret.",
   "emptyTitle": "Inga utlägg här",
   "emptyDescription": "Skapa ditt första utlägg genom att ladda upp ett kvitto.",
-  "statusFilter": {
-    "all": "Alla statusar"
-  },
   "scope": {
     "mine": "Mina",
+    "unit": "Min resultatenhet",
+    "all": "Alla"
+  },
+  "tab": {
+    "draft": "Utkast",
+    "attest": "Att attestera",
+    "book": "Att kontera",
+    "export": "Att bokföra",
+    "done": "Bokförda",
     "all": "Alla"
   },
   "col": {

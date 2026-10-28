@@ -51,6 +51,15 @@ export const IconReceipt = (p: P) => (
   </Svg>
 );
 
+// A levfaktura: a sheet with a folded corner and a total at its foot, so it
+// does not read as the utlägg's torn-off receipt beside it on the rail.
+export const IconInvoice = (p: P) => (
+  <Svg {...p}>
+    <path d="M14 3H6v18h12V7l-4-4Z" />
+    <path d="M14 3v4h4M9 11h6M9 14.5h3M13 18h2" />
+  </Svg>
+);
+
 export const IconCard = (p: P) => (
   <Svg {...p}>
     <rect x="2.5" y="5" width="19" height="14" rx="2.5" />

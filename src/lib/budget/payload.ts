@@ -56,7 +56,14 @@ export interface BudgetCC {
   id: string;
   sortOrder: number;
   label: string | null;
-  costCenter: { id: string; code: string; name: string; resultUnit: string | null } | null;
+  costCenter: {
+    id: string;
+    code: string;
+    name: string;
+    /** Its name under its result unit's heading. See lib/domain/cost-center-short-name. */
+    shortName: string | null;
+    resultUnit: string | null;
+  } | null;
   accounts: Account[];
 }
 

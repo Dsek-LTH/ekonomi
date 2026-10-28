@@ -1,44 +1,43 @@
-import { getIncomeReviewQueue } from "@/lib/data/income";
-import { redirect } from "next/navigation";
-
-import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
-import { intaktConfigured } from "@/lib/income/client";
+import { getBookedIncome, getIncomeReviewQueue } from "@/lib/data/income";
+import { canBookkeep, canViewBookkeeping, canUnexport } from "@/lib/domain/permissions";
+import type { SearchParams } from "@/lib/data/list-query";
 import { requirePage } from "@/lib/server/current-user";
+import { getFiscalYear } from "@/lib/server/fiscal-year";
+import IncomeClient from "./income-client";
+import { INCOME_TABS, incomeDefaultTab, type IncomeTab } from "./tabs";
 
-import IncomeReviewClient from "./review-client";
-import { loadReviewContext } from "./review-context";
-
+// Intäkter: every day of takings, waiting or booked, with the stage as a tab.
+// See docs/navigation.md.
+//
+// It used to be two pages behind a switch: the review queue here and the
+// booked days at /income/booked. Stage is a tab on every other list, so it is
+// one here too, and the queue is the workbench you go into from it
+// (/income/review), the way the utlägg review is.
 export default async function IncomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ report?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
-  // The section's takings, day by day. The nav only offers this to bookkeeping;
-  // this is what keeps the route from being reachable by URL regardless.
-  //
-  // This is the queue where days are booked, so it is the workers'. A reader
-  // (a revisor) is sent to what has already been booked, which is the part
-  // there is anything to read in.
   const user = await requirePage(canViewBookkeeping);
-  if (!canBookkeep(user.capabilities)) redirect("/income/booked");
-
-  const queue = await getIncomeReviewQueue();
-  const context = await loadReviewContext(queue.reports);
-
-  // `?report=` opens the queue on one day rather than on its first. What
-  // reopening a booked day uses: the day goes back into the queue, and this is
-  // what makes "back into the queue" land on it instead of near it.
-  const { report } = await searchParams;
-
-  // Running without the intakt service is a supported way to run, the same as
-  // running without Fortnox, so the page loads and says so rather than
-  // failing. Checked here because the environment is the server's to read.
+  const params = await searchParams;
+  const books = canBookkeep(user.capabilities);
+  const tab: IncomeTab = INCOME_TABS.find((t) => t === params.tab) ?? incomeDefaultTab(books);
+  const [queue, booked, fiscal] = await Promise.all([
+    getIncomeReviewQueue(),
+    getBookedIncome(),
+    getFiscalYear(),
+  ]);
+  // Undoing any of this (unexporting, unbooking, deleting) is the treasury's
+  // to do, not everyone with bookkeeping access. Decided here, where the roles
+  // are, and enforced again by every route behind the buttons.
   return (
-    <IncomeReviewClient
-      queue={queue}
-      {...context}
-      serviceConfigured={intaktConfigured()}
-      initialReportId={report}
+    <IncomeClient
+      reports={[...queue.reports, ...booked]}
+      tab={tab}
+      defaultTab={incomeDefaultTab(books)}
+      canBook={books}
+      canManage={canUnexport(user.capabilities)}
+      fiscal={fiscal}
     />
   );
 }

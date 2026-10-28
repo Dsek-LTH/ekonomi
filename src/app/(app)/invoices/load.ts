@@ -15,10 +15,10 @@ import { canBookkeep, canTriageInvoices } from "@/lib/domain/permissions";
 import type { Viewer } from "@/lib/data/expense-scope";
 import type { WorkspaceProps } from "./workspace";
 
-export type WorkspaceData = Omit<WorkspaceProps, "onDone" | "header">;
+export type WorkspaceData = Omit<WorkspaceProps, "onDone">;
 
-/** Whether the viewer works the invoices as the treasury does: the inbox,
- *  rather than the one-at-a-time view. */
+/** Whether the viewer works the invoices as the treasury does, and so gets
+ *  the table's tabs for each of its steps. */
 export const isTreasury = (v: Viewer) => canTriageInvoices(v.capabilities) || canBookkeep(v.capabilities);
 
 export async function loadWorkspace(id: string, viewer: Viewer): Promise<WorkspaceData | null> {
@@ -35,7 +35,7 @@ export async function loadWorkspace(id: string, viewer: Viewer): Promise<Workspa
     can.canEditDetails
       ? getActiveAccounts(invoice.allocations.flatMap((a) => (a.account ? [a.account] : [])))
       : [],
-    can.canAssign ? getAssignableResultUnits() : [],
+    can.canMove ? getAssignableResultUnits() : [],
   ]);
 
   return { invoice, can, reach: attestReachOf(ctx), costCenters, accounts, resultUnits };

@@ -34,6 +34,8 @@ export interface CompareAccount {
 export interface CompareSheet {
   key: string; // what it is matched on, see compareKey
   name: string;
+  /** The cost centre's name under its result unit's heading, if one is set. */
+  shortName?: string | null;
   resultUnit: string | null;
   accounts: CompareAccount[];
 }
@@ -118,7 +120,7 @@ interface BudgetLike {
   costCenters: {
     id: string;
     label: string | null;
-    costCenter: { code: string; name: string; resultUnit?: string | null } | null;
+    costCenter: { code: string; name: string; shortName?: string | null; resultUnit?: string | null } | null;
     accounts: {
       accountCode: string;
       accountName: string;
@@ -142,6 +144,7 @@ export function snapshotOf(budget: BudgetLike, label: string): Snapshot {
     sheets: budget.costCenters.map((cc) => ({
       key: compareKey(cc),
       name: sheetName(cc),
+      shortName: cc.costCenter?.shortName ?? null,
       resultUnit: cc.costCenter?.resultUnit ?? null,
       accounts: cc.accounts.map((a) => {
         const keys = lineKeys(a.lineItems);
@@ -179,6 +182,7 @@ export interface JoinedAccount {
 export interface JoinedSheet {
   key: string;
   name: string;
+  shortName: string | null;
   resultUnit: string | null;
   accounts: JoinedAccount[];
   /** Whether each side has this sheet at all. A sheet may exist and total zero. */
@@ -212,7 +216,7 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
       let js = sheets.get(sheet.key);
       if (!js) {
         js = {
-          key: sheet.key, name: sheet.name, resultUnit: sheet.resultUnit,
+          key: sheet.key, name: sheet.name, shortName: sheet.shortName ?? null, resultUnit: sheet.resultUnit,
           accounts: [], present: Array.from({ length: n }, () => false),
         };
         sheets.set(sheet.key, js);
@@ -220,6 +224,7 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
       }
       js.present[i] = true;
       js.resultUnit ??= sheet.resultUnit;
+      js.shortName ??= sheet.shortName ?? null;
 
       const accounts = accountsOf.get(sheet.key)!;
       for (const acct of sheet.accounts) {

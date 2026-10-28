@@ -126,11 +126,11 @@ export function ExpenseActions({
     },
     // Bokföring is done from the review, one utlägg at a time, so this opens
     // the review at this one. Whether it can go through (Fortnox, the
-    // two-person rule) is said there. See app/(app)/bookkeeping/review.
+    // two-person rule) is said there. See app/(app)/expenses/review.
     can.canExport && {
       key: "export",
       label: t("review"),
-      href: `/bookkeeping/review?id=${expenseId}`,
+      href: `/expenses/review?id=${expenseId}`,
     },
     // Ahead of "Skicka in", because on a late utlägg it is what stands between
     // the two: nobody can submit until the dispens is given, and the person

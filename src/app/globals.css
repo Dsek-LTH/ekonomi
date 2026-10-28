@@ -12,24 +12,6 @@
   }
 }
 
-/*
- * The nav rail is open when it is hovered, or when the keyboard is somewhere
- * inside it. Every reveal in the shell tracks the panel's width, so all of them
- * have to open on exactly those two things and on nothing else.
- *
- * As a variant rather than as a pair written out per property. Six values in
- * app-shell.tsx each carried `md:group-hover:X md:group-has-[:focus-visible]:X`,
- * so a seventh reveal meant remembering two spellings and a change to how the
- * rail opens meant twelve edits. It cannot be a helper in TypeScript: Tailwind
- * finds classes by scanning the source for literal strings, so a name built by
- * interpolation is one whose CSS never gets generated.
- *
- * `:focus-visible` and not `:focus-within`: clicking a nav link focuses it, and
- * `:focus-within` would then hold the panel open after the pointer had left and
- * the page had changed under it.
- */
-@custom-variant nav-open (&:is(.group:hover *, .group:has(:focus-visible) *));
-
 /* While somebody is typing: a field that brings up a phone's keyboard has the
  * focus. The receipt button in a form's corner steps aside then: iOS lifts what
  * is fixed to the foot onto the keyboard, where it covers the field. (The tab

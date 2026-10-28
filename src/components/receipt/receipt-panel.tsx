@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt-viewer";
 import { DocumentStrip } from "@/components/receipt/document-strip";
@@ -147,6 +148,10 @@ type Ctx = {
   setCollapsed: (next: boolean, persist?: boolean) => void;
   width: number;
   setWidth: (w: number) => void;
+  /** The element at the panel's foot that ReceiptPanelFooter renders into,
+   *  while the panel is open. */
+  footerSlot: HTMLElement | null;
+  setFooterSlot: (el: HTMLElement | null) => void;
 };
 
 const PanelCtx = createContext<Ctx | null>(null);
@@ -165,6 +170,17 @@ function usePanel(): Ctx {
 export function useReceiptTabShowing(): boolean {
   const { source, collapsed } = usePanel();
   return Boolean(source) && collapsed && !isAwaitingUpload(source);
+}
+
+/**
+ * Unfold the panel, for a page where choosing something to look at is asking
+ * to see it: a row clicked in the levfaktura Inkorg. Not remembered, so it
+ * does not overwrite the reader's own choice to keep the panel folded
+ * elsewhere.
+ */
+export function useRevealReceiptPanel(): () => void {
+  const { setCollapsed } = usePanel();
+  return useCallback(() => setCollapsed(false, false), [setCollapsed]);
 }
 
 /**
@@ -207,6 +223,7 @@ export function ReceiptPanelProvider({
   const [source, setSource] = useState<Source | null>(null);
   const [collapsed, setCollapsedState] = useState(defaultCollapsed);
   const [width, setWidthState] = useState(defaultWidth);
+  const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null);
 
   const setCollapsed = useCallback((next: boolean, persist = true) => {
     setCollapsedState(next);
@@ -218,8 +235,8 @@ export function ReceiptPanelProvider({
   const setWidth = useCallback((w: number) => setWidthState(w), []);
 
   const value = useMemo(
-    () => ({ source, setSource, collapsed, setCollapsed, width, setWidth }),
-    [source, collapsed, setCollapsed, width, setWidth],
+    () => ({ source, setSource, collapsed, setCollapsed, width, setWidth, footerSlot, setFooterSlot }),
+    [source, collapsed, setCollapsed, width, setWidth, footerSlot],
   );
 
   return <PanelCtx.Provider value={value}>{children}</PanelCtx.Provider>;
@@ -374,9 +391,28 @@ export function ReceiptPanelSource({
   return null;
 }
 
+/**
+ * Something a page puts at the foot of the panel, under the document: what to
+ * do with the thing being read, beside it, where the eye already is. The
+ * levfaktura Inkorg's actions are the one use.
+ *
+ * A bar under the document rather than over it, because what a document is
+ * read for (an invoice's total, its bankgiro, its OCR) is usually at the
+ * bottom of the page, the part a floating toolbar would cover.
+ *
+ * Rendered through a portal, so it stays part of the page that declares it:
+ * its state, its handlers and its translations are the page's own, and the
+ * panel only lends it the place. Nothing while the panel is folded, which
+ * takes the bar with it.
+ */
+export function ReceiptPanelFooter({ children }: { children: React.ReactNode }) {
+  const { footerSlot } = usePanel();
+  return footerSlot ? createPortal(children, footerSlot) : null;
+}
+
 /** Rendered once, by AppShell, as the column to the right of the main one. */
 export function ReceiptPanelColumn() {
-  const { source, collapsed, setCollapsed, width, setWidth } = usePanel();
+  const { source, collapsed, setCollapsed, width, setWidth, setFooterSlot } = usePanel();
   const t = useTranslations("receipt");
   const widthRef = useRef(width);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -766,6 +802,9 @@ export function ReceiptPanelColumn() {
     <>
       {controls}
       {body}
+      {/* Where a page's ReceiptPanelFooter lands. Takes no room while none
+          does, so every other page's panel is exactly as it was. */}
+      <div ref={setFooterSlot} className="shrink-0 border-t border-border bg-background empty:hidden" />
       {upload && (
         <input
           ref={fileInput}
@@ -939,14 +978,20 @@ export function ReceiptPanelColumn() {
                 // reading, but that resizes the viewer 12 times on the way,
                 // the exact re-measure the drag above goes to such lengths to
                 // avoid. Nothing in here is clickable while it leaves.
-                "pointer-events-none translate-y-full md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
+                // From md it leaves from under the header, not over it: 65px is
+                // the header's 64 and its rule (app-header.tsx).
+                "pointer-events-none translate-y-full md:top-[65px] md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
               : // md:relative, not md:static: the drag handle and the fold
                 // button are positioned against this panel, and `static` would
                 // hand them to whatever ancestor happened to be positioned
                 // instead, which put the handle somewhere off the panel
                 // entirely, with nothing to grab.
+                // No height of its own: it stretches to the row under the
+                // header. It was `h-screen` when it stood the window's full
+                // height, which under the header ran its foot 65px off the
+                // bottom.
                 cn(
-                  "md:relative md:inset-auto md:z-auto md:h-screen md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
+                  "md:relative md:inset-auto md:z-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
                   // In its place in the layout from the first frame, the main
                   // column giving up the width at once, but held out at the
                   // edge until the frame after, so there is something to come

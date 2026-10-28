@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
-import { getBankTransactionPage, getCardlessTransactions, getCards } from "@/lib/data/bank";
+import { countCardlessTransactions, getBankTransactionPage, getCards } from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { ownedResultUnits } from "@/lib/server/result-units";
 import BankClient from "./bank-client";
 import { bankDefaultTab, type BankScope } from "./scope";
+import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
 
 // One feed, three readings of it.
 //
@@ -52,20 +53,28 @@ export default async function BankPage({
   // No card, no unit and not the books: there is no reading of this feed for them.
   if (scopes.length === 0) redirect("/dashboard");
 
-  // What was asked for, if it is one of theirs. Otherwise the first they have:
-  // your own purchases when you hold a card, the same as Utlägg opens on Mina,
-  // then your unit's, then the whole feed.
+  // What was asked for, if it is one of theirs. Otherwise the one their work
+  // is on, the same as Utlägg: the whole feed for bookkeeping, their unit's for
+  // a resultatansvarig, their own for a card holder.
   const asked = scopes.find((s) => s === params.scope);
-  const scope: BankScope = asked ?? scopes[0];
-
-  const query = parseListQuery(params, { defaultTab: bankDefaultTab(scope) });
+  const scope: BankScope = asked ?? scopes[scopes.length - 1];
 
   // Purchases on no card are only on the section's feed, since they are on
   // nobody's own. Placing them is bookkeeping's; a revisor sees them unplaced.
   const showsCardless = canSeeAll && scope === "all";
   const canPlaceCards = showsCardless && canBookkeep(user.capabilities);
+  // The räkenskapsår narrows every tab, "Utan kort" included, so whether
+  // that tab is there at all is asked of the year too. See docs/navigation.md.
+  const fiscal = await getFiscalYear();
+  const during = fiscal ? fiscalYearWhere(fiscal) : undefined;
+  const cardless = showsCardless ? await countCardlessTransactions({ during }) : 0;
+  // "Utan kort" is a tab only while there is something on it (see
+  // docs/navigation.md), so a link to it once the last one is placed lands on
+  // the scope's own tab rather than on an empty one nobody can see.
+  const tab = params.tab === "nocard" && cardless === 0 ? undefined : params.tab;
+  const query = parseListQuery({ ...params, tab }, { defaultTab: bankDefaultTab(scope) });
 
-  const [page, cards, allCards, cardless] = await Promise.all([
+  const [page, cards, allCards] = await Promise.all([
     getBankTransactionPage(
       scope === "mine"
         ? { cardHolderId: user.id }
@@ -73,6 +82,7 @@ export default async function BankPage({
           ? { resultUnitNames: owned.names }
           : {},
       query,
+      { during },
     ),
     // Only to decide whether the card column earns its width, so only asked for
     // where it could be shown.
@@ -81,7 +91,6 @@ export default async function BankPage({
     // on is on nobody's own feed, so putting it on one is bookkeeping's job and
     // only the section-wide reading shows those rows at all.
     canPlaceCards ? getCards() : Promise.resolve([]),
-    showsCardless ? getCardlessTransactions() : Promise.resolve([]),
   ]);
 
   return (

@@ -160,46 +160,30 @@ function PeriodDate({
 
 
 /**
- * The year, the period within it, and the cost centres: what both panels ask
+ * The period within the header's year, and the cost centres: what both panels ask
  * first, in the same order. One component, so the report and the charts cannot
  * come to ask it differently.
  */
 function PeriodRows({
   query,
   onQuery,
-  years,
   costCenters,
   period,
 }: {
   query: QueryState;
   onQuery: (patch: Partial<QueryState>) => void;
-  years: { id: number; year: number }[];
   costCenters: { code: string; name: string }[];
   period?: PeriodChoice;
 }) {
   const t = useTranslations("ledger");
   const tAlloc = useTranslations("allocation");
-  const yearOptions: ComboOption[] = years.map((y) => ({
-    value: String(y.id),
-    label: String(y.year),
-  }));
   const ccOptions = costCenterOptions(costCenters, t("noCostCenter"), t("withCostCenter"));
 
   return (
     <>
       <Row>
-        <Field label={t("year")} className="w-28">
-          <Combobox
-            size="sm"
-            options={yearOptions}
-            value={query.year != null ? String(query.year) : ""}
-            onChange={(v) => onQuery({ year: Number(v) })}
-            placeholder={t("yearPlaceholder")}
-            searchPlaceholder={t("yearSearch")}
-            emptyText={t("noYears")}
-            aria-label={t("year")}
-          />
-        </Field>
+        {/* No year here: it is the header's räkenskapsår, for this page and
+            every other (see docs/navigation.md). The period is within it. */}
         {/* Above the dates it names. A preset sets them; typing in them makes
             the range the reader's own, and the picker says so. */}
         {period && (
@@ -326,7 +310,6 @@ export function ReportParameters({
   onColumns,
   diff,
   onDiff,
-  years,
   costCenters,
   budgets,
   synced,
@@ -340,7 +323,6 @@ export function ReportParameters({
   /** The difference column beside the comparison. */
   diff: boolean;
   onDiff: (diff: boolean) => void;
-  years: { id: number; year: number }[];
   costCenters: { code: string; name: string }[];
   budgets: BudgetOption[];
   /** When the year was last synced from Fortnox, already worded. */
@@ -369,7 +351,6 @@ export function ReportParameters({
       <PeriodRows
         query={query}
         onQuery={onQuery}
-        years={years}
         costCenters={costCenters}
         period={period}
       />
@@ -479,7 +460,6 @@ export function ReportParameters({
 export function ChartParameters({
   query,
   onQuery,
-  years,
   costCenters,
   budgets,
   synced,
@@ -487,7 +467,6 @@ export function ChartParameters({
 }: {
   query: QueryState;
   onQuery: (patch: Partial<QueryState>) => void;
-  years: { id: number; year: number }[];
   costCenters: { code: string; name: string }[];
   budgets: BudgetOption[];
   /** When the year was last synced from Fortnox, already worded. */
@@ -503,7 +482,6 @@ export function ChartParameters({
       <PeriodRows
         query={query}
         onQuery={onQuery}
-        years={years}
         costCenters={costCenters}
         period={period}
       />

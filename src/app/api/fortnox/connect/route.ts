@@ -17,7 +17,7 @@ import { fail, gate } from "@/lib/api/guard";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const mode: FortnoxAuthMode = url.searchParams.get("mode") === "user" ? "user" : "service";
-  const returnTo = url.searchParams.get("returnTo") ?? "/bookkeeping";
+  const returnTo = url.searchParams.get("returnTo") ?? "/expenses?scope=all";
 
   const { can, denied } = authorityFor(mode);
   const g = await gate(can, denied);

@@ -13,7 +13,7 @@
         {
           "t": "action",
           "v": "Till attesteringen",
-          "href": "/approvals"
+          "href": "/expenses?scope=unit"
         }
       ]
     },

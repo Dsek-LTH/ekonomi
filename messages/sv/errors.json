@@ -401,7 +401,9 @@
     "giroMismatch": "Fakturans {field} {invoice} är inte det som står på leverantören i Fortnox ({register}).",
     "exportInProgress": "Fakturan exporteras redan.",
     "exportUncertain": "Fortnox svarade inte säkert. Kontrollera i Fortnox om leverantörsfakturan skapades innan du försöker igen.",
-    "nothingToRelease": "Det finns ingen osäker export att reda ut."
+    "nothingToRelease": "Det finns ingen osäker export att reda ut.",
+    "documentOnInvoice": "Dokumentet ligger redan på en faktura.",
+    "documentNotOnInvoice": "Dokumentet ligger inte på någon faktura."
   },
   "settings": {
     "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",

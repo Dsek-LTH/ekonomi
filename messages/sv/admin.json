@@ -134,7 +134,22 @@
       "madeLocal": "gjorde {count} lokala eftersom de inte finns i Fortnox"
     },
     "rename": "Byt namn",
-    "rowActions": "Åtgärder för {code}"
+    "rowActions": "Åtgärder för {code}",
+    "colShortName": "Kortnamn",
+    "shortNameHint": "Vad kostnadsstället heter under sin resultatenhets rubrik, till exempel i budgeten. Tomt visar hela benämningen.",
+    "shortNameNone": "Inget",
+    "editShortName": "Ändra kortnamn för {code}",
+    "shortNameSaved": "{code} heter nu {name} under sin resultatenhet.",
+    "shortNameCleared": "{code} visas med hela benämningen.",
+    "shortNameFailed": "Kunde inte spara kortnamnet",
+    "suggest": "Föreslå kortnamn",
+    "suggestSubtitle": "Resultatenhetens namn tas bort från början av benämningen. Granska förslagen innan du sparar. Inget ändras i Fortnox.",
+    "suggestInclude": "Ta med {code}",
+    "suggestAll": "Alla förslag",
+    "suggestSave": "Spara {count} kortnamn",
+    "suggestSaved": "{count} kortnamn sparade.",
+    "suggestFailed": "Kunde inte spara kortnamnen",
+    "suggestBlocked": "Välj minst ett förslag, och ge varje valt ett namn."
   },
   "resultUnits": {
     "title": "Resultatenheter",

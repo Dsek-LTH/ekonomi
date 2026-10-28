@@ -10,11 +10,12 @@
 // What one mail becomes:
 //
 //   • from outside dsek.se, or not verified by Gmail: a REJECTED row saying
-//     why, and nothing else. Triage sees the latest of them on /invoices.
-//   • otherwise one INBOX invoice per PDF attached (or a single one with no
-//     document, when the mail carried none, so the PDF can be added by hand),
-//     each given to a result unit at once when what the forwarder wrote
-//     settles whose it is (autoAssign in lib/domain/inbound-mail.ts).
+//     why, and nothing else. Triage sees the latest of them in the Inkorg.
+//   • no PDF at all: refused too, with that reason, since every invoice needs
+//     one and the Inkorg holds only documents;
+//   • one PDF, and a note that settles whose it is (autoAssign in
+//     lib/domain/inbound-mail.ts): an invoice, given to that unit at once;
+//   • anything else: its PDFs in the Inkorg, for triage to make invoices of.
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -22,7 +23,7 @@ import { prisma } from "@/lib/server/db";
 import {
   deleteObjectBestEffort,
   putObject,
-  supplierInvoiceDocumentKey,
+  supplierInvoiceInboxKey,
 } from "@/lib/server/storage";
 import { getPrefixes, ownedResultUnits, resultUnitForCode } from "@/lib/server/result-units";
 import { deliverSoon, notify } from "@/lib/server/notify";
@@ -168,26 +169,17 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
   try {
     // The documents first, into storage, each fetched and checked against its
     // own bytes. Something called faktura.pdf that is not one is left out.
-    const docs: {
-      invoiceId: string;
-      documentId: string;
-      key: string;
-      filename: string;
-      size: number;
-      fields: InvoiceTextFields;
-    }[] = [];
+    const docs: { documentId: string; key: string; filename: string; size: number; fields: InvoiceTextFields }[] = [];
     for (const part of pdfParts(top)) {
       const bytes = part.body?.attachmentId
         ? await getAttachment(c, gmailId, part.body.attachmentId)
         : Buffer.from(part.body?.data ?? "", "base64url");
       if (bytes.length === 0 || sniffReceiptType(bytes.subarray(0, SNIFF_BYTES)) !== "application/pdf") continue;
-      const invoiceId = randomUUID();
       const documentId = randomUUID();
-      const key = supplierInvoiceDocumentKey(invoiceId, documentId, part.filename!);
+      const key = supplierInvoiceInboxKey(documentId, part.filename!);
       await putObject(key, bytes, "application/pdf");
       written.push(key);
       docs.push({
-        invoiceId,
         documentId,
         key,
         filename: part.filename!,
@@ -196,27 +188,13 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
       });
     }
 
-    // A mail with no PDF still becomes one invoice, to be completed by hand.
-    const invoices = docs.length
-      ? docs
-      : [
-          {
-            invoiceId: randomUUID(),
-            documentId: null,
-            key: null,
-            filename: null,
-            size: 0,
-            fields: {} as InvoiceTextFields,
-          },
-        ];
-
     const owned = sender ? await ownedResultUnits({ id: sender.id, roles: sender.roles }) : null;
     const forwarderUnitIds = owned
       ? ctx.units.filter((u) => owned.names.includes(u.name)).map((u) => u.id)
       : [];
     // "Er referens" counts as something the forwarder said: a supplier asked
     // to put the cost centre there has done the routing for us.
-    const references = invoices.map((d) => d.fields.reference).filter(Boolean);
+    const references = docs.map((d) => d.fields.reference).filter(Boolean);
     const auto: AutoAssignment | null = autoAssign({
       text: [note, subject, ...references].filter(Boolean).join("\n"),
       units: ctx.units,
@@ -224,78 +202,80 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
       forwarderUnitIds,
     });
     const unit = auto ? ctx.units.find((u) => u.id === auto.resultUnitId)! : null;
-    const owners = unit
-      ? (
-          await prisma.user.findMany({
-            where: { active: true, roles: { has: "RESULTATANSVARIG" }, resultUnits: { has: unit.name } },
-            select: { id: true },
-          })
-        ).map((u) => u.id)
-      : [];
     const description = cleanSubject(subject);
+    const documentRow = (d: (typeof docs)[number]) => ({
+      id: d.documentId,
+      objectKey: d.key,
+      filename: d.filename,
+      mimeType: "application/pdf",
+      byteSize: d.size,
+      uploadedById: sender?.id ?? null,
+      inboundMailId: mailId,
+    });
+
+    // What the mail becomes.
+    //
+    //   no PDF                  refused: there is nothing to make an invoice
+    //                           of, and a link to a supplier's portal is a PDF
+    //                           somebody has to fetch by hand anyway;
+    //   one PDF, unit named     an invoice for that unit, straight away;
+    //   anything else           its PDFs in the Inkorg, for triage. Several PDFs
+    //                           may be an invoice and its specification, or two
+    //                           invoices, and an unclear unit is a person's call.
+    if (docs.length === 0) {
+      await prisma.inboundMail.update({
+        where: { id: mailId },
+        data: { status: "REJECTED", rejectReason: "noPdf" },
+      });
+      return "rejected";
+    }
+    if (docs.length > 1 || !unit) {
+      await prisma.supplierInvoiceDocument.createMany({ data: docs.map(documentRow) });
+      return "accepted";
+    }
+
+    const invoiceId = randomUUID();
+    const [only] = docs;
+    const owners = (
+      await prisma.user.findMany({
+        where: { active: true, roles: { has: "RESULTATANSVARIG" }, resultUnits: { has: unit.name } },
+        select: { id: true },
+      })
+    ).map((u) => u.id);
 
     await prisma.$transaction(async (tx) => {
-      for (const d of invoices) {
-        await tx.supplierInvoice.create({
-          data: {
-            id: d.invoiceId,
-            ...prefillData({}, d.fields),
-            source: "EMAIL",
-            status: unit ? "ASSIGNED" : "INBOX",
-            receivedById: sender?.id ?? null,
-            inboundMailId: mailId,
-            description,
-            resultUnitId: unit?.id ?? null,
-            assignedAt: unit ? new Date() : null,
-            ...(d.key && {
-              documents: {
-                create: {
-                  id: d.documentId!,
-                  objectKey: d.key,
-                  filename: d.filename!,
-                  mimeType: "application/pdf",
-                  byteSize: d.size,
-                  uploadedById: sender?.id ?? null,
-                },
-              },
-            }),
-            events: {
-              create: [
-                { type: "RECEIVED", actorId: sender?.id ?? null },
-                ...(unit && auto
-                  ? [
-                      {
-                        type: "ASSIGNED" as const,
-                        diff: { from: null, to: unit.name, auto: auto.rule, match: auto.match },
-                      },
-                    ]
-                  : []),
-              ],
-            },
+      await tx.supplierInvoice.create({
+        data: {
+          id: invoiceId,
+          ...prefillData({}, only.fields),
+          source: "EMAIL",
+          status: "ASSIGNED",
+          receivedById: sender?.id ?? null,
+          inboundMailId: mailId,
+          description,
+          resultUnitId: unit.id,
+          assignedAt: new Date(),
+          documents: { create: documentRow(only) },
+          events: {
+            create: [
+              { type: "RECEIVED", actorId: sender?.id ?? null },
+              { type: "ASSIGNED", diff: { from: null, to: unit.name, auto: auto!.rule, match: auto!.match } },
+            ],
           },
-        });
-        if (unit) {
-          await notify(
-            tx,
-            "SUPPLIER_INVOICE_ASSIGNED",
-            owners,
-            invoiceNotice(
-              "assigned",
-              {
-                id: d.invoiceId,
-                supplierName: null,
-                invoiceNumber: null,
-                description,
-                amount: null,
-                dueDate: null,
-              },
-              { actor: sender?.name ?? from!.address, unit: unit.name },
-              note ? { author: sender?.name ?? from!.address, text: note } : undefined,
-            ),
-            { exclude: [sender?.id] },
-          );
-        }
-      }
+        },
+      });
+      await notify(
+        tx,
+        "SUPPLIER_INVOICE_ASSIGNED",
+        owners,
+        invoiceNotice(
+          "assigned",
+          { id: invoiceId, supplierName: null, invoiceNumber: null, description, amount: null, dueDate: null },
+          { actor: sender?.name ?? from!.address, unit: unit.name },
+          note ? { author: sender?.name ?? from!.address, text: note } : undefined,
+        ),
+        { exclude: [sender?.id] },
+      );
     });
     return "accepted";
   } catch (err) {

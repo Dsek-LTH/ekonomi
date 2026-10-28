@@ -38,7 +38,7 @@ export function decodeState(raw: string | undefined): OAuthState | null {
       parsed.returnTo.startsWith("/") &&
       !parsed.returnTo.startsWith("//")
         ? parsed.returnTo
-        : "/bookkeeping";
+        : "/expenses?scope=all";
     return { nonce: parsed.nonce, mode, returnTo };
   } catch {
     return null;

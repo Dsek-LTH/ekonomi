@@ -15,7 +15,7 @@ import { prisma } from "@/lib/server/db";
 import type { TxClient } from "@/lib/server/tx";
 import { attestersOf, deliverSoon, notify } from "@/lib/server/notify";
 import { invoiceNotice } from "@/lib/email/content";
-import { attestBlocker, awaitsKontering, isInvoiceAssignable } from "@/lib/domain/supplier-invoice";
+import { attestBlocker, awaitsKontering, isInvoiceReturnable } from "@/lib/domain/supplier-invoice";
 import type { SupplierInvoiceEventType, SupplierInvoiceStatus } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
@@ -99,22 +99,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ id: invoice.id, status });
   };
 
-  // ── Give it to a result unit, move it, or take it back ────────────────────
+  // ── Give it to another unit instead ───────────────────────────────────────
+  // Only while nothing on it is signed. It keeps where it was: an invoice sent
+  // back with a comment is still waiting on that comment, whoever answers it
+  // now. Sending it back to the Inkorg is not a move but ../return, since an
+  // invoice without a unit is not one.
   if (action === "assign") {
-    if (!can.canAssign) return refuseChange(invoice, isInvoiceAssignable(invoice.status));
-    if (resultUnitId === undefined) return fail(422, "supplierInvoice.noResultUnit");
-
-    if (resultUnitId === null) {
-      if (invoice.status === "INBOX") return done("INBOX");
-      const result = await commit(() =>
-        prisma.$transaction(async (tx) => {
-          await move(tx, invoice, "INBOX", { resultUnitId: null, assignedById: null, assignedAt: null });
-          await tx.supplierInvoiceEvent.create({ data: event("UNASSIGNED", { comment }) });
-        }),
-      );
-      if (result instanceof NextResponse) return result;
-      return done("INBOX");
-    }
+    if (!can.canMove) return refuseChange(invoice, isInvoiceReturnable(invoice.status));
+    if (!resultUnitId) return fail(422, "supplierInvoice.noResultUnit");
 
     const unit = await prisma.resultUnit.findUnique({
       where: { id: resultUnitId },
@@ -123,14 +115,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (!unit) return fail(422, "supplierInvoice.unknownResultUnit");
     if (unit.id === invoice.resultUnitId) return done(invoice.status);
 
-    // Out of the inkorg it becomes ASSIGNED. Moved between units it keeps
-    // where it was: an invoice sent back with a comment is still waiting on
-    // that comment, whoever answers it now.
-    const to: SupplierInvoiceStatus = invoice.status === "INBOX" ? "ASSIGNED" : invoice.status;
     const owners = await unitOwnersOf(unit.name);
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {
-        await move(tx, invoice, to, { resultUnitId: unit.id, assignedById: actor.id, assignedAt: new Date() });
+        await move(tx, invoice, invoice.status, {
+          resultUnitId: unit.id,
+          assignedById: actor.id,
+          assignedAt: new Date(),
+        });
         await tx.supplierInvoiceEvent.create({
           data: event("ASSIGNED", { comment, diff: { from: invoice.resultUnit?.name ?? null, to: unit.name } }),
         });
@@ -140,21 +132,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       }),
     );
     if (result instanceof NextResponse) return result;
-    return done(to);
-  }
-
-  // ── "Inte vår" ────────────────────────────────────────────────────────────
-  if (action === "decline") {
-    if (!can.canDecline) return refuseChange(invoice, awaitsKontering(invoice.status));
-    if (!comment) return fail(422, "supplierInvoice.commentRequired");
-    const result = await commit(() =>
-      prisma.$transaction(async (tx) => {
-        await move(tx, invoice, "INBOX", { resultUnitId: null, assignedById: null, assignedAt: null });
-        await tx.supplierInvoiceEvent.create({ data: event("DECLINED", { comment }) });
-      }),
-    );
-    if (result instanceof NextResponse) return result;
-    return done("INBOX");
+    return done(invoice.status);
   }
 
   // ── Kontera and attest ────────────────────────────────────────────────────

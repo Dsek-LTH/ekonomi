@@ -1,9 +1,10 @@
 {
   "title": "Bank transactions",
   "tab": {
-    "all": "All",
-    "matched": "Matched",
-    "unmatched": "Unmatched"
+    "unaccounted": "To account for",
+    "accounted": "Accounted for",
+    "nocard": "No card",
+    "all": "All"
   },
   "pickCsv": "Pick a CSV file",
   "importFailed": "The import failed",
@@ -47,10 +48,5 @@
   "account": "Account for it",
   "assignCard": "Pick a card",
   "changeCard": "Change card",
-  "assignFailed": "Could not put the transaction on that card",
-  "noCard": {
-    "count": "{count, plural, one {# purchase has} other {# purchases have}} no card, so {count, plural, one {it is} other {they are}} on nobody's own list.",
-    "show": "Show them",
-    "hide": "Hide"
-  }
+  "assignFailed": "Could not put the transaction on that card"
 }

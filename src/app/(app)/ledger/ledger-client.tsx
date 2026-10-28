@@ -8,7 +8,7 @@ import { resolveApiError } from "@/lib/ui/api-error";
 import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { useQuery } from "@/components/shell/use-query";
 import { Menu, MenuItem } from "@/components/ui/menu";
-import { IconDownload } from "@/components/ui/icons";
+import { IconChart, IconDownload, IconViewTable } from "@/components/ui/icons";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
 import { SkeletonSheet } from "@/components/ui/skeleton";
 import { type ComboOption } from "@/components/ui/combobox";
@@ -102,9 +102,17 @@ const INITIAL: QueryState = {
 export default function LedgerClient({
   fortnox,
   costCenters,
+  fiscalYearId,
 }: {
   fortnox: FortnoxStatus;
   costCenters: { code: string; name: string }[];
+  /**
+   * The header's räkenskapsår, the report's year. Changing it there refreshes
+   * the page, which remounts this (page.tsx keys it by the year), so the
+   * period and the cached rows start over for the new year. Null before any
+   * year is synced, and the server picks one.
+   */
+  fiscalYearId: number | null;
 }) {
   const t = useTranslations("ledger");
   const tCommon = useTranslations("common");
@@ -130,7 +138,10 @@ export default function LedgerClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [query, setQuery] = useState<QueryState>(INITIAL);
+  // Held as state so it stays the same object for the life of the page, which
+  // is the year's (see fiscalYearId).
+  const [initial] = useState<QueryState>(() => ({ ...INITIAL, year: fiscalYearId }));
+  const [query, setQuery] = useState<QueryState>(initial);
   const [view, setView] = useState<ViewOptions>(EMPTY_VIEW);
 
   /**
@@ -268,8 +279,8 @@ export default function LedgerClient({
   // values match, hence the exemption rather than a restructure.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(INITIAL);
-  }, [load]);
+    load(initial);
+  }, [load, initial]);
 
   // The panel only exists once there is something to report on.
   const hasPanel = data != null && data.years.length > 0;
@@ -522,25 +533,24 @@ export default function LedgerClient({
   return (
     <PageShell
       title={t("title")}
-      // Beside the title, in the track register, which is the coarsest of the
-      // four switchers and the right one here. It looked like a view toggle and
-      // is not: the charts are a different question asked of the same period,
-      // off their own endpoint (/api/ledger/trend), and not one row of the
-      // table is redrawn into them. Everything in the bar below narrows rows,
-      // so down there it sat among controls that meant nothing to it and had to
-      // hide half of them to say so.
+      // The same period as a table or as charts. It sat in the band as a
+      // collection switch, on the reasoning that the charts ask their own
+      // question off their own endpoint (/api/ledger/trend). True, but the
+      // band's switch only ever says whose (docs/navigation.md), and what a
+      // reader is choosing here is how the period is drawn. It stays out of
+      // the bar below, which narrows rows and means nothing to it.
       //
       // Hidden for a balansrapport, which has no period these charts draw. A
       // switch that led to "not for this report" would be a control whose whole
       // job is to disappoint. Hidden rather than left out, so its room stays and
       // the page does not jump when the report changes kind.
-      collectionsHidden={isBalance}
-      collections={{
+      views={{
         label: t("charts.view"),
         value: mode,
+        hidden: isBalance,
         options: [
-          { value: "TABLE", label: t("charts.table") },
-          { value: "CHART", label: t("charts.diagram") },
+          { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
+          { value: "CHART", label: t("charts.diagram"), icon: IconChart },
         ],
         onChange: (v) => setMode(v as "TABLE" | "CHART"),
       }}
@@ -580,7 +590,6 @@ export default function LedgerClient({
             <ChartParameters
               query={query}
               onQuery={update}
-              years={data.years}
               costCenters={costCenters}
               budgets={data.budgets}
               synced={syncedNote}
@@ -590,7 +599,6 @@ export default function LedgerClient({
             <ReportParameters
               query={query}
               onQuery={update}
-              years={data.years}
               costCenters={costCenters}
               budgets={data.budgets}
               diff={view.diff}

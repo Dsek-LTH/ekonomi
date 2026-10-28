@@ -32,7 +32,17 @@ import type { BudgetSummary } from "@/lib/data/budget";
 // and showed the "no budgets yet" empty state when the request had actually
 // failed. `useMutation`'s refresh does all of that now, and a failure is the
 // route's error boundary rather than a silent empty list.
-export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
+export function BudgetListClient({
+  budgets,
+  year,
+}: {
+  /** Every budget, for the comparison and for copying from: either can reach
+   *  across years. The table shows only `year`'s. */
+  budgets: BudgetSummary[];
+  /** The header's räkenskapsår, as the calendar year a budget is kept in.
+   *  Null before any year has been synced, and every budget is listed. */
+  year: number | null;
+}) {
   const router = useProgressRouter();
   const t = useTranslations("budget.list");
   const { user } = useRole();
@@ -49,7 +59,10 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
   // order, any of them against any other, across years.
   const [picked, setPicked] = useState<string[]>([]);
 
-  const thisYear = new Date().getFullYear();
+  // A new budget is for the year being looked at, which is this one unless the
+  // header says otherwise.
+  const thisYear = year ?? new Date().getFullYear();
+  const shown = year == null ? budgets : budgets.filter((b) => b.year === year);
 
   // Creating asks nothing. Every budget starts as a year and a name that are
   // both a pencil away on its own page, so a form here would only be collecting
@@ -266,7 +279,7 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
             toolbar beside "new", acting on the rows ticked below it. */}
         <ClientDataTable
           columns={columns}
-          rows={budgets}
+          rows={shown}
           controls={controls}
           // On the list's toolbar: it adds a budget to the list under it.
           action={
@@ -328,7 +341,13 @@ export function BudgetListClient({ budgets }: { budgets: BudgetSummary[] }) {
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(b) => b.id}
           rowHref={(b) => `/budget/${b.id}`}
-          empty={budgets.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
+          empty={
+            budgets.length === 0
+              ? t("emptyNone")
+              : shown.length === 0
+                ? t("emptyYear", { year: String(thisYear) })
+                : t("emptyNoMatch")
+          }
         />
       </Card>
     </PageShell>

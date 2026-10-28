@@ -26,7 +26,6 @@ export const MESSAGE_NAMESPACES = [
   "fortnox",
   "meta",
   "book",
-  "approvals",
   "bank",
   "bookkeeping",
   "ledger",
