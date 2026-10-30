@@ -34,6 +34,7 @@ import { Notice } from "@/components/ui/notice";
 import { expenseLabel } from "@/lib/domain/reference";
 import type { ReviewWarning } from "@/lib/domain/review";
 import { useLiveBookkeeping } from "../use-live-bookkeeping";
+import { PersonName } from "@/components/ui/avatar";
 
 /** What bokföring this utlägg has to know, for whoever may do it. Worked out
  *  on the server; see bookkeepingReview in page.tsx. */
@@ -137,7 +138,8 @@ function ExpenseDetail({
       // would be.
       subtitle={
         <span className="inline-flex flex-wrap items-center gap-x-2">
-          {expense.reference ? `${expense.reference} - ${expense.submitterName}` : expense.submitterName}
+          {expense.reference && `${expense.reference} - `}
+          <PersonName userId={expense.submitterId} name={expense.submitterName} />
         </span>
       }
       back="/expenses"

@@ -42,6 +42,8 @@ export default function BankClient({
   cards,
   allCards,
   cardless,
+  unaccounted,
+  placesCards,
   viewerId,
 }: {
   page: RowPage<BankTransaction>;
@@ -62,6 +64,11 @@ export default function BankClient({
   /** Purchases on no card, on the section's reading. "Utan kort" is a tab
    *  only while this is above zero. */
   cardless: number;
+  /** The reader's own purchases with no utlägg yet, on Mina. Zero elsewhere. */
+  unaccounted: number;
+  /** Whether placing the cardless ones is the reader's job, which makes their
+   *  count work waiting rather than a tally (a revisor sees them too). */
+  placesCards: boolean;
   viewerId: string;
 }) {
   const t = useTranslations("bank");
@@ -112,7 +119,8 @@ export default function BankClient({
   const tabs: TabFilter = BANK_TABS.filter((v) => v !== "nocard" || cardless > 0).map((value) => ({
     value,
     label: t(`tab.${value}`),
-    badge: value === "nocard" ? cardless : undefined,
+    badge: value === "nocard" ? cardless : value === "unaccounted" ? unaccounted || undefined : undefined,
+    waiting: value === "nocard" ? placesCards : value === "unaccounted",
   }));
 
 

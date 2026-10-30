@@ -62,8 +62,9 @@ const DIRECTION_CONTRACT = `<!--
 THESIS: A section's money app that reads as a finance tool. It refuses the two
 defaults on either side: generic dashboard-blue, and a themed toy. Colour is a system
 with jobs, not a skin.
-OWN-WORLD: ink #18181b as the one action fill with a white label (inverted in dark);
-D-sektionen's pink kept for the mark and the first chart series (#c93663);
+OWN-WORLD: D-sektionen's pink #f280a1 as the one action fill, in a flat blend with a
+white label, and for the current page, scope and tab and the first chart series;
+ink #18181b for the accent and links (inverted in dark);
 #8b5fc7 for a budget's standing (locked, adopted); cards drawn by hairline alone;
 Inter, tabular figures on every number.
 STORY: An ordinarie sees one filled button per screen and it is the way forward.

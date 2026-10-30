@@ -54,16 +54,18 @@ export type Collections = {
 const TRACK = "relative inline-flex rounded-control border border-border-control bg-surface p-0.5";
 
 // What the pill looks like, in the one place both the moving copy and the
-// static fallback read it from.
+// static fallback read it from. The primary button's pink, flat and without a
+// shadow, so the chosen scope reads as part of the same accent.
 //
-// --shadow-pill, not --shadow-card: the pill is the height of the track's
-// content box, so it is centred by construction. But a shadow that leans
-// downwards puts more darkness in the 4px below it than above, and the eye
-// reads that as the pill sitting low. See globals.css.
-const PILL = "rounded-mark bg-background shadow-[var(--shadow-pill)]";
+// Its corners are the track's less the 3px it sits inside (the 1px border and
+// the 2px padding), so the two curves run parallel. The mark radius was a pixel
+// rounder, which a white pill hid and a pink one shows.
+const PILL = "rounded-mark action-fill";
 
+// The label's own colour, dimmed, so it reads on the pink pill and on the
+// track alike.
 const Count = ({ count }: { count?: number }) =>
-  count ? <span className="ml-1.5 tabular-nums text-muted">{count}</span> : null;
+  count ? <span className="ml-1.5 tabular-nums opacity-70">{count}</span> : null;
 
 /**
  * Where the active option is, in the track's own coordinates, and whether the
@@ -98,18 +100,24 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       setPlacement(null);
       return;
     }
-    // offsetLeft/offsetTop are measured from the offsetParent's padding edge,
-    // and `left: 0` on an absolutely positioned child resolves to that same
-    // edge, so the two agree without anyone having to subtract the track's
-    // own border.
-    const measure = () =>
+    // Measured from the track's padding edge, which is where `left: 0` on an
+    // absolutely positioned child resolves, so the track's border (clientLeft)
+    // comes off. Bounding rects and not offsetLeft/offsetWidth: those round to
+    // whole pixels, and the labels are fractional widths, so the pill came out
+    // up to a pixel short or long and the gap either side of it was uneven.
+    const measure = () => {
+      const track = el.parentElement;
+      if (!track) return;
+      const r = el.getBoundingClientRect();
+      const t = track.getBoundingClientRect();
       setPlacement((prev) => ({
-        x: el.offsetLeft,
-        y: el.offsetTop,
-        w: el.offsetWidth,
-        h: el.offsetHeight,
+        x: r.left - t.left - track.clientLeft,
+        y: r.top - t.top - track.clientTop,
+        w: r.width,
+        h: r.height,
         animate: prev !== null,
       }));
+    };
     measure();
     // Widths move without this component re-rendering: a webfont landing after
     // first paint, or a count going from 9 to 10 in an option to the left of
@@ -128,7 +136,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors",
       active
         ? cn(
-            "text-foreground",
+            "text-white",
             // Until the pill has been measured there is nothing laid over the
             // track, and this is the same shape drawn the old way. It is what
             // the server renders and what the first client render matches, so

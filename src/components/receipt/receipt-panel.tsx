@@ -82,7 +82,8 @@ export interface UploadCopy {
   fileTypes?: string;
   action?: string;
   /**
-   * The floating button's title once a document is already showing.
+   * The floating button's title once a document is already showing, and what
+   * the panel says while a file is dragged over that document.
    *
    * Defaults to "Ersätt": most callers offer exactly one document and picking
    * another swaps it. An utlägg's receipts are additive instead, and a button
@@ -418,6 +419,8 @@ export function ReceiptPanelColumn() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
+  // How many elements deep a file drag is inside the panel. See dropHandlers.
+  const dragDepth = useRef(0);
   // Which document the thumbnails mark as showing, and the last jump they asked
   // the viewer for. Only read where the page lets documents be arranged.
   const [currentDoc, setCurrentDoc] = useState(0);
@@ -664,6 +667,40 @@ export function ReceiptPanelColumn() {
     for (const file of upload.multiple ? files : files.slice(0, 1)) upload.onFile(file);
   };
 
+  // The whole panel takes a drop, not only the empty one: with a receipt
+  // showing, a second dragged onto it is added (or replaces it, on a page that
+  // holds one). Counted rather than toggled, because dragleave fires every time
+  // the pointer crosses into a child, and a flag would flicker off over the
+  // viewer. Only file drags count, so the strip's own reordering is left alone.
+  const isFileDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
+  const dropHandlers = upload
+    ? {
+        onDragEnter: (e: React.DragEvent) => {
+          if (!isFileDrag(e)) return;
+          e.preventDefault();
+          dragDepth.current += 1;
+          setOver(true);
+        },
+        onDragOver: (e: React.DragEvent) => {
+          if (!isFileDrag(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = upload.uploading ? "none" : "copy";
+        },
+        onDragLeave: (e: React.DragEvent) => {
+          if (!isFileDrag(e)) return;
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setOver(false);
+        },
+        onDrop: (e: React.DragEvent) => {
+          if (!isFileDrag(e)) return;
+          e.preventDefault();
+          dragDepth.current = 0;
+          setOver(false);
+          take(e.dataTransfer.files);
+        },
+      }
+    : {};
+
   // No header, no title: a receipt is recognisably a receipt, and a bar naming
   // it would cost 48px of the height it came here for. The controls it needs
   // float in the corner the viewer's own toolbar doesn't use, styled to match
@@ -746,16 +783,6 @@ export function ReceiptPanelColumn() {
     // in it as a box: the whole column is the target, which is what someone
     // dragging a photo across the screen is aiming at anyway.
     <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setOver(false);
-        take(e.dataTransfer.files);
-      }}
       className={cn(
         "flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center transition-colors",
         over && "bg-accent-soft/40",
@@ -802,6 +829,17 @@ export function ReceiptPanelColumn() {
     <>
       {controls}
       {body}
+      {/* Over a receipt already showing, the drop needs saying: the empty
+          panel lights up as a whole, but a document fills this one edge to
+          edge and would show nothing. */}
+      {over && source.docs.length > 0 && !upload?.uploading && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 text-center backdrop-blur-sm">
+          <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
+            <IconUpload className="size-6" />
+          </span>
+          <p className="mt-4 text-sm font-medium">{upload?.copy?.addLabel ?? t("replace")}</p>
+        </div>
+      )}
       {/* Where a page's ReceiptPanelFooter lands. Takes no room while none
           does, so every other page's panel is exactly as it was. */}
       <div ref={setFooterSlot} className="shrink-0 border-t border-border bg-background empty:hidden" />
@@ -947,6 +985,7 @@ export function ReceiptPanelColumn() {
           // browser moves the focus out for us rather than being asked to
           // pretend a focused thing is not there.
           inert={leavingNow}
+          {...dropHandlers}
           // The drag writes this same property straight onto the node; this is
           // the value it starts from and the value React puts back on release.
           style={{ "--receipt-w": `${width}px` } as React.CSSProperties}

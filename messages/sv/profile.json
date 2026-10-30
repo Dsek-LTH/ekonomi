@@ -67,5 +67,23 @@
     "label": "Profil",
     "me": "Min profil",
     "members": "Medlemmar"
+  },
+  "appearance": "Utseende",
+  "avatar": {
+    "title": "Profilbild",
+    "hint": "Dra för att flytta bilden och zooma med reglaget. Det som syns i cirkeln blir din bild.",
+    "frameLabel": "Bildens beskärning",
+    "zoom": "Zoom",
+    "cancel": "Avbryt",
+    "save": "Spara bild",
+    "useAnyway": "Ladda upp ändå",
+    "cannotPreview": "Webbläsaren kan inte visa den här bilden, så den kan inte beskäras här. Laddar du upp den ändå används mitten av bilden.",
+    "saved": "Profilbilden är sparad.",
+    "saveFailed": "Kunde inte spara profilbilden",
+    "upload": "Lägg till bild",
+    "change": "Byt bild",
+    "remove": "Ta bort bild",
+    "removed": "Profilbilden är borttagen.",
+    "removeFailed": "Kunde inte ta bort profilbilden"
   }
 }

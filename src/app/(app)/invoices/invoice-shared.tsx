@@ -14,6 +14,7 @@ import { cn } from "@/lib/ui/utils";
 import type { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import type { AccountRecord, CostCenter, ProjectRecord, SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { AttestReach, SupplierInvoiceView } from "@/lib/data/supplier-invoices";
+import { PersonName } from "@/components/ui/avatar";
 
 /** The small capitals every label on the card is set in, as on the utlägg page. */
 export const LABEL = "text-xs font-medium text-muted";
@@ -141,7 +142,12 @@ export function Timeline({ invoice }: { invoice: SupplierInvoiceView }) {
               <span className={cn("font-medium", EVENT_TONE[e.type])}>
                 {tEvent(e.type, { unit: e.toUnit ?? "-" })}
               </span>
-              {e.actor && <span className="text-muted"> - {e.actor}</span>}
+              {e.actor && (
+                <span className="text-muted">
+                  {" - "}
+                  <PersonName userId={e.actorId} name={e.actor} />
+                </span>
+              )}
               {e.auto && (
                 <span className="mt-0.5 block text-muted">
                   {tEvent(`auto.${e.auto.rule}`, { match: e.auto.match })}

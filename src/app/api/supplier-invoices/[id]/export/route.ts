@@ -19,6 +19,7 @@ import {
   FortnoxError,
   connectFileToSupplierInvoice,
   createSupplierInvoice,
+  getServiceToken,
   getSupplier,
   uploadInboxFile,
 } from "@/lib/fortnox";
@@ -73,14 +74,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!auth.ok) return auth.res;
   const token = auth.token;
 
-  // Pay where the register says, or know why not.
+  // Pay where the register says, or know why not. The register is read as
+  // the organisation, like everywhere else; only the writes below are the
+  // treasurer's.
   let supplier;
   try {
-    supplier = await getSupplier(token, invoice.fortnoxSupplierNumber!);
+    supplier = await getSupplier(await getServiceToken(), invoice.fortnoxSupplierNumber!);
   } catch (e) {
-    if (e instanceof FortnoxError && e.status === 403) {
-      return fail(401, "fortnox.missingScopeLogin", { extra: { needsFortnoxLogin: true } });
-    }
+    if (e instanceof FortnoxError && e.status === 403) return fail(403, "fortnox.missingSupplierScope");
+    if (e instanceof FortnoxError && e.status === 409) return fail(409, e.message);
     if (e instanceof FortnoxError && e.status === 404) return fail(422, "supplierInvoice.supplierGone");
     throw e;
   }

@@ -90,3 +90,18 @@ export function normalisedName(filename: string, mimeType: NormalisedMime): stri
   const base = filename.replace(/\.[^.]+$/, "");
   return `${base || "kvitto"}.${EXTENSION[mimeType]}`;
 }
+
+/** The side of a stored profile picture, in px. */
+export const AVATAR_SIZE = 256;
+
+// A profile picture, from whatever the member cropped. The crop dialog already
+// sends a square, so `cover` only matters for a request that did not come from
+// it. WebP, since it is only ever shown in a browser, and at this size it is a
+// few kilobytes. Throws if the bytes aren't a decodable image.
+export async function avatarImage(input: Buffer): Promise<Buffer> {
+  return sharp(input, { failOn: "none" })
+    .rotate()
+    .resize({ width: AVATAR_SIZE, height: AVATAR_SIZE, fit: "cover" })
+    .webp({ quality: 85 })
+    .toBuffer();
+}

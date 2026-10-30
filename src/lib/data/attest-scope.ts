@@ -35,11 +35,19 @@ import type { Viewer } from "./expense-scope";
  *
  * Someone with no attest authority at all gets a filter that matches nothing,
  * rather than one that matches everything. An empty `OR` would be the second.
+ *
+ * `ownUnits` leaves out the skattmästare's blanket clause, for the counts of
+ * what waits on the viewer (lib/data/nav-counts.ts). The skattmästare may
+ * attest anyone's, but only their own result units' are theirs to do, and a
+ * count of the whole section's never goes away.
  */
-export async function attestScopeWhere(viewer: Viewer): Promise<Prisma.ExpenseWhereInput> {
+export async function attestScopeWhere(
+  viewer: Viewer,
+  { ownUnits = false }: { ownUnits?: boolean } = {},
+): Promise<Prisma.ExpenseWhereInput> {
   const notMine: Prisma.ExpenseWhereInput = { submitterId: { not: viewer.id } };
 
-  if (isAdmin(viewer.capabilities)) return notMine;
+  if (!ownUnits && isAdmin(viewer.capabilities)) return notMine;
 
   const authority: Prisma.ExpenseWhereInput[] = [];
 

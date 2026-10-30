@@ -22,7 +22,7 @@ export default async function ProfilePage() {
   const [payout, fortnoxSession, holdsCard, saved, score] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { bankClearingNumber: true, bankAccountNumber: true },
+      select: { bankClearingNumber: true, bankAccountNumber: true, avatarKey: true },
     }),
     showsFortnox ? getFortnoxSession(user.id) : null,
     userHoldsCard(user.id),
@@ -48,6 +48,8 @@ export default async function ProfilePage() {
 
   return (
     <ProfileClient
+      userId={user.id}
+      hasAvatar={!!payout?.avatarKey}
       name={user.name}
       email={user.email}
       roles={user.roles}

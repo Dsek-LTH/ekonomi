@@ -108,6 +108,14 @@
     --color-on-brand: #ffffff;
     --color-brand-edge: #18181b;
 
+    /* The primary button's fill, which is the section's pink again rather than
+       the ink above. Ink stays on the segmented control, the stepper and the
+       accent, so the pink is the one thing on a screen that asks to be pressed.
+       A gentle diagonal blend ending on the chart pink. White reads 4.0:1 at
+       the light end and 4.9:1 at the dark one. */
+    --color-action-from: #f280a1;
+    --color-action-to: #fa7b9f;
+
 
     /* Accent */
     --color-accent: #18181b;
@@ -219,9 +227,9 @@
        the number that matters where two bands touch. And every chart in the app
        carries a legend or a labelled row, so colour is the second way to tell a
        series apart and never the only one. */
-    /* The section's pink, as a value rather than an alias of the accent: the
-       accent went to ink, and a chart series in near-black would read as text. */
-    --chart-1: #c93663;
+    /* The section's pink, the same as the primary button's, so a theme has one
+       pink rather than two. An alias, so the dark theme's follows its own. */
+    --chart-1: var(--color-action-from);
     --chart-2: var(--color-purple);
     --chart-3: var(--color-success);
     --chart-4: var(--color-warning);
@@ -354,6 +362,9 @@
   --color-brand-hover: #e4e4e7;
   --color-on-brand: #18181b;
   --color-brand-edge: #fafafa;
+  /* The same pink as on paper. It holds on a dark ground. */
+  --color-action-from: #f280a1;
+  --color-action-to: #ea6f95;
 
 
   /* Accent */
@@ -399,15 +410,14 @@
   --color-pay-mileage: #d9a273;
   --color-pay-mileage-soft: #372a1e;
 
-  /* Chart series. Five of the eight are aliases of tokens this block already
+  /* Chart series. Six of the eight are aliases of tokens this block already
      redefines above, so they are already on this ground and are not repeated
-     here. The first is the pink the accent used to be. The other two are the palette's own, chosen for a near-black card rather
+     here. The other two are the palette's own, chosen for a near-black card rather
      than lightened from the light theme's, and by the same rule: as far from
      the five status hues and from each other as the space allows, which lands
      the closest pair either is in at ΔE 13.2. The blue is the one colour here
      with a contrast to watch, 3.9 against the card, which is a fill and not
      text and reads. */
-  --chart-1: #ff7fa5;
   --chart-6: #4f70e8;
   --chart-7: #70ebd6;
 
@@ -473,6 +483,9 @@
     --color-brand-hover: #e4e4e7;
     --color-on-brand: #18181b;
     --color-brand-edge: #fafafa;
+    /* The same pink as on paper. It holds on a dark ground. */
+    --color-action-from: #f280a1;
+    --color-action-to: #ea6f95;
 
 
     /* Accent */
@@ -518,15 +531,14 @@
     --color-pay-mileage: #d9a273;
     --color-pay-mileage-soft: #372a1e;
 
-    /* Chart series. Five of the eight are aliases of tokens this block already
+    /* Chart series. Six of the eight are aliases of tokens this block already
        redefines above, so they are already on this ground and are not repeated
-       here. The first is the pink the accent used to be. The other two are the palette's own, chosen for a near-black card rather
+       here. The other two are the palette's own, chosen for a near-black card rather
        than lightened from the light theme's, and by the same rule: as far from
        the five status hues and from each other as the space allows, which lands
        the closest pair either is in at ΔE 13.2. The blue is the one colour here
        with a contrast to watch, 3.9 against the card, which is a fill and not
        text and reads. */
-    --chart-1: #ff7fa5;
     --chart-6: #4f70e8;
     --chart-7: #70ebd6;
 
@@ -584,6 +596,23 @@
 
 .brand-fill:hover {
     background: var(--color-brand-hover);
+}
+
+/* The primary button. A gentle diagonal blend with no highlight and no shade,
+   so it reads as a flat colour that shifts rather than a raised surface. The
+   hover darkens through an inset tint, because a gradient cannot be eased
+   between and the button would snap. In the components layer so a utility on
+   the element (the tab bar's card shadow) still wins. */
+@layer components {
+    .action-fill {
+        background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to));
+        border-color: transparent;
+        transition: box-shadow 150ms var(--ease-out-quint);
+    }
+
+    .action-fill:hover {
+        box-shadow: inset 0 0 0 999px rgb(0 0 0 / 0.08);
+    }
 }
 
 /* A block standing in for content that hasn't arrived. The surface fill is what
@@ -1136,6 +1165,8 @@ summary {
     --color-brand-hover: #000000;
     --color-on-brand: #ffffff;
     --color-brand-edge: #000000;
+    --color-action-from: #000000;
+    --color-action-to: #000000;
     --color-accent: #000000;
     --color-accent-soft: #e2e2e6;
     --chart-1: #d02253;

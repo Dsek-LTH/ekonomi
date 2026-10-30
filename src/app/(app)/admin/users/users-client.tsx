@@ -32,7 +32,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/avatar";
 import { ClientDataTable, type ClientSelectFilter } from "@/components/ui/client-data-table";
 import { type Column } from "@/components/ui/data-table";
 import { IconButton } from "@/components/ui/icon-button";
@@ -88,7 +88,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
           aria-label={t("explainFor", { name: u.name })}
           className="group flex min-w-0 items-center gap-3 text-left"
         >
-          <Avatar initials={u.initials} />
+          <UserAvatar userId={u.id} name={u.name} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium group-hover:text-accent group-hover:underline">
               {u.name}
@@ -154,7 +154,7 @@ function PersonDialog({ person, onClose }: { person: User; onClose: () => void }
   return (
     <Modal label={person.name} onClose={onClose} className="max-w-xl">
       <div className="flex shrink-0 items-center gap-3.5 border-b border-border px-inset py-3">
-        <Avatar initials={person.initials} />
+        <UserAvatar userId={person.id} name={person.name} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold">{person.name}</h2>
           <p className="truncate text-xs text-muted">{person.email}</p>

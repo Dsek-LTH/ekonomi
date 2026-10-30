@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
-import { countCardlessTransactions, getBankTransactionPage, getCards } from "@/lib/data/bank";
+import { countCardlessTransactions, countUnaccountedPurchases, getBankTransactionPage, getCards } from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { ownedResultUnits } from "@/lib/server/result-units";
@@ -67,7 +67,12 @@ export default async function BankPage({
   // that tab is there at all is asked of the year too. See docs/navigation.md.
   const fiscal = await getFiscalYear();
   const during = fiscal ? fiscalYearWhere(fiscal) : undefined;
-  const cardless = showsCardless ? await countCardlessTransactions({ during }) : 0;
+  const [cardless, unaccounted] = await Promise.all([
+    showsCardless ? countCardlessTransactions({ during }) : 0,
+    // The reader's own purchases with no utlägg yet, the nav's count for
+    // them, under Att redovisa on Mina.
+    scope === "mine" ? countUnaccountedPurchases(user.id, { during }) : 0,
+  ]);
   // "Utan kort" is a tab only while there is something on it (see
   // docs/navigation.md), so a link to it once the last one is placed lands on
   // the scope's own tab rather than on an empty one nobody can see.
@@ -104,6 +109,8 @@ export default async function BankPage({
       cards={cards}
       allCards={allCards}
       cardless={cardless}
+      unaccounted={unaccounted}
+      placesCards={canPlaceCards}
       viewerId={user.id}
     />
   );

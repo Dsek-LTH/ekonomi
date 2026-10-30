@@ -25,17 +25,21 @@ import type { RowPage } from "@/lib/data/list-query";
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
 import { useBookingColumn } from "./booking-column";
-import { EXPENSE_TABS, expenseDefaultTab, type ExpenseScope } from "./scope";
+import { EXPENSE_TABS, expenseDefaultTab, type ExpenseScope, type ExpenseTab } from "./scope";
 
 
 export function ExpensesClient({
   page,
+  waiting,
   scope,
   scopes,
   ownBooked,
   canRemind,
 }: {
   page: RowPage<Expense>;
+  /** What waits on the reader under each tab, for its pink count. See
+   *  getExpenseTabCounts. */
+  waiting: Partial<Record<ExpenseTab, number>>;
   /** Whose utlägg these are, settled by the server. See page.tsx. */
   scope: ExpenseScope;
   /** The scopes this reader has, in the order the track draws them. */
@@ -77,8 +81,14 @@ export function ExpensesClient({
   // No predicates: these are names the server matches on (STATUS_TAB in
   // lib/data/expenses.ts), so the rows arrive already narrowed.
   const tabs: TabFilter = useMemo(
-    () => EXPENSE_TABS.map((value) => ({ value, label: t(`tab.${value}`) })),
-    [t],
+    () =>
+      EXPENSE_TABS.map((value) => ({
+        value,
+        label: t(`tab.${value}`),
+        badge: waiting[value] || undefined,
+        waiting: true,
+      })),
+    [t, waiting],
   );
 
   // "Nothing here at all" and "nothing matching what you asked for" are

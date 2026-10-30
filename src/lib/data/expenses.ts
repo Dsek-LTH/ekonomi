@@ -511,6 +511,7 @@ export async function getExpense(
     revisions: e.events.map((ev) => ({
       id: ev.id,
       actor: ev.actor?.name ?? "System",
+      actorId: ev.actor?.id,
       action: ev.type,
       comment: ev.comment ?? undefined,
       recipients: ev.type === "REMINDER_SENT" ? reminderRecipients(ev.diff) : undefined,

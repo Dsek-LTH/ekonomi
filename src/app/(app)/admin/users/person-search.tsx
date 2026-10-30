@@ -5,7 +5,7 @@
 // browser, only what a query actually matches.
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/avatar";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
@@ -101,7 +101,7 @@ export function PersonSearch({
                     onClick={() => pick(u)}
                     className="flex w-full items-center gap-3 rounded-control px-2.5 py-2 text-left transition-colors hover:bg-hover"
                   >
-                    <Avatar initials={u.initials} />
+                    <UserAvatar userId={u.id} name={u.name} />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{u.name}</span>
                       <span className="block truncate text-xs text-muted">{u.email}</span>

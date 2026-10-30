@@ -67,5 +67,23 @@
     "label": "Profile",
     "me": "My profile",
     "members": "Members"
+  },
+  "appearance": "Appearance",
+  "avatar": {
+    "title": "Profile picture",
+    "hint": "Drag to move the picture and zoom with the slider. What shows in the circle becomes your picture.",
+    "frameLabel": "Picture crop",
+    "zoom": "Zoom",
+    "cancel": "Cancel",
+    "save": "Save picture",
+    "useAnyway": "Upload anyway",
+    "cannotPreview": "Your browser cannot show this picture, so it cannot be cropped here. If you upload it anyway, the middle of the picture is used.",
+    "saved": "Profile picture saved.",
+    "saveFailed": "Could not save the profile picture",
+    "upload": "Add picture",
+    "change": "Change picture",
+    "remove": "Remove picture",
+    "removed": "Profile picture removed.",
+    "removeFailed": "Could not remove the profile picture"
   }
 }

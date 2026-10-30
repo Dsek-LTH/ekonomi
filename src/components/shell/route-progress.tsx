@@ -120,7 +120,7 @@ function RouteProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 print:hidden"
     >
       <div
-        className="h-full bg-brand shadow-[0_0_10px_var(--color-brand)] transition-[width,opacity] duration-200 ease-[var(--ease-out-quint)]"
+        className="h-full bg-linear-to-r from-action-from to-action-to shadow-[0_0_10px_var(--color-action-to)] transition-[width,opacity] duration-200 ease-[var(--ease-out-quint)]"
         style={{ width: `${value}%`, opacity: active ? 1 : 0 }}
       />
     </div>

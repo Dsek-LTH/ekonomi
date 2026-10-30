@@ -12,6 +12,7 @@ import type { Column } from "@/components/ui/data-table";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
 
 import { Amount } from "@/components/ui/amount";
+import { PersonName } from "@/components/ui/avatar";
 import type { Expense } from "@/lib/domain/types";
 
 // Each column also says where it lands in DataTable's phone card, so every
@@ -115,7 +116,7 @@ export const expenseSubmitterColumn = (header: string, hidden = false): Column<E
   searchable: true,
   className: "text-muted",
   mobile: "meta",
-  cell: (e) => e.submitterName,
+  cell: (e) => <PersonName userId={e.submitterId} name={e.submitterName} />,
 });
 
 // Sorted by where the status sits in the chain, not by its label: the point of

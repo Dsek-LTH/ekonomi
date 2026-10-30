@@ -17,8 +17,8 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { Avatar } from "@/components/ui/avatar";
-import { IconCheck, IconExternal, IconMenu } from "@/components/ui/icons";
+import { UserAvatar } from "@/components/ui/avatar";
+import { IconCheck, IconExternal, IconHelp, IconMenu } from "@/components/ui/icons";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import {
@@ -52,7 +52,7 @@ export function AppHeader({
   waiting,
 }: {
   user: CurrentUser;
-  fortnox?: { session: FortnoxStatus["session"] | null };
+  fortnox?: { session: FortnoxStatus["session"] | null; company: string | null };
   fiscal: FiscalYears | null;
   /** Whether the nav panel is showing. This button is the only way to it. */
   navOpen: boolean;
@@ -64,6 +64,7 @@ export function AppHeader({
   waiting: boolean;
 }) {
   const t = useTranslations("nav");
+  const pathname = usePathname();
   return (
     // `box-content`, so the 48px is all room for the controls and the rule is
     // drawn below it. Inside it, the rule took a pixel of the height and a 32px
@@ -77,11 +78,11 @@ export function AppHeader({
         aria-expanded={navOpen}
         aria-controls="app-nav"
         className={cn(
-          // A secondary button's look rather than the primary's: opening the
-          // nav is not the thing the page is for. Held in the hover fill while
-          // the panel is open, so the button says it is pressed in.
-          "relative flex h-8 shrink-0 items-center gap-2 rounded-control border border-border-control bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover",
-          navOpen && "bg-hover",
+          // The primary button's pink, so the way into the app is the first
+          // thing the header offers. Held in the hover tint while the panel is
+          // open, so the button says it is pressed in.
+          "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-white",
+          navOpen && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
         )}
       >
         <IconMenu className="size-4" />
@@ -89,7 +90,7 @@ export function AppHeader({
         {/* Off the corner rather than inside it, where it would crowd the
             label. */}
         {waiting && !navOpen && (
-          <span aria-hidden className="absolute -right-1 -top-1 size-2.5 rounded-full bg-accent ring-2 ring-background" />
+          <span aria-hidden className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background" />
         )}
       </button>
 
@@ -105,7 +106,21 @@ export function AppHeader({
       </Link>
 
       <div className="ms-auto flex items-center gap-2">
-        {fortnox && <FortnoxStatusButton session={fortnox.session} />}
+        {/* The rules, for when a purchase is in front of you and you're not
+            sure. Up here rather than at the foot of the nav, so it is one
+            click from every page instead of two. */}
+        <Link
+          href="/faq"
+          aria-current={pathname === "/faq" ? "page" : undefined}
+          className={cn(
+            "flex h-8 items-center gap-2 rounded-control px-2.5 text-sm font-medium transition-colors hover:bg-hover",
+            pathname === "/faq" && "bg-hover",
+          )}
+        >
+          <IconHelp aria-hidden className="size-4" />
+          {t("faq")}
+        </Link>
+        {fortnox && <FortnoxStatusButton session={fortnox.session} company={fortnox.company} />}
         {fiscal && <FiscalYearPicker fiscal={fiscal} />}
         <AccountMenu user={user} />
       </div>
@@ -173,11 +188,19 @@ export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
  * A plain `<a>`: /api/fortnox/connect is a redirect out to Fortnox's consent
  * screen, and the client router would ask for a page that never arrives.
  */
-function FortnoxStatusButton({ session }: { session: FortnoxStatus["session"] | null }) {
+function FortnoxStatusButton({
+  session,
+  company,
+}: {
+  session: FortnoxStatus["session"] | null;
+  /** The company the section is connected to, which is where a login lands. */
+  company: string | null;
+}) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const signedIn = Boolean(session);
-  const label = signedIn ? t("fortnoxSignedIn") : t("fortnoxSignIn");
+  const state = signedIn ? t("fortnoxSignedIn") : t("fortnoxSignIn");
+  const label = company ? `${state} - ${company}` : state;
   return (
     <a
       href={`/api/fortnox/connect?mode=user&returnTo=${encodeURIComponent(pathname)}`}
@@ -186,9 +209,11 @@ function FortnoxStatusButton({ session }: { session: FortnoxStatus["session"] | 
       className="flex h-8 items-center gap-2 rounded-control px-2.5 text-sm font-medium transition-colors hover:bg-hover"
     >
       <IconFortnox className="size-4" />
-      {/* The name alone. Whether the session holds is the dot's to say, and
-          the full sentence is the title and the accessible name. */}
-      <span>Fortnox</span>
+      {/* Which company, since a test company and the real books look the
+          same otherwise, and the mark already says it is Fortnox. Whether the
+          session holds is the dot's to say, and the full sentence is the
+          title and the accessible name. */}
+      <span className="max-w-48 truncate">{company ?? "Fortnox"}</span>
       <span
         aria-hidden
         className={cn("size-2 rounded-full", signedIn ? "bg-success" : "bg-warning")}
@@ -210,7 +235,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   return (
     <Menu
       label={tNav("accountMenu")}
-      trigger={<Avatar initials={user.initials} />}
+      trigger={<UserAvatar userId={user.id} name={user.name} />}
       triggerClassName="flex rounded-full transition-opacity hover:opacity-80"
     >
       <div className="px-2.5 pb-2 pt-1.5 leading-tight">
@@ -223,11 +248,11 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           open so the reader sees what they did. */}
       <div className="flex items-center justify-between gap-4 px-2.5 py-1.5">
         <span className="text-sm">{t("theme")}</span>
-        <ThemeToggle />
+        <ThemeToggle round />
       </div>
       <div className="flex items-center justify-between gap-4 px-2.5 py-1.5">
         <span className="text-sm">{t("language")}</span>
-        <LanguageSwitcher />
+        <LanguageSwitcher round />
       </div>
       <MenuSeparator />
       {/* A new tab, because leaving takes somebody out of a form they may be

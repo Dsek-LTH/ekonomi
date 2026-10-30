@@ -38,12 +38,12 @@ describe("productRows", () => {
     expect(shown([line({ name: "Läsk", variant: "Stor" })])).toEqual(["Läsk:", "  Stor"]);
   });
 
-  it("keeps a variant-less row of a grouped product unindented, under the heading", () => {
-    // What the document does: the plain row falls back to its display name and
-    // is not stepped in, because there is no variant to name it by.
+  it("steps a variant-less row of a grouped product in, under its own name", () => {
+    // Unlike the document, which leaves it flush with the heading, where it read
+    // as a separate product rather than one of the group's.
     expect(
       shown([line({ name: "Macka" }), line({ name: "Macka", variant: "Ost" })]),
-    ).toEqual(["Macka:", "Macka", "  Ost"]);
+    ).toEqual(["Macka:", "  Macka", "  Ost"]);
   });
 
   it("orders groups by name and rows by variant, then account, then price", () => {
@@ -62,7 +62,7 @@ describe("productRows", () => {
   it("groups a product whose name differs only by surrounding space", () => {
     expect(shown([line({ name: "Macka ", variant: "Ost" }), line({ name: "Macka" })])).toEqual([
       "Macka:",
-      "Macka",
+      "  Macka",
       "  Ost",
     ]);
   });

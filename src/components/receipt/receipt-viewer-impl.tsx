@@ -169,6 +169,20 @@ export default function ReceiptViewerImpl({
     });
   }, []);
 
+  // How far each document has been turned by the reader, in degrees clockwise,
+  // keyed by address like the page counts. A phone photo of a receipt is often
+  // stored sideways, and the person who notices is usually reading it rather
+  // than the one who could re-upload it. So this turns the view only. Nothing
+  // is saved, and the stored file (and what Fortnox is sent) stays as it was.
+  //
+  // Per document rather than for the stack, because it is one photo in the
+  // stack that is sideways, and turning the utläggsräkning with it would only
+  // trade one wrong way up for another.
+  const [turns, setTurns] = useState<Record<string, number>>({});
+  // The document in view, for the rotate button to act on. A ref, for the
+  // same reason the jump bar holds its own copy (see `reportCurrent`).
+  const inView = useRef(0);
+
   // A different *set* of documents starts over. The panel lives in the app
   // shell and is never remounted, so without this the second utlägg you open
   // inherits the first one's page counts and rations the canvas budget against
@@ -182,6 +196,7 @@ export default function ReceiptViewerImpl({
   if (openedFor !== docsKey) {
     setOpenedFor(docsKey);
     setPageCounts({});
+    setTurns({});
   }
   const totalPages = documents.reduce((n, d) => n + (pageCounts[d.src] ?? 0), 0);
 
@@ -352,7 +367,10 @@ export default function ReceiptViewerImpl({
             best = i;
           }
         }
-        if (best >= 0) reportCurrent.current(best);
+        if (best >= 0) {
+          inView.current = best;
+          reportCurrent.current(best);
+        }
       },
       { root, threshold: Array.from({ length: 21 }, (_, i) => i / 20) },
     );
@@ -379,6 +397,7 @@ export default function ReceiptViewerImpl({
     const lowest = Math.min(0, wrapper.clientHeight - content.offsetHeight * state.scale);
     const y = Math.min(0, Math.max(lowest, state.positionY - offset));
     jumpQuiet.current = Date.now() + JUMP_MS + 100;
+    inView.current = i;
     reportCurrent.current(i);
     ctl.setTransform(state.positionX, y, state.scale, JUMP_MS, "easeOut");
   };
@@ -387,6 +406,14 @@ export default function ReceiptViewerImpl({
   // gave one, which every multi-document page does; the bare name otherwise.
   const docName = (d: ViewerDocument, i: number) =>
     d.label ?? d.filename ?? t("documentN", { n: i + 1 });
+
+  // A quarter turn clockwise for the document in view. Clamped, so a document
+  // removed from the end never leaves the button pointing past it.
+  const rotate = () => {
+    const d = documents[Math.min(inView.current, documents.length - 1)];
+    if (!d) return;
+    setTurns((prev) => ({ ...prev, [d.src]: ((prev[d.src] ?? 0) + 90) % 360 }));
+  };
 
   // Tab is held inside the overlay while it is up. Fullscreen covers the page
   // it was opened from, and tabbing out of the last control landed on buttons
@@ -554,6 +581,9 @@ export default function ReceiptViewerImpl({
               <ToolBtn label={t("reset")} onClick={() => ctl.resetTransform()}>
                 <ResetIcon />
               </ToolBtn>
+              <ToolBtn label={t("rotate")} onClick={rotate}>
+                <RotateIcon />
+              </ToolBtn>
               <span className="mx-0.5 h-5 w-px bg-border" />
               {/* The one control worth naming out loud. Fullscreen is how a
                   receipt is actually read, and as an unlabelled 28px icon in a
@@ -652,6 +682,7 @@ export default function ReceiptViewerImpl({
                       }
                       width={pdfWidth}
                       pixelRatio={pixelRatio}
+                      turn={turns[d.src] ?? 0}
                       onPages={reportPages}
                     />
                   </div>
@@ -719,6 +750,7 @@ function DocumentSheet({
   position,
   width,
   pixelRatio,
+  turn,
   onPages,
 }: {
   doc: ViewerDocument;
@@ -727,6 +759,8 @@ function DocumentSheet({
   position?: { index: number; total: number; name: string };
   width: number;
   pixelRatio: number | undefined;
+  /** Degrees clockwise the reader has turned it: 0, 90, 180 or 270. */
+  turn: number;
   /** Reports the page count up, so the viewer can ration the canvas budget
    *  across the whole stack rather than per document. */
   onPages: (src: string, pages: number) => void;
@@ -750,6 +784,20 @@ function DocumentSheet({
   };
 
   const isPdf = doc.mimeType === "application/pdf";
+
+  // Each page's own rotation, from the PDF. react-pdf's `rotate` replaces it
+  // rather than adding to it, so a turn has to start from it, or the first
+  // click on a page saved landscape would turn it the wrong way.
+  const [ownRotation, setOwnRotation] = useState<Record<number, number>>({});
+  const pageRotation = (i: number) =>
+    turn !== 0 && i in ownRotation ? (ownRotation[i] + turn) % 360 : undefined;
+
+  // An image's own size, for a quarter turn. A CSS rotation leaves the box
+  // where it was, so a portrait photo turned sideways would hang out of both
+  // edges of the viewer. The box is sized to the turned image instead.
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const quarter = turn === 90 || turn === 270;
+  const fit = natural && quarter ? Math.min(1, width / natural.h) : 1;
 
   // Its own page count leaves with it, so the budget upstairs stops counting
   // pages that are no longer on screen.
@@ -795,6 +843,12 @@ function DocumentSheet({
               key={i}
               pageNumber={i + 1}
               width={width}
+              rotate={pageRotation(i)}
+              onLoadSuccess={(page) =>
+                setOwnRotation((prev) =>
+                  prev[i] === page.rotate ? prev : { ...prev, [i]: page.rotate },
+                )
+              }
               devicePixelRatio={pixelRatio}
               renderTextLayer={false}
               renderAnnotationLayer={false}
@@ -810,14 +864,39 @@ function DocumentSheet({
         </Document>
       ) : failed ? (
         <LoadFailed onRetry={retry} />
+      ) : natural && quarter ? (
+        // Turned a quarter: a box the shape of the turned image, and the image
+        // drawn at its unturned size in the middle of it, then turned.
+        <div
+          className="relative shrink-0"
+          style={{ width: natural.h * fit, height: natural.w * fit }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={fileSrc}
+            alt={doc.filename ?? t("alt")}
+            draggable={false}
+            onError={() => setFailed(true)}
+            className="absolute left-1/2 top-1/2 max-w-none select-none rounded-mark shadow-[var(--shadow-card)]"
+            style={{
+              width: natural.w * fit,
+              height: natural.h * fit,
+              transform: `translate(-50%, -50%) rotate(${turn}deg)`,
+            }}
+          />
+        </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={fileSrc}
           alt={doc.filename ?? t("alt")}
           draggable={false}
+          onLoad={(e) =>
+            setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+          }
           onError={() => setFailed(true)}
           className="max-w-full select-none rounded-mark shadow-[var(--shadow-card)]"
+          style={turn ? { transform: `rotate(${turn}deg)` } : undefined}
         />
       )}
     </div>
@@ -1025,6 +1104,22 @@ const ResetIcon = () => (
   >
     <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
     <path d="M3 3v5h5" />
+  </svg>
+);
+
+const RotateIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    className="size-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 5H6a2 2 0 0 0-2 2v3" />
+    <path d="m9 8 3-3-3-3" />
+    <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
   </svg>
 );
 

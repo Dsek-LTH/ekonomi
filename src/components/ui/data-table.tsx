@@ -56,6 +56,10 @@ export type TabOption = {
   label: string;
   /** A count beside the label, drawn by FilterTabs. Left out, none is shown. */
   badge?: number;
+  /** Whether the count is work waiting on the reader, the same as the count on
+   *  the section's tab above, and drawn in the same pink. Otherwise it is a
+   *  tally and stays grey. */
+  waiting?: boolean;
 };
 
 export type TabFilter = TabOption[];
@@ -434,7 +438,7 @@ export function DataTable<T>({
         <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-inset">
           <div className="min-w-0">
             <FilterTabs
-              options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge }))}
+              options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge, waiting: o.waiting }))}
               value={activeTab?.value ?? ""}
               onChange={controls.setTab}
               aria-label={t("tabsLabel")}

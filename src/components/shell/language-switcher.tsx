@@ -16,7 +16,7 @@ function writeLocaleCookie(next: string) {
   document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000; samesite=lax`;
 }
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ round = false }: { round?: boolean }) {
   const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -46,7 +46,8 @@ export function LanguageSwitcher() {
           aria-pressed={locale === value}
           title={label}
           className={cn(
-          "overflow-hidden flex size-9 items-center justify-center rounded-control border border-border-control bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
+          "overflow-hidden flex size-9 items-center justify-center border border-border-control bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
+            round ? "rounded-full" : "rounded-control",
             locale === value
               ? ""
               : "border-border opacity-50 hover:opacity-100 focus:opacity-100",

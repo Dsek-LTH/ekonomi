@@ -130,9 +130,12 @@ of failing.
   [docs/gmail-inbound.md](docs/gmail-inbound.md). Without it, invoices are
   added by hand.
 - **Scheduled jobs** (`CRON_SECRET`): `POST /api/cron/weekly-digest`,
-  `/api/cron/deliver-mail` and, with the Gmail inkorg, hourly
-  `/api/cron/gmail-sync`, called with `Authorization: Bearer <CRON_SECRET>`.
-  Without the secret they answer 404.
+  `/api/cron/deliver-mail`, with Fortnox, `/api/cron/fortnox-sync` daily at
+  04:00, and, with the Gmail inkorg, hourly `/api/cron/gmail-sync`, called
+  with `Authorization: Bearer <CRON_SECRET>`. Without the secret they answer
+  404. The Fortnox sync runs on the service connection, so it needs nobody
+  logged in. It answers 502, with which step failed in the body, when any
+  step did.
 
 ## Running the whole stack in Docker
 

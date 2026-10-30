@@ -191,6 +191,14 @@ model User {
   bankClearingNumber String?
   bankAccountNumber  String?
 
+  // The member's own profile picture, a 256px square they cropped themselves
+  // (api/profile/avatar). The key into object storage, and when it was last
+  // replaced, which is also the version in the picture's URL so a new one is
+  // never answered from a browser's cache of the old. Both null for no picture,
+  // and the UI draws the initials instead.
+  avatarKey       String?
+  avatarUpdatedAt DateTime?
+
   active Boolean @default(true)
 
   submittedExpenses    Expense[]                @relation("ExpenseSubmitter")

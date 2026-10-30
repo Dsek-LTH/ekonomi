@@ -200,6 +200,8 @@ export interface CostAllocation {
 interface RevisionEntry {
   id: string;
   actor: string;
+  /** Who, for their picture. Absent for the system's own events. */
+  actorId?: string;
   action: string; // ExpenseEventType, named by `expenses.event.<TYPE>`
   comment?: string;
   /** Who a REMINDER_SENT went to, by name as they were then. */
@@ -257,7 +259,9 @@ export interface FortnoxStatus {
   connected: boolean; // the org's service connection is stored (reads + sync)
   companyName?: string;
   voucherSeries?: string;
-  expiresAt?: string; // ISO, access-token expiry
+  // Fortnox refused to renew the connection, when and why. Until it is
+  // connected again nothing reads from Fortnox. Absent while it works.
+  refreshFailed?: { at: string; error: string };
 
   // The viewer's own Fortnox login, used when they book (writes). Separate from
   // the service connection above and short-lived by design.

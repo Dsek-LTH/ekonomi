@@ -85,7 +85,13 @@ export function SectionBand({
         // and a row's buttons sit at z-10 over their row, and at the band's
         // own z-10 they came later in the page and were drawn over it as they
         // scrolled under.
-        "sticky top-14 z-20 md:top-0 -ml-4 -mr-6 mb-6 bg-background/90 pl-4 pr-6 backdrop-blur-xl backdrop-saturate-150 md:-mx-6 md:px-6",
+        // The right side follows the main column's own gutter, which widens
+        // while the folded receipt tab hangs over that edge (app-shell.tsx).
+        //
+        // Its bottom border is the divider under the tabs. The band reaches
+        // both edges of the main column, so its own border does too, at
+        // every width and whatever the receipt panel is doing.
+        "sticky top-14 z-20 md:top-0 -ml-4 -mr-(--main-pr) mb-6 border-b border-border bg-background/90 pl-4 pr-(--main-pr) backdrop-blur-xl backdrop-saturate-150 md:-ml-6 md:pl-6",
         // The main column's top padding, taken back, so the band starts right
         // under the header. The tabs are the first thing there, with no title
         // above them, and the row's own height is all the room it needs.
@@ -101,21 +107,10 @@ export function SectionBand({
       {/* One row of a fixed height whatever stands at its end. The switch is
           32px (a 26px option in a padded, bordered track), the height of every
           control from sm up, and 44 leaves it 6px from the header above and 6
-          from the divider below. `box-content` and `pb-px`, so the divider is
-          drawn under the 44 rather than taking a pixel of it, which put the
-          switch half a pixel off centre. */}
-      <div className="relative box-content flex h-11 items-stretch justify-between gap-4 border-b border-border pb-0 md:border-b-0 md:pb-px">
-        {/* The divider, edge to edge of the main column from md, the way the
-            header's rule above it is. Drawn as a border it stopped at the
-            page's content width, and two rules of different lengths one above
-            the other read as an accident. A viewport wide and centred on the
-            page, which is centred in the column, so it always covers the
-            column; the column clips what is left over (app-shell.tsx). Below
-            md the page is the width of the screen and the border does it. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 left-1/2 hidden h-px w-screen -translate-x-1/2 bg-border md:block"
-        />
+          from the divider below. The divider is the band's border, outside
+          the 44, so it takes no pixel from the row and the switch stays
+          centred. */}
+      <div className="relative flex h-11 items-stretch justify-between gap-4">
         <SectionTabs label={section.tabsLabel} tabs={section.tabs} />
         <div ref={slotRef} className="flex shrink-0 items-center empty:hidden" />
       </div>
@@ -262,7 +257,7 @@ export function PageHeaderSkeleton({
 
 /**
  * The pages of a section, as tabs with the page's icon. The one you are on is
- * in bold and in the text colour, with the accent line under it.
+ * in bold and in the text colour, with the pink line under it.
  *
  * The line is one element under the whole row rather than a border on each
  * tab, so that moving to another tab moves it: measured to the current tab and
@@ -357,7 +352,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
                 >
                   <Icon className="size-4 shrink-0" />
                   {i.label}
-                  {i.count > 0 && <NavCount count={i.count} />}
+                  {i.count > 0 && <NavCount count={i.count} alert />}
                 </Link>
               </li>
             );
@@ -366,7 +361,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
         <span
           ref={line}
           aria-hidden
-          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-accent opacity-0 motion-safe:transition-[transform,width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]"
+          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-linear-to-r from-action-from to-action-to opacity-0 motion-safe:transition-[transform,width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]"
         />
       </div>
     </nav>

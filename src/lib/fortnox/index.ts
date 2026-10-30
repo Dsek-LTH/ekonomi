@@ -7,8 +7,9 @@
 //
 //   service: a Fortnox service account, authorised once by a Fortnox system
 //             administrator, tied to no person. Backs everything that READS
-//             (ledger sync, accounts, cost centres) including the scheduled
-//             job, so it must outlive individual employees. FortnoxConnection.
+//             (ledger sync, accounts, cost centres, projects, the supplier
+//             register) including the nightly job, so it must outlive
+//             individual employees. FortnoxConnection.
 //   user    a bookkeeper's own Fortnox login, short-lived. Backs everything
 //             that WRITES, so Fortnox stamps the voucher with their name rather
 //             than the integration's. FortnoxUserSession.
@@ -40,10 +41,15 @@ export type FortnoxAuthMode = "service" | "user";
 // rows pick from; a connection made before it was added syncs without it.
 //
 // `supplierinvoice` and `supplier` are for exporting a levfaktura: making the
-// supplier invoice, and reading (or adding to) the supplier register it is
-// billed against. A personal login made before they were added has to log in
-// again, which is a prompt the export answers with rather than a failure.
-const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation";
+// supplier invoice against a supplier in the register. A personal login made
+// before they were added has to log in again, which is a prompt the export
+// answers with rather than a failure.
+//
+// The register itself is read by the service account (`supplier` there): the
+// picker, the nightly sync and the bankgiro check before an export. Suppliers
+// are only ever added in Fortnox, never from here. A connection made before
+// `supplier` was added has to be connected again before the register syncs.
+const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation supplier";
 const USER_SCOPES = "bookkeeping inbox connectfile companyinformation supplierinvoice supplier";
 
 const scopesFor = (mode: FortnoxAuthMode) =>
@@ -241,30 +247,75 @@ export async function disconnect(): Promise<void> {
 // Everything that reads from Fortnox goes through here, including the scheduled
 // sync. Never use it to write a voucher. See getUserToken.
 //
-// Note: refresh-token rotation means concurrent refreshes could race and
-// invalidate each other. A scheduled sync running alongside an interactive one
-// makes that a real possibility; this needs a lock around the refresh.
+// The refresh is done under a lock. Fortnox rotates the refresh token on every
+// refresh and the old one stops working, so two refreshes at once (the nightly
+// sync and someone opening the supplier picker, say) would leave one of them
+// storing a pair Fortnox has already replaced. The connection would then be
+// dead until an administrator connected it again. Under the lock the second
+// caller reads the connection again, finds the first one's fresh token, and
+// uses that instead of refreshing a second time.
 export async function getServiceToken(): Promise<string> {
   const conn = await getConnection();
   if (!conn) {
     throw new FortnoxError("fortnox.notConnected", 409);
   }
-  if (conn.expiresAt.getTime() - EXPIRY_SKEW_MS > Date.now()) {
-    return decryptSecret(conn.accessToken);
-  }
-  // Expired (or about to). Refresh and persist the rotated tokens.
-  const token = await refreshTokens(decryptSecret(conn.refreshToken));
-  await prisma.fortnoxConnection.update({
-    where: { id: conn.id },
-    data: {
-      accessToken: encryptSecret(token.access_token),
-      refreshToken: encryptSecret(token.refresh_token),
-      expiresAt: new Date(Date.now() + token.expires_in * 1000),
-      scopes: token.scope || conn.scopes,
+  if (isFresh(conn.expiresAt)) return decryptSecret(conn.accessToken);
+
+  const outcome = await prisma.$transaction(
+    async (tx): Promise<{ token: string } | { refused: FortnoxError }> => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SERVICE_REFRESH_LOCK}::bigint)`;
+      const current = await tx.fortnoxConnection.findUnique({ where: { id: conn.id } });
+      // Disconnected, or connected again, while this waited for the lock.
+      if (!current) throw new FortnoxError("fortnox.notConnected", 409);
+      if (isFresh(current.expiresAt)) return { token: decryptSecret(current.accessToken) };
+
+      // Expired (or about to). Refresh and persist the rotated tokens.
+      let token: TokenResponse;
+      try {
+        token = await refreshTokens(decryptSecret(current.refreshToken));
+      } catch (e) {
+        // Fortnox said no, which no retry will change. Handed out of the
+        // transaction rather than thrown, so the record of it below is not
+        // rolled back with everything else. Anything else (a timeout, a 5xx)
+        // may well work next time and is not recorded.
+        if (e instanceof FortnoxError && e.status !== undefined && e.status >= 400 && e.status < 500) {
+          return { refused: e };
+        }
+        throw e;
+      }
+      await tx.fortnoxConnection.update({
+        where: { id: current.id },
+        data: {
+          accessToken: encryptSecret(token.access_token),
+          refreshToken: encryptSecret(token.refresh_token),
+          expiresAt: new Date(Date.now() + token.expires_in * 1000),
+          scopes: token.scope || current.scopes,
+          refreshFailedAt: null,
+          refreshError: null,
+        },
+      });
+      return { token: token.access_token };
     },
+    // The refresh is a request to Fortnox, made inside the transaction, and a
+    // slow one must not be cut off by Prisma's 5 second default after Fortnox
+    // has already rotated the pair.
+    { timeout: 30_000, maxWait: 30_000 },
+  );
+  if ("token" in outcome) return outcome.token;
+
+  // For the settings page, which says so and asks for a reconnect. updateMany,
+  // so a connection removed in the meantime is not an error of its own.
+  await prisma.fortnoxConnection.updateMany({
+    where: { id: conn.id },
+    data: { refreshFailedAt: new Date(), refreshError: outcome.refused.message },
   });
-  return token.access_token;
+  throw outcome.refused;
 }
+
+/** Any number, as long as nothing else takes the same advisory lock. */
+const SERVICE_REFRESH_LOCK = 724_501;
+
+const isFresh = (expiresAt: Date) => expiresAt.getTime() - EXPIRY_SKEW_MS > Date.now();
 
 // ── Personal sessions (write side, one per user) ──────────────────
 
@@ -779,35 +830,6 @@ export async function getSupplier(token: string, number: string): Promise<Fortno
     bankgiro: s.BG || null,
     plusgiro: s.PG || null,
     active: s.Active !== false,
-  };
-}
-
-/** Add a supplier to the register, returning the number Fortnox gave it. */
-export async function createSupplier(
-  token: string,
-  input: { name: string; orgNo?: string | null; bankgiro?: string | null; plusgiro?: string | null },
-): Promise<FortnoxSupplier> {
-  const data = await fortnoxPost<{ Supplier?: { SupplierNumber?: string; Name?: string } }>(
-    "/suppliers",
-    token,
-    {
-      Supplier: {
-        Name: input.name,
-        ...(input.orgNo && { OrganisationNumber: input.orgNo }),
-        ...(input.bankgiro && { BG: input.bankgiro }),
-        ...(input.plusgiro && { PG: input.plusgiro }),
-      },
-    },
-  );
-  const number = data.Supplier?.SupplierNumber;
-  if (!number) throw new FortnoxError("Fortnox returnerade inget leverantörsnummer.");
-  return {
-    number,
-    name: data.Supplier?.Name ?? input.name,
-    orgNo: input.orgNo ?? null,
-    bankgiro: input.bankgiro ?? null,
-    plusgiro: input.plusgiro ?? null,
-    active: true,
   };
 }
 

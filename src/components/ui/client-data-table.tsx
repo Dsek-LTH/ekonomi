@@ -160,7 +160,7 @@ export function ClientDataTable<T>({
   // What DataTable is handed: the page, the count behind it, and tabs stripped
   // of the predicates it has no use for.
   const plainTabs: TabFilter | undefined = useMemo(
-    () => tabs?.map(({ value, label, badge }) => ({ value, label, badge })),
+    () => tabs?.map(({ value, label, badge, waiting }) => ({ value, label, badge, waiting })),
     [tabs],
   );
   const plainFilter: SelectFilter[] = useMemo(

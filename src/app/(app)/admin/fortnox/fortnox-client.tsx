@@ -30,7 +30,10 @@ import type {
   AccountSyncResult,
   CostCenterSyncResult,
   ProjectSyncResult,
+  SupplierSyncResult,
+  SyncAllResult,
 } from "@/lib/fortnox/sync";
+import type { FortnoxSyncStatus } from "@/lib/data/fortnox";
 import type {
   AccountRecord,
   BookkeepingSettings,
@@ -51,6 +54,8 @@ export function FortnoxClient({
   ledgerYears,
   costCenters,
   projects,
+  suppliers,
+  lastSync,
 }: {
   fortnox: FortnoxStatus;
   accounts: AccountRecord[];
@@ -60,6 +65,10 @@ export function FortnoxClient({
   costCenters: { count: number; lastSyncAt: string | null };
   /** The mirrored Fortnox projects: how many, and when the sync last ran. */
   projects: { count: number; lastSyncAt: string | null };
+  /** The kept supplier register: how many, and when it was last read. */
+  suppliers: { count: number; lastSyncAt: string | null };
+  /** The last full sync, the nightly job's or one started here. */
+  lastSync: FortnoxSyncStatus;
 }) {
   const t = useTranslations("admin.fortnox");
   const tCostCenters = useTranslations("admin.costCenters");
@@ -139,6 +148,30 @@ export function FortnoxClient({
     );
   }
 
+  async function syncSuppliers() {
+    const data = await mutate<SupplierSyncResult>("/api/fortnox/suppliers/sync", {
+      key: "suppliers",
+      error: t("suppliersSyncFailed"),
+    });
+    if (!data) return;
+    notify.success(t("suppliersSummary", { count: data.suppliers }), t("suppliersSynced"));
+  }
+
+  // What the nightly job does, now. A step that failed is not an error of the
+  // request, so it is said here, and the card's status line names the step.
+  async function syncEverything() {
+    const data = await mutate<SyncAllResult>("/api/fortnox/sync-all", {
+      key: "all",
+      error: t("syncAllFailed"),
+    });
+    if (!data) return;
+    const failed =
+      [data.financialYears, data.costCenters, data.projects, data.accounts, data.suppliers].some((s) => !s.ok) ||
+      data.ledger.some((s) => !s.ok);
+    if (failed) notify.error(t("syncAllPartial"));
+    else notify.success(t("syncAllDone"));
+  }
+
   // Cost centres are listed and added to on their own settings page (local
   // ones live there too), but fetched here, with everything else that comes
   // from Fortnox.
@@ -215,7 +248,16 @@ export function FortnoxClient({
           title={t("connection")}
           subtitle={t("connectionSubtitle")}
           action={
-            connected ? (
+            connected && fortnox.refreshFailed ? (
+              // Connecting again replaces the dead connection, keeping the
+              // voucher series, so there is nothing to disconnect first.
+              <ButtonLink
+                href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
+                size="sm"
+              >
+                {t("reconnect")}
+              </ButtonLink>
+            ) : connected ? (
               <Button
                 variant="secondary"
                 size="sm"
@@ -235,8 +277,11 @@ export function FortnoxClient({
           }
         />
         <CardBody>
+          {/* The access token's hour is not shown: it renews by itself and
+              said nothing an administrator could act on. Only a renewal
+              Fortnox refused is, since that one needs them to connect again. */}
           <FortnoxBanner
-            ok={connected}
+            ok={connected && !fortnox.refreshFailed}
             title={
               !fortnox.configured
                 ? t("notConfigured")
@@ -250,12 +295,18 @@ export function FortnoxClient({
               !fortnox.configured
                 ? t("unconfigured")
                 : connected
-                  ? fortnox.expiresAt
-                    ? t("tokenValidUntil", { time: dateTime(fortnox.expiresAt) })
-                    : undefined
+                  ? undefined
                   : t("connectHint")
             }
           />
+          {connected && fortnox.refreshFailed && (
+            <p className="mt-3 text-sm text-danger">
+              {t("refreshFailed", {
+                time: dateTime(fortnox.refreshFailed.at),
+                error: fortnox.refreshFailed.error,
+              })}
+            </p>
+          )}
         </CardBody>
       </Card>
 
@@ -309,13 +360,45 @@ export function FortnoxClient({
       </Card>
 
       <Card>
-        <CardHeader title={t("sync")} subtitle={t("syncSubtitle")} />
+        <CardHeader
+          title={t("sync")}
+          subtitle={t("syncSubtitle")}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!connected || Boolean(lastSync.runningSince)}
+              loading={pending === "all"}
+              onClick={syncEverything}
+            >
+              {t("syncAll")}
+            </Button>
+          }
+        />
         {/* Said once, rather than under each greyed-out button, and in words
             rather than a tooltip nobody hovers on a phone. */}
-        {!connected && (
+        {!connected ? (
           <p className="border-b border-border px-inset py-3 text-sm text-muted">
             {tBookkeeping("connectFirst")}
           </p>
+        ) : (
+          // When it last ran by itself, and what went wrong if anything did.
+          // A failure stays here until a run goes through, so a connection
+          // that has quietly stopped working is seen on this page.
+          <div className="space-y-1 border-b border-border px-inset py-3 text-sm">
+            <p className="text-muted">
+              {lastSync.runningSince
+                ? t("nightlyRunning", { time: dateTime(lastSync.runningSince) })
+                : lastSync.lastFinishedAt
+                  ? t("nightlyLast", { time: dateTime(lastSync.lastFinishedAt) })
+                  : t("nightly")}
+            </p>
+            {lastSync.lastError && lastSync.lastFinishedAt && !lastSync.runningSince && (
+              <p className="text-danger">
+                {t("nightlyFailed", { time: dateTime(lastSync.lastFinishedAt), error: lastSync.lastError })}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Two groups, because they are two kinds of thing. The registers are
@@ -405,6 +488,20 @@ export function FortnoxClient({
             }
           >
             {syncButton("projects", t("syncProjects"), syncProjects)}
+          </SyncRow>
+
+          <SyncRow
+            label={t("suppliers")}
+            meta={
+              suppliers.lastSyncAt
+                ? t("suppliersSubtitle", {
+                    count: suppliers.count,
+                    time: dateTime(suppliers.lastSyncAt),
+                  })
+                : t("suppliersSubtitleNever")
+            }
+          >
+            {syncButton("suppliers", t("syncSuppliers"), syncSuppliers)}
           </SyncRow>
         </SyncGroup>
 

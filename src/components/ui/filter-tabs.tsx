@@ -31,6 +31,9 @@ interface FilterTab<T extends string> {
   label: string;
   /** Shown after the label when there is something in that slice. */
   badge?: number;
+  /** The badge is work waiting on the reader, so it is pink like the count on
+   *  the section's tab (shell/nav-count.tsx) rather than a grey tally. */
+  waiting?: boolean;
 }
 
 export function FilterTabs<T extends string>({
@@ -137,7 +140,11 @@ export function FilterTabs<T extends string>({
               <span
                 className={cn(
                   "rounded-mark px-1.5 py-0.5 text-xs tabular-nums",
-                  active ? "bg-accent-soft text-accent" : "bg-surface text-muted",
+                  opt.waiting
+                    ? "action-fill text-white"
+                    : active
+                      ? "bg-action-from/20 text-foreground"
+                      : "bg-surface text-muted",
                 )}
               >
                 {opt.badge}
@@ -150,7 +157,7 @@ export function FilterTabs<T extends string>({
       <span
         ref={line}
         aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-accent opacity-0 motion-safe:transition-[transform,width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]"
+        className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-linear-to-r from-action-from to-action-to opacity-0 motion-safe:transition-[transform,width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]"
       />
     </div>
   );

@@ -133,6 +133,13 @@
     "notFound": "The user was not found",
     "unknown": "Unknown user"
   },
+  "avatar": {
+    "notFound": "There is no profile picture",
+    "notImage": "The profile picture must be a JPEG, PNG, WebP or HEIC image",
+    "tooLarge": "The picture can be at most {max} MB",
+    "unreadable": "Could not read the picture",
+    "storageUnavailable": "The picture archive is not responding right now"
+  },
   "resultUnit": {
     "notFound": "The result unit was not found",
     "prefixFormat": "A prefix may only contain letters and digits.",
@@ -200,7 +207,8 @@
     "missingScope": "Fortnox is missing permission for this. Disconnect and connect again to grant the app the scopes it needs.",
     "missingCostCenterScope": "Fortnox is missing permission for cost centers. Disconnect and connect again to grant the app the 'costcenter' scope.",
     "missingProjectScope": "Fortnox is missing permission for projects. Disconnect and connect again to grant the app the 'project' scope.",
-    "missingScopeLogin": "Your Fortnox login lacks access to supplier invoices. Log in to Fortnox again."
+    "syncRunning": "A sync from Fortnox is already running. Try again in a moment.",
+    "missingSupplierScope": "The Fortnox connection lacks access to the supplier register. Disconnect and connect again to grant the app the 'supplier' scope."
   },
   "database": "Database error",
   "budgetAccount": {

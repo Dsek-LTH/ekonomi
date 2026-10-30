@@ -1,8 +1,8 @@
 "use client";
 
 // Every member's redovisningsbetyg, the lowest first, since those are the ones
-// to talk to. A list rather than a table: the overlay is one column wide, and
-// a name, the stars and what waits is all a row needs. A row opens the same
+// to talk to. A list rather than a table: a face, a name, the stars and what
+// waits is all a row needs. A row opens the same
 // breakdown the member sees on their own profile.
 import { useState } from "react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { EmptyNote } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
 import { IconChevronRight } from "@/components/ui/icons";
 import { MemberScorePanel, StarRating } from "@/components/member-score";
+import { UserAvatar } from "@/components/ui/avatar";
 import type { MemberScoreRow } from "@/lib/data/member-score";
 import { profileTabs } from "../profile-client";
 
@@ -38,12 +39,15 @@ export function MembersClient({
 
   if (selected) {
     return (
-      <PageShell title={title} width="form" pages={profileTabs(tProfile, "members")} back="/profile/members">
+      <PageShell title={title} width="content" pages={profileTabs(tProfile, "members")} back="/profile/members">
         <Card>
           <CardBody className="space-y-5">
-            <div>
-              <h2 className="text-base font-semibold">{selected.name}</h2>
-              <p className="text-sm text-muted">{selected.email}</p>
+            <div className="flex items-center gap-3">
+              <UserAvatar userId={selected.userId} name={selected.name} size="md" />
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold">{selected.name}</h2>
+                <p className="truncate text-sm text-muted">{selected.email}</p>
+              </div>
             </div>
             <MemberScorePanel score={selected.score} own={false} />
           </CardBody>
@@ -58,7 +62,7 @@ export function MembersClient({
     .sort(byConcern);
 
   return (
-    <PageShell title={title} width="form" pages={profileTabs(tProfile, "members")}>
+    <PageShell title={title} width="content" pages={profileTabs(tProfile, "members")}>
       <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} />
       <Card>
         {shown.length === 0 ? (
@@ -71,6 +75,7 @@ export function MembersClient({
                   href={`/profile/members?id=${r.userId}`}
                   className="flex items-center gap-3 px-inset py-3 hover:bg-hover"
                 >
+                  <UserAvatar userId={r.userId} name={r.name} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{r.name}</span>
                     <span className="block truncate text-xs text-muted">

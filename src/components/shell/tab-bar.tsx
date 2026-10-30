@@ -155,7 +155,7 @@ export function TabBar({
             onClick={() => setChoosing(true)}
             aria-label={tNew("label")}
             aria-expanded={choosing}
-            className="brand-fill flex size-11 items-center justify-center rounded-full text-on-brand shadow-[var(--shadow-card)] active:scale-95"
+            className="action-fill flex size-11 items-center justify-center rounded-full text-white shadow-[var(--shadow-card)] active:scale-95"
           >
             <IconPlus className="size-5" />
           </button>
@@ -169,7 +169,7 @@ export function TabBar({
           <span className="relative">
             <IconMenu className="size-[22px]" />
             {moreWaiting && (
-              <span aria-hidden className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-accent ring-2 ring-background" />
+              <span aria-hidden className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-action-to ring-2 ring-background" />
             )}
           </span>
           <span>{t("more")}</span>

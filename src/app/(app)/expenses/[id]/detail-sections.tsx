@@ -23,6 +23,7 @@ import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import { formatNumber } from "@/lib/ui/format";
 import { bookingTrail } from "@/lib/domain/review";
+import { PersonName } from "@/components/ui/avatar";
 
 /** The small capitals every label and column head on the card is set in. */
 export const LABEL = "text-xs font-medium text-muted";
@@ -529,7 +530,10 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
             <span className="tabular-nums text-muted">{dateTime(r.date)}</span>
             <span className="min-w-0">
               <span className={cn("font-medium", EVENT_TONE[r.action])}>{tEvent(r.action)}</span>
-              <span className="text-muted"> - {r.actor}</span>
+              <span className="text-muted">
+                {" - "}
+                <PersonName userId={r.actorId} name={r.actor} />
+              </span>
               {r.recipients && r.recipients.length > 0 && (
                 <span className="mt-0.5 block text-muted">
                   {t("reminderTo", { names: r.recipients.join(", ") })}

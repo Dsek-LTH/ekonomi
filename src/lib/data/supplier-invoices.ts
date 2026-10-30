@@ -269,6 +269,8 @@ export interface SupplierInvoiceEventView {
   id: string;
   type: SupplierInvoiceEventType;
   actor: string | null;
+  /** Who, for their picture. Null with `actor`. */
+  actorId: string | null;
   comment: string | null;
   /** For ASSIGNED: the unit it went to, by name as it was then. */
   toUnit: string | null;
@@ -483,7 +485,7 @@ export async function getInvoice(
       },
       events: {
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-        include: { actor: { select: { name: true } } },
+        include: { actor: { select: { id: true, name: true } } },
       },
     },
   });
@@ -596,6 +598,7 @@ export async function getInvoice(
         id: e.id,
         type: e.type,
         actor: e.actor?.name ?? null,
+        actorId: e.actor?.id ?? null,
         comment: e.comment,
         toUnit: e.type === "ASSIGNED" ? assignedTo(e.diff) : null,
         auto: e.type === "ASSIGNED" ? autoOf(e.diff) : null,

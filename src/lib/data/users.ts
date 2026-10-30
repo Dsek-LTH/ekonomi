@@ -98,3 +98,16 @@ export const getPayoutAccount = cache(
     return { clearing: u?.bankClearingNumber ?? "", account: u?.bankAccountNumber ?? "" };
   },
 );
+
+/**
+ * Which members have a profile picture, and its version (when it was set, in
+ * ms), for components/ui/avatar's AvatarProvider. Every member with one, since
+ * a name can turn up on any page. A few hundred rows of two columns at most.
+ */
+export const getAvatarVersions = cache(async (): Promise<Record<string, number>> => {
+  const rows = await prisma.user.findMany({
+    where: { avatarUpdatedAt: { not: null } },
+    select: { id: true, avatarUpdatedAt: true },
+  });
+  return Object.fromEntries(rows.map((r) => [r.id, r.avatarUpdatedAt!.getTime()]));
+});

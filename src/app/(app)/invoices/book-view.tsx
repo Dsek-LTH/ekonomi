@@ -208,7 +208,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   const tErr = useTranslations("errors");
   const notify = useNotify();
   const save = useMutation();
-  const creator = useMutation();
   const suppliers = useQuery<FortnoxSupplier[]>("/api/fortnox/suppliers");
   const tr = useTransition(invoice.id, onDone);
   const confirm = useConfirm();
@@ -282,23 +281,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     lines,
   });
 
-  async function createInFortnox() {
-    const created = await creator.mutate<FortnoxSupplier>("/api/fortnox/suppliers", {
-      body: {
-        name: invoice.supplierName,
-        orgNo: invoice.supplierOrgNo || null,
-        bankgiro: invoice.bankgiro || null,
-        plusgiro: invoice.plusgiro || null,
-      },
-      success: t("supplierCreated"),
-      refresh: false,
-    });
-    if (created) {
-      suppliers.reload();
-      await pickSupplier(created.number);
-    }
-  }
-
   async function book() {
     // The lines, and what is shown but not saved: a register match nobody
     // has touched. The route leaves out whatever already says the same.
@@ -368,12 +350,13 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
                 searchPlaceholder={t("searchSupplier")}
                 aria-label={t("supplier")}
               />
+              {/* Suppliers are added in Fortnox, not here. The picker reads the
+                  register afresh each time, so one added there is on the list
+                  the next time this is opened. */}
               {!supplier && !suppliers.loading && invoice.supplierName && (
-                <span className="mt-1.5 block">
-                  <Button size="sm" variant="secondary" loading={creator.busy} onClick={() => void createInFortnox()}>
-                    {t("createSupplier", { name: invoice.supplierName })}
-                  </Button>
-                </span>
+                <p className="mt-1.5 text-xs text-muted">
+                  {t("supplierNotInRegister", { name: invoice.supplierName })}
+                </p>
               )}
             </BookField>
             <BookField label={tFields("invoiceDate")}>

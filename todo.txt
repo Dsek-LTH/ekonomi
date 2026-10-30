@@ -1,4 +1,3 @@
-When one receipt is already selected you cant drop another one onto it
 Get intäkter up an running
 Finish implemntation of bokslut page:
 * Revisor should be able to granska all utlägg
@@ -12,12 +11,10 @@ Go over components and code to see if anything is unused. Components used by onl
 Work through an optimal avtal / hyrnings flow. This whole system is wack currently.
 Ensure email reminders work for now levfakt
 Try to make the design of the webpage be more "proffesional" and "serious"
-Find a better design for datatables filter tab selector
 Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
 Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
 View kvitto button is ugly
 Revise milersättnings view so it reflects design in utlägg view.
-Make utfall & rapporter intuitive to use. Perhaps a guide?
 Add fun stats such as total spent, how many utlägg done etc
 Add a score system based on how long it takes for people to upload their receipts and other metrics
 wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better

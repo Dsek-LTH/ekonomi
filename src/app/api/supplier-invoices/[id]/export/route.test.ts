@@ -121,6 +121,8 @@ vi.mock("@/lib/fortnox", () => {
   }
   return {
     FortnoxError,
+    // The register is read as the organisation; only the writes are Maja's.
+    getServiceToken: async () => "service-token",
     getSupplier: async () => h.supplier,
     uploadInboxFile: async () => "file-1",
     createSupplierInvoice: h.create,

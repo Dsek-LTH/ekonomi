@@ -15,8 +15,9 @@ import { NotificationBanners, NotificationsProvider } from "@/components/shell/n
 import { ConfirmProvider } from "@/components/confirm-dialog";
 import { FortnoxAuthResult } from "@/components/shell/fortnox-auth-result";
 import { requireUser } from "@/lib/server/current-user";
-import { userHoldsCard } from "@/lib/data/users";
-import { getFortnoxSession } from "@/lib/data/fortnox";
+import { getAvatarVersions, userHoldsCard } from "@/lib/data/users";
+import { AvatarProvider } from "@/components/ui/avatar";
+import { getFortnoxCompany, getFortnoxSession } from "@/lib/data/fortnox";
 import { getNavCounts } from "@/lib/data/nav-counts";
 import { getFiscalYear, getFiscalYears } from "@/lib/server/fiscal-year";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
@@ -43,9 +44,10 @@ export default async function AppLayout({
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
   const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
-  const [holdsCard, fortnoxSession, cookieStore, counts, fiscalYears, fiscalYear] = await Promise.all([
+  const [holdsCard, fortnoxSession, fortnoxCompany, cookieStore, counts, fiscalYears, fiscalYear, avatars] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
+    booksInFortnox ? getFortnoxCompany() : null,
     cookies(),
     // The numbers beside the nav's links. Counts only, four of them, since
     // this runs for every page. They refresh with the layout, which every
@@ -57,6 +59,9 @@ export default async function AppLayout({
     // so they and this cannot disagree. See lib/server/fiscal-year.ts.
     getFiscalYears(),
     getFiscalYear(),
+    // Who has a profile picture, so a face can be drawn beside any name. See
+    // components/ui/avatar.tsx.
+    getAvatarVersions(),
   ]);
   // Read here rather than in the client so the frame renders in its stored
   // shape on the first paint instead of settling into it after hydration, a
@@ -67,6 +72,7 @@ export default async function AppLayout({
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>
+      <AvatarProvider versions={avatars}>
       <NotificationsProvider>
         <ConfirmProvider>
           <FortnoxAuthResult />
@@ -94,7 +100,7 @@ export default async function AppLayout({
                 Present with a null session is the treasury signed out. The
                 one state the sidebar exists to catch. */}
             <AppShell
-              fortnox={booksInFortnox ? { session: fortnoxSession } : undefined}
+              fortnox={booksInFortnox ? { session: fortnoxSession, company: fortnoxCompany } : undefined}
               fiscal={fiscalYear && { years: fiscalYears, selected: fiscalYear }}
               counts={{
                 "/expenses": counts.expenses,
@@ -113,6 +119,7 @@ export default async function AppLayout({
           </ReceiptPanelProvider>
         </ConfirmProvider>
       </NotificationsProvider>
+      </AvatarProvider>
     </RoleProvider>
   );
 }

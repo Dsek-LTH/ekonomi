@@ -86,8 +86,14 @@ export type NavGroup = {
 
 const ALL = () => true;
 
-// How wide the main column may grow. One cap per section, not two: the nav
-// lies over the page rather than beside it, so it never costs the row width.
+// How wide a page may grow. One cap per section, not two: the nav lies over
+// the page rather than beside it, so it never costs the row width.
+//
+// The cap is on the page, not on the main column. The column is the full width
+// of the window, so the section band at its top (which has a background of its
+// own) reaches both edges; capped with the page, it stopped short on a wide
+// screen and the canvas showed beside it. The page sits at the column's left,
+// under the band's first tab, rather than centred under a band that is not.
 const CONTENT_MAX = {
   budget: "max-w-[1792px]",
   default: "max-w-[1472px]",
@@ -104,9 +110,10 @@ const SETTINGS_HOME = SETTINGS_ROOT;
 // Standalone top-level link (no group heading).
 const OVERVIEW: NavItem = { href: "/dashboard", label: "overview", icon: IconGrid, visible: ALL };
 
-// Pinned to the foot of the nav rather than sorted into a group, and present in
-// the settings nav too: it isn't somewhere you go to do a job, it's what you
-// open when a purchase is in front of you and you're not sure of the rules.
+// Not sorted into a group: it isn't somewhere you go to do a job, it's what you
+// open when a purchase is in front of you and you're not sure of the rules. From
+// md it is a link in the header (AppHeader), one click from every page. Below
+// md there is no header, so the phone's menu keeps it at its foot.
 const HELP: NavItem = { href: "/faq", label: "faq", icon: IconHelp, visible: ALL };
 
 // Pinned beside it for the same reason: it used to sit inside groupAdmin,
@@ -346,7 +353,7 @@ export function AppShell({
    * is an action only the treasury can take. A present-but-null session is
    * signed out. See the foot of the nav.
    */
-  fortnox?: { session: FortnoxStatus["session"] | null };
+  fortnox?: { session: FortnoxStatus["session"] | null; company: string | null };
   /** How much waits behind each link, by its href. See lib/data/nav-counts. */
   counts?: Record<string, number>;
   /** Fortnox's financial years and the one in force, for the header's
@@ -460,10 +467,12 @@ export function AppShell({
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex h-8 items-center gap-2.5 rounded-control px-2 text-sm transition-colors",
-          active ? "bg-hover font-medium text-foreground" : "text-foreground hover:bg-hover",
+          // A pink wash on the current page, the same pink as the primary
+          // button, so where you are reads in the accent.
+          active ? "bg-action-from/15 font-medium text-foreground" : "text-foreground hover:bg-hover",
         )}
       >
-        <Icon className="size-[18px] shrink-0" />
+        <Icon className={cn("size-[18px] shrink-0", active && "text-action-from")} />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {count > 0 && <NavCount count={count} active={active} />}
       </Link>
@@ -623,13 +632,12 @@ export function AppShell({
                 )}
               </div>
               {/* `mt-auto` so it sits at the foot however few groups
-                  this user's roles leave above it. Settings pinned beside Help
-                  rather than buried in groupAdmin: neither is a job you go do,
-                  both are always there. */}
-              <div className="mt-auto flex flex-col gap-0.5 pt-4">
-                {SETTINGS.visible(user) && navLink(SETTINGS)}
-                {navLink(HELP)}
-              </div>
+                  this user's roles leave above it. Settings pinned there
+                  rather than buried in groupAdmin: it is not a job you go do,
+                  and it is always there. */}
+              {SETTINGS.visible(user) && (
+                <div className="mt-auto flex flex-col gap-0.5 pt-4">{navLink(SETTINGS)}</div>
+              )}
             </nav>
           </aside>
         </div>
@@ -658,8 +666,6 @@ export function AppShell({
         <div
           // What scrolls from md up, for anything that has to know whether the
           // page is scrolled (the section band's fade, section-nav.tsx).
-          // `overflow-x-hidden` clips the band's divider, which is drawn a
-          // viewport wide so it reaches both edges of this column.
           data-main-scroll
           className="relative flex min-w-0 flex-1 flex-col md:overflow-y-auto md:overflow-x-hidden md:overscroll-contain print:overflow-visible"
         >
@@ -701,7 +707,7 @@ export function AppShell({
               // block clears the end of the scroll instead of butting against it.
               // The phone gutter drops to 16px: at 20px, page padding plus card
               // inset spent 36px of a 375px screen before any content.
-              "mx-auto w-full flex-1 pl-4 pt-6 md:pl-6",
+              "w-full flex-1 pl-4 pt-6 md:pl-6",
               // The folded receipt tab is `fixed`, so it reserves no space at all
               // and sits on top of whatever reaches the edge it is on, which is
               // a different edge at each width (receipt/receipt-panel.tsx). Below
@@ -721,9 +727,14 @@ export function AppShell({
                 : tabBar
                   ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
                   : "pb-16 md:pb-20",
-              receiptTab ? "pr-6 md:pr-12" : "pr-6 md:pr-6",
-              // The budget sheets need more room; everything else stays centered.
-              caps,
+              // The right gutter as a variable, so the section band can take
+              // exactly this much back and reach the edge (section-nav.tsx).
+              // Written into the band as a fixed 24px, it stopped short of the
+              // edge by the difference whenever the receipt was folded.
+              receiptTab
+                ? "[--main-pr:1.5rem] md:[--main-pr:3rem]"
+                : "[--main-pr:1.5rem]",
+              "pr-(--main-pr)",
             )}
           >
             {/* The section's band, drawn here rather than by the page so that it
@@ -738,7 +749,11 @@ export function AppShell({
                   slotRef={setSectionSlot}
                 />
               )}
-              <FiscalYearProvider value={fiscal?.selected ?? null}>{children}</FiscalYearProvider>
+              {/* The page, at its section's cap and left-aligned. The band above
+                  it is not capped. See CONTENT_MAX. */}
+              <div className={caps}>
+                <FiscalYearProvider value={fiscal?.selected ?? null}>{children}</FiscalYearProvider>
+              </div>
             </SectionNavProvider>
           </main>
         </div>

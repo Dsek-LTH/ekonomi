@@ -111,6 +111,13 @@ export function supplierInvoiceInboxKey(documentId: string, filename: string): s
   return `supplier-invoices/inbox/${documentId}-${safeName(filename)}`;
 }
 
+// A member's profile picture. A new key per upload rather than one key
+// overwritten, so a browser holding the old one under its versioned URL can
+// never be served the new bytes, or the reverse while the write is in flight.
+export function avatarObjectKey(userId: string, version: number): string {
+  return `avatars/${userId}/${version}.webp`;
+}
+
 export async function putObject(
   key: string,
   body: Buffer,

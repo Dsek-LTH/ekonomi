@@ -5,13 +5,12 @@ import { Spinner } from "./spinner";
 type Variant = "primary" | "secondary" | "ghost" | "quiet" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
-// Ink with a white label (see the brand block in globals.css), the same button
-// in both themes, where dark flips it to a light fill with a dark label. The
-// only thing on a screen allowed to wear it, so it marks the action register.
-// The hairline matches the fill on screen and gives a printed page an edge.
+// A flat pink blend with a white label (see .action-fill in globals.css).
+// The only thing on a screen allowed to wear it, so it marks the action
+// register.
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "brand-fill text-on-brand border border-brand-edge active:scale-[0.98]",
+    "action-fill text-white border active:scale-[0.98]",
   secondary:
     "bg-background text-foreground border border-border-control hover:bg-hover active:scale-[0.98]",
   ghost: "text-accent hover:bg-accent-soft",

@@ -21,6 +21,17 @@ export async function getFortnoxSession(
   };
 }
 
+// The Fortnox company the section is connected to, for the header. Personal
+// logins are refused for any other company (api/fortnox/callback), so this is
+// also the company a bookkeeper's export lands in.
+export async function getFortnoxCompany(): Promise<string | null> {
+  const conn = await prisma.fortnoxConnection.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { companyName: true },
+  });
+  return conn?.companyName ?? null;
+}
+
 // The org's Fortnox connection status, plus the viewer's own bookkeeping
 // session when they have one (no secrets, safe for the client).
 export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> {
@@ -34,12 +45,36 @@ export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> 
     connected: Boolean(conn),
     companyName: conn?.companyName ?? undefined,
     voucherSeries: conn?.voucherSeries ?? undefined,
-    expiresAt: conn?.expiresAt.toISOString() ?? undefined,
+    refreshFailed: conn?.refreshFailedAt
+      ? { at: conn.refreshFailedAt.toISOString(), error: conn.refreshError ?? "" }
+      : undefined,
     session: live
       ? {
           fortnoxUserName: live.fortnoxUserName ?? undefined,
           expiresAt: live.sessionExpiresAt.toISOString(),
         }
       : undefined,
+  };
+}
+
+/** The kept supplier register: how many, and when it was last read. */
+export async function getSupplierSyncStatus(): Promise<{ count: number; lastSyncAt: string | null }> {
+  const agg = await prisma.supplier.aggregate({ _count: true, _max: { syncedAt: true } });
+  return { count: agg._count, lastSyncAt: agg._max.syncedAt?.toISOString() ?? null };
+}
+
+/** The last full sync (the nightly job's, or one started by hand). */
+export interface FortnoxSyncStatus {
+  runningSince: string | null;
+  lastFinishedAt: string | null;
+  lastError: string | null;
+}
+
+export async function getFortnoxSyncStatus(): Promise<FortnoxSyncStatus> {
+  const row = await prisma.fortnoxSync.findUnique({ where: { id: "singleton" } });
+  return {
+    runningSince: row?.runningSince?.toISOString() ?? null,
+    lastFinishedAt: row?.lastFinishedAt?.toISOString() ?? null,
+    lastError: row?.lastError ?? null,
   };
 }

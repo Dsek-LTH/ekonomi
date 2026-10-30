@@ -30,7 +30,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { Avatar } from "../ui/avatar";
+import { UserAvatar } from "../ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { IconFortnox } from "./fortnox-mark";
@@ -74,7 +74,7 @@ export function MobileNav({
   /** How much waits behind each link, by its href. */
   counts: Record<string, number>;
   user: CurrentUser;
-  fortnox?: { session: FortnoxStatus["session"] | null };
+  fortnox?: { session: FortnoxStatus["session"] | null; company: string | null };
 }) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
@@ -170,7 +170,7 @@ export function MobileNav({
           aria-current={pathname === "/profile" ? "page" : undefined}
           className={cn(CARD, "flex items-center gap-3 px-4 py-3 active:bg-surface")}
         >
-          <Avatar initials={user.initials} />
+          <UserAvatar userId={user.id} name={user.name} />
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-sm font-medium">{user.name}</span>
             <span className="block truncate text-xs text-muted">{user.email}</span>
@@ -212,8 +212,13 @@ export function MobileNav({
               className={cn(ROW, "active:bg-surface")}
             >
               <IconFortnox className="size-5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate font-medium">
-                {fortnox.session ? t("fortnoxSignedIn") : t("fortnoxSignIn")}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">
+                  {fortnox.session ? t("fortnoxSignedIn") : t("fortnoxSignIn")}
+                </span>
+                {fortnox.company && (
+                  <span className="block truncate text-xs text-muted">{fortnox.company}</span>
+                )}
               </span>
               {/* Warning rather than grey when signed out: the session is short
                   by design, and an export fails until somebody presses this. */}

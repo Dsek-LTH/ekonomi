@@ -133,6 +133,13 @@
     "notFound": "Användaren hittades inte",
     "unknown": "Okänd användare"
   },
+  "avatar": {
+    "notFound": "Det finns ingen profilbild",
+    "notImage": "Profilbilden måste vara en JPEG-, PNG-, WebP- eller HEIC-bild",
+    "tooLarge": "Bilden får vara högst {max} MB",
+    "unreadable": "Kunde inte läsa bilden",
+    "storageUnavailable": "Bildarkivet svarar inte just nu"
+  },
   "resultUnit": {
     "notFound": "Resultatenheten hittades inte",
     "prefixFormat": "Prefixet får bara innehålla bokstäver och siffror.",
@@ -200,7 +207,8 @@
     "missingScope": "Fortnox saknar behörighet för det här. Koppla från och anslut igen för att ge appen de scope den behöver.",
     "missingCostCenterScope": "Fortnox saknar behörighet för kostnadsställen. Koppla från och anslut igen för att ge appen 'costcenter'-behörighet.",
     "missingProjectScope": "Fortnox saknar behörighet för projekt. Koppla från och anslut igen för att ge appen 'project'-behörighet.",
-    "missingScopeLogin": "Din Fortnox-inloggning saknar behörighet för leverantörsfakturor. Logga in mot Fortnox igen."
+    "syncRunning": "En synk från Fortnox pågår redan. Försök igen om en stund.",
+    "missingSupplierScope": "Fortnox-anslutningen saknar behörighet för leverantörsregistret. Koppla från och anslut igen för att ge appen 'supplier'-behörighet."
   },
   "database": "Databasfel",
   "budgetAccount": {

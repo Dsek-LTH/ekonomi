@@ -12,11 +12,13 @@ import {
   listCostCenters,
   listFinancialYears,
   listProjects,
+  listSuppliers,
   type FortnoxFinancialYear,
 } from "@/lib/fortnox";
+import { rememberRegister } from "@/lib/server/supplier-register";
 import { parseSie } from "@/lib/fortnox/sie";
 import { voucherFingerprint } from "@/lib/closing/fingerprint";
-import type { Prisma } from "@/lib/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
 
 const toOre = (sek: number) => Math.round(sek * 100);
 
@@ -388,9 +390,8 @@ export async function syncLedger(opts: {
   if (opts.financialYearId != null) {
     targets = years.filter((y) => y.id === opts.financialYearId);
   } else if (opts.scope === "current") {
-    const today = new Date().toISOString().slice(0, 10);
-    const containing = years.find((y) => y.fromDate <= today && today <= y.toDate);
-    targets = containing ? [containing] : years.slice(0, 1); // newest as fallback
+    const containing = yearContaining(years);
+    targets = containing ? [containing] : [];
   } else {
     targets = years;
   }
@@ -398,4 +399,165 @@ export async function syncLedger(opts: {
   const results: YearSyncResult[] = [];
   for (const y of targets) results.push(await syncYear(token, y.id));
   return { years: results, costCenters };
+}
+
+export interface SupplierSyncResult {
+  suppliers: number;
+}
+
+// Keep the app's copy of the supplier register (lib/server/supplier-register).
+// It is what a levfaktura's PDF is matched against at the fördelning, so it has
+// to be current without anyone having opened the export picker first.
+export async function syncSuppliers(token: string): Promise<SupplierSyncResult> {
+  const suppliers = await listSuppliers(token);
+  await rememberRegister(suppliers);
+  return { suppliers: suppliers.length };
+}
+
+/** The financial year a date falls in, or the newest one Fortnox knows. */
+export function yearContaining(
+  years: readonly FortnoxFinancialYear[],
+  date = new Date().toISOString().slice(0, 10),
+): FortnoxFinancialYear | undefined {
+  return years.find((y) => y.fromDate <= date && date <= y.toDate) ?? years[0];
+}
+
+/** One step of a full sync: what it did, or the error it stopped on. */
+export type SyncStep<T> = { ok: true; result: T } | { ok: false; error: string };
+
+export interface SyncAllResult {
+  financialYears: SyncStep<{ years: number }>;
+  costCenters: SyncStep<CostCenterSyncResult>;
+  projects: SyncStep<ProjectSyncResult>;
+  accounts: SyncStep<AccountSyncResult>;
+  suppliers: SyncStep<SupplierSyncResult>;
+  ledger: SyncStep<YearSyncResult>[];
+}
+
+/**
+ * How long a sync may claim to be running before the claim is ignored. A
+ * sync that crashed, or a pod that was killed mid-way, never clears it, and
+ * without this the nightly job would stand aside for it forever. A whole run
+ * is a few SIE files and some lists, so this is generous.
+ */
+const SYNC_STALE_MS = 30 * 60 * 1000;
+
+const step = async <T>(run: () => Promise<T>): Promise<SyncStep<T>> => {
+  try {
+    return { ok: true, result: await run() };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+};
+
+/**
+ * Everything the app mirrors from Fortnox, in one go: the nightly job
+ * (api/cron/fortnox-sync) and "Synka allt nu" on the Fortnox settings page.
+ * The page's other buttons still fetch one thing each.
+ *
+ * Each step on its own. A connection without the `project` scope, or a
+ * supplier list Fortnox will not hand over, still leaves the ledger synced,
+ * and the result says which step failed and why. Only the financial years are
+ * needed by later steps, so failing to get them skips the accounts and the
+ * ledger, and nothing else.
+ *
+ * The ledger is this financial year and the one before it. Vouchers keep
+ * arriving in last year until its bokslut is done, and the app has nothing
+ * that says when that is, so it is always fetched. Older years are closed,
+ * and each has its own button on the settings page.
+ *
+ * Returns null, having done nothing, when another sync is already running.
+ */
+export async function syncAll(): Promise<SyncAllResult | null> {
+  const startedAt = new Date();
+  // The claim. Taken in one statement, so two syncs started at once cannot
+  // both see the row free.
+  const claimed = await prisma.$executeRaw`
+    INSERT INTO "FortnoxSync" ("id", "runningSince", "lastStartedAt", "updatedAt")
+    VALUES ('singleton', ${startedAt}, ${startedAt}, ${startedAt})
+    ON CONFLICT ("id") DO UPDATE SET
+      "runningSince" = EXCLUDED."runningSince",
+      "lastStartedAt" = EXCLUDED."lastStartedAt",
+      "updatedAt" = EXCLUDED."updatedAt"
+    WHERE "FortnoxSync"."runningSince" IS NULL
+       OR "FortnoxSync"."runningSince" < ${new Date(startedAt.getTime() - SYNC_STALE_MS)}`;
+  if (claimed === 0) return null;
+
+  let result: SyncAllResult | null = null;
+  let failure: string | null = null;
+  try {
+    result = await runAll();
+    failure = failedSteps(result);
+  } catch (e) {
+    // No token at all: not connected, or the connection is no longer valid.
+    failure = e instanceof Error ? e.message : String(e);
+    throw e;
+  } finally {
+    await prisma.fortnoxSync.update({
+      where: { id: "singleton" },
+      data: {
+        runningSince: null,
+        lastFinishedAt: new Date(),
+        lastResult: result ? (result as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        lastError: failure,
+      },
+    });
+  }
+  return result;
+}
+
+async function runAll(): Promise<SyncAllResult> {
+  const token = await getServiceToken();
+
+  const years = await step(() => syncFinancialYears(token));
+  const costCenters = await step(() => syncCostCenters(token));
+  const projects = await step(() => syncProjects(token));
+  const suppliers = await step(() => syncSuppliers(token));
+
+  const skipped = { ok: false as const, error: "fortnox.noFinancialYears" };
+  if (!years.ok || years.result.length === 0) {
+    return {
+      financialYears: years.ok ? { ok: true, result: { years: 0 } } : years,
+      costCenters,
+      projects,
+      accounts: skipped,
+      suppliers,
+      ledger: [skipped],
+    };
+  }
+
+  const current = yearContaining(years.result)!;
+  const accounts = await step(() => syncAccounts(token, current.id));
+
+  // The year that ended right before this one, if Fortnox has it.
+  const previous = years.result
+    .filter((y) => y.toDate < current.fromDate)
+    .sort((a, b) => b.toDate.localeCompare(a.toDate))[0];
+  const ledger: SyncStep<YearSyncResult>[] = [];
+  for (const y of previous ? [current, previous] : [current]) {
+    ledger.push(await step(() => syncYear(token, y.id)));
+  }
+
+  return {
+    financialYears: { ok: true, result: { years: years.result.length } },
+    costCenters,
+    projects,
+    accounts,
+    suppliers,
+    ledger,
+  };
+}
+
+/** The steps that failed, named, or null when none did. */
+function failedSteps(r: SyncAllResult): string | null {
+  const failed = [
+    ...(["financialYears", "costCenters", "projects", "accounts", "suppliers"] as const).flatMap(
+      (key) => {
+        const s = r[key];
+        return s.ok ? [] : [`${key}: ${s.error}`];
+      },
+    ),
+    ...r.ledger.flatMap((s) => (s.ok ? [] : [`ledger: ${s.error}`])),
+  ];
+  return failed.length > 0 ? failed.join("; ") : null;
 }

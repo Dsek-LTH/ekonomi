@@ -55,14 +55,17 @@ export function InvoicesClient({
   );
   const setScope = useScopeSwitch(controls.tab, (s) => invoiceDefaultTab(s as InvoiceScope));
 
+  // Each stage's count is the invoices on it that wait on the reader, the
+  // same test the nav's count asks (lib/data/nav-counts.ts), so the two add
+  // up. A stage nothing waits on carries no count.
   const tabs: ClientTabFilter<SupplierInvoiceRow> = useMemo(
     () =>
-      INVOICE_TABS.map((value) => ({
-        value,
-        label: t(`tab.${value}`),
-        predicate: invoiceTabHolds(value, fiscal),
-      })),
-    [t, fiscal],
+      INVOICE_TABS.map((value) => {
+        const holds = invoiceTabHolds(value, fiscal);
+        const waiting = value === "all" ? 0 : rows.filter((r) => r.waitsOnViewer && holds(r)).length;
+        return { value, label: t(`tab.${value}`), predicate: holds, badge: waiting || undefined, waiting: true };
+      }),
+    [t, fiscal, rows],
   );
 
   const columns: Column<SupplierInvoiceRow>[] = [

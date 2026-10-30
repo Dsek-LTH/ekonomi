@@ -240,7 +240,8 @@
     "notConfigured": "Not configured",
     "notConnected": "Not connected",
     "connected": "Connected{company}",
-    "tokenValidUntil": "Access token valid until {time}",
+    "refreshFailed": "Fortnox refused to renew the connection at {time}: {error}. Nothing is fetched from Fortnox until it is connected again.",
+    "reconnect": "Connect again",
     "connect": "Connect Fortnox",
     "connectHint": "Connect the guild's Fortnox account to export and sync. Requires you to be a system administrator in Fortnox.",
     "disconnect": "Disconnect",
@@ -287,7 +288,7 @@
     "costCentersSubtitle": "{count} from Fortnox - last synced {time}",
     "costCentersSubtitleNever": "Never synced from Fortnox",
     "groupRegisters": "Registers",
-    "groupRegistersHint": "The accounts and cost centers that expenses, budgets and vouchers point at.",
+    "groupRegistersHint": "Accounts, cost centres, projects and suppliers that expenses, invoices, budgets and vouchers point at.",
     "groupLedgerHint": "Booked vouchers, one financial year at a time. Drives the Outcome reports.",
     "projects": "Projects",
     "projectsSubtitle": "{count} projects - last synced {time}",
@@ -298,7 +299,22 @@
     "projectsSummary": {
       "fetched": "{count} projects fetched",
       "retired": "{count} deactivated"
-    }
+    },
+    "suppliers": "Supplier register",
+    "suppliersSubtitle": "{count} suppliers - last synced {time}",
+    "suppliersSubtitleNever": "Never synced from Fortnox",
+    "syncSuppliers": "Sync supplier register",
+    "suppliersSyncFailed": "Could not sync the supplier register",
+    "suppliersSynced": "Supplier register synced",
+    "suppliersSummary": "{count} suppliers fetched",
+    "nightly": "Synced automatically every night at 04:00.",
+    "nightlyLast": "Synced automatically every night at 04:00. Last run {time}.",
+    "nightlyFailed": "The last sync at {time} did not fully succeed: {error}",
+    "nightlyRunning": "A sync has been running since {time}.",
+    "syncAll": "Sync everything now",
+    "syncAllDone": "Everything synced from Fortnox",
+    "syncAllPartial": "The sync did not fully succeed. See Sync for what failed.",
+    "syncAllFailed": "Could not sync from Fortnox"
   },
   "income": {
     "title": "Sales",

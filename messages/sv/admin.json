@@ -240,7 +240,8 @@
     "notConfigured": "Inte konfigurerat",
     "notConnected": "Inte anslutet",
     "connected": "Anslutet{company}",
-    "tokenValidUntil": "Åtkomsttoken giltig till {time}",
+    "refreshFailed": "Fortnox vägrade förnya anslutningen {time}: {error}. Inget hämtas från Fortnox förrän den är ansluten igen.",
+    "reconnect": "Anslut igen",
     "connect": "Anslut Fortnox",
     "connectHint": "Anslut sektionens Fortnox-konto för att kunna exportera och synka. Kräver att du är systemadministratör i Fortnox.",
     "disconnect": "Koppla från",
@@ -287,7 +288,7 @@
     "costCentersSubtitle": "{count} från Fortnox - senast synkad {time}",
     "costCentersSubtitleNever": "Aldrig synkad från Fortnox",
     "groupRegisters": "Register",
-    "groupRegistersHint": "Konton, kostnadsställen och projekt som utlägg, budgetar och verifikationer pekar på.",
+    "groupRegistersHint": "Konton, kostnadsställen, projekt och leverantörer som utlägg, fakturor, budgetar och verifikationer pekar på.",
     "groupLedgerHint": "Bokförda verifikationer, ett räkenskapsår i taget. Driver Utfall-rapporterna.",
     "projects": "Projekt",
     "projectsSubtitle": "{count} projekt - senast synkad {time}",
@@ -298,7 +299,22 @@
     "projectsSummary": {
       "fetched": "{count} projekt hämtade",
       "retired": "{count} inaktiverade"
-    }
+    },
+    "suppliers": "Leverantörsregister",
+    "suppliersSubtitle": "{count} leverantörer - senast synkat {time}",
+    "suppliersSubtitleNever": "Aldrig synkat från Fortnox",
+    "syncSuppliers": "Synka leverantörsregister",
+    "suppliersSyncFailed": "Kunde inte synka leverantörsregistret",
+    "suppliersSynced": "Leverantörsregister synkat",
+    "suppliersSummary": "{count} leverantörer hämtade",
+    "nightly": "Synkas automatiskt varje natt kl. 04.",
+    "nightlyLast": "Synkas automatiskt varje natt kl. 04. Senaste körning {time}.",
+    "nightlyFailed": "Senaste synken {time} gick inte igenom helt: {error}",
+    "nightlyRunning": "En synk pågår sedan {time}.",
+    "syncAll": "Synka allt nu",
+    "syncAllDone": "Allt synkat från Fortnox",
+    "syncAllPartial": "Synken gick inte igenom helt. Se Synk för vad som misslyckades.",
+    "syncAllFailed": "Kunde inte synka från Fortnox"
   },
   "income": {
     "title": "Försäljning",

@@ -116,6 +116,13 @@ model FortnoxConnection {
   companyName   String? // from /3/companyinformation, for display
   orgNumber     String? // organisationsnummer, personal logins are checked against it
 
+  // Fortnox refused the last refresh (an invalid or revoked refresh token), and
+  // what it said. The connection cannot recover from that by itself, so the
+  // settings page asks for it to be connected again. Cleared by the next
+  // refresh that goes through, and gone with the row on a reconnect.
+  refreshFailedAt DateTime?
+  refreshError    String?
+
   connectedBy   User?   @relation("FortnoxConnector", fields: [connectedById], references: [id], onDelete: SetNull)
   connectedById String?
 
@@ -149,6 +156,26 @@ model FortnoxUserSession {
   fortnoxUserEmail String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// The last full sync from Fortnox (lib/fortnox/sync.ts, syncAll): the nightly
+// job's, or the one an administrator started by hand. One row.
+model FortnoxSync {
+  id String @id @default("singleton")
+
+  /// Set while a sync is running, so a second one started meanwhile stands
+  /// aside instead of racing it. A sync that died without clearing it is
+  /// taken over once it is old enough (see SYNC_STALE_MS).
+  runningSince DateTime?
+
+  lastStartedAt  DateTime?
+  lastFinishedAt DateTime?
+  /// What each step did, or why it did not: SyncAllResult in sync.ts.
+  lastResult     Json?
+  /// The steps that failed, joined, or null when every step went through.
+  lastError      String?
+
   updatedAt DateTime @updatedAt
 }
 

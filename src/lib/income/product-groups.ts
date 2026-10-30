@@ -18,8 +18,13 @@
 //   • a group where *anything* carries a variant gets a heading of its own and
 //     its rows indented under it; one where nothing does is just its rows.
 //
-// Keep the two in step. If pdf.go's ordering changes, this changes with it, or
-// the table and the document it renders stop being the same list.
+// One deliberate difference: every row under a heading is stepped in, the one
+// sold without a variant as well, which keeps its plain name. The document
+// leaves that row flush with the heading, so it read as a product of its own
+// that had wandered into the group ("Mat" alone, under "Mat" with "Billys").
+//
+// Otherwise keep the two in step. If pdf.go's ordering changes, this changes
+// with it, or the table and the document it renders stop being the same list.
 export interface GroupableLine {
   name: string;
   variant: string | null;
@@ -100,7 +105,8 @@ export function productRows<T extends GroupableLine>(lines: readonly T[]): Produ
         key: `${name}:${i}`,
         line,
         label: grouped && variant ? variant : productDisplayName(line),
-        indented: grouped && variant !== "",
+        // Every row under a heading, the variant-less one too. See the top.
+        indented: grouped,
       });
     }
   }

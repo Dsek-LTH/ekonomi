@@ -4,7 +4,7 @@ import { canViewMemberScores } from "@/lib/domain/permissions";
 import { getMemberScoreRow, getMemberScores } from "@/lib/data/member-score";
 import { MembersClient } from "./members-client";
 
-// The profile overlay's Medlemmar tab: every member's redovisningsbetyg, for
+// The profile's Medlemmar tab: every member's redovisningsbetyg, for
 // the holders of MEMBER_SCORE_VIEW. `?id=` opens one member's breakdown, which
 // is where Översikt's "Släpar efter" and the stars on an utlägg lead.
 export default async function ProfileMembersPage({

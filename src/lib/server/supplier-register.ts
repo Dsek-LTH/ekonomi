@@ -23,11 +23,6 @@ export async function rememberRegister(list: readonly FortnoxSupplier[]): Promis
   ]);
 }
 
-/** One supplier just added in Fortnox, kept before the next full read. */
-export async function rememberSupplier(s: FortnoxSupplier): Promise<void> {
-  await prisma.supplier.upsert({ where: { number: s.number }, create: s, update: s });
-}
-
 export type KnownSupplier = { number: string; name: string };
 
 /** A function matching a scan to the register, loaded once for a batch. */

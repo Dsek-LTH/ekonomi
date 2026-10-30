@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/server/current-user";
 import { getExpensePage, type ExpenseListScope } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { getReviewQueue } from "@/lib/data/review-queue";
+import { getExpenseTabCounts } from "@/lib/data/nav-counts";
 import { canBookkeep, canViewBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
 import { ExpensesClient } from "./expenses-client";
 import { expenseDefaultTab, type ExpenseScope } from "./scope";
@@ -56,14 +57,16 @@ export default async function ExpensesPage({
   // asking to see 2025. See docs/navigation.md.
   const fiscal = await getFiscalYear();
   const during = fiscal ? fiscalYearWhere(fiscal) : undefined;
-  const [page, queue] = await Promise.all([
+  const [page, queue, waiting] = await Promise.all([
     getExpensePage(user, listScope, query, { during }),
     books ? getReviewQueue(user, { during }) : null,
+    getExpenseTabCounts(user, scope, fiscal),
   ]);
 
   return (
     <ExpensesClient
       page={page}
+      waiting={waiting}
       scope={scope}
       scopes={scopes}
       ownBooked={queue?.ownIds ?? []}
