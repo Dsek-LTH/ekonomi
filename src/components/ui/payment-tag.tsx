@@ -66,7 +66,7 @@ export function PaymentTag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-control border text-xs font-medium",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-control border text-xs font-medium",
         // No horizontal padding while it is only an icon, or the chip is a
         // lozenge with a dot rattling around in it.
         compact ? "px-1.5 py-1 md:px-2 md:py-0.5" : "px-2 py-0.5",
@@ -75,7 +75,9 @@ export function PaymentTag({
       )}
     >
       <Icon className="size-3.5 shrink-0" />
-      <span className={compact ? "sr-only md:not-sr-only" : undefined}>
+      {/* `not-sr-only` resets white-space to normal, which let the label
+          wrap inside the chip in a narrow column, so it is set back. */}
+      <span className={compact ? "sr-only md:not-sr-only md:whitespace-nowrap" : undefined}>
         {t(`${type}.label`)}
       </span>
     </span>

@@ -50,6 +50,11 @@ export const bankDescriptionColumn = (header: string): Column<BankTransaction> =
   cell: (tx) => <p className="truncate">{tx.description}</p>,
 });
 
+/** A card's last four as the app writes them everywhere: a four-dot mask
+ *  before the digits. Here, with the other card masks, so the mask is written
+ *  in one place (see AGENTS.md on the dots). */
+export const cardMask = (last4: string) => `····${last4}`;
+
 /** Just the card number, for a list where every row is the same person's. */
 export const bankCardColumn = (header: string, hidden = false): Column<BankTransaction> => ({
   key: "card",
@@ -61,7 +66,7 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
 });
 
 /**
- * Who holds the card a purchase sat on, with its number under it.
+ * Who holds the card a purchase sat on, with its number beside it.
  *
  * A component rather than only a cell body, because a screen that lets the card
  * be changed still has to draw the row as it stands, and a second copy of this
@@ -75,18 +80,23 @@ export function BankCardHolder({ tx }: { tx: BankTransaction }) {
   if (!tx.cardLast4) return <span className="text-muted"></span>;
   // Spans rather than paragraphs: a screen that lets the card be changed wraps
   // this in a button, and a button may only hold phrasing content.
+  //
+  // One line: the name gives way first and truncates, the number never does,
+  // since it is the short exact part and the one a reader checks against the
+  // statement. Capped at the card picker's 176px: a table cell's width is
+  // only a floor, and a long name would otherwise widen the column instead.
   return (
-    <>
-      <span title={tx.cardHolderName} className="block max-w-44 truncate text-sm font-medium">
+    <span className="flex min-w-0 max-w-44 items-baseline gap-1.5">
+      <span title={tx.cardHolderName} className="min-w-0 truncate text-sm font-medium">
         {tx.cardHolderName}
       </span>
-      <span className="block text-xs tabular-nums text-muted">····{tx.cardLast4}</span>
-    </>
+      <span className="shrink-0 text-xs tabular-nums text-muted">····{tx.cardLast4}</span>
+    </span>
   );
 }
 
 /**
- * Who holds the card, with its number under it, for the section-wide list.
+ * Who holds the card, with its number beside it, for the section-wide list.
  *
  * `cell` is passed by a page that offers to change the card. It is still sorted
  * and searched on the holder's name, because that is what the reader sees
@@ -114,18 +124,17 @@ export const bankHolderColumn = (
   // so nothing this column can draw is wider than the column.
   className: "w-50",
   // And a fixed height, for the same reason one row down. The name with its
-  // number under it and the picker are both 36px, but the name sits in a
+  // number and the picker are both 32px, but the name sits in a
   // button that is inline by default, and an inline box on a line picks up
   // the line's descender space under it. Switching between the two changed
-  // the row's height by those few pixels. A column box of exactly 36px holds
-  // whichever it is, centred, and is the same height either way. A column and
-  // not a row, because BankCardHolder is two lines handed over as siblings.
+  // the row's height by those few pixels. A column box of exactly 32px holds
+  // whichever it is, centred, and is the same height either way.
   //
   // From md only. On a phone the cell is an item in the row's line of small
   // text (see DataTable's mobile card), and a 36px box there stood out of the
   // line into the rows around it.
   cell: (tx) => (
-    <div className="flex flex-col justify-center md:h-9">
+    <div className="flex flex-col justify-center md:h-8">
       {cell ? cell(tx) : <BankCardHolder tx={tx} />}
     </div>
   ),
@@ -181,7 +190,7 @@ export const bankMatchedColumn = (
     tx.matchedExpenseId ? (
       <Link
         href={`/expenses/${tx.matchedExpenseId}`}
-        className="font-medium text-accent hover:underline"
+        className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
       >
         {tx.matchedExpenseRef ?? linked}
       </Link>

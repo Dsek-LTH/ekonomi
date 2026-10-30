@@ -4,7 +4,7 @@
   "unnamed": "Invoice",
   "empty": "No supplier invoices",
   "emptyDescription": "Supplier invoices land here once they have been given to a result unit from the inbox.",
-  "searchPlaceholder": "Search supplier, invoice number or unit",
+  "searchPlaceholder": "Search what it is for, supplier or unit",
   "noMatch": "No invoices match.",
   "scopeLabel": "Scope",
   "scope": {
@@ -14,24 +14,26 @@
   "tab": {
     "attest": "To attest",
     "book": "To book",
+    "send": "To send",
     "exported": "In Fortnox",
     "all": "All"
   },
   "col": {
+    "reference": "No.",
     "supplier": "Supplier",
     "invoiceNumber": "Invoice no.",
     "unit": "Result unit",
     "received": "Received",
     "dueDate": "Due",
     "status": "Status",
-    "amount": "Amount"
+    "amount": "Amount",
+    "description": "What for"
   },
   "due": {
     "none": "No due date",
     "overdue": "{days, plural, one {Overdue by # day} other {Overdue by # days}}",
     "today": "Due today",
-    "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}",
-    "on": "Due {date}"
+    "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}"
   },
   "field": {
     "supplierName": "Supplier",
@@ -47,11 +49,9 @@
     "yourReference": "Your reference"
   },
   "detail": {
-    "invoiceNo": "Invoice {number}",
     "save": "Save",
     "saved": "Saved",
     "documents": "Documents",
-    "removeDocument": "To the inbox",
     "noDocumentTitle": "Invoice",
     "noDocument": "No PDF attached yet.",
     "upload": {
@@ -62,48 +62,13 @@
     },
     "history": "History",
     "returnedTitle": "{name} wants something changed:",
-    "documentToInbox": "The document is back in the inbox",
     "missingTitle": "The invoice does not exist",
     "missingDescription": "It may have been deleted, or you do not have access to it.",
-    "missingAction": "To invoices"
+    "missingAction": "To invoices",
+    "note": "Comment"
   },
   "workspace": {
-    "pickUnit": "Pick a result unit",
-    "searchUnit": "Search result units",
-    "konteraTitle": "Where does the cost go?",
-    "costCenter": "Cost centre",
-    "pickCostCenter": "Pick a cost centre",
-    "searchCostCenter": "Search cost centres",
-    "split": "Split across several cost centres",
-    "addRow": "Add cost centre",
-    "removeRow": "Remove the row",
-    "share": "Share",
-    "splitOfTotal": "{sum} of {total}",
-    "splitSum": "Total {sum}",
-    "comment": "Comment",
-    "commentPlaceholder": "What is the invoice for? (optional)",
-    "othersSign": "Cost centres outside your unit are attested by their resultatansvarig.",
-    "shareTitle": "Your share of the invoice",
-    "exportTitle": "Make ready for Fortnox",
-    "accounts": "Account per cost centre",
-    "pickAccount": "Pick an account",
-    "searchAccount": "Search accounts",
-    "details": "Invoice details",
-    "editDetails": "Edit",
-    "closeDetails": "Close",
-    "noDetails": "No details filled in yet. They are completed before the invoice is exported.",
-    "noDocumentReadOnly": "The invoice has no PDF.",
-    "move": "Change unit",
-    "moveTo": "Give to another unit",
-    "waiting": {
-      "unit": "Waiting for {unit} to attest.",
-      "share": "Waiting for attest from {units}.",
-      "export": "Attested. Waiting to be exported to Fortnox.",
-      "exported": "The invoice is in Fortnox as supplier invoice {number}."
-    },
-    "fromPdf": "From the PDF",
     "supplier": "Supplier in Fortnox",
-    "supplierHint": "Pick the supplier from Fortnox's supplier register, or add it.",
     "loadingSuppliers": "Fetching suppliers…",
     "pickSupplier": "Pick a supplier",
     "searchSupplier": "Search name, organisation number or bankgiro",
@@ -118,7 +83,8 @@
     "uncertainBody": "Fortnox did not answer for certain when invoice {number} was sent. Look in Fortnox for the supplier invoice before doing anything else.",
     "uncertainNotCreated": "It is not there, try again",
     "uncertainGivenNumber": "Number in Fortnox",
-    "uncertainCreated": "It is in Fortnox"
+    "uncertainCreated": "It is in Fortnox",
+    "amountInvalid": "Write the amount in kronor, for example 1 250,00."
   },
   "action": {
     "attest": "Attest",
@@ -130,25 +96,24 @@
     "confirm": {
       "request_changes": "The invoice goes back to the result unit, and every attest on it is removed.",
       "withdraw_attest": "Your attest is removed and the invoice goes back to waiting for attest.",
-      "return": "The invoice is removed and its documents go back to the inbox, with your answer as the reason."
+      "return": "The invoice is removed and its documents go back to the inbox, with your answer as the reason.",
+      "redistribute": "Every attest on the invoice is removed, yours too. The new split is sent to everyone it concerns again."
     },
     "done": {
       "assign": "The invoice has been assigned",
       "attest": "Attested",
       "withdraw_attest": "The attest is withdrawn",
       "request_changes": "The invoice is sent back",
-      "return": "The documents are back in the inbox"
+      "return": "The documents are back in the inbox",
+      "redistribute": "The split can be changed",
+      "book": "The invoice is booked"
     },
-    "export": "Export to Fortnox",
     "return": "Back to the inbox",
-    "returnLabel": "Why?"
+    "returnLabel": "Why?",
+    "redistribute": "Change the split"
   },
   "kontering": {
-    "title": "Coding",
-    "whole": "The whole amount",
-    "attestedBy": "Attested by {name}, {when}",
-    "yoursToAttest": "Waiting for your attest",
-    "awaitingAttest": "Waiting for attest from {unit}"
+    "yoursToAttest": "Waiting for your attest"
   },
   "mailbox": {
     "title": "Inbox mail account",
@@ -180,34 +145,117 @@
       "unitName": "Automatically: the email mentioned {match}",
       "forwarder": "Automatically: the sender answers for {match}"
     },
-    "EXPORTED": "Exported to Fortnox",
+    "EXPORTED": "Sent to Fortnox",
     "EXPORT_RELEASED": "Uncertain export released",
-    "DOCUMENT_ATTACHED": "Document added from the inbox"
+    "DOCUMENT_ATTACHED": "Document added from the inbox",
+    "BOOKED": "Booked"
   },
   "inkorg": {
     "title": "Inbox",
     "upload": "Add documents",
     "uploaded": "{name} is in the inbox",
     "emptyTitle": "The inbox is empty",
-    "emptyDescription": "Invoices sent in by email end up here, and documents taken off an invoice. You can also add PDFs yourself.",
+    "emptyDescription": "Invoices mailed in land here, and the documents of invoices that are sent back. You can also add PDFs yourself.",
     "uploadedByUnknown": "Unknown",
-    "createTitle": "Make it an invoice",
     "createUnit": "Send to",
     "createUnitPlaceholder": "Send to…",
     "searchUnit": "Search result units",
-    "create": "Create invoice",
     "delete": "Delete",
     "deleteConfirm": "{name} is deleted completely. This cannot be undone.",
     "deleted": "The document is deleted",
     "col": {
       "document": "Document",
-      "from": "From",
-      "note": "Comment",
-      "received": "Received"
+      "from": "Sender",
+      "received": "Received",
+      "unit": "Unit",
+      "dueDate": "Due date"
     },
-    "searchPlaceholder": "Search subject, sender or comment",
+    "searchPlaceholder": "Search file, sender or subject",
     "noMatch": "No documents match.",
-    "created": "The invoice is created and sent",
-    "returned": "Back from {unit}: {reason}"
+    "returned": "Back from {unit}: {reason}",
+    "returnedTag": "Returned",
+    "tab": {
+      "sort": "To sort",
+      "allocate": "To allocate",
+      "units": "With the units"
+    },
+    "assign": "Send",
+    "move": "Change unit",
+    "assigned": "Sent to {unit}",
+    "allocate": "Allocate",
+    "decline": "Not ours",
+    "declineConfirm": "The document goes back to the inbox, with your answer as the reason.",
+    "declined": "The document is back in the inbox",
+    "unitEmptyTitle": "Nothing to allocate",
+    "dueDate": "Due date",
+    "saveDue": "Save",
+    "dueSaved": "The due date is saved"
+  },
+  "attest": {
+    "signersTitle": "Who attests",
+    "signerYou": "You, for your cost centres, when you send it",
+    "signerAsked": "{unit} is asked for its share",
+    "signersHint": "Each unit attests its own share. If the split changes, every attest is removed and everyone is asked again.",
+    "attestAndSend": "Attest and send on",
+    "notOurs": "Not our share",
+    "notOursConfirm": "The invoice goes back to {unit}, who split it, and every attest on it is removed.",
+    "notOursLabel": "Why? {unit} sees what you write.",
+    "distribution": "Cost distribution"
+  },
+  "book": {
+    "sendBack": "Send back to {unit}",
+    "total": "Total",
+    "more": "More details",
+    "kontering": "Accounting",
+    "payable": "Accounts payable",
+    "supplierRef": "Supplier's reference",
+    "payableHint": "Accounts payable is credited with the whole invoice amount, so that row is not changed here.",
+    "ourRef": "Our reference",
+    "rounding": "Rounding",
+    "roundingHint": "The rounding is booked on its own account, and the largest row takes the difference.",
+    "roundingInvalid": "The rounding can be at most 0.99 kr either way.",
+    "save": "Save booking",
+    "giroAtSend": "You will confirm the number again when the invoice is sent to Fortnox."
+  },
+  "record": {
+    "more": "More",
+    "move": "Change unit",
+    "moveTo": "Give to another unit",
+    "searchUnit": "Search result unit",
+    "unit": "Result unit",
+    "waitingFor": "Waiting for {units}",
+    "split": "Cost split",
+    "costCenter": "Cost centre",
+    "account": "Account",
+    "amount": "Amount",
+    "total": "Total",
+    "fortnoxLine": "Supplier invoice {number}, created {date}",
+    "attestColumn": "Attest",
+    "book": "Book",
+    "allocate": "Allocate",
+    "send": "Send to Fortnox",
+    "sendConfirm": "The invoice is created as a supplier invoice in Fortnox, with the PDF and the attests attached. This cannot be undone from here.",
+    "sendUncertain": "The last attempt to send it ended without a clear answer. Look in Fortnox first.",
+    "fortnoxNotConnected": "Fortnox is not connected. Connect it under Bookkeeping first.",
+    "fortnoxNotSignedIn": "You are not signed in to Fortnox. Sign in from your profile to send it.",
+    "rebook": "Change booking",
+    "booking": "Booking",
+    "fortnoxNumber": "Fortnox {number}",
+    "notAllocated": "{unit} has not allocated the invoice yet.",
+    "sendWarningsTitle": "Worth a look before it is sent",
+    "warning": {
+      "overdue": "{days, plural, one {The due date passed # day ago.} other {The due date passed # days ago.}}"
+    },
+    "accountName": "Account name",
+    "costCenterShort": "CC",
+    "debit": "Debit",
+    "credit": "Credit"
+  },
+  "notAllocated": "Not allocated yet",
+  "fromForwarder": "From {name}",
+  "allocate": {
+    "fromScan": "Read from the invoice. Check that it is right.",
+    "descriptionHint": "What the invoice is called in lists and for other units asked to attest.",
+    "descriptionPlaceholder": "For example trailer hire for the introduction week"
   }
 }

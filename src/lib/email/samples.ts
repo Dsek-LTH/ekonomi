@@ -29,6 +29,7 @@ export const SAMPLE_EXPENSE = {
 
 export const SAMPLE_INVOICE = {
   id: "preview",
+  reference: "LEV26-0012",
   supplierName: "Lunds Släpvagnsuthyrning AB",
   invoiceNumber: "20417",
   description: "Släp till nollningen",

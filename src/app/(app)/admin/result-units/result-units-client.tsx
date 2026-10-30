@@ -2,8 +2,9 @@
 
 // Settings → Result units. A result unit owns one or more cost-centre code
 // prefixes; every cost centre whose code starts with one of them belongs to it,
-// and its resultatansvariga hold approval authority over those expenses. A unit
-// that takes money in also says how its sales are booked.
+// and its resultatansvariga hold approval authority over those expenses. How a
+// unit's sales are booked is set under Inställningar → Försäljning, beside the
+// accounts they are booked against.
 //
 // One table of every unit, and the unit itself in a dialog over it. It was a
 // list down the side and the selected unit beside it, which meant reading the
@@ -23,7 +24,6 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable } from "@/components/ui/client-data-table";
-import { Combobox } from "@/components/ui/combobox";
 import { type Column } from "@/components/ui/data-table";
 import { EditableText } from "@/components/ui/editable-text";
 import { FieldGroup, Input } from "@/components/ui/field";
@@ -35,21 +35,18 @@ import { Tag } from "@/components/ui/status-pill";
 import { ExpandToggle } from "@/components/ui/expand-toggle";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { cn } from "@/lib/ui/utils";
-import type { CostCenter, ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
+import type { ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 
 type Mutate = ReturnType<typeof useMutation>["mutate"];
 
 export function ResultUnitsClient({
   resultUnits,
   unassigned,
-  costCenters,
   incomeEnabled,
 }: {
   resultUnits: ResultUnit[];
   /** Cost centres no unit's prefix matches. */
   unassigned: ResultUnitCostCenter[];
-  /** For the sales section's cost-centre picker. */
-  costCenters: CostCenter[];
   /** False when the app runs without the intakt service. See intaktConfigured. */
   incomeEnabled: boolean;
 }) {
@@ -98,7 +95,7 @@ export function ResultUnitsClient({
         <button
           type="button"
           onClick={() => setOpenId(u.id)}
-          className="text-left font-medium hover:text-accent hover:underline"
+          className="text-left font-medium hover:text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
         >
           {u.resultUnit}
         </button>
@@ -173,7 +170,7 @@ export function ResultUnitsClient({
             <button
               type="button"
               onClick={() => setShowUnassigned(true)}
-              className="font-medium text-accent hover:underline"
+              className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
             >
               {t("showThem")}
             </button>
@@ -236,7 +233,6 @@ export function ResultUnitsClient({
           // Keyed, so every draft inside starts over when another unit opens.
           key={open.id}
           unit={open}
-          costCenters={costCenters}
           incomeEnabled={incomeEnabled}
           pending={pending}
           mutate={mutate}
@@ -257,26 +253,23 @@ export function ResultUnitsClient({
 }
 
 /**
- * One result unit, in three sections that each answer one question: which
- * cost centres are its, who attests them, and how its sales are booked.
+ * One result unit, in sections that each answer one question: which cost
+ * centres are its, who attests them, and whether it sells.
  */
 function UnitDialog({
   unit,
-  costCenters,
   incomeEnabled,
   pending,
   mutate,
   onClose,
 }: {
   unit: ResultUnit;
-  costCenters: CostCenter[];
   incomeEnabled: boolean;
   pending: string | null;
   mutate: Mutate;
   onClose: () => void;
 }) {
   const t = useTranslations("admin.resultUnits");
-  const tIncome = useTranslations("admin.resultUnits.income");
   const tCommon = useTranslations("common");
   const tCostCenters = useTranslations("admin.costCenters");
   const tRole = useTranslations("common.role");
@@ -285,21 +278,7 @@ function UnitDialog({
   // The prefix input is hidden behind a + until asked for, so the prefixes
   // read as data rather than as a form. null means "not adding".
   const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
-  const [productDraft, setProductDraft] = useState<{ code: string; account: string } | null>(null);
   const [showCostCenters, setShowCostCenters] = useState(false);
-
-  // Only the unit's own cost centres: its sales are attested by its own
-  // resultatansvariga, which another unit's cost centre would hand to someone
-  // else. The one already chosen stays offered if it no longer matches (a
-  // prefix removed since), so the picker shows it rather than going blank.
-  const ownCodes = new Set(unit.costCenters.map((c) => c.code));
-  const ccOptions = costCenters
-    .filter((c) => ownCodes.has(c.code) || c.id === unit.income?.defaultCostCenterId)
-    .map((c) => ({
-      value: c.id,
-      label: `${c.code} - ${c.name}`,
-      short: c.code,
-    }));
 
   async function rename(raw: string) {
     const name = raw.trim();
@@ -352,81 +331,6 @@ function UnitDialog({
       method: "DELETE",
       error: t("prefixRemoveFailed"),
       success: t("prefixRemoved", { prefix: value }),
-    });
-  }
-
-  // ── Sales ──
-  //
-  // Everything a unit needs in order to take money in. The key intakt groups
-  // reports by is not among these: it is derived from the name when the
-  // profile is created and never changed, and nobody here needs to read it.
-
-  async function enableIncome() {
-    await mutate("/api/income/units", {
-      key: `income-new-${unit.id}`,
-      // The verifikationstext starts as the unit's own name. It is what the
-      // voucher will say, and that is a better start than blank.
-      body: { resultUnitId: unit.id, description: unit.resultUnit },
-      error: t("saveFailed"),
-    });
-  }
-
-  async function updateIncome(body: Record<string, unknown>) {
-    if (!unit.income) return;
-    await mutate(`/api/income/units/${unit.income.id}`, {
-      key: `income-${unit.income.id}`,
-      method: "PATCH",
-      body,
-      error: t("saveFailed"),
-    });
-  }
-
-  async function removeIncome() {
-    if (!unit.income) return;
-    const ok = await confirm({
-      title: tIncome("removeTitle", { name: unit.resultUnit }),
-      message: tIncome("removeBody"),
-      confirmLabel: tIncome("remove"),
-      tone: "danger",
-    });
-    if (!ok) return;
-    await mutate(`/api/income/units/${unit.income.id}`, {
-      key: `income-${unit.income.id}`,
-      method: "DELETE",
-      error: t("saveFailed"),
-    });
-  }
-
-  async function addProductPrefix() {
-    if (!unit.income || !productDraft) return;
-    const ok = await mutate("/api/income/prefixes", {
-      key: "addProduct",
-      body: {
-        incomeId: unit.income.id,
-        code: productDraft.code.trim(),
-        account: productDraft.account.trim(),
-      },
-      error: t("saveFailed"),
-    });
-    if (ok) setProductDraft(null);
-  }
-
-  // The API moves the flag off whichever prefix held it, so there is always at
-  // most one fallback and no need to clear the old one here.
-  async function makeFallback(id: string) {
-    await mutate(`/api/income/prefixes/${id}`, {
-      key: `fallback-${id}`,
-      method: "PATCH",
-      body: { isFallback: true },
-      error: t("saveFailed"),
-    });
-  }
-
-  async function removeProductPrefix(id: string) {
-    await mutate(`/api/income/prefixes/${id}`, {
-      key: `product-${id}`,
-      method: "DELETE",
-      error: t("saveFailed"),
     });
   }
 
@@ -579,163 +483,28 @@ function UnitDialog({
                 .{" "}
               </>
             )}
-            <Link href="/admin/roles" className="font-medium text-accent hover:underline">
+            <Link href="/admin/roles" className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
               {t("editInRoles")}
             </Link>
           </p>
         </Section>
 
-        {/* ── How its sales are booked ──
-            Only when the income module is configured: a section that runs
-            without intakt has no use for any of it, and the result-unit screen
-            must not depend on income existing. */}
+        {/* ── Whether it sells ──
+            Said here, set under Inställningar → Försäljning, where every
+            unit's sales sit beside the accounts they are booked against. Only
+            when the income module is configured: the result-unit screen must
+            not depend on income existing. */}
         {incomeEnabled && (
-          <Section title={tIncome("section")} hint={tIncome("sectionHint")}>
-            {!unit.income ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted">{tIncome("disabledHint")}</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  loading={pending === `income-new-${unit.id}`}
-                  onClick={enableIncome}
-                >
-                  <IconPlus className="size-4" />
-                  {tIncome("enable")}
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FieldGroup label={tIncome("description")} hint={tIncome("descriptionHint")}>
-                    <Input
-                      size="sm"
-                      // Uncontrolled: it commits on blur rather than on every
-                      // keystroke. The dialog is keyed on the unit, so opening
-                      // another one re-reads the default.
-                      defaultValue={unit.income.description}
-                      aria-label={tIncome("description")}
-                      onBlur={(e) =>
-                        e.target.value !== unit.income?.description &&
-                        updateIncome({ description: e.target.value })
-                      }
-                    />
-                  </FieldGroup>
-                  <FieldGroup label={tIncome("defaultCostCenter")} hint={tIncome("defaultCostCenterHint")}>
-                    <Combobox
-                      size="sm"
-                      options={ccOptions}
-                      value={unit.income.defaultCostCenterId ?? ""}
-                      onChange={(v) => updateIncome({ defaultCostCenterId: v || null })}
-                      placeholder={tIncome("noCostCenter")}
-                      emptyText={tIncome("noOwnCostCenters")}
-                      allowClear
-                      aria-label={tIncome("defaultCostCenter")}
-                    />
-                  </FieldGroup>
-                </div>
-
-                {/* Which goods are this unit's: a small table of "starts with"
-                    and the account it is booked to, the add row as its last
-                    line. Chips with an arrow said the same thing, but not
-                    what it meant. */}
-                <FieldGroup label={tIncome("productPrefixes")} hint={tIncome("productHint")}>
-                  <ul className="rounded-control border border-border">
-                    {unit.income.prefixes.map((p) => (
-                      <li
-                        key={p.id}
-                        className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0"
-                      >
-                        <span className="w-20 shrink-0 font-mono text-sm font-semibold">{p.code}</span>
-                        <span className="min-w-0 flex-1 truncate text-sm">
-                          <span className="font-mono tabular-nums">{p.account}</span>
-                          {p.accountName && <span className="text-muted"> - {p.accountName}</span>}
-                        </span>
-                        {/* An account the chart has never heard of is a
-                            voucher Fortnox will reject, but only at export, so
-                            it is worth saying here. */}
-                        {!p.accountName && <Tag tone="warning">{tIncome("unknownAccount")}</Tag>}
-                        {p.isFallback ? (
-                          <span title={tIncome("fallbackHint")}>
-                            <Tag tone="accent">{tIncome("fallback")}</Tag>
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-xs"
-                            title={tIncome("fallbackHint")}
-                            loading={pending === `fallback-${p.id}`}
-                            onClick={() => makeFallback(p.id)}
-                          >
-                            {tIncome("makeFallback")}
-                          </Button>
-                        )}
-                        <IconButton
-                          tone="danger"
-                          size="xs"
-                          disabled={p.isFallback}
-                          loading={pending === `product-${p.id}`}
-                          label={tIncome("prefixRemove")}
-                          onClick={() => removeProductPrefix(p.id)}
-                        >
-                          <IconTrash className="size-3.5" />
-                        </IconButton>
-                      </li>
-                    ))}
-                    <li className="flex flex-wrap items-center gap-2 bg-surface px-3 py-2">
-                      <span className="w-20 shrink-0">
-                        <Input
-                          size="sm"
-                          value={productDraft?.code ?? ""}
-                          onChange={(e) =>
-                            setProductDraft({ account: productDraft?.account ?? "", code: e.target.value })
-                          }
-                          placeholder="c"
-                          aria-label={tIncome("prefixCode")}
-                          className="font-mono"
-                        />
-                      </span>
-                      <span className="w-24">
-                        <Input
-                          size="sm"
-                          inputMode="numeric"
-                          value={productDraft?.account ?? ""}
-                          onChange={(e) =>
-                            setProductDraft({ code: productDraft?.code ?? "", account: e.target.value })
-                          }
-                          onKeyDown={(e) => { if (e.key === "Enter") addProductPrefix(); }}
-                          placeholder="3011"
-                          aria-label={tIncome("prefixAccount")}
-                          className="font-mono"
-                        />
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={pending === "addProduct"}
-                        disabled={!productDraft?.code.trim() || !productDraft.account.trim()}
-                        onClick={addProductPrefix}
-                      >
-                        <IconPlus className="size-4" />
-                        {tCostCenters("add")}
-                      </Button>
-                    </li>
-                  </ul>
-                </FieldGroup>
-
-                <div className="flex justify-end">
-                  <Button
-                    variant="dangerOutline"
-                    size="sm"
-                    loading={pending === `income-${unit.income.id}`}
-                    onClick={removeIncome}
-                  >
-                    {tIncome("remove")}
-                  </Button>
-                </div>
-              </>
-            )}
+          <Section title={t("sectionSales")} hint={t("sectionSalesHint")}>
+            <p className="text-sm">
+              {unit.income ? t("salesOnSummary", { count: unit.income.prefixes.length }) : t("salesOffSummary")}{" "}
+              <Link
+                href="/admin/income#units"
+                className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              >
+                {t("editInSales")}
+              </Link>
+            </p>
           </Section>
         )}
       </ModalBody>

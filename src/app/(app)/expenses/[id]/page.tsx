@@ -3,7 +3,46 @@ import { getBankTransactions, getBankTransactionsByIds } from "@/lib/data/bank";
 import { getExpense } from "@/lib/data/expenses";
 import { getFortnoxStatus } from "@/lib/data/fortnox";
 import { expenseCapabilities } from "@/lib/domain/expense-capabilities";
+import { getActiveAccounts } from "@/lib/data/accounts";
+import { getActiveCostCenters } from "@/lib/data/cost-centers";
+import { getActiveProjects } from "@/lib/data/projects";
+import { getLedgerYears } from "@/lib/ledger";
+import { reviewWarnings, voucherTextPrefix, type ReviewWarning } from "@/lib/domain/review";
+import { exportReviewBlocker } from "@/lib/server/review";
+import type { Expense } from "@/lib/domain/types";
 import ExpenseDetailClient from "./detail-client";
+
+/**
+ * What the bokföring of a konterat utlägg has to know, for whoever may do it:
+ * what is worth a second look on the voucher (none of it stops the bokföring),
+ * and whether the two-person rule hands it to somebody else. This page is
+ * where it is bokförd, so this is where it is asked.
+ */
+async function bookkeepingReview(
+  expense: Expense,
+  user: Parameters<typeof exportReviewBlocker>[1],
+): Promise<{ warnings: ReviewWarning[]; ownBooking: boolean } | null> {
+  const verification = expense.verification;
+  if (!verification) return null;
+  const [accounts, costCenters, projects, years, blocker] = await Promise.all([
+    getActiveAccounts(),
+    getActiveCostCenters(),
+    getActiveProjects(),
+    getLedgerYears(),
+    exportReviewBlocker(expense.id, user),
+  ]);
+  const warnings = reviewWarnings({
+    date: verification.date,
+    financialYears: years,
+    description: verification.description,
+    textPrefix: voucherTextPrefix(expense.paymentType, expense.submitterStudentId),
+    lines: verification.lines,
+    isActiveAccount: (n) => accounts.some((a) => a.number === n),
+    isActiveCostCenter: (c) => costCenters.some((cc) => cc.code === c),
+    isActiveProject: (n) => projects.some((p) => p.number === n),
+  });
+  return { warnings, ownBooking: blocker === "ownBooking" };
+}
 
 export default async function ExpenseDetailPage({
   params,
@@ -60,12 +99,15 @@ export default async function ExpenseDetailPage({
         // asks for.
         await getBankTransactionsByIds(matched);
 
+  const review = expense && can?.canExport ? await bookkeepingReview(expense, user) : null;
+
   return (
     <ExpenseDetailClient
       expense={expense}
       can={can}
       bankTransactions={bankTransactions}
       fortnox={fortnox}
+      review={review}
     />
   );
 }

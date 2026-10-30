@@ -16,7 +16,13 @@ import {
   invoiceViewerOf,
   type InvoiceViewerCtx,
 } from "@/lib/data/supplier-invoices";
-import { invoiceCapabilities, type InvoiceCapabilities } from "@/lib/domain/supplier-invoice";
+import {
+  documentCapabilities,
+  invoiceCapabilities,
+  type DocumentCapabilities,
+  type ExportFacts,
+  type InvoiceCapabilities,
+} from "@/lib/domain/supplier-invoice";
 
 const INCLUDE = {
   resultUnit: { select: { name: true } },
@@ -24,6 +30,7 @@ const INCLUDE = {
     orderBy: [{ position: "asc" as const }, { id: "asc" as const }],
     include: { costCenter: { select: { code: true, name: true } } },
   },
+  lines: { orderBy: [{ position: "asc" as const }, { id: "asc" as const }] },
   _count: { select: { documents: true } },
 };
 
@@ -58,6 +65,58 @@ export async function loadInvoiceFor(actor: Actor, id: string): Promise<InvoiceA
     viewer,
     mayAttest: facts.allocations.map((a) => a.viewerMayAttest),
     can: invoiceCapabilities(viewer, facts),
+  };
+}
+
+const DOCUMENT_SELECT = {
+  id: true,
+  invoiceId: true,
+  objectKey: true,
+  filename: true,
+  createdAt: true,
+  uploadedById: true,
+  resultUnitId: true,
+  assignedById: true,
+  assignedAt: true,
+  dueDate: true,
+  resultUnit: { select: { id: true, name: true } },
+  inboundMail: { select: { id: true, senderId: true, receivedAt: true, subject: true } },
+} as const;
+
+async function findDocument(id: string) {
+  return prisma.supplierInvoiceDocument.findUnique({ where: { id }, select: DOCUMENT_SELECT });
+}
+
+export type LoadedDocument = NonNullable<Awaited<ReturnType<typeof findDocument>>>;
+
+export type DocumentAccess =
+  | { ok: true; doc: LoadedDocument; viewer: InvoiceViewerCtx; can: DocumentCapabilities }
+  | { ok: false; res: NextResponse };
+
+/**
+ * A document in an Inkorg, the way the viewer may see it, and what they may
+ * do with it. One already on an invoice is a 409: it is the invoice's now, and
+ * asked about through the invoice. One the viewer may not see is a 404.
+ */
+export async function loadInboxDocumentFor(actor: Actor, id: string): Promise<DocumentAccess> {
+  const [viewer, doc] = await Promise.all([invoiceViewerOf(actor), findDocument(id)]);
+  const can = doc && documentCapabilities(viewer, doc);
+  if (!doc || !can?.canSee) return { ok: false, res: fail(404, "supplierInvoice.documentNotFound") };
+  if (doc.invoiceId !== null) return { ok: false, res: fail(409, "supplierInvoice.documentOnInvoice") };
+  return { ok: true, doc, viewer, can };
+}
+
+/** What the kontering and the export ask of an invoice as it was loaded. */
+export function exportFactsOf(invoice: LoadedInvoice): ExportFacts {
+  return {
+    fortnoxSupplierNumber: invoice.fortnoxSupplierNumber,
+    invoiceNumber: invoice.invoiceNumber,
+    invoiceDate: invoice.invoiceDate,
+    dueDate: invoice.dueDate,
+    amount: invoice.amount,
+    rounding: invoice.rounding,
+    shares: invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => a.amount),
+    lines: invoice.lines,
   };
 }
 

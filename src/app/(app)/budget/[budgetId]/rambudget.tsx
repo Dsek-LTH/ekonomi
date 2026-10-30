@@ -64,7 +64,7 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
         {/* Column names and the grand total both sit here; the whole block pins
             as one from lg up. See `.rambudget thead` in globals.css. */}
         <thead>
-          <tr className="border-b border-border text-[11px] text-muted">
+          <tr className="border-b border-border text-xs text-muted">
             <th className="px-3 py-2 text-left font-medium">{tAlloc("costCenter")}</th>
             <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>{t("income")}</th>
             <th className={cn("font-medium", numCls)}>{t("costs")}</th>
@@ -156,7 +156,7 @@ function FragmentGroup({ resultUnit, own, other, impact, showCompare, showImpact
   return (
     <>
       <tr className="border-b border-border bg-surface">
-        <td className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted" colSpan={4 + (showCompare ? 2 : 0) + (showImpact ? 2 : 0)}>{resultUnit}</td>
+        <td className="px-3 py-1.5 text-xs font-medium text-muted" colSpan={4 + (showCompare ? 2 : 0) + (showImpact ? 2 : 0)}>{resultUnit}</td>
       </tr>
       {children}
       <tr className="border-b border-border text-sm font-medium">

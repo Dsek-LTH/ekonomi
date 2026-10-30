@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
+import { Tooltip } from "@/components/ui/tooltip";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { IconCheck, IconDots, IconUndo } from "@/components/ui/icons";
@@ -64,12 +65,18 @@ type Action = {
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
+  /** Why it is disabled, on hover and for a screen reader. A dead button with
+   *  no reason on it reads as a fault. */
+  disabledReason?: string;
   danger?: boolean;
 };
 
 export function ExpenseActions({
   expenseId,
   can,
+  fortnox,
+  exportBlock,
+  onExport,
   busy,
   onTransition,
   onWithdrawAttest,
@@ -80,6 +87,14 @@ export function ExpenseActions({
 }: {
   expenseId: string;
   can: ExpenseCapabilities;
+  /** Whether bokföring can happen from here now: the section connected and
+   *  the reader's own login live. */
+  fortnox: FortnoxStatus;
+  /** Why the reader may not bokföra it besides Fortnox (the two-person rule,
+   *  somebody else's export under way), or null. */
+  exportBlock: string | null;
+  /** Bokföring: the voucher sent to Fortnox from here. */
+  onExport: () => void;
   busy: boolean;
   onTransition: (
     action: "submit" | "approve" | Explained,
@@ -124,14 +139,24 @@ export function ExpenseActions({
       label: t("book"),
       href: `/expenses/${expenseId}/book`,
     },
-    // Bokföring is done from the review, one utlägg at a time, so this opens
-    // the review at this one. Whether it can go through (Fortnox, the
-    // two-person rule) is said there. See app/(app)/expenses/review.
-    can.canExport && {
-      key: "export",
-      label: t("review"),
-      href: `/expenses/review?id=${expenseId}`,
-    },
+    // Bokföring, done here: this page is where the voucher is looked over,
+    // and this is the last step. Dead when it could not go through, with the
+    // reason on the button rather than in a notice over the page.
+    can.canExport &&
+      (() => {
+        const reason = !canExportNow(fortnox)
+          ? fortnox.connected
+            ? t("fortnoxNotSignedIn")
+            : t("fortnoxNotConnected")
+          : exportBlock;
+        return {
+          key: "export",
+          label: t("review"),
+          onClick: onExport,
+          disabled: reason !== null,
+          disabledReason: reason ?? undefined,
+        };
+      })(),
     // Ahead of "Skicka in", because on a late utlägg it is what stands between
     // the two: nobody can submit until the dispens is given, and the person
     // reading this page is the only one who can give it.
@@ -229,7 +254,19 @@ export function ExpenseActions({
     // manage. So the first fills the row and the second is its glyph.
     <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
       <div className="flex w-full items-center gap-2.5 sm:w-auto sm:flex-wrap">
-        {primary.href ? (
+        {primary.disabledReason ? (
+          // A disabled button takes no pointer events (ui/button.tsx), so the
+          // wrapper is what is hovered. Not a link either way: a link cannot
+          // be disabled, and this one would have led to a page that can do
+          // nothing.
+          <Tooltip label={primary.disabledReason} align="start" className="flex-1 sm:flex-none">
+            <Button disabled className="w-full">
+              {primary.icon}
+              {primary.label}
+              <span className="sr-only">{`. ${primary.disabledReason}`}</span>
+            </Button>
+          </Tooltip>
+        ) : primary.href ? (
           <ButtonLink href={primary.href} className="flex-1 sm:flex-none">
             {primary.icon}
             {primary.label}
@@ -278,6 +315,7 @@ export function ExpenseActions({
                 >
                   {a.icon}
                   {a.label}
+                  {a.disabledReason && <span className="sr-only">{`. ${a.disabledReason}`}</span>}
                 </MenuItem>
               </Fragment>
             ))}
@@ -310,16 +348,11 @@ export function ExpenseActionNotice({
 }) {
   const t = useTranslations("expenses.detail");
 
-  // The export button is rendered but dead without Fortnox, and its own
-  // tooltip can't say so. Button sets `disabled:pointer-events-none`. Which
-  // half is missing decides where you have to go: the section's connection is
-  // set up once under Bokföring, your own login is yours to renew.
-  const fortnoxNote =
-    can.canExport && !canExportNow(fortnox)
-      ? fortnox.connected
-        ? t("fortnoxNotSignedIn")
-        : t("fortnoxNotConnected")
-      : null;
+  // The section's connection missing is said here as well as on the dead
+  // button: it is set up once under Bokföring, by somebody else, and is worth
+  // a line on the page. A lapsed login of the reader's own is routine and is
+  // said only on the button (see ExpenseActions).
+  const fortnoxNote = can.canExport && !fortnox.connected ? t("fortnoxNotConnected") : null;
 
   // The other side of the same sentence. Where the submitter is told their
   // utlägg is too old to send, whoever can do something about it is told there

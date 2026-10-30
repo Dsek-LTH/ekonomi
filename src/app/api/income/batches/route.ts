@@ -6,18 +6,21 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
-import { intaktConfigFor } from "@/lib/api/intakt-route";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { FetchIncome } from "@/lib/api/schemas/income";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { createFeeBatch, createSalesBatch } from "@/lib/income/batch";
 import {
-  fetchFeeReports,
-  fetchZettleReports,
+  fetchZettleFees,
+  fetchZettleSales,
   IntaktError,
   IntaktNotConfiguredError,
 } from "@/lib/income/client";
+import { loadRoutingTable } from "@/lib/income/config";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
+import { groupZettleFees, routeZettleSales } from "@/lib/income/routing";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
 export async function POST(req: Request) {
   const g = await gate(canBookkeep, "auth.denied");
@@ -28,9 +31,16 @@ export async function POST(req: Request) {
   const { source, from, to } = parsed.data;
 
   if (to < from) return fail(422, "income.rangeBackwards");
+  // Every day fetched becomes a report, so the whole range is in the year
+  // picked in the header. Both ends in it is all of it in it.
+  const offYear = (await denyOutsideFiscalYear(from)) ?? (await denyOutsideFiscalYear(to));
+  if (offYear) return offYear;
 
-  const cfg = await intaktConfigFor(g.actor.id);
-  if (!cfg.ok) return cfg.res;
+  // Fees are not routed, so only sales need the table. Checked before the
+  // service is asked, so a setup problem is said as one rather than after a
+  // term of purchases has come back with nowhere to go.
+  const routing = source === "ZETTLE_FEE" ? null : await loadRoutingTable();
+  if (routing && !routing.ok) return fail(409, `income.${routing.blocker}`);
 
   // Asked once for the whole range, before anything is stored: a day Fortnox
   // already holds a voucher for is not imported at all, so there is nothing on
@@ -40,10 +50,13 @@ export async function POST(req: Request) {
 
   try {
     const input = { source, from, to, createdById: g.actor.id };
-    const result =
-      source === "ZETTLE_FEE"
-        ? await createFeeBatch(input, await fetchFeeReports(from, to, cfg.config), existing)
-        : await createSalesBatch(input, await fetchZettleReports(from, to, cfg.config), existing);
+    const result = routing
+      ? await createSalesBatch(input, routeZettleSales(routing.table, await fetchZettleSales(from, to)), existing)
+      : await createFeeBatch(
+          input,
+          groupZettleFees(await fetchZettleFees(from, to), (await loadBookkeepingSettings()).zettleFeeAccount ?? ""),
+          existing,
+        );
 
     return NextResponse.json(
       { ...result, fortnoxChecked: existing.checked, fortnoxCheckSkipped: existing.skipped },

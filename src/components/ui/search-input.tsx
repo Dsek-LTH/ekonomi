@@ -36,7 +36,7 @@ export function SearchInput({
         // so they win without `cn` having to merge anything.
         className={cn(
           CONTROL_SIZES.sm,
-          "w-full border border-border bg-background pl-8 pr-2.5 text-sm text-foreground placeholder:text-muted",
+          "w-full border border-border-control bg-background pl-8 pr-2.5 text-sm text-foreground placeholder:text-muted",
           inputClassName,
         )}
         {...props}

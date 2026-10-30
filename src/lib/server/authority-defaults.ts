@@ -160,6 +160,10 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   // not get to hand out dispenser.
   { role: "SKATTMASTARE", capability: "EXPENSE_DEADLINE_WAIVE" },
 
+  // Everyone's redovisningsbetyg, to the one who chases late utlägg. A member
+  // sees their own without it.
+  { role: "SKATTMASTARE", capability: "MEMBER_SCORE_VIEW" },
+
   { role: "SKATTMASTARE", capability: "ATTEST_VIEW" },
   { role: "ORDFORANDE", capability: "ATTEST_VIEW" },
   { role: "RESULTATANSVARIG", capability: "ATTEST_VIEW" },

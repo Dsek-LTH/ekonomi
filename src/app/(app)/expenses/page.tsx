@@ -48,8 +48,9 @@ export default async function ExpensesPage({
     scope === "mine" ? { kind: "mine" } : scope === "unit" ? { kind: "attestable" } : { kind: "all" };
 
   // The treasury's things to do sit on the section's reading: the column of
-  // Bokför buttons and the way into the review. A reader (a revisor) bokför
-  // nothing, so is offered no way in.
+  // Bokför and Granska buttons. A reader (a revisor) bokför nothing, so is
+  // offered no way in. The queue is asked for which of the konterade ones this
+  // viewer konterade, since those are somebody else's to bokföra.
   const books = scope === "all" && canBookkeep(user.capabilities);
   // The räkenskapsår narrows every tab, the work ones too: picking 2025 is
   // asking to see 2025. See docs/navigation.md.
@@ -65,7 +66,7 @@ export default async function ExpensesPage({
       page={page}
       scope={scope}
       scopes={scopes}
-      reviewCount={queue?.ids.length ?? 0}
+      ownBooked={queue?.ownIds ?? []}
       canRemind={canSendReminders(user.capabilities)}
     />
   );

@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         await tx.supplierInvoiceEvent.create({
           data: { invoiceId: invoice.id, type: "EXPORT_RELEASED", actorId: g.actor.id },
         });
-        return "APPROVED" as const;
+        return "BOOKED" as const;
       }
       applied(
         await tx.supplierInvoice.updateMany({

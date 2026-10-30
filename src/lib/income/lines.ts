@@ -84,9 +84,9 @@ interface MoveLineInput {
    * the account the routing gave it.
    *
    * It is a choice rather than something derived because there is nothing left
-   * to derive it from. intakt strips the prefix off a product name when it
-   * routes (report/helpers.go, `deconstruct`), so a line that ended up in the
-   * fallback is one whose name never had a prefix in the first place. There is
+   * to derive it from. The routing strips the prefix off a product name
+   * (lib/income/routing.ts), so a line that ended up in the reserv is one
+   * whose name never had a prefix in the first place. There is
    * no evidence in the row of which of the destination's accounts it belongs
    * to. The screen suggests, a person decides.
    */
@@ -222,7 +222,7 @@ export async function moveIncomeLines(
   if (lines.some((l) => !own.has(l.id))) return { ok: false, reason: "unknownLine" };
 
   // The destination is a verksamhet, and a verksamhet is a result unit with
-  // income settings: the key intakt files the report under, the text its
+  // income settings: the key its reports are grouped by, the text its
   // voucher carries and the name on the PDF all live there. A unit without them
   // would produce a report no document could be rendered for.
   const income = await prisma.resultUnitIncome.findUnique({

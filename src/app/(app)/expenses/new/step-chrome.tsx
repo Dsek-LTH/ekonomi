@@ -34,7 +34,7 @@ export function FormSection({
 }) {
   return (
     <Card>
-      <section className="space-y-4 px-inset py-5">
+      <section className="space-y-3 px-inset py-4">
         {title && (
           <h2 className="flex items-center gap-1.5 text-base font-semibold">
             {title}

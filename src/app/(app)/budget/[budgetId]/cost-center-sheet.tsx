@@ -578,7 +578,7 @@ export function CostCenterSheet(props: {
             showed through them. `bg-canvas` is the page's own colour, so the
             arcs read exactly as they do at rest. */}
         <div className="sticky top-14 z-10 bg-canvas md:hidden">
-          <div className="rounded-panel border border-border bg-background shadow-[var(--shadow-card)]">
+          <div className="rounded-panel border border-border bg-background">
             <button
               type="button"
               onClick={() => setSummaryOpen((o) => !o)}
@@ -587,7 +587,7 @@ export function CostCenterSheet(props: {
             >
               {summary.map((s) => (
                 <span key={s.label} className="min-w-0">
-                  <span className="block truncate text-[11px] text-muted">{s.label}</span>
+                  <span className="block truncate text-xs text-muted">{s.label}</span>
                   <span
                     className={cn(
                       "block truncate text-sm font-semibold tabular-nums",
@@ -718,7 +718,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={copySelection}
-              className="text-sm font-medium text-accent hover:underline"
+              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
             >
               {t("copyMarked")}
             </button>
@@ -726,7 +726,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={clearTicks}
-              className="ml-auto text-xs font-medium text-accent hover:underline"
+              className="ml-auto text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
             >
               {t("clearMarked")}
             </button>
@@ -751,7 +751,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={() => onCopy(null)}
-              className="ml-auto text-xs font-medium text-accent hover:underline"
+              className="ml-auto text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
             >
               {t("clearClipboard")}
             </button>

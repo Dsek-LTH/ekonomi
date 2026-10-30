@@ -36,6 +36,7 @@ export function Menu({
   accessibleName,
   trigger,
   triggerClassName,
+  narrow = false,
   className,
   children,
 }: {
@@ -82,6 +83,11 @@ export function Menu({
    */
   trigger?: React.ReactNode;
   triggerClassName?: string;
+  /**
+   * A panel as wide as its items rather than at least 14rem, for a list of
+   * short words: the header's years.
+   */
+  narrow?: boolean;
   /** Which edge the panel lines up with, "end" hangs it left of the button. */
   align?: "start" | "end";
   className?: string;
@@ -116,7 +122,7 @@ export function Menu({
   const WANTED = 220;
 
   // No `cap`: WANTED is the flip threshold and not a ceiling. The panel sizes
-  // itself to its own content (w-max, min-w-56), so a long menu with room for
+  // itself to its own content (w-max, above a minimum width), so a long menu with room for
   // all of it gets all of it. See lib/ui/anchored-panel.ts.
   const panelStyle = () => placeAnchored(rect, { wanted: WANTED, align });
 
@@ -168,7 +174,7 @@ export function Menu({
           {!iconOnly && (
             <IconChevronDown
               className={cn(
-                "size-4 transition-transform duration-150",
+                "size-4 transition-transform duration-200 ease-[var(--ease-out-quint)]",
                 open && "rotate-180",
                 // Nothing to point at once the label is gone. The icon is the
                 // whole button, and a chevron beside it is half the width again
@@ -203,7 +209,10 @@ export function Menu({
           data-popup-layer=""
 
           style={panelStyle()}
-          className="z-[210] max-h-[min(70vh,26rem)] w-max min-w-56 max-w-[min(22rem,80vw)] overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)]"
+          className={cn(
+            "z-[210] max-h-[min(70vh,26rem)] w-max max-w-[min(22rem,80vw)] overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)]",
+            narrow ? "min-w-28" : "min-w-56",
+          )}
         >
           <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>
         </div>,
@@ -251,10 +260,10 @@ export function MenuSeparator() {
 }
 
 export function MenuLabel({ children }: { children: React.ReactNode }) {
-  return <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted">{children}</p>;
+  return <p className="px-2.5 pb-1 pt-1.5 text-xs font-medium text-muted">{children}</p>;
 }
 
 /** A closing line of small print: what the actions above will actually do. */
 export function MenuNote({ children }: { children: React.ReactNode }) {
-  return <p className="px-2.5 pb-1.5 pt-1 text-[11px] leading-snug text-muted">{children}</p>;
+  return <p className="px-2.5 pb-1.5 pt-1 text-xs leading-snug text-muted">{children}</p>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/ui/utils";
 
 // "Which slice of this list?" The underline register.
@@ -60,6 +61,43 @@ export function FilterTabs<T extends string>({
   className?: string;
   "aria-label"?: string;
 }) {
+  // The underline is one line that travels between the tabs rather than a
+  // border each tab turns on, the same as the section tabs over the page
+  // (shell/section-nav.tsx), so moving from one slice to the next is seen as
+  // a move. Placed without a slide on the first draw, so it does not come in
+  // from the left edge.
+  const bar = useRef<HTMLDivElement>(null);
+  const line = useRef<HTMLSpanElement>(null);
+  const placed = useRef(false);
+  const index = options.findIndex((o) => o.value === value);
+
+  useLayoutEffect(() => {
+    const row = bar.current;
+    const el = line.current;
+    if (!row || !el) return;
+    const place = (animate: boolean) => {
+      const tab = index >= 0 ? (row.children[index] as HTMLElement | undefined) : undefined;
+      el.style.opacity = tab ? "1" : "0";
+      if (!tab) return;
+      if (!animate) el.style.transition = "none";
+      el.style.transform = `translateX(${tab.offsetLeft}px)`;
+      el.style.width = `${tab.offsetWidth}px`;
+      if (!animate) {
+        // Painted where it is before the transition is given back, so the
+        // next move slides rather than this one.
+        void el.offsetWidth;
+        el.style.transition = "";
+      }
+    };
+    place(placed.current);
+    placed.current = true;
+    // Kept on its tab when the row changes size: a font arriving, a badge
+    // count changing the tab's width.
+    const ro = new ResizeObserver(() => place(true));
+    ro.observe(row);
+    return () => ro.disconnect();
+  }, [index]);
+
   return (
     // Scrolls rather than wraps: a wrapped second row of tabs reads as a second
     // question, which is the confusion this whole register exists to remove.
@@ -69,9 +107,10 @@ export function FilterTabs<T extends string>({
     // One gap or the other, never both: `cn` joins rather than merges, so two
     // `gap-` utilities would be settled by stylesheet order instead of intent.
     <div
+      ref={bar}
       role="tablist"
       aria-label={ariaLabel}
-      className={cn("-mb-px flex overflow-x-auto", fill ? "gap-2" : "gap-5", className)}
+      className={cn("relative -mb-px flex overflow-x-auto", fill ? "gap-2" : "gap-5", className)}
     >
       {options.map((opt) => {
         const active = opt.value === value;
@@ -89,7 +128,7 @@ export function FilterTabs<T extends string>({
               // it says and never squeezed by a neighbour.
               fill ? "flex-1 justify-center" : "shrink-0",
               active
-                ? "border-accent text-foreground"
+                ? "border-transparent text-foreground"
                 : "border-transparent text-muted hover:border-border hover:text-foreground",
             )}
           >
@@ -107,6 +146,12 @@ export function FilterTabs<T extends string>({
           </button>
         );
       })}
+      {/* Last, so it is not one of the tabs `children[index]` counts. */}
+      <span
+        ref={line}
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-accent opacity-0 motion-safe:transition-[transform,width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]"
+      />
     </div>
   );
 }

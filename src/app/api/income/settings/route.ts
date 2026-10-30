@@ -14,6 +14,11 @@ export async function PATCH(req: Request) {
   if (!parsed.ok) return parsed.res;
   const data = parsed.data;
 
+  if (data.incomeFallbackIncomeId) {
+    const income = await prisma.resultUnitIncome.findUnique({ where: { id: data.incomeFallbackIncomeId } });
+    if (!income) return fail(422, "income.committeeNotFound");
+  }
+
   if (data.zettleFeeCostCenterId) {
     const cc = await prisma.costCenter.findUnique({ where: { id: data.zettleFeeCostCenterId } });
     if (!cc) return fail(422, "income.unknownCostCenter");

@@ -64,6 +64,7 @@ const AREA_OF: Record<Capability, Area> = {
   ATTEST_VIEW: "expenses",
   EXPENSE_DEADLINE_WAIVE: "expenses",
   SEND_REMINDERS: "expenses",
+  MEMBER_SCORE_VIEW: "expenses",
   BOOKKEEPING: "bookkeeping",
   BOOKKEEPING_VIEW: "bookkeeping",
   AUDIT_REVIEW: "bookkeeping",

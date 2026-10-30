@@ -43,7 +43,7 @@ interface SettingsSection {
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/admin/fortnox", label: "fortnox", blurb: "fortnox", icon: IconFortnox },
   { href: "/admin/cost-centers", label: "costCenters", blurb: "costCenters", icon: IconChart },
-  { href: "/admin/income", label: "income", blurb: "income", icon: IconIncome },
+  { href: "/admin/income", label: "salesSettings", blurb: "income", icon: IconIncome },
   { href: "/admin/result-units", label: "resultUnits", blurb: "resultUnits", icon: IconHierarchy },
   { href: "/admin/cards", label: "cards", blurb: "cards", icon: IconCard },
   { href: "/admin/mileage", label: "mileageRates", blurb: "mileageRates", icon: IconCar },

@@ -46,9 +46,10 @@ interface IntaktConfig {
   swish_amount_fallbacks?: Record<string, string>;
 }
 
-// Which prefix catches products matching nothing. intakt hard-coded this to
-// "sk". See the `fallback` in report/purchases.go. So that is what the import
-// carries across, and it becomes an editable flag rather than a constant.
+// Which prefix caught products matching nothing. intakt hard-coded this to
+// "sk" (fallbackPrefix in its config/config.go), so the import carries that
+// prefix's verksamhet and account across as the reserv setting, which is what
+// the app routes unmatched sales by now.
 const FALLBACK_PREFIX = "sk";
 
 function fail(message: string): never {
@@ -161,11 +162,6 @@ async function main() {
     incomeIdByKey.set(key, income.id);
   }
 
-  // The fallback flag is guarded by a partial unique index, so two rows can
-  // never claim it. Clearing it first keeps a re-run from colliding with the
-  // row that already holds it.
-  await prisma.incomeProductPrefix.updateMany({ where: { isFallback: true }, data: { isFallback: false } });
-
   for (const [code, prefix] of Object.entries(prefixes)) {
     const incomeId = incomeIdByKey.get(prefix.name);
     if (!incomeId) fail(`Verksamhet "${prefix.name}" was not imported, this should not happen.`);
@@ -173,18 +169,18 @@ async function main() {
     const normalised = code.trim().toLowerCase();
     await prisma.incomeProductPrefix.upsert({
       where: { code: normalised },
-      create: {
-        code: normalised,
-        incomeId,
-        account: String(prefix.account),
-        isFallback: normalised === FALLBACK_PREFIX,
-      },
-      update: {
-        incomeId,
-        account: String(prefix.account),
-        isFallback: normalised === FALLBACK_PREFIX,
-      },
+      create: { code: normalised, incomeId, account: String(prefix.account) },
+      update: { incomeId, account: String(prefix.account) },
     });
+
+    if (normalised === FALLBACK_PREFIX) {
+      const reserv = { incomeFallbackIncomeId: incomeId, incomeFallbackAccount: String(prefix.account) };
+      await prisma.bookkeepingSettings.upsert({
+        where: { id: "singleton" },
+        create: { id: "singleton", ...reserv },
+        update: reserv,
+      });
+    }
   }
 
   const fallbacks = cfg.swish_amount_fallbacks ?? {};

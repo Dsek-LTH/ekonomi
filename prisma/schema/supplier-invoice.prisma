@@ -16,26 +16,32 @@
 
 /// Where an invoice is. The path through it is
 ///
-///   ASSIGNED → APPROVED → EXPORTED
+///   APPROVED → BOOKED → EXPORTED
 ///
-/// Every invoice is born belonging to a result unit. Anything nobody has yet
-/// said is whose is not an invoice at all but a document in the Inkorg (see
-/// SupplierInvoiceDocument), and an invoice sent back there stops being one:
-/// its documents return to the Inkorg and the invoice goes.
+/// An invoice is born when its unit fördelar it. Until then it is a document
+/// in the Inkorg (see SupplierInvoiceDocument), given to a unit or not yet,
+/// and an invoice sent back there stops being one: its documents return to
+/// the Inkorg and the invoice goes.
 ///
-/// The resultatansvarig konterar and attests in one step: picking the cost
-/// centre and pressing Attestera is both. PENDING_APPROVAL is only for an
-/// invoice split with another unit, waiting for that unit's signature, and
-/// CHANGES_REQUESTED is the way back with a comment.
+/// The fördelning (which cost centres, how much each) signs the unit's own
+/// rows in the same step, so an invoice with only the unit's rows is born
+/// APPROVED. PENDING_APPROVAL is for one split with another unit, waiting for
+/// that unit's signature, and CHANGES_REQUESTED is the way back with a
+/// comment. The treasury then konterar it (BOOKED) and sends it to Fortnox as
+/// a separate act, the way an utlägg is.
 enum SupplierInvoiceStatus {
-  /// Given to a result unit, whose resultatansvarig attests it.
+  /// Waiting for its unit to fördela it again: the split reopened, or the
+  /// last signature on it taken back. Never where an invoice starts.
   ASSIGNED
   /// Attested for some of its rows, waiting for another unit to sign the rest.
   PENDING_APPROVAL
   /// Sent back with a comment, to be attested again.
   CHANGES_REQUESTED
-  /// Every row attested. The treasurer completes it and exports it.
+  /// Every row attested. The treasurer konterar it.
   APPROVED
+  /// Konterad: supplier, invoice facts and an account on every row, checked
+  /// and saved. Waiting to be sent to Fortnox.
+  BOOKED
   /// Created in Fortnox as an unbooked supplier invoice. Booking it and paying
   /// it happen there.
   EXPORTED
@@ -53,6 +59,8 @@ enum SupplierInvoiceEventType {
   RECEIVED
   EDITED
   DOCUMENT_UPLOADED
+  /// A document taken off and put back in the Inkorg. No longer written: the
+  /// underlag stays on its invoice. Kept for the history that has it.
   DOCUMENT_REMOVED
   /// Given to a result unit, or moved from one to another. `diff` is
   /// `{ from: string | null, to: string }`, the unit names as they were then.
@@ -64,8 +72,9 @@ enum SupplierInvoiceEventType {
   CHANGES_REQUESTED
   /// The last row signed.
   APPROVED
-  /// A document from the Inkorg added to it. Its counterpart, a document
-  /// taken off, is DOCUMENT_REMOVED, and the document goes back to the Inkorg.
+  /// Konterad by the treasury, ready to be sent to Fortnox.
+  BOOKED
+  /// A document from the Inkorg added to it.
   DOCUMENT_ATTACHED
   /// Created in Fortnox. `comment` is the GivenNumber Fortnox gave it.
   EXPORTED
@@ -75,9 +84,15 @@ enum SupplierInvoiceEventType {
 }
 
 model SupplierInvoice {
-  id     String                @id @default(cuid())
-  status SupplierInvoiceStatus @default(ASSIGNED)
-  source SupplierInvoiceSource
+  id        String                @id @default(cuid())
+  /// Human-readable, "LEV26-0012", a series of its own beside the utlägg's
+  /// DEK26-0042 (lib/domain/reference.ts). Taken when the invoice is made,
+  /// which is when its unit fördelar it: a document that never got that far
+  /// never had a number. Null only on invoices from before the numbering, until the
+  /// migration gave them one. Pages and routes are keyed on `id`.
+  reference String?               @unique
+  status    SupplierInvoiceStatus
+  source    SupplierInvoiceSource
 
   /// Who put it here: the uploader, or the member whose mail it came from.
   receivedBy   User?   @relation("SupplierInvoiceReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
@@ -101,6 +116,10 @@ model SupplierInvoice {
   invoiceDate   DateTime? @db.Date
   dueDate       DateTime? @db.Date
   amount        Int? // öre
+  /// Öresutjämning, öre, signed: what the invoice's lines came to less the
+  /// amount to pay, rounded away. Booked on its own account at the export
+  /// (bookedShares in lib/domain/supplier-invoice.ts). Under a krona.
+  rounding      Int?
   currency      String    @default("SEK")
   ocr           String?
   bankgiro      String?
@@ -108,6 +127,9 @@ model SupplierInvoice {
   /// "Er referens" as printed: a name, or the cost centre code a supplier was
   /// asked to put there. Read for the automatic assignment as well as shown.
   yourReference String?
+  /// "Vår referens": who at the section the invoice concerns, written by the
+  /// treasurer at the booking and sent to Fortnox as OurReference.
+  ourReference  String?
 
   /// Which of the fields above were read from the PDF's text rather than
   /// typed, so the page can say so and the treasurer knows what to check.
@@ -140,11 +162,11 @@ model SupplierInvoice {
   // The result unit answering for it, which is who konterar it. Not who attests
   // it. That is still decided per allocation from the cost centre's code, the
   // same as an utlägg, so an invoice split with another unit is signed for by
-  // both. Null in the inkorg.
+  // both. The unit its document was given to, carried over when it was made.
   resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
   resultUnitId String?
-  /// Null when it was given to a unit automatically, from what the forwarded
-  /// mail said. The ASSIGNED event's `diff.auto` says why.
+  /// Who gave its document to the unit, carried over from the document. Null
+  /// when it was given automatically, from what the forwarded mail said.
   assignedBy   User?       @relation("SupplierInvoiceAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
   assignedById String?
   assignedAt   DateTime?
@@ -155,6 +177,7 @@ model SupplierInvoice {
   inboundMailId String?
 
   allocations SupplierInvoiceAllocation[]
+  lines       SupplierInvoiceLine[]
   documents   SupplierInvoiceDocument[]
   events      SupplierInvoiceEvent[]
 
@@ -182,11 +205,11 @@ model SupplierInvoiceAllocation {
   invoiceId    String
   costCenter   CostCenter      @relation(fields: [costCenterId], references: [id])
   costCenterId String
-  /// BAS account number, e.g. "5410". A plain number like VerificationLine's,
-  /// not a relation: Fortnox retires accounts, and a row must outlive that.
-  /// Null until the treasurer sets it.
+  /// BAS account number, as the treasurer set it on the row before the
+  /// kontering had lines of its own. No longer written: the accounts are on
+  /// SupplierInvoiceLine, and the migration that made it copied these there.
   account      String?
-  /// Fortnox project number, or null. See Project.
+  /// Fortnox project number. No longer written, for the same reason.
   project      String?
   /// Öre. Null on an invoice with one row, which is the whole of it, whatever
   /// the amount turns out to be. A split names every row's share, and is the
@@ -207,14 +230,51 @@ model SupplierInvoiceAllocation {
   @@index([costCenterId])
 }
 
+/// One line of the treasury's kontering of a levfaktura, as an utlägg's
+/// verifikation has lines: what is sent to Fortnox as the supplier invoice's
+/// rows. Free, the way any voucher is: the treasurer may add rows, move them,
+/// and put a project or a cost centre on any of them. The attested split
+/// (SupplierInvoiceAllocation) is what the lines start out from, and stays as
+/// the record of what each unit signed for. The leverantörsskuld and the
+/// öresutjämning are not lines: they follow from the invoice's amount and its
+/// rounding, and are added at the export.
+///
+/// Replaced whole each time the kontering is saved, and dropped when the unit
+/// fördelar the invoice again, since they were made from a split that is gone.
+model SupplierInvoiceLine {
+  id        String          @id @default(cuid())
+  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+  position  Int
+  /// BAS account number, "5410". Plain, like VerificationLine.account.
+  account        String
+  /// The cost centre's code, as Fortnox knows it. Null for none.
+  costCenterCode String?
+  /// Fortnox project number, or null.
+  project        String?
+  /// Fortnox's TransactionInformation for the row.
+  description    String?
+  /// Öre. One side or the other, never both.
+  debit          Int     @default(0)
+  credit         Int     @default(0)
+
+  @@index([invoiceId])
+}
+
 /// A file that is, or may become, part of a levfaktura: usually its PDF,
 /// sometimes a specification that only makes sense beside it.
 ///
 /// With no invoice it is in the Inkorg. Everything that arrives lands there
-/// first (forwarded mail, a hand upload), and triage makes an invoice from it,
-/// adds it to one, or deletes it. Taking a document off an invoice puts it back
-/// there, and so does deleting the invoice: a file is only ever thrown away
-/// from the Inkorg, by somebody who has looked at it.
+/// first (forwarded mail, a hand upload), and triage gives it to a result
+/// unit or deletes it. Given to a unit, it is in that unit's Inkorg, and the
+/// unit fördelar it, which is what makes the invoice, or says it is not
+/// theirs, which puts it back with triage. Once on an invoice it stays there,
+/// since it is what the invoice is attested and booked on. It goes back to the
+/// Inkorg only with the whole invoice, when that is sent back: a file is only
+/// ever thrown away from the Inkorg, by somebody who has looked at it.
+///
+/// Only who it was given to is kept here, not a history. The history is the
+/// invoice's, and starts when there is one.
 model SupplierInvoiceDocument {
   id        String           @id @default(cuid())
   invoice   SupplierInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
@@ -225,10 +285,23 @@ model SupplierInvoiceDocument {
   inboundMail   InboundMail? @relation(fields: [inboundMailId], references: [id], onDelete: SetNull)
   inboundMailId String?
 
-  /// For a document back in the Inkorg from an invoice: which unit it came
-  /// back from, and why, as whoever sent it back wrote it ("Det här är
-  /// Caféets"). The invoice it was on is gone, so this is where the reason
-  /// lives. Cleared when it is made into an invoice again.
+  /// The unit whose Inkorg it is in, while it is in one: given by triage, or
+  /// automatically from what the forwarded mail said. Null while it waits for
+  /// triage. Cleared once it is on an invoice, which has a unit of its own.
+  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
+  resultUnitId String?
+  /// Who gave it to the unit. Null when it was given automatically.
+  assignedBy   User?       @relation("SupplierInvoiceDocumentAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById String?
+  assignedAt   DateTime?
+  /// When it is due, as triage read it off the PDF when giving it to the
+  /// unit, so the unit can tell what is urgent before it opens anything. Only
+  /// offered: the unit's fördelning says the due date the invoice is made with.
+  dueDate      DateTime?   @db.Date
+
+  /// For a document back with triage: which unit it came back from, and why,
+  /// as whoever sent it back wrote it ("Det här är Caféets"). Cleared when it
+  /// is given to a unit again.
   returnedFrom String?
   returnNote   String?
 
@@ -236,6 +309,14 @@ model SupplierInvoiceDocument {
   filename  String
   mimeType  String
   byteSize  Int?
+
+  /// What the PDF's text layer says (lib/domain/invoice-text.ts), read once
+  /// when its unit opens the fördelning and kept, so it is never read twice.
+  /// Nothing is read on arrival: the Inkorg shows the file, who sent it and
+  /// when, and nothing interpreted. An InvoiceTextFields, `{}` when nothing was
+  /// found (a scan, a photo). Null until read.
+  scan      Json?
+  scannedAt DateTime?
 
   uploadedBy   User?   @relation("SupplierInvoiceDocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   uploadedById String?
@@ -246,6 +327,7 @@ model SupplierInvoiceDocument {
 
   @@index([invoiceId, createdAt])
   @@index([inboundMailId])
+  @@index([resultUnitId])
 }
 
 model SupplierInvoiceEvent {
@@ -263,4 +345,25 @@ model SupplierInvoiceEvent {
   createdAt DateTime @default(now())
 
   @@index([invoiceId])
+}
+
+/// Fortnox's supplier register, as it was last read: what a document in the
+/// Inkorg is matched against, by org number or giro, to say who sent it.
+///
+/// A copy because the register is only readable through the treasurer's own
+/// login (the service account has no `supplier` scope), and a document arrives
+/// by mail with nobody logged in. Refreshed every time the treasurer's export
+/// step reads the register, and when a supplier is added from there, so it is
+/// as fresh as the last invoice exported. Nothing is decided on it: the export
+/// reads the register itself.
+model Supplier {
+  /// Fortnox's SupplierNumber.
+  number   String  @id
+  name     String
+  orgNo    String?
+  bankgiro String?
+  plusgiro String?
+  active   Boolean @default(true)
+
+  syncedAt DateTime @default(now())
 }

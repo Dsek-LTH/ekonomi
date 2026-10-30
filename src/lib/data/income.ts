@@ -39,7 +39,7 @@ export interface IncomeReportRow {
    * day's own unit out of the destinations it offers.
    */
   resultUnitId: string | null;
-  /** The verksamhet's income key, as intakt files its reports under. */
+  /** The verksamhet's income key, which its reports are grouped by. */
   unitKey: string | null;
   /** What the day is called on screen: the result unit's name. */
   unitName: string | null;
@@ -91,6 +91,9 @@ export interface IncomeReportRow {
    * different address, so what comes back is the corrected PDF.
    */
   updatedAt: string;
+  /** Who approved the day, and when. Null until it is booked. */
+  reviewedByName: string | null;
+  reviewedAt: string | null;
   lines: IncomeLineRow[];
 }
 
@@ -114,6 +117,7 @@ const REPORT_INCLUDE = {
     },
   },
   costCenter: { select: { id: true, code: true } },
+  reviewedBy: { select: { name: true } },
   lines: { orderBy: { sortOrder: "asc" } },
   verification: { select: { fortnoxSeries: true, fortnoxNumber: true } },
   duplicateOf: {
@@ -158,6 +162,8 @@ function reportRow(r: LoadedReport): IncomeReportRow {
     },
     batchId: r.batchId,
     importedAt: r.createdAt.toISOString(),
+    reviewedByName: r.reviewedBy?.name ?? null,
+    reviewedAt: r.reviewedAt?.toISOString() ?? null,
     updatedAt: r.updatedAt.toISOString(),
     lines: r.lines.map((l) => ({
       id: l.id,
@@ -181,8 +187,8 @@ function reportRow(r: LoadedReport): IncomeReportRow {
  * thing to "where does this unit's money normally go" the routing table holds.
  * They are offered first in the picker rather than imposed: a unit that sells
  * beer and food has two, and which one a mis-sold line belongs to is not
- * recoverable from the line. intakt strips the prefix off the product name
- * when it routes, so a line in the fallback never carried one.
+ * recoverable from the line. The routing strips the prefix off the product
+ * name, so a line in the reserv never carried one.
  */
 export interface IncomeMoveTarget {
   resultUnitId: string;
@@ -194,9 +200,9 @@ export interface IncomeMoveTarget {
 /**
  * Every verksamhet still taking money in, as move destinations.
  *
- * Inactive ones are left out for the same reason `buildIntaktConfig` drops
- * them: they are not in the routing table sent to the service, so a report
- * under one could not be rendered.
+ * Inactive ones are left out for the same reason the routing drops them
+ * (lib/income/config.ts): a verksamhet that has stopped selling takes no new
+ * takings.
  */
 export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
   const [units, accounts] = await Promise.all([
@@ -245,6 +251,12 @@ export interface IncomeReviewQueue {
   batch: { id: string; source: IncomeSource; fromDate: string; toDate: string } | null;
   /** Everything unbooked, oldest day first. */
   reports: IncomeReportRow[];
+  /**
+   * How many of the fetch's days have been reviewed and booked already. With
+   * `reports`, what the progress through it is counted from: every day is
+   * reviewed one at a time, so how far along you are is worth saying.
+   */
+  reviewed: number;
 }
 
 /**
@@ -268,6 +280,10 @@ export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
     }),
   ]);
 
+  const reviewed = batch
+    ? await prisma.incomeReport.count({ where: { batchId: batch.id, status: { not: "DRAFT" } } })
+    : 0;
+
   return {
     batch: batch && {
       id: batch.id,
@@ -276,6 +292,7 @@ export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
       toDate: isoDate(batch.toDate),
     },
     reports: reports.map(reportRow),
+    reviewed,
   };
 }
 

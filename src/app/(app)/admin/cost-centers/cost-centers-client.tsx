@@ -241,7 +241,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
             aria-label={t("editShortName", { code: c.code })}
             className="group/short inline-flex max-w-full items-center gap-1.5 rounded-control text-left hover:underline"
           >
-            <span className={cn("truncate", !c.shortName && "text-faint")}>
+            <span className={cn("truncate", !c.shortName && "text-muted")}>
               {c.shortName ?? t("shortNameNone")}
             </span>
             <IconPencil

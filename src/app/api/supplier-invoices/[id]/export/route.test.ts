@@ -39,7 +39,7 @@ vi.mock("@/lib/server/db", () => {
       supplierInvoice: {
         findFirst: async () => ({
           id: "inv1",
-          status: "APPROVED",
+          status: "BOOKED",
           resultUnitId: "unit-sex",
           resultUnit: { name: "Sexmästeriet" },
           supplierName: "Lunds Släp AB",
@@ -68,6 +68,17 @@ vi.mock("@/lib/server/db", () => {
               costCenter: { code: "SEX01", name: "Sexmästeriet" },
             },
           ],
+          lines: [
+            {
+              account: "5615",
+              costCenterCode: "SEX01",
+              project: null,
+              description: "Släp",
+              debit: 125000,
+              credit: 0,
+            },
+          ],
+          rounding: null,
           ...h.invoice,
         }),
         updateMany,
@@ -158,7 +169,7 @@ describe("export", () => {
       dueDate: "2026-11-10",
       total: 1250,
       payableAccount: 2440,
-      rows: [{ account: 5615, amount: 1250, costCenter: "SEX01" }],
+      rows: [{ account: 5615, debit: 1250, credit: 0, costCenter: "SEX01", text: "Släp" }],
     });
     expect(states()).toEqual(["CLAIMED", "SENT", "DONE"]);
     expect(h.connect).toHaveBeenCalledWith("t", "file-1", "4711");

@@ -97,7 +97,15 @@ export async function reopenIncomeReport(id: string): Promise<LifecycleResult> {
   await prisma.$transaction(async (tx) => {
     await tx.incomeReport.updateMany({
       where: { id, status: "BOOKED" },
-      data: { status: "DRAFT", documentKey: null, documentFilename: null },
+      // Unreviewed again too: whatever is changed before it is booked anew is
+      // reviewed then, by whoever books it.
+      data: {
+        status: "DRAFT",
+        documentKey: null,
+        documentFilename: null,
+        reviewedById: null,
+        reviewedAt: null,
+      },
     });
     await tx.verification.deleteMany({ where: { incomeReportId: id } });
   });

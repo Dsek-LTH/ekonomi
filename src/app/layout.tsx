@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
@@ -42,40 +43,33 @@ export async function generateViewport(): Promise<Viewport> {
   };
 }
 
+// Self-hosted at build time by next/font, so no request leaves for Google at
+// runtime. Exposed as a variable rather than a class: --font-sans in
+// globals.css puts it first and keeps the system stack behind it.
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+
 /** `--color-canvas` in both themes. The one pair of values that has to exist
  *  outside globals.css, because a <meta> tag cannot read a custom property. */
-const CANVAS = { light: "#fafafa", dark: "#17171a" } as const;
+const CANVAS = { light: "#f4f4f5", dark: "#17171a" } as const;
 
 // The visual direction, recorded where the built output can be audited against
 // it. Survives the production build on purpose. Grep the emitted HTML for
 // "seed aab31d9b" to confirm the contract is still shipping.
 //
 // Every hex in it is a token in app/globals.css and has to keep saying what the
-// token says. All four had drifted: the pink had moved to #e85d86 and the text
-// pink to #c93663 without this being touched, and the violet was described as
-// the authority chain when it has only ever marked a budget's standing. A
-// contract whose whole job is to be audited against cannot be audited against
-// when it is the thing that is wrong, so it is now the tokens that are the
-// record and this that follows them.
-//
-// The label is one the contract and the build genuinely disagreed about, and
-// the build won on purpose: white was preferred to the near-black this asked
-// for. The reasoning and the contrast it costs are in globals.css under Brand,
-// which is where a decision like that belongs. This only records the outcome.
+// token says. The tokens are the record and this follows them.
 const DIRECTION_CONTRACT = `<!--
-THESIS: A section's money app that looks like it belongs to the section. It refuses
-the two defaults on either side: generic dashboard-blue, and a themed toy. Colour is
-a system with jobs, not a skin.
-OWN-WORLD: D-sektionen's pink #e85d86 as a FILL with a white label in both themes
-(near-black in print, where the fill is the lighter #f280a1); the same hue darkened
-to #c93663 whenever it has to be read as text;
-#8b5fc7 for a budget's standing (locked, adopted); a near-black ground carrying the
-violet, cards raised by fill in dark and by hairline plus a soft offset shadow in
-light; system sans, tabular figures on every number.
-STORY: An ordinarie sees one pink thing per screen and it is the way forward.
+THESIS: A section's money app that reads as a finance tool. It refuses the two
+defaults on either side: generic dashboard-blue, and a themed toy. Colour is a system
+with jobs, not a skin.
+OWN-WORLD: ink #18181b as the one action fill with a white label (inverted in dark);
+D-sektionen's pink kept for the mark and the first chart series (#c93663);
+#8b5fc7 for a budget's standing (locked, adopted); cards drawn by hairline alone;
+Inter, tabular figures on every number.
+STORY: An ordinarie sees one filled button per screen and it is the way forward.
 Skattmästeriet sees status in colours that never lie and columns of digits that line up.
-FIRST VIEWPORT: Sidebar with the section mark, page title, the primary action as the
-only pink fill on the screen, dense table below with amounts right-aligned and tabular.
+FIRST VIEWPORT: Header with the section mark, page title, the primary action as the
+only filled button on the screen, dense table below with amounts right-aligned and tabular.
 FORM: the category standard, taken as the standing exit over assigned direction 6
 (Inbetalningskortet); mode operate, seed aab31d9b.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
@@ -107,7 +101,7 @@ export default async function RootLayout({
     // of them was a hydration error in dev. It covers this element's own
     // attributes and nothing below it. The theme class is rendered here from the
     // cookie, so there is no difference of our own for it to hide.
-    <html lang={locale} className={cn("h-full", theme)} suppressHydrationWarning>
+    <html lang={locale} className={cn("h-full", inter.variable, theme)} suppressHydrationWarning>
       <body className="min-h-full">
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <NextIntlClientProvider locale={locale} messages={messages}>

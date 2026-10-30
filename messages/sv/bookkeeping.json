@@ -2,7 +2,6 @@
   "title": "Bokföring",
   "book": "Kontera",
   "connectFirst": "Anslut Fortnox först",
-  "loginFirst": "Logga in mot Fortnox för att bokföra",
   "exportFailed": "{id}: bokföringen misslyckades",
   "exportDone": "{id}: bokförd i Fortnox ({label})",
   "voucherLabel": "Verifikat {label}",
@@ -33,19 +32,8 @@
     "released": "Låset är släppt. Utlägget kan bokföras igen."
   },
   "review": {
-    "title": "Granska och bokför",
-    "position": "{position} av {total} - {label}",
     "open": "Granska",
-    "start": "Granska ({count})",
-    "emptyTitle": "Inget att granska",
-    "emptyDescription": "Alla konterade utlägg är bokförda.",
-    "emptyWaitingOnOthers": "{count, plural, =1 {Ett utlägg som du har konterat väntar} other {# utlägg som du har konterat väntar}} på att någon annan granskar.",
-    "toList": "Till bokföringen",
     "ownBooking": "Du har konterat utlägget själv, så någon annan behöver granska och bokföra det.",
-    "bokfor": "Bokför",
-    "bokforNext": "Bokför och nästa",
-    "edit": "Ändra kontering",
-    "skip": "Hoppa över",
     "warningsTitle": "Värt att titta på innan du bokför",
     "warning": {
       "outsideFinancialYear": "Verifikationsdatumet ligger utanför de räkenskapsår som är hämtade från Fortnox.",
@@ -53,7 +41,6 @@
       "inactiveAccount": "Ett konto på verifikationen är inaktivt i Fortnox.",
       "inactiveCostCenter": "Ett kostnadsställe på verifikationen är inaktivt.",
       "inactiveProject": "Ett projekt på verifikationen är avslutat i Fortnox."
-    },
-    "shortcuts": "Enter bokför, E ändrar konteringen och → hoppar över."
+    }
   }
 }

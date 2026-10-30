@@ -1,6 +1,6 @@
 "use client";
 
-// The three self-contained cards of the review screen's middle column.
+// The self-contained cards of the review screen's middle column.
 //
 // None of them knows anything about the queue beside it or the sales table
 // under it. Each is one report and what may be done to it, so each takes what
@@ -23,36 +23,51 @@ import type { VoucherDraft } from "./voucher-draft";
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
- * That this day may already have been booked, here as well as in the list,
- * because this is where the decision to book it is actually made.
+ * What to check on this day before approving it.
  *
- * Two separate facts and both are shown: this database holding the verifikation
- * is a different thing from Fortnox holding one for the same source, verksamhet
- * and day. Renders nothing when neither is true.
+ * Every day is reviewed one at a time against its intäktsräkning, so the
+ * review should start with whatever about this one is out of the ordinary:
+ * that it may already be booked, here or in Fortnox, that it holds the sales
+ * the routing could not place, that it has no cost centre, or that its voucher
+ * was changed by hand. Each said once, in words, where the decision is made.
+ *
+ * A day with none of those still says so, rather than showing nothing. "Nothing
+ * stood out" is itself what the reviewer is being asked to confirm against the
+ * document beside it.
  */
-export function AlreadyBookedNotice({
+export function ReviewFindings({
   report,
+  isFallback,
+  noCostCentre,
+  edited,
   t,
 }: {
   report: IncomeReportRow;
+  /** The day belongs to the reserv, where unplaced sales go. */
+  isFallback: boolean;
+  noCostCentre: boolean;
+  edited: boolean;
   t: Translator;
 }) {
-  if (!report.duplicateOf && !report.existingVoucher) return null;
-  return (
-    <Notice>
-      {report.duplicateOf && (
-        <p>
-          {t("review.alreadyBookedWarning")}{" "}
-          {report.duplicateOf.voucherLabel && (
-            <span className="tabular-nums">{report.duplicateOf.voucherLabel}</span>
-          )}
-        </p>
-      )}
-      {report.existingVoucher && (
-        <p>{t("review.inFortnoxWarning", { voucher: report.existingVoucher })}</p>
-      )}
-    </Notice>
-  );
+  const findings = [
+    report.duplicateOf && (
+      <p key="duplicate">
+        {t("review.alreadyBookedWarning")}{" "}
+        {report.duplicateOf.voucherLabel && (
+          <span className="tabular-nums">{report.duplicateOf.voucherLabel}</span>
+        )}
+      </p>
+    ),
+    report.existingVoucher && (
+      <p key="fortnox">{t("review.inFortnoxWarning", { voucher: report.existingVoucher })}</p>
+    ),
+    isFallback && report.lines.length > 0 && <p key="fallback">{t("review.findings.fallback")}</p>,
+    noCostCentre && <p key="costCentre">{t("review.findings.noCostCentre")}</p>,
+    edited && <p key="edited">{t("review.findings.edited")}</p>,
+  ].filter(Boolean);
+
+  if (findings.length === 0) return <Notice tone="info">{t("review.findings.none")}</Notice>;
+  return <Notice>{findings}</Notice>;
 }
 
 /**
@@ -89,7 +104,8 @@ export function EmptyReportCard({
 }
 
 /**
- * The voucher this day will be posted as, and the button that posts it.
+ * The voucher this day will be posted as, and the button that approves and
+ * posts it.
  *
  * The header no longer repeats the verksamhet or the date. Those are the two
  * cards above it, the picker that sets the one and the locked field that states
@@ -102,6 +118,7 @@ export function VoucherCard({
   onRows,
   onBook,
   booking,
+  reviewerName,
   t,
 }: {
   voucher: VoucherDraft;
@@ -110,12 +127,12 @@ export function VoucherCard({
   onRows: (rows: VoucherEditorRow[]) => void;
   onBook: () => void;
   booking: boolean;
+  /** Who approving records as the reviewer, and the document as attesting. */
+  reviewerName: string;
   t: Translator;
 }) {
   return (
     <Card className="overflow-hidden">
-      <CardHeader title={t("book.title")} />
-
       <VoucherEditor
         rows={voucher.rows}
         onChange={onRows}
@@ -135,13 +152,23 @@ export function VoucherCard({
       )}
 
       <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-        <BalanceChip balanced={voucher.balanced} difference={formatSEK(voucher.difference)} />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <BalanceChip balanced={voucher.balanced} difference={formatSEK(voucher.difference)} />
+          {/* Approving puts a name on the day and on its document, so the
+              name is said beside the button that does it. */}
+          <span className="text-xs text-muted">{t("review.approvedAs", { name: reviewerName })}</span>
+        </div>
         <div className="flex items-center gap-2.5">
           {/* Why the button is dead: an empty row leaves a balanced voucher
               that still cannot be booked, and without this nothing on the
               screen would admit why. */}
           <VoucherBlockerChip blocker={voucher.blocker} />
-          <Button onClick={onBook} loading={booking} disabled={!voucher.canBook}>
+          <Button
+            onClick={onBook}
+            loading={booking}
+            disabled={!voucher.canBook}
+            title={t("review.approveShortcut")}
+          >
             {t("actions.bookAndNext")}
           </Button>
         </div>

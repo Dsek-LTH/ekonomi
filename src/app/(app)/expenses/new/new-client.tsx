@@ -20,6 +20,8 @@ import {
   submitBlocker,
 } from "@/lib/domain/status";
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
+import { useFiscalYear } from "@/components/shell/fiscal-year-context";
+import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go.
@@ -106,6 +108,8 @@ export default function NewExpenseClient({
   const t = useTranslations("expenses.wizard");
   const phone = usePhone();
   const tReceipt = useTranslations("receipt");
+  const tCommon = useTranslations("common");
+  const fiscalYear = useFiscalYear();
   const { date } = useFormat();
   // The description opens focused. See the field on the first step.
   const selectOnce = useSelectOnce();
@@ -519,6 +523,11 @@ export default function NewExpenseClient({
   // Nothing has been bought tomorrow. Almost always a mistyped year, so it's
   // pointed at here rather than left for the server to refuse on save.
   const dateInFuture = isFutureDate(form.purchaseDate);
+  // Outside the year picked in the header, where the utlägg would be missing
+  // from the list it was made from. Not for a date the utlägg already had,
+  // which the route lets stand as well.
+  const dateOutsideYear =
+    form.purchaseDate !== (existing?.purchaseDate ?? "") && outsideFiscalYear(fiscalYear, form.purchaseDate);
   // Past the 60-day deadline for an eget utlägg. Depends on the payment type,
   // which is picked further down this same step, so switching to "Eget utlägg"
   // lights this up on an old receipt then and there.
@@ -583,6 +592,7 @@ export default function NewExpenseClient({
     form.title.trim() !== "" &&
     !dateIncomplete &&
     !dateInFuture &&
+    !dateOutsideYear &&
     hasReceipt &&
     !saving;
   // Everything required to send for attest (complete details + match/payout);
@@ -930,7 +940,9 @@ export default function NewExpenseClient({
                   ? t("dateIncomplete")
                   : dateInFuture
                     ? t("dateFuture")
-                    : undefined
+                    : dateOutsideYear
+                      ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                      : undefined
               }
               // A hint rather than an error: the date is a real day and the
               // form accepts it. What it cannot do is be sent without a
@@ -939,6 +951,8 @@ export default function NewExpenseClient({
               hint={dateTooLate ? tooLateHint : undefined}
             >
               <DateInput
+                min={fiscalYear?.fromDate}
+                max={fiscalYear?.toDate}
                 value={form.purchaseDate}
                 onChange={(e) =>
                   setForm({ ...form, purchaseDate: e.target.value })
@@ -983,7 +997,7 @@ export default function NewExpenseClient({
                     <Link
                       href={`/expenses/${d.id}`}
                       target="_blank"
-                      className="font-medium text-accent hover:underline"
+                      className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                     >
                       {d.reference ? `${d.reference} - ` : ""}
                       {d.title || t("duplicateUntitled")}

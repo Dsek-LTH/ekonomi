@@ -51,7 +51,7 @@ export function LoginClient({
 
         <button
           onClick={() => signIn("authentik", { callbackUrl })}
-          className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-control border border-border bg-background text-sm font-medium transition-colors hover:bg-hover"
+          className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-control border border-border-control bg-background text-sm font-medium transition-colors hover:bg-hover"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="" aria-hidden className="h-5 w-auto" />
@@ -70,7 +70,7 @@ export function LoginClient({
                   onClick={() =>
                     signIn("dev", { studentId: u.studentId, callbackUrl })
                   }
-                  className="flex h-11 w-full items-center rounded-control border border-border bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-9"
+                  className="flex h-11 w-full items-center rounded-control border border-border-control bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-8"
                 >
                   {u.name} - {u.roles.map((r) => tRole(r)).join(", ")}
                 </button>

@@ -1,9 +1,4 @@
-Make fiscal year selector smaller
-Bug with fiscal year and the inkorg upload. That should not be fiscal year dependant.
-With fiscal years, make sure people can only create stuff in their selected fiscal year.
-Improve empty states, ie not utlägg in the list or no faktura exists. perhaps with a large icon and helpful text to check scope settings?
-Go over light mode so its easier on the eyes and increase contrast
-Review action buttons for utlägg. Currently the granska button shows for all page tabs, even though its only relevant for att kontera
+When one receipt is already selected you cant drop another one onto it
 Get intäkter up an running
 Finish implemntation of bokslut page:
 * Revisor should be able to granska all utlägg
@@ -22,7 +17,8 @@ Simplify the överblick page (way too much noise and numbers currently), perhaps
 Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
 View kvitto button is ugly
 Revise milersättnings view so it reflects design in utlägg view.
-Fix deadspace in header at utfall & rapporter. 
 Make utfall & rapporter intuitive to use. Perhaps a guide?
 Add fun stats such as total spent, how many utlägg done etc
 Add a score system based on how long it takes for people to upload their receipts and other metrics
+wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better
+Check that program uses our own components

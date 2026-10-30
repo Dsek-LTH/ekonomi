@@ -64,7 +64,7 @@
   "cancel": "Avbryt",
   "confirm": "Bekräfta",
   "loading": "Laddar…",
-  "datePlaceholder": "ÅÅÅÅ-MM-DD",
+  "datePlaceholder": "åååå-mm-dd",
   "openDatePicker": "Välj datum i kalender",
   "field": {
     "required": "krävs",
@@ -133,13 +133,17 @@
     "AUDIT_REVIEW": "Granska bokslutet",
     "AUDIT_REVIEW_hint": "Granska räkenskapsårets verifikationer som revisor: godkänna dem, ställa frågor och göra anmärkningar.",
     "INVOICE_TRIAGE": "Sortera levfakturor",
-    "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet eller ta bort den. Ger inte rätt att attestera."
+    "INVOICE_TRIAGE_hint": "Se inkorgen för leverantörsfakturor, lägga in en faktura för hand, ge den till en resultatenhet eller ta bort den. Ger inte rätt att attestera.",
+    "MEMBER_SCORE_VIEW": "Redovisningsbetyg",
+    "MEMBER_SCORE_VIEW_hint": "Se alla medlemmars redovisningsbetyg, stjärnorna för hur snabbt de redovisar. Var och en ser alltid sitt eget."
   },
   "invoiceStatus": {
-    "ASSIGNED": "Att kontera",
+    "ASSIGNED": "Att fördela",
     "PENDING_APPROVAL": "Väntar på attest",
     "CHANGES_REQUESTED": "Ändring begärd",
     "APPROVED": "Attesterad",
+    "BOOKED": "Konterad",
     "EXPORTED": "I Fortnox"
-  }
+  },
+  "dateOutsideFiscalYear": "Datumet ligger utanför räkenskapsåret {year}. Byt år i sidhuvudet för att lägga in det där."
 }

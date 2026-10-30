@@ -1,9 +1,6 @@
-// Turning a stored report back into the shape the intakt service renders from.
-//
-// The service is stateless: it computed these reports and forgot them, so
-// anything it has to render must be handed back to it. What comes back is not
-// quite what it sent (the cost centre may have been corrected in review) which
-// is exactly why fetching and rendering are separate calls.
+// Turning a stored report back into the routed shape, for the voucher that
+// books it (api/income/reports/[id]/book) and the document behind it
+// (./document.ts).
 //
 // The account distributions are recomputed here rather than stored. They are a
 // pure function of the lines (sum by account), so keeping a second copy would
@@ -16,7 +13,7 @@ import type { IncomeAccountDistribution, IncomeFeeReportDto, IncomeReportDto } f
 interface StoredReport {
   date: Date;
   total: number;
-  /** The verksamhet, by the key intakt files its reports under. */
+  /** The verksamhet, by the key its reports are grouped under. */
   resultUnit: { income: { key: string } | null } | null;
   lines: readonly StoredLine[];
 }

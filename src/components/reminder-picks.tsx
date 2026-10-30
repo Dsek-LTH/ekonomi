@@ -1,8 +1,8 @@
 "use client";
 
 // Ticking rows on a list to remind somebody about them: the box on each row,
-// the select-all over them, the "Påminn (n)" button on the toolbar, and the
-// dialog it opens. The same on every list that offers it (Utlägg, Attest, and
+// the select-all over them, the bar with "Påminn" that rises at the foot of
+// the screen while any are ticked, and the dialog it opens. The same on every list that offers it (Utlägg, Attest, and
 // the bank feed), so each one says only which rows can be ticked and what they
 // are.
 //
@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import { SelectionBar } from "@/components/selection-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Column } from "@/components/ui/data-table";
 import { ReminderDialog } from "@/components/reminder-dialog";
@@ -38,8 +39,9 @@ export function useReminderPicks<T>({
 }): {
   /** Hidden when not `enabled`, so it can sit first in any list's columns. */
   column: Column<T>;
-  /** For the toolbar. Null until something is ticked. */
-  button: React.ReactNode;
+  /** The bar at the foot of the screen while something is ticked. Render it
+   *  anywhere on the page: it portals itself. */
+  bar: React.ReactNode;
   /** Render it anywhere on the page. Null while closed. */
   dialog: React.ReactNode;
 } {
@@ -97,14 +99,16 @@ export function useReminderPicks<T>({
 
   return {
     column,
-    // Only once something is ticked: an inert "Påminn (0)" on every visit
-    // would be a button for a question nobody asked.
-    button:
-      ticked.length > 0 ? (
-        <Button variant="secondary" onClick={() => setOpen(true)}>
-          {t("remindPicked", { count: ticked.length })}
+    // Only while something is ticked: an inert "Påminn" on every visit would
+    // be a button for a question nobody asked. See SelectionBar.
+    bar: (
+      <SelectionBar count={ticked.length} label={(count) => t("picked", { count })}>
+        <Button variant="quiet" onClick={() => setPicked([])}>
+          {t("clearPicked")}
         </Button>
-      ) : null,
+        <Button onClick={() => setOpen(true)}>{t("remindPicked")}</Button>
+      </SelectionBar>
+    ),
     dialog: open ? (
       <ReminderDialog
         {...(subject === "expense" ? { expenseIds: ticked } : { transactionIds: ticked })}

@@ -11,5 +11,6 @@
   "over": "{amount} too much allocated",
   "balancedChip": "Allocated",
   "split": "Split across several cost centres",
-  "comment": "Comment"
+  "comment": "Comment",
+  "noAmount": "No amount to allocate"
 }

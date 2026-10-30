@@ -48,5 +48,6 @@
   "account": "Redovisa",
   "assignCard": "Välj kort",
   "changeCard": "Byt kort",
+  "cardLocked": "Kortet kan inte bytas medan köpet är kopplat till ett utlägg.",
   "assignFailed": "Kunde inte koppla transaktionen till kortet"
 }

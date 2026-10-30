@@ -172,9 +172,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // ── The document ──
 
-  // The signed-in user is only the fallback attestation, for a batch whose
-  // importer is no longer in the app: the report is attested by whoever fetched
-  // it, and by now it usually carries their name already.
+  // Booking is approving. The day has been reviewed against its intäktsräkning
+  // by the person booking it, so the stored document is attested by them and
+  // the day records them as its reviewer (below).
   const user = await loadUser(g.actor.id);
   if (!user) return fail(401, "auth.signedOut");
 
@@ -188,12 +188,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         return fail(404, "income.reportNotFound");
       case "serviceUnavailable":
         return fail(503, "income.serviceUnavailable");
-      case "noAttestation":
-        return fail(409, "income.noAttestation");
-      case "config":
-        return fail(409, `income.${document.blocker}`, {
-          ...(document.detail && { values: { detail: document.detail } }),
-        });
       case "renderFailed":
         return fail(502, "income.renderFailed", { values: { detail: document.detail } });
       case "storeFailed":
@@ -249,7 +243,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // them when it rendered, or found them there.
     await tx.incomeReport.update({
       where: { id: report.id },
-      data: { status: "BOOKED", ...(booked && { costCenterId: booked }) },
+      data: {
+        status: "BOOKED",
+        reviewedById: g.actor.id,
+        reviewedAt: new Date(),
+        ...(booked && { costCenterId: booked }),
+      },
     });
   });
 

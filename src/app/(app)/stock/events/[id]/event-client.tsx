@@ -47,6 +47,7 @@ import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconDots, IconList, IconLock, IconPencil, IconSwap, IconTrash, IconViewTable, IconX } from "@/components/ui/icons";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
@@ -820,39 +821,44 @@ export default function EventClient({
       subtitle={longDate}
       back="/stock/events"
       width="wide"
-      // Two readings of one night: where the figures ended up, and how they got
-      // there. The second was a card under the sheet that only mattered when
-      // something looked wrong, and pushed the sheet's foot further down.
-      views={{
-        label: t("event.view.label"),
-        value: view,
-        options: [
-          { value: "sheet", label: t("event.view.sheet"), icon: IconViewTable },
-          { value: "changes", label: t("event.view.changes"), icon: IconList },
-        ],
-        onChange: (v) => setView(v as "sheet" | "changes"),
-      }}
-      // What is done to the night itself rather than to its figures. It sat on
-      // the sheet's card, where it read as acting on the sheet.
+      // What applies to the whole night: how it is drawn, and the menu of what
+      // is done to the night itself rather than to its figures. The menu sat on
+      // the sheet's card, where it read as acting on the sheet. The toggle sat
+      // on a strip of its own above the sheet, alone on a row of empty header.
       aside={
-        canManage ? (
-          <Menu
-            label={t("event.actions")}
-            iconOnly
-            variant="ghost"
-            size="sm"
-            icon={<IconDots className="size-4" />}
-          >
-            <MenuItem onClick={() => setEditing(true)}>
-              <IconPencil className="size-4 shrink-0 text-muted" />
-              {t("event.edit")}
-            </MenuItem>
-            <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
-              <IconTrash className="size-4 shrink-0" />
-              {t("event.remove")}
-            </MenuItem>
-          </Menu>
-        ) : undefined
+        <>
+          {/* Two readings of one night: where the figures ended up, and how
+              they got there. The second was a card under the sheet that only
+              mattered when something looked wrong, and pushed the sheet's foot
+              further down. */}
+          <ViewToggle
+            aria-label={t("event.view.label")}
+            value={view}
+            options={[
+              { value: "sheet", label: t("event.view.sheet"), icon: IconViewTable },
+              { value: "changes", label: t("event.view.changes"), icon: IconList },
+            ]}
+            onChange={setView}
+          />
+          {canManage && (
+            <Menu
+              label={t("event.actions")}
+              iconOnly
+              variant="ghost"
+              size="sm"
+              icon={<IconDots className="size-4" />}
+            >
+              <MenuItem onClick={() => setEditing(true)}>
+                <IconPencil className="size-4 shrink-0 text-muted" />
+                {t("event.edit")}
+              </MenuItem>
+              <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
+                <IconTrash className="size-4 shrink-0" />
+                {t("event.remove")}
+              </MenuItem>
+            </Menu>
+          )}
+        </>
       }
     >
       {editing && (
@@ -867,7 +873,7 @@ export default function EventClient({
           <div className="border-t border-border px-inset py-3">
             <Link
               href={`/stock/history?event=${event.id}`}
-              className="text-sm font-medium text-accent hover:underline"
+              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
             >
               {t("event.movements", { count: event.entries })}
             </Link>

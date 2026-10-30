@@ -139,13 +139,11 @@ export const CreateIncomePrefix = z.object({
   /** The income profile it routes to, ResultUnitIncome.id. */
   incomeId: Id,
   account: AccountNumber,
-  isFallback: z.boolean().optional(),
 });
 
 export const UpdateIncomePrefix = z.object({
   incomeId: Id.optional(),
   account: AccountNumber.optional(),
-  isFallback: z.boolean().optional(),
 });
 
 /**
@@ -171,4 +169,10 @@ export const UpdateIncomeSettings = z.object({
    * the app, so "b" and "B" cannot become two.
    */
   incomeVoucherSeries: Clearable(UpperCode).optional(),
+  /**
+   * Where a sale matching no prefix goes: a verksamhet's income profile, and
+   * the account it is credited to. See BookkeepingSettings.
+   */
+  incomeFallbackIncomeId: Clearable(Id).optional(),
+  incomeFallbackAccount: AccountNumber.optional(),
 });

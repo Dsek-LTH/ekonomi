@@ -66,7 +66,7 @@ export function incomeVoucherSeries(
 }
 
 /**
- * The key intakt files a unit's reports under, derived from its name.
+ * The key a unit's reports are grouped under, derived from its name.
  *
  * Nobody types this any more. It used to be a field on the settings screen,
  * a second identifier to invent and keep in step with the name, and the name

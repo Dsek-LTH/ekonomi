@@ -16,6 +16,7 @@ import { parseBudgetCsv } from "@/lib/domain/budget-csv";
 import { decodeCsvBytes } from "@/lib/domain/csv";
 import { bulkTransaction } from "@/lib/server/tx";
 import { fail, gate } from "@/lib/api/guard";
+import { denyBudgetOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { ImportBudgetQuery } from "@/lib/api/schemas/budget";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
     name: url.searchParams.get("name") ?? undefined,
   });
   if (!query.success) return fail(422, "budget.importBadQuery");
+  const offYear = await denyBudgetOutsideFiscalYear(query.data.year);
+  if (offYear) return offYear;
 
   const buf = Buffer.from(await req.arrayBuffer());
   if (buf.byteLength === 0) return fail(400, "budget.emptyFile");

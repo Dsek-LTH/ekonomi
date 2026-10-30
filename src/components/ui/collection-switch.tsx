@@ -51,7 +51,7 @@ export type Collections = {
 
 // `relative`, because the pill is laid over the track rather than drawn on the
 // option. See the measurement below.
-const TRACK = "relative inline-flex rounded-control border border-border bg-surface p-1";
+const TRACK = "relative inline-flex rounded-control border border-border-control bg-surface p-0.5";
 
 // What the pill looks like, in the one place both the moving copy and the
 // static fallback read it from.
@@ -125,7 +125,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     cn(
       // Above the pill, which is a positioned sibling and would otherwise paint
       // over the label.
-      "relative rounded-mark px-4 py-1.5 text-sm font-medium transition-colors",
+      "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors",
       active
         ? cn(
             "text-foreground",

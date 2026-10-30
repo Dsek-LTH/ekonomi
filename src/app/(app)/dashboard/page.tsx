@@ -4,7 +4,8 @@ import { getDashboardExpenses } from "@/lib/data/expenses";
 import { countUnaccountedPurchases } from "@/lib/data/bank";
 import { getBudgetOverview } from "@/lib/data/budget-overview";
 import { buildQueue } from "@/lib/domain/queue";
-import { canViewBookkeeping, canAccessBudget } from "@/lib/domain/permissions";
+import { canViewBookkeeping, canAccessBudget, canViewMemberScores } from "@/lib/domain/permissions";
+import { getMemberScore, getMemberScores } from "@/lib/data/member-score";
 import { getMyMoney } from "@/lib/data/my-money";
 import { getPayoutAccount } from "@/lib/data/users";
 import { ownedResultUnits } from "@/lib/server/result-units";
@@ -21,6 +22,10 @@ import type { DashboardView } from "./view";
 // rather than the value: `take: [object Function]`, which is exactly what
 // Prisma reported when it did.
 const MINE_PREVIEW = 5;
+
+// How many members "Släpar efter" names. Enough to see who to chase this week;
+// the rest are a click away on the profile's Medlemmar tab.
+const BEHIND_PREVIEW = 5;
 
 // Two columns. The right one is yours and the same for everybody: what is
 // waiting on you, and your own utlägg. The left one depends on who you are,
@@ -66,7 +71,7 @@ export default async function DashboardPage({
   if (views.length === 0) views.push("personal");
   const view = views.find((v) => v === params.scope) ?? views[0];
 
-  const [{ queueCandidates, mine }, unaccountedPurchases, payout, overview, money] =
+  const [{ queueCandidates, mine }, unaccountedPurchases, payout, overview, money, score, everyone] =
     await Promise.all([
       // What waits on you and your own latest, in the year too: Översikt
       // reads the same year as every list it links to. See docs/navigation.md.
@@ -75,7 +80,31 @@ export default async function DashboardPage({
       getPayoutAccount(user.id),
       view === "personal" ? null : getBudgetOverview(year),
       view === "personal" ? getMyMoney(user.id, year) : null,
+      // A rolling year, not the header's: see lib/domain/member-score.ts.
+      getMemberScore(user.id),
+      canViewMemberScores(user.capabilities) ? getMemberScores() : null,
     ]);
+
+  // Only what the two cards draw. The breakdowns stay on the server until
+  // somebody opens one on the profile.
+  const oldest = score.waiting[0];
+  const ownScore = {
+    stars: score.stars,
+    next: oldest ? { title: oldest.title, startedOn: oldest.startedOn } : null,
+  };
+  const behind =
+    everyone &&
+    everyone
+      .filter((r) => r.score.waiting.length > 0)
+      .sort((a, b) => b.score.waiting[0].days - a.score.waiting[0].days)
+      .slice(0, BEHIND_PREVIEW)
+      .map((r) => ({
+        userId: r.userId,
+        name: r.name,
+        stars: r.score.stars,
+        waiting: r.score.waiting.length,
+        oldestDays: r.score.waiting[0].days,
+      }));
 
   // Decided here rather than in the browser, so the marker does not move
   // between the server's render and the client's.
@@ -86,7 +115,6 @@ export default async function DashboardPage({
 
   return (
     <DashboardClient
-      firstName={user.name.split(" ")[0]}
       view={view}
       views={views}
       queue={buildQueue(queueCandidates, user)}
@@ -99,6 +127,8 @@ export default async function DashboardPage({
       // mine get to", which reads backwards from the queue, where the oldest
       // thing is the urgent one.
       mine={mine}
+      score={ownScore}
+      behind={behind}
     />
   );
 }

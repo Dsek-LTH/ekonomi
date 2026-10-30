@@ -6,15 +6,17 @@
 // The bytes are passed through untouched. A Swish export is ISO-8859-1, and the
 // intakt service is what knows that; decoding it here as UTF-8 on the way past
 // would mangle every å, ä and ö in a message, which would surface not as an
-// error but as payments quietly routed to the fallback committee.
+// error but as payments quietly routed to the reserv.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
-import { intaktConfigFor } from "@/lib/api/intakt-route";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { createSalesBatch } from "@/lib/income/batch";
-import { fetchSwishReports, IntaktError, IntaktNotConfiguredError } from "@/lib/income/client";
+import { fetchSwishPayments, IntaktError, IntaktNotConfiguredError } from "@/lib/income/client";
+import { loadRoutingTable } from "@/lib/income/config";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
+import { routeSwishPayments } from "@/lib/income/routing";
 
 // A term's export is a couple of hundred kilobytes; this is generous against
 // that and small enough that a mistaken upload cannot exhaust memory.
@@ -33,20 +35,23 @@ export async function POST(req: Request) {
 
   if (!ISO_DATE.test(from) || !ISO_DATE.test(to)) return fail(422, "income.rangeRequired");
   if (to < from) return fail(422, "income.rangeBackwards");
+  // In the year picked in the header, as a Zettle fetch is (../route.ts).
+  const offYear = (await denyOutsideFiscalYear(from)) ?? (await denyOutsideFiscalYear(to));
+  if (offYear) return offYear;
 
   const bytes = new Uint8Array(await req.arrayBuffer());
   if (bytes.byteLength === 0) return fail(400, "income.emptyFile");
   if (bytes.byteLength > MAX_BYTES) return fail(413, "income.fileTooLarge");
 
-  const cfg = await intaktConfigFor(g.actor.id);
-  if (!cfg.ok) return cfg.res;
+  const routing = await loadRoutingTable();
+  if (!routing.ok) return fail(409, `income.${routing.blocker}`);
 
   // The same fail-safe the Zettle route runs, for the same reason: a day
   // already booked in Fortnox is never imported, so it cannot be booked twice.
   const existing = await fortnoxIncomeVouchers(from, to);
 
   try {
-    const reports = await fetchSwishReports(from, to, bytes, filename, cfg.config);
+    const reports = routeSwishPayments(routing.table, await fetchSwishPayments(from, to, bytes, filename));
     if (reports.length === 0) return fail(422, "income.noReports");
 
     const result = await createSalesBatch(

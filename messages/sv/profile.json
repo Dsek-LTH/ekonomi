@@ -62,5 +62,10 @@
       "SUPPLIER_INVOICE_ASSIGNED": "När en leverantörsfaktura ges till en enhet du är resultatansvarig för, eller kommer tillbaka från attesten.",
       "SUPPLIER_INVOICE_SUBMITTED": "När en leverantörsfaktura som du ska attestera skickas på attest."
     }
+  },
+  "tabs": {
+    "label": "Profil",
+    "me": "Min profil",
+    "members": "Medlemmar"
   }
 }

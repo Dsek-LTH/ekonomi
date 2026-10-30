@@ -17,7 +17,7 @@ export function Card({
     <div
       {...rest}
       className={cn(
-        "rounded-panel border border-border bg-background shadow-[var(--shadow-card)]",
+        "rounded-panel border border-border bg-background",
         className,
       )}
     >

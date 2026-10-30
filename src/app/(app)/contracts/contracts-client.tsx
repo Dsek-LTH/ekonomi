@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/status-pill";
 import { DataTable, type Column, type SelectFilter, type TabFilter } from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
@@ -155,37 +154,20 @@ export function ContractsClient({
 
   return (
     <PageShell title={t("title")}>
-      {page.total === 0 && !narrowed ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            canManage ? (
-              <div className="flex flex-wrap justify-center gap-2">
-                <ButtonLink href="/contracts/rental/new">{t("drawRental")}</ButtonLink>
-                <ButtonLink href="/contracts/upload" variant="secondary">
-                  {t("uploadExisting")}
-                </ButtonLink>
-              </div>
-            ) : undefined
-          }
+      <Card>
+        <DataTable
+          columns={columns}
+          rows={page.rows}
+          controls={controls}
+          tabs={TABS}
+          filter={KIND_FILTER}
+          action={actions}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(c) => c.id}
+          rowHref={(c) => `/contracts/${c.id}`}
+          empty={page.total === 0 && !narrowed ? t("emptyTitle") : t("noMatch")}
         />
-      ) : (
-        <Card>
-          <DataTable
-            columns={columns}
-            rows={page.rows}
-            controls={controls}
-            tabs={TABS}
-            filter={KIND_FILTER}
-            action={actions}
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(c) => c.id}
-            rowHref={(c) => `/contracts/${c.id}`}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      </Card>
     </PageShell>
   );
 }

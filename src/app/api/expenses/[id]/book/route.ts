@@ -24,6 +24,7 @@ import { fail, gate } from "@/lib/api/guard";
 import { StaleWrite, applied, commit } from "@/lib/api/stale-write";
 import { exportLock } from "@/lib/domain/export-claim";
 import { CLEARED } from "@/lib/server/export-claim";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { BookVoucher } from "@/lib/api/schemas/expense";
 
@@ -288,6 +289,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     date: expense.purchaseDate ?? new Date(),
     description: expense.title,
   });
+  // A new voucher, so in the year picked in the header. See lib/api/fiscal-year.ts.
+  const offYear = await denyOutsideFiscalYear(date);
+  if (offYear) return offYear;
 
   const expected = new Date(body.expectedUpdatedAt);
   const done = await commit(() =>
@@ -356,6 +360,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!voucher.ok) return voucher.res;
 
   const { date, description } = voucherMeta(body, verification);
+  // Only a date this amend moves: a voucher already in another year can still
+  // have its rows corrected.
+  if (body.date && date.getTime() !== verification.date.getTime()) {
+    const offYear = await denyOutsideFiscalYear(date);
+    if (offYear) return offYear;
+  }
 
   const expected = new Date(body.expectedUpdatedAt);
   const done = await commit(() =>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { IconCheck } from "@/components/ui/icons";
@@ -36,6 +36,8 @@ import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
 import { useReturnTo } from "@/components/shell/route-history";
 import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
+import { useFiscalYear } from "@/components/shell/fiscal-year-context";
+import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import { useBookingPresence } from "./use-booking-presence";
 import { OthersBookingNotice, UpdatedElsewhere } from "./presence-notices";
 
@@ -143,6 +145,8 @@ export default function BookExpenseClient({
   const t = useTranslations("book");
   const tDetail = useTranslations("expenses.detail");
   const tReceipt = useTranslations("receipt");
+  const tCommon = useTranslations("common");
+  const fiscalYear = useFiscalYear();
   const { user } = useRole();
   const { busy: submitting, mutate } = useMutation();
   const confirm = useConfirm();
@@ -325,8 +329,13 @@ export default function BookExpenseClient({
   const paymentAccountKnown = accountExists(paymentAccount);
   // Not on a version somebody else has already replaced. The server refuses
   // that too. This is so the button says so first.
+  // A new voucher is in the year picked in the header, as the route holds. An
+  // amend may leave the date it already had.
+  const dateOutsideYear =
+    date !== expense?.verification?.date.slice(0, 10) && outsideFiscalYear(fiscalYear, date);
   const canSubmit =
     !blocker &&
+    !dateOutsideYear &&
     allValidAccounts &&
     allValidCostCenters &&
     allValidProjects &&
@@ -415,7 +424,15 @@ export default function BookExpenseClient({
           )}
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
-          <Field label={t("voucherDate")} requirement="required">
+          <Field
+            label={t("voucherDate")}
+            requirement="required"
+            error={
+              dateOutsideYear
+                ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                : undefined
+            }
+          >
             {/* Where the booking starts, so it is where the cursor starts. The
                 field already holds a date, the utlägg's own, so it is
                 selected as well as focused: the mask takes eight digits and no
@@ -423,6 +440,8 @@ export default function BookExpenseClient({
                 all. Once, on arrival; clicking back in later to fix a single
                 digit behaves as it should. */}
             <DateInput
+              min={fiscalYear?.fromDate}
+              max={fiscalYear?.toDate}
               autoFocus
               onFocus={selectOnce}
               size="sm"
@@ -434,7 +453,7 @@ export default function BookExpenseClient({
             {/* Prefix and input are one field, so the ring goes round the pair
                 (focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}
-            <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border bg-background px-2.5 text-sm sm:h-9">
+            <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
               {/* The prefix comes from the submitter's identity, so its width is
                   out of our hands. Nowrap-and-never-shrink made the box wider
                   than the card body on a long one; it truncates instead, and the
@@ -455,7 +474,6 @@ export default function BookExpenseClient({
       </Card>
 
       <Card>
-        <CardHeader title={t("lines")} subtitle={t("linesHint")} />
         <VoucherEditor
           rows={rows}
           onChange={setRows}

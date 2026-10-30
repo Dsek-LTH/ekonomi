@@ -77,7 +77,7 @@ export function SkeletonPage({
       <PageHeaderSkeleton
         back={back}
         aside={aside}
-        right={action ? <Skeleton className="h-9 w-36 rounded-control" /> : undefined}
+        right={action ? <Skeleton className="h-8 w-36 rounded-control" /> : undefined}
         title={
           // In the settings overlay the title is drawn in its top bar, so its
           // placeholder is too. See components/shell/settings-title.
@@ -135,8 +135,8 @@ export function SkeletonTable({
           )}
           {toolbar && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Skeleton className="h-11 rounded-control sm:h-9 sm:w-52 sm:shrink-0" />
-              <Skeleton className="h-11 rounded-control sm:h-9 sm:min-w-48 sm:flex-1" />
+              <Skeleton className="h-11 rounded-control sm:h-8 sm:w-52 sm:shrink-0" />
+              <Skeleton className="h-11 rounded-control sm:h-8 sm:min-w-48 sm:flex-1" />
             </div>
           )}
         </div>
@@ -157,7 +157,7 @@ export function SkeletonTable({
           <thead>
             <tr className="border-b border-border">
               {cols.map((c) => (
-                <th key={c} className="px-3 py-3 first:pl-inset last:pr-inset">
+                <th key={c} className="px-2.5 py-2.5 first:pl-inset last:pr-inset">
                   <Skeleton className={cn("h-3", c === 0 ? "w-24" : "w-16")} />
                 </th>
               ))}
@@ -167,7 +167,7 @@ export function SkeletonTable({
             {Array.from({ length: rows }, (_, r) => (
               <tr key={r}>
                 {cols.map((c) => (
-                  <td key={c} className="px-3 py-4 first:pl-inset last:pr-inset">
+                  <td key={c} className="px-2.5 py-3 first:pl-inset last:pr-inset">
                     <Skeleton
                       className={cn(
                         "h-4",

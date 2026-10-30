@@ -10,6 +10,10 @@
 // and what the locked row is, so those stay with the pages and only the table
 // lives here.
 //
+// A levfaktura's booking uses it too, with `accountsOnly`: its rows are the
+// attested shares, fixed in number, cost centre and amount by the attest, and
+// what the bookkeeper adds is the account on each.
+//
 // The rows are the caller's state. This renders them and reports edits; it
 // decides nothing, which is what lets the same table serve a page that derives
 // its rows from an expense's allocations and one that derives them from a
@@ -17,7 +21,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { Amount } from "@/components/ui/amount";
+import { formatNumber } from "@/lib/ui/format";
 import { Combobox } from "@/components/ui/combobox";
 import { DragHandle } from "@/components/ui/drag";
 import { IconButton } from "@/components/ui/icon-button";
@@ -137,6 +141,7 @@ export function VoucherEditor({
   totalDebit,
   totalCredit,
   readOnly = false,
+  accountsOnly = false,
 }: {
   rows: VoucherEditorRow[];
   onChange: (rows: VoucherEditorRow[]) => void;
@@ -144,12 +149,16 @@ export function VoucherEditor({
   costCenters: CostCenter[];
   /** Given, the table has a project column picking from these. */
   projects?: ProjectRecord[];
-  locked?: VoucherLockedRow;
+  /** One, or several: a levfaktura's leverantörsskuld and its öresutjämning. */
+  locked?: VoucherLockedRow | VoucherLockedRow[];
   /** Kronor, including the locked row. The page has already built the payload. */
   totalDebit: number;
   totalCredit: number;
   /** A booked voucher being looked at rather than written. */
   readOnly?: boolean;
+  /** The rows are given and stay as given, and only their accounts are
+   *  picked: no spare rows, no removing or moving one, no amount filled in. */
+  accountsOnly?: boolean;
 }) {
   const t = useTranslations("book");
   const tAlloc = useTranslations("allocation");
@@ -157,6 +166,8 @@ export function VoucherEditor({
 
   const accountName = (number: string) =>
     accounts.find((a) => a.number === number.trim())?.name ?? "";
+  // Everything but the account column, read rather than written.
+  const fixed = readOnly || accountsOnly;
 
   // `short` collapses the trigger to the bare code once picked, which is what
   // lets these columns stay narrow; search still matches the full
@@ -193,12 +204,16 @@ export function VoucherEditor({
   );
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
+  // Debit and credit are set to the right, as a ledger sets figures, so the
+  // decimals stand in one column down the rows and the sums under them.
+  const amountHeader = "px-2 py-2.5 text-right font-medium";
   const cellInput =
-    "block h-10 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
-  const amountInput = cn(cellInput, "tabular-nums");
+    "block h-8 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
+  const amountInput =
+    "block h-8 w-full bg-transparent px-2 text-right text-sm tabular-nums placeholder:text-muted focus-inset";
   // Tight padding: these two columns are only as wide as a code needs, so the
   // chevron and padding would otherwise be most of the box.
-  const cellCombo = "h-10 gap-1 bg-transparent px-1.5 focus-inset";
+  const cellCombo = "h-8 gap-1 bg-transparent px-1.5 focus-inset";
 
   // A row in the air, and where it has got to. Declared up here because the
   // spare rows below wait on it; what it is for is at `startDrag`.
@@ -220,9 +235,9 @@ export function VoucherEditor({
   // moment it ends.
   const stocked = withBlankRows(rows, BLANK_ROWS, isBlankVoucherRow, makeVoucherRow);
   useEffect(() => {
-    if (readOnly || draggingId || !stocked) return;
+    if (fixed || draggingId || !stocked) return;
     onChange(stocked);
-  }, [stocked, readOnly, draggingId, onChange]);
+  }, [stocked, fixed, draggingId, onChange]);
 
   function patch(id: string, change: Partial<VoucherEditorRow>) {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...change } : r)));
@@ -237,6 +252,8 @@ export function VoucherEditor({
   // the locked row included, which is what makes this the amount that would
   // finish the voucher. Positive: the debit side is short by it.
   const outstanding = totalCredit - totalDebit;
+  // A sum under the grid, written as an amount in it is: "1 247,50".
+  const figure = (kr: number) => formatNumber(kr, 2, 2);
 
   /**
    * Fill in the amount that would balance the voucher, on the side that is
@@ -250,7 +267,7 @@ export function VoucherEditor({
    * this row to be part of the voucher.
    */
   function balanceOnLeave(r: VoucherEditorRow) {
-    if (readOnly) return;
+    if (fixed) return;
     if (!r.account.trim() || r.debit.trim() || r.credit.trim()) return;
     // Under half an öre there is nothing to write; the voucher already meets.
     if (Math.abs(outstanding) < 0.005) return;
@@ -258,7 +275,7 @@ export function VoucherEditor({
   }
 
   function startDrag(e: React.PointerEvent, row: VoucherEditorRow) {
-    if (readOnly || e.button !== 0) return;
+    if (fixed || e.button !== 0) return;
     const tr = (e.target as HTMLElement).closest("tr");
     const index = rows.findIndex((r) => r.id === row.id);
     if (!tr || index === -1) return;
@@ -373,6 +390,19 @@ export function VoucherEditor({
       {value || (dash ? "-" : "")}
     </div>
   );
+  // A value the rows were given and that this table does not change
+  // (`accountsOnly`), drawn as a picked one would be, the same height and
+  // colour, so the table reads as the one an utlägg is booked in.
+  const given = (value: string) => (
+    <div className="flex h-8 items-center justify-center truncate px-2 text-sm" title={value || undefined}>
+      {value}
+    </div>
+  );
+  const givenAmount = (value: string) => (
+    <div className="flex h-8 items-center justify-end truncate px-2 text-sm" title={value || undefined}>
+      {value}
+    </div>
+  );
 
   // What the rows point at that this app does not have. Usually pre-filled
   // rather than typed, because an income report routes to whatever account its
@@ -389,14 +419,14 @@ export function VoucherEditor({
         rows.map((r) => r.account),
         (v) => accounts.some((a) => a.number === v),
       );
-  const unknownCostCenters = readOnly
+  const unknownCostCenters = fixed
     ? []
     : unknown(
         rows.map((r) => r.costCenterCode),
         (v) => costCenters.some((c) => c.code === v),
       );
   const unknownProjects =
-    readOnly || !showProjects
+    fixed || !showProjects
       ? []
       : unknown(
           rows.map((r) => r.project ?? ""),
@@ -441,17 +471,17 @@ export function VoucherEditor({
                 <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>
               )}
               <th className={cn(headerCell, showProjects ? "w-[10%]" : "w-[15%]")}>{t("colDescription")}</th>
-              <th className={cn(headerCell, "w-[15%]")}>{t("colDebit")}</th>
-              <th className={cn(headerCell, "w-[15%]")}>{t("colCredit")}</th>
+              <th className={cn(amountHeader, "w-[15%]")}>{t("colDebit")}</th>
+              <th className={cn(amountHeader, "w-[15%]")}>{t("colCredit")}</th>
               {/* Wide enough for the ✕ and the grip side by side. The name
                   column gave up the difference, being the one with slack. */}
               <th className="w-[9%]" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {locked && (
-              <tr className="divide-x divide-border bg-surface">
-                <td className="px-2 py-3 text-center align-middle font-medium tabular-nums">
+            {(locked ? [locked].flat() : []).map((locked) => (
+              <tr key={locked.account} className="divide-x divide-border bg-surface">
+                <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
                   {locked.account}
                 </td>
                 <td className="px-2 align-middle">{cell(locked.accountName, false)}</td>
@@ -459,10 +489,10 @@ export function VoucherEditor({
                 {showProjects && <td className="px-2 text-center align-middle text-sm text-muted" />}
                 {/* Truncated like the name, with the whole text on hover. */}
                 <td className="px-2 align-middle">{cell(locked.description ?? "", false)}</td>
-                <td className="px-2 text-center align-middle text-sm tabular-nums">
+                <td className="px-2 text-right align-middle text-sm tabular-nums">
                   {locked.debit ? locked.debit.toFixed(2).replace(".", ",") : ""}
                 </td>
-                <td className="px-2 text-center align-middle text-sm font-medium tabular-nums">
+                <td className="px-2 text-right align-middle text-sm font-medium tabular-nums">
                   {locked.credit ? locked.credit.toFixed(2).replace(".", ",") : ""}
                 </td>
                 <td className="text-center align-middle">
@@ -475,7 +505,7 @@ export function VoucherEditor({
                   </span>
                 </td>
               </tr>
-            )}
+            ))}
             {rows.map((r) => {
               const blank = isBlankVoucherRow(r);
               // Any row can be picked up and put anywhere, spare ones included:
@@ -483,8 +513,8 @@ export function VoucherEditor({
               // row nothing has been written in yet. Removing one is what the
               // editor would undo on the spot, so that is the one thing a spare
               // row does not offer.
-              const movable = !readOnly;
-              const removable = !readOnly && !blank;
+              const movable = !fixed;
+              const removable = !fixed && !blank;
               return (
               <tr
                 key={r.id}
@@ -519,13 +549,13 @@ export function VoucherEditor({
                   balanceOnLeave(r);
                 }}
                 onKeyDown={(e) => {
-                  if (!e.altKey || readOnly) return;
+                  if (!e.altKey || fixed) return;
                   if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
                   e.preventDefault();
                   nudgeRow(r.id, e.key === "ArrowDown" ? 1 : -1);
                 }}
               >
-                <td className={readOnly ? "px-2 py-3 text-center align-middle tabular-nums" : "p-0 align-middle"}>
+                <td className={readOnly ? "px-2 py-1.5 text-center align-middle tabular-nums" : "p-0 align-middle"}>
                   {readOnly ? (
                     r.account || "-"
                   ) : (
@@ -546,8 +576,10 @@ export function VoucherEditor({
                 {/* Derived from the picked account, so read-only either way.
                     It's the name the trigger no longer shows. */}
                 <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
-                <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
-                  {readOnly ? (
+                <td className={fixed && !accountsOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
+                  {accountsOnly ? (
+                    given(r.costCenterCode)
+                  ) : fixed ? (
                     r.costCenterCode || "-"
                   ) : (
                     <Combobox
@@ -572,8 +604,10 @@ export function VoucherEditor({
                   )}
                 </td>
                 {showProjects && (
-                  <td className={readOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
-                    {readOnly ? (
+                  <td className={fixed && !accountsOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
+                    {accountsOnly ? (
+                      given(r.project ?? "")
+                    ) : fixed ? (
                       r.project || "-"
                     ) : (
                       <Combobox
@@ -592,8 +626,10 @@ export function VoucherEditor({
                     )}
                   </td>
                 )}
-                <td className={readOnly ? "px-2 align-middle" : "p-0 align-middle"}>
-                  {readOnly ? (
+                <td className={fixed && !accountsOnly ? "px-2 align-middle" : "p-0 align-middle"}>
+                  {accountsOnly ? (
+                    given(r.description)
+                  ) : fixed ? (
                     cell(r.description)
                   ) : (
                     // size=1 kills the ~180px default intrinsic width an <input>
@@ -614,8 +650,10 @@ export function VoucherEditor({
                     />
                   )}
                 </td>
-                <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
-                  {readOnly ? (
+                <td className={fixed && !accountsOnly ? "px-2 text-right align-middle tabular-nums" : "p-0 align-middle"}>
+                  {accountsOnly ? (
+                    <div className="tabular-nums">{givenAmount(r.debit)}</div>
+                  ) : fixed ? (
                     r.debit || "-"
                   ) : (
                     <input
@@ -633,8 +671,10 @@ export function VoucherEditor({
                     />
                   )}
                 </td>
-                <td className={readOnly ? "px-2 text-center align-middle tabular-nums" : "p-0 align-middle"}>
-                  {readOnly ? (
+                <td className={fixed && !accountsOnly ? "px-2 text-right align-middle tabular-nums" : "p-0 align-middle"}>
+                  {accountsOnly ? (
+                    <div className="tabular-nums">{givenAmount(r.credit)}</div>
+                  ) : fixed ? (
                     r.credit || "-"
                   ) : (
                     <input
@@ -675,16 +715,34 @@ export function VoucherEditor({
               );
             })}
           </tbody>
-          <tfoot>
+          {/* The sum of each side and what is left between them, as Fortnox
+              ends a voucher: a total row and a difference row, labelled, so
+              the two figures do not have to be compared by eye. Set as the
+              rows above them are, the same size and without "kr", so the sums
+              read as the last lines of the grid. */}
+          <tfoot className="text-sm">
             <tr className="border-t border-border font-medium">
               {/* No "add row": there are always three waiting below the last
                   one, and a fourth appears as each is used. */}
-              <td colSpan={showProjects ? 5 : 4} className="px-3 py-3" />
-              <td className="px-2 py-3 text-center">
-                <Amount value={totalDebit} size="md" />
+              <td colSpan={showProjects ? 5 : 4} className="px-3 py-1.5 text-right">
+                {t("sum")}
               </td>
-              <td className="px-2 py-3 text-center">
-                <Amount value={totalCredit} size="md" />
+              <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalDebit)}</td>
+              <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalCredit)}</td>
+              <td />
+            </tr>
+            <tr className="border-t border-border font-medium">
+              <td colSpan={showProjects ? 5 : 4} className="px-3 py-1.5 text-right">
+                {t("differenceLabel")}
+              </td>
+              <td />
+              <td
+                className={cn(
+                  "px-2 py-1.5 text-right tabular-nums",
+                  Math.abs(outstanding) >= 0.005 && "text-danger",
+                )}
+              >
+                {figure(Math.abs(outstanding) < 0.005 ? 0 : Math.abs(outstanding))}
               </td>
               <td />
             </tr>
@@ -731,5 +789,10 @@ export function VoucherBlockerChip({ blocker }: { blocker: VoucherBlocker | null
   // them as error codes. See lib/domain/voucher.ts.
   const t = useTranslations("errors.voucher");
   if (!blocker || blocker === "unbalanced") return null;
-  return <span className={cn(chip, "bg-warning-soft text-warning")}>{t(blocker)}</span>;
+  return <WarningChip>{t(blocker)}</WarningChip>;
+}
+
+/** The blocker chip's shape, for a booking screen whose reasons are its own. */
+export function WarningChip({ children }: { children: React.ReactNode }) {
+  return <span className={cn(chip, "bg-warning-soft text-warning")}>{children}</span>;
 }

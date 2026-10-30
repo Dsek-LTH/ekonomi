@@ -19,6 +19,8 @@ const h = vi.hoisted(() => ({
 const VERSION = "2026-05-02T09:14:03.512Z";
 const NEXT_VERSION = "2026-05-02T09:20:00.000Z";
 
+// The year picked in the header is its own test (lib/api/fiscal-year.test.ts).
+vi.mock("@/lib/api/fiscal-year", () => ({ denyOutsideFiscalYear: async () => null }));
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "u1",
   loadUser: async () => ({

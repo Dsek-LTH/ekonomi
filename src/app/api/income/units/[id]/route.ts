@@ -63,7 +63,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  * The same shape as retiring a cost centre, and for the same reason: reports
  * already booked name the unit, and its settings are what say how they were
  * routed. Retiring keeps the books readable and takes the unit out of the
- * routing table sent to intakt, which is all anybody actually wanted.
+ * routing (lib/income/routing.ts), which is all anybody actually wanted.
  *
  * The result unit itself is never touched. Deciding that a verksamhet no longer
  * sells anything is not deciding that it has stopped existing; it still owns its

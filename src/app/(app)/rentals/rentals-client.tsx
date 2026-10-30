@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/status-pill";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
@@ -110,36 +109,28 @@ export function RentalsClient({
 
   return (
     <PageShell title={t("title")}>
-      {page.total === 0 && !narrowed && controls.tab === "" ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={canManage ? <ButtonLink href="/contracts/rental/new">{t("new")}</ButtonLink> : undefined}
+      <Card>
+        <DataTable
+          columns={columns}
+          rows={page.rows}
+          controls={controls}
+          tabs={TABS}
+          action={
+            canManage ? (
+              <ButtonLink href="/contracts/rental/new" variant="accentOutline" size="sm">
+                {t("new")}
+              </ButtonLink>
+            ) : undefined
+          }
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(r) => r.id}
+          // Through to the contract, which is the one page that describes this
+          // row. A second detail screen showing the same rental from an
+          // operational angle would be two pages disagreeing about one thing.
+          rowHref={(r) => `/contracts/${r.id}`}
+          empty={page.total === 0 && !narrowed && controls.tab === "" ? t("emptyTitle") : t("noMatch")}
         />
-      ) : (
-        <Card>
-          <DataTable
-            columns={columns}
-            rows={page.rows}
-            controls={controls}
-            tabs={TABS}
-            action={
-              canManage ? (
-                <ButtonLink href="/contracts/rental/new" variant="accentOutline" size="sm">
-                  {t("new")}
-                </ButtonLink>
-              ) : undefined
-            }
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(r) => r.id}
-            // Through to the contract, which is the one page that describes this
-            // row. A second detail screen showing the same rental from an
-            // operational angle would be two pages disagreeing about one thing.
-            rowHref={(r) => `/contracts/${r.id}`}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      </Card>
     </PageShell>
   );
 }

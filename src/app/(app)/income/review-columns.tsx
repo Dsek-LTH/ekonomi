@@ -2,15 +2,19 @@
 
 // The columns of the review queue's table view.
 //
-// Data, not markup: five column definitions and the two buttons on each row. It
+// Data, not markup: five column definitions and the button on each row. It
 // was eighty lines in the middle of the component that draws the whole screen,
 // and it is the same kind of thing components/columns/expense-columns.ts
 // already keeps in a file of its own.
 //
 // The three things a column cannot work out for itself (what a day is called
-// in the reader's language, where its cost centre comes from, and what pressing
-// a button does) arrive as arguments, so nothing here reaches back into the
+// in the reader's language, where its cost centre comes from, and what opening
+// a day does) arrive as arguments, so nothing here reaches back into the
 // screen.
+//
+// An overview, and nothing is booked from it. Every day is reviewed against
+// its intäktsräkning before it is booked, and a row here has no document
+// beside it, so a row's one action is to open the day for review.
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import type { Column } from "@/components/ui/data-table";
@@ -27,18 +31,13 @@ export function reviewColumns({
   t,
   settings,
   formatDate,
-  pending,
   onOpen,
-  onBook,
 }: {
   t: Translator;
   settings: IncomeSettingsRow;
   formatDate: (iso: string) => string;
-  /** The mutation key currently in flight, for the row's own spinner. */
-  pending: string | null;
   /** Show this day in the review column instead of the table. */
   onOpen: (report: IncomeReportRow) => void;
-  onBook: (report: IncomeReportRow) => void;
 }): Column<IncomeReportRow>[] {
   return [
     {
@@ -98,25 +97,9 @@ export function reviewColumns({
       align: "right",
       mobile: "actions",
       cell: (r) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onOpen(r)}
-          >
-            {t("review.open")}
-          </Button>
-          {r.status === "DRAFT" && (
-            <Button
-              size="sm"
-              onClick={() => onBook(r)}
-              loading={pending === `book-${r.id}`}
-              disabled={!costCentreFor(r, settings) || Boolean(r.duplicateOf)}
-            >
-              {t("actions.book")}
-            </Button>
-          )}
-        </div>
+        <Button size="sm" variant="secondary" onClick={() => onOpen(r)}>
+          {t("review.open")}
+        </Button>
       ),
     },
   ];

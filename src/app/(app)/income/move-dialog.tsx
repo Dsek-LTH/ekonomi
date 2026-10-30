@@ -10,8 +10,8 @@
 // intäktsräkning and one verifikation.
 //
 // The account is the part that cannot be worked out for anyone. A line in the
-// fallback got there by having no prefix, and intakt strips the prefix off the
-// name of every line that does have one, so the row carries no trace of which
+// reserv got there by having no prefix, and the routing strips the prefix off
+// the name of every line that does have one, so the row carries no trace of which
 // of the destination's accounts it belongs to. What this can do is put the
 // destination's own accounts at the top of the picker and set them all at once,
 // which turns thirty mis-sold beers into one choice rather than thirty.

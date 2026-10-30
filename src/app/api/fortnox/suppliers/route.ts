@@ -3,6 +3,10 @@
 //
 // Through the treasurer's own login, like the export it serves, so both need
 // the same thing to work and a missing scope surfaces here first.
+//
+// Every read is also kept (lib/server/supplier-register.ts), which is what a
+// levfaktura's PDF is matched against at the fördelning, and what its record
+// checks the bankgiro against before it is sent.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupplier, listSuppliers } from "@/lib/fortnox";
@@ -12,6 +16,7 @@ import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { Clearable, Trimmed } from "@/lib/api/schemas/common";
 import { fortnoxFailure } from "@/lib/api/fortnox-route";
+import { rememberRegister, rememberSupplier } from "@/lib/server/supplier-register";
 
 // GET /api/fortnox/suppliers: every supplier, active ones first.
 export async function GET() {
@@ -22,6 +27,8 @@ export async function GET() {
   try {
     const suppliers = await listSuppliers(auth.token);
     suppliers.sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "sv"));
+    // Best effort: a copy that could not be kept does not fail the picker.
+    await rememberRegister(suppliers).catch((err) => console.warn("[suppliers] could not keep register", err));
     return NextResponse.json(suppliers);
   } catch (e) {
     return fortnoxFailure(e, { forbidden: "fortnox.missingScopeLogin" });
@@ -44,7 +51,9 @@ export async function POST(req: Request) {
   const auth = await userToken(g.actor.id);
   if (!auth.ok) return auth.res;
   try {
-    return NextResponse.json(await createSupplier(auth.token, parsed.data), { status: 201 });
+    const created = await createSupplier(auth.token, parsed.data);
+    await rememberSupplier(created).catch((err) => console.warn("[suppliers] could not keep supplier", err));
+    return NextResponse.json(created, { status: 201 });
   } catch (e) {
     return fortnoxFailure(e, { forbidden: "fortnox.missingScopeLogin" });
   }

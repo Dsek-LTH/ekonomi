@@ -185,7 +185,7 @@ export function MobileNav({
             {/* The rail turns a group heading into a rule, because a word in a
                 64px column is noise. Here there is room for the word, which is
                 the whole point of the shape: a caption over the card it names. */}
-            <p className="mb-1.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <p className="mb-1.5 px-4 text-xs font-medium text-muted">
               {t(group.label)}
             </p>
             <div className={CARD}>{group.items.map(navRow)}</div>

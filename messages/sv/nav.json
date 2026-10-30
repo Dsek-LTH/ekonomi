@@ -49,5 +49,6 @@
   "groupInvoices": "Leverantörsfakturor",
   "fiscalYear": "Räkenskapsår",
   "fiscalYearNotHere": "Räkenskapsåret gäller inte den här sidan.",
-  "accountMenu": "Konto"
+  "accountMenu": "Konto",
+  "salesSettings": "Försäljning"
 }

@@ -140,7 +140,7 @@ Google Workspace → Gmail → Authenticate email** in the admin console.
 - A mail with no PDF still becomes one invoice, with the mail shown, so the
   PDF can be added by hand.
 - What the forwarder wrote above the forwarded message is kept, and used to
-  give the invoice to a unit automatically:
+  put a lone PDF straight into a unit's Inkorg, for the unit to fördela:
   1. a cost centre code (`SEX01`), when all codes named belong to one unit,
   2. a unit named in full (`Sexmästeriet`), when exactly one is,
   3. otherwise the forwarder's unit, if they answer for exactly one.

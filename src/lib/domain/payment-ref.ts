@@ -33,3 +33,38 @@ export function giroMismatch(
   }
   return null;
 }
+
+/** An org number as digits only. A VAT number ("SE556677889901") is the org
+ *  number inside a country code and a trailing 01, and is taken as that. */
+export const orgNoDigits = (orgNo: string | null | undefined): string | null => {
+  const raw = (orgNo ?? "").trim();
+  let d = raw.replace(/\D/g, "");
+  if (/^SE/i.test(raw) && d.length === 12 && d.endsWith("01")) d = d.slice(0, 10);
+  return d || null;
+};
+
+/**
+ * The supplier in the register an invoice is from, by what it prints: the org
+ * number first, then the bankgiro, then the plusgiro. An active supplier wins
+ * over a retired one with the same number. Null when nothing matches, which is
+ * an unknown supplier and not a guess.
+ *
+ * A giro match is a match on where the money goes, so it is only as good as
+ * the giro. The export still checks it against the register (giroMismatch).
+ */
+export function matchSupplier<S extends { orgNo: string | null; bankgiro: string | null; plusgiro: string | null; active: boolean }>(
+  invoice: { supplierOrgNo?: string | null; bankgiro?: string | null; plusgiro?: string | null },
+  register: readonly S[],
+): S | null {
+  const tries: [string | null, (s: S) => string | null][] = [
+    [orgNoDigits(invoice.supplierOrgNo), (s) => orgNoDigits(s.orgNo)],
+    [giroDigits(invoice.bankgiro), (s) => giroDigits(s.bankgiro)],
+    [giroDigits(invoice.plusgiro), (s) => giroDigits(s.plusgiro)],
+  ];
+  for (const [mine, theirs] of tries) {
+    if (!mine) continue;
+    const hits = register.filter((s) => theirs(s) === mine);
+    if (hits.length) return hits.find((s) => s.active) ?? hits[0];
+  }
+  return null;
+}

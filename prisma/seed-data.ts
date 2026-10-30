@@ -62,6 +62,16 @@ export interface SeedExpense {
   journey?: { stops: string[]; odometerStart: number; odometerEnd: number };
   /** Who sent it back, and why. CHANGES_REQUESTED only. */
   changesRequested?: { by: string; comment: string };
+  /** How many days after the purchase it was first sent. One when left out.
+   *  What the redovisningsbetyg measures (lib/domain/member-score.ts). */
+  submittedAfterDays?: number;
+  /** Sent back once and sent again the day after, before it went on. For an
+   *  utlägg past CHANGES_REQUESTED, whose history says it was returned. */
+  returnedOnce?: { by: string; comment: string };
+  /** A card purchase's bank row was imported this many days after the
+   *  purchase. One when left out. It cannot be sent before then, since the
+   *  match needs the row. */
+  bankImportedAfterDays?: number;
   /** Who konterade it. BOOKED and later. */
   bookedBy?: string;
   /** Who bokförde it in Fortnox. EXPORTED only. */
@@ -442,6 +452,249 @@ export const EXPENSES: SeedExpense[] = [
       ],
     },
   },
+  // ── Redovisningsbetyg history ──
+  //
+  // Older utlägg, all bokförda, so each member's stars have something to go
+  // on (lib/domain/member-score.ts). Sara and Ludwig send within days, Elsa
+  // mostly does, Anton is slow on card purchases, and Emma is slow and often
+  // sent back. Jonas has too little for stars at all. Ludwig's card purchase
+  // waited on a late bank import, which the score does not hold against him.
+  {
+    title: "Glögg till julmyset",
+    submitterName: "Elsa Lindqvist",
+    paymentType: "REIMBURSEMENT",
+    status: "EXPORTED",
+    daysAgo: 120,
+    submittedAfterDays: 3,
+    allocations: [{ costCenterCode: "SEX03", amount: 356, attestedBy: "Klara Ström", account: "4101" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Systembolaget",
+      address: "Mårtenstorget 2, Lund",
+      time: "15:20",
+      paidWith: "SWISH",
+      lines: [{ name: "Alkoholfri glögg 4 fl", amount: 356 }],
+    },
+  },
+  {
+    title: "Pappersmuggar till puben",
+    submitterName: "Elsa Lindqvist",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 75,
+    submittedAfterDays: 25,
+    bankImportedAfterDays: 2,
+    allocations: [{ costCenterCode: "SEX03", amount: 189, attestedBy: "Klara Ström", account: "4101" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Willys",
+      address: "Mobilvägen 10, Lund",
+      time: "17:45",
+      lines: [{ name: "Pappersmuggar 200 st", amount: 189 }],
+    },
+  },
+  {
+    title: "Lunch med företagskontakt",
+    submitterName: "Anton Falk",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 150,
+    submittedAfterDays: 48,
+    bankImportedAfterDays: 3,
+    returnedOnce: { by: "Oskar Berg", comment: "Skriv vilka som var med på lunchen." },
+    allocations: [{ costCenterCode: "NARU01", amount: 486, attestedBy: "Oskar Berg", account: "6071" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Bryggeriet",
+      address: "Lilla Fiskaregatan 2, Lund",
+      time: "12:30",
+      lines: [{ name: "Dagens lunch x3", amount: 486 }],
+    },
+  },
+  {
+    title: "Kaffe till mässmontern",
+    submitterName: "Anton Falk",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 210,
+    submittedAfterDays: 80,
+    bankImportedAfterDays: 4,
+    allocations: [{ costCenterCode: "NARU02", amount: 274, attestedBy: "Oskar Berg", account: "4002" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "ICA Supermarket Tuna",
+      address: "Tunavägen 39, Lund",
+      time: "08:10",
+      lines: [{ name: "Bryggkaffe 4x500 g", amount: 274 }],
+    },
+  },
+  {
+    title: "Förlängningssladdar till mässan",
+    submitterName: "Anton Falk",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 100,
+    submittedAfterDays: 33,
+    bankImportedAfterDays: 2,
+    allocations: [{ costCenterCode: "NARU02", amount: 398, attestedBy: "Oskar Berg", account: "5410" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Clas Ohlson",
+      address: "Nova Lund, Lund",
+      time: "16:05",
+      lines: [{ name: "Förlängningssladd 10 m x2", amount: 398 }],
+    },
+  },
+  {
+    title: "Presenter till föreläsare",
+    submitterName: "Anton Falk",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 60,
+    submittedAfterDays: 40,
+    bankImportedAfterDays: 2,
+    returnedOnce: { by: "Oskar Berg", comment: "Kvittot saknas, ladda upp det." },
+    allocations: [{ costCenterCode: "NARU01", amount: 450, attestedBy: "Oskar Berg", account: "6071" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Lundagård Presentbod",
+      address: "Kyrkogatan 6, Lund",
+      time: "11:40",
+      lines: [{ name: "Presentkorg x2", amount: 450 }],
+    },
+  },
+  {
+    title: "Bordsdukar till sittningen",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "EXPORTED",
+    daysAgo: 90,
+    submittedAfterDays: 55,
+    returnedOnce: { by: "Klara Ström", comment: "Beloppet stämmer inte med kvittot." },
+    allocations: [{ costCenterCode: "SEX02", amount: 540, attestedBy: "Klara Ström", account: "4310" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Partykungen",
+      address: "Stora Varvsgatan 11, Malmö",
+      time: "14:15",
+      paidWith: "BANKKORT ****2051",
+      lines: [{ name: "Bordsdukar 12 st", amount: 540 }],
+    },
+  },
+  {
+    title: "Ljus till vårbalen",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "EXPORTED",
+    daysAgo: 140,
+    submittedAfterDays: 58,
+    returnedOnce: { by: "Klara Ström", comment: "Ange vilken sittning det gäller." },
+    allocations: [{ costCenterCode: "SEX02", amount: 312, attestedBy: "Klara Ström", account: "4310" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Panduro Hobby",
+      address: "Mårtenstorget 3, Lund",
+      time: "13:05",
+      paidWith: "BANKKORT ****2051",
+      lines: [{ name: "Kronljus 48 st", amount: 312 }],
+    },
+  },
+  {
+    title: "Servetter till gasquen",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "EXPORTED",
+    daysAgo: 170,
+    submittedAfterDays: 45,
+    allocations: [{ costCenterCode: "SEX02", amount: 168, attestedBy: "Klara Ström", account: "4310" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Panduro Hobby",
+      address: "Mårtenstorget 3, Lund",
+      time: "10:30",
+      paidWith: "BANKKORT ****2051",
+      lines: [{ name: "Servetter 6 fp", amount: 168 }],
+    },
+  },
+  {
+    // Left lying: it counts as late every day it is not sent.
+    title: "Tejp och snören",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "DRAFT",
+    daysAgo: 50,
+    allocations: [{ costCenterCode: "SEX02", amount: 94 }],
+    receipt: {
+      merchant: "Clas Ohlson",
+      address: "Nova Lund, Lund",
+      time: "15:50",
+      paidWith: "BANKKORT ****2051",
+      lines: [{ name: "Gaffatejp, snöre", amount: 94 }],
+    },
+  },
+  {
+    // Past the filing deadline already, so it would need a dispens to be sent.
+    title: "Kvitto från pubrundan",
+    submitterName: "Emma Sjö",
+    paymentType: "REIMBURSEMENT",
+    status: "DRAFT",
+    daysAgo: 70,
+    allocations: [{ costCenterCode: "SEX03", amount: 215 }],
+    receipt: {
+      merchant: "Willys",
+      address: "Mobilvägen 10, Lund",
+      time: "18:40",
+      paidWith: "BANKKORT ****2051",
+      lines: [{ name: "Snacks och läsk", amount: 215 }],
+    },
+  },
+  {
+    title: "Affischer till insparken",
+    submitterName: "Sara Nyberg",
+    paymentType: "REIMBURSEMENT",
+    status: "EXPORTED",
+    daysAgo: 80,
+    submittedAfterDays: 2,
+    allocations: [{ costCenterCode: "INFU01", amount: 620, attestedBy: "Oskar Berg", account: "6150" }],
+    bookedBy: "Ludwig Gehlsdorf",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Tryckeriet i Lund",
+      address: "Bankgatan 7, Lund",
+      time: "10:15",
+      paidWith: "BANKKORT ****7720",
+      lines: [{ name: "Affischer A3 50 st", amount: 620 }],
+    },
+  },
+  {
+    title: "Kabel till projektorn",
+    submitterName: "Ludwig Gehlsdorf",
+    paymentType: "CARD",
+    status: "EXPORTED",
+    daysAgo: 65,
+    // Bought, then waited three weeks on the bank import, then sent the day
+    // after: two days by the score's count, not twenty-three.
+    bankImportedAfterDays: 21,
+    submittedAfterDays: 23,
+    allocations: [{ costCenterCode: "INFU01", amount: 229, attestedBy: "Oskar Berg", account: "5410" }],
+    bookedBy: "Maja Holm",
+    exportedBy: "Maja Holm",
+    receipt: {
+      merchant: "Kjell & Company",
+      address: "Nova Lund, Lund",
+      time: "13:20",
+      lines: [{ name: "HDMI-kabel 5 m", amount: 229 }],
+    },
+  },
 ];
 
 /**
@@ -456,6 +709,8 @@ export interface SeedBankTransaction {
   amount: number;
   /** On this section card, or null for a row on the account itself. */
   cardLast4: string | null;
+  /** Imported this many days after the purchase. One when left out. */
+  importedAfterDays?: number;
 }
 
 export const BANK_TRANSACTIONS: SeedBankTransaction[] = [
@@ -463,6 +718,13 @@ export const BANK_TRANSACTIONS: SeedBankTransaction[] = [
   { daysAgo: 7, description: "SYSTEMBOLAGET LUND", amount: -980, cardLast4: "8842" },
   { daysAgo: 11, description: "SWISH INBETALNING", amount: 500, cardLast4: null },
   { daysAgo: 27, description: "BANKAVGIFT", amount: -75, cardLast4: null },
+
+  // For the redovisningsbetyg. Elsa has one waiting past the week, Anton one
+  // well past it. Ludwig's was bought a month ago but only imported two days
+  // ago, so it is still inside his week: the import was the treasury's delay.
+  { daysAgo: 19, description: "CLAS OHLSON LUND", amount: -259, cardLast4: "8842" },
+  { daysAgo: 44, description: "BAUHAUS MALMO", amount: -1149, cardLast4: "5517" },
+  { daysAgo: 30, description: "KJELL & COMPANY", amount: -399, cardLast4: "3310", importedAfterDays: 28 },
 ];
 
 // Section cards ("sektionskort"). Only some members hold one, and a card

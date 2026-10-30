@@ -176,23 +176,23 @@
       "attester": "Du får det här mejlet eftersom du kan attestera fakturan."
     },
     "assigned": {
-      "subject": "Att kontera: {label}",
-      "eyebrow": "Att kontera",
+      "subject": "Att fördela: {label}",
+      "eyebrow": "Att fördela",
       "heading": "{actor} har gett {unit} en leverantörsfaktura",
-      "intro": "Kontera den och skicka den på attest.",
-      "button": "Öppna och kontera"
+      "intro": "Fördela den på era kostnadsställen och attestera.",
+      "button": "Öppna och fördela"
     },
     "returned": {
       "subject": "Ändring begärd: {label}",
       "eyebrow": "Behöver ändras",
       "heading": "En leverantörsfaktura kom tillbaka",
-      "intro": "{actor} vill att något ändras innan den kan attesteras. Ändra det och skicka den på attest igen.",
+      "intro": "{actor} vill att något ändras innan den kan attesteras. Fördela den igen och attestera.",
       "button": "Öppna fakturan"
     },
     "submitted": {
       "subject": "Att attestera: {label}",
       "eyebrow": "Att attestera",
-      "heading": "{actor} har konterat en leverantörsfaktura",
+      "heading": "{actor} har fördelat en leverantörsfaktura",
       "intro": "Den väntar på din attest.",
       "button": "Öppna och attestera"
     }

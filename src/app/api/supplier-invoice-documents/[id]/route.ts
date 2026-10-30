@@ -3,16 +3,17 @@
 //
 // A document on an invoice is as visible as the invoice, asked through the
 // same loader the invoice's own routes use. One in the Inkorg belongs to no
-// invoice yet, and is triage's alone.
+// invoice yet: it is triage's, and once given to a unit, that unit's too.
 //
-// Deleting is only ever from the Inkorg. A document on an invoice is taken off
-// it first (./detach), which puts it back in the Inkorg, so a file is never
-// thrown away by somebody who was only tidying an invoice.
+// Deleting is only ever from the Inkorg. A document on an invoice stays on it:
+// it is the underlag the invoice is attested and booked on, so there is no
+// taking it off. It goes back to the Inkorg only with the whole invoice, when
+// that is sent back (supplier-invoices/[id]/return).
 import { prisma } from "@/lib/server/db";
 import { deleteObject, getObjectStream } from "@/lib/server/storage";
 import { canTriageInvoices } from "@/lib/domain/permissions";
 import { fail, gate, type Actor } from "@/lib/api/guard";
-import { loadInvoiceFor } from "@/lib/api/supplier-invoice-access";
+import { loadInboxDocumentFor, loadInvoiceFor } from "@/lib/api/supplier-invoice-access";
 
 async function findDocument(id: string) {
   return prisma.supplierInvoiceDocument.findUnique({
@@ -22,8 +23,8 @@ async function findDocument(id: string) {
 }
 
 /** Whether the actor may see this document at all. */
-async function maySee(actor: Actor, doc: { invoiceId: string | null }): Promise<boolean> {
-  if (doc.invoiceId === null) return canTriageInvoices(actor.capabilities);
+async function maySee(actor: Actor, doc: { id: string; invoiceId: string | null }): Promise<boolean> {
+  if (doc.invoiceId === null) return (await loadInboxDocumentFor(actor, doc.id)).ok;
   return (await loadInvoiceFor(actor, doc.invoiceId)).ok;
 }
 

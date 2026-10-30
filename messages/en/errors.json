@@ -239,8 +239,7 @@
     "noReports": "The file held no reports in the chosen period.",
     "noCommittees": "No committees are set up. Add them in settings.",
     "noPrefixes": "No product prefixes are set up.",
-    "noFallbackPrefix": "No prefix is marked as the fallback. Products that match nothing have nowhere to go.",
-    "prefixAccountNotNumeric": "A prefix points at an invalid account: {detail}",
+    "noFallback": "No fallback is chosen for products without a recognised prefix. Choose it under Settings → Sales.",
     "reportNotFound": "That report does not exist.",
     "noUnexportAccess": "Only the treasury can undo a booking or an export.",
     "unexportOnlyExported": "Only exported reports can be un-exported (this one is {status}).",
@@ -277,17 +276,15 @@
     "committeeNotFound": "That committee does not exist.",
     "prefixExists": "The prefix {code} already exists.",
     "prefixNotFound": "That prefix does not exist.",
-    "cannotDeleteFallback": "The fallback prefix cannot be removed. Mark another one as the fallback first.",
     "fallbackNotFound": "That amount rule does not exist.",
     "alreadyInFortnox": "Fortnox already holds a voucher for this day ({voucher}). Nothing was exported.",
-    "noAttestation": "The report has no attestor. Whoever fetched it is no longer in the app.",
     "voucherTotalMismatch": "The voucher does not book the day's total. The debit side has to match the income statement.",
     "unitNotFound": "That result unit does not exist.",
     "unitHasIncome": "{name} already has income settings.",
     "keyFromName": "The name \"{name}\" gives no usable key. It needs letters or digits."
   },
   "stock": {
-    "calibrationNoVolume": "The bottle's volume has to be more than nothing.",
+    "calibrationNoVolume": "The container's volume has to be more than nothing.",
     "correctionNeedsTarget": "A correction has to name the row it corrects.",
     "correctionTargetNotFound": "The row to be corrected was not found.",
     "correctionWrongProduct": "The row to be corrected belongs to another product.",
@@ -390,20 +387,22 @@
     "noSupplier": "Pick the supplier.",
     "noAmount": "Fill in the amount.",
     "noDueDate": "Fill in the due date.",
-    "noAllocations": "Code the invoice to at least one cost centre.",
-    "allocationNoAccount": "Every coding row needs an account.",
-    "allocationSumMismatch": "The coding does not add up to the invoice amount.",
+    "noAllocations": "Allocate the invoice to at least one cost centre.",
+    "noLines": "Add at least one booking row.",
+    "lineNoAccount": "Every booking row needs an account.",
+    "lineNoAmount": "Every booking row needs an amount, as debit or credit.",
+    "unbalanced": "The booking does not add up to the invoice amount.",
+    "allocationSumMismatch": "The allocation does not add up to the invoice amount.",
     "splitNeedsAmounts": "Give how much goes to each cost centre.",
     "noInvoiceNumber": "Fill in the invoice number.",
     "noInvoiceDate": "Fill in the invoice date.",
-    "unknownAllocation": "A coding row no longer exists. Reload the page.",
     "supplierGone": "The supplier no longer exists in Fortnox. Pick another.",
     "giroMismatch": "The invoice's {field} {invoice} is not what Fortnox has for the supplier ({register}).",
     "exportInProgress": "The invoice is already being exported.",
     "exportUncertain": "Fortnox did not answer for certain. Check in Fortnox whether the supplier invoice was made before trying again.",
     "nothingToRelease": "There is no uncertain export to settle.",
     "documentOnInvoice": "The document is already on an invoice.",
-    "documentNotOnInvoice": "The document is not on an invoice."
+    "documentNotAssigned": "The document has not been sent to a result unit yet."
   },
   "settings": {
     "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",
@@ -422,5 +421,8 @@
     "itemHasCheck": "This item is ticked off when the app sees that it is done",
     "accountNotFound": "The account has no balance in the ledger for the year",
     "templateItemNotFound": "The item is not in the template"
+  },
+  "fiscalYear": {
+    "outside": "The date is outside the financial year {year}. Switch year in the header to enter it there."
   }
 }

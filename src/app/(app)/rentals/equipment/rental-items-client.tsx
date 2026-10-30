@@ -17,7 +17,6 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/ui/amount";
 import { IconPlus } from "@/components/ui/icons";
 import { ClientDataTable } from "@/components/ui/client-data-table";
@@ -59,7 +58,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
               <button
                 type="button"
                 onClick={() => setEditing(i)}
-                className="text-left font-medium text-accent hover:underline"
+                className="text-left font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
               >
                 {i.name}
               </button>
@@ -131,25 +130,17 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
 
   return (
     <>
-      {items.length === 0 ? (
-        <EmptyState
-          title={t("empty")}
-          description={t("emptyDescription")}
-          action={<Button onClick={() => setEditing("new")}>{t("add")}</Button>}
+      <Card>
+        <ClientDataTable
+          columns={columns}
+          rows={items}
+          controls={controls}
+          action={add}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(i) => i.id}
+          empty={items.length === 0 ? t("empty") : t("noMatch")}
         />
-      ) : (
-        <Card>
-          <ClientDataTable
-            columns={columns}
-            rows={items}
-            controls={controls}
-            action={add}
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(i) => i.id}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      </Card>
 
       {editing !== null && (
         <ItemDialog

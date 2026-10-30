@@ -197,6 +197,8 @@ const INVOICE_KINDS: Record<InvoiceKind, { tone: Tone; reason: "unitOwner" | "at
 /** What a mail about a levfaktura can say about it. */
 export interface InvoiceFacts {
   id: string;
+  /** "LEV26-0012". */
+  reference: string | null;
   supplierName: string | null;
   invoiceNumber: string | null;
   description: string | null;
@@ -205,16 +207,16 @@ export interface InvoiceFacts {
   allocations?: { costCenter: { code: string; name: string } }[];
 }
 
-/** What a levfaktura is called in a mail: the supplier and what it was for,
- *  or whichever of them is known. An invoice fresh from the inkorg may have
- *  neither yet. */
-const invoiceLabel = (i: InvoiceFacts): string =>
-  [i.supplierName, i.description].filter(Boolean).join(" - ") || emailT("invoice.untitled");
+/** What a levfaktura is called in a mail: what its unit said it was for, as
+ *  its page calls it. An invoice fresh from the inkorg has not been told yet.
+ *  The supplier is the treasury's to settle, at the kontering, and is not
+ *  named before then. */
+const invoiceLabel = (i: InvoiceFacts): string => i.description || emailT("invoice.untitled");
 
 /**
  * The mail about one levfaktura, the same shape as an utlägg's: what happened,
  * which invoice, and the button to it. The invoice is drawn as the utlägg card
- * is, with its number where an utlägg's reference goes.
+ * is, with its own LEV number where an utlägg's DEK number goes.
  */
 export function invoiceNotice(
   key: InvoiceKind,
@@ -224,7 +226,10 @@ export function invoiceNotice(
 ): Email {
   const { tone, reason } = INVOICE_KINDS[key];
   const label = invoiceLabel(invoice);
-  const url = appUrl(`/invoices/${invoice.id}`);
+  // Every one of these asks the reader to act. A unit given an invoice, or
+  // given it back, goes straight to the fördelning; an attester to the record,
+  // where Attestera is the main button.
+  const url = appUrl(key === "submitted" ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}/allocate`);
 
   const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
   if (invoice.dueDate) {
@@ -247,15 +252,50 @@ export function invoiceNotice(
       ...commentBlock(comment),
       {
         kind: "expense",
-        reference: invoice.invoiceNumber,
+        reference: invoice.reference,
         title: label,
-        amount: formatOre(invoice.amount ?? 0),
+        amount: invoice.amount == null ? "-" : formatOre(invoice.amount),
         facts,
       },
     ],
     action: { label: emailT(`invoice.${key}.button`), url },
     orOpen: emailT("orOpen", { url }),
     ...frame(emailT(`invoice.reason.${reason}`)),
+  };
+}
+
+/**
+ * The mail to a unit given a document from the Inkorg: the same "att fördela"
+ * as an invoice given to it, since to the unit it is the same errand. It is
+ * not an invoice yet, so it has no number and no amount, and the button goes
+ * to the document's fördelning, which is what makes it one.
+ */
+export function documentNotice(
+  doc: { id: string; title: string | null; dueDate?: Date | null },
+  values: Record<string, string | number> = {},
+  comment?: { author: string; text: string | null },
+): Email {
+  const url = appUrl(`/invoices/inbox/${doc.id}`);
+  const label = doc.title || emailT("invoice.untitled");
+  return {
+    subject: emailT("invoice.assigned.subject", { label }),
+    tone: INVOICE_KINDS.assigned.tone,
+    eyebrow: emailT("invoice.assigned.eyebrow"),
+    heading: emailT("invoice.assigned.heading", values),
+    intro: emailT("invoice.assigned.intro", values),
+    blocks: [
+      ...commentBlock(comment),
+      {
+        kind: "expense",
+        reference: null,
+        title: label,
+        amount: "-",
+        facts: doc.dueDate ? [{ label: emailT("invoice.fact.dueDate"), value: isoDay(doc.dueDate) }] : [],
+      },
+    ],
+    action: { label: emailT("invoice.assigned.button"), url },
+    orOpen: emailT("orOpen", { url }),
+    ...frame(emailT(`invoice.reason.${INVOICE_KINDS.assigned.reason}`)),
   };
 }
 

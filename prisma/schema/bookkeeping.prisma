@@ -41,6 +41,15 @@ model BookkeepingSettings {
   // day is recognised over there by its series, its date and its voucher text
   // (lib/income/duplicate.ts), so the two must be decided in one place.
   incomeVoucherSeries   String?
+  // Where a sale that matches no product prefix goes: whose takings it counts
+  // as, and which revenue account it is credited to. One answer for the whole
+  // section, so it is a setting of its own rather than a flag on one of the
+  // prefixes. It used to be that flag, which the routing never read: intakt
+  // routed every unknown product to whichever prefix was literally called "sk".
+  // The app routes now (lib/income/routing.ts), and this is what it reads.
+  incomeFallbackIncome   ResultUnitIncome? @relation("IncomeFallback", fields: [incomeFallbackIncomeId], references: [id], onDelete: SetNull)
+  incomeFallbackIncomeId String?
+  incomeFallbackAccount  String?
 
   updatedAt DateTime @updatedAt
 }

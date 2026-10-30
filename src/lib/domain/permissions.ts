@@ -145,6 +145,13 @@ export const canManageContracts = (caps: readonly Capability[]) =>
 /** May remind whoever an utlägg is waiting on, by mail. See lib/server/reminders.ts. */
 export const canSendReminders = (caps: readonly Capability[]) => has(caps, "SEND_REMINDERS");
 
+// ── Redovisningsbetyg ─────────────────────────────────────────────
+
+/** May see every member's redovisningsbetyg: the profile's Medlemmar tab,
+ *  Översikt's "Släpar efter" and the stars beside a submitter. A member sees
+ *  their own without it. See lib/domain/member-score.ts. */
+export const canViewMemberScores = (caps: readonly Capability[]) => has(caps, "MEMBER_SCORE_VIEW");
+
 // ── Leverantörsfakturor ───────────────────────────────────────────
 
 /** May keep the levfaktura inkorg: see what has arrived, put an invoice in by
@@ -285,6 +292,7 @@ const CAPABILITY_ORDER = {
   REVIEW_OWN_BOOKING: 20,
   BOOKKEEPING_VIEW: 21,
   AUDIT_REVIEW: 22,
+  MEMBER_SCORE_VIEW: 23,
 } satisfies Record<Capability, number>;
 
 export const CAPABILITIES: readonly Capability[] = (

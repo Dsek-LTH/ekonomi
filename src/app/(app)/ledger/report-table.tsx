@@ -148,7 +148,7 @@ function Diff({ value, against }: { value: number; against: number | null }) {
     <span className="inline-flex flex-col items-end leading-tight">
       <span>{diff > 0 ? `+${formatSEK(diff)}` : formatSEK(diff)}</span>
       {pct != null && (
-        <span className="text-[11px] text-muted">
+        <span className="text-xs text-muted">
           {diff > 0 ? "+" : ""}
           {formatPercent(pct, 0)}
         </span>
@@ -468,7 +468,7 @@ function SectionRows({
         <div
           role="cell"
           aria-colspan={cols.length}
-          className="px-inset py-2 text-xs font-semibold uppercase tracking-wide"
+          className="px-inset py-2 text-xs font-medium"
         >
           {t(`section.${section.key}`)}
         </div>

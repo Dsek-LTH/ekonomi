@@ -14,6 +14,7 @@ import { isMatchable } from "@/lib/domain/matching";
 import { exportLock } from "@/lib/domain/export-claim";
 import { expenseLabel } from "@/lib/domain/reference";
 import { fail, gate } from "@/lib/api/guard";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { PatchExpense } from "@/lib/api/schemas/expense";
 import { valueForStorage } from "@/lib/mileage/store";
@@ -84,6 +85,13 @@ export async function PATCH(
   // Declared here rather than beside the diff below because the mileage
   // valuation needs it first.
   const dateStr = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  // In the year picked in the header, so the utlägg is in the list it was made
+  // from. The same allowance as the future check above: only when this edit is
+  // what sets the date.
+  if (body.purchaseDate && body.purchaseDate !== dateStr(expense.purchaseDate)) {
+    const offYear = await denyOutsideFiscalYear(body.purchaseDate);
+    if (offYear) return offYear;
+  }
   const purchaseDate =
     body.purchaseDate === undefined
       ? expense.purchaseDate

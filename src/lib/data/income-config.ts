@@ -19,7 +19,6 @@ interface IncomePrefixRow {
   account: string;
   /** The account's name from the chart, or "" when it is not in it. */
   accountName: string;
-  isFallback: boolean;
 }
 
 /**
@@ -70,6 +69,9 @@ export interface IncomeSettingsRow {
   zettleFeeCostCenterCode: string | null;
   /** The verifikationsserie takings export to; null means the connection's. */
   incomeVoucherSeries: string | null;
+  /** Where a sale matching no prefix goes: an income profile, and an account. */
+  incomeFallbackIncomeId: string | null;
+  incomeFallbackAccount: string | null;
   /**
    * What that null falls back to: the series everything else is exported to.
    *
@@ -114,6 +116,8 @@ function incomeSettingsRow(
     zettleFeeCostCenterId: row.zettleFeeCostCenterId,
     zettleFeeCostCenterCode: row.zettleFeeCostCenterCode,
     incomeVoucherSeries: row.incomeVoucherSeries,
+    incomeFallbackIncomeId: row.incomeFallbackIncomeId,
+    incomeFallbackAccount: row.incomeFallbackAccount,
     connectionVoucherSeries,
   };
 }
@@ -168,7 +172,6 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
           incomeId: p.incomeId,
           account: p.account,
           accountName: accountName.get(p.account) ?? "",
-          isFallback: p.isFallback,
         })),
       },
     })),

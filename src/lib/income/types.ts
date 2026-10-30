@@ -1,18 +1,17 @@
-// The wire format of the intakt service.
+// The income pipeline's shapes: what the intakt service sends and is sent, and
+// the reports the app routes those sales into.
 //
-// These are hand-written counterparts to Go structs in another repository:
-// report.Report and config.Config, so nothing but care keeps them in step.
-// Two things make that survivable. The service rejects unknown fields, so a
-// name misspelled here fails loudly on the first request rather than silently
-// dropping a value; and the shapes are pinned by a test (client.test.ts)
-// against a recorded response, so a change on the far side shows up as a
-// failing assertion rather than as an undefined at runtime.
+// The wire half are hand-written counterparts to Go structs in another
+// repository (report.SaleLine, report.Fee, report.SwishPayment and
+// report.Document), so nothing but care keeps them in step. The service rejects
+// unknown fields, so a name misspelled here fails loudly on the first request
+// rather than silently dropping a value.
 //
 // Every amount is öre, matching both the service and the database. Nothing here
 // is kronor.
 
-/** One product line of a report. */
-interface IncomeProduct {
+/** One product line of a routed report. */
+export interface IncomeProduct {
   name: string;
   variant?: string;
   /** BAS revenue account this line routed to, e.g. "3011". */
@@ -37,7 +36,10 @@ export interface IncomeAccountDistribution {
   total: number;
 }
 
-/** One committee's takings for one day: one PDF, one voucher. */
+/**
+ * One verksamhet's takings for one day: one PDF, one voucher. Built by the
+ * app's own routing (./routing.ts) from the raw lines below.
+ */
 export interface IncomeReportDto {
   /** "<committee>-<date>", the key the service files it under. */
   key: string;
@@ -66,37 +68,56 @@ export interface IncomeFeeReportDto {
   total: number;
 }
 
-// ── The configuration the service is sent ─────────────────────────
-//
-// snake_case, because these mirror the YAML keys intakt's Config carries on
-// both its yaml and json tags. It is the only place in this app that spells
-// fields that way, and it is not a style slip. It is the other side's format.
+// ── What the service sends ─────────────────────────────────────────
 
-interface IntaktAttestation {
+/** One product line of one Zettle purchase, as rung up. See report.SaleLine. */
+export interface ZettleSaleLine {
+  purchaseId: string;
+  /** YYYY-MM-DD, Swedish local day. */
+  date: string;
+  /** As rung up, prefix included. Splitting it off is routing, and ours. */
   name: string;
-  stil_id: string;
+  variant?: string;
+  quantity: number;
+  unitPrice: number;
+  /** The product's own discount plus its share of a purchase-level one. */
+  discount: number;
+  total: number;
 }
 
-export interface IntaktPrefix {
-  /** The committee key this prefix routes to. */
-  name: string;
-  /** BAS revenue account, as a number (the Go field is an int). */
-  account: number;
+/** One of Zettle's payment fees, as a positive cost. */
+export interface ZettleFee {
+  date: string;
+  amount: number;
 }
 
-export interface IntaktCommittee {
-  proper_name: string;
+/** One payment row of a Swish export. */
+export interface SwishPayment {
+  date: string;
+  /** Free text, usually "<prefix> - <product>". */
+  message: string;
+  amount: number;
+}
+
+// ── What the service is sent ───────────────────────────────────────
+
+/**
+ * Everything a rendered intäktsräkning shows, handed over whole. See
+ * report.Document. Names rather than keys, so the service renders without
+ * knowing anything about the section.
+ */
+export interface IncomeDocument {
+  kind: "income" | "fee";
+  paymentType: IncomePaymentType;
+  /** Whose takings, as the page names them. */
+  unit: string;
+  /** The verifikationstext. */
   description: string;
-  default_cost_center: string;
-}
-
-export interface IntaktConfig {
-  attestation: IntaktAttestation;
-  account_descriptions: Record<string, string>;
-  prefix_mappings: Record<string, IntaktPrefix>;
-  committees: Record<string, IntaktCommittee>;
-  /** Keyed by amount in öre, as a string (JSON has no integer keys). */
-  swish_amount_fallbacks: Record<string, string>;
+  date: string;
+  attestation: { name: string; stilId: string };
+  lines: IncomeProduct[];
+  distributions: IncomeAccountDistribution[];
+  total: number;
 }
 
 /** What appears under the heading of a rendered report. */

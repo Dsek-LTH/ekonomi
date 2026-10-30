@@ -1,14 +1,13 @@
 // Intäkter: the routing that decides which committee and which revenue
-// account a sold product belongs to, and the reports the intakt service
-// returns for review and booking.
+// account a sold product belongs to, and the reports the app routes the intakt
+// service's raw sales into, for review and booking.
 
 // ── Income routing (intäkter) ─────────────────────────────────────
 // The table that decides which committee and which revenue account a sold
 // product belongs to. This is intakt's config.yaml, moved into the database so
 // it can be edited in the app rather than in a file on the treasurer's laptop,
-// and so there is one copy of it. The app serialises these rows into the
-// request it sends the intakt service; the service holds no configuration of
-// its own.
+// and so there is one copy of it. The app routes with it itself
+// (lib/income/routing.ts); the service only says what was sold.
 
 // The income half of a resultatenhet: what it is called on an intäktsräkning,
 // what its verifikation says, and which products route to it.
@@ -33,10 +32,10 @@ model ResultUnitIncome {
   resultUnit   ResultUnit @relation(fields: [resultUnitId], references: [id], onDelete: Cascade)
   resultUnitId String     @unique
 
-  // Stable identifier, matching the key intakt groups by, e.g. "cafe". Report
-  // keys are "<key>-<date>", so changing this renames every future report. It
-  // stays a field of its own rather than being derived from the unit's name:
-  // the name is editable prose, the key is a contract with another program.
+  // Stable identifier the routing groups reports by, e.g. "cafe". Report keys
+  // are "<key>-<date>", so changing this renames every future report. It stays
+  // a field of its own rather than being derived from the unit's name: the
+  // name is editable prose, the key is an identifier.
   key String @unique
 
   // What the rendered PDF calls it. Null means the result unit's own name,
@@ -54,10 +53,13 @@ model ResultUnitIncome {
   defaultCostCenterId String?
 
   // Whether it still takes money in. A retired verksamhet keeps its reports and
-  // stops appearing in the routing table sent to intakt.
+  // stops being routed to (lib/income/routing.ts).
   active Boolean @default(true)
 
   prefixes IncomeProductPrefix[]
+
+  // The settings row naming this unit as where unmatched sales go.
+  fallbackFor BookkeepingSettings[] @relation("IncomeFallback")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,11 +86,6 @@ model IncomeProductPrefix {
   // may name an account Fortnox has since retired.
   account String
 
-  // Products matching no prefix at all fall back to exactly one prefix, marked
-  // here. Without it an unrecognised product has nowhere to go; with more than
-  // one the fallback would be ambiguous, so the API enforces a single row.
-  isFallback Boolean @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -113,7 +110,7 @@ model SwishAmountFallback {
 }
 
 // ── Income batches (intäkter) ─────────────────────────────────────
-// What the intakt service returned, held so it survives a page reload and so
+// What a fetch routed into reports, held so it survives a page reload and so
 // booking is reproducible. This is the old pending.yaml: a list of reports
 // waiting to be reviewed and booked, except that it is per-user, reviewable in
 // the app, and cannot be half-edited by hand.
@@ -191,6 +188,15 @@ model IncomeReport {
   // field the old workflow made a person edit a YAML file for.
   costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   costCenterId String?
+
+  // Who looked at this day against its intäktsräkning and approved it, and
+  // when. Every day is reviewed one at a time before it is booked, and
+  // approving is what books it, so this is set by booking and cleared by
+  // reopening. The reviewer is also who the stored document says attested it:
+  // they are the one standing behind it, not whoever happened to run the fetch.
+  reviewedBy   User?     @relation("IncomeReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById String?
+  reviewedAt   DateTime?
 
   // The report this one repeats: same source, same verksamhet, same day, and
   // already booked here. Set at import, and the reason the row is shown as a

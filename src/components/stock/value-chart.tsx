@@ -189,7 +189,7 @@ export function StockValueChart({
             <p className="mb-1.5 text-xs font-medium tabular-nums">{hovered.date}</p>
             <dl className="space-y-0.5">
               {CATEGORIES.filter((c) => (hovered.byCategory[c] ?? 0) !== 0).map((c) => (
-                <div key={c} className="flex items-center gap-1.5 text-[11px]">
+                <div key={c} className="flex items-center gap-1.5 text-xs">
                   <span
                     aria-hidden
                     className="size-2 shrink-0 rounded-mark"
@@ -199,7 +199,7 @@ export function StockValueChart({
                   <dd className="tabular-nums">{kr.format(hovered.byCategory[c] / 100)}</dd>
                 </div>
               ))}
-              <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 text-[11px] font-medium">
+              <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 text-xs font-medium">
                 <dt className="min-w-0 flex-1">{t("total")}</dt>
                 <dd className="tabular-nums">{kr.format(hovered.totalOre / 100)}</dd>
               </div>

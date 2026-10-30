@@ -97,12 +97,12 @@ export function BudgetListClient({
   // Importing a past budget from the interchange CSV (lib/domain/budget-csv.ts).
   //
   // Asks nothing, like every other way of starting a budget here: the year is
-  // taken from the file name when it states one, the name is the file's own,
-  // and both are a pencil away on the page this opens. Guessing wrong costs one
-  // edit; a dialog would cost one every time.
+  // the one in the header, as for every new budget (the route holds to it), and
+  // the name is the file's own. A past year's budget is imported with that year
+  // picked.
   async function importCsv(file: File) {
     const base = file.name.replace(/\.[^.]+$/, "");
-    const year = Number(base.match(/(20\d{2})/)?.[1] ?? thisYear);
+    const year = thisYear;
     const data = await mutate<{
       budgetId: string;
       sheets: number;

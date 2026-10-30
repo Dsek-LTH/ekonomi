@@ -106,7 +106,7 @@ export function TransactionPicker({
             type="button"
             onClick={() => setChanging(true)}
             disabled={busy}
-            className="text-sm font-medium text-accent hover:underline disabled:opacity-40"
+            className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
           >
             {t("change")}
           </button>

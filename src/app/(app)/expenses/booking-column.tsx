@@ -48,9 +48,15 @@ function CornerDot({ tone }: { tone: "warning" | "danger" }) {
  * `enabled` false polls nothing and adds no column, for every other scope and
  * for readers who are not bookkeeping.
  */
-export function useBookingColumn(enabled: boolean): {
+export function useBookingColumn(
+  enabled: boolean,
+  /** Konterade by the reader, so not theirs to bokföra (see reviewBlocker). */
+  ownBooked: readonly string[] = [],
+): {
   column: Column<Expense> | null;
   dialog: React.ReactNode;
+  /** Whether a row is konterat and was konterat by the reader. */
+  isOwn: (e: Expense) => boolean;
 } {
   const t = useTranslations("bookkeeping");
   const { list } = useFormat();
@@ -73,7 +79,9 @@ export function useBookingColumn(enabled: boolean): {
   // not theirs; the row itself still opens the utlägg.
   const mayBook = canBookkeep(user.capabilities);
 
-  if (!enabled) return { column: null, dialog: null };
+  const isOwn = (e: Expense) => enabled && e.status === "BOOKED" && ownBooked.includes(e.id);
+
+  if (!enabled) return { column: null, dialog: null, isOwn };
 
   const column: Column<Expense> = {
     key: "actions",
@@ -96,11 +104,24 @@ export function useBookingColumn(enabled: boolean): {
         )}
         {mayBook && e.status === "BOOKED" &&
           (() => {
-            // Bokföring is done from the review, one utlägg at a time, and not
-            // from here: this opens the review at this one. A lock left
+            // Bokföring is done on the utlägg's own page, where the voucher is
+            // looked over first, and not from here: this opens it. A lock left
             // uncertain is still resolved from here, since it is not bokföring
             // but finding out whether it already happened.
             const locked = live.exporting[e.id];
+            // The reader konterade it, so the two-person rule hands the
+            // bokföring to somebody else. Still drawn, and dead, with the
+            // reason on hover: a missing button said nothing about why.
+            if (isOwn(e)) {
+              return (
+                <Tooltip label={t("review.ownBooking")}>
+                  <Button size="sm" variant="secondary" disabled>
+                    {t("review.open")}
+                    <span className="sr-only">{`. ${t("review.ownBooking")}`}</span>
+                  </Button>
+                </Tooltip>
+              );
+            }
             if (locked?.lock === "uncertain" && mayResolve) {
               return (
                 <Tooltip label={exportHint(locked)}>
@@ -113,7 +134,7 @@ export function useBookingColumn(enabled: boolean): {
             }
             return (
               <Tooltip label={locked ? exportHint(locked) : null}>
-                <ButtonLink href={`/expenses/review?id=${e.id}`} size="sm" variant="secondary">
+                <ButtonLink href={`/expenses/${e.id}`} size="sm" variant="secondary">
                   {t("review.open")}
                   {locked && <span className="sr-only">{exportHint(locked)}</span>}
                 </ButtonLink>
@@ -141,5 +162,5 @@ export function useBookingColumn(enabled: boolean): {
     />
   );
 
-  return { column, dialog };
+  return { column, dialog, isOwn };
 }

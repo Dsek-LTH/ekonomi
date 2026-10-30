@@ -1,5 +1,5 @@
-// Handing out the next utlägg reference. The format itself lives in
-// lib/domain/reference.ts; this is the half that needs the database.
+// Handing out the next utlägg or levfaktura reference. The format itself lives
+// in lib/domain/reference.ts; this is the half that needs the database.
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { nextReference, referencePrefix } from "@/lib/domain/reference";
 import { today } from "@/lib/domain/date";
@@ -53,4 +53,21 @@ export async function claimReference(
     select: { reference: true },
   });
   return nextReference(year, last?.reference ?? null);
+}
+
+/**
+ * The next free levfaktura reference in `year`, "LEV26-0012". The same rules
+ * as `claimReference`: inside the transaction that takes it, and that inside
+ * `withReferenceRetry`.
+ */
+export async function claimInvoiceReference(
+  tx: Prisma.TransactionClient,
+  year: number = Number(today().slice(0, 4)),
+): Promise<string> {
+  const last = await tx.supplierInvoice.findFirst({
+    where: { reference: { startsWith: referencePrefix(year, "LEV") } },
+    orderBy: { reference: "desc" },
+    select: { reference: true },
+  });
+  return nextReference(year, last?.reference ?? null, "LEV");
 }

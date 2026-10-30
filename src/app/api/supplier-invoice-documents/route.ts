@@ -3,7 +3,8 @@
 // one, or delete it.
 //
 // The other way in is mail forwarded to the inkorg address, whose PDFs land in
-// the same place (lib/server/inbound-mail.ts).
+// the same place (lib/server/inbound-mail.ts). Either way nothing is read off
+// the PDF on the way in: that waits for the fördelning.
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";

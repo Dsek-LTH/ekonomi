@@ -64,7 +64,7 @@
   "cancel": "Cancel",
   "confirm": "Confirm",
   "loading": "Loading…",
-  "datePlaceholder": "YYYY-MM-DD",
+  "datePlaceholder": "yyyy-mm-dd",
   "openDatePicker": "Pick a date from a calendar",
   "field": {
     "required": "required",
@@ -133,13 +133,17 @@
     "AUDIT_REVIEW": "Audit the books",
     "AUDIT_REVIEW_hint": "Review the financial year's vouchers as an auditor: pass them, ask questions and make remarks.",
     "INVOICE_TRIAGE": "Sort supplier invoices",
-    "INVOICE_TRIAGE_hint": "See the supplier invoice inbox, add an invoice by hand, give it to a result unit, or delete it. Does not grant approval."
+    "INVOICE_TRIAGE_hint": "See the supplier invoice inbox, add an invoice by hand, give it to a result unit, or delete it. Does not grant approval.",
+    "MEMBER_SCORE_VIEW": "Filing scores",
+    "MEMBER_SCORE_VIEW_hint": "See every member's filing score, the stars for how promptly they file expenses. Everyone always sees their own."
   },
   "invoiceStatus": {
-    "ASSIGNED": "To code",
+    "ASSIGNED": "To allocate",
     "PENDING_APPROVAL": "Awaiting attest",
     "CHANGES_REQUESTED": "Changes requested",
     "APPROVED": "Attested",
+    "BOOKED": "Booked",
     "EXPORTED": "In Fortnox"
-  }
+  },
+  "dateOutsideFiscalYear": "The date is outside the financial year {year}. Switch year in the header to enter it there."
 }

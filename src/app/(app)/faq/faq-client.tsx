@@ -139,7 +139,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
 
       {visible.map((section) => (
         <section key={section.id} className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+          <h2 className="text-xs font-medium text-muted">
             {section.label}
           </h2>
           {/* overflow-hidden so a hovered first or last question doesn't
@@ -280,7 +280,7 @@ function Block({ block }: { block: FaqBlock }) {
       // gets a button rather than a line of text.
       return (
         <p>
-          <a href={block.href} className="font-medium text-accent hover:underline">
+          <a href={block.href} className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
             {block.v}
           </a>
         </p>
@@ -334,7 +334,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">
           <IconReceipt className="size-7 text-faint" />
           <p className="text-sm font-medium text-muted">{t("imageMissing")}</p>
-          <code className="break-all text-[11px] leading-tight text-muted">
+          <code className="break-all text-xs leading-tight text-muted">
             {block.expected}
           </code>
         </div>

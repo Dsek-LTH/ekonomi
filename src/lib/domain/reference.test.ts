@@ -62,3 +62,16 @@ describe("expenseLabel", () => {
     expect(expenseLabel({ id: "e_1" })).toBe("e_1");
   });
 });
+
+describe("levfaktura series", () => {
+  it("has its own prefix of the same width", () => {
+    expect(referencePrefix(2026, "LEV")).toBe("LEV26-");
+    expect(referencePrefix(2026, "LEV").length).toBe(referencePrefix(2026).length);
+    expect(formatReference(2026, 12, "LEV")).toBe("LEV26-0012");
+  });
+
+  it("counts on from its own last number", () => {
+    expect(nextReference(2026, "LEV26-0012", "LEV")).toBe("LEV26-0013");
+    expect(nextReference(2026, null, "LEV")).toBe("LEV26-0001");
+  });
+});

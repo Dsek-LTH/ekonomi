@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, CreateIncomePrefix);
   if (!parsed.ok) return parsed.res;
-  const { code, incomeId, account, isFallback } = parsed.data;
+  const { code, incomeId, account } = parsed.data;
 
   const existing = await prisma.incomeProductPrefix.findUnique({ where: { code } });
   if (existing) return fail(409, "income.prefixExists", { values: { code } });
@@ -22,20 +22,7 @@ export async function POST(req: Request) {
   const income = await prisma.resultUnitIncome.findUnique({ where: { id: incomeId } });
   if (!income) return fail(422, "income.committeeNotFound");
 
-  // Exactly one prefix is the fallback, guarded by a partial unique index. The
-  // old one is cleared in the same transaction, so claiming it is a move rather
-  // than a collision the caller has to resolve.
-  const prefix = await prisma.$transaction(async (tx) => {
-    if (isFallback) {
-      await tx.incomeProductPrefix.updateMany({
-        where: { isFallback: true },
-        data: { isFallback: false },
-      });
-    }
-    return tx.incomeProductPrefix.create({
-      data: { code, incomeId, account, isFallback: isFallback ?? false },
-    });
-  });
+  const prefix = await prisma.incomeProductPrefix.create({ data: { code, incomeId, account } });
 
   return NextResponse.json({ id: prefix.id }, { status: 201 });
 }

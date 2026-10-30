@@ -16,7 +16,7 @@ const h = vi.hoisted(() => ({
   recent: [] as string[],
   existing: new Set<string>(),
   claimFails: false,
-  invoiceCreate: vi.fn(),
+  assignedCreate: vi.fn(),
   docCreate: vi.fn(),
   mailCreate: vi.fn(),
   mailDelete: vi.fn(),
@@ -83,8 +83,9 @@ vi.mock("@/lib/server/db", () => ({
       update: h.syncUpdate,
     },
     supplierInvoiceDocument: { createMany: h.docCreate },
+    supplier: { findMany: async () => [] },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ supplierInvoice: { create: h.invoiceCreate } }),
+      fn({ supplierInvoiceDocument: { create: h.assignedCreate } }),
   },
 }));
 
@@ -152,21 +153,23 @@ beforeEach(() => {
   h.claimFails = false;
   h.sender = { id: "klara", name: "Klara Ström", roles: ["RESULTATANSVARIG"] };
   h.owned = ["Sexmästeriet"];
-  for (const fn of [h.invoiceCreate, h.docCreate, h.mailCreate, h.mailDelete, h.mailUpdate, h.syncUpdate, h.put, h.del, h.notify, h.getMessage]) {
+  for (const fn of [h.assignedCreate, h.docCreate, h.mailCreate, h.mailDelete, h.mailUpdate, h.syncUpdate, h.put, h.del, h.notify, h.getMessage]) {
     fn.mockReset();
   }
   h.mailDelete.mockResolvedValue({});
+  h.assignedCreate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data);
   h.getMessage.mockImplementation(async () => mail({ attachments: [{ name: "faktura.pdf", id: "a1", bytes: PDF }] }));
 });
 
-const created = () => h.invoiceCreate.mock.calls.map((c) => c[0].data);
+/** The one document written straight into a unit's Inkorg, if any. */
+const assigned = () => h.assignedCreate.mock.calls[0]?.[0].data;
 
 describe("one mail", () => {
-  it("refuses mail from outside dsek.se and makes no invoice", async () => {
+  it("refuses mail from outside dsek.se and keeps no document", async () => {
     h.getMessage.mockResolvedValue(mail({ from: "faktura@lundsslap.se", attachments: [{ name: "f.pdf", id: "a1", bytes: PDF }] }));
     expect(await syncInbox()).toEqual({ accepted: 0, rejected: 1, skipped: 0 });
     expect(h.mailCreate.mock.calls[0][0].data).toMatchObject({ status: "REJECTED", rejectReason: "foreignDomain" });
-    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.assignedCreate).not.toHaveBeenCalled();
     expect(h.put).not.toHaveBeenCalled();
   });
 
@@ -174,7 +177,7 @@ describe("one mail", () => {
     h.getMessage.mockResolvedValue(mail({ auth: "mx.google.com; dkim=fail; dmarc=fail header.from=dsek.se" }));
     await syncInbox();
     expect(h.mailCreate.mock.calls[0][0].data.rejectReason).toBe("notAuthenticated");
-    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.assignedCreate).not.toHaveBeenCalled();
   });
 
   it("puts several PDFs in the Inkorg, and leaves out what only claims to be one", async () => {
@@ -192,7 +195,7 @@ describe("one mail", () => {
     expect(h.put).toHaveBeenCalledTimes(2);
     // Several PDFs may be one invoice and its specification: no invoice is
     // guessed, even with a unit to give it to.
-    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.assignedCreate).not.toHaveBeenCalled();
     const rows = h.docCreate.mock.calls[0][0].data;
     expect(rows.map((r: { filename: string }) => r.filename)).toEqual(["faktura.pdf", "specifikation.pdf"]);
     expect(rows[0]).toMatchObject({ inboundMailId: "mail1", uploadedById: "klara" });
@@ -202,7 +205,7 @@ describe("one mail", () => {
   it("puts a single PDF in the Inkorg when nothing says whose it is", async () => {
     h.owned = [];
     await syncInbox();
-    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.assignedCreate).not.toHaveBeenCalled();
     expect(h.docCreate.mock.calls[0][0].data).toHaveLength(1);
   });
 
@@ -213,7 +216,7 @@ describe("one mail", () => {
       where: { id: "mail1" },
       data: { status: "REJECTED", rejectReason: "noPdf" },
     });
-    expect(h.invoiceCreate).not.toHaveBeenCalled();
+    expect(h.assignedCreate).not.toHaveBeenCalled();
     expect(h.docCreate).not.toHaveBeenCalled();
   });
 
@@ -230,13 +233,15 @@ describe("one mail", () => {
       note: "Till CAFE01 tack",
       originalFrom: "order@grossisten.se",
     });
-    expect(created()[0]).toMatchObject({ status: "ASSIGNED", resultUnitId: "cafe", inboundMailId: "mail1" });
-    expect(created()[0].documents.create).toMatchObject({ filename: "f.pdf", inboundMailId: "mail1" });
-    expect(h.docCreate).not.toHaveBeenCalled();
-    expect(created()[0].events.create[1]).toMatchObject({
-      type: "ASSIGNED",
-      diff: { from: null, to: "Caféutskottet", auto: "costCenter", match: "CAFE01" },
+    // A document in that unit's Inkorg, not an invoice: the unit's fördelning
+    // is what makes one.
+    expect(assigned()).toMatchObject({
+      filename: "f.pdf",
+      inboundMailId: "mail1",
+      resultUnitId: "cafe",
+      assignedAt: expect.any(Date),
     });
+    expect(h.docCreate).not.toHaveBeenCalled();
     expect(h.notify).toHaveBeenCalledWith(
       expect.anything(),
       "SUPPLIER_INVOICE_ASSIGNED",
@@ -248,7 +253,7 @@ describe("one mail", () => {
 
   it("falls back to the forwarder's one unit", async () => {
     await syncInbox();
-    expect(created()[0]).toMatchObject({ status: "ASSIGNED", resultUnitId: "sex" });
+    expect(assigned()).toMatchObject({ resultUnitId: "sex" });
   });
 
   it("skips a mail it has already read without asking Gmail for it", async () => {
@@ -263,8 +268,8 @@ describe("one mail", () => {
     expect(h.put).not.toHaveBeenCalled();
   });
 
-  it("undoes the claim and the stored files when the invoices cannot be written", async () => {
-    h.invoiceCreate.mockRejectedValue(new Error("db down"));
+  it("undoes the claim and the stored files when the documents cannot be written", async () => {
+    h.assignedCreate.mockRejectedValue(new Error("db down"));
     await expect(syncInbox()).rejects.toThrow("db down");
     expect(h.del).toHaveBeenCalledTimes(1);
     expect(h.mailDelete).toHaveBeenCalledWith({ where: { id: "mail1" } });

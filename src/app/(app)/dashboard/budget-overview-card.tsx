@@ -186,7 +186,7 @@ function HeaderLink({ href, children }: { href: string; children: React.ReactNod
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+      className="inline-flex items-center gap-1 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
     >
       {children}
       <IconChevronRight className="size-4" />
@@ -301,7 +301,7 @@ function Meter({
   const { budget, actual } = figure;
   if (!budget && !actual) {
     return (
-      <div className="text-sm text-faint">
+      <div className="text-sm text-muted">
         <span className="text-xs md:hidden">{label}: </span>-
       </div>
     );
@@ -329,7 +329,7 @@ function Meter({
           className="relative mt-1.5 h-1.5 rounded-full bg-surface"
         >
           <div
-            className={cn("h-full rounded-full", alarm ? "bg-danger" : "bg-accent")}
+            className={cn("h-full rounded-full", alarm ? "bg-danger" : "bg-faint")}
             style={{ width: `${Math.min(Math.max(share, 0), 1) * 100}%` }}
           />
           <span

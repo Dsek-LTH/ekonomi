@@ -1,6 +1,7 @@
 import { getBookedIncome, getIncomeReviewQueue } from "@/lib/data/income";
-import { canBookkeep, canViewBookkeeping, canUnexport } from "@/lib/domain/permissions";
+import { canAccessSettings, canBookkeep, canViewBookkeeping, canUnexport } from "@/lib/domain/permissions";
 import type { SearchParams } from "@/lib/data/list-query";
+import { incomeSetupSteps } from "@/lib/income/setup";
 import { requirePage } from "@/lib/server/current-user";
 import { getFiscalYear } from "@/lib/server/fiscal-year";
 import IncomeClient from "./income-client";
@@ -22,10 +23,12 @@ export default async function IncomePage({
   const params = await searchParams;
   const books = canBookkeep(user.capabilities);
   const tab: IncomeTab = INCOME_TABS.find((t) => t === params.tab) ?? incomeDefaultTab(books);
-  const [queue, booked, fiscal] = await Promise.all([
+  // Only for whoever fetches and books: a reader has nothing to set up.
+  const [queue, booked, fiscal, setup] = await Promise.all([
     getIncomeReviewQueue(),
     getBookedIncome(),
     getFiscalYear(),
+    books ? incomeSetupSteps() : [],
   ]);
   // Undoing any of this (unexporting, unbooking, deleting) is the treasury's
   // to do, not everyone with bookkeeping access. Decided here, where the roles
@@ -38,6 +41,8 @@ export default async function IncomePage({
       canBook={books}
       canManage={canUnexport(user.capabilities)}
       fiscal={fiscal}
+      setup={setup}
+      canSetUp={canAccessSettings(user.capabilities)}
     />
   );
 }

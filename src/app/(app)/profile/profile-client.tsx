@@ -15,10 +15,12 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
+import { MemberScorePanel } from "@/components/member-score";
 import { NotificationSettings } from "./notification-settings";
 
 import { useFormat } from "@/lib/ui/use-format";
 import type { FortnoxStatus, NotificationKind, Role } from "@/lib/domain/types";
+import type { MemberScore } from "@/lib/domain/member-score";
 
 export function ProfileClient({
   name,
@@ -28,6 +30,8 @@ export function ProfileClient({
   account: a0,
   fortnox,
   notifications,
+  score,
+  showMembers,
 }: {
   name: string;
   email: string;
@@ -38,11 +42,16 @@ export function ProfileClient({
   fortnox?: { session: FortnoxStatus["session"] | null };
   /** The emails this member can be sent, and whether each is on. */
   notifications: { kind: NotificationKind; enabled: boolean }[];
+  /** The member's own redovisningsbetyg, which only they and the treasury see. */
+  score: MemberScore;
+  /** Holds MEMBER_SCORE_VIEW, so the overlay has a Medlemmar tab. */
+  showMembers: boolean;
 }) {
   const t = useTranslations("common");
   const tRole = useTranslations("common.role");
   const tProfile = useTranslations("profile");
   const tNav = useTranslations("nav");
+  const tScore = useTranslations("score");
   const { dateTime } = useFormat();
   const { pending, mutate } = useMutation();
   const [clearing, setClearing] = useState(c0);
@@ -65,6 +74,7 @@ export function ProfileClient({
     <PageShell
       title={tNav("profile")}
       width="form"
+      pages={showMembers ? profileTabs(tProfile, "me") : undefined}
     >
       <Card>
         <CardBody className="space-y-5">
@@ -121,6 +131,13 @@ export function ProfileClient({
               {tProfile("save")}
             </Button>
           </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title={tScore("title")} subtitle={tScore("ownSubtitle")} />
+        <CardBody>
+          <MemberScorePanel score={score} own />
         </CardBody>
       </Card>
 
@@ -207,4 +224,17 @@ export function ProfileClient({
       </Card>
     </PageShell>
   );
+}
+
+/** The overlay's two tabs, for the holders of MEMBER_SCORE_VIEW. Shared with
+ *  members/members-client.tsx, the other of them. */
+export function profileTabs(t: (key: string) => string, value: "me" | "members") {
+  return {
+    label: t("tabs.label"),
+    value,
+    options: [
+      { value: "me", label: t("tabs.me"), href: "/profile" },
+      { value: "members", label: t("tabs.members"), href: "/profile/members" },
+    ],
+  };
 }

@@ -4,7 +4,7 @@
     "section": {
       "fortnox": "The Fortnox connection, and syncing the chart of accounts and cost centres.",
       "costCenters": "The cost centres expenses and budgets can be split across.",
-      "income": "How a day's takings are split across accounts and activities.",
+      "income": "Which committees sell, which products are theirs and where the income is booked.",
       "resultUnits": "Which cost centres belong together, and who attests them.",
       "cards": "The section's cards and who holds which.",
       "mileageRates": "What a kilometre is worth, and from which day.",
@@ -202,10 +202,7 @@
       "prefixAccount": "Account",
       "unknownAccount": "Not in the chart",
       "fallback": "Fallback",
-      "makeFallback": "Make fallback",
       "noPrefixHint": "No product prefixes yet. Products starting with one are booked to its account.",
-      "disabledHint": "The unit takes no money in. Turn on sales to fetch and book them.",
-      "sectionHint": "How the unit's sales at the till and via Swish are booked.",
       "defaultCostCenterHint": "Sales are booked on this cost center.",
       "productHint": "Goods whose name starts with the prefix belong to the unit and are booked on the account beside it. With the prefix c, c-Cola lands here, for example.",
       "fallbackHint": "Goods that match no unit land here.",
@@ -229,7 +226,12 @@
     "sectionAttest": "Attest",
     "sectionAttestHint": "Result owners attest expenses on the unit's cost centers.",
     "grantedBy": "The role is granted by",
-    "editInRoles": "Change under Roles"
+    "editInRoles": "Change under Roles",
+    "sectionSales": "Sales",
+    "sectionSalesHint": "Whether the unit takes money in, and how it is booked.",
+    "salesOnSummary": "Sells, with {count, plural, =0 {no products yet} one {# product prefix} other {# product prefixes}}.",
+    "salesOffSummary": "Does not sell.",
+    "editInSales": "Edit under Sales"
   },
   "fortnox": {
     "connection": "Connection",
@@ -299,13 +301,13 @@
     }
   },
   "income": {
-    "title": "Income",
+    "title": "Sales",
     "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save",
     "cancel": "Cancel",
     "booking": {
-      "title": "Bookkeeping",
+      "title": "3. Booking",
       "description": "Where the day's takings are booked. Accounts and the cost center save as soon as you pick them."
     },
     "export": {
@@ -323,36 +325,8 @@
       "feeCostCenterHint": "Fees do not belong to one committee.",
       "chooseCostCenter": "Choose a cost centre"
     },
-    "committees": {
-      "title": "Committees",
-      "description": "The result units, and the income settings that let them take money in. One report per verksamhet per day; the prefixes decide what goes where.",
-      "add": "Add",
-      "key": "Key",
-      "name": "Name",
-      "namePlaceholder": "Cafémästeriet",
-      "empty": "No result units set up yet.",
-      "retired": "Retired",
-      "remove": "Remove",
-      "removeTitle": "Remove {name}?",
-      "removeBody": "The income settings and prefixes are removed. The result unit itself stays.",
-      "defaultCostCenter": "Default cost centre",
-      "noCostCenter": "No cost centre",
-      "noFallback": "No prefix is marked as the fallback. Products matching nothing have nowhere to go, and fetches will be refused.",
-      "manageUnits": "Manage result units"
-    },
-    "prefixes": {
-      "add": "Add prefix",
-      "save": "Save",
-      "none": "No prefixes",
-      "code": "Prefix",
-      "account": "Account",
-      "accountPlaceholder": "3011",
-      "remove": "Remove prefix",
-      "fallback": "Fallback",
-      "unknownAccount": "Unknown account"
-    },
     "fallbacks": {
-      "title": "Swish amounts",
+      "title": "4. Swish amounts",
       "description": "Payments with no usable message are matched on the exact amount.",
       "hint": "The message runs through the same prefix pipeline, so \"c-Cola\" lands with Cafémästeriet exactly as a labelled payment would.",
       "empty": "No amount rules.",
@@ -362,6 +336,34 @@
       "message": "Message",
       "messagePlaceholder": "c-Cola",
       "remove": "Remove"
+    },
+    "ready": "Everything is set up. Income can be fetched and booked.",
+    "optional": "Optional",
+    "done": "Done",
+    "stepsLeft": "{count, plural, one {# step left} other {# steps left}}",
+    "service": {
+      "title": "1. Connection",
+      "description": "The service that fetches from Zettle and renders the income statement.",
+      "connected": "The income service is connected.",
+      "missing": "The income service is not connected. Whoever runs the app needs to set INTAKT_URL and INTAKT_TOKEN."
+    },
+    "units": {
+      "title": "2. Committees and products",
+      "description": "Which result units sell, and which products are theirs. A product belongs to the committee whose prefix its name starts with.",
+      "notSelling": "Does not sell",
+      "noProducts": "Sells, but has no products yet",
+      "needsProducts": "No products",
+      "edit": "Edit",
+      "empty": "There are no result units yet.",
+      "manageUnits": "Create them under Result units"
+    },
+    "fallback": {
+      "unit": "Fallback for unknown products",
+      "unitHint": "Products and Swish payments that start with no prefix count as this committee's.",
+      "chooseUnit": "Choose committee",
+      "noSellingUnits": "No committee sells yet. Turn on sales below first.",
+      "account": "Account for unknown products",
+      "accountHint": "The revenue account they are booked to."
     }
   },
   "roles": {

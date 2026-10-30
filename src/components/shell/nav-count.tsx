@@ -8,18 +8,27 @@ import { cn } from "@/lib/ui/utils";
 export function NavCount({
   count,
   active,
+  overlay,
   className,
 }: {
   count: number;
-  /** On the lit row, whose fill is the accent already. */
+  /** On the lit row, whose fill is the hover grey, so the count steps up to
+   *  the card's white to stay a shape of its own. */
   active?: boolean;
+  /** Pinned over the corner of an icon (the phone's tab bar). There it has no
+   *  label beside it to lean on, so it is solid ink and a size smaller. These
+   *  are props rather than classes from the caller because cn() only joins,
+   *  and two heights in one class list are settled by emission order. */
+  overlay?: boolean;
   className?: string;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
-        active ? "bg-background/25 text-on-brand" : "bg-accent text-on-brand",
+        "inline-flex shrink-0 items-center justify-center rounded-mark px-1 font-medium tabular-nums",
+        overlay
+          ? "h-4 min-w-4 bg-foreground text-[10px] text-background"
+          : cn("h-[18px] min-w-[18px] text-[11px] text-muted", active ? "bg-background" : "bg-surface"),
         className,
       )}
     >

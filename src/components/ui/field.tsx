@@ -79,7 +79,7 @@ type Requirement = "required" | "optional";
 // accent border and a soft halo on top of that ring, which is where the "two
 // outlines, and one of them only on click" came from.
 const CONTROL =
-  "w-full border border-border bg-background text-sm text-foreground placeholder:text-muted transition-[color,background-color] duration-150 disabled:bg-surface disabled:text-muted disabled:cursor-not-allowed";
+  "w-full border border-border-control bg-background text-sm text-foreground placeholder:text-muted transition-[color,background-color] duration-150 disabled:bg-surface disabled:text-muted disabled:cursor-not-allowed";
 
 // "md" is the form control; "sm" is the compact one that sits in a card header,
 // a filter bar or a table row. Sizes live here so those don't get re-typed.
@@ -91,23 +91,39 @@ const CONTROL =
 // approximately true.
 export type ControlSize = "sm" | "md";
 type Size = ControlSize;
-// "sm" is two heights, not one. 36px is a density for a pointer, and it is what
-// every filter bar in the app was built at. On a phone that is a control you
-// aim at rather than one you hit, eight pixels under what both Apple and
-// Google ask for. So below sm it stands at 44 and from sm up it goes back to
-// the density a mouse earns.
+// Each is two heights, not one. 32px is a density for a pointer. On a phone
+// that is a control you aim at rather than one you hit, twelve pixels under
+// what both Apple and Google ask for. So below sm it stands at 44 and from sm
+// up it goes back to the density a mouse earns.
+//
+// The two registers are the same height from sm up. They used to be 36 and
+// 38, beside a 36px button, so one form carried three heights and no row of
+// controls lined up. What still tells them apart is the padding.
 //
 // One height per band written into the same string, rather than left to call
 // sites: a toolbar is five of these in a row and any one of them opting out
 // would be the row that no longer lines up.
 export const CONTROL_SIZES: Record<ControlSize, string> = {
-  sm: "h-11 rounded-control px-2.5 sm:h-9",
-  // No height of its own: md is sized by its padding, which puts it at 38px,
-  // two above the compact register so a form field still reads as the larger
-  // of the two. The textarea shares this string, which is why it is padding and
-  // not a height.
-  md: "rounded-control px-3 py-2",
+  // `field-ring` puts the focus ring on the field's own border rather than
+  // just outside it (see globals.css). Carried here because every box that
+  // reads as a field (input, combobox, search, the suffixed pairs) is built
+  // from these two strings.
+  sm: "field-ring h-11 rounded-control px-2.5 sm:h-8",
+  md: "field-ring h-11 rounded-control px-2.5 sm:h-8",
 };
+
+/**
+ * A control that is a cell of a table from its container's 2xl up: no box of
+ * its own there, the grid lines are the boxes, as in the voucher table. Below
+ * it, an ordinary control. Laid on top of CONTROL_SIZES.sm, which it overrides
+ * only inside the container query, so the two never compete for one property
+ * at the same width. The cost-split editor's rows are built from it.
+ */
+export const CONTROL_CELL = "@2xl:h-10 @2xl:rounded-none @2xl:border-0 @2xl:bg-transparent focus-inset";
+
+// The textarea grows with what is typed, so it is sized by padding rather
+// than a height, set to land a single line at the same 32px.
+const TEXTAREA = "field-ring rounded-control px-2.5 py-1.5";
 const SIZES = CONTROL_SIZES;
 const control = (size: Size, className?: string) => cn(CONTROL, SIZES[size], className);
 
@@ -156,14 +172,14 @@ function FieldContent({
   return (
     <>
       {/* The label's own line, and it is a line whether or not anything else
-          is on it: 24px, the height of the compact controls, so two fields side
+          is on it: 20px, so two fields side
           by side in a grid have their boxes at the same height even when one of
           them carries something up here.
 
           What may ride the far end is a second question about this same field
           (the utlägg's direction beside "Belopp"), which is how it gets asked
           without costing the form a row. */}
-      <span className="mb-1.5 flex min-h-6 items-center justify-between gap-2 text-[13px] font-medium text-foreground">
+      <span className="mb-1 flex min-h-5 items-center justify-between gap-2 text-[13px] font-medium text-foreground">
         <span className="flex min-w-0 items-center gap-1">
           {label}
           {requirement === "required" && (
@@ -351,7 +367,7 @@ export function Textarea({
   return (
     <textarea
       {...wiring}
-      className={control("md", cn("min-h-24 resize-y", className))}
+      className={cn(CONTROL, TEXTAREA, "min-h-24 resize-y", className)}
       {...props}
     />
   );
@@ -382,6 +398,8 @@ export function DateInput({
   onChange,
   disabled,
   id,
+  min,
+  max,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size"> & { size?: Size }) {
   const t = useTranslations("common");
@@ -412,10 +430,15 @@ export function DateInput({
     // that is the input inside, not the box. SuffixedInput has the same gap and
     // says so; this one is closed because DateInput takes `disabled` as a prop
     // and a field that ignored it would look editable while refusing to be.
+    //
+    // `min-w-fit`, with the text's floor a whole date: squeezed by its
+    // neighbours, the box stops at what it holds rather than letting the
+    // calendar button spill out over its border, and a date is never shown
+    // cut short.
     <div
       className={suffixBox(
         size,
-        cn("relative pr-1", disabled && "cursor-not-allowed bg-surface text-muted", className),
+        cn("relative min-w-fit pr-1", disabled && "cursor-not-allowed bg-surface text-muted", className),
       )}
     >
       <DateInputBase
@@ -424,7 +447,7 @@ export function DateInput({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={SUFFIXED_TEXT}
+        className={cn(SUFFIXED_TEXT, "min-w-[10ch] tabular-nums")}
       />
       {/* The calendar the button opens, kept out of sight and out of the tab
           order: it is not a second field to fill in. Placed at the bottom of
@@ -440,6 +463,10 @@ export function DateInput({
         tabIndex={-1}
         aria-hidden
         disabled={disabled}
+        // The calendar's range, for a field kept to one räkenskapsår. The mask
+        // takes any date, so the form still says when a typed one is outside.
+        min={min}
+        max={max}
         // Whole dates only. The mask holds "2026" and "2026-07" while somebody
         // is part-way through typing, and a native date input handed a partial
         // value clears itself, which would open an empty calendar on a field

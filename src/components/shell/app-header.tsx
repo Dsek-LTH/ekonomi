@@ -65,11 +65,11 @@ export function AppHeader({
 }) {
   const t = useTranslations("nav");
   return (
-    // `box-content`, so the 64px is all room for the controls and the rule is
-    // drawn below it. Inside it, the rule took a pixel of the height and a 40px
-    // button sat 11.5px from the top and 11.5 from the line, which the browser
-    // rounds to an off-centre 11 and 12.
-    <header className="z-30 hidden box-content h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:flex print:hidden">
+    // `box-content`, so the 48px is all room for the controls and the rule is
+    // drawn below it. Inside it, the rule took a pixel of the height and a 32px
+    // button sat 7.5px from the top and 7.5 from the line, which the browser
+    // rounds to an off-centre 7 and 8.
+    <header className="z-30 hidden box-content h-12 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:flex print:hidden">
       <button
         ref={navToggleRef}
         type="button"
@@ -77,17 +77,17 @@ export function AppHeader({
         aria-expanded={navOpen}
         aria-controls="app-nav"
         className={cn(
-          // The section's pink as a fill, the primary button's look, in the
-          // year picker's type (text-base, font-medium). Darkened a touch while
+          // A secondary button's look rather than the primary's: opening the
+          // nav is not the thing the page is for. Held in the hover fill while
           // the panel is open, so the button says it is pressed in.
-          "relative flex h-10 shrink-0 items-center gap-2 rounded-control border border-brand-edge px-3 text-base font-medium brand-fill text-on-brand shadow-[var(--shadow-card)] transition-[filter,scale] hover:brightness-95 active:scale-[0.98]",
-          navOpen && "brightness-90 hover:brightness-90",
+          "relative flex h-8 shrink-0 items-center gap-2 rounded-control border border-border-control bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover",
+          navOpen && "bg-hover",
         )}
       >
         <IconMenu className="size-4" />
         {t("menu")}
-        {/* Off the corner rather than inside it: a pink dot on a pink fill
-            would not be seen. */}
+        {/* Off the corner rather than inside it, where it would crowd the
+            label. */}
         {waiting && !navOpen && (
           <span aria-hidden className="absolute -right-1 -top-1 size-2.5 rounded-full bg-accent ring-2 ring-background" />
         )}
@@ -100,8 +100,8 @@ export function AppHeader({
           the account menu now. */}
       <Link href="/dashboard" className="flex shrink-0 items-center gap-2 rounded-control">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-8" />
-        <span className="text-base font-semibold">{t("brandTagline")}</span>
+        <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-6" />
+        <span className="text-sm font-semibold">{t("brandTagline")}</span>
       </Link>
 
       <div className="ms-auto flex items-center gap-2">
@@ -146,8 +146,10 @@ export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
         label={year}
         accessibleName={`${t("fiscalYear")} ${year}`}
         variant="quiet"
-        size="lg"
-        className="[&_button]:px-3"
+        // Tighter than a page's button: it is a word in a row of controls,
+        // and a year has nothing to give room to.
+        className="[&_button]:gap-1 [&_button]:px-2"
+        narrow
         disabled={!applies}
       >
         {fiscal.years.map((y) => (
@@ -181,7 +183,7 @@ function FortnoxStatusButton({ session }: { session: FortnoxStatus["session"] | 
       href={`/api/fortnox/connect?mode=user&returnTo=${encodeURIComponent(pathname)}`}
       title={label}
       aria-label={label}
-      className="flex h-10 items-center gap-2 rounded-control px-3 text-base font-medium transition-colors hover:bg-hover"
+      className="flex h-8 items-center gap-2 rounded-control px-2.5 text-sm font-medium transition-colors hover:bg-hover"
     >
       <IconFortnox className="size-4" />
       {/* The name alone. Whether the session holds is the dot's to say, and

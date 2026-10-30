@@ -8,7 +8,7 @@ import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { usePhone } from "@/lib/ui/media";
-import { CONTROL_SIZES, type ControlSize } from "./field";
+import { CONTROL_CELL, CONTROL_SIZES, type ControlSize } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
 
@@ -50,14 +50,15 @@ type SharedProps = {
   createLabel?: (text: string) => string;
   clearLabel?: string;
   /**
-   * Whether the menu carries a box to filter by.
+   * Whether the field can be typed into to filter the list.
    *
-   * On by default, because most of these stand over a list nobody can read at a
-   * glance: a chart of accounts, every cost centre the section has. Off for a
-   * short fixed set, where a search box is a field asking to be typed into in
-   * order to choose between four numbers, which is more work than the menu it
-   * is meant to shorten. Keyboard use survives either way; the list itself
-   * takes the arrows and Enter when there is no box to hold them.
+   * Left out, it is decided by the list: on from SEARCH_MIN options, or when
+   * `onCreate` needs something typed. Most of these stand over a list nobody
+   * can read at a glance (a chart of accounts, every cost centre the section
+   * has), but a short fixed set does not want a search, which would be a field
+   * asking to be typed into in order to choose between four numbers. Keyboard
+   * use survives either way; the list itself takes the arrows and Enter when
+   * there is nothing to type into.
    */
   searchable?: boolean;
   disabled?: boolean;
@@ -74,15 +75,33 @@ type SharedProps = {
    * toolbars pass "sm".
    */
   size?: ControlSize;
+  /**
+   * The trigger's look. "field" is a form control at `size`. "cell" is the
+   * compact one that turns into a borderless table cell inside a 2xl
+   * container (CONTROL_CELL in ui/field.tsx), for rows that read as a table.
+   */
+  variant?: "field" | "cell";
   buttonClassName?: string; // replaces the default field appearance when given
   chevronClassName?: string; // for triggers on a coloured background
   invalid?: boolean;
+  /**
+   * Opens its list on mount. For a picker a click has just put in place of
+   * something else (the bank's card holder), where that click was already the
+   * request to choose, and a second one to open the list read as the first
+   * having done nothing.
+   */
+  openOnMount?: boolean;
+  /** Told whenever the list closes, picked or not. */
+  onClose?: () => void;
   // Takes focus on mount. For fields a click has just brought into existence,
   // such as a new allocation row's cost centre, where the alternative is tabbing back
   // to the thing you asked for.
   autoFocus?: boolean;
   "aria-label"?: string;
 };
+
+/** From this many options a list is long enough to want filtering. */
+const SEARCH_MIN = 8;
 
 // A strict, searchable single-select. You can filter by typing, but only a value
 // that exists in `options` (or "" when `allowClear`) can be committed. The menu
@@ -143,17 +162,20 @@ function ComboboxBase({
   searchPlaceholder,
   emptyText,
   onCreate,
-  searchable = true,
+  searchable: searchableProp,
   createLabel,
   clearLabel,
   disabled,
   align = "left",
   size = "md",
   className,
+  variant = "field",
   buttonClassName,
   chevronClassName,
   invalid,
   autoFocus,
+  openOnMount = false,
+  onClose,
   "aria-label": ariaLabel,
 }: SharedProps & {
   values: string[];
@@ -212,6 +234,20 @@ function ComboboxBase({
   // covers the foot of the list, and the matches are at its head.
   const phone = usePhone();
 
+  const searchable = searchableProp ?? (options.length >= SEARCH_MIN || Boolean(onCreate));
+  /**
+   * Where the typing happens. In the field itself, from the desktop's own
+   * field appearance: the field turns into the search while the list is open,
+   * so the panel is only the list, with no second box above it saying the
+   * same thing. A centred cell (the voucher table's account and cost centre)
+   * does the same: its value is centred in the cell, and so is what is typed
+   * over it, so there is no padding to match. In the panel's head everywhere
+   * else. A phone's list is a screen of its own, which covers the field, and a
+   * left-aligned trigger drawn by its caller (a budget cell, the bank's card
+   * picker) has a box this cannot match padding for padding.
+   */
+  const inline = searchable && !phone && (align === "center" || !buttonClassName);
+
   function openMenu(initial = "") {
     if (disabled) return;
     setRect(triggerRef.current?.getBoundingClientRect() ?? null);
@@ -219,7 +255,10 @@ function ComboboxBase({
     setActive(initial ? 0 : Math.max(0, options.findIndex((o) => isPicked(o.value))));
     setOpen(true);
   }
-  function close() { setOpen(false); }
+  function close() {
+    setOpen(false);
+    onClose?.();
+  }
 
   // Picking one of several is rarely the last thing you want to do, so multi
   // stays open and keeps the search you typed; single has nothing left to offer.
@@ -251,8 +290,9 @@ function ComboboxBase({
    * jumping over the field. Flipping is the last resort it was meant to be:
    * only when there is genuinely more room the other way.
    */
-  /** Search box and its border, plus the list's own padding. */
-  const CHROME = 58;
+  /** The list's own padding, plus the search box and its border when the
+   *  panel carries it. */
+  const CHROME = searchable && !inline ? 58 : 10;
   const ROW = 30;
 
   function menuStyle(): React.CSSProperties {
@@ -285,6 +325,15 @@ function ComboboxBase({
     if (autoFocus) triggerRef.current?.focus();
   }, [autoFocus]);
 
+  // A frame later, so the trigger is laid out and the list has a rect to sit
+  // against. Mount only: it is the click that put this here being answered.
+  useEffect(() => {
+    if (!openOnMount) return;
+    const frame = requestAnimationFrame(() => openMenu());
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The options aren't focusable, so nothing scrolls the list on its own.
   // Whichever key moved the highlight (arrows or Tab), bring it into view.
   useEffect(() => {
@@ -301,7 +350,9 @@ function ComboboxBase({
   //
   // The trigger and the panel are both the layer: the panel is portalled out of
   // the trigger's subtree, so a press on it is not a press "inside" the field.
-  useDismissOnOutside(open, [triggerRef, panelRef], close);
+  // The inline search too: it lies over the trigger rather than in it, so a
+  // press on it is not a press on the trigger either.
+  useDismissOnOutside(open, [triggerRef, searchRef, panelRef], close);
 
 
   /** A row's height: a finger's worth on a phone, a pointer's elsewhere. */
@@ -340,6 +391,11 @@ function ComboboxBase({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
+        // While the field is the search, focus is in the input laid over it,
+        // and this is what draws the ring for it (globals.css). On the trigger
+        // rather than round the pair, because the trigger knows its own
+        // corners and its own ring: a field's on its border, a cell's inside.
+        data-search-open={(open && inline) || undefined}
         onClick={() => (open ? close() : openMenu())}
         onKeyDown={(e) => {
           if (open) return;
@@ -363,7 +419,9 @@ function ComboboxBase({
           "relative flex w-full items-center text-sm disabled:opacity-50",
           align === "center" ? "justify-center text-center" : "justify-between gap-1.5 text-left",
           buttonClassName ??
-            cn(CONTROL_SIZES[size], "border border-border bg-background"),
+            (variant === "cell"
+              ? cn(CONTROL_SIZES.sm, "border border-border-control bg-background", CONTROL_CELL)
+              : cn(CONTROL_SIZES[size], "border border-border-control bg-background")),
           invalid && "text-danger",
         )}
       >
@@ -372,6 +430,8 @@ function ComboboxBase({
             "truncate",
             align === "center" && "w-full",
             triggerLabel === null && "text-muted",
+            // Held in place under the search, so the box keeps its width.
+            open && inline && "invisible",
           )}
         >
           {triggerLabel ?? placeholder ?? t("placeholder")}
@@ -379,14 +439,46 @@ function ComboboxBase({
         {/* Centred, the chevron leaves the flow entirely. As a flex sibling it
             would shift the label left by half its width and the value would sit
             off-centre in the box. */}
+        {/* Turns over while the list is open, the same gesture as the Menu's
+            chevron, so a field and a menu say "open" the same way. */}
         <IconChevronDown
           className={cn(
-            "size-4 shrink-0",
+            "size-4 shrink-0 transition-transform duration-200 ease-[var(--ease-out-quint)]",
+            open && "rotate-180",
             align === "center" && "pointer-events-none absolute right-1",
             chevronClassName ?? "text-faint",
           )}
         />
       </button>
+
+      {/* The search, laid over the label it replaces while the list is open.
+          The chevron stays the button's, so a press on it still shuts the
+          list. What is picked now is the placeholder, so the field does not
+          appear to have lost its value the moment it is opened. */}
+      {open && inline && (
+        <input
+          ref={searchRef}
+          id={`${listId}-search`}
+          role="combobox"
+          aria-expanded
+          aria-controls={listId}
+          aria-activedescendant={filtered[active] ? optionId(active) : undefined}
+          aria-autocomplete="list"
+          data-combobox-search=""
+          aria-label={ariaLabel ?? searchPlaceholder ?? t("searchPlaceholder")}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+          onKeyDown={onSearchKey}
+          placeholder={multiple ? (searchPlaceholder ?? t("searchPlaceholder")) : (triggerLabel ?? searchPlaceholder ?? t("searchPlaceholder"))}
+          autoComplete="off"
+          className={cn(
+            "absolute inset-y-0 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted",
+            // Centred, it keeps clear of the chevron on both sides so the
+            // text stays on the cell's middle.
+            align === "center" ? "inset-x-5 text-center" : "left-0 right-8 px-2.5",
+          )}
+        />
+      )}
 
       {open && (phone || rect) && createPortal(
         <div
@@ -435,7 +527,7 @@ function ComboboxBase({
               </button>
             </div>
           )}
-          {searchable && (
+          {searchable && !inline && (
           <div className={cn("shrink-0 border-b border-border", phone ? "px-4 pb-3" : "p-2")}>
             <input
               ref={searchRef}
@@ -455,7 +547,7 @@ function ComboboxBase({
               placeholder={searchPlaceholder ?? t("searchPlaceholder")}
               // 16px on a phone: iOS zooms the page in on any field set smaller.
               className={cn(
-                "w-full rounded-control border border-border bg-background",
+                "w-full rounded-control border border-border-control bg-background",
                 phone ? "h-11 px-3 text-base" : "h-8 px-2.5 text-sm",
               )}
             />

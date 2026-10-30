@@ -28,6 +28,7 @@ import type { Expense } from "@/lib/domain/types";
 import type { BudgetOverview } from "@/lib/data/budget-overview";
 import type { MyMoney } from "@/lib/data/my-money";
 import { useFormat } from "@/lib/ui/use-format";
+import { StarRating } from "@/components/member-score";
 import { BudgetOverviewCard } from "./budget-overview-card";
 import { BudgetKpis } from "./budget-kpis";
 import { MyMoneyCard } from "./my-money-card";
@@ -58,7 +59,6 @@ const ACTION_ORDER: QueueAction[] = ["FIX", "SUBMIT", "ATTEST", "BOOK", "EXPORT"
 
 // See page.tsx for who gets which view and why.
 export function DashboardClient({
-  firstName,
   view,
   views,
   queue,
@@ -68,8 +68,9 @@ export function DashboardClient({
   budget,
   money,
   showBudgetLink,
+  score,
+  behind,
 }: {
-  firstName: string;
   view: DashboardView;
   /** The views this person may pick between. One is not a choice. */
   views: DashboardView[];
@@ -84,6 +85,11 @@ export function DashboardClient({
   /** For the personal view. */
   money: MyMoney | null;
   showBudgetLink: boolean;
+  /** The viewer's own redovisningsbetyg, and the oldest purchase still waiting. */
+  score: OwnScore;
+  /** Who has purchases waiting the longest, for the holders of
+   *  MEMBER_SCORE_VIEW. Null for everyone else. */
+  behind: BehindRow[] | null;
 }) {
   const t = useTranslations("dashboard");
   const router = useRouter();
@@ -105,7 +111,7 @@ export function DashboardClient({
 
   return (
     <PageShell
-      title={t("greeting", { name: firstName })}
+      title={t("title")}
       collections={
         views.length > 1
           ? {
@@ -128,7 +134,7 @@ export function DashboardClient({
               {showBudgetLink && (
                 <Link
                   href="/budget"
-                  className="inline-flex items-center gap-1 self-start text-sm font-medium text-accent hover:underline"
+                  className="inline-flex items-center gap-1 self-start text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                 >
                   {t("budgetLink")}
                   <IconChevronRight className="size-4" />
@@ -150,14 +156,16 @@ export function DashboardClient({
             )
           )}
         </div>
-        <div className="order-1 lg:order-2">
+        <div className="order-1 flex flex-col gap-6 lg:order-2">
           <YouPanel
             queue={queue}
             unaccountedPurchases={unaccountedPurchases}
             payoutMissing={payoutMissing}
             // The personal view shows them large on the left already.
             mine={view === "personal" ? null : mine}
+            score={score}
           />
+          {behind && behind.length > 0 && <BehindCard rows={behind} />}
         </div>
       </div>
     </PageShell>
@@ -172,13 +180,17 @@ function YouPanel({
   unaccountedPurchases,
   payoutMissing,
   mine,
+  score,
 }: {
   queue: QueueItem[];
   unaccountedPurchases: number;
   payoutMissing: boolean;
   mine: Expense[] | null;
+  score: OwnScore;
 }) {
   const t = useTranslations("dashboard");
+  const tScore = useTranslations("score");
+  const { date } = useFormat();
 
   const counts = useMemo(() => {
     const n = new Map<QueueAction, number>();
@@ -218,11 +230,28 @@ function YouPanel({
           )}
         </ul>
       )}
+      {/* The member's own stars, where they look every day rather than
+          only on the profile, and what sending would raise them. Not shown
+          while there are no stars and nothing waits: a "Ny" alone says
+          nothing worth the room. */}
+      {(score.stars !== null || score.next) && (
+        <Link href="/profile" className="block border-t border-border px-inset py-3 hover:bg-hover">
+          <span className="flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-muted">{tScore("ownTitle")}</span>
+            <StarRating value={score.stars} />
+          </span>
+          {score.next && (
+            <span className="mt-1 block text-sm">
+              {tScore("ownHint", { title: score.next.title || tScore("kind.draft"), date: date(score.next.startedOn) })}
+            </span>
+          )}
+        </Link>
+      )}
       {mine && (
         <div className="border-t border-border">
           <div className="flex items-center justify-between px-inset pt-3 text-xs font-medium text-muted">
             <span>{t("mineTitle")}</span>
-            <Link href="/expenses" className="inline-flex items-center gap-0.5 text-accent hover:underline">
+            <Link href="/expenses" className="inline-flex items-center gap-0.5 text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
               {t("allExpenses")}
               <IconChevronRight className="size-3.5" />
             </Link>
@@ -249,6 +278,60 @@ function YouPanel({
           )}
         </div>
       )}
+    </Card>
+  );
+}
+
+interface OwnScore {
+  stars: number | null;
+  next: { title: string; startedOn: string } | null;
+}
+
+interface BehindRow {
+  userId: string;
+  name: string;
+  stars: number | null;
+  waiting: number;
+  oldestDays: number;
+}
+
+// For the one who chases late utlägg: the members whose purchases have waited
+// longest, each opening their breakdown on the profile's Medlemmar tab. Absent
+// when nobody is behind, rather than a card saying so every day.
+function BehindCard({ rows }: { rows: BehindRow[] }) {
+  const t = useTranslations("score");
+  const tList = useTranslations("score.list");
+  return (
+    <Card>
+      <CardHeader
+        title={t("behindTitle")}
+        action={
+          <Link
+            href="/profile/members"
+            className="inline-flex items-center gap-0.5 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+          >
+            {t("behindAll")}
+            <IconChevronRight className="size-3.5" />
+          </Link>
+        }
+      />
+      <ul className="px-2 pb-3 pt-1">
+        {rows.map((r) => (
+          <li key={r.userId}>
+            <Link
+              href={`/profile/members?id=${r.userId}`}
+              className="flex items-center gap-3 rounded-control px-2 py-2 hover:bg-hover"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{r.name}</span>
+                <span className="block truncate text-xs text-muted">
+                  {tList("waitingSummary", { count: r.waiting, days: r.oldestDays })}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -311,7 +394,7 @@ function MineTable({ mine }: { mine: Expense[] }) {
         action={
           <Link
             href="/expenses"
-            className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+            className="inline-flex items-center gap-1 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
           >
             {t("allExpenses")}
             <IconChevronRight className="size-4" />

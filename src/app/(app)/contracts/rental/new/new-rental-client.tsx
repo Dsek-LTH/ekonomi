@@ -514,7 +514,7 @@ export function NewRentalClient({
                       <button
                         type="button"
                         onClick={() => setNewCounterpartyName("")}
-                        className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                        className="flex items-center gap-1 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                       >
                         <IconPlus className="size-3.5" />
                         {tc("add")}
@@ -735,7 +735,7 @@ export function NewRentalClient({
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      className="text-xs font-medium text-accent hover:underline"
+                      className="text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                       onClick={lendFree}
                     >
                       {t("rental.lendFree")}

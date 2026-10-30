@@ -130,8 +130,8 @@ model Contract {
   /// next. Not rendered into any document.
   notes String?
 
-  files   ContractFile[]
-  rental  RentalDetails?
+  files  ContractFile[]
+  rental RentalDetails?
 
   /// The agreement-specific facts: counterparty, period, status. Always
   /// present for CONTRACT. Present for OTHER only when a counterparty was

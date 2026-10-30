@@ -1,4 +1,4 @@
-// Export an attested levfaktura to Fortnox: make the supplier invoice, unbooked,
+// Send a konterad levfaktura to Fortnox: make the supplier invoice, unbooked,
 // with the attest page and the invoice PDF attached. Booking it and paying it
 // happen in Fortnox, as for every supplier invoice the section has.
 //
@@ -24,17 +24,13 @@ import {
 } from "@/lib/fortnox";
 import { userToken } from "@/lib/fortnox/export";
 import { canBookkeep } from "@/lib/domain/permissions";
-import { exportBlocker } from "@/lib/domain/supplier-invoice";
+import { exportBlocker, PAYABLE_ACCOUNT, ROUNDING_ACCOUNT } from "@/lib/domain/supplier-invoice";
 import { giroMismatch } from "@/lib/domain/payment-ref";
 import { oreToSEK } from "@/lib/domain/money";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
-import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
+import { exportFactsOf, loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
 import { isoDate } from "@/lib/data/shared";
-
-/** The leverantörsskuld account, BAS standard. What every supplier invoice's
- *  total is credited to until it is paid. */
-const PAYABLE_ACCOUNT = 2440;
 
 const ExportBody = z.object({
   /** The treasurer has seen the bankgiro warning and pays to the invoice's
@@ -60,22 +56,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
   const { invoice } = access;
-  if (invoice.status !== "APPROVED") return refuseChange(invoice, false);
+  if (invoice.status !== "BOOKED") return refuseChange(invoice, false);
 
-  // A single row is the whole invoice; a split names its shares.
-  const rows = invoice.allocations.map((a) => ({
-    ...a,
-    share: invoice.allocations.length === 1 ? invoice.amount : a.amount,
-  }));
-  const blocker = exportBlocker({
-    fortnoxSupplierNumber: invoice.fortnoxSupplierNumber,
-    invoiceNumber: invoice.invoiceNumber,
-    invoiceDate: invoice.invoiceDate,
-    dueDate: invoice.dueDate,
-    amount: invoice.amount,
-    rows: rows.map((r) => ({ amount: r.share, account: r.account })),
-  });
+  const blocker = exportBlocker(exportFactsOf(invoice));
   if (blocker) return fail(422, blocker);
+  // What each unit signed for, for the attest page: a single row is the whole
+  // invoice, a split names its shares.
+  const shares = invoice.allocations.map((a) => ({
+    ...a,
+    share: invoice.allocations.length === 1 ? invoice.amount! : a.amount!,
+  }));
 
   // The treasurer's own Fortnox login, so Fortnox says who made it. Before the
   // lock, so needing to log in leaves nothing to clean up.
@@ -106,10 +96,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   }
 
-  // The lock. Still attested and nobody else's is part of the condition.
+  // The lock. Still konterad and nobody else's is part of the condition.
   const claimedAt = new Date();
   const { count } = await prisma.supplierInvoice.updateMany({
-    where: { id: invoice.id, status: "APPROVED", exportClaimedAt: null },
+    where: { id: invoice.id, status: "BOOKED", exportClaimedAt: null },
     data: { exportClaimedAt: claimedAt, exportClaimedById: g.actor.id, exportClaimState: "CLAIMED" },
   });
   if (count === 0) return fail(409, "supplierInvoice.exportInProgress");
@@ -138,10 +128,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       amount: invoice.amount!,
       description: invoice.description,
       resultUnit: invoice.resultUnit?.name ?? null,
-      rows: rows.map((r) => ({
+      rows: shares.map((r) => ({
         costCenter: `${r.costCenter.code} - ${r.costCenter.name}`,
-        account: r.account!,
-        amount: r.share!,
+        // The accounts the kontering booked this cost centre's share on.
+        account:
+          [...new Set(invoice.lines.filter((l) => l.costCenterCode === r.costCenter.code).map((l) => l.account))].join(
+            ", ",
+          ) || "-",
+        amount: r.share,
         attestedBy: r.approvedById ? (nameOf.get(r.approvedById) ?? null) : null,
         attestedAt: r.approvedAt,
         comment: r.comment,
@@ -177,14 +171,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       total: oreToSEK(invoice.amount),
       ocr: invoice.ocr,
       yourReference: invoice.yourReference,
-      comments: invoice.description,
+      ourReference: invoice.ourReference,
+      // Our number at the end, as an utlägg's is on its voucher, so the
+      // invoice in Fortnox can be traced back to the one here.
+      comments: [invoice.description, invoice.reference && `(${invoice.reference})`].filter(Boolean).join(" ") || null,
       payableAccount: PAYABLE_ACCOUNT,
-      rows: rows.map((r) => ({
-        account: Number(r.account),
-        amount: oreToSEK(r.share),
-        costCenter: r.costCenter.code,
-        project: r.project ?? undefined,
-        text: r.comment ?? undefined,
+      ...(invoice.rounding && { rounding: { account: ROUNDING_ACCOUNT, amount: oreToSEK(invoice.rounding) } }),
+      // The kontering as the treasurer saved it. With the rounding, its
+      // lines book exactly the amount to pay (exportBlocker).
+      rows: invoice.lines.map((l) => ({
+        account: Number(l.account),
+        debit: oreToSEK(l.debit),
+        credit: oreToSEK(l.credit),
+        costCenter: l.costCenterCode ?? undefined,
+        project: l.project ?? undefined,
+        text: l.description ?? undefined,
       })),
     });
   } catch (e) {

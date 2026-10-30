@@ -10,10 +10,10 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { fiscalYearWhere } from "@/lib/server/fiscal-year";
 import { inFiscalYear, type FiscalYear } from "@/lib/ui/fiscal-year";
-import { canBookkeep, canSeeInvoices, canTriageInvoices, hasAttestRole } from "@/lib/domain/permissions";
+import { canBookkeep, canSeeInvoices, hasAttestRole } from "@/lib/domain/permissions";
 import { attestScopeWhere } from "./attest-scope";
 import { countCardlessTransactions, countUnaccountedPurchases } from "./bank";
-import { countInboxDocuments } from "./invoice-inbox";
+import { canSeeInvoiceInbox, countInboxDocuments } from "./invoice-inbox";
 import { getInvoiceRows } from "./supplier-invoices";
 import type { Viewer } from "./expense-scope";
 
@@ -51,7 +51,7 @@ export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Pro
     canBookkeep(viewer.capabilities)
       ? prisma.expense.count({ where: { status: { in: ["APPROVED", "BOOKED"] }, ...bought } })
       : 0,
-    canTriageInvoices(viewer.capabilities) ? countInboxDocuments({ during }) : 0,
+    canSeeInvoiceInbox(viewer) ? countInboxDocuments(viewer) : 0,
     // The rows rather than a count, because whether an invoice waits on the
     // viewer is invoiceWaitsOn's answer per row, and writing it again as a
     // query is how the badge and the list would come to disagree. A section's

@@ -97,7 +97,7 @@ export function TabBar({
       >
         <span className="relative">
           <Icon className="size-[22px]" />
-          {n > 0 && <NavCount count={n} className="absolute -right-3 -top-1.5 h-4 min-w-4 px-1 text-[10px]" />}
+          {n > 0 && <NavCount count={n} overlay className="absolute -right-3 -top-1.5" />}
         </span>
         <span className="max-w-full truncate">{t(x.label)}</span>
       </Link>

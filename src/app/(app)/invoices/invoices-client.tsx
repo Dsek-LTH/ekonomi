@@ -11,7 +11,6 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import { useScopeSwitch, useTableControls, useUrlTab } from "@/lib/data/use-list-query";
@@ -27,9 +26,10 @@ import {
   type InvoiceTab,
 } from "./scope";
 
-// Undated last when sorted soonest first: an invoice nobody has read a due
-// date off yet is not more urgent than one due tomorrow.
-const dueKey = (r: SupplierInvoiceRow) => r.dueDate || "9999-12-31";
+// Undated by arrival, after every dated one: an invoice its unit has not
+// fördelat yet has no due date, and is not more urgent than one due tomorrow.
+// Among themselves they keep the order they came in.
+const dueKey = (r: SupplierInvoiceRow) => r.dueDate || `9999-${r.receivedAt}`;
 
 export function InvoicesClient({
   rows,
@@ -66,29 +66,39 @@ export function InvoicesClient({
   );
 
   const columns: Column<SupplierInvoiceRow>[] = [
+    // Our number, "LEV26-0012", the way the utlägg list leads with its DEK.
     {
-      key: "supplier",
-      header: t("col.supplier"),
-      mobile: "title",
-      value: (r) => title(r),
+      key: "reference",
+      header: t("col.reference"),
+      mobile: "hide",
+      value: (r) => r.reference ?? "",
       sortable: true,
       searchable: true,
-      cell: (r) => (
-        <span className="block min-w-0">
-          <span className="block truncate font-medium">{title(r)}</span>
-          {r.supplierName && r.description && (
-            <span className="block truncate text-xs text-muted">{r.description}</span>
-          )}
-        </span>
-      ),
+      className: "whitespace-nowrap tabular-nums text-muted",
+      cell: (r) => r.reference ?? "-",
     },
+    // What it is for, as the unit said it. Before it is fördelad, who sent it
+    // in, since that is all there is to tell it by. The supplier and its
+    // number are searched as well, for the treasury looking one up.
     {
-      key: "invoiceNumber",
-      header: t("col.invoiceNumber"),
-      mobile: "hide",
-      value: (r) => r.invoiceNumber ?? "",
+      key: "description",
+      header: t("col.description"),
+      mobile: "title",
+      value: (r) => [r.description ?? "", r.supplierName ?? "", r.invoiceNumber ?? "", r.receivedByName ?? ""].join(" "),
+      sortable: true,
       searchable: true,
-      cell: (r) => r.invoiceNumber ?? <span className="text-muted">-</span>,
+      cell: (r) =>
+        r.description ? (
+          <span className="block min-w-0">
+            <span className="block truncate font-medium">{r.description}</span>
+            {r.supplierName && <span className="block truncate text-xs text-muted">{r.supplierName}</span>}
+          </span>
+        ) : (
+          <span className="block truncate text-muted">
+            {r.receivedByName ? t("fromForwarder", { name: r.receivedByName }) : t("notAllocated")}
+          </span>
+        ),
+      mobileCell: (r) => title(r),
     },
     {
       key: "unit",
@@ -144,22 +154,18 @@ export function InvoicesClient({
           : undefined
       }
     >
-      {rows.length === 0 ? (
-        <EmptyState title={t("empty")} description={t("emptyDescription")} />
-      ) : (
-        <Card>
-          <ClientDataTable
-            columns={columns}
-            rows={rows}
-            controls={controls}
-            tabs={tabs}
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(r) => r.id}
-            rowHref={(r) => `/invoices/${r.id}`}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      <Card>
+        <ClientDataTable
+          columns={columns}
+          rows={rows}
+          controls={controls}
+          tabs={tabs}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(r) => r.id}
+          rowHref={(r) => `/invoices/${r.id}`}
+          empty={rows.length === 0 ? t("empty") : t("noMatch")}
+        />
+      </Card>
     </PageShell>
   );
 }

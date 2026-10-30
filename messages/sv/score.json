@@ -1,0 +1,39 @@
+{
+  "title": "Redovisningsbetyg",
+  "ownSubtitle": "Hur snabbt du redovisar dina köp, det senaste året.",
+  "outOf": "{value} av 5",
+  "starsLabel": "{value} av 5 stjärnor",
+  "new": "Ny",
+  "newDescription": "Inga stjärnor än. Betyget visas när minst {min} köp räknas.",
+  "basedOn": "Utifrån {count} köp det senaste året.",
+  "withinWeek": "Inom en vecka",
+  "withinWeekValue": "{count} av {of}",
+  "firstTime": "Godkända direkt",
+  "firstTimeValue": "{clean} av {of}",
+  "waitingTitle": "Väntar på att skickas in",
+  "waitingOwn": "Betyget stiger när de här skickas in.",
+  "waitingOther": "Köp som inte är redovisade ännu.",
+  "waitedDays": "{days, plural, one {Väntat # dag} other {Väntat # dagar}}",
+  "tookDays": "{days, plural, =0 {Samma dag} one {# dag} other {# dagar}}",
+  "kind": {
+    "draft": "Utkast",
+    "cardPurchase": "Kortköp"
+  },
+  "send": "Skicka in",
+  "redovisa": "Redovisa",
+  "slowestTitle": "Långsammast först",
+  "nothingCounted": "Inget köp räknas ännu.",
+  "howTitle": "Så räknas betyget",
+  "how": "Varje köp får stjärnor efter hur många dagar det tog att skicka in: inom 7 dagar 5, inom 14 dagar 4, inom 30 dagar 3, inom 60 dagar 2, senare 1. Köp som inte är inskickade räknas efter hur länge de har väntat, efter den första veckan. För ett kortköp börjar räkningen när bankraden finns i appen, eftersom det inte går att skicka in förut. Det senaste halvåret väger dubbelt, och en liten del av betyget är hur många som godkändes utan att skickas tillbaka. Betyget påverkar ingenting, det är bara till för dig.",
+  "list": {
+    "search": "Sök medlem",
+    "empty": "Ingen har redovisat något det senaste året.",
+    "noMatch": "Ingen medlem matchar.",
+    "waitingSummary": "{count, plural, one {# köp väntar} other {# köp väntar}}, äldsta {days} dagar",
+    "upToDate": "Inget väntar"
+  },
+  "behindTitle": "Släpar efter",
+  "behindAll": "Alla medlemmars betyg",
+  "ownTitle": "Ditt redovisningsbetyg",
+  "ownHint": "Skicka in {title} från {date} för att höja det."
+}

@@ -1,4 +1,4 @@
-// Turning mail in the levfaktura inkorg mailbox into invoices.
+// Turning mail in the levfaktura inkorg mailbox into documents in the Inkorg.
 //
 // Called from two places: the Pub/Sub push (api/inbound/gmail), seconds after
 // a mail arrives, and the cron job (api/cron/gmail-sync), which renews Gmail's
@@ -14,8 +14,9 @@
 //   • no PDF at all: refused too, with that reason, since every invoice needs
 //     one and the Inkorg holds only documents;
 //   • one PDF, and a note that settles whose it is (autoAssign in
-//     lib/domain/inbound-mail.ts): an invoice, given to that unit at once;
-//   • anything else: its PDFs in the Inkorg, for triage to make invoices of.
+//     lib/domain/inbound-mail.ts): a document given to that unit at once, in
+//     its Inkorg for it to fördela;
+//   • anything else: its PDFs in the Inkorg, for triage to give to a unit.
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -27,9 +28,7 @@ import {
 } from "@/lib/server/storage";
 import { getPrefixes, ownedResultUnits, resultUnitForCode } from "@/lib/server/result-units";
 import { deliverSoon, notify } from "@/lib/server/notify";
-import { prefillData, readInvoicePdf } from "@/lib/server/invoice-prefill";
-import type { InvoiceTextFields } from "@/lib/domain/invoice-text";
-import { invoiceNotice } from "@/lib/email/content";
+import { documentNotice } from "@/lib/email/content";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import {
   autoAssign,
@@ -169,7 +168,7 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
   try {
     // The documents first, into storage, each fetched and checked against its
     // own bytes. Something called faktura.pdf that is not one is left out.
-    const docs: { documentId: string; key: string; filename: string; size: number; fields: InvoiceTextFields }[] = [];
+    const docs: { documentId: string; key: string; filename: string; size: number }[] = [];
     for (const part of pdfParts(top)) {
       const bytes = part.body?.attachmentId
         ? await getAttachment(c, gmailId, part.body.attachmentId)
@@ -184,7 +183,6 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
         key,
         filename: part.filename!,
         size: bytes.length,
-        fields: await readInvoicePdf(bytes, "application/pdf"),
       });
     }
 
@@ -192,17 +190,16 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
     const forwarderUnitIds = owned
       ? ctx.units.filter((u) => owned.names.includes(u.name)).map((u) => u.id)
       : [];
-    // "Er referens" counts as something the forwarder said: a supplier asked
-    // to put the cost centre there has done the routing for us.
-    const references = docs.map((d) => d.fields.reference).filter(Boolean);
+    // Only what the forwarder wrote routes it. The PDF is not read until its
+    // unit fördelar it, so what it prints (an "Er referens" naming a cost
+    // centre, say) is not looked at here.
     const auto: AutoAssignment | null = autoAssign({
-      text: [note, subject, ...references].filter(Boolean).join("\n"),
+      text: [note, subject].filter(Boolean).join("\n"),
       units: ctx.units,
       costCenters: ctx.costCenters,
       forwarderUnitIds,
     });
     const unit = auto ? ctx.units.find((u) => u.id === auto.resultUnitId)! : null;
-    const description = cleanSubject(subject);
     const documentRow = (d: (typeof docs)[number]) => ({
       id: d.documentId,
       objectKey: d.key,
@@ -218,7 +215,8 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
     //   no PDF                  refused: there is nothing to make an invoice
     //                           of, and a link to a supplier's portal is a PDF
     //                           somebody has to fetch by hand anyway;
-    //   one PDF, unit named     an invoice for that unit, straight away;
+    //   one PDF, unit named     a document in that unit's Inkorg, straight
+    //                           away;
     //   anything else           its PDFs in the Inkorg, for triage. Several PDFs
     //                           may be an invoice and its specification, or two
     //                           invoices, and an unclear unit is a person's call.
@@ -234,7 +232,6 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
       return "accepted";
     }
 
-    const invoiceId = randomUUID();
     const [only] = docs;
     const owners = (
       await prisma.user.findMany({
@@ -244,33 +241,15 @@ export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx)
     ).map((u) => u.id);
 
     await prisma.$transaction(async (tx) => {
-      await tx.supplierInvoice.create({
-        data: {
-          id: invoiceId,
-          ...prefillData({}, only.fields),
-          source: "EMAIL",
-          status: "ASSIGNED",
-          receivedById: sender?.id ?? null,
-          inboundMailId: mailId,
-          description,
-          resultUnitId: unit.id,
-          assignedAt: new Date(),
-          documents: { create: documentRow(only) },
-          events: {
-            create: [
-              { type: "RECEIVED", actorId: sender?.id ?? null },
-              { type: "ASSIGNED", diff: { from: null, to: unit.name, auto: auto!.rule, match: auto!.match } },
-            ],
-          },
-        },
+      await tx.supplierInvoiceDocument.create({
+        data: { ...documentRow(only), resultUnitId: unit.id, assignedAt: new Date() },
       });
       await notify(
         tx,
         "SUPPLIER_INVOICE_ASSIGNED",
         owners,
-        invoiceNotice(
-          "assigned",
-          { id: invoiceId, supplierName: null, invoiceNumber: null, description, amount: null, dueDate: null },
+        documentNotice(
+          { id: only.documentId, title: cleanSubject(subject) },
           { actor: sender?.name ?? from!.address, unit: unit.name },
           note ? { author: sender?.name ?? from!.address, text: note } : undefined,
         ),

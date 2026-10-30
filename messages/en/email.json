@@ -176,23 +176,23 @@
       "attester": "You get this email because you can attest the invoice."
     },
     "assigned": {
-      "subject": "To code: {label}",
-      "eyebrow": "To code",
+      "subject": "To allocate: {label}",
+      "eyebrow": "To allocate",
       "heading": "{actor} has given {unit} a supplier invoice",
-      "intro": "Code it and send it for attest.",
-      "button": "Open and code"
+      "intro": "Allocate it to your cost centres and attest it.",
+      "button": "Open and allocate"
     },
     "returned": {
       "subject": "Changes requested: {label}",
       "eyebrow": "Needs changes",
       "heading": "A supplier invoice came back",
-      "intro": "{actor} wants something changed before it can be attested. Change it and send it for attest again.",
+      "intro": "{actor} wants something changed before it can be attested. Allocate it again and attest it.",
       "button": "Open the invoice"
     },
     "submitted": {
       "subject": "To attest: {label}",
       "eyebrow": "To attest",
-      "heading": "{actor} has coded a supplier invoice",
+      "heading": "{actor} has allocated a supplier invoice",
       "intro": "It is waiting for your attest.",
       "button": "Open and attest"
     }

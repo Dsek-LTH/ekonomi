@@ -1,0 +1,39 @@
+{
+  "title": "Filing score",
+  "ownSubtitle": "How promptly you file your purchases, over the last year.",
+  "outOf": "{value} of 5",
+  "starsLabel": "{value} of 5 stars",
+  "new": "New",
+  "newDescription": "No stars yet. The score shows once at least {min} purchases count.",
+  "basedOn": "Based on {count, plural, one {# purchase} other {# purchases}} over the last year.",
+  "withinWeek": "Within a week",
+  "withinWeekValue": "{count} of {of}",
+  "firstTime": "Approved first time",
+  "firstTimeValue": "{clean} of {of}",
+  "waitingTitle": "Waiting to be submitted",
+  "waitingOwn": "The score goes up when these are submitted.",
+  "waitingOther": "Purchases not filed yet.",
+  "waitedDays": "{days, plural, one {Waited # day} other {Waited # days}}",
+  "tookDays": "{days, plural, =0 {Same day} one {# day} other {# days}}",
+  "kind": {
+    "draft": "Draft",
+    "cardPurchase": "Card purchase"
+  },
+  "send": "Submit",
+  "redovisa": "File",
+  "slowestTitle": "Slowest first",
+  "nothingCounted": "No purchase counts yet.",
+  "howTitle": "How the score works",
+  "how": "Each purchase gets stars for how many days it took to submit: within 7 days 5, within 14 days 4, within 30 days 3, within 60 days 2, later 1. Purchases not submitted yet count by how long they have waited, after the first week. For a card purchase the count starts when its bank row is in the app, since it cannot be submitted before. The last six months weigh double, and a small part of the score is how many were approved without being sent back. The score has no consequences, it is only there for you.",
+  "list": {
+    "search": "Search member",
+    "empty": "Nobody has filed anything in the last year.",
+    "noMatch": "No member matches.",
+    "waitingSummary": "{count, plural, one {# purchase waiting} other {# purchases waiting}}, oldest {days} days",
+    "upToDate": "Nothing waiting"
+  },
+  "behindTitle": "Falling behind",
+  "behindAll": "Every member's score",
+  "ownTitle": "Your filing score",
+  "ownHint": "Submit {title} from {date} to raise it."
+}

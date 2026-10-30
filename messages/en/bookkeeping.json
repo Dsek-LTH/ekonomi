@@ -2,7 +2,6 @@
   "title": "Bookkeeping",
   "book": "Book",
   "connectFirst": "Connect Fortnox first",
-  "loginFirst": "Log in to Fortnox to export",
   "exportFailed": "{id}: the export failed",
   "exportDone": "{id}: exported to Fortnox ({label})",
   "voucherLabel": "Voucher {label}",
@@ -33,19 +32,8 @@
     "released": "The lock is released. The expense can be exported again."
   },
   "review": {
-    "title": "Review and post",
-    "position": "{position} of {total} - {label}",
     "open": "Review",
-    "start": "Review ({count})",
-    "emptyTitle": "Nothing to review",
-    "emptyDescription": "Every booked expense has been posted.",
-    "emptyWaitingOnOthers": "{count, plural, =1 {One expense you booked is} other {# expenses you booked are}} waiting for someone else to review.",
-    "toList": "To bookkeeping",
     "ownBooking": "You booked this expense yourself, so someone else needs to review and post it.",
-    "bokfor": "Post",
-    "bokforNext": "Post and next",
-    "edit": "Change booking",
-    "skip": "Skip",
     "warningsTitle": "Worth a look before you post",
     "warning": {
       "outsideFinancialYear": "The voucher date is outside the financial years fetched from Fortnox.",
@@ -53,7 +41,6 @@
       "inactiveAccount": "An account on the voucher is inactive in Fortnox.",
       "inactiveCostCenter": "A cost centre on the voucher is inactive.",
       "inactiveProject": "A project on the voucher is completed in Fortnox."
-    },
-    "shortcuts": "Enter posts, E changes the booking and → skips."
+    }
   }
 }

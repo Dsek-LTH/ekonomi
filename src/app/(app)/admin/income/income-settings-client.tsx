@@ -1,17 +1,21 @@
 "use client";
 
-// Settings → Income. This screen is intakt's config.yaml: the table that
-// decides which verksamhet a sold product belongs to and which account its
+// Inställningar → Försäljning. This screen is intakt's config.yaml: the table
+// that decides which verksamhet a sold product belongs to and which account its
 // money is credited to. It used to be a file on the treasurer's laptop, which
 // meant only whoever held it could change the routing, and that the app and
 // the service could disagree about it.
 //
-// The verksamheter themselves are resultatenheter, listed here whether or not
-// they take money in. There used to be a second list, IncomeCommittee, beside
-// the one under Inställningar → Resultatenheter, with nothing checking that the
-// two agreed; Sexmästeriet was two rows in two tables that happened to share a
-// name. Adding a unit therefore happens over there, and giving one income
-// settings happens here.
+// Everything income needs is here, in the order it is set up: the connection,
+// which units sell and what, where the takings are booked, and the Swish rules
+// that are only needed now and then. A unit's sales used to be a section of its
+// dialog under Resultatenheter, so setting up income was a dialog per unit on
+// one page and the accounts on another, and nothing said what was left. What is
+// left now heads the page, each step pointing at the section it is done in.
+//
+// The verksamheter themselves are resultatenheter. Creating one happens under
+// Resultatenheter, where its cost centres and attesters are; giving one sales
+// happens here.
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -24,24 +28,38 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconCheck, IconPlus, IconTrash } from "@/components/ui/icons";
 import { InfoHint } from "@/components/ui/info-hint";
 import type { IncomeConfigView } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ResultUnit } from "@/lib/domain/types";
+import type { IncomeSetupSection, IncomeSetupStep } from "@/lib/income/setup";
+import { cn } from "@/lib/ui/utils";
 
-type AccountKey = "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount";
+import { IncomeSetupNotice } from "../../income/setup-notice";
+import { UnitSales } from "./unit-sales";
+
+type AccountKey = "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
 
 export function IncomeSettingsClient({
   config,
+  resultUnits,
   costCenters,
   accounts,
+  setup,
+  serviceConfigured,
 }: {
   config: IncomeConfigView;
+  /** Every unit, selling or not, for the Verksamheter section. */
+  resultUnits: ResultUnit[];
   costCenters: CostCenter[];
   /** The chart, active accounts plus any the settings still point at. */
   accounts: AccountRecord[];
+  /** What is left to do. See lib/income/setup.ts. */
+  setup: IncomeSetupStep[];
+  serviceConfigured: boolean;
 }) {
   const t = useTranslations("admin.income");
+  const left = (section: IncomeSetupSection) => setup.filter((s) => s.section === section).length;
   const tBook = useTranslations("book");
   const { pending, mutate } = useMutation();
 
@@ -57,12 +75,6 @@ export function IncomeSettingsClient({
     label: `${a.number} - ${a.name}`,
     short: a.number,
   }));
-
-  // The fallback is a property of the whole table, not of one verksamhet, so it
-  // is worth stating once at the top rather than only as a flag on a row.
-  const fallback = config.units
-    .flatMap((u) => u.income?.prefixes ?? [])
-    .find((p) => p.isFallback);
 
   const [settings, setSettings] = useState(config.settings);
   const [series, setSeries] = useState(config.settings.incomeVoucherSeries ?? "");
@@ -88,6 +100,17 @@ export function IncomeSettingsClient({
     setSettings({ ...settings, [key]: value });
     save({ [key]: value }, key);
   }
+
+  function pickFallbackUnit(value: string) {
+    setSettings({ ...settings, incomeFallbackIncomeId: value || null });
+    save({ incomeFallbackIncomeId: value }, "incomeFallbackIncomeId");
+  }
+
+  // Only units that sell can take unmatched sales: routing one there would
+  // book takings to a verksamhet that takes none.
+  const sellingOptions: ComboOption[] = resultUnits
+    .filter((u) => u.income?.active)
+    .map((u) => ({ value: u.income!.id, label: u.resultUnit }));
 
   function pickFeeCostCenter(value: string) {
     setSettings({ ...settings, zettleFeeCostCenterId: value || null });
@@ -131,85 +154,163 @@ export function IncomeSettingsClient({
 
   return (
     <div className="space-y-5">
-      {/* Everything about a particular verksamhet (its produktprefix, its
-          verifikationstext, its kostnadsställe) is edited where the verksamhet
-          is: Inställningar → Resultatenheter. What is left here is what belongs
-          to income as a whole and to no unit in particular. */}
-      {!fallback && (
-        <Notice>
-          {t("committees.noFallback")} <Link href="/admin/result-units" className="underline">{t("committees.manageUnits")}</Link>
-        </Notice>
+      {setup.length === 0 ? (
+        <Notice tone="info">{t("ready")}</Notice>
+      ) : (
+        <IncomeSetupNotice steps={setup} canSetUp onPage />
       )}
 
-      {/* Where takings are booked: one list of settings, label and what it
-          does on the left, a small control on the right. It was two cards of
-          full-width inputs for four-digit numbers and a four-letter series,
-          each card with its own Spara. */}
-      <Card>
-        <CardHeader title={t("booking.title")} subtitle={t("booking.description")} />
-        <ul>
-          <SettingRow label={t("accounts.zettleClearing")} hint={t("accounts.clearingHint")}>
-            {accountPicker("zettleClearingAccount", t("accounts.zettleClearing"))}
-          </SettingRow>
-          <SettingRow label={t("accounts.swishClearing")} hint={t("accounts.clearingHint")}>
-            {accountPicker("swishClearingAccount", t("accounts.swishClearing"))}
-          </SettingRow>
-          <SettingRow label={t("accounts.feeAccount")} hint={t("accounts.feeHint")}>
-            {accountPicker("zettleFeeAccount", t("accounts.feeAccount"))}
-          </SettingRow>
-          <SettingRow label={t("accounts.feeCostCenter")} hint={t("accounts.feeCostCenterHint")}>
-            <Combobox
-              size="sm"
-              options={ccOptions}
-              value={settings.zettleFeeCostCenterId ?? ""}
-              onChange={pickFeeCostCenter}
-              placeholder={t("accounts.chooseCostCenter")}
-              allowClear
-              aria-label={t("accounts.feeCostCenter")}
-            />
-          </SettingRow>
-          {/* Typed, not picked, so it keeps a save of its own. Left empty,
-              takings go wherever everything else does, which is what they did
-              before this setting existed, and what the hint says rather than
-              leaving an empty box reading as "nowhere". */}
-          <SettingRow
-            label={t("export.series")}
-            hint={
-              settings.connectionVoucherSeries
-                ? t("export.seriesHint", { series: settings.connectionVoucherSeries })
-                : t("export.seriesHintUnconnected")
-            }
-          >
-            <div className="flex gap-2">
-              <Input
-                size="sm"
-                className="min-w-0 font-mono uppercase"
-                value={series}
-                onChange={(e) => setSeries(e.target.value.toUpperCase())}
-                placeholder={settings.connectionVoucherSeries ?? ""}
-                maxLength={4}
-                aria-label={t("export.series")}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={series === savedSeries}
-                loading={pending === "incomeVoucherSeries"}
-                onClick={() => save({ incomeVoucherSeries: series }, "incomeVoucherSeries")}
-              >
-                {t("save")}
-              </Button>
-            </div>
-          </SettingRow>
-        </ul>
-      </Card>
+      {/* ── 1. The connection ── Read-only: it is the server's environment. */}
+      <Section id="service">
+        <Card>
+          <CardHeader
+            title={t("service.title")}
+            subtitle={t("service.description")}
+            action={<SectionStatus left={left("service")} />}
+          />
+          <p className="px-inset pt-3 pb-4 text-sm">
+            {serviceConfigured ? t("service.connected") : t("service.missing")}
+          </p>
+        </Card>
+      </Section>
 
-      {/* ── Swish amount fallbacks ── */}
+      {/* ── 2. Which units sell, and what ── Every unit is listed, selling or
+          not, so the whole register is in view and turning sales on is a
+          button on its row rather than a hunt for the unit. */}
+      <Section id="units">
+        <Card>
+          <CardHeader
+            title={t("units.title")}
+            subtitle={t("units.description")}
+            action={<SectionStatus left={left("units")} />}
+          />
+          {resultUnits.length === 0 ? (
+            <p className="px-inset pb-4 text-sm text-muted">
+              {t("units.empty")}{" "}
+              <Link href="/admin/result-units" className="font-medium underline">
+                {t("units.manageUnits")}
+              </Link>
+            </p>
+          ) : (
+            <>
+              {/* Where sales matching no prefix go. One answer for the whole
+                  section, so it is a setting of its own above the units rather
+                  than a flag on one of their prefixes. */}
+              <ul className="border-t border-border">
+                <SettingRow label={t("fallback.unit")} hint={t("fallback.unitHint")}>
+                  <Combobox
+                    size="sm"
+                    options={sellingOptions}
+                    value={settings.incomeFallbackIncomeId ?? ""}
+                    onChange={pickFallbackUnit}
+                    placeholder={t("fallback.chooseUnit")}
+                    emptyText={t("fallback.noSellingUnits")}
+                    allowClear
+                    aria-label={t("fallback.unit")}
+                  />
+                </SettingRow>
+                <SettingRow label={t("fallback.account")} hint={t("fallback.accountHint")}>
+                  {accountPicker("incomeFallbackAccount", t("fallback.account"))}
+                </SettingRow>
+              </ul>
+              <ul className="border-t border-border">
+                {resultUnits.map((u) => (
+                  <UnitSales
+                    key={u.id}
+                    unit={u}
+                    costCenters={costCenters}
+                    isFallback={Boolean(u.income) && u.income?.id === settings.incomeFallbackIncomeId}
+                    pending={pending}
+                    mutate={mutate}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </Card>
+      </Section>
+
+      {/* ── 3. Where takings are booked ── One list of settings, label and what
+          it does on the left, a small control on the right. It was two cards
+          of full-width inputs for four-digit numbers and a four-letter series,
+          each card with its own Spara. */}
+      <Section id="booking">
+        <Card>
+          <CardHeader
+            title={t("booking.title")}
+            subtitle={t("booking.description")}
+            action={<SectionStatus left={left("booking")} />}
+          />
+          <ul>
+            <SettingRow label={t("accounts.zettleClearing")} hint={t("accounts.clearingHint")}>
+              {accountPicker("zettleClearingAccount", t("accounts.zettleClearing"))}
+            </SettingRow>
+            <SettingRow label={t("accounts.swishClearing")} hint={t("accounts.clearingHint")}>
+              {accountPicker("swishClearingAccount", t("accounts.swishClearing"))}
+            </SettingRow>
+            <SettingRow label={t("accounts.feeAccount")} hint={t("accounts.feeHint")}>
+              {accountPicker("zettleFeeAccount", t("accounts.feeAccount"))}
+            </SettingRow>
+            <SettingRow label={t("accounts.feeCostCenter")} hint={t("accounts.feeCostCenterHint")}>
+              <Combobox
+                size="sm"
+                options={ccOptions}
+                value={settings.zettleFeeCostCenterId ?? ""}
+                onChange={pickFeeCostCenter}
+                placeholder={t("accounts.chooseCostCenter")}
+                allowClear
+                aria-label={t("accounts.feeCostCenter")}
+              />
+            </SettingRow>
+            {/* Typed, not picked, so it keeps a save of its own. Left empty,
+                takings go wherever everything else does, which is what they did
+                before this setting existed, and what the hint says rather than
+                leaving an empty box reading as "nowhere". */}
+            <SettingRow
+              label={t("export.series")}
+              hint={
+                settings.connectionVoucherSeries
+                  ? t("export.seriesHint", { series: settings.connectionVoucherSeries })
+                  : t("export.seriesHintUnconnected")
+              }
+            >
+              <div className="flex gap-2">
+                <Input
+                  size="sm"
+                  className="min-w-0 font-mono uppercase"
+                  value={series}
+                  onChange={(e) => setSeries(e.target.value.toUpperCase())}
+                  placeholder={settings.connectionVoucherSeries ?? ""}
+                  maxLength={4}
+                  aria-label={t("export.series")}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={series === savedSeries}
+                  loading={pending === "incomeVoucherSeries"}
+                  onClick={() => save({ incomeVoucherSeries: series }, "incomeVoucherSeries")}
+                >
+                  {t("save")}
+                </Button>
+              </div>
+            </SettingRow>
+          </ul>
+        </Card>
+      </Section>
+
+      {/* ── 4. Swish amount fallbacks ── Optional, and said to be: nothing
+          waits on it, it only saves sorting the odd payment by hand. */}
       <Card>
         <CardHeader
           title={t("fallbacks.title")}
           subtitle={t("fallbacks.description")}
-          action={<InfoHint label={t("fallbacks.title")}>{t("fallbacks.hint")}</InfoHint>}
+          action={
+            <span className="flex items-center gap-2">
+              <span className="text-xs text-muted">{t("optional")}</span>
+              <InfoHint label={t("fallbacks.title")}>{t("fallbacks.hint")}</InfoHint>
+            </span>
+          }
         />
         {/* A table rather than chips: amount and message are two columns of
             the same rule, and chips with an arrow between them stopped being
@@ -276,6 +377,27 @@ export function IncomeSettingsClient({
         </ul>
       </Card>
     </div>
+  );
+}
+
+/** A part of the page the setup steps point at. Clear of the overlay's top
+ *  edge when one is jumped to. */
+function Section({ id, children }: { id: IncomeSetupSection; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-4">
+      {children}
+    </section>
+  );
+}
+
+/** Done, or how many steps are left in it. */
+function SectionStatus({ left }: { left: number }) {
+  const t = useTranslations("admin.income");
+  return (
+    <span className={cn("flex items-center gap-1 text-xs font-medium", left ? "text-warning" : "text-success")}>
+      {left === 0 && <IconCheck className="size-3.5" />}
+      {left ? t("stepsLeft", { count: left }) : t("done")}
+    </span>
   );
 }
 

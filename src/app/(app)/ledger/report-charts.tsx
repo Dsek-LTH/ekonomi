@@ -108,7 +108,7 @@ function Readout({
           <div
             key={r.label}
             className={cn(
-              "flex items-center gap-1.5 text-[11px]",
+              "flex items-center gap-1.5 text-xs",
               r.strong && "mt-1 border-t border-border pt-1 font-medium",
             )}
           >
@@ -579,7 +579,7 @@ function CostCenterRanking({
         <button
           type="button"
           onClick={() => setAll((v) => !v)}
-          className="pt-1 text-sm font-medium text-accent hover:underline"
+          className="pt-1 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
         >
           {all ? t("ranking.showFewer") : t("ranking.showAll", { count: costCenters.length })}
         </button>

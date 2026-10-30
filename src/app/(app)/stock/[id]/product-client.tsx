@@ -413,7 +413,7 @@ export default function StockProductClient({
                       href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="tabular-nums text-accent hover:underline"
+                      className="tabular-nums text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                     >
                       {product.systembolagetId}
                     </a>
@@ -770,7 +770,7 @@ function CellarTable({
           <button
             type="button"
             onClick={() => onFix(r)}
-            className="relative z-10 text-xs font-medium text-accent hover:underline"
+            className="relative z-10 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
           >
             {t("entry.fix")}
           </button>
@@ -780,7 +780,7 @@ function CellarTable({
           <button
             type="button"
             onClick={() => onToPurchase(r)}
-            className="relative z-10 whitespace-nowrap text-xs font-medium text-accent hover:underline"
+            className="relative z-10 whitespace-nowrap text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
           >
             {t("toPurchase.action")}
           </button>
@@ -871,7 +871,7 @@ function CheckTable({
                     {t("expiry.stateSoon", { days: check.daysLeft })}
                   </Tag>
                 ) : (
-                  <span className="text-[11px] text-muted">
+                  <span className="text-xs text-muted">
                     {t("expiry.stateLater", { days: check.daysLeft })}
                   </span>
                 )}

@@ -16,9 +16,11 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Modal, ModalHeader } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, FieldGroup } from "@/components/ui/field";
+import { useFiscalYear } from "@/components/shell/fiscal-year-context";
+import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import type { IncomeSource } from "@/lib/domain/types";
 
 /** What a fetch answers with. See api/income/batches. */
@@ -38,18 +40,19 @@ const SOURCES: IncomeSource[] = ["SWISH", "ZETTLE", "ZETTLE_FEE"];
 
 /** The form inside a card, as the page, for when there is nothing to book. */
 export function FetchPanel({
-  serviceConfigured,
+  ready,
   title,
   subtitle,
 }: {
-  serviceConfigured: boolean;
+  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
+  ready: boolean;
   title: string;
   subtitle: string;
 }) {
   return (
     <Card>
       <CardHeader title={title} subtitle={subtitle} />
-      <FetchForm serviceConfigured={serviceConfigured} />
+      <FetchForm ready={ready} />
     </Card>
   );
 }
@@ -57,30 +60,38 @@ export function FetchPanel({
 /** The form in a dialog, from the list's header. Closes itself once a fetch
  *  has gone through, since what it fetched is then on the list behind it. */
 export function FetchDialog({
-  serviceConfigured,
+  ready,
   onClose,
 }: {
-  serviceConfigured: boolean;
+  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
+  ready: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("income");
   return (
     <Modal label={t("fetch.title")} onClose={onClose} className="max-w-2xl">
       <ModalHeader title={t("fetch.title")} subtitle={t("fetch.description")} />
-      <FetchForm serviceConfigured={serviceConfigured} onDone={onClose} />
+      <FetchForm ready={ready} onDone={onClose} onCancel={onClose} />
     </Modal>
   );
 }
 
 function FetchForm({
-  serviceConfigured,
+  ready,
   onDone,
+  onCancel,
 }: {
-  serviceConfigured: boolean;
+  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
+  ready: boolean;
   /** After a fetch that went through. */
   onDone?: () => void;
+  /** In a dialog: the form is then the dialog's body, with Avbryt beside the
+   *  button in its footer, the way every other dialog closes. */
+  onCancel?: () => void;
 }) {
   const t = useTranslations("income");
+  const tCommon = useTranslations("common");
+  const fiscalYear = useFiscalYear();
   const notify = useNotify();
   const { pending, mutate } = useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,7 +104,15 @@ function FetchForm({
   const rangeSet = Boolean(from && to);
   // The service is what reaches Zettle and renders; without it there is nothing
   // to import. Said once, by the page, rather than as a failure on every button.
-  const canFetch = serviceConfigured && rangeSet && !busy;
+  // Every day fetched becomes a report, so the range is kept to the year
+  // picked in the header, as the routes keep it.
+  const offYear = (d: string) =>
+    outsideFiscalYear(fiscalYear, d)
+      ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+      : undefined;
+  const fromError = offYear(from);
+  const toError = offYear(to);
+  const canFetch = ready && rangeSet && !fromError && !toError && !busy;
 
   function report(result: FetchResult | null) {
     if (!result) return;
@@ -146,71 +165,105 @@ function FetchForm({
     report(result);
   }
 
-  return (
+  const fields = (
     <>
-      {/* One row on a laptop, wrapping on a narrow window: the four controls
-          are one sentence: this source, these dates, go. Bottom-aligned, so
-          the labels sit above a single line of controls rather than each field
-          floating at its own height. A wider gap down the page than across it:
-          when the row does wrap, the labels need clearing from the controls
-          above them. */}
-      <CardBody className="flex flex-wrap items-end gap-x-4 gap-y-5">
-        {/* A FieldGroup rather than a Field: the picker's trigger is a button,
-            and a <label> forwards a click anywhere in its box to the first
-            labelable element inside, so the label's own whitespace would pop
-            the menu open. See components/ui/field.tsx. */}
-        <div className="w-48">
-          <FieldGroup label={t("fetch.source")} requirement="required">
-            <Combobox
-              options={SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
-              value={source}
-              onChange={(v) => setSource(v as IncomeSource)}
-              aria-label={t("fetch.source")}
-            />
-          </FieldGroup>
-        </div>
-        {/* Sized on a wrapper rather than on the control: every field in the
-            app is `w-full` inside whatever holds it (see `control` in
-            components/ui/field.tsx), and `cn` joins classes rather than merging
-            them, a `w-40` passed to the input would leave both widths in the
-            class attribute for Tailwind's emission order to settle.
+      {/* A FieldGroup rather than a Field: the picker's trigger is a button,
+          and a <label> forwards a click anywhere in its box to the first
+          labelable element inside, so the label's own whitespace would pop
+          the menu open. See components/ui/field.tsx. */}
+      <div className="w-48">
+        <FieldGroup label={t("fetch.source")} requirement="required">
+          <Combobox
+            options={SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
+            value={source}
+            onChange={(v) => setSource(v as IncomeSource)}
+            aria-label={t("fetch.source")}
+          />
+        </FieldGroup>
+      </div>
+      {/* Sized on a wrapper rather than on the control: every field in the
+          app is `w-full` inside whatever holds it (see `control` in
+          components/ui/field.tsx), and `cn` joins classes rather than merging
+          them, a `w-40` passed to the input would leave both widths in the
+          class attribute for Tailwind's emission order to settle.
 
-            Ten characters wide, because that is what the mask allows and a
-            field that grew with the row would be mostly empty. Both the same,
-            because they are the two ends of one range. */}
-        <div className="w-40">
-          <Field label={t("fetch.from")} requirement="required">
-            <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
-          </Field>
-        </div>
-        <div className="w-40">
-          <Field label={t("fetch.to")} requirement="required">
-            <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
-          </Field>
-        </div>
-
-        {source === "SWISH" ? (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void uploadSwish(file);
-              }}
-            />
-            <Button onClick={() => fileRef.current?.click()} disabled={!canFetch} loading={busy}>
-              {t("fetch.chooseFile")}
-            </Button>
-          </>
-        ) : (
-          <Button onClick={fetchRange} disabled={!canFetch} loading={busy}>
-            {t("fetch.submit")}
-          </Button>
-        )}
-      </CardBody>
+          Ten characters wide, because that is what the mask allows and a
+          field that grew with the row would be mostly empty. Both the same,
+          because they are the two ends of one range. */}
+      <div className="w-40">
+        <Field label={t("fetch.from")} requirement="required" error={fromError}>
+          <DateInput
+            min={fiscalYear?.fromDate}
+            max={fiscalYear?.toDate}
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </Field>
+      </div>
+      <div className="w-40">
+        <Field label={t("fetch.to")} requirement="required" error={toError}>
+          <DateInput
+            min={fiscalYear?.fromDate}
+            max={fiscalYear?.toDate}
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </Field>
+      </div>
     </>
+  );
+
+  const submit =
+    source === "SWISH" ? (
+      <>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void uploadSwish(file);
+          }}
+        />
+        <Button onClick={() => fileRef.current?.click()} disabled={!canFetch} loading={busy}>
+          {t("fetch.chooseFile")}
+        </Button>
+      </>
+    ) : (
+      <Button onClick={fetchRange} disabled={!canFetch} loading={busy}>
+        {t("fetch.submit")}
+      </Button>
+    );
+
+  if (onCancel) {
+    return (
+      <>
+        <ModalBody>
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-5">{fields}</div>
+        </ModalBody>
+        <ModalFooter blocker={ready ? null : t("fetch.notReady")}>
+          <span />
+          <div className="flex items-center gap-2.5">
+            <Button variant="secondary" onClick={onCancel}>
+              {tCommon("cancel")}
+            </Button>
+            {submit}
+          </div>
+        </ModalFooter>
+      </>
+    );
+  }
+
+  return (
+    // One row on a laptop, wrapping on a narrow window: the four controls are
+    // one sentence: this source, these dates, go. Bottom-aligned, so the labels
+    // sit above a single line of controls rather than each field floating at
+    // its own height. A wider gap down the page than across it: when the row
+    // does wrap, the labels need clearing from the controls above them.
+    <CardBody className="flex flex-wrap items-end gap-x-4 gap-y-5">
+      {fields}
+      {submit}
+    </CardBody>
   );
 }

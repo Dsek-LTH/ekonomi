@@ -4,7 +4,7 @@
     "section": {
       "fortnox": "Kopplingen till Fortnox, och synk av kontoplan och kostnadsställen.",
       "costCenters": "Kostnadsställen som utlägg och budget kan fördelas på.",
-      "income": "Hur en försäljningsdag delas upp på konton och verksamheter.",
+      "income": "Vilka verksamheter som säljer, vilka varor som är deras och var intäkterna bokförs.",
       "resultUnits": "Vilka kostnadsställen som hör ihop, och vem som attesterar dem.",
       "cards": "Sektionens kort och vem som håller vilket.",
       "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
@@ -202,10 +202,7 @@
       "prefixAccount": "Konto",
       "unknownAccount": "Saknas i kontoplanen",
       "fallback": "Reserv",
-      "makeFallback": "Gör till reserv",
       "noPrefixHint": "Inga produktprefix än. Varor som börjar på ett prefix bokförs mot dess konto.",
-      "disabledHint": "Enheten tar inte in några pengar. Slå på försäljning för att hämta och bokföra den.",
-      "sectionHint": "Hur enhetens försäljning i kassan och via Swish bokförs.",
       "defaultCostCenterHint": "Försäljningen bokförs på det här kostnadsstället.",
       "productHint": "En vara vars namn börjar på prefixet hör till enheten och bokförs på kontot bredvid. Med prefixet c hamnar till exempel c-Cola här.",
       "fallbackHint": "Varor som inte matchar någon enhet hamnar här.",
@@ -229,7 +226,12 @@
     "sectionAttest": "Attest",
     "sectionAttestHint": "Resultatansvariga attesterar utlägg på enhetens kostnadsställen.",
     "grantedBy": "Rollen ges av",
-    "editInRoles": "Ändra under Roller"
+    "editInRoles": "Ändra under Roller",
+    "sectionSales": "Försäljning",
+    "sectionSalesHint": "Om enheten tar in pengar, och hur de bokförs.",
+    "salesOnSummary": "Säljer, med {count, plural, =0 {inga varor än} one {# varuprefix} other {# varuprefix}}.",
+    "salesOffSummary": "Säljer inte.",
+    "editInSales": "Ändra under Försäljning"
   },
   "fortnox": {
     "connection": "Anslutning",
@@ -299,13 +301,13 @@
     }
   },
   "income": {
-    "title": "Intäkter",
+    "title": "Försäljning",
     "save": "Spara",
     "saved": "Sparat",
     "saveFailed": "Kunde inte spara",
     "cancel": "Avbryt",
     "booking": {
-      "title": "Bokföring",
+      "title": "3. Bokföring",
       "description": "Var dagens försäljning bokförs. Konton och kostnadsställe sparas direkt när du väljer dem."
     },
     "export": {
@@ -323,36 +325,8 @@
       "feeCostCenterHint": "Avgifter hör inte till en enskild verksamhet.",
       "chooseCostCenter": "Välj kostnadsställe"
     },
-    "committees": {
-      "title": "Verksamheter",
-      "description": "Resultatenheterna, och de intäktsinställningar som låter dem ta in pengar. En rapport per verksamhet och dag; prefixen avgör vad som hamnar var.",
-      "add": "Lägg till",
-      "key": "Nyckel",
-      "name": "Namn",
-      "namePlaceholder": "Cafémästeriet",
-      "empty": "Inga resultatenheter uppsatta än.",
-      "retired": "Avslutad",
-      "remove": "Ta bort",
-      "removeTitle": "Ta bort {name}?",
-      "removeBody": "Intäktsinställningarna och prefixen tas bort. Resultatenheten finns kvar.",
-      "defaultCostCenter": "Standardkostnadsställe",
-      "noCostCenter": "Inget kostnadsställe",
-      "noFallback": "Inget prefix är markerat som reserv. Produkter utan igenkänt prefix har ingenstans att ta vägen, och hämtningar kommer att nekas.",
-      "manageUnits": "Hantera resultatenheter"
-    },
-    "prefixes": {
-      "add": "Lägg till prefix",
-      "save": "Spara",
-      "none": "Inga prefix",
-      "code": "Prefix",
-      "account": "Konto",
-      "accountPlaceholder": "3011",
-      "remove": "Ta bort prefix",
-      "fallback": "Reserv",
-      "unknownAccount": "Okänt konto"
-    },
     "fallbacks": {
-      "title": "Swish-belopp",
+      "title": "4. Swish-belopp",
       "description": "Betalningar utan användbart meddelande matchas på exakt belopp.",
       "hint": "Meddelandet körs genom samma prefixlogik, så \"c-Cola\" hamnar hos Cafémästeriet precis som en märkt betalning.",
       "empty": "Inga beloppsregler.",
@@ -362,6 +336,34 @@
       "message": "Meddelande",
       "messagePlaceholder": "c-Cola",
       "remove": "Ta bort"
+    },
+    "ready": "Allt är klart. Intäkter kan hämtas och bokföras.",
+    "optional": "Valfritt",
+    "done": "Klart",
+    "stepsLeft": "{count, plural, one {# steg kvar} other {# steg kvar}}",
+    "service": {
+      "title": "1. Anslutning",
+      "description": "Tjänsten som hämtar från Zettle och skapar intäktsräkningen.",
+      "connected": "Intäktstjänsten är ansluten.",
+      "missing": "Intäktstjänsten är inte ansluten. Den som driftar appen behöver sätta INTAKT_URL och INTAKT_TOKEN."
+    },
+    "units": {
+      "title": "2. Verksamheter och varor",
+      "description": "Vilka resultatenheter som säljer, och vilka varor som är deras. En vara hör till den verksamhet vars prefix dess namn börjar på.",
+      "notSelling": "Säljer inte",
+      "noProducts": "Säljer, men har inga varor än",
+      "needsProducts": "Saknar varor",
+      "edit": "Ändra",
+      "empty": "Det finns inga resultatenheter än.",
+      "manageUnits": "Skapa dem under Resultatenheter"
+    },
+    "fallback": {
+      "unit": "Reserv för okända varor",
+      "unitHint": "Varor och Swish-betalningar som inte börjar på något prefix räknas till den här verksamheten.",
+      "chooseUnit": "Välj verksamhet",
+      "noSellingUnits": "Ingen verksamhet säljer än. Slå på försäljning nedan först.",
+      "account": "Konto för okända varor",
+      "accountHint": "Intäktskontot de bokförs på."
     }
   },
   "roles": {

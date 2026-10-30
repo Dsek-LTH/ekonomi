@@ -819,17 +819,21 @@ export interface SupplierInvoiceInput {
   total: number; // SEK
   ocr?: string | null;
   yourReference?: string | null;
+  ourReference?: string | null;
   comments?: string | null;
-  /** The cost rows, each debited. */
-  rows: { account: number; amount: number; costCenter?: string; project?: string; text?: string }[];
+  /** The kontering's rows, SEK, each a debit or a credit. */
+  rows: { account: number; debit: number; credit: number; costCenter?: string; project?: string; text?: string }[];
   /** The leverantörsskuld account the total is credited to. */
   payableAccount: number;
+  /** Öresutjämning, SEK, signed: debited to its account, credited when
+   *  negative. The cost rows already leave room for it. */
+  rounding?: { account: number; amount: number };
 }
 
 /**
  * Make an unbooked supplier invoice, returning its GivenNumber.
  *
- * The rows are sent whole: each cost row debited, and the total credited to
+ * The rows are sent whole: each kontering row as it was written, and the total credited to
  * the supplier-debt account as the TOT row, so what Fortnox books is exactly
  * the kontering that was attested. No VAT: the section is momsbefriad, so the
  * invoice's VAT is zero and every krona is cost.
@@ -837,11 +841,15 @@ export interface SupplierInvoiceInput {
 export async function createSupplierInvoice(token: string, input: SupplierInvoiceInput): Promise<string> {
   const rows: Record<string, unknown>[] = input.rows.map((r) => ({
     Account: r.account,
-    Debit: r.amount,
+    ...(r.debit ? { Debit: r.debit } : { Credit: r.credit }),
     ...(r.costCenter && { CostCenter: r.costCenter }),
     ...(r.project && { Project: r.project }),
     ...(r.text && { TransactionInformation: r.text.slice(0, 100) }),
   }));
+  if (input.rounding) {
+    const { account, amount } = input.rounding;
+    rows.push(amount > 0 ? { Account: account, Debit: amount } : { Account: account, Credit: -amount });
+  }
   rows.push({ Account: input.payableAccount, Code: "TOT", Credit: input.total });
 
   const data = await fortnoxPost<{ SupplierInvoice?: { GivenNumber?: string | number } }>(
@@ -855,8 +863,10 @@ export async function createSupplierInvoice(token: string, input: SupplierInvoic
         DueDate: input.dueDate,
         Total: input.total.toFixed(2),
         VAT: "0",
+        ...(input.rounding && { RoundOffValue: input.rounding.amount.toFixed(2) }),
         ...(input.ocr && { OCR: input.ocr }),
         ...(input.yourReference && { YourReference: input.yourReference.slice(0, 50) }),
+        ...(input.ourReference && { OurReference: input.ourReference.slice(0, 50) }),
         ...(input.comments && { Comments: input.comments.slice(0, 1000) }),
         SupplierInvoiceRows: rows,
       },

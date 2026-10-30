@@ -1,5 +1,5 @@
 // Give a resultatenhet an income profile: the settings that let it take money
-// in: the key intakt groups its reports by, the text its verifikationer carry,
+// in: the key its reports are grouped by, the text its verifikationer carry,
 // and the cost centre they are booked against.
 //
 // The unit itself is not created here. There is one register of the section's

@@ -185,6 +185,7 @@ export const CapabilityName = z.enum([
   "REVIEW_OWN_BOOKING",
   "BOOKKEEPING_VIEW",
   "AUDIT_REVIEW",
+  "MEMBER_SCORE_VIEW",
 ]);
 
 /**

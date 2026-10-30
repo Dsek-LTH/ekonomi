@@ -43,7 +43,7 @@ export function ViewToggle<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-control border border-border bg-surface p-0.5",
+        "inline-flex items-center gap-0.5 rounded-control border border-border-control bg-surface p-0.5",
         className,
       )}
     >

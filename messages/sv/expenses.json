@@ -97,6 +97,7 @@
     "noReceipt": "Inget kvitto uppladdat.",
     "bankTransaction": "Banktransaktion",
     "removeMatch": "Ta bort matchning",
+    "transactionDate": "Transaktionsdatum",
     "noMatch": "Ingen matchning.",
     "more": "Mer",
     "book": "Kontera",
@@ -317,6 +318,8 @@
     "sendFailed": "Kunde inte skicka påminnelsen",
     "pickAll": "Välj alla utlägg på sidan att påminna om",
     "pick": "Välj {label} att påminna om",
-    "remindPicked": "Påminn ({count})"
+    "remindPicked": "Påminn",
+    "picked": "{count, plural, one {# vald} other {# valda}}",
+    "clearPicked": "Avmarkera"
   }
 }

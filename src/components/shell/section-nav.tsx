@@ -85,11 +85,11 @@ export function SectionBand({
         // and a row's buttons sit at z-10 over their row, and at the band's
         // own z-10 they came later in the page and were drawn over it as they
         // scrolled under.
-        "sticky top-14 z-20 md:top-0 -ml-4 -mr-6 mb-6 bg-canvas/85 pl-4 pr-6 backdrop-blur-xl backdrop-saturate-150 md:-mx-6 md:px-6",
+        "sticky top-14 z-20 md:top-0 -ml-4 -mr-6 mb-6 bg-background/90 pl-4 pr-6 backdrop-blur-xl backdrop-saturate-150 md:-mx-6 md:px-6",
         // The main column's top padding, taken back, so the band starts right
         // under the header. The tabs are the first thing there, with no title
         // above them, and the row's own height is all the room it needs.
-        "-mt-6 md:-mt-8",
+        "-mt-6",
       )}
     >
       {/* No visible title. The lit tab already says which page this is, and
@@ -99,12 +99,12 @@ export function SectionBand({
           budget, an utlägg) the page has a heading of its own below. */}
       {own && <h1 className="sr-only">{section.tabs.find((tab) => tab.active)?.label ?? section.label}</h1>}
       {/* One row of a fixed height whatever stands at its end. The switch is
-          42px (a 32px option in a padded, bordered track), and 62 leaves it
-          10px from the header above and 10 from the divider below.
-          `box-content` and `pb-px`, so the divider is drawn under the 62
-          rather than taking a pixel of it, which put the switch half a pixel
-          off centre. */}
-      <div className="relative box-content flex h-15.5 items-stretch justify-between gap-4 border-b border-border pb-0 md:border-b-0 md:pb-px">
+          32px (a 26px option in a padded, bordered track), the height of every
+          control from sm up, and 44 leaves it 6px from the header above and 6
+          from the divider below. `box-content` and `pb-px`, so the divider is
+          drawn under the 44 rather than taking a pixel of it, which put the
+          switch half a pixel off centre. */}
+      <div className="relative box-content flex h-11 items-stretch justify-between gap-4 border-b border-border pb-0 md:border-b-0 md:pb-px">
         {/* The divider, edge to edge of the main column from md, the way the
             header's rule above it is. Drawn as a border it stopped at the
             page's content width, and two rules of different lengths one above
@@ -351,7 +351,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
                   className={cn(
                     "flex items-center gap-2 border-b-2 border-transparent px-3 text-sm transition-colors",
                     shown
-                      ? "font-semibold text-foreground"
+                      ? "font-medium text-foreground"
                       : "font-medium text-muted hover:border-border hover:text-foreground",
                   )}
                 >

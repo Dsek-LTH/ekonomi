@@ -1,8 +1,8 @@
 import { getIncomeReviewQueue } from "@/lib/data/income";
 import { redirect } from "next/navigation";
 
-import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
-import { intaktConfigured } from "@/lib/income/client";
+import { canAccessSettings, canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
+import { incomeSetupSteps } from "@/lib/income/setup";
 import { requirePage } from "@/lib/server/current-user";
 
 import IncomeReviewClient from "../review-client";
@@ -22,7 +22,7 @@ export default async function IncomeReviewPage({
   const user = await requirePage(canViewBookkeeping);
   if (!canBookkeep(user.capabilities)) redirect("/income");
 
-  const queue = await getIncomeReviewQueue();
+  const [queue, setup] = await Promise.all([getIncomeReviewQueue(), incomeSetupSteps()]);
   const context = await loadReviewContext(queue.reports);
 
   // `?report=` opens the queue on one day rather than on its first. What
@@ -31,13 +31,15 @@ export default async function IncomeReviewPage({
   const { report } = await searchParams;
 
   // Running without the intakt service is a supported way to run, the same as
-  // running without Fortnox, so the page loads and says so rather than
-  // failing. Checked here because the environment is the server's to read.
+  // running without Fortnox, so the page loads and says so among the setup
+  // steps rather than failing. See lib/income/setup.ts.
   return (
     <IncomeReviewClient
       queue={queue}
       {...context}
-      serviceConfigured={intaktConfigured()}
+      setup={setup}
+      canSetUp={canAccessSettings(user.capabilities)}
+      reviewerName={user.name}
       initialReportId={report}
     />
   );

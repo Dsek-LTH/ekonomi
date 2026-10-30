@@ -186,7 +186,7 @@ export function CardsClient({
         c.txCount > 0 ? (
           <Link
             href={`/bank?scope=all&q=${c.last4}`}
-            className="tabular-nums text-accent hover:underline"
+            className="tabular-nums text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
           >
             {c.txCount}
           </Link>

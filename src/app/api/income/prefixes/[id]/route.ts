@@ -15,7 +15,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const parsed = await parseBody(req, UpdateIncomePrefix);
   if (!parsed.ok) return parsed.res;
-  const { incomeId, account, isFallback } = parsed.data;
+  const { incomeId, account } = parsed.data;
 
   if (incomeId) {
     const income = await prisma.resultUnitIncome.findUnique({ where: { id: incomeId } });
@@ -24,24 +24,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const updated = await orNotFound(
     () =>
-      prisma.$transaction(async (tx) => {
-        // Moving the fallback flag rather than colliding with it, see the
-        // create route for why this is a transaction.
-        if (isFallback) {
-          await tx.incomeProductPrefix.updateMany({
-            where: { isFallback: true, NOT: { id } },
-            data: { isFallback: false },
-          });
-        }
-        return tx.incomeProductPrefix.update({
-          where: { id },
-          data: {
-            ...(incomeId !== undefined && { incomeId }),
-            ...(account !== undefined && { account }),
-            ...(isFallback !== undefined && { isFallback }),
-          },
-          select: { id: true },
-        });
+      prisma.incomeProductPrefix.update({
+        where: { id },
+        data: {
+          ...(incomeId !== undefined && { incomeId }),
+          ...(account !== undefined && { account }),
+        },
+        select: { id: true },
       }),
     "income.prefixNotFound",
   );
@@ -58,11 +47,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const prefix = await prisma.incomeProductPrefix.findUnique({ where: { id } });
   if (!prefix) return fail(404, "income.prefixNotFound");
-
-  // Deleting the fallback would leave products matching nothing with nowhere to
-  // go, and every fetch would then be refused with a message about a missing
-  // fallback. Refusing here says so at the point the mistake is made.
-  if (prefix.isFallback) return fail(409, "income.cannotDeleteFallback");
 
   // Prefixes carry no history of their own: a report's lines record the account
   // they routed to, not the rule that chose it. So this really is a delete.

@@ -10,7 +10,6 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { IconPlus } from "@/components/ui/icons";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -41,7 +40,7 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
                 type="button"
                 onClick={() => setEditing(c)}
                 className={cn(
-                  "text-left font-medium text-accent hover:underline",
+                  "text-left font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current",
                 )}
               >
                 {c.name}
@@ -86,25 +85,17 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
 
   return (
     <>
-      {counterparties.length === 0 ? (
-        <EmptyState
-          title={t("empty")}
-          description={t("emptyDescription")}
-          action={<Button onClick={() => setEditing("new")}>{t("add")}</Button>}
+      <Card>
+        <ClientDataTable
+          columns={columns}
+          rows={counterparties}
+          controls={controls}
+          action={add}
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(c) => c.id}
+          empty={counterparties.length === 0 ? t("empty") : t("noMatch")}
         />
-      ) : (
-        <Card>
-          <ClientDataTable
-            columns={columns}
-            rows={counterparties}
-            controls={controls}
-            action={add}
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(c) => c.id}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      </Card>
 
       {editing !== null && (
         <CounterpartyDialog

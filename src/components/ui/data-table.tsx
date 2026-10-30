@@ -199,7 +199,7 @@ const alignCls = (a?: Column<unknown>["align"]) => a === "right" ? "text-right" 
 // trailing columns off the screen on a laptop. 12px a side keeps the table
 // aligned outside and dense inside, for the same reason `md:` is where the table
 // appears at all.
-const CELL_X = "px-3 first:pl-inset last:pr-inset";
+const CELL_X = "px-2.5 first:pl-inset last:pr-inset";
 
 type MobileGroups<T> = {
   title: Column<T> | undefined;
@@ -395,6 +395,30 @@ export function DataTable<T>({
   const activeFilters =
     controls.picks.length + (controls.dateFrom ? 1 : 0) + (controls.dateTo ? 1 : 0);
 
+  // The column heads, drawn over the rows and over the empty note alike.
+  const head = (
+    <thead>
+      <tr className="border-b border-border text-left text-xs font-medium text-muted">
+        {cols.map((c) =>
+          c.value && c.sortable ? (
+            <SortableHeader
+              key={c.key}
+              sortKey={c.key}
+              controls={controls}
+              className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}
+            >
+              {c.header}
+            </SortableHeader>
+          ) : (
+            <th key={c.key} className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}>
+              {c.header}
+            </th>
+          ),
+        )}
+      </tr>
+    </thead>
+  );
+
   return (
     <>
       {/* Which slice of the list, on its own hairline at the top of the card,
@@ -587,7 +611,24 @@ export function DataTable<T>({
       )}
 
       {data.length === 0 ? (
-        <EmptyNote size="page">{empty ?? t("empty")}</EmptyNote>
+        // An empty list is still the table: its heads stay, so the reader sees
+        // what the list would hold, and the note is its one row. On a phone
+        // there are no heads to keep, so the note stands alone.
+        <>
+          <EmptyNote size="page" className="md:hidden">{empty ?? t("empty")}</EmptyNote>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              {head}
+              <tbody>
+                <tr>
+                  <td colSpan={cols.length}>
+                    <EmptyNote size="page">{empty ?? t("empty")}</EmptyNote>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : (
         <>
           <div className="divide-y divide-border md:hidden">
@@ -632,26 +673,7 @@ export function DataTable<T>({
               intended way to read one. */}
           <div className="hidden overflow-x-auto overscroll-x-contain md:block">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs font-medium text-muted">
-                  {cols.map((c) =>
-                    c.value && c.sortable ? (
-                      <SortableHeader
-                        key={c.key}
-                        sortKey={c.key}
-                        controls={controls}
-                        className={cn(CELL_X, "py-3", alignCls(c.align), c.className)}
-                      >
-                        {c.header}
-                      </SortableHeader>
-                    ) : (
-                      <th key={c.key} className={cn(CELL_X, "py-3", alignCls(c.align), c.className)}>
-                        {c.header}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
+              {head}
               <tbody className="divide-y divide-border">
                 {pageRows.map((row) => {
                   const href = rowHref?.(row);
@@ -687,7 +709,7 @@ export function DataTable<T>({
                     )}
                   >
                     {cols.map((c) => (
-                      <td key={c.key} className={cn(CELL_X, "py-4", alignCls(c.align), c.className)}>
+                      <td key={c.key} className={cn(CELL_X, "py-2", alignCls(c.align), c.className)}>
                         {/* The link goes in the title cell and nowhere else:
                             one control per row, on the thing that names it.
                             `before:` stretches its hit area over the whole row,
@@ -949,7 +971,7 @@ function Pagination({
   const from = totalItems === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
-  const btn = "flex size-8 items-center justify-center rounded-control border border-border bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
+  const btn = "flex size-8 items-center justify-center rounded-control border border-border-control bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">

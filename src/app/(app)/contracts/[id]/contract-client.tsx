@@ -266,7 +266,7 @@ export function ContractClient({
                       href={`/api/contracts/${contract.id}/files/${f.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="min-w-0 flex-1 truncate text-sm text-accent hover:underline"
+                      className="min-w-0 flex-1 truncate text-sm text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                     >
                       {f.filename}
                     </a>

@@ -30,6 +30,9 @@ export function fiscalYearLabel(y: FiscalYear): string {
  * the header keeps its shape and the reader can see the year does not apply.
  * The bokslut template is under /closing but is the same every year, so it is
  * listed as an exception.
+ *
+ * The Inkorg stays in: its list is not narrowed, but an invoice made from it
+ * is made in the year, so the reader has to be able to pick it there.
  */
 const APPLIES = ["/dashboard", "/expenses", "/bank", "/invoices", "/income", "/budget", "/ledger", "/closing"];
 const EXCEPT = ["/closing/template"];
@@ -47,6 +50,18 @@ export function inFiscalYear(y: FiscalYear, date: string | null | undefined): bo
   if (!date) return false;
   const day = date.slice(0, 10);
   return day >= y.fromDate && day <= y.toDate;
+}
+
+/**
+ * Whether a date somebody is entering lies outside the year they have picked.
+ * Something new is made in the year being looked at, so it shows up in the
+ * list it was made from. False while there is no year, or the date is not
+ * whole yet: the field has its own word for a half-typed date. The routes ask
+ * the same through lib/api/fiscal-year.ts.
+ */
+export function outsideFiscalYear(y: FiscalYear | null, date: string | null | undefined): boolean {
+  if (!y || !date || !/^\d{4}-\d{2}-\d{2}/.test(date)) return false;
+  return !inFiscalYear(y, date);
 }
 
 /** Keep a pick for the rest of the session. See FISCAL_YEAR_COOKIE. */

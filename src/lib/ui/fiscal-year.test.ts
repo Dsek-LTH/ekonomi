@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { fiscalYearApplies, fiscalYearLabel, inFiscalYear } from "./fiscal-year";
+import { fiscalYearApplies, fiscalYearLabel, inFiscalYear, outsideFiscalYear } from "./fiscal-year";
 
 const y2025 = { id: 1, fromDate: "2025-01-01", toDate: "2025-12-31" };
 
 describe("fiscalYearApplies", () => {
-  it("applies to every list with a date, the Inkorg included", () => {
-    for (const path of ["/dashboard", "/expenses", "/expenses/review", "/bank", "/invoices", "/invoices/inbox", "/income", "/budget", "/ledger", "/closing"]) {
+  it("applies to every list with a date, and to the Inkorg, which makes dated invoices", () => {
+    for (const path of ["/dashboard", "/expenses", "/bank", "/invoices", "/invoices/inbox", "/income", "/budget", "/ledger", "/closing"]) {
       expect(fiscalYearApplies(path), path).toBe(true);
     }
   });
@@ -14,6 +14,7 @@ describe("fiscalYearApplies", () => {
   it("does not apply to the bokslut template, which is the same every year", () => {
     expect(fiscalYearApplies("/closing/template")).toBe(false);
   });
+
 
   it("does not apply to pages outside the books", () => {
     expect(fiscalYearApplies("/stock")).toBe(false);
@@ -30,6 +31,19 @@ describe("inFiscalYear", () => {
   it("holds nothing outside it, or undated", () => {
     expect(inFiscalYear(y2025, "2026-01-01")).toBe(false);
     expect(inFiscalYear(y2025, null)).toBe(false);
+  });
+});
+
+describe("outsideFiscalYear", () => {
+  it("is a whole date that falls outside the year", () => {
+    expect(outsideFiscalYear(y2025, "2026-01-01")).toBe(true);
+    expect(outsideFiscalYear(y2025, "2025-06-30")).toBe(false);
+  });
+
+  it("is never a half-typed date, an empty one, or one without a year", () => {
+    expect(outsideFiscalYear(y2025, "2026")).toBe(false);
+    expect(outsideFiscalYear(y2025, "")).toBe(false);
+    expect(outsideFiscalYear(null, "2026-01-01")).toBe(false);
   });
 });
 

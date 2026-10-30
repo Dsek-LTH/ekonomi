@@ -74,6 +74,8 @@ const DYNAMIC = [
   "common.status.",
   "income.status.",
   "expenses.event.",
+  // `tEvent(e.type)` over SupplierInvoiceEventType in invoices/invoice-shared.tsx.
+  "invoices.event.",
   "errors.expense.exportStep.",
   "errors.income.exportStep.",
 ];

@@ -18,9 +18,10 @@
 // is the split those two attempts were circling: render whenever anyone looks,
 // store when it starts to matter.
 //
-// Rendering on demand is safe because what the service renders from (the day,
-// the verksamhet, the product lines) is settled when the report is stored, so
-// the same report renders to the same document every time. The one field review
+// Rendering on demand is safe because what the document shows (the day, the
+// verksamhet, the product lines) is settled when the report is stored, so the
+// same report renders to the same document every time. It is built here in
+// full and sent whole: the service knows nothing about the section. The one field review
 // can change, the cost centre, appears nowhere on the page; it decides where the
 // money is booked, not what the document says.
 import "server-only";
@@ -28,14 +29,9 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { incomeDocumentKey, putObject } from "@/lib/server/storage";
 
-import {
-  IntaktError,
-  IntaktNotConfiguredError,
-  renderFeeReport,
-  renderReport,
-} from "./client";
-import { buildIntaktConfig, type IncomeConfigBlocker } from "./config";
-import { toFeeReportDto, toReportDto } from "./report";
+import { IntaktError, IntaktNotConfiguredError, renderDocument } from "./client";
+import { distributionsFor } from "./report";
+import type { IncomeDocument } from "./types";
 
 /**
  * Why a report has no document. Each maps to a message key under
@@ -44,8 +40,6 @@ import { toFeeReportDto, toReportDto } from "./report";
 export type DocumentFailure =
   | { reason: "reportNotFound" }
   | { reason: "serviceUnavailable" }
-  | { reason: "noAttestation" }
-  | { reason: "config"; blocker: IncomeConfigBlocker; detail?: string }
   | { reason: "renderFailed"; detail: string }
   | { reason: "storeFailed" };
 
@@ -55,7 +49,10 @@ export type StoredDocument = { ok: true; key: string; filename: string };
 export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
-/** Who the rendered report is attested by, when the batch cannot say. */
+/** What a day of Zettle's fees is called on its page. */
+const FEE_TITLE = "Zettleavgifter";
+
+/** Who a rendered report is attested by. */
 interface DocumentAttestation {
   name: string;
   studentId: string;
@@ -64,36 +61,32 @@ interface DocumentAttestation {
 /**
  * Render a report to PDF bytes.
  *
- * The attestation is the person who imported the batch, not whoever happens to
- * be asking. A report is a statement someone stands behind, and the one who
- * fetched the day's takings is that someone. Otherwise the same document would
- * carry a different name depending on who opened it. `fallback` covers a batch
- * whose importer has since been removed from the app.
+ * Attested by `attestation`: the person reviewing the day. A report is a
+ * statement someone stands behind, and every day is reviewed against this very
+ * document before it is booked, so the one who approves it is that someone.
+ * While it is a draft that is whoever is looking at it, which is who would be
+ * approving it. Once booked the document is stored (below) with the reviewer's
+ * name on it and never rendered again, so a booked day says the same thing
+ * whoever opens it.
+ *
+ * It used to name the person who ran the fetch, which said nothing about who
+ * had actually looked at the day.
  */
 export async function renderIncomeDocument(
   reportId: string,
-  fallback?: DocumentAttestation,
+  attestation: DocumentAttestation,
 ): Promise<RenderResult> {
   const report = await prisma.incomeReport.findUnique({
     where: { id: reportId },
     include: {
-      resultUnit: { select: { name: true, income: { select: { key: true } } } },
+      resultUnit: {
+        select: { name: true, income: { select: { key: true, properName: true, description: true } } },
+      },
+      costCenter: { select: { name: true } },
       lines: { orderBy: { sortOrder: "asc" } },
-      batch: { select: { createdBy: { select: { name: true, studentId: true } } } },
     },
   });
   if (!report) return { ok: false, reason: "reportNotFound" };
-
-  const attestation = report.batch.createdBy ?? fallback;
-  // Rendering with nobody to attest it would produce a document signed by no
-  // one, which is worse than not having one.
-  if (!attestation) return { ok: false, reason: "noAttestation" };
-
-  const cfg = await buildIntaktConfig({
-    name: attestation.name,
-    studentId: attestation.studentId,
-  });
-  if (!cfg.ok) return { ok: false, reason: "config", blocker: cfg.blocker, detail: cfg.detail };
 
   const isFee = report.source === "ZETTLE_FEE";
   const dateStr = report.date.toISOString().slice(0, 10);
@@ -101,14 +94,37 @@ export async function renderIncomeDocument(
     ? `avgift-${dateStr}.pdf`
     : `${report.resultUnit?.income?.key ?? "intakt"}-${dateStr}.pdf`;
 
+  // The verksamhet as its documents name it: the override where it has one,
+  // otherwise the unit's own name. Fees belong to no verksamhet, so their page
+  // names the cost centre they are booked on.
+  const income = report.resultUnit?.income;
+  const unit = isFee
+    ? (report.costCenter?.name ?? FEE_TITLE)
+    : (income?.properName ?? report.resultUnit?.name ?? "");
+  const document: IncomeDocument = {
+    kind: isFee ? "fee" : "income",
+    paymentType: report.source === "SWISH" ? "Swish" : "Zettle",
+    unit,
+    description: isFee ? FEE_TITLE : (income?.description || unit),
+    date: dateStr,
+    attestation: { name: attestation.name, stilId: attestation.studentId },
+    lines: report.lines.map((l) => ({
+      name: l.name,
+      // Omitted rather than sent as null: the service's field is
+      // `variant,omitempty`.
+      ...(l.variant ? { variant: l.variant } : {}),
+      account: l.account,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      effectiveDiscount: l.discount,
+      total: l.total,
+    })),
+    distributions: distributionsFor(report.lines),
+    total: report.total,
+  };
+
   try {
-    const bytes = isFee
-      ? await renderFeeReport(toFeeReportDto(report), cfg.config)
-      : await renderReport(
-          toReportDto(report),
-          cfg.config,
-          report.source === "SWISH" ? "Swish" : "Zettle",
-        );
+    const bytes = await renderDocument(document);
     return { ok: true, bytes, filename };
   } catch (e) {
     if (e instanceof IntaktNotConfiguredError) return { ok: false, reason: "serviceUnavailable" };
@@ -126,11 +142,11 @@ export async function renderIncomeDocument(
  * Idempotent: a report that already has one is not rendered again, which is
  * what makes it safe for booking to call unconditionally. The key is derived
  * from the report id, so even a double call writes the same object twice rather
- * than leaving two.
+ * than leaving two. `attestation` is the reviewer, the one booking it.
  */
 export async function storeIncomeDocument(
   reportId: string,
-  fallback?: DocumentAttestation,
+  attestation: DocumentAttestation,
 ): Promise<StoreResult> {
   const existing = await prisma.incomeReport.findUnique({
     where: { id: reportId },
@@ -141,7 +157,7 @@ export async function storeIncomeDocument(
     return { ok: true, key: existing.documentKey, filename: existing.documentFilename };
   }
 
-  const rendered = await renderIncomeDocument(reportId, fallback);
+  const rendered = await renderIncomeDocument(reportId, attestation);
   if (!rendered.ok) return rendered;
 
   const key = incomeDocumentKey(reportId, rendered.filename);

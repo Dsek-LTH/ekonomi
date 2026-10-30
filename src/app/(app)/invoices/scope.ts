@@ -9,14 +9,16 @@ import { inFiscalYear, type FiscalYear } from "@/lib/ui/fiscal-year";
  */
 export type InvoiceScope = "unit" | "all";
 
-/** The stages, as `?tab=` values, each grouped by who acts next. */
-export const INVOICE_TABS = ["attest", "book", "exported", "all"] as const;
+/** The stages, as `?tab=` values, each grouped by who acts next: the units
+ *  (fördela and attestera), then the treasury (kontera, then send). */
+export const INVOICE_TABS = ["attest", "book", "send", "exported", "all"] as const;
 export type InvoiceTab = (typeof INVOICE_TABS)[number];
 
 /** Which rows each stage holds. "all" holds every one. */
 export const INVOICE_TAB_HOLDS: Record<InvoiceTab, (r: SupplierInvoiceRow) => boolean> = {
   attest: (r) => r.status === "ASSIGNED" || r.status === "PENDING_APPROVAL" || r.status === "CHANGES_REQUESTED",
   book: (r) => r.status === "APPROVED",
+  send: (r) => r.status === "BOOKED",
   exported: (r) => r.status === "EXPORTED",
   all: () => true,
 };

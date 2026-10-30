@@ -1,16 +1,20 @@
-// One levfaktura: the treasurer's details on it, and deleting it.
+// One levfaktura: the treasurer's kontering of it, a field at a time.
 //
-// The details (supplier, amount, dates, OCR, the account on each row) are the
-// treasurer's to complete, at any point until it is in Fortnox
-// (canEditDetails). The kontering is not changed here: that is the attest's,
-// and is sent with it (./transition).
+// The kontering (supplier, amount, dates, OCR, and its lines) is the
+// treasurer's, once every row is attested and until it is in Fortnox
+// (canBook). The head's fields are saved as each is left, the lines together
+// when Spara kontering is pressed. Marking the kontering done is
+// ./transition's `book`. The fördelning is not changed here: that is the
+// unit's, and is sent with its attest.
 import { prisma } from "@/lib/server/db";
 import { isoToDate } from "@/lib/domain/date";
-import { fail, gate } from "@/lib/api/guard";
+import { gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
+import { isWithTreasury } from "@/lib/domain/supplier-invoice";
 import { isoDate } from "@/lib/data/shared";
 
 // The free-text columns, which are copied across as they arrive.
@@ -22,8 +26,13 @@ const TEXT_FIELDS = [
   "ocr",
   "bankgiro",
   "plusgiro",
+  "yourReference",
+  "ourReference",
   "fortnoxSupplierNumber",
 ] as const;
+
+// How long after one edit the next still counts as the same sitting.
+const EDIT_SITTING_MS = 15 * 60 * 1000;
 
 // PATCH /api/supplier-invoices/:id
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -38,7 +47,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
   const { invoice, can } = access;
-  if (!can.canEditDetails) return refuseChange(invoice, invoice.status !== "EXPORTED");
+  if (!can.canBook) return refuseChange(invoice, isWithTreasury(invoice.status));
 
   // What changed, by field name, for the history. The values themselves are
   // on the invoice, and a log of every keystroke's worth of old text says less
@@ -55,6 +64,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   for (const f of ["invoiceDate", "dueDate"] as const) {
     const v = body[f];
     if (v === undefined || v === (isoDate(invoice[f]) || null)) continue;
+    // The invoice's own date decides its year, and it is set in the one
+    // picked in the header. The due date may fall in the next.
+    if (f === "invoiceDate") {
+      const offYear = await denyOutsideFiscalYear(v);
+      if (offYear) return offYear;
+    }
     data[f] = isoToDate(v);
     changed.push(f);
   }
@@ -62,17 +77,31 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.amount = body.amount;
     changed.push("amount");
   }
-
-  // The account per row. Only rows of this invoice, and only where it moved.
-  const rows = new Map(invoice.allocations.map((a) => [a.id, a]));
-  const accounts = (body.accounts ?? []).filter((a) => {
-    const row = rows.get(a.allocationId);
-    return row !== undefined && row.account !== a.account;
-  });
-  if ((body.accounts ?? []).some((a) => !rows.has(a.allocationId))) {
-    return fail(422, "supplierInvoice.unknownAllocation");
+  if (body.rounding !== undefined && (body.rounding || null) !== invoice.rounding) {
+    data.rounding = body.rounding || null;
+    changed.push("rounding");
   }
-  if (accounts.length) changed.push("accounts");
+
+  // The lines, whole. Changed when they say anything other than what is saved.
+  const saved = (
+    await prisma.supplierInvoiceLine.findMany({
+      where: { invoiceId: invoice.id },
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      select: { account: true, costCenterCode: true, project: true, description: true, debit: true, credit: true },
+    })
+  ).map((l) => JSON.stringify(l));
+  const lines = body.lines?.map((l) => ({
+    account: l.account,
+    costCenterCode: l.costCenterCode ?? null,
+    project: l.project ?? null,
+    description: l.description ?? null,
+    debit: l.debit,
+    credit: l.credit,
+  }));
+  const linesChanged =
+    lines !== undefined &&
+    (lines.length !== saved.length || lines.some((l, i) => JSON.stringify(l) !== saved[i]));
+  if (linesChanged) changed.push("lines");
 
   if (changed.length === 0) return new Response(null, { status: 204 });
 
@@ -89,15 +118,34 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         await tx.supplierInvoice.updateMany({ where: { id: invoice.id, status: invoice.status }, data }),
         "supplierInvoice.changedMeanwhile",
       );
-      for (const a of accounts) {
-        await tx.supplierInvoiceAllocation.update({
-          where: { id: a.allocationId },
-          data: { account: a.account },
+      if (linesChanged) {
+        await tx.supplierInvoiceLine.deleteMany({ where: { invoiceId: invoice.id } });
+        await tx.supplierInvoiceLine.createMany({
+          data: lines!.map((l, position) => ({ ...l, invoiceId: invoice.id, position })),
         });
       }
-      await tx.supplierInvoiceEvent.create({
-        data: { invoiceId: invoice.id, type: "EDITED", actorId: g.actor.id, diff: { fields: changed } },
+      // The page saves a field at a time, as each is left. One sitting's
+      // edits are one line in the history, not one per field.
+      const last = await tx.supplierInvoiceEvent.findFirst({
+        where: { invoiceId: invoice.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, type: true, actorId: true, createdAt: true, diff: true },
       });
+      if (
+        last?.type === "EDITED" &&
+        last.actorId === g.actor.id &&
+        Date.now() - last.createdAt.getTime() < EDIT_SITTING_MS
+      ) {
+        const before = ((last.diff as { fields?: string[] } | null)?.fields ?? []) as string[];
+        await tx.supplierInvoiceEvent.update({
+          where: { id: last.id },
+          data: { diff: { fields: [...new Set([...before, ...changed])] } },
+        });
+      } else {
+        await tx.supplierInvoiceEvent.create({
+          data: { invoiceId: invoice.id, type: "EDITED", actorId: g.actor.id, diff: { fields: changed } },
+        });
+      }
     }),
   );
   if (result instanceof Response) return result;

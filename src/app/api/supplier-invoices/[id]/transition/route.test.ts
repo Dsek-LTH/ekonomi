@@ -22,6 +22,8 @@ const h = vi.hoisted(() => ({
   ownedUnits: [] as string[],
   invoice: {} as Record<string, unknown>,
   allocations: [] as Alloc[],
+  lines: [] as { account: string; debit: number; credit: number }[],
+  lineDelete: vi.fn(),
   remaining: 0,
   invoiceUpdate: vi.fn(),
   allocationUpdate: vi.fn(),
@@ -30,7 +32,10 @@ const h = vi.hoisted(() => ({
   event: vi.fn(),
   notify: vi.fn(),
   attesters: [] as string[],
+  reading: { fields: {}, supplier: null } as { fields: Record<string, unknown>; supplier: null },
 }));
+
+vi.mock("@/lib/server/invoice-documents", () => ({ readInvoiceScan: async () => h.reading }));
 
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "actor",
@@ -56,6 +61,9 @@ vi.mock("@/lib/server/db", () => ({
         description: "Släp",
         amount: null,
         dueDate: null,
+        prefilled: [],
+        rounding: null,
+        lines: h.lines,
         _count: { documents: 1 },
         ...h.invoice,
         allocations: h.allocations,
@@ -79,6 +87,7 @@ vi.mock("@/lib/server/db", () => ({
           createMany: h.allocationCreate,
           count: async () => h.remaining,
         },
+        supplierInvoiceLine: { deleteMany: h.lineDelete },
         supplierInvoiceEvent: { create: h.event },
       }),
   },
@@ -139,9 +148,11 @@ beforeEach(() => {
   h.ownedUnits = [];
   h.invoice = {};
   h.allocations = [];
+  h.lines = [];
   h.remaining = 0;
   h.attesters = [];
-  for (const fn of [h.invoiceUpdate, h.allocationUpdate, h.allocationDelete, h.allocationCreate, h.event, h.notify]) {
+  h.reading = { fields: {}, supplier: null };
+  for (const fn of [h.invoiceUpdate, h.allocationUpdate, h.allocationDelete, h.allocationCreate, h.lineDelete, h.event, h.notify]) {
     fn.mockReset();
     fn.mockResolvedValue({ count: 1 });
   }
@@ -180,14 +191,17 @@ describe("assign, to another unit", () => {
   });
 });
 
-describe("attest, as the kontering", () => {
+describe("attest, as the fördelning", () => {
   beforeEach(() => {
     asSexmastare();
     h.invoice = assigned;
   });
 
-  it("konterar and attests in one step, the whole invoice on one cost centre", async () => {
-    const res = await call({ action: "attest", rows: [{ costCenterCode: "sex01" }] });
+  // What the unit read off the invoice, sent with every fördelning.
+  const read = { amount: 125000, dueDate: "2026-11-30" };
+
+  it("fördelar and attests in one step, the whole invoice on one cost centre", async () => {
+    const res = await call({ action: "attest", rows: [{ costCenterCode: "sex01" }], ...read, description: "Släp" });
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("APPROVED");
     const created = h.allocationCreate.mock.calls[0][0].data;
@@ -195,15 +209,35 @@ describe("attest, as the kontering", () => {
     expect(created[0]).toMatchObject({ costCenterId: "cc-0-SEX01", amount: null, approvedById: "actor" });
     expect(h.invoiceUpdate).toHaveBeenCalledWith({
       where: { id: "inv1", status: "ASSIGNED" },
-      data: { status: "APPROVED" },
+      data: {
+        status: "APPROVED",
+        amount: 125000,
+        dueDate: new Date("2026-11-30T00:00:00.000Z"),
+        description: "Släp",
+        prefilled: [],
+      },
     });
     expect(h.event.mock.calls.map((c) => c[0].data.type)).toEqual(["COST_CENTER_APPROVED", "APPROVED"]);
+    // A kontering made from an earlier split goes with it.
+    expect(h.lineDelete).toHaveBeenCalledWith({ where: { invoiceId: "inv1" } });
     expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it("needs the amount and the due date", async () => {
+    const rows = [{ costCenterCode: "SEX01" }];
+    expect((await (await call({ action: "attest", rows, dueDate: read.dueDate })).json()).error).toBe(
+      "supplierInvoice.noAmount",
+    );
+    expect((await (await call({ action: "attest", rows, amount: read.amount })).json()).error).toBe(
+      "supplierInvoice.noDueDate",
+    );
+    expect(h.invoiceUpdate).not.toHaveBeenCalled();
   });
 
   it("signs its own share of a split and asks the other unit for the rest", async () => {
     h.attesters = ["cafe-chief"];
     const res = await call({
+      ...read,
       action: "attest",
       rows: [
         { costCenterCode: "SEX01", amount: 80000 },
@@ -222,8 +256,33 @@ describe("attest, as the kontering", () => {
     );
   });
 
+  it("splits against the amount the unit read, and fills the rest from the PDF", async () => {
+    h.invoice = { ...h.invoice, amount: 100000, prefilled: ["amount", "dueDate"] };
+    h.reading = { fields: { amount: 99900, invoiceNumber: "20417" }, supplier: null };
+    const rows = [
+      { costCenterCode: "SEX01", amount: 80000 },
+      { costCenterCode: "SEX02", amount: 45000 },
+    ];
+    // Against the 1 000 kr already on it the rows are too much; against 1 250 they meet.
+    expect((await call({ action: "attest", rows, dueDate: read.dueDate })).status).toBe(422);
+    const res = await call({ action: "attest", rows, ...read });
+    expect(res.status).toBe(200);
+    expect(h.invoiceUpdate).toHaveBeenCalledWith({
+      where: { id: "inv1", status: "ASSIGNED" },
+      data: {
+        status: "APPROVED",
+        amount: 125000,
+        dueDate: new Date("2026-11-30T00:00:00.000Z"),
+        invoiceNumber: "20417",
+        // What the unit typed is theirs; what was only read stays marked.
+        prefilled: ["invoiceNumber"],
+      },
+    });
+  });
+
   it("refuses a split without every share", async () => {
     const res = await call({
+      ...read,
       action: "attest",
       rows: [{ costCenterCode: "SEX01", amount: 80000 }, { costCenterCode: "SEX02" }],
     });
@@ -234,7 +293,7 @@ describe("attest, as the kontering", () => {
 
   it("refuses an invoice without its PDF", async () => {
     h.invoice = { ...assigned, _count: { documents: 0 } };
-    const res = await call({ action: "attest", rows: [{ costCenterCode: "SEX01" }] });
+    const res = await call({ action: "attest", rows: [{ costCenterCode: "SEX01" }], ...read });
     expect((await res.json()).error).toBe("supplierInvoice.noDocument");
   });
 
@@ -278,6 +337,50 @@ describe("withdraw_attest", () => {
   });
 });
 
+describe("book, the treasury's kontering", () => {
+  const complete = {
+    ...assigned,
+    status: "APPROVED",
+    fortnoxSupplierNumber: "12",
+    invoiceNumber: "20417",
+    invoiceDate: new Date("2026-10-20"),
+    dueDate: new Date("2026-11-30"),
+    amount: 125000,
+  };
+
+  it("marks a complete kontering konterad, and nothing goes to Fortnox", async () => {
+    h.capabilities = ["BOOKKEEPING"];
+    h.invoice = complete;
+    h.allocations = [row({ approvedById: "klara" })];
+    h.lines = [{ account: "5615", debit: 125000, credit: 0 }];
+    const res = await call({ action: "book" });
+    expect((await res.json()).status).toBe("BOOKED");
+    expect(h.invoiceUpdate).toHaveBeenCalledWith({
+      where: { id: "inv1", status: "APPROVED" },
+      data: { status: "BOOKED" },
+    });
+    expect(h.event.mock.calls.map((c) => c[0].data.type)).toEqual(["BOOKED"]);
+  });
+
+  it("refuses one that is not enough to send yet", async () => {
+    h.capabilities = ["BOOKKEEPING"];
+    h.invoice = complete;
+    h.allocations = [row({ approvedById: "klara" })];
+    h.lines = [{ account: "5615", debit: 120000, credit: 0 }];
+    expect((await (await call({ action: "book" })).json()).error).toBe("supplierInvoice.unbalanced");
+    expect(h.invoiceUpdate).not.toHaveBeenCalled();
+  });
+
+  it("is the bookkeepers', and only once it is attested", async () => {
+    h.capabilities = ["INVOICE_TRIAGE"];
+    h.invoice = complete;
+    expect((await call({ action: "book" })).status).toBe(403);
+    h.capabilities = ["BOOKKEEPING"];
+    h.invoice = { ...complete, status: "PENDING_APPROVAL" };
+    expect((await call({ action: "book" })).status).toBe(409);
+  });
+});
+
 describe("request_changes", () => {
   it("needs a comment, and is the treasury's once attested", async () => {
     h.capabilities = ["BOOKKEEPING"];
@@ -289,5 +392,34 @@ describe("request_changes", () => {
 
     h.capabilities = ["BOOKKEEPING_VIEW"];
     expect((await call({ action: "request_changes", comment: "x" })).status).toBe(403);
+  });
+});
+
+describe("redistribute", () => {
+  const split = () => [
+    row({ id: "a1", approvedById: "actor", amount: 80000 }),
+    row({ id: "a2", amount: 45000, costCenter: { code: "CAFE01", name: "Caféet" } }),
+  ];
+
+  it("takes every signature off and gives the split back to the unit", async () => {
+    asSexmastare();
+    h.invoice = { ...assigned, status: "PENDING_APPROVAL" };
+    h.allocations = split();
+    const res = await call({ action: "redistribute" });
+    expect((await res.json()).status).toBe("ASSIGNED");
+    expect(h.allocationUpdate).toHaveBeenCalledWith({
+      where: { invoiceId: "inv1" },
+      data: { approvedById: null, approvedAt: null },
+    });
+  });
+
+  it("is the proposing unit's, not the unit asked to sign", async () => {
+    h.roles = ["RESULTATANSVARIG"];
+    h.capabilities = ["ATTEST_VIEW"];
+    h.ownedUnits = ["Caféutskottet"];
+    h.invoice = { ...assigned, status: "PENDING_APPROVAL" };
+    h.allocations = split();
+    expect((await call({ action: "redistribute" })).status).toBe(403);
+    expect(h.allocationUpdate).not.toHaveBeenCalled();
   });
 });

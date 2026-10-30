@@ -3,7 +3,6 @@
   "title": "Income",
   "reviewTitle": "Review and book",
   "description": "Fetch sales from Zettle and Swish. Look them over and book them.",
-  "serviceUnavailable": "The income service is not configured. Set INTAKT_URL and INTAKT_TOKEN to fetch and render reports.",
   "source": {
     "SWISH": "Swish",
     "ZETTLE": "Zettle",
@@ -21,7 +20,8 @@
     "from": "From",
     "to": "To",
     "submit": "Fetch",
-    "chooseFile": "Choose Swish file"
+    "chooseFile": "Choose Swish file",
+    "notReady": "The setup is not ready for fetching yet. See the steps on the page."
   },
   "fetchDone": "Fetch complete",
   "fetchFailed": "The fetch failed",
@@ -62,17 +62,23 @@
     "status": "Status",
     "fees": "Zettle fees",
     "chooseCostCenter": "Choose a cost centre",
-    "voucher": "Voucher"
+    "voucher": "Voucher",
+    "reviewedBy": "Reviewed by"
   },
   "lines": {
     "product": "Item",
     "account": "Account",
     "quantity": "Qty",
-    "unitPrice": "Unit price",
-    "discount": "Discount",
     "total": "Amount",
     "accountFor": "Account for {product}",
-    "accountFailed": "The account could not be changed."
+    "accountFailed": "The account could not be changed.",
+    "unitPriceKr": "Unit price (kr)",
+    "discountKr": "Discount (kr)",
+    "totalKr": "Amount (kr)",
+    "changeAccount": "Change account",
+    "unknownPrefix": "A prefix no committee has, {count, plural, one {# product} other {# products}}",
+    "movePrefix": "Move all {prefix} ({count})",
+    "selectPrefix": "Select every product with the prefix {prefix}"
   },
   "move": {
     "title": "Move sales",
@@ -150,17 +156,11 @@
   },
   "actions": {
     "book": "Book",
+    "more": "More",
     "export": "Export",
     "viewDocument": "View report",
     "hideDocument": "Hide income statement",
-    "bookAndNext": "Book & next"
-  },
-  "bookAll": {
-    "action": "Book all ({count})",
-    "title": "Book all?",
-    "body": "{count} reports will be booked, one at a time. Each gets an intäktsräkning and a verifikation.",
-    "confirm": "Book",
-    "done": "{count} of {total} booked"
+    "bookAndNext": "Approve and book"
   },
   "searchPlaceholder": "Search source, file or period…",
   "tab": {
@@ -184,15 +184,23 @@
     "edited": "Edited",
     "modeReview": "Review",
     "modeTable": "Reports",
-    "open": "Open",
+    "open": "Review",
     "alreadyBooked": "{count} days in the period are already booked and cannot be booked again.",
     "inFortnox": "In Fortnox ({voucher})",
     "inFortnoxWarning": "Fortnox already holds a voucher for this day and verksamhet ({voucher}). Only book this if they really are two separate reports.",
     "alreadyBookedShort": "Already booked",
-    "alreadyBookedWarning": "This day is already booked here and cannot be booked again. Voucher:"
+    "alreadyBookedWarning": "This day is already booked here and cannot be booked again. Voucher:",
+    "progress": "{reviewed} of {total} reviewed",
+    "approvedAs": "Approved as {name}",
+    "approveShortcut": "Approve and book (⌘ or Ctrl + Enter). j and k change day.",
+    "findings": {
+      "none": "Nothing out of the ordinary. Compare the products sold with the income statement and approve.",
+      "fallback": "Products without a recognised prefix ended up here. Check that every line belongs here, and move the ones that belong to another committee.",
+      "noCostCentre": "The cost centre is missing. Choose it above before approving.",
+      "edited": "The voucher has been changed by hand. Check the rows before approving."
+    }
   },
   "book": {
-    "title": "Voucher lines",
     "clearingHint": "The clearing account follows from how the day was paid and cannot be changed here.",
     "clearingLocked": "Locked row",
     "unknownClearingAccount": "The clearing account {account} is not in the chart of accounts. Fix it under Settings → Income before booking."
@@ -203,5 +211,25 @@
   },
   "booked": {
     "searchPlaceholder": "Search committee, cost centre or voucher…"
+  },
+  "setup": {
+    "titleFetch": "Before you can fetch income",
+    "titleBook": "You can fetch income, but before you can book it",
+    "steps": {
+      "service": "Connect the income service. Whoever runs the app needs to set INTAKT_URL and INTAKT_TOKEN.",
+      "noCommittees": "Turn on sales for at least one result unit, so there is a committee to book the income to.",
+      "noPrefixes": "Add product prefixes to the committee. A product whose name starts with the prefix is booked to its account, so c picks up c-Cola, for example.",
+      "noFallback": "Choose the fallback for unknown products: which committee and which account products without a prefix are booked to.",
+      "swishClearing": "Choose the clearing account for Swish.",
+      "zettleClearing": "Choose the clearing account for Zettle.",
+      "zettleFee": "Choose the account for Zettle's fees."
+    },
+    "askAdmin": "The steps are done under Settings → Sales, which only people with access to settings can reach. Ask someone who has it.",
+    "openSettings": "Open Settings → Sales",
+    "goTo": {
+      "service": "See Connection",
+      "units": "Go to Committees and products",
+      "booking": "Go to Booking"
+    }
   }
 }

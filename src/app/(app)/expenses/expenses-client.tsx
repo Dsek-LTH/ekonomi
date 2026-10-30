@@ -8,10 +8,8 @@ import { Card } from "@/components/ui/card";
 import { useReminderPicks } from "@/components/reminder-picks";
 import { useRole } from "@/components/shell/role-context";
 import { canRemindAboutExpense } from "@/lib/domain/reminders";
-import { EmptyState } from "@/components/ui/empty-state";
 import { IconCheck } from "@/components/ui/icons";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
-import { ButtonLink } from "@/components/ui/button";
 import { useScopeSwitch, useUrlTableControls } from "@/lib/data/use-list-query";
 import {
   expenseAmountColumn,
@@ -34,7 +32,7 @@ export function ExpensesClient({
   page,
   scope,
   scopes,
-  reviewCount,
+  ownBooked,
   canRemind,
 }: {
   page: RowPage<Expense>;
@@ -42,13 +40,13 @@ export function ExpensesClient({
   scope: ExpenseScope;
   /** The scopes this reader has, in the order the track draws them. */
   scopes: ExpenseScope[];
-  /** Konterade utlägg this viewer may bokföra. See getReviewQueue. */
-  reviewCount: number;
+  /** Konterade utlägg this viewer konterade, so may not bokföra. See
+   *  getReviewQueue. */
+  ownBooked: string[];
   /** Holds SEND_REMINDERS, so the rows can be ticked and reminded about. */
   canRemind: boolean;
 }) {
   const t = useTranslations("expenses");
-  const tBookkeeping = useTranslations("bookkeeping");
   const tPayment = useTranslations("common.payment");
   const { date } = useFormat();
   // The list's state lives in the URL, because the query behind it runs on the
@@ -59,7 +57,7 @@ export function ExpensesClient({
   const { user } = useRole();
   const showOwnOnly = scope === "mine";
   // What bookkeeping adds on the section's reading. See booking-column.tsx.
-  const booking = useBookingColumn(scope === "all");
+  const booking = useBookingColumn(scope === "all", ownBooked);
 
   // Bulk reminders: tick the utlägg, then "Påminn". See useReminderPicks.
   const picks = useReminderPicks({
@@ -132,12 +130,10 @@ export function ExpensesClient({
                         })
                   }
                 >
+                  {/* The slot is kept when it is empty, so a waiting name
+                      lines up with an attested one under it. */}
                   <span className="flex size-3.5 shrink-0 items-center justify-center">
-                    {attested ? (
-                      <IconCheck className="size-3.5 text-success" />
-                    ) : (
-                      <span className="size-1.5 rounded-full bg-muted/40" />
-                    )}
+                    {attested && <IconCheck className="size-3.5 text-success" />}
                   </span>
                   <span className={attested ? "font-medium" : "text-muted"}>
                     {attested ? a.approvedByName : (a.resultUnit ?? t("attest.waiting"))}
@@ -178,47 +174,38 @@ export function ExpensesClient({
           : undefined
       }
     >
-      {showOwnOnly && page.total === 0 && !narrowed ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
+      {/* The table even with nothing in it: its toolbar carries the way to
+          make the first one, and its heads say what the list will hold. */}
+      <Card>
+        <DataTable
+          columns={columns}
+          rows={page.rows}
+          controls={controls}
+          tabs={tabs}
+          // On the list's own toolbar rather than in the page header: it adds
+          // a row to what is below it, so that is where it lives.
           action={
-            <NewExpenseMenu />
+            <>
+              {/* Filled: making an utlägg is the main thing this page is for,
+                  so it is drawn as the page's primary action even on a bar it
+                  shares with the search and the status filter. */}
+              <NewExpenseMenu variant="primary" />
+            </>
           }
+          searchPlaceholder={t("searchPlaceholder")}
+          rowKey={(e) => e.id}
+          rowHref={(e) => `/expenses/${e.id}`}
+          // Konterade by the reader, so somebody else's to bokföra: still
+          // listed, so the stage shows everything in it, but held back. The
+          // reason is on the row's Granska button.
+          rowClassName={(e) => (booking.isOwn(e) ? "text-muted [&_td]:opacity-70" : undefined)}
+          // Nothing of one's own yet reads differently from a filter that
+          // found nothing.
+          empty={showOwnOnly && page.total === 0 && !narrowed ? t("emptyTitle") : t("noMatch")}
         />
-      ) : (
-        <Card>
-          <DataTable
-            columns={columns}
-            rows={page.rows}
-            controls={controls}
-            tabs={tabs}
-            // On the list's own toolbar rather than in the page header: it adds
-            // a row to what is below it, so that is where it lives.
-            action={
-              <>
-                {picks.button}
-                {reviewCount > 0 && (
-                  <ButtonLink href="/expenses/review" variant="secondary">
-                    {tBookkeeping("review.start", { count: reviewCount })}
-                  </ButtonLink>
-                )}
-                {/* Filled: making an utlägg is the main thing this page is for,
-                    so it is drawn as the page's primary action even on a bar it
-                    shares with the search and the status filter. The empty
-                    state's copy is filled too, so the two read as the same
-                    button. */}
-                <NewExpenseMenu variant="primary" />
-              </>
-            }
-            searchPlaceholder={t("searchPlaceholder")}
-            rowKey={(e) => e.id}
-            rowHref={(e) => `/expenses/${e.id}`}
-            empty={t("noMatch")}
-          />
-        </Card>
-      )}
+      </Card>
 
+      {picks.bar}
       {picks.dialog}
       {booking.dialog}
     </PageShell>

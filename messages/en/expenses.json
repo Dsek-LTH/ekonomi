@@ -97,6 +97,7 @@
     "noReceipt": "No receipt uploaded.",
     "bankTransaction": "Bank transaction",
     "removeMatch": "Remove match",
+    "transactionDate": "Transaction date",
     "noMatch": "No match.",
     "more": "More",
     "book": "Book",
@@ -317,6 +318,8 @@
     "sendFailed": "Could not send the reminder",
     "pickAll": "Select every expense on the page to remind about",
     "pick": "Select {label} to remind about",
-    "remindPicked": "Remind ({count})"
+    "remindPicked": "Remind",
+    "picked": "{count} selected",
+    "clearPicked": "Clear selection"
   }
 }

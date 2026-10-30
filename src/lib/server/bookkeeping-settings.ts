@@ -19,6 +19,9 @@ export interface BookkeepingSettingsValues {
   /** Null means "the same series as everything else", which is itself a choice
    *  the settings screen offers. See incomeVoucherSeries. */
   incomeVoucherSeries: string | null;
+  /** Where a sale matching no product prefix goes. See lib/income/routing.ts. */
+  incomeFallbackIncomeId: string | null;
+  incomeFallbackAccount: string | null;
 }
 
 export async function loadBookkeepingSettings(): Promise<BookkeepingSettingsValues> {
@@ -35,5 +38,7 @@ export async function loadBookkeepingSettings(): Promise<BookkeepingSettingsValu
     zettleFeeCostCenterId: row?.zettleFeeCostCenterId ?? null,
     zettleFeeCostCenterCode: row?.zettleFeeCostCenter?.code ?? null,
     incomeVoucherSeries: row?.incomeVoucherSeries ?? null,
+    incomeFallbackIncomeId: row?.incomeFallbackIncomeId ?? null,
+    incomeFallbackAccount: row?.incomeFallbackAccount ?? null,
   };
 }

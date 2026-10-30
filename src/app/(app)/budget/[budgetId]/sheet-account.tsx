@@ -181,7 +181,7 @@ export function AccountBlock({ account }: { account: Account }) {
             other, which set an override saying a cost account was income. The
             side is the account number's to decide now, so there is nothing to
             drag it to. */}
-        <td className="group relative border-r border-border/60 bg-brand p-0 align-middle">
+        <td className="group relative border-r border-border/60 bg-surface p-0 align-middle">
           {isAdmin ? (
             <Combobox
               // Its own side only. Swapping 3010 for 5010 while the row sits
@@ -205,13 +205,12 @@ export function AccountBlock({ account }: { account: Account }) {
               placeholder={tBook("accountPlaceholder")}
               searchPlaceholder={tBook("accountSearch")}
               emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-              align="center"
-              buttonClassName="px-2 py-1.5 font-mono text-sm font-semibold text-on-brand"
-              chevronClassName="text-on-brand"
+              buttonClassName="px-2 py-1.5 font-mono text-sm font-medium text-foreground"
+              chevronClassName="text-faint"
               aria-label={t("accountNumber")}
             />
           ) : (
-            <div className="px-2 py-1.5 text-center font-mono text-sm font-semibold text-on-brand">
+            <div className="px-2 py-1.5 font-mono text-sm font-medium text-foreground">
               {account.accountCode}
             </div>
           )}
@@ -351,7 +350,7 @@ export function AccountBlock({ account }: { account: Account }) {
           two trailing cells carry the compared figure and its diff vs budget. */}
       <tr className="border-t border-border/60 bg-surface">
         {gut(undefined)}
-        <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-xs font-medium text-muted">
           {t("sum")}
           {/* What the account said before the changes, the number that was
               voted through, kept beside the one in force so neither has to be
@@ -431,7 +430,7 @@ export function AccountBlock({ account }: { account: Account }) {
                     if (ok) setCommentDraft((m) => ({ ...m, [account.id]: "" }));
                   }}
                   placeholder={t("commentPlaceholder")}
-                  className="w-full rounded-control border border-border bg-background px-3 py-1.5 text-sm"
+                  className="w-full rounded-control border border-border-control bg-background px-3 py-1.5 text-sm"
                 />
               )}
             </div>
@@ -449,12 +448,10 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
     <tbody className="border-b border-border">
       <tr className="bg-background text-muted">
         {gut(undefined)}
-        {/* A ghost row's account cell is the real cell held back, so it keeps
-            the pink but at a fraction. The label follows the ground rather
-            than the fill: at this alpha the fill lands pale over white and
-            dark over the dark canvas, and a fixed near-black label was 2.3:1
-            in the dark theme. */}
-        <td className="border-r border-border/60 bg-brand/25 px-2 py-1.5 text-center font-mono text-sm font-semibold text-foreground">
+        {/* A ghost row's account cell is the real cell held back: the same
+            code, on the page's own ground rather than the surface, in the
+            row's muted ink. */}
+        <td className="border-r border-border/60 px-2 py-1.5 font-mono text-sm font-medium">
           {account.code}
         </td>
         <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>

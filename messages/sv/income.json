@@ -3,7 +3,6 @@
   "title": "Intäkter",
   "reviewTitle": "Granska och bokför",
   "description": "Hämta försäljning från Zettle och Swish. Granska och bokför.",
-  "serviceUnavailable": "Intäktstjänsten är inte konfigurerad. Sätt INTAKT_URL och INTAKT_TOKEN för att kunna hämta och rendera rapporter.",
   "source": {
     "SWISH": "Swish",
     "ZETTLE": "Zettle",
@@ -21,7 +20,8 @@
     "from": "Från",
     "to": "Till",
     "submit": "Hämta",
-    "chooseFile": "Välj Swish-fil"
+    "chooseFile": "Välj Swish-fil",
+    "notReady": "Inställningarna är inte klara för att hämta. Se stegen på sidan."
   },
   "fetchDone": "Hämtning klar",
   "fetchFailed": "Hämtningen misslyckades",
@@ -62,17 +62,23 @@
     "status": "Status",
     "fees": "Zettleavgifter",
     "chooseCostCenter": "Välj kostnadsställe",
-    "voucher": "Verifikation"
+    "voucher": "Verifikation",
+    "reviewedBy": "Granskad av"
   },
   "lines": {
     "product": "Vara",
     "account": "Konto",
     "quantity": "Antal",
-    "unitPrice": "Styckpris",
-    "discount": "Rabatt",
     "total": "Belopp",
     "accountFor": "Konto för {product}",
-    "accountFailed": "Kunde inte byta konto."
+    "accountFailed": "Kunde inte byta konto.",
+    "unitPriceKr": "Styckpris (kr)",
+    "discountKr": "Rabatt (kr)",
+    "totalKr": "Belopp (kr)",
+    "changeAccount": "Byt konto",
+    "unknownPrefix": "Prefix som ingen verksamhet har, {count, plural, one {# vara} other {# varor}}",
+    "movePrefix": "Flytta alla {prefix} ({count})",
+    "selectPrefix": "Markera alla varor med prefixet {prefix}"
   },
   "move": {
     "title": "Flytta försäljning",
@@ -150,17 +156,11 @@
   },
   "actions": {
     "book": "Bokför",
+    "more": "Mer",
     "export": "Exportera",
     "viewDocument": "Visa intäktsräkning",
     "hideDocument": "Dölj intäktsräkning",
-    "bookAndNext": "Bokför & nästa"
-  },
-  "bookAll": {
-    "action": "Bokför alla ({count})",
-    "title": "Bokför alla?",
-    "body": "{count} rapporter bokförs, en i taget. Varje rapport får en intäktsräkning och en verifikation.",
-    "confirm": "Bokför",
-    "done": "{count} av {total} bokförda"
+    "bookAndNext": "Godkänn och bokför"
   },
   "searchPlaceholder": "Sök källa, fil eller period…",
   "tab": {
@@ -184,15 +184,23 @@
     "edited": "Ändrad",
     "modeReview": "Granska",
     "modeTable": "Rapporter",
-    "open": "Öppna",
+    "open": "Granska",
     "alreadyBooked": "{count} dagar i perioden är redan bokförda och kan inte bokföras igen.",
     "inFortnox": "Finns i Fortnox ({voucher})",
     "inFortnoxWarning": "Det finns redan en verifikation i Fortnox för den här dagen och verksamheten ({voucher}). Bokför bara om det verkligen är två skilda dagsrapporter.",
     "alreadyBookedShort": "Redan bokförd",
-    "alreadyBookedWarning": "Den här dagen är redan bokförd här och kan inte bokföras igen. Verifikation:"
+    "alreadyBookedWarning": "Den här dagen är redan bokförd här och kan inte bokföras igen. Verifikation:",
+    "progress": "{reviewed} av {total} granskade",
+    "approvedAs": "Godkänns av {name}",
+    "approveShortcut": "Godkänn och bokför (⌘ eller Ctrl + Enter). j och k byter dag.",
+    "findings": {
+      "none": "Inget avvikande. Jämför de sålda varorna med intäktsräkningen och godkänn.",
+      "fallback": "Hit hamnade varor utan igenkänt prefix. Kontrollera att varje rad hör hit, och flytta de som hör till en annan verksamhet.",
+      "noCostCentre": "Kostnadsställe saknas. Välj det ovan innan du godkänner.",
+      "edited": "Verifikationen är ändrad för hand. Kontrollera raderna innan du godkänner."
+    }
   },
   "book": {
-    "title": "Konteringsrader",
     "clearingHint": "Likvidkontot följer av hur dagen betalades och kan inte ändras här.",
     "clearingLocked": "Låst rad",
     "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Intäkter innan du bokför."
@@ -203,5 +211,25 @@
   },
   "booked": {
     "searchPlaceholder": "Sök verksamhet, kostnadsställe eller verifikation…"
+  },
+  "setup": {
+    "titleFetch": "Innan du kan hämta intäkter",
+    "titleBook": "Du kan hämta intäkter, men innan du kan bokföra dem",
+    "steps": {
+      "service": "Anslut intäktstjänsten. Den som driftar appen behöver sätta INTAKT_URL och INTAKT_TOKEN.",
+      "noCommittees": "Slå på försäljning för minst en resultatenhet, så att det finns en verksamhet att bokföra intäkterna på.",
+      "noPrefixes": "Lägg till produktprefix på verksamheten. En vara vars namn börjar på prefixet bokförs mot dess konto, så c hämtar till exempel c-Cola.",
+      "noFallback": "Välj reserv för okända varor: vilken verksamhet och vilket konto varor utan prefix bokförs på.",
+      "swishClearing": "Välj likvidkonto för Swish.",
+      "zettleClearing": "Välj likvidkonto för Zettle.",
+      "zettleFee": "Välj konto för Zettles avgifter."
+    },
+    "askAdmin": "Stegen görs under Inställningar → Försäljning, som bara den med behörighet till inställningarna når. Be någon med den behörigheten.",
+    "openSettings": "Öppna Inställningar → Försäljning",
+    "goTo": {
+      "service": "Se Anslutning",
+      "units": "Gå till Verksamheter och varor",
+      "booking": "Gå till Bokföring"
+    }
   }
 }

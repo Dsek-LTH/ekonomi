@@ -1,29 +1,26 @@
-// The intakt service: income reports from Zettle and Swish, and the PDFs that
-// substantiate them.
+// The intakt service: what Zettle and a Swish export say was sold, and the PDFs
+// that substantiate a booked day.
 //
 // intakt is a separate container for one blunt reason: it renders its reports
 // with pdflatex, and a TeX installation has no business in the image that
-// serves every page of this app. It holds no state and no configuration: the
-// routing table lives here (see ./config.ts) and is sent with every request, so
-// there is one copy of it and it is the one an admin can edit.
+// serves every page of this app. It holds no state and no configuration. It
+// returns sales as they were rung up, and the app routes them (./routing.ts):
+// which verksamhet a product is, and which account it is credited to, is
+// decided here and only here. It used to be sent the whole routing table and
+// route on its own, which put the routing in two places.
 //
 // It also never talks to Fortnox. Booking is this app's job, because a voucher
 // has to be written with the bookkeeper's own Fortnox login so Fortnox
 // attributes it to them by name, and only the thing that knows who is signed
 // in can do that. See lib/fortnox/index.ts.
 //
-// Fetching and rendering are deliberately separate calls. Between them the
-// treasurer reviews what came back and sets cost centres, and reports they skip
-// are never rendered at all. Fusing the two is what forced intakt's old CLI to
-// write a manifest file and have it edited by hand.
+// Fetching and rendering are deliberately separate calls. Between them the app
+// routes the sales and the treasurer reviews them, and days they skip are never
+// rendered at all. The document is sent whole, so what is rendered is exactly
+// what was booked.
 import "server-only";
 
-import type {
-  IncomeFeeReportDto,
-  IncomePaymentType,
-  IncomeReportDto,
-  IntaktConfig,
-} from "./types";
+import type { IncomeDocument, SwishPayment, ZettleFee, ZettleSaleLine } from "./types";
 
 /**
  * A failure from the service, carrying the status so a route can decide whether
@@ -109,68 +106,42 @@ async function postJSON<T>(path: string, body: unknown, timeoutMs: number): Prom
   return (await res.json()) as T;
 }
 
-interface ReportsResponse {
-  reports: IncomeReportDto[];
-}
-interface FeeReportsResponse {
-  reports: IncomeFeeReportDto[];
-}
-
-/** Card takings for an inclusive date range, grouped one report per committee per day. */
-export async function fetchZettleReports(
-  from: string,
-  to: string,
-  cfg: IntaktConfig,
-): Promise<IncomeReportDto[]> {
-  const body = await postJSON<ReportsResponse>(
-    "/v1/reports/zettle",
-    { from, to, config: cfg },
-    FETCH_TIMEOUT_MS,
-  );
-  return body.reports ?? [];
+/** Every product line Zettle sold in an inclusive range of Swedish days. */
+export async function fetchZettleSales(from: string, to: string): Promise<ZettleSaleLine[]> {
+  const body = await postJSON<{ lines?: ZettleSaleLine[] }>("/v1/zettle/sales", { from, to }, FETCH_TIMEOUT_MS);
+  return body.lines ?? [];
 }
 
-/** Zettle's own transaction fees for a range, grouped by day. */
-export async function fetchFeeReports(
-  from: string,
-  to: string,
-  cfg: IntaktConfig,
-): Promise<IncomeFeeReportDto[]> {
-  const body = await postJSON<FeeReportsResponse>(
-    "/v1/reports/fees",
-    { from, to, config: cfg },
-    FETCH_TIMEOUT_MS,
-  );
-  return body.reports ?? [];
+/** Zettle's own payment fees in the same kind of range, as positive costs. */
+export async function fetchZettleFees(from: string, to: string): Promise<ZettleFee[]> {
+  const body = await postJSON<{ fees?: ZettleFee[] }>("/v1/zettle/fees", { from, to }, FETCH_TIMEOUT_MS);
+  return body.fees ?? [];
 }
 
 /**
- * The same grouping, from an uploaded Swish export rather than an API.
+ * The payments in an uploaded Swish export that fall in the range.
  *
  * The CSV is passed through as bytes and never decoded here: the export is
  * ISO-8859-1, and the service is the thing that knows that. Reading it as UTF-8
- * anywhere on the way would mangle every å, ä and ö in a product name, which
- * would show up as a committee that routes to the fallback rather than as an
- * error.
+ * anywhere on the way would mangle every å, ä and ö in a message, which would
+ * show up as payments routed to the reserv rather than as an error.
  */
-export async function fetchSwishReports(
+export async function fetchSwishPayments(
   from: string,
   to: string,
   csv: Uint8Array<ArrayBuffer>,
   filename: string,
-  cfg: IntaktConfig,
-): Promise<IncomeReportDto[]> {
+): Promise<SwishPayment[]> {
   const { url, token } = config();
 
   const form = new FormData();
-  form.append("config", JSON.stringify(cfg));
   form.append("from", from);
   form.append("to", to);
   form.append("file", new Blob([csv], { type: "text/csv" }), filename);
 
   let res: Response;
   try {
-    res = await fetch(`${url}/v1/reports/swish`, {
+    res = await fetch(`${url}/v1/swish/payments`, {
       method: "POST",
       // No Content-Type: fetch sets it, with the multipart boundary.
       headers: { Authorization: `Bearer ${token}` },
@@ -183,47 +154,12 @@ export async function fetchSwishReports(
   }
 
   if (!res.ok) throw await errorFrom(res);
-  const body = (await res.json()) as ReportsResponse;
-  return body.reports ?? [];
+  const body = (await res.json()) as { payments?: SwishPayment[] };
+  return body.payments ?? [];
 }
 
-/**
- * Render one report to a PDF.
- *
- * The report is sent rather than referenced, because by now it is not the one
- * that was fetched. The cost centre may have been corrected, and the service
- * keeps no copy to render from.
- */
-export async function renderReport(
-  report: IncomeReportDto,
-  cfg: IntaktConfig,
-  paymentType: IncomePaymentType,
-): Promise<Uint8Array> {
-  return renderPdf({ config: cfg, paymentType, report: withoutKey(report) });
-}
-
-/** The same, for a fee report, which uses the other skeleton. */
-export async function renderFeeReport(
-  report: IncomeFeeReportDto,
-  cfg: IntaktConfig,
-): Promise<Uint8Array> {
-  return renderPdf({ config: cfg, feeReport: withoutKey(report) });
-}
-
-/**
- * The report without its `key`.
- *
- * The key is ours, how a report is filed here, not part of what the service
- * defined. It rejects unknown fields, so sending it back would be a 400 rather
- * than something quietly ignored.
- */
-function withoutKey<T extends { key: string }>(report: T): Omit<T, "key"> {
-  const copy: Partial<T> = { ...report };
-  delete copy.key;
-  return copy as Omit<T, "key">;
-}
-
-async function renderPdf(body: unknown): Promise<Uint8Array> {
+/** One finished day as PDF bytes. */
+export async function renderDocument(document: IncomeDocument): Promise<Uint8Array> {
   const { url, token } = config();
 
   let res: Response;
@@ -231,7 +167,7 @@ async function renderPdf(body: unknown): Promise<Uint8Array> {
     res = await fetch(`${url}/v1/render`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
+      body: JSON.stringify(document),
       signal: AbortSignal.timeout(RENDER_TIMEOUT_MS),
       cache: "no-store",
     });

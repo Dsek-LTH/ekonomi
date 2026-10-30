@@ -110,6 +110,10 @@ enum Capability {
   /// or make an anmärkning. The treasury's own pass is BOOKKEEPING's. See
   /// canAuditReview in lib/domain/permissions.ts.
   AUDIT_REVIEW
+  /// See every member's redovisningsbetyg, the stars for how promptly they
+  /// redovisar (lib/domain/member-score.ts). A member always sees their own.
+  /// Held by the skattmästare by default.
+  MEMBER_SCORE_VIEW
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -204,6 +208,7 @@ model User {
   fortnoxConnections   FortnoxConnection[]      @relation("FortnoxConnector")
   fortnoxSession       FortnoxUserSession?      @relation("FortnoxUserSession")
   incomeBatches        IncomeBatch[]            @relation("IncomeBatchCreator")
+  reviewedIncome       IncomeReport[]           @relation("IncomeReportReviewer")
   stockEntries         StockEntry[]             @relation("StockEntryActor")
   stockEvents          StockEvent[]             @relation("StockEventCreator")
   stockChanges         StockChange[]            @relation("StockChangeActor")
@@ -228,6 +233,7 @@ model User {
   assignedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceAssigner")
   supplierInvoiceApprovals SupplierInvoiceAllocation[] @relation("SupplierInvoiceAllocationApprover")
   supplierInvoiceDocuments SupplierInvoiceDocument[]   @relation("SupplierInvoiceDocumentUploader")
+  assignedSupplierInvoiceDocuments SupplierInvoiceDocument[] @relation("SupplierInvoiceDocumentAssigner")
   supplierInvoiceEvents    SupplierInvoiceEvent[]      @relation("SupplierInvoiceEventActor")
   inboundMails             InboundMail[]               @relation("InboundMailSender")
   exportedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceExporter")

@@ -148,7 +148,15 @@ export function DocumentStrip({
 
   return (
     <div className="shrink-0 border-t border-border bg-background px-3 py-2.5">
-      <ul className="flex items-start gap-2 overflow-x-auto pb-0.5" aria-label={t("documents")}>
+      {/* The padding is room inside the scrollport for what stands outside a
+          tile: the selected one's ring and the remove button over its corner.
+          A box that scrolls on one axis clips on both, so without it they were
+          cut off at the edges. The negative margin gives the same room back,
+          so the tiles still line up with the hint under them. */}
+      <ul
+        className="-mx-1.5 -mt-1.5 flex items-start gap-2 overflow-x-auto px-1.5 pb-0.5 pt-1.5"
+        aria-label={t("documents")}
+      >
         {items.map((item, i) => {
           const held = draggingKey === item.key;
           return (
@@ -191,7 +199,8 @@ export function DocumentStrip({
               >
                 <Thumb item={item} />
               </button>
-              <span className="pointer-events-none absolute bottom-0.5 left-0.5 rounded-mark bg-background/90 px-1 text-[10px] font-medium tabular-nums">
+              {/* Clear of the tile's border and ring, which a badge at 2px sat on. */}
+              <span className="pointer-events-none absolute bottom-1 left-1 rounded-mark bg-background/90 px-1 text-[10px] font-medium tabular-nums">
                 {i + 1}
               </span>
               <button
@@ -223,7 +232,7 @@ export function DocumentStrip({
           </li>
         )}
       </ul>
-      {items.length > 1 && <p className="mt-1.5 text-[11px] text-muted">{t("stripHint")}</p>}
+      {items.length > 1 && <p className="mt-1.5 text-xs text-muted">{t("stripHint")}</p>}
     </div>
   );
 }

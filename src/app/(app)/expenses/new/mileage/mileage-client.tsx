@@ -50,6 +50,8 @@ import {
   submitBlocker,
 } from "@/lib/domain/status";
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
+import { useFiscalYear } from "@/components/shell/fiscal-year-context";
+import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import { commaForm, oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
 import { claimBlocker, namedStops, valueJourney } from "@/lib/mileage/claim";
 import type { MileageRateLike } from "@/lib/mileage/rate";
@@ -113,6 +115,8 @@ export default function MileageClient({
   const t = useTranslations("mileage");
   const tWizard = useTranslations("expenses.wizard");
   const tPayment = useTranslations("common.payment");
+  const tCommon = useTranslations("common");
+  const fiscalYear = useFiscalYear();
   const { date } = useFormat();
   const selectOnce = useSelectOnce();
   const notify = useNotify();
@@ -180,6 +184,9 @@ export default function MileageClient({
   // Empty is a draft in progress; a partial date is an error to point at.
   const dateIncomplete = journeyDate !== "" && !isCompleteDate(journeyDate);
   const dateInFuture = isFutureDate(journeyDate);
+  // In the year picked in the header, as in the receipt wizard.
+  const dateOutsideYear =
+    journeyDate !== (existing?.purchaseDate ?? "") && outsideFiscalYear(fiscalYear, journeyDate);
   // Past the filing deadline, which a milersättning has exactly as an eget
   // utlägg does. It is the claimant's own petrol out of the claimant's own
   // account, and a stale one is as uncheckable as a stale receipt. Said here,
@@ -220,6 +227,7 @@ export default function MileageClient({
   const filledForm =
     !journeyBlocker &&
     !dateInFuture &&
+    !dateOutsideYear &&
     allocations.length > 0 &&
     allocations.every((a) => a.costCenterCode);
   // A draft may be saved with the readings still missing, since that is what a
@@ -230,7 +238,7 @@ export default function MileageClient({
   // the server), so a save that went ahead would fail with a toast instead of
   // the sentence under the field that already says what is wrong.
   const canPersist =
-    title.trim() !== "" && !dateIncomplete && !dateInFuture && !saving;
+    title.trim() !== "" && !dateIncomplete && !dateInFuture && !dateOutsideYear && !saving;
   // An attested claim can still be corrected but not re-sent from this form.
   // the same rule the ordinary wizard holds to.
   const submittable = !existing || isSubmittable(existing.status);
@@ -393,7 +401,9 @@ export default function MileageClient({
                   ? tWizard("dateIncomplete")
                   : dateInFuture
                     ? t("dateFuture")
-                    : undefined
+                    : dateOutsideYear
+                      ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                      : undefined
               }
               // A hint, not an error: the day is a real one and the form takes
               // it. See the same field in the receipt wizard.
@@ -404,6 +414,8 @@ export default function MileageClient({
               }
             >
               <DateInput
+                min={fiscalYear?.fromDate}
+                max={fiscalYear?.toDate}
                 value={journeyDate}
                 onChange={(e) => setJourneyDate(e.target.value)}
               />
@@ -463,7 +475,7 @@ export default function MileageClient({
                   type="button"
                   onClick={() => setStops([...stops, ""])}
                   disabled={stops.length >= MAX_STOPS}
-                  className="text-sm font-medium text-accent hover:underline disabled:opacity-40"
+                  className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
                 >
                   {t("route.addStop")}
                 </button>
@@ -477,7 +489,7 @@ export default function MileageClient({
                     <button
                       type="button"
                       onClick={() => setStops([...stops, stops[0]])}
-                      className="text-sm font-medium text-accent hover:underline"
+                      className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                     >
                       {t("route.addReturn")}
                     </button>
@@ -552,7 +564,7 @@ export default function MileageClient({
                   <button
                     type="button"
                     onClick={() => router.push("/expenses/new")}
-                    className="font-medium text-accent hover:underline"
+                    className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                   >
                     {t("otherTypeLink")}
                   </button>

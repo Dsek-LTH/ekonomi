@@ -44,6 +44,7 @@ import type {
 } from "@/lib/domain/types";
 import type { AutoRule } from "@/lib/domain/inbound-mail";
 import { gmailConfig } from "@/lib/server/gmail";
+import type { DocumentReading } from "@/lib/server/invoice-documents";
 import type { Viewer } from "./expense-scope";
 import { isoDate } from "./shared";
 
@@ -160,6 +161,8 @@ export function invoiceFactsOf(
 
 export interface SupplierInvoiceRow {
   id: string;
+  /** "LEV26-0012". */
+  reference: string | null;
   status: SupplierInvoiceStatus;
   source: SupplierInvoiceSource;
   supplierName: string | null;
@@ -179,6 +182,7 @@ export interface SupplierInvoiceRow {
 
 const ROW_SELECT = {
   id: true,
+  reference: true,
   status: true,
   source: true,
   supplierName: true,
@@ -213,6 +217,7 @@ export async function getInvoiceRows(
   });
   return rows.map((r) => ({
     id: r.id,
+    reference: r.reference,
     status: r.status,
     source: r.source,
     supplierName: r.supplierName,
@@ -248,6 +253,18 @@ export interface SupplierInvoiceAllocationView {
   canAttest: boolean;
 }
 
+/** One line of the treasury's kontering. See SupplierInvoiceLine. */
+export interface SupplierInvoiceLineView {
+  id: string;
+  account: string;
+  accountName: string | null;
+  costCenterCode: string | null;
+  project: string | null;
+  description: string | null;
+  debit: number; // SEK
+  credit: number; // SEK
+}
+
 export interface SupplierInvoiceEventView {
   id: string;
   type: SupplierInvoiceEventType;
@@ -272,6 +289,8 @@ export interface InvoiceMailView {
 
 export interface SupplierInvoiceView {
   id: string;
+  /** "LEV26-0012". */
+  reference: string | null;
   status: SupplierInvoiceStatus;
   source: SupplierInvoiceSource;
   description: string | null;
@@ -281,12 +300,16 @@ export interface SupplierInvoiceView {
   invoiceDate: string;
   dueDate: string;
   amount: number | null; // SEK
+  /** Öresutjämning, SEK, signed. See bookedShares. */
+  rounding: number | null;
   currency: string;
   ocr: string | null;
   bankgiro: string | null;
   plusgiro: string | null;
-  /** "Er referens", as the PDF printed it. */
+  /** "Er referens", as the PDF printed it or the treasurer corrected it. */
   yourReference: string | null;
+  /** "Vår referens", written at the booking. */
+  ourReference: string | null;
   /** Which fields were read from the PDF rather than typed. */
   prefilled: string[];
   fortnoxSupplierNumber: string | null;
@@ -296,10 +319,13 @@ export interface SupplierInvoiceView {
   /** Set while an export holds the lock. UNCERTAIN is the one to act on: the
    *  treasurer has to look in Fortnox and say whether it was made. */
   exportState: "CLAIMED" | "SENT" | "UNCERTAIN" | null;
+  /** The picked Fortnox supplier as the app's copy of the register has it,
+   *  for the giro check on the record before it is sent. */
+  register: { name: string; bankgiro: string | null; plusgiro: string | null } | null;
   /**
-   * An account to start each row on, by allocation id, for an attested
-   * invoice whose rows have none yet: whatever the same supplier's last
-   * invoice was booked on, for the same cost centre if it had one.
+   * An account to start each line on, by allocation id, for an attested
+   * invoice with no kontering yet: whatever the same supplier's last invoice
+   * was booked on, for the same cost centre if it had one.
    */
   suggestedAccounts: Record<string, string>;
   resultUnitId: string | null;
@@ -308,13 +334,15 @@ export interface SupplierInvoiceView {
   receivedAt: string;
   mail: InvoiceMailView | null;
   /**
-   * The cost centre the attest card opens on, for an invoice waiting for its
-   * kontering: one named in the forwarded mail, failing that the one the same
-   * supplier's last invoice went to, failing that the unit's only one. Null
-   * when none of them settles it.
+   * The cost centre the fördelning opens on, for an invoice waiting for one:
+   * one named in the forwarded mail or the PDF's "Er referens", failing that
+   * the one the same supplier's last invoice went to, failing that the unit's
+   * only one. Null when none of them settles it.
    */
   suggestedCostCenter: string | null;
   allocations: SupplierInvoiceAllocationView[];
+  /** The kontering, once the treasury has saved one. Empty before. */
+  lines: SupplierInvoiceLineView[];
   documents: { id: string; filename: string; mimeType: string }[];
   events: SupplierInvoiceEventView[];
   updatedAt: string;
@@ -342,7 +370,7 @@ function autoOf(diff: unknown): { rule: AutoRule; match: string } | null {
  * unit: a suggestion from another unit's history would be a suggestion to
  * charge somebody else.
  */
-async function costCenterSuggestionFor(inv: {
+export async function costCenterSuggestionFor(inv: {
   id: string;
   resultUnitId: string | null;
   supplierName: string | null;
@@ -392,24 +420,24 @@ async function accountSuggestionsFor(inv: {
   fortnoxSupplierNumber: string | null;
   supplierOrgNo: string | null;
   supplierName: string | null;
-  allocations: { id: string; account: string | null; costCenterId: string }[];
+  lines: unknown[];
+  allocations: { id: string; costCenter: { code: string } }[];
 }): Promise<Record<string, string>> {
-  const open = inv.allocations.filter((a) => !a.account);
-  if (open.length === 0) return {};
+  if (inv.lines.length > 0 || inv.allocations.length === 0) return {};
   const same: Prisma.SupplierInvoiceWhereInput[] = [];
   if (inv.fortnoxSupplierNumber) same.push({ fortnoxSupplierNumber: inv.fortnoxSupplierNumber });
   if (inv.supplierOrgNo) same.push({ supplierOrgNo: inv.supplierOrgNo });
   if (inv.supplierName) same.push({ supplierName: inv.supplierName });
   if (same.length === 0) return {};
-  const prior = await prisma.supplierInvoiceAllocation.findMany({
-    where: { account: { not: null }, invoice: { id: { not: inv.id }, OR: same } },
+  const prior = await prisma.supplierInvoiceLine.findMany({
+    where: { debit: { gt: 0 }, invoice: { id: { not: inv.id }, OR: same } },
     orderBy: [{ invoice: { createdAt: "desc" } }, { position: "asc" }],
     take: 50,
-    select: { account: true, costCenterId: true },
+    select: { account: true, costCenterCode: true },
   });
   if (prior.length === 0) return {};
   return Object.fromEntries(
-    open.map((a) => [a.id, (prior.find((p) => p.costCenterId === a.costCenterId) ?? prior[0]).account!]),
+    inv.allocations.map((a) => [a.id, (prior.find((p) => p.costCenterCode === a.costCenter.code) ?? prior[0]).account]),
   );
 }
 
@@ -421,6 +449,9 @@ async function accountSuggestionsFor(inv: {
 export async function getInvoice(
   id: string,
   viewer: Viewer,
+  /** What its PDF says, read by the fördelning's page, for the cost centre
+   *  suggestion to go on before any of it is saved on the invoice. */
+  reading?: DocumentReading,
 ): Promise<{ invoice: SupplierInvoiceView; can: InvoiceCapabilities } | null> {
   const v = await invoiceViewerOf(viewer);
   const inv = await prisma.supplierInvoice.findFirst({
@@ -445,6 +476,7 @@ export async function getInvoice(
           approvedBy: { select: { name: true } },
         },
       },
+      lines: { orderBy: [{ position: "asc" }, { id: "asc" }] },
       documents: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
         select: { id: true, filename: true, mimeType: true },
@@ -461,7 +493,10 @@ export async function getInvoice(
   // row rather than a relation, because the column is a plain number. See
   // SupplierInvoiceAllocation.account.
   const numbers = [
-    ...new Set(inv.allocations.flatMap((a) => (a.account ? [a.account] : []))),
+    ...new Set([
+      ...inv.allocations.flatMap((a) => (a.account ? [a.account] : [])),
+      ...inv.lines.map((l) => l.account),
+    ]),
   ];
   const accounts = numbers.length
     ? await prisma.account.findMany({
@@ -475,13 +510,25 @@ export async function getInvoice(
   const can = invoiceCapabilities(v, facts);
   const m = inv.inboundMail;
   const suggestedCostCenter =
-    can.canKontera && inv.allocations.length === 0 ? await costCenterSuggestionFor(inv) : null;
-  const suggestedAccounts =
-    inv.status === "APPROVED" && can.canEditDetails ? await accountSuggestionsFor(inv) : {};
+    can.canAllocate && inv.allocations.length === 0
+      ? await costCenterSuggestionFor({
+          ...inv,
+          yourReference: inv.yourReference ?? reading?.fields.reference ?? null,
+          supplierName: inv.supplierName ?? reading?.supplier?.name ?? null,
+        })
+      : null;
+  const suggestedAccounts = can.canBook ? await accountSuggestionsFor(inv) : {};
+  const register = inv.fortnoxSupplierNumber
+    ? await prisma.supplier.findUnique({
+        where: { number: inv.fortnoxSupplierNumber },
+        select: { name: true, bankgiro: true, plusgiro: true },
+      })
+    : null;
   return {
     can,
     invoice: {
       id: inv.id,
+      reference: inv.reference,
       status: inv.status,
       source: inv.source,
       description: inv.description,
@@ -491,17 +538,20 @@ export async function getInvoice(
       invoiceDate: isoDate(inv.invoiceDate),
       dueDate: isoDate(inv.dueDate),
       amount: inv.amount == null ? null : ore(inv.amount),
+      rounding: inv.rounding == null ? null : ore(inv.rounding),
       currency: inv.currency,
       ocr: inv.ocr,
       bankgiro: inv.bankgiro,
       plusgiro: inv.plusgiro,
       yourReference: inv.yourReference,
+      ourReference: inv.ourReference,
       prefilled: inv.prefilled,
       fortnoxSupplierNumber: inv.fortnoxSupplierNumber,
       fortnoxGivenNumber: inv.fortnoxGivenNumber,
       exportedAt: inv.exportedAt?.toISOString() ?? null,
       exportState: inv.exportClaimState,
       suggestedAccounts,
+      register,
       resultUnitId: inv.resultUnitId,
       resultUnitName: inv.resultUnit?.name ?? null,
       receivedByName: inv.receivedBy?.name ?? null,
@@ -530,6 +580,16 @@ export async function getInvoice(
         approvedByName: a.approvedBy?.name ?? null,
         approvedAt: a.approvedAt?.toISOString() ?? null,
         canAttest: facts.allocations[i].viewerMayAttest,
+      })),
+      lines: inv.lines.map((l) => ({
+        id: l.id,
+        account: l.account,
+        accountName: accountName.get(l.account) ?? null,
+        costCenterCode: l.costCenterCode,
+        project: l.project,
+        description: l.description,
+        debit: ore(l.debit),
+        credit: ore(l.credit),
       })),
       documents: inv.documents,
       events: inv.events.map((e) => ({

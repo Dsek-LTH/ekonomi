@@ -169,9 +169,9 @@ export interface ResultUnit {
 export interface ResultUnitIncome {
   id: string;
   /**
-   * What intakt groups the unit's reports by. Derived from the name when the
+   * What the unit's reports are grouped by. Derived from the name when the
    * profile is created and never edited after: the name is prose someone may
-   * reword, this is an identifier another program holds.
+   * reword, this is an identifier report keys are built from.
    */
   key: string;
   /** The verifikationstext a booked day carries. */
@@ -180,7 +180,7 @@ export interface ResultUnitIncome {
   defaultCostCenterCode: string | null;
   active: boolean;
   /** Product-name prefixes: "s1 - Öl" → account 3011. */
-  prefixes: { id: string; code: string; account: string; accountName: string; isFallback: boolean }[];
+  prefixes: { id: string; code: string; account: string; accountName: string }[];
 }
 
 export interface CostAllocation {

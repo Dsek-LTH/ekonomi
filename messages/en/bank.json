@@ -48,5 +48,6 @@
   "account": "Account for it",
   "assignCard": "Pick a card",
   "changeCard": "Change card",
+  "cardLocked": "The card can't be changed while the purchase is matched to an expense.",
   "assignFailed": "Could not put the transaction on that card"
 }

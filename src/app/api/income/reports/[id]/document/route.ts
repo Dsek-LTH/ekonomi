@@ -20,12 +20,6 @@ function documentFailure(failure: DocumentFailure) {
       return fail(404, "income.reportNotFound");
     case "serviceUnavailable":
       return fail(503, "income.serviceUnavailable");
-    case "noAttestation":
-      return fail(409, "income.noAttestation");
-    case "config":
-      return fail(409, `income.${failure.blocker}`, {
-        ...(failure.detail && { values: { detail: failure.detail } }),
-      });
     case "renderFailed":
       return fail(502, "income.renderFailed", { values: { detail: failure.detail } });
     case "storeFailed":

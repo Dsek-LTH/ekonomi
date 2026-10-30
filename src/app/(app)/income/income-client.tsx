@@ -26,12 +26,17 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
+import { IconDots, IconDownload } from "@/components/ui/icons";
+import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { Tag } from "@/components/ui/status-pill";
 import { useTableControls, useUrlTab } from "@/lib/data/use-list-query";
 import { useFormat } from "@/lib/ui/use-format";
 import type { IncomeReportRow } from "@/lib/data/income";
+import type { IncomeSetupStep } from "@/lib/income/setup";
 import type { IncomeReportStatus, IncomeSource } from "@/lib/domain/types";
 
+import { FetchDialog } from "./fetch-panel";
+import { IncomeSetupNotice } from "./setup-notice";
 import { INCOME_TABS, incomeTabHolds, type IncomeTab } from "./tabs";
 import type { FiscalYear } from "@/lib/ui/fiscal-year";
 
@@ -52,6 +57,8 @@ export default function IncomeClient({
   canBook,
   canManage,
   fiscal,
+  setup,
+  canSetUp,
 }: {
   reports: IncomeReportRow[];
   /** The header's räkenskapsår, which narrows every tab. */
@@ -69,6 +76,10 @@ export default function IncomeClient({
    * that somebody has to go and reverse, and that somebody is who this is.
    */
   canManage: boolean;
+  /** What is left to set up before fetching and booking. See lib/income/setup.ts. */
+  setup: IncomeSetupStep[];
+  /** Holds Inställningar, where most of the setup is done. */
+  canSetUp: boolean;
 }) {
   const t = useTranslations("income");
   const { date: formatDate } = useFormat();
@@ -82,6 +93,7 @@ export default function IncomeClient({
   // rather than by URL, so the row it belongs to can say so.
   const [viewing, setViewing] = useState<string | null>(null);
   const viewed = reports.find((r) => r.id === viewing);
+  const [fetchOpen, setFetchOpen] = useState(false);
 
   const waiting = reports.filter((r) => r.status === "BOOKED");
   const drafts = reports.filter((r) => r.status === "DRAFT").length;
@@ -237,6 +249,26 @@ export default function IncomeClient({
       cell: (r) => (r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "-"),
     },
     {
+      // Who approved the day against its intäktsräkning, and when. Every day is
+      // reviewed before it is booked, so for a booked day this is never empty,
+      // and it is what a revisor asks about a figure first.
+      key: "reviewedBy",
+      mobile: "hide",
+      header: t("table.reviewedBy"),
+      value: (r) => r.reviewedByName ?? "",
+      sortable: true,
+      searchable: true,
+      cell: (r) =>
+        r.reviewedByName ? (
+          <div className="min-w-0">
+            <span className="block truncate">{r.reviewedByName}</span>
+            {r.reviewedAt && <span className="block text-xs text-muted">{formatDate(r.reviewedAt)}</span>}
+          </div>
+        ) : (
+          "-"
+        ),
+    },
+    {
       key: "total",
       header: t("table.total"),
       value: (r) => r.total,
@@ -270,43 +302,38 @@ export default function IncomeClient({
               {t(viewing === r.id ? "actions.hideDocument" : "actions.viewDocument")}
             </Button>
           )}
-          {canManage && r.status === "EXPORTED" && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => unexport(r)}
-              loading={pending === `unexport-${r.id}`}
-            >
-              {t("undo.unexport")}
-            </Button>
-          )}
-          {canManage && r.status === "BOOKED" && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => reopen(r)}
-              loading={pending === `reopen-${r.id}`}
-            >
-              {t("undo.reopen")}
-            </Button>
-          )}
-          {/* Never while it is exported: unexport it first, so leaving Fortnox
-              holding a voucher for takings this app forgot is a decision
-              somebody made rather than a side effect. */}
-          {canManage && r.status === "BOOKED" && (
-            <Button
-              size="sm"
-              variant="dangerOutline"
-              onClick={() => remove(r)}
-              loading={pending === `delete-${r.id}`}
-            >
-              {t("undo.delete")}
-            </Button>
-          )}
           {r.status === "BOOKED" && (
             <Button size="sm" onClick={() => exportOne(r)} loading={pending === `export-${r.id}`}>
               {t("actions.export")}
             </Button>
+          )}
+          {/* Undoing is the treasury's, and rarer than anything else on the
+              row, so it waits behind the menu the way the rest of an utlägg's
+              actions do. Delete last and apart: it is the one that cannot be
+              taken back. Never offered while a day is exported: unexport it
+              first, so leaving Fortnox holding a voucher for takings this app
+              forgot is a decision somebody made rather than a side effect. */}
+          {canManage && r.status !== "DRAFT" && (
+            <Menu
+              label={t("actions.more")}
+              iconOnly
+              variant="ghost"
+              size="sm"
+              icon={<IconDots className="size-4" />}
+              disabled={pending != null && pending.endsWith(r.id)}
+            >
+              {r.status === "EXPORTED" ? (
+                <MenuItem onClick={() => unexport(r)}>{t("undo.unexport")}</MenuItem>
+              ) : (
+                <>
+                  <MenuItem onClick={() => reopen(r)}>{t("undo.reopen")}</MenuItem>
+                  <MenuSeparator />
+                  <MenuItem onClick={() => remove(r)} className="text-danger">
+                    {t("undo.delete")}
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
           )}
         </div>
       ),
@@ -326,6 +353,12 @@ export default function IncomeClient({
         filename={viewed ? `${t(`source.${viewed.source}`)} - ${formatDate(viewed.date)}` : undefined}
       />
 
+      <IncomeSetupNotice steps={setup} canSetUp={canSetUp} />
+
+      {fetchOpen && (
+        <FetchDialog ready={setup.every((s) => !s.blocksFetch)} onClose={() => setFetchOpen(false)} />
+      )}
+
       <Card>
         {/* No header of its own: the band and the tabs already say what this
             is, and the table's footer counts it. The way into the workbench
@@ -333,8 +366,16 @@ export default function IncomeClient({
             act on, the way every list's own button does. */}
         <ClientDataTable
           action={
-            (canBook && drafts > 0) || waiting.length > 0 ? (
+            canBook || waiting.length > 0 ? (
               <>
+                {/* Here as well as in the workbench, or a list with nothing
+                    to book had no way to bring any in. */}
+                {canBook && (
+                  <Button size="sm" variant="secondary" onClick={() => setFetchOpen(true)}>
+                    <IconDownload className="size-4" />
+                    {t("fetch.title")}
+                  </Button>
+                )}
                 {canBook && drafts > 0 && (
                   <ButtonLink size="sm" href="/income/review" variant="secondary">
                     {t("list.reviewStart", { count: drafts })}

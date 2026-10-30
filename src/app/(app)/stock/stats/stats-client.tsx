@@ -252,7 +252,7 @@ export default function StockStatsClient({
                 // no space to break at: without it the two columns push the
                 // card off the side of a phone rather than wrapping.
                 <div key={tile.key} className="min-w-0">
-                  <p className="text-xs uppercase tracking-wide text-muted">
+                  <p className="text-xs text-muted">
                     {t(`stats.flow.${tile.key}`)}
                   </p>
                   <p className={cn("mt-1 text-lg font-semibold tabular-nums sm:text-xl", tile.tone)}>

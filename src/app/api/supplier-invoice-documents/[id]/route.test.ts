@@ -49,7 +49,6 @@ vi.mock("@/lib/api/supplier-invoice-access", () => ({
 }));
 
 const { DELETE } = await import("./route");
-const { POST: DETACH } = await import("./detach/route");
 const { POST: RETURN } = await import("@/app/api/supplier-invoices/[id]/return/route");
 
 const params = { params: Promise.resolve({ id: "d1" }) };
@@ -98,27 +97,6 @@ describe("deleting a document", () => {
   it("is triage's alone", async () => {
     h.capabilities = ["BOOKKEEPING"];
     expect((await DELETE(req("DELETE"), params)).status).toBe(403);
-  });
-});
-
-describe("taking a document off an invoice", () => {
-  it("puts it back in the Inkorg rather than deleting it", async () => {
-    h.doc = { ...h.doc, invoiceId: "inv1" };
-    const res = await DETACH(req("POST"), params);
-    expect(res.status).toBe(204);
-    expect(h.docUpdateMany).toHaveBeenCalledWith({
-      where: { id: "d1", invoiceId: "inv1" },
-      data: { invoiceId: null, position: 0 },
-    });
-    expect(h.deleteObject).not.toHaveBeenCalled();
-    expect(h.event.mock.calls[0][0].data.type).toBe("DOCUMENT_REMOVED");
-  });
-
-  it("is refused once the PDF is fixed by an attest", async () => {
-    h.doc = { ...h.doc, invoiceId: "inv1" };
-    h.canEditDocuments = false;
-    expect((await DETACH(req("POST"), params)).status).toBe(403);
-    expect(h.docUpdateMany).not.toHaveBeenCalled();
   });
 });
 

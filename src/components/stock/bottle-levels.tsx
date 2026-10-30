@@ -87,13 +87,15 @@ const BODY =
   "M10.5 5.9l-2.6 2.6A2 2 0 0 0 7.3 9.9V20a1.5 1.5 0 0 0 1.5 1.5h6.4a1.5 1.5 0 0 0 1.5-1.5V9.9a2 2 0 0 0-.6-1.4l-2.6-2.6z";
 
 export function Bottle({ level, big = false }: { level: number; big?: boolean }) {
-  // The inside of the body runs from the shoulder at y 10 down to 20.7, where
-  // the base's stroke begins. The level is measured over that, and the liquid
+  // The inside of the body runs from the foot of the neck at y 5.9 down to
+  // 20.7, where the base's stroke begins. The level is measured over that,
+  // shoulder included: measured from where the shoulder starts to slope, a full
+  // bottle left the shoulder empty and read as four-fifths full. The liquid
   // carries on under the stroke to the outline at 21.5, so 20 % shows as 20 %
   // of the glass rather than mostly hidden behind the base. The neck is never
   // filled, since an opened bottle's level is a fraction of what the body
   // holds.
-  const top = 10;
+  const top = 5.9;
   const inner = 20.7;
   const bottom = 21.5;
   const fill = level > 0 ? ((inner - top) * level) / 100 + (bottom - inner) : 0;

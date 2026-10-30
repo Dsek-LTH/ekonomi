@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
-import { IconUpload, IconTrash } from "@/components/ui/icons";
+import { IconChevronDown, IconUpload, IconTrash } from "@/components/ui/icons";
+import { Tooltip } from "@/components/ui/tooltip";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import { useScopeSwitch, useUrlTableControls } from "@/lib/data/use-list-query";
 import { useRole } from "@/components/shell/role-context";
@@ -29,6 +30,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import type { PatchBankTransaction } from "@/lib/api/schemas/bank";
 import { useFormat } from "@/lib/ui/use-format";
+import { cn } from "@/lib/ui/utils";
 import type { RowPage } from "@/lib/data/list-query";
 import type { BankTransaction, Card as SectionCard } from "@/lib/domain/types";
 import { BANK_TABS, bankDefaultTab, type BankScope } from "./scope";
@@ -277,9 +279,8 @@ export default function BankClient({
           tabs={tabs}
           // On the list's own toolbar, like every other list's action: an
           // import adds rows to what is below it.
-          action={(picks.button || canImport) && (
+          action={canImport && (
             <>
-              {picks.button}
               {canImport && (
                 <>
                   <input
@@ -323,6 +324,7 @@ export default function BankClient({
         />
       </Card>
 
+      {picks.bar}
       {picks.dialog}
     </PageShell>
   );
@@ -336,6 +338,16 @@ export default function BankClient({
  * feed of the person who made the purchase, so nobody accounts for them. This
  * is where somebody says whose they were.
  */
+
+/**
+ * The box a card holder sits in, assigned or not: the card picker's own shape
+ * from md (176px, the field's padding and border), so a name, a name that can
+ * be changed and the "Välj kort" picker all start at the same place in the
+ * column. Only the edge differs, and only the changeable one shows it, on
+ * hover.
+ */
+const CARD_BOX = "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-8 md:w-44 md:px-2.5";
+
 function CardCell({
   tx,
   cards,
@@ -381,18 +393,40 @@ function CardCell({
   // The server refuses to move the card under a matched purchase: a match is
   // only allowed between an utlägg and its submitter's own card, so the match
   // has to come off first. Better not to offer it than to offer it and refuse.
-  if (tx.matchedExpenseId) return <BankCardHolder tx={tx} />;
+  //
+  // Said on hover, and drawn with no chevron, so it does not look like the
+  // ones that can be changed. The same box as theirs, borderless, so the names
+  // in the column line up whichever they are.
+  if (tx.matchedExpenseId) {
+    return (
+      <Tooltip label={t("cardLocked")} align="start" className="w-full md:w-44">
+        <span className={cn(CARD_BOX, "border-transparent")}>
+          <BankCardHolder tx={tx} />
+          <span className="sr-only">{t("cardLocked")}</span>
+        </span>
+      </Tooltip>
+    );
+  }
 
+  // A picker at rest: the name and number with a faint chevron after them,
+  // which is the mark every list-picker in the app carries, and the field's
+  // own edge and fill once the pointer is on it. The chevron is always there,
+  // since a phone has no hover to show it on.
   if (row.cardLast4 && !picking) {
     return (
-      <button
-        type="button"
-        onClick={() => setPicking(true)}
-        title={t("changeCard")}
-        className="text-left hover:text-accent"
-      >
-        <BankCardHolder tx={row} />
-      </button>
+      <Tooltip label={t("changeCard")} align="start" className="w-full md:w-44">
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className={cn(CARD_BOX, "border-transparent text-left transition-colors hover:border-border-control hover:bg-background")}
+        >
+          <span className="min-w-0 flex-1">
+            <BankCardHolder tx={row} />
+          </span>
+          <IconChevronDown aria-hidden className="size-4 shrink-0 text-faint" />
+          <span className="sr-only">{t("changeCard")}</span>
+        </button>
+      </Tooltip>
     );
   }
 
@@ -404,7 +438,7 @@ function CardCell({
       // a 44px control there overlapped the rows above and below it. The list
       // it opens is a screen of its own on a phone, so the trigger only has to
       // be something to tap. From md it is the field it always was.
-      buttonClassName="md:h-9 md:rounded-control md:border md:border-border md:bg-background md:px-2.5"
+      buttonClassName="md:h-8 md:rounded-control md:border md:border-border-control md:bg-background md:px-2.5"
       chevronClassName="text-accent md:text-faint"
       allowClear
       disabled={busy}
@@ -412,6 +446,13 @@ function CardCell({
       onChange={pick}
       placeholder={t("assignCard")}
       aria-label={t("assignCard")}
+      // Opened by the click on the holder's name, the list comes with it, and
+      // shutting it without a pick puts the name back. A row on no card has
+      // no name to go back to, so its picker simply stays.
+      openOnMount={picking}
+      onClose={() => {
+        if (row.cardLast4) setPicking(false);
+      }}
       // The number is what the bank wrote and the holder is who it means, so
       // the option carries both. Collapsed to the number alone on a trigger too
       // narrow for the name, which is the cell in most tables.

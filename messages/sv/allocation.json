@@ -11,5 +11,6 @@
   "over": "{amount} för mycket fördelat",
   "balancedChip": "Fördelat",
   "split": "Dela upp på flera kostnadsställen",
-  "comment": "Kommentar"
+  "comment": "Kommentar",
+  "noAmount": "Inget belopp att fördela"
 }

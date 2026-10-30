@@ -14,12 +14,13 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-control px-2.5 py-1 text-xs font-medium",
+        // No dot: the tint already says which state, and a dot inside it said
+        // it a second time. The word says it a third, and is the one that counts.
+        "inline-flex items-center whitespace-nowrap rounded-control px-1.5 py-0.5 text-xs font-medium",
         TONE_CLASSES[STATUS_TONE[status]],
         className,
       )}
     >
-      <span className="size-1.5 rounded-full bg-current opacity-70" />
       {t(status)}
     </span>
   );
@@ -49,8 +50,8 @@ export function Tag({
     <span
       title={title}
       className={cn(
-        "inline-flex items-center rounded-control font-medium",
-        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
+        "inline-flex items-center whitespace-nowrap rounded-control font-medium",
+        size === "sm" ? "px-1.5 py-px text-[11px]" : "px-1.5 py-0.5 text-xs",
         TONE_CLASSES[tone],
         className,
       )}

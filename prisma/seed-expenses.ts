@@ -14,7 +14,7 @@
 // happen, so the seed is not allowed to write one.
 import { randomUUID } from "node:crypto";
 import type { ExpenseEventType, PrismaClient, Role } from "../src/lib/generated/prisma/client";
-import { submitBlocker } from "../src/lib/domain/status";
+import { REIMBURSEMENT_DEADLINE_DAYS, isOutOfPocket, submitBlocker } from "../src/lib/domain/status";
 import { isRevenueAccount, voucherBlocker } from "../src/lib/domain/voucher";
 import { reviewBlocker, voucherTextPrefix } from "../src/lib/domain/review";
 import {
@@ -54,6 +54,8 @@ export function dayBefore(from: string, days: number): string {
   d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().slice(0, 10);
 }
+
+const earlier = (a: Date, b: Date) => (a < b ? a : b);
 
 /** A moment on a day, in local time: `day` plus `days`, at `hhmm`. */
 function at(day: string, days: number, hhmm: string): Date {
@@ -98,6 +100,10 @@ interface Planned {
   created: Date;
   submitted: Date | null;
   changesRequestedAt: Date | null;
+  /** Sent back and sent again, for one with `returnedOnce`. */
+  returned: { at: Date; resubmitted: Date } | null;
+  /** When a card purchase's bank row was imported. Never after the seed runs. */
+  imported: Date | null;
   /** When each attester signed, in the order they did. */
   attests: { by: string; at: Date }[];
   booked: Date | null;
@@ -128,13 +134,22 @@ function plan(spec: SeedExpense, ctx: SeedContext): Planned {
   // The day's events, each on a later day than the one before, at an hour
   // somebody would plausibly have done it.
   const created = at(purchaseDate, 0, spec.receipt ? laterThan(spec.receipt.time) : "18:30");
+  // Sent `submittedAfterDays` after the purchase, and every later step moves
+  // with it. A return and a resend take a day each.
+  let day = spec.submittedAfterDays ?? 1;
   const submitted = atLeast(spec.status, "PENDING_APPROVAL") || spec.status === "CHANGES_REQUESTED"
-    ? at(purchaseDate, 1, "09:15")
+    ? at(purchaseDate, day, "09:15")
     : null;
-  const changesRequestedAt = spec.status === "CHANGES_REQUESTED" ? at(purchaseDate, 2, "14:40") : null;
+  const changesRequestedAt = spec.status === "CHANGES_REQUESTED" ? at(purchaseDate, day + 1, "14:40") : null;
+  const returned = spec.returnedOnce
+    ? { at: at(purchaseDate, day + 1, "14:40"), resubmitted: at(purchaseDate, day + 2, "09:15") }
+    : null;
+  if (returned) day += 2;
   const attesters = [...new Set(spec.allocations.flatMap((a) => (a.attestedBy ? [a.attestedBy] : [])))];
-  const attests = attesters.map((by, i) => ({ by, at: at(purchaseDate, 2 + i, "08:30") }));
-  const lastDay = 1 + attests.length;
+  const attests = attesters.map((by, i) => ({ by, at: at(purchaseDate, day + 1 + i, "08:30") }));
+  const lastDay = day + attests.length;
+  const importedAt = at(purchaseDate, spec.bankImportedAfterDays ?? 1, "08:00");
+  const imported = spec.paymentType === "CARD" ? (importedAt > ctx.now ? ctx.now : importedAt) : null;
   const booked = atLeast(spec.status, "BOOKED") ? at(purchaseDate, lastDay + 1, "13:45") : null;
   const exported = spec.status === "EXPORTED" ? at(purchaseDate, lastDay + 2, "10:20") : null;
 
@@ -170,6 +185,8 @@ function plan(spec: SeedExpense, ctx: SeedContext): Planned {
     created,
     submitted,
     changesRequestedAt,
+    returned,
+    imported,
     attests,
     booked,
     exported,
@@ -224,10 +241,35 @@ function problems(p: Planned, ctx: SeedContext): string[] {
       mileageBlocker: spec.journey
         ? claimBlocker({ ...spec.journey, date: p.purchaseDate }, ctx.rates)
         : null,
-      deadlineWaived: false,
+      // The filing deadline is checked below, on the day it was sent:
+      // submitBlocker counts from today, which for an utlägg sent long ago
+      // asks the wrong question.
+      deadlineWaived: true,
       allocations: p.allocations.map((a) => ({ costCenterCode: a.code, amount: a.amount })),
     });
     if (blocker) say(`could not have been submitted (${blocker})`);
+    const waited = spec.submittedAfterDays ?? 1;
+    if (isOutOfPocket(spec.paymentType) && waited > REIMBURSEMENT_DEADLINE_DAYS) {
+      say(`sent ${waited} days after the purchase, past the filing deadline, without a dispens`);
+    }
+    // The match needs the bank row, so a card purchase waits for the import.
+    if (p.imported && p.submitted && p.submitted < p.imported) {
+      say("a card purchase sent before its bank row was imported");
+    }
+  }
+  if (spec.returnedOnce) {
+    if (!atLeast(spec.status, "PENDING_APPROVAL")) say("only an utlägg sent again was returned once");
+    const by = spec.returnedOnce.by;
+    const may = spec.allocations.some((a) =>
+      canAttestAllocation({
+        actorCapabilities: ctx.capabilitiesOf(by),
+        actorRoles: ctx.rolesOf(by),
+        actorIsSubmitter: by === submitter,
+        actorOwnedResultUnits: ctx.ownedUnitsOf(by),
+        allocationResultUnit: ctx.costCenter(a.costCenterCode)?.resultUnit ?? null,
+      }),
+    );
+    if (!may) say(`${by} attests none of it, so could not have returned it`);
   }
 
   // Attest: every row from APPROVED on, some but not all while pending, none
@@ -306,7 +348,16 @@ function problems(p: Planned, ctx: SeedContext): string[] {
   }
 
   // And nothing is dated after the seed runs.
-  const moments = [p.created, p.submitted, p.changesRequestedAt, p.booked, p.exported, ...p.attests.map((a) => a.at)];
+  const moments = [
+    p.created,
+    p.submitted,
+    p.changesRequestedAt,
+    p.returned?.at,
+    p.returned?.resubmitted,
+    p.booked,
+    p.exported,
+    ...p.attests.map((a) => a.at),
+  ];
   if (moments.some((m) => m && m > ctx.now)) say("has a step dated in the future; raise its daysAgo");
   return out;
 }
@@ -344,6 +395,7 @@ export async function seedExpenses(ctx: SeedContext): Promise<{ receipts: number
         amount: ore(t.amount),
         cardId: cardId ?? null,
         cardLast4: t.cardLast4,
+        importedAt: earlier(at(dayBefore(ctx.today, t.daysAgo), t.importedAfterDays ?? 1, "08:00"), ctx.now),
       },
     });
   }
@@ -364,6 +416,7 @@ export async function seedExpenses(ctx: SeedContext): Promise<{ receipts: number
             amount: -ore(p.gross),
             cardId: card.id,
             cardLast4: card.last4,
+            importedAt: p.imported!,
           },
         })
       : null;
@@ -377,6 +430,17 @@ export async function seedExpenses(ctx: SeedContext): Promise<{ receipts: number
       { type: "CREATED", actorId: submitterId, createdAt: p.created },
     ];
     if (p.submitted) events.push({ type: "SUBMITTED", actorId: submitterId, createdAt: p.submitted });
+    if (p.returned && spec.returnedOnce) {
+      events.push(
+        {
+          type: "CHANGES_REQUESTED",
+          actorId: ctx.userId(spec.returnedOnce.by),
+          comment: spec.returnedOnce.comment,
+          createdAt: p.returned.at,
+        },
+        { type: "SUBMITTED", actorId: submitterId, createdAt: p.returned.resubmitted },
+      );
+    }
     if (p.changesRequestedAt && spec.changesRequested) {
       events.push({
         type: "CHANGES_REQUESTED",

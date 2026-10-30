@@ -25,7 +25,7 @@ import { formatNumber } from "@/lib/ui/format";
 import { bookingTrail } from "@/lib/domain/review";
 
 /** The small capitals every label and column head on the card is set in. */
-const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted";
+export const LABEL = "text-xs font-medium text-muted";
 
 /**
  * One part of the card below the strip, ruled off from the part above.
@@ -443,7 +443,7 @@ export function VerificationSection({
                 )}
                 <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums sm:hidden">
                   <Amount value={l.debit || l.credit} />
-                  <span className="ml-1.5 text-[11px] text-muted">
+                  <span className="ml-1.5 text-xs text-muted">
                     {l.debit ? t("debitShort") : t("creditShort")}
                   </span>
                 </td>

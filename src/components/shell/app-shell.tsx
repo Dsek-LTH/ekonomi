@@ -16,6 +16,7 @@ import { MobileNav } from "./mobile-nav";
 import { NavCount } from "./nav-count";
 import { SectionBand, SectionNavProvider, type SectionNav } from "./section-nav";
 import { AppHeader, FiscalYearPicker, type FiscalYears } from "./app-header";
+import { FiscalYearProvider } from "./fiscal-year-context";
 import {
   IconArchive,
   IconBox,
@@ -48,6 +49,7 @@ import {
   canViewContracts,
   canViewRentals,
   canViewStock,
+  isAdmin,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { SETTINGS_ROOT, SETTINGS_SECTIONS } from "./settings-sections";
@@ -152,12 +154,16 @@ const NAV_GROUPS: NavGroup[] = [
     label: "groupInvoices",
     icon: IconInvoice,
     items: [
-      // Where every levfaktura starts, as a document nobody has said is whose.
+      // Where every levfaktura starts, as a document: given to a unit by
+      // triage, and fördelad there, which makes it an invoice. A
+      // resultatansvarig reads it narrowed to their units. The role is the
+      // closest thing the frame knows to "answers for a unit", as for /bank.
       {
         href: "/invoices/inbox",
         label: "invoiceInbox",
         icon: IconMail,
-        visible: (u) => canTriageInvoices(u.capabilities),
+        visible: (u) =>
+          canTriageInvoices(u.capabilities) || isAdmin(u.capabilities) || u.roles.includes("RESULTATANSVARIG"),
       },
       // Every levfaktura from the moment it is given to a unit until it is in
       // Fortnox, the stage as a tab, the way Utlägg is. It used to be split
@@ -453,8 +459,8 @@ export function AppShell({
         onClick={closeNav}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium transition-colors",
-          active ? "brand-fill text-on-brand" : "text-foreground hover:bg-hover",
+          "flex h-8 items-center gap-2.5 rounded-control px-2 text-sm transition-colors",
+          active ? "bg-hover font-medium text-foreground" : "text-foreground hover:bg-hover",
         )}
       >
         <Icon className="size-[18px] shrink-0" />
@@ -695,7 +701,7 @@ export function AppShell({
               // block clears the end of the scroll instead of butting against it.
               // The phone gutter drops to 16px: at 20px, page padding plus card
               // inset spent 36px of a 375px screen before any content.
-              "mx-auto w-full flex-1 pl-4 pt-6 md:pl-6 md:pt-8",
+              "mx-auto w-full flex-1 pl-4 pt-6 md:pl-6",
               // The folded receipt tab is `fixed`, so it reserves no space at all
               // and sits on top of whatever reaches the edge it is on, which is
               // a different edge at each width (receipt/receipt-panel.tsx). Below
@@ -732,7 +738,7 @@ export function AppShell({
                   slotRef={setSectionSlot}
                 />
               )}
-              {children}
+              <FiscalYearProvider value={fiscal?.selected ?? null}>{children}</FiscalYearProvider>
             </SectionNavProvider>
           </main>
         </div>

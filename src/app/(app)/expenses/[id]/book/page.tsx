@@ -9,15 +9,10 @@ import BookExpenseClient from "./book-client";
 
 export default async function BookExpensePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ review?: string }>;
 }) {
   const { id } = await params;
-  // Opened from Granska och bokför: back there when done, at this utlägg. A
-  // flag rather than a return address, so the page cannot be sent anywhere.
-  const fromReview = (await searchParams).review === "1";
   // Writing a verifikation is bookkeeping's alone. The same check
   // POST /api/expenses/[id]/book makes. The client renders an empty state for
   // an utlägg that isn't bookable *yet*; that is about the utlägg, not about
@@ -64,7 +59,7 @@ export default async function BookExpensePage({
       )}
       projects={projects}
       settings={settings}
-      returnHref={fromReview ? `/expenses/review?id=${id}` : `/expenses/${id}`}
+      returnHref={`/expenses/${id}`}
     />
   );
 }

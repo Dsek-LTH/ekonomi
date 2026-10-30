@@ -11,9 +11,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, supplierInvoiceDocumentKey } from "@/lib/server/storage";
 import { readDocumentUpload } from "@/lib/server/document-upload";
-import { prefillData, readInvoicePdf } from "@/lib/server/invoice-prefill";
-import { DocumentTaken, attachDocument, readLooseDocument } from "@/lib/server/invoice-documents";
-import { awaitsKontering } from "@/lib/domain/supplier-invoice";
+import { DocumentTaken, attachDocument } from "@/lib/server/invoice-documents";
+import { awaitsAllocation } from "@/lib/domain/supplier-invoice";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { Id } from "@/lib/api/schemas/common";
@@ -31,7 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!access.ok) return access.res;
   const { invoice, can } = access;
   if (!can.canEditDocuments) {
-    return refuseChange(invoice, awaitsKontering(invoice.status));
+    return refuseChange(invoice, awaitsAllocation(invoice.status));
   }
 
   if (req.headers.get("content-type")?.includes("application/json")) {
@@ -44,9 +43,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const documentId = randomUUID();
   const objectKey = supplierInvoiceDocumentKey(invoice.id, documentId, doc.filename);
-  // The PDF for a mail that came without one fills what the invoice still
-  // lacks, the same as a first upload would have.
-  const prefill = prefillData(invoice, await readInvoicePdf(doc.body, doc.mimeType));
 
   try {
     await putObject(objectKey, doc.body, doc.mimeType);
@@ -68,9 +64,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         },
         select: { id: true, filename: true, mimeType: true },
       });
-      if (Object.keys(prefill).length) {
-        await tx.supplierInvoice.update({ where: { id: invoice.id }, data: prefill });
-      }
       await tx.supplierInvoiceEvent.create({
         data: { invoiceId: invoice.id, type: "DOCUMENT_UPLOADED", actorId: g.actor.id },
       });
@@ -86,22 +79,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 /** A document from the Inkorg onto this invoice. Triage's, since the Inkorg is. */
 async function attachFromInbox(
   req: Request,
-  invoice: { id: string; prefilled: string[] } & Record<string, unknown>,
+  invoice: { id: string },
   actorId: string,
 ) {
   const parsed = await parseBody(req, FromInbox);
   if (!parsed.ok) return parsed.res;
   const doc = await prisma.supplierInvoiceDocument.findUnique({
     where: { id: parsed.data.documentId },
-    select: { id: true, invoiceId: true, objectKey: true, mimeType: true },
+    select: { id: true, invoiceId: true },
   });
   if (!doc) return fail(404, "supplierInvoice.documentNotFound");
   if (doc.invoiceId !== null) return fail(409, "supplierInvoice.documentOnInvoice");
 
-  const fields = await readLooseDocument(doc);
   try {
     await prisma.$transaction(async (tx) => {
-      await attachDocument(tx, doc, invoice, fields);
+      await attachDocument(tx, doc, invoice);
       await tx.supplierInvoiceEvent.create({
         data: { invoiceId: invoice.id, type: "DOCUMENT_ATTACHED", actorId },
       });

@@ -17,20 +17,27 @@
 //    ACROSS years ("25-9999" < "26-0001"). That holds until 2100, at which
 //    point a section that still runs this code has a nicer problem to solve.
 //
+// A levfaktura is numbered the same way in a series of its own, "LEV26-0012",
+// so the two are told apart by their number alone. Both prefixes are three
+// letters, which is what keeps the first property above true for either.
+//
 // Nothing but the counter follows the separator, so the hyphen is unambiguous
 // here, unlike in the "D-26|0043" this replaced, where the prefix had a hyphen
 // of its own and the separator had to be a pipe to stay distinguishable.
 
 const COUNTER_DIGITS = 4;
 
+/** Which series: utlägg, or leverantörsfakturor. */
+export type ReferenceSeries = "DEK" | "LEV";
+
 /** "DEK26-": everything before the counter, for a given calendar year. */
-export function referencePrefix(year: number): string {
-  return `DEK${String(year % 100).padStart(2, "0")}-`;
+export function referencePrefix(year: number, series: ReferenceSeries = "DEK"): string {
+  return `${series}${String(year % 100).padStart(2, "0")}-`;
 }
 
 /** "DEK26-0043" from its two parts. */
-export function formatReference(year: number, counter: number): string {
-  return `${referencePrefix(year)}${String(counter).padStart(COUNTER_DIGITS, "0")}`;
+export function formatReference(year: number, counter: number, series: ReferenceSeries = "DEK"): string {
+  return `${referencePrefix(year, series)}${String(counter).padStart(COUNTER_DIGITS, "0")}`;
 }
 
 /**
@@ -40,9 +47,9 @@ export function formatReference(year: number, counter: number): string {
  * (the migration rewrote the ones that weren't), so the counter is simply the
  * prefix sliced off.
  */
-export function nextReference(year: number, last: string | null): string {
-  const counter = Number.parseInt(last?.slice(referencePrefix(year).length) ?? "", 10);
-  return formatReference(year, Number.isFinite(counter) ? counter + 1 : 1);
+export function nextReference(year: number, last: string | null, series: ReferenceSeries = "DEK"): string {
+  const counter = Number.parseInt(last?.slice(referencePrefix(year, series).length) ?? "", 10);
+  return formatReference(year, Number.isFinite(counter) ? counter + 1 : 1, series);
 }
 
 /**

@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { CreateIncomeReport } from "@/lib/api/schemas/income";
 import { canBookkeep } from "@/lib/domain/permissions";
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, CreateIncomeReport);
   if (!parsed.ok) return parsed.res;
+  const offYear = await denyOutsideFiscalYear(parsed.data.date);
+  if (offYear) return offYear;
 
   const result = await createDraftReport(parsed.data);
   if (!result.ok) {

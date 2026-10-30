@@ -11,12 +11,19 @@ import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { getIncomeMoveTargets, type IncomeMoveTarget, type IncomeReportRow } from "@/lib/data/income";
 import { getIncomeSettings, type IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import { prisma } from "@/lib/server/db";
 
 interface IncomeReviewContext {
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
   moveTargets: IncomeMoveTarget[];
+  /**
+   * The verksamhet sales matching no prefix are routed to, as a result unit.
+   * Its days hold whatever the routing could not place, which is what a
+   * reviewer most needs to look at on them. Null while no reserv is set.
+   */
+  fallbackResultUnitId: string | null;
 }
 
 /**
@@ -49,5 +56,12 @@ export async function loadReviewContext(
     ]),
   ]);
 
-  return { settings, costCenters, accounts, moveTargets };
+  const fallback = settings.incomeFallbackIncomeId
+    ? await prisma.resultUnitIncome.findUnique({
+        where: { id: settings.incomeFallbackIncomeId },
+        select: { resultUnitId: true },
+      })
+    : null;
+
+  return { settings, costCenters, accounts, moveTargets, fallbackResultUnitId: fallback?.resultUnitId ?? null };
 }

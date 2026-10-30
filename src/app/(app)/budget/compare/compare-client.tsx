@@ -162,7 +162,7 @@ const differs = (values: (number | undefined)[]) =>
 function SectionHeader({ label, cols }: { label: string; cols: number }) {
   return (
     <tr className="bg-surface">
-      <td colSpan={cols} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
+      <td colSpan={cols} className="px-4 py-2 text-xs font-medium text-muted">
         {label}
       </td>
     </tr>

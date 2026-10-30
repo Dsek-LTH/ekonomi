@@ -239,8 +239,7 @@
     "noReports": "Filen innehöll inga rapporter i den valda perioden.",
     "noCommittees": "Inga verksamheter är uppsatta. Lägg upp dem under inställningar.",
     "noPrefixes": "Inga produktprefix är uppsatta.",
-    "noFallbackPrefix": "Inget prefix är markerat som reserv. Produkter utan igenkänt prefix har ingenstans att ta vägen.",
-    "prefixAccountNotNumeric": "Ett prefix pekar på ett ogiltigt konto: {detail}",
+    "noFallback": "Ingen reserv är vald för varor utan igenkänt prefix. Välj den under Inställningar → Försäljning.",
     "reportNotFound": "Rapporten finns inte.",
     "noUnexportAccess": "Bara skattmästeriet kan ångra en bokföring eller en export.",
     "unexportOnlyExported": "Bara exporterade rapporter kan avmarkeras (den här är {status}).",
@@ -277,17 +276,15 @@
     "committeeNotFound": "Verksamheten finns inte.",
     "prefixExists": "Prefixet {code} finns redan.",
     "prefixNotFound": "Prefixet finns inte.",
-    "cannotDeleteFallback": "Reservprefixet kan inte tas bort. Markera ett annat som reserv först.",
     "fallbackNotFound": "Beloppsregeln finns inte.",
     "alreadyInFortnox": "Det finns redan en verifikation i Fortnox för den här dagen ({voucher}). Ingenting exporterades.",
-    "noAttestation": "Rapporten har ingen attestant. Den som hämtade den finns inte längre i appen.",
     "voucherTotalMismatch": "Verifikationen bokför inte dagens summa. Debet måste motsvara intäktsräkningens belopp.",
     "unitNotFound": "Resultatenheten finns inte.",
     "unitHasIncome": "{name} har redan intäktsinställningar.",
     "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel. Det behöver bokstäver eller siffror."
   },
   "stock": {
-    "calibrationNoVolume": "Flaskans volym måste vara större än noll.",
+    "calibrationNoVolume": "Behållarens volym måste vara större än noll.",
     "correctionNeedsTarget": "En rättelse måste peka ut raden den rättar.",
     "correctionTargetNotFound": "Raden som skulle rättas hittades inte.",
     "correctionWrongProduct": "Raden som skulle rättas hör till en annan produkt.",
@@ -390,20 +387,22 @@
     "noSupplier": "Välj leverantör.",
     "noAmount": "Fyll i belopp.",
     "noDueDate": "Fyll i förfallodag.",
-    "noAllocations": "Kontera fakturan på minst ett kostnadsställe.",
-    "allocationNoAccount": "Varje konteringsrad behöver ett konto.",
-    "allocationSumMismatch": "Konteringen går inte jämnt ut med fakturans belopp.",
+    "noAllocations": "Fördela fakturan på minst ett kostnadsställe.",
+    "noLines": "Lägg till minst en konteringsrad.",
+    "lineNoAccount": "Varje konteringsrad behöver ett konto.",
+    "lineNoAmount": "Varje konteringsrad behöver ett belopp, i debet eller kredit.",
+    "unbalanced": "Konteringen går inte jämnt ut med fakturans belopp.",
+    "allocationSumMismatch": "Fördelningen går inte jämnt ut med fakturans belopp.",
     "splitNeedsAmounts": "Ange hur mycket som ska till varje kostnadsställe.",
     "noInvoiceNumber": "Fyll i fakturanummer.",
     "noInvoiceDate": "Fyll i fakturadatum.",
-    "unknownAllocation": "En konteringsrad finns inte längre. Ladda om sidan.",
     "supplierGone": "Leverantören finns inte längre i Fortnox. Välj en annan.",
     "giroMismatch": "Fakturans {field} {invoice} är inte det som står på leverantören i Fortnox ({register}).",
     "exportInProgress": "Fakturan exporteras redan.",
     "exportUncertain": "Fortnox svarade inte säkert. Kontrollera i Fortnox om leverantörsfakturan skapades innan du försöker igen.",
     "nothingToRelease": "Det finns ingen osäker export att reda ut.",
     "documentOnInvoice": "Dokumentet ligger redan på en faktura.",
-    "documentNotOnInvoice": "Dokumentet ligger inte på någon faktura."
+    "documentNotAssigned": "Dokumentet har inte skickats till någon resultatenhet än."
   },
   "settings": {
     "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",
@@ -422,5 +421,8 @@
     "itemHasCheck": "Den här punkten bockas av när appen ser att den är klar",
     "accountNotFound": "Kontot har inget saldo i huvudboken för året",
     "templateItemNotFound": "Punkten finns inte i mallen"
+  },
+  "fiscalYear": {
+    "outside": "Datumet ligger utanför räkenskapsåret {year}. Byt år i sidhuvudet för att lägga in det där."
   }
 }

@@ -29,28 +29,23 @@ import {
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { IconButton } from "@/components/ui/icon-button";
 import { Field } from "@/components/ui/field";
 import {
   IconAlert,
   IconDownload,
-  IconElbow,
   IconLock,
   IconPlus,
   IconViewSplit,
   IconViewTable,
 } from "@/components/ui/icons";
 import { ViewToggle } from "@/components/ui/view-toggle";
-import { productDisplayName, productRows } from "@/lib/income/product-groups";
 import { Combobox } from "@/components/ui/combobox";
-import { DragHandle } from "@/components/ui/drag";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
-import { TableScroll } from "@/components/ui/table-scroll";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { incomeVoucherDescription } from "@/lib/income/voucher";
+import { useFillViewport } from "@/lib/ui/use-fill-viewport";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import type { IncomeMoveTarget, IncomeReportRow, IncomeReviewQueue } from "@/lib/data/income";
@@ -64,10 +59,13 @@ import {
   isDuplicate,
   voucherFor as voucherDraft,
 } from "./voucher-draft";
-import { AlreadyBookedNotice, EmptyReportCard, VoucherCard } from "./report-detail";
+import { EmptyReportCard, ReviewFindings, VoucherCard } from "./report-detail";
 import { reviewColumns } from "./review-columns";
+import { SoldLinesTable } from "./sold-lines-table";
 import { useLineDrag } from "./use-line-drag";
 import { FetchDialog, FetchPanel } from "./fetch-panel";
+import { IncomeSetupNotice } from "./setup-notice";
+import type { IncomeSetupStep } from "@/lib/income/setup";
 import { MoveLinesDialog, accountOptions, suggestedAccount, type MoveRequest } from "./move-dialog";
 import {
   NewReportDialog,
@@ -81,7 +79,10 @@ export default function IncomeReviewClient({
   costCenters,
   accounts,
   moveTargets,
-  serviceConfigured,
+  setup,
+  canSetUp,
+  fallbackResultUnitId,
+  reviewerName,
   initialReportId,
 }: {
   queue: IncomeReviewQueue;
@@ -90,7 +91,14 @@ export default function IncomeReviewClient({
   accounts: AccountRecord[];
   /** Where a mis-routed sale can be moved to. See move-dialog.tsx. */
   moveTargets: IncomeMoveTarget[];
-  serviceConfigured: boolean;
+  /** What is left to set up before fetching and booking. See lib/income/setup.ts. */
+  setup: IncomeSetupStep[];
+  /** Holds Inställningar, where most of the setup is done. */
+  canSetUp: boolean;
+  /** The reserv's result unit, whose days hold the sales routing could not place. */
+  fallbackResultUnitId: string | null;
+  /** The signed-in user, who approving records as the reviewer. */
+  reviewerName: string;
   /**
    * Which day to open on, when the caller has one in mind.
    *
@@ -100,6 +108,7 @@ export default function IncomeReviewClient({
    */
   initialReportId?: string;
 }) {
+  const ready = setup.every((s) => !s.blocksFetch);
   const t = useTranslations("income");
   const tBook = useTranslations("book");
   const { date: formatDate } = useFormat();
@@ -111,6 +120,9 @@ export default function IncomeReviewClient({
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, busy, mutate } = useMutation();
+  // From xl, where the queue and the day stand side by side, the two fill the
+  // window and the page itself does not scroll. See the row below.
+  const fillRef = useFillViewport<HTMLDivElement>("xl");
 
   // Two ways of looking at the same fetch: one day at a time with its
   // intäktsräkning beside it, or all of them at once. Not another destination
@@ -427,59 +439,9 @@ export default function IncomeReviewClient({
     setEdits((e) => Object.fromEntries(Object.entries(e).filter(([id]) => id !== report.id)));
   }
 
-  /**
-   * Book every day that is ready, one at a time and in order.
-   *
-   * Sequential on purpose. Each book renders and stores a PDF, and the service
-   * caps how many renders run at once. Firing a hundred at it would queue them
-   * behind that cap anyway, but with a hundred open requests and no way to say
-   * how far it got. In order, a failure halfway is "these are done, that one
-   * stopped it".
-   *
-   * No bodies: each day is booked as the app derives it. A day someone has
-   * edited is theirs to book, deliberately, with the button in the editor.
-   */
-  const bookable = drafts.filter(
-    (d) =>
-      costCentreFor(d, settings) &&
-      !isEdited(d) &&
-      !d.duplicateOf &&
-      // A report waiting to be filled has nothing to book: the server answers
-      // "noDistributions" and this loop stops at it, which would make one empty
-      // day left open on the screen a reason none of the days after it got
-      // booked.
-      d.lines.length > 0,
-  );
-  async function bookAll() {
-    const ok = await confirm({
-      title: t("bookAll.title"),
-      message: t("bookAll.body", { count: bookable.length }),
-      confirmLabel: t("bookAll.confirm"),
-    });
-    if (!ok) return;
-
-    let done = 0;
-    for (const report of bookable) {
-      const result = await mutate(`/api/income/reports/${report.id}/book`, {
-        key: "bookAll",
-        error: t("bookFailed"),
-        // One notification at the end, not one per day.
-        refresh: false,
-      });
-      if (!result) break;
-      done++;
-    }
-    notify.success(t("bookAll.done", { count: done, total: bookable.length }));
-    // Refreshed once, after the loop. See the `refresh: false` above.
-    window.location.reload();
-  }
-
-  // One button, wherever the queue is being shown: the sidebar in "granska",
-  // the card header in "tabell". Absent rather than disabled when there is
-  // nothing it would do: a day that needs a cost centre or has been edited is
-  // one somebody has to open anyway, and a permanently greyed control on a
-  // screen you look at a hundred times is furniture.
-  // Which shape the queue is drawn in, beside it in either shape.
+  // Which shape the queue is drawn in. On the title's line, at its far end: it
+  // redraws the whole page, and there it stays put when the shape changes,
+  // where it used to ride in whichever header the current shape had.
   const viewToggle = (
     <ViewToggle
       value={mode}
@@ -492,27 +454,52 @@ export default function IncomeReviewClient({
     />
   );
 
-  const bookAllButton = bookable.length > 0 && (
-    <Button size="sm" variant="secondary" onClick={bookAll} loading={pending === "bookAll"}>
-      {t("bookAll.action", { count: bookable.length })}
-    </Button>
-  );
-
   // The table view of the working set: every fetched day at once, with the two
   // decisions available on each without leaving it.
   const tableColumns = reviewColumns({
     t,
     settings,
     formatDate,
-    pending,
     onOpen: (r) => {
       setSelectedId(r.id);
       setMode("review");
     },
-    onBook: book,
   });
 
   const voucher = selected ? voucherFor(selected) : null;
+  // The day belongs to the reserv, so it holds the sales the routing could not
+  // place, which is what both the findings and the sold lines lead with.
+  const isReserv = Boolean(fallbackResultUnitId) && selected?.resultUnitId === fallbackResultUnitId;
+
+  // Going through the queue from the keyboard, since it is gone through one day
+  // at a time: j and k step down and up it, and Cmd or Ctrl with Enter approves
+  // the day in front of you, the same as its button. The letters are ignored
+  // while a field has focus, so typing a "j" into a cost centre picker does not
+  // also change the day. Nothing fires while a dialog is open over the queue.
+  // Re-bound on every render, so it always acts on the day currently shown.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!selected || mode !== "review" || moveFor || newFor || fetchOpen) return;
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        if (voucher?.canBook && !busy) {
+          e.preventDefault();
+          void book(selected);
+        }
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      const index = drafts.findIndex((d) => d.id === selected.id);
+      const to = e.key === "j" ? drafts[index + 1] : e.key === "k" ? drafts[index - 1] : undefined;
+      if (to) {
+        e.preventDefault();
+        setSelectedId(to.id);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
   // A report waiting for sales to be moved onto it. It has no intäktsräkning
   // and no voucher, since both are derived from lines it does not have, so the
   // middle column says what it is for instead of showing empty versions of them.
@@ -597,14 +584,11 @@ export default function IncomeReviewClient({
       // A work surface, entered from the list rather than a tab of it (see
       // docs/navigation.md), so it has a way back instead of a switch.
       back="/income"
+      // Nothing to toggle while there is nothing to review: the page is then
+      // the fetch form.
+      aside={drafts.length > 0 ? viewToggle : undefined}
     >
-      {!serviceConfigured && (
-        <Card>
-          <CardBody>
-            <p className="text-sm text-muted">{t("serviceUnavailable")}</p>
-          </CardBody>
-        </Card>
-      )}
+      <IncomeSetupNotice steps={setup} canSetUp={canSetUp} />
 
       {/* The document belongs to whichever day is selected; the shell stands it
           beside all of this, full height. */}
@@ -622,7 +606,7 @@ export default function IncomeReviewClient({
         // Nothing to book, so fetching is the only thing to do here, and the
         // form is the page rather than a dialog behind a button.
         <FetchPanel
-          serviceConfigured={serviceConfigured}
+          ready={ready}
           title={t("empty.title")}
           subtitle={t("empty.description")}
         />
@@ -632,14 +616,11 @@ export default function IncomeReviewClient({
             title={t("review.modeTable")}
             subtitle={t("counts.reports", { count: drafts.length })}
             action={
-              <div className="flex flex-wrap items-center gap-2">
-                {bookAllButton}
-                <Button variant="secondary" size="sm" onClick={() => setFetchOpen(true)}>
-                  <IconDownload className="size-4" />
-                  {t("fetch.title")}
-                </Button>
-                {viewToggle}
-              </div>
+              // What fills the queue, with the queue.
+              <Button variant="secondary" size="sm" onClick={() => setFetchOpen(true)}>
+                <IconDownload className="size-4" />
+                {t("fetch.title")}
+              </Button>
             }
           />
           <ClientDataTable
@@ -661,25 +642,22 @@ export default function IncomeReviewClient({
         // gutters − 280 queue and gap − 32 card padding), which is narrower
         // than a single one of the fields inside it. Stacked, the detail gets
         // the full main column instead, and the queue is a list above it.
-        <div className="flex flex-col gap-6 xl:flex-row">
+        // From xl the row is sized to the window (useFillViewport), so the page
+        // has nothing to scroll: the queue keeps the full height of its column
+        // with its own scroll, and only the open day scrolls beside it. The
+        // day is the long thing on this screen, a day's sales can be a hundred
+        // rows, and when the page scrolled the queue went off the top with it,
+        // so picking the next day was a scroll back up every time. A sticky
+        // queue fixed that but still took the day's scrollbar to the window's
+        // edge and the queue's height from a guessed calc().
+        <div ref={fillRef} className="flex flex-col gap-6 xl:-mb-14 xl:flex-row">
           {/* Matching the row above: the panel's default becomes a fixed column
               at lg, which here would be a 16rem card stranded above a detail
-              that is still stacked under it.
-
-              Sticky from xl, where it is a column beside the detail rather than
-              a list above it. The detail is the long thing on this screen, since
-              a day's sales can be a hundred rows, and the queue scrolling away
-              with it meant that picking the next day was a scroll back to the
-              top every time, on the one screen whose whole job is going through
-              a list of days one after another.
-
-              `self-start` is what makes that work at all: the row stretches its
-              items by default, so the panel was already as tall as the detail
-              beside it, and a sticky box that is as tall as its own scroll
-              range has nothing to stick for. */}
+              that is still stacked under it. */}
           <SidebarPanel
             at="xl"
-            className="xl:sticky xl:top-8 xl:self-start"
+            className="xl:flex xl:max-h-full xl:flex-col"
+            cardClassName="xl:flex xl:min-h-0 xl:flex-col"
             sheetLabel={t("counts.reports", { count: drafts.length })}
             // The day being reviewed, as the row in the queue states it: the
             // verksamhet, the day it is for, and what it comes to. Below xl the
@@ -701,40 +679,34 @@ export default function IncomeReviewClient({
               )
             }
           >
-            {/* What the queue holds, and the one thing you can do to all of it.
-                The same pair the table view puts in its card header. This is
-                the same list in the other shape, and a bulk action belongs to
-                the list it books rather than to the page around it. */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-              <span className="text-sm font-medium">
-                {t("counts.reports", { count: drafts.length })}
+            {/* What the queue holds, and how far through it you are. There is
+                no action on all of it: every day is reviewed against its
+                intäktsräkning before it is booked, one at a time, so the only
+                way through the queue is down it. */}
+            <div className="shrink-0 border-b border-border px-4 py-2.5">
+              <span className="block text-sm font-medium">
+                {t("review.progress", { reviewed: queue.reviewed, total: queue.reviewed + drafts.length })}
+                {/* How far through it you are, since the way through is one
+                    day at a time. */}
+                <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+                  <span
+                    className="block h-full rounded-full bg-accent"
+                    style={{ width: `${(100 * queue.reviewed) / Math.max(1, queue.reviewed + drafts.length)}%` }}
+                  />
+                </span>
               </span>
-              {/* What fills the queue and how it is drawn, beside what it
-                  holds. As an icon here: the column is 16rem, and the table
-                  view's header has the room to spell it out. */}
-              <span className="flex items-center gap-1">
-                <IconButton label={t("fetch.title")} onClick={() => setFetchOpen(true)}>
-                  <IconDownload className="size-4" />
-                </IconButton>
-                {viewToggle}
-              </span>
-              {bookAllButton}
             </div>
             {/* The scrollbar floats over the rows rather than taking a column
                 from them. See components/ui/overlay-scroll.tsx. In a 16rem
                 panel whose rows are a name against an amount, the gutter was
                 worth removing. */}
-            {/* Stacked above the detail, this is 70% of the screen you have to
-                scroll past before reaching the day you just picked, so while
-                it is a list on top, it is a short one.
-
-                As a sticky column it is the opposite: the panel now holds its
-                own position, so the height it takes is height it keeps, and the
-                right amount is as much of the screen as it can have. The 8rem
-                is the 2rem it sticks at plus the panel's own header, and enough
-                left under it that the card ends visibly rather than running off
-                the bottom edge. */}
-            <OverlayScroll className="max-h-80 xl:max-h-[calc(100dvh-8rem)]">
+            {/* Below xl the queue opens as a dialog, and is capped there. From
+                xl it takes whatever height the column has left under its
+                header, which is the window's. */}
+            <OverlayScroll
+              className="max-h-80 xl:min-h-0 xl:max-h-none xl:flex-1"
+              frameClassName="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col"
+            >
               {groups.map((group) => (
                 <div key={group.date}>
                   {/* The heading carries the day's own action: a report for a
@@ -810,6 +782,16 @@ export default function IncomeReviewClient({
                 </div>
               ))}
             </OverlayScroll>
+            {/* What fills the queue, under it, the way a list's add row sits
+                under the list (the budget's cost centres). Spelled out rather
+                than an icon: it used to be one, squeezed into the header beside
+                the progress and the view toggle, in a 16rem column. */}
+            <div className="shrink-0 border-t border-border p-2">
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setFetchOpen(true)}>
+                <IconDownload className="size-4" />
+                {t("fetch.title")}
+              </Button>
+            </div>
           </SidebarPanel>
 
           {selected && voucher && (
@@ -819,330 +801,163 @@ export default function IncomeReviewClient({
             // so the detail's width is not a function of the viewport's and a
             // `sm:`/`lg:` breakpoint here is guessing. What the fields inside
             // respond to is this box. See the grid below.
-            <div className="@container min-w-0 flex-1 space-y-4">
-              {/* What the voucher is: its own card, a gap above the rows that
-                  say what it books, exactly as the utlägg booking view has it.
-                  Both fields are locked, and not merely disabled-looking: the
-                  date is which day was sold, and the text is what the Fortnox
-                  duplicate check matches on together with it
-                  (lib/income/duplicate.ts). */}
-              {/* Named where the decision is made, not only in the list. */}
-              <AlreadyBookedNotice report={selected} t={t} />
+            // From xl the day is the one thing that scrolls (see the row above),
+            // on the app's ordinary thin scrollbar, the same as a budget's sheet
+            // beside its list of cost centres.
+            <div className="min-w-0 flex-1 xl:h-full xl:overflow-y-auto xl:overscroll-contain">
+              <div className="@container min-w-0 space-y-4">
+                {/* What the voucher is: its own card, a gap above the rows that
+                    say what it books, exactly as the utlägg booking view has it.
+                    Both fields are locked, and not merely disabled-looking: the
+                    date is which day was sold, and the text is what the Fortnox
+                    duplicate check matches on together with it
+                    (lib/income/duplicate.ts). */}
+                {/* What to check on this day, named where the decision is made
+                    and not only in the list. */}
+                <ReviewFindings
+                  report={selected}
+                  isFallback={isReserv}
+                  noCostCentre={!costCentreFor(selected, settings)}
+                  edited={isEdited(selected)}
+                  t={t}
+                />
 
-              <Card>
-                <CardBody
-                  className={cn(
-                    "grid gap-5",
-                    // Every track is a minmax with a floor of 0, so a column
-                    // that has run out of room shrinks instead of pushing the
-                    // card open. The old `150px`/`140px` were rigid: four of
-                    // them wanted 542px however little there was, which is how
-                    // a 250px detail column ended up with fields hanging out
-                    // over the page.
-                    //
-                    // Two up as soon as there is room for two, four only when
-                    // the last column would still be worth having. Below that
-                    // the voucher text was a 30px box with an ellipsis in it.
-                    canMove
-                      ? "@md:grid-cols-2 @4xl:grid-cols-[minmax(0,12rem)_minmax(0,10rem)_minmax(0,9rem)_minmax(0,1fr)]"
-                      : "@md:grid-cols-2 @3xl:grid-cols-[minmax(0,10rem)_minmax(0,9rem)_minmax(0,1fr)]",
-                  )}
-                >
-                  {/* Whose takings the day is, stated where the rest of its
-                      identity is stated, and changed the same way. Picking
-                      another verksamhet moves every line onto that unit's
-                      report for this day, which is the whole-day case of the
-                      move the table below does line by line.
+                <Card>
+                  <CardBody
+                    className={cn(
+                      "grid gap-5",
+                      // Every track is a minmax with a floor of 0, so a column
+                      // that has run out of room shrinks instead of pushing the
+                      // card open. The old `150px`/`140px` were rigid: four of
+                      // them wanted 542px however little there was, which is how
+                      // a 250px detail column ended up with fields hanging out
+                      // over the page.
+                      //
+                      // One row as soon as the column has room for it. They are
+                      // one statement (where this day books, which day, what the
+                      // voucher says), and two up left the text alone on a second
+                      // row at every width the document panel leaves. The date is
+                      // a fixed 9rem, all a locked date and its lock need. The
+                      // other two share the rest, the text the larger part since
+                      // it is the longer value. With the verksamhet picker as
+                      // well, two up first and four once the last column would
+                      // still be worth having.
+                      canMove
+                        ? "@md:grid-cols-2 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem_minmax(0,1.5fr)]"
+                        : "@md:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1.5fr)]",
+                    )}
+                  >
+                    {/* Whose takings the day is, stated where the rest of its
+                        identity is stated, and changed the same way. Picking
+                        another verksamhet moves every line onto that unit's
+                        report for this day, which is the whole-day case of the
+                        move the table below does line by line.
 
-                      The two at the end are locked because they are not
-                      anybody's choice: the date is which day was sold, and the
-                      text is how the day is recognised in Fortnox. The two
-                      before them are decisions, whose takings these were and
-                      where they book, and both of them are what the voucher
-                      below is derived from. */}
-                  {canMove && (
-                    <Field label={t("move.unitField")}>
+                        The two at the end are locked because they are not
+                        anybody's choice: the date is which day was sold, and the
+                        text is how the day is recognised in Fortnox. The two
+                        before them are decisions, whose takings these were and
+                        where they book, and both of them are what the voucher
+                        below is derived from. */}
+                    {canMove && (
+                      <Field label={t("move.unitField")}>
+                        <Combobox
+                          options={unitOptions}
+                          value={selected.resultUnitId ?? ""}
+                          onChange={(v) => changeUnit(selected, v)}
+                          disabled={busy}
+                          aria-label={t("move.unitField")}
+                        />
+                      </Field>
+                    )}
+                    {/* The day's own cost centre, not the voucher's rows: change
+                        it here and every row follows, which is the difference
+                        between a day that is booked against it and a voucher that
+                        happens to mention it. Shown at what it would book against
+                        today: its own if it has one, else its verksamhet's
+                        default, which is the order the booking route falls back
+                        in as well. */}
+                    <Field label={t("table.costCenter")}>
                       <Combobox
-                        options={unitOptions}
-                        value={selected.resultUnitId ?? ""}
-                        onChange={(v) => changeUnit(selected, v)}
+                        options={costCentreOptions}
+                        value={costCentreFor(selected, settings)}
+                        onChange={(v) =>
+                          v !== costCentreFor(selected, settings) && setCostCentre(selected, v)
+                        }
                         disabled={busy}
-                        aria-label={t("move.unitField")}
+                        allowClear
+                        placeholder={t("review.noCostCenter")}
+                        aria-label={t("table.costCenter")}
                       />
                     </Field>
-                  )}
-                  {/* The day's own cost centre, not the voucher's rows: change
-                      it here and every row follows, which is the difference
-                      between a day that is booked against it and a voucher that
-                      happens to mention it. Shown at what it would book against
-                      today: its own if it has one, else its verksamhet's
-                      default, which is the order the booking route falls back
-                      in as well. */}
-                  <Field label={t("table.costCenter")}>
-                    <Combobox
-                      options={costCentreOptions}
-                      value={costCentreFor(selected, settings)}
-                      onChange={(v) =>
-                        v !== costCentreFor(selected, settings) && setCostCentre(selected, v)
-                      }
-                      disabled={busy}
-                      allowClear
-                      placeholder={t("review.noCostCenter")}
-                      aria-label={t("table.costCenter")}
-                    />
-                  </Field>
-                  <Field label={tBook("voucherDate")}>
-                    <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
-                      <IconLock className="size-3.5 shrink-0" />
-                      <span className="tabular-nums">{selected.date}</span>
-                    </div>
-                  </Field>
-                  <Field label={tBook("voucherText")}>
-                    <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-9">
-                      <IconLock className="size-3.5 shrink-0" />
-                      <span className="truncate">
-                        {incomeVoucherDescription(selected.source, selected.unitDescription)}
-                      </span>
-                    </div>
-                  </Field>
-                </CardBody>
-              </Card>
-              {/* A report made by hand and not yet filled: created for a
-                  verksamhet the routing produced no day for, so that a fallback
-                  day belonging to two of them can be split in two. Neither the
-                  voucher nor the sold-lines table is shown, because both are
-                  derived from lines it has none of. What it says instead is
-                  what to do with it. */}
-              {isEmpty ? (
-                <EmptyReportCard
-                  t={t}
-                  onDelete={() => deleteEmptyReport(selected)}
-                  deleting={pending === `delete-${selected.id}`}
-                />
-              ) : (
-                <>
-                  <VoucherCard
-                    voucher={voucher}
-                    accounts={accounts}
-                    costCenters={costCenters}
-                    onRows={(rows) => setRows(selected, rows)}
-                    onBook={() => book(selected)}
-                    booking={pending === `book-${selected.id}`}
-                    t={t}
-                  />
-
-                  {/* What was sold, which is what the intäktsräkning beside this is
-                      a rendering of. Below the voucher rather than beside it: the
-                      voucher is the thing being decided, this is the backing. */}
-                  <Card>
-                    <CardHeader title={t("review.lines")} />
-                    {/* A plain div, not a CardBody with its padding turned off:
-                        `cn` is a joiner rather than tailwind-merge, so a `p-0`
-                        passed to CardBody does not replace its `px-inset py-4`.
-                        Both land in the class attribute and Tailwind's own order
-                        decides, which it does in favour of the more specific
-                        padding. The table is meant to run to the card's edges, so
-                        it is wrapped in something that has no padding to begin
-                        with. Same as DataTable, which puts its rows straight into
-                        the Card. */}
-                    {/* TableScroll, not a bare `overflow-x-auto`: with nothing
-                        setting a floor, a `w-full` table always fits its box,
-                        so the scroller never engaged and six columns, one of
-                        them an account picker, squeezed down to a few
-                        characters each instead. Same treatment as the voucher
-                        editor directly above, which has scrolled at its own
-                        600px all along. */}
-                    {/* 7rem lighter than it was, all of it out of the account
-                        column below. Every other column keeps the floor it
-                        had. */}
-                    <TableScroll minWidth={canMove ? "min-w-[35rem]" : "min-w-[31rem]"}>
-                      <table className="w-full text-sm">
-                        <thead className="border-b border-border bg-surface text-left text-xs text-muted">
-                          <tr>
-                            {canMove && (
-                              <>
-                                {/* The grip's column, outermost. It is what you
-                                    reach for to pick the row up, and a handle
-                                    inside the selection column reads as part of
-                                    the checkbox. */}
-                                <th className="w-6 pl-3" />
-                                <th className="w-8 py-2 pl-2">
-                                  <Checkbox
-                                    checked={
-                                      picked.length > 0 && picked.length === selected.lines.length
-                                    }
-                                    indeterminate={
-                                      picked.length > 0 && picked.length < selected.lines.length
-                                    }
-                                    // Ticks all from empty or partial, clears from full.
-                                    onChange={() =>
-                                      pick(
-                                        picked.length === selected.lines.length
-                                          ? []
-                                          : selected.lines.map((l) => l.id),
-                                      )
-                                    }
-                                    label={t("move.selectAll")}
-                                  />
-                                </th>
-                              </>
-                            )}
-                            <th className="px-3 py-2 font-medium">{t("lines.product")}</th>
-                            {/* The picker under this only ever shows the account
-                                number. `accountOptions` gives every option a
-                                `short` of exactly that, and the trigger prefers
-                                it (components/ui/combobox.tsx). So the column
-                                was 14rem of box around four digits, taken from
-                                the product names next to it, which are the ones
-                                that actually run long. 7rem fits "3001" with
-                                room to spare.
-
-                                The menu does not shrink with it: it floors at
-                                240px of its own, so the full "3001 - Försäljning
-                                (prefixes)" is still what you pick from. */}
-                            <th className="w-28 px-3 py-2 font-medium">{t("lines.account")}</th>
-                            <th className="px-3 py-2 text-right font-medium">{t("lines.quantity")}</th>
-                            <th className="px-3 py-2 text-right font-medium">{t("lines.unitPrice")}</th>
-                            <th className="px-3 py-2 text-right font-medium">{t("lines.total")}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {productRows(selected.lines).map((row) =>
-                            row.kind === "group" ? (
-                              // The product said once, with its variants stepped
-                              // in beneath, exactly as the intäktsräkning in the
-                              // panel beside this lays them out. See
-                              // lib/income/product-groups.ts.
-                              <tr key={row.key} className="[&>td]:align-middle">
-                                {canMove && <td colSpan={2} />}
-                                <td colSpan={5} className="px-3 pb-2 pt-2 font-medium">
-                                  {row.name}:
-                                </td>
-                              </tr>
-                            ) : (
-                            // `group` so the drag handle appears on hover. See
-                            // components/ui/drag.tsx.
-                            <tr
-                              key={row.key}
-                              className={cn(
-                                "group",
-                                // A cell aligns on its first line's baseline by
-                                // default, and the account picker is a good deal
-                                // taller than a line of text, so the product, the
-                                // quantity and the amounts all sat high against it.
-                                // Set on the row rather than on six cells:
-                                // vertical-align is not inherited, so it has to
-                                // name them.
-                                "[&>td]:align-middle",
-                                // What is currently in flight, so it is clear which
-                                // rows a drop is about when several were checked.
-                                dragging?.lineIds.includes(row.line.id) && "opacity-40",
-                              )}
-                            >
-                              {canMove && (
-                                <>
-                                  <td className="py-2 pl-3">
-                                    <DragHandle
-                                      title={t("move.dragHint")}
-                                      className="flex items-center text-faint hover:text-muted"
-                                      onDragStart={(e) => {
-                                        // Dragging a checked row takes the whole
-                                        // selection; dragging an unchecked one is
-                                        // about that row alone, and does not
-                                        // disturb whatever is checked.
-                                        const lineIds = picked.includes(row.line.id)
-                                          ? picked
-                                          : [row.line.id];
-                                        e.dataTransfer.setData(
-                                          "incomeLines",
-                                          JSON.stringify({ reportId: selected.id, lineIds }),
-                                        );
-                                        e.dataTransfer.effectAllowed = "move";
-                                        startDrag(selected.id, lineIds);
-                                      }}
-                                      onDragEnd={endDrag}
-                                    />
-                                  </td>
-                                  <td className="py-2 pl-2">
-                                    <Checkbox
-                                        checked={picked.includes(row.line.id)}
-                                        onChange={() =>
-                                          pick(
-                                            picked.includes(row.line.id)
-                                              ? picked.filter((id) => id !== row.line.id)
-                                              : [...picked, row.line.id],
-                                          )
-                                        }
-                                        // The whole name, not the row's label:
-                                        // out of the table "Ost" is not a
-                                        // product, and a checkbox announced on
-                                        // its own has no heading above it.
-                                        label={t("move.selectLine", {
-                                          product: productDisplayName(row.line),
-                                        })}
-                                      />
-                                  </td>
-                                </>
-                              )}
-                              <td className="px-3 py-2">
-                                {row.indented ? (
-                                  <span className="flex items-center gap-1.5 pl-4">
-                                    {/* The same elbow the document draws. */}
-                                    <IconElbow className="size-3.5 shrink-0 text-faint" />
-                                    {row.label}
-                                  </span>
-                                ) : (
-                                  row.label
-                                )}
-                              </td>
-                              <td className="px-3 py-2">
-                                {/* Editable in place. A sale that fell to the
-                                    fallback is on the fallback's account, and that
-                                    is as likely to be what needs correcting as the
-                                    report it landed in. See lib/income/lines.ts. */}
-                                <Combobox
-                                  options={lineAccountOptions}
-                                  value={row.line.account}
-                                  onChange={(v) =>
-                                    v !== row.line.account &&
-                                    setLineAccount(selected, row.line.id, v)
-                                  }
-                                  disabled={busy}
-                                  aria-label={t("lines.accountFor", {
-                                    product: productDisplayName(row.line),
-                                  })}
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {row.line.quantity}
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <Amount value={row.line.unitPrice} />
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <Amount value={row.line.total} />
-                              </td>
-                            </tr>
-                            ),
-                          )}
-                        </tbody>
-                      </table>
-                    </TableScroll>
-                    {/* Only once something is picked: an action bar on a day nobody
-                        is correcting is a row of controls to read past. */}
-                    {canMove && picked.length > 0 && (
-                      <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-                        <span className="text-sm text-muted">
-                          {t("move.picked", { count: picked.length })}
+                    <Field label={tBook("voucherDate")}>
+                      <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-8">
+                        <IconLock className="size-3.5 shrink-0" />
+                        <span className="whitespace-nowrap tabular-nums">{selected.date}</span>
+                      </div>
+                    </Field>
+                    <Field label={tBook("voucherText")}>
+                      <div className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-sm text-muted sm:h-8">
+                        <IconLock className="size-3.5 shrink-0" />
+                        <span className="truncate">
+                          {incomeVoucherDescription(selected.source, selected.unitDescription)}
                         </span>
-                        <div className="flex items-center gap-2.5">
-                          <Button onClick={() => setMoveFor(selected.id)}>{t("move.action")}</Button>
-                        </div>
-                      </CardBody>
-                    )}
-                  </Card>
-                </>
-              )}
+                      </div>
+                    </Field>
+                  </CardBody>
+                </Card>
+                {/* A report made by hand and not yet filled: created for a
+                    verksamhet the routing produced no day for, so that a fallback
+                    day belonging to two of them can be split in two. Neither the
+                    voucher nor the sold-lines table is shown, because both are
+                    derived from lines it has none of. What it says instead is
+                    what to do with it. */}
+                {isEmpty ? (
+                  <EmptyReportCard
+                    t={t}
+                    onDelete={() => deleteEmptyReport(selected)}
+                    deleting={pending === `delete-${selected.id}`}
+                  />
+                ) : (
+                  <>
+                    {/* What was sold, which is what the intäktsräkning beside this is
+                        a rendering of, and so what the reviewer is comparing it
+                        with. Above the voucher: the day reads from what was sold
+                        to how it is booked, and ends at the button that approves
+                        it. */}
+                    <SoldLinesTable
+                      reportId={selected.id}
+                      lines={selected.lines}
+                      reserv={isReserv}
+                      canMove={canMove}
+                      picked={picked}
+                      onPick={pick}
+                      onMove={(lineIds) => {
+                        pick(lineIds);
+                        setMoveFor(selected.id);
+                      }}
+                      dragging={dragging?.lineIds ?? null}
+                      onDragStart={(lineIds) => startDrag(selected.id, lineIds)}
+                      onDragEnd={endDrag}
+                      accountOptions={lineAccountOptions}
+                      onAccount={(lineId, account) => setLineAccount(selected, lineId, account)}
+                      busy={busy}
+                      t={t}
+                    />
+
+                    <VoucherCard
+                      voucher={voucher}
+                      accounts={accounts}
+                      costCenters={costCenters}
+                      onRows={(rows) => setRows(selected, rows)}
+                      onBook={() => book(selected)}
+                      booking={pending === `book-${selected.id}`}
+                      reviewerName={reviewerName}
+                      t={t}
+                    />
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1173,7 +988,7 @@ export default function IncomeReviewClient({
         />
       )}
       {fetchOpen && (
-        <FetchDialog serviceConfigured={serviceConfigured} onClose={() => setFetchOpen(false)} />
+        <FetchDialog ready={ready} onClose={() => setFetchOpen(false)} />
       )}
     </PageShell>
   );

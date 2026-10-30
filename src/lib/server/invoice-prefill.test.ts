@@ -72,6 +72,18 @@ describe("prefillData", () => {
     });
   });
 
+  it("names the register's supplier and picks it for the export", () => {
+    const supplier = { number: "42", name: "Lunds Släpvagnsuthyrning AB" };
+    expect(prefillData({}, { supplierOrgNo: "556677-8899" }, supplier)).toEqual({
+      supplierOrgNo: "556677-8899",
+      supplierName: "Lunds Släpvagnsuthyrning AB",
+      fortnoxSupplierNumber: "42",
+      prefilled: ["supplierOrgNo", "supplierName"],
+    });
+    // A name somebody typed stays, and so does a supplier already picked.
+    expect(prefillData({ supplierName: "Släpet", fortnoxSupplierNumber: "7" }, {}, supplier)).toEqual({});
+  });
+
   it("is nothing at all when there is nothing to fill", () => {
     expect(prefillData({ amount: 1 }, { amount: 2 })).toEqual({});
   });

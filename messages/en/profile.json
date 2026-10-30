@@ -62,5 +62,10 @@
       "SUPPLIER_INVOICE_ASSIGNED": "When a supplier invoice is given to a unit you answer for, or comes back from attest.",
       "SUPPLIER_INVOICE_SUBMITTED": "When a supplier invoice you are to attest is sent for attest."
     }
+  },
+  "tabs": {
+    "label": "Profile",
+    "me": "My profile",
+    "members": "Members"
   }
 }

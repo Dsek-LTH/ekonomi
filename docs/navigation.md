@@ -31,8 +31,9 @@ Rules:
 - All of it is in the URL, so a link or Back lands on the same view. A list cut
   in the browser keeps its tab there too (`useUrlTab`).
 - A count, on a rail row or a table tab, always means "waiting on you".
-- One-at-a-time work surfaces (`/expenses/review`, `/income/review`) are
-  entered from a list's primary button. They are never tabs.
+- One-at-a-time work surfaces (`/income/review`) are entered from a list's
+  primary button. They are never tabs. Utlägg has none: an utlägg is bokfört
+  from its own page, `/expenses/[id]`, opened row by row from Att bokföra.
 - A route that moves is not kept as a redirect. The old path simply goes.
 
 ## The tree
@@ -48,17 +49,20 @@ Utlägg
     tabs: Utkast | Att attestera | Att kontera | Att bokföra | Bokförda | Alla
       default: Mina -> Alla, Min resultatenhet -> Att attestera, Alla -> Att kontera
     /expenses/[id], /expenses/[id]/book
-    /expenses/review  (Granska och bokför, bookkeepers on Alla)
   Bankhändelser  /bank
     scope: Mina | Min resultatenhet | Alla
 
 Leverantörsfakturor
-  Inkorg  /invoices/inbox  (triage only)
+  Inkorg  /invoices/inbox  (triage, and a resultatansvarig for their units)
+    tabs: Att sortera | Att fördela | Hos enheterna  (each only for who has it)
+    /invoices/inbox/[id]      Fördela a document, which makes it an invoice
   Fakturor  /invoices
     scope: Min resultatenhet | Alla
-    tabs: Att attestera | Att bokföra | I Fortnox | Alla
-      default: Min resultatenhet -> Att attestera, Alla -> Att bokföra
-    /invoices/[id]
+    tabs: Att attestera | Att kontera | Att skicka | I Fortnox | Alla
+      default: Min resultatenhet -> Att attestera, Alla -> Att kontera
+    /invoices/[id]            the record, one layout in every state
+    /invoices/[id]/allocate   Fördela (the unit's split and attest)
+    /invoices/[id]/book       Kontera, which only saves. Skicka till Fortnox is on the record.
 
 Bokföring
   Intäkter  /income
@@ -108,6 +112,17 @@ partly attested splits come out right.
 - Intäkter says "Att bokföra" for a day to book here, where Utlägg says "Att
   kontera" for the same step.
 
+## The redovisningsbetyg
+
+A member's stars for how promptly they redovisa (lib/domain/member-score.ts).
+It is a property of a person, not a kind of thing, so it has no page in the
+nav. A member sees their own on Översikt and in full on the profile. The
+holders of MEMBER_SCORE_VIEW also get a Medlemmar tab in the profile overlay
+(`/profile/members`, every member's score with search), a "Släpar efter" card
+on Översikt naming whoever has purchases waiting, and the submitter's stars
+beside their name on an utlägg. Every one of those opens the same breakdown.
+It reads a rolling year, not the räkenskapsår.
+
 ## The räkenskapsår
 
 One of Fortnox's financial years, picked in the header (`AppHeader`), one level
@@ -120,8 +135,17 @@ that cares asks for it there.
   picking 2025 is asking to see 2025. Utlägg by purchase date (the Granska
   queue too), Bankhändelser by transaction date ("Utan kort" too, which is only
   a tab while the year has one), Fakturor by the invoice's date or, without
-  one, when it arrived, Intäkter by the day of the takings, and the Inkorg by
-  when each document arrived.
+  one, when it arrived, Intäkter by the day of the takings.
+- The Inkorg is not narrowed. Its documents have no date until somebody reads
+  one off them, and one uploaded while another year is picked must still be
+  there to triage. The picker stays live on it all the same, since an invoice
+  made from it is made in the picked year.
+- Anything new is made in the picked year: an utlägg or milersättning, a
+  verifikation, a levfaktura's date, an intäktsrapport, a Zettle or Swish
+  fetch and a budget. A date outside it is refused on the form and by the
+  route (`denyOutsideFiscalYear`), with a word to switch year in the header.
+  A record already carrying a date from another year can still be saved, as
+  long as the edit is not what sets it.
 - Översikt's queue, your own latest utlägg and the unaccounted card purchases
   are in the year too, and so are the counts beside the nav's links, so a
   count never promises rows the list it leads to then hides.

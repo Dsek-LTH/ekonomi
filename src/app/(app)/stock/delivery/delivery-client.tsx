@@ -417,7 +417,7 @@ export default function DeliveryClient({
         </div>
         <div className="hidden space-y-3 border-t border-border px-inset py-4 lg:block">
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted">{t("delivery.total")}</div>
+            <div className="text-xs text-muted">{t("delivery.total")}</div>
             <div className="mt-1 text-2xl font-semibold tabular-nums">{formatOreKr2(totalOre)}</div>
             <div className="mt-1 text-sm text-muted">{saveStatus}</div>
           </div>
@@ -560,7 +560,7 @@ export default function DeliveryClient({
           <span className="text-sm text-muted">{saveStatus}</span>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="flex items-baseline gap-2">
-              <span className="text-xs uppercase tracking-wide text-muted">{t("delivery.total")}</span>
+              <span className="text-xs text-muted">{t("delivery.total")}</span>
               <span className="text-lg font-semibold tabular-nums">{formatOreKr2(totalOre)}</span>
             </span>
             {saveButtons}

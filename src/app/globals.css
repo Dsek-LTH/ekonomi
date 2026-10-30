@@ -25,13 +25,37 @@
 
 @theme {
     /* Neutrals */
-    --color-background: #ffffff;
-    --color-canvas: #fafafa;
-    --color-surface: #f5f5f7;
-    --color-border: #e5e5ea;
+    /* The page is a visible grey under white cards, 1.10:1, where it used to
+       be #fafafa at 1.04:1. At that step the screen read as one white field:
+       nothing for the eye to hold on to, and all of it glare. The border is
+       one step firmer for the same reason. With the cards' shadow gone it is
+       the only thing drawing their edge, and #e5e5ea put that edge at 1.20:1
+       on the page.
 
-    --color-foreground: #1d1d1f;
-    --color-muted: #6e6e73;
+       One ramp, cool and even, from the card's white down to the ink: page
+       #f4f4f5, surface #efeff1, hover #e9e9ec, selected #e2e2e6, border
+       #dcdce0, control edge #d1d1d6, faint #808088, muted #5f5f66, ink
+       #18181b. It used to be Apple's greys with the ink from another ramp
+       beside them, so the buttons and the text were two blacks and the
+       surface (#f5f5f7) came out lighter than the page it sat on. */
+    --color-background: #ffffff;
+    --color-canvas: #f4f4f5;
+    /* A tinted header or a disabled field inside a card. Darker than the page,
+       so it still reads where it sits straight on it (a switch's track). */
+    --color-surface: #efeff1;
+    --color-border: #dcdce0;
+    /* The edge of anything typed into or pressed: fields, comboboxes, the
+       secondary button. A step firmer than a divider (1.52:1 on a card,
+       against the divider's 1.37) so a field can be found on a form without
+       every rule in a card turning into a box. 3:1 was tried for this once and
+       is the reason for the step: see the 3:1 tier below. */
+    --color-border-control: #d1d1d6;
+
+    --color-foreground: #18181b;
+    /* 6.33:1 on a card and 5.76 on a surface fill. It was #6e6e73, which is
+       5.07 and 4.66, at the edge of what text owes, and this is the colour
+       most of the app's small text is set in. */
+    --color-muted: #5f5f66;
 
     /* ── The 3:1 tier ────────────────────────────────────────────
        For ink that is not a word: a chevron, the search glyph, an elbow
@@ -43,88 +67,90 @@
        reasoning that a control's edge owes the same 3:1, and that is true but it
        drew an app of heavy grey boxes: a hairline this dark is a different
        design, not the same design corrected. Controls keep --color-border, which
-       is 1.26:1 in light and is a real gap, and the answer to it is a lighter
+       is 1.37:1 in light and is a real gap, and the answer to it is a lighter
        touch than this token was.
 
        Not a text colour either. `--color-muted` is the floor for anything with
-       words in it, placeholders included, and it is already near that floor:
-       5.07:1 on a card in light, so there is no room for a quieter tier that a
-       reader could still read. The `text-muted/40` … `/70` ladder this replaced
+       words in it, placeholders included. This one is 3.44:1 on a card, under
+       the 4.5 text owes, so no word is set in it. The `text-muted/40` … `/70` ladder this replaced
        ran from 1.72:1 to 2.81:1, and it was carrying real content. */
-    --color-faint: #8a8a8f;
+    --color-faint: #808088;
 
     /* The fill a row or a control takes while the pointer is on it. Its own
        token rather than a fraction of the surface: `bg-surface/40` is a 3%
        step (1.03:1), which is under what a screen at an angle can show, so in a
        table of fifty rows the hover said nothing. One step above --color-surface
        so a hovered row still reads over a tinted header. */
-    --color-hover: #ebebee;
+    --color-hover: #e9e9ec;
 
     /* Budget sheets rule their cells in this rather than in --color-border, a
        hairline heavier, because a spreadsheet is read by its grid. Cool, like
        every other neutral here: it used to be #ddd7df, the one warm grey in the
        app. See the `.budget-grid` block near the bottom. */
-    --color-grid-line: #dbdbe0;
+    --color-grid-line: #d4d4d8;
 
 
     /* ── Brand ───────────────────────────────────────────────────
-       The label on the pink is white, and it is a deliberate choice against the
-       measurement rather than an oversight, so the numbers are written down
-       here and not argued about again. White reads 3.31:1 on this pink and
-       2.83:1 on the dark theme's, both under the 4.5:1 a label owes; the dark
-       hover takes it to 2.52. Near-black would read 5.08 and 5.94, and is what
-       the direction contract in app/layout.tsx originally called for and what
-       app/globals.css still prints in. It was tried and the white was preferred.
+       The primary action, and it is ink rather than the section's pink. A pink
+       fill on every button, nav item and row action read as a consumer app,
+       and with a white label it was 3.31:1, under what a label owes. Near-black
+       carries white at 17:1. The pink is the logo's, and the first chart
+       series keeps it as a value of its own (see --chart-1).
 
-       What follows from that, and is the reason the hover darkens rather than
-       lifts: every step the pink takes toward white is a step the white label
-       loses. #d94f78 keeps it at 3.93, and the #f07096 that a near-black label
-       wanted would leave it at 2.81, which is worse than not hovering at all.
-
-       So: the pink fill is for short labels on large targets, and nothing long
-       or small is set on it. The dark theme is the weaker of the two and the
-       one to look at first if this is ever revisited. */
-    --color-brand: #e85d86;
-    --color-brand-hover: #d94f78;
+       Accent is the same ink: links, the active tab and the required star. A
+       blue was the obvious alternative and was ruled out because the two blues
+       here already mean something (a card purchase, an attested utlägg). The
+       soft step is the selected row's fill, one step past the hover so the two
+       are never confused, and a selected row carries an ink bar at its start
+       as well, so the state is not left to a fill alone. */
+    --color-brand: #18181b;
+    --color-brand-hover: #27272a;
     --color-on-brand: #ffffff;
-    --color-brand-edge: #d94f78;
+    --color-brand-edge: #18181b;
 
 
     /* Accent */
-    --color-accent: #c93663;
-    --color-accent-soft: #fdf1f5;
+    --color-accent: #18181b;
+    --color-accent-soft: #e2e2e6;
 
 
-    /* Purple, secondary meaning only */
-    --color-purple: #8b5fc7;
-    --color-purple-soft: #f6f2fc;
+    /* ── Tints ───────────────────────────────────────────────────
+       Every soft tint below is one step deeper than it was, 1.13 to 1.27:1
+       against a card where they were 1.06 to 1.20, so a pill reads as a chip
+       and not as coloured text. Each ink was moved where its tint needed it,
+       to hold 4.5:1 on its own tint: green and purple were 4.10 and 4.17
+       before. Light theme only. The dark tints were already deep enough.
+
+       Separation was measured as CIEDE2000, normal vision and the worse of
+       full protanopia and deuteranopia (Machado 2009). Every pair of status
+       tints moved apart under both. The one that cannot be fixed is purple
+       against blue for a dichromat (0.8, up from 0.2): the two collapse into
+       one hue, so the word in the pill is what tells them apart. */
+
+    /* Purple, secondary meaning only. 4.87:1 on its tint. */
+    --color-purple: #7a4fb5;
+    --color-purple-soft: #efe8fa;
 
     /* Blue, for an utlägg that is attesterat and waiting on the treasury. It
        used to share the green with bokförd, so the two ends of the last step
        looked the same. A sky blue rather than the card chip's royal one, and
-       5.4:1 on its own tint. */
+       5.05:1 on its own tint. */
     --color-blue: #0369a1;
-    --color-blue-soft: #ecf5fb;
+    --color-blue-soft: #e0eff8;
 
-    /* Semantic */
-    --color-success: #248a3d;
-    --color-success-soft: #f1f9f2;
+    /* Semantic. On their tints: 4.74, 5.15 and 4.99:1. */
+    --color-success: #1f7a36;
+    --color-success-soft: #e6f4e9;
 
-    --color-warning: #9a6700;
-    --color-warning-soft: #fff8e7;
+    --color-warning: #8a5c00;
+    --color-warning-soft: #fdf0d5;
 
-    --color-danger: #d70015;
-    --color-danger-hover: #ba0012;
-    /* Off the accent's pink, deliberately. The two used to be #fff2f3 and
-       #fdf1f5, ΔE 1.6 apart, which is no distance at all: an "obalanserad"
-       chip and a selected row were the same wash, separated only by two reds
-       that converge further for a protanope. Warmer and one step deeper puts
-       them ΔE 7.1 apart (5.9 under dichromacy, up from 1.6) while staying
-       ΔE 11.0 clear of the warning amber, and the danger ink still reads on it
-       at 4.50:1. Two pale tints cannot be pulled much further apart than this
-       without moving the tones themselves, so the word in the chip stays the
-       thing that says which is which. */
-    --color-danger-soft: #ffe5e2;
+    --color-danger: #c20013;
+    --color-danger-hover: #a50010;
+    /* Warm and a step deeper than the other tints, so an "obalanserad" chip
+       is not taken for the warning amber: ΔE 16.0 apart, 5.5 for a
+       dichromat, and 6.1 clear of the neutral selected row. */
+    --color-danger-soft: #ffdcd8;
     --color-on-danger: #ffffff;
 
 
@@ -143,7 +169,9 @@
        Chosen by measurement, not by eye. Between the three the worst pair is
        ΔE 35.6 under deuteranopia or protanopia (34.1 dark, 30.9 in print),
        which is the same floor the chart palette holds its adjacent series to.
-       Each reads at 5:1 or better on its own tint, in all three themes.
+       Each reads at 5:1 or better on its own tint, in all three themes. The
+       light tints were deepened with the status ones (see Tints above) and
+       the teal ink a step with them, to keep that.
 
        What could not be fixed, and is stated here for the same reason the
        chart block states its own: five status tones already occupy the wheel,
@@ -154,11 +182,11 @@
        in different columns, and the word is the answer. Colour is the second
        way to tell these apart and never the only one. */
     --color-pay-card: #1d4ed8;
-    --color-pay-card-soft: #eef2fd;
-    --color-pay-private: #0f766e;
-    --color-pay-private-soft: #ecf8f5;
+    --color-pay-card-soft: #e3eafc;
+    --color-pay-private: #0e7068;
+    --color-pay-private-soft: #dcf2ec;
     --color-pay-mileage: #7c4a1e;
-    --color-pay-mileage-soft: #f9f1e9;
+    --color-pay-mileage-soft: #f3e5d6;
 
     /* ── Chart series ────────────────────────────────────────────
        One categorical palette for every chart in the app, and it is the status
@@ -191,7 +219,9 @@
        the number that matters where two bands touch. And every chart in the app
        carries a legend or a labelled row, so colour is the second way to tell a
        series apart and never the only one. */
-    --chart-1: var(--color-accent);
+    /* The section's pink, as a value rather than an alias of the accent: the
+       accent went to ink, and a chart series in near-black would read as text. */
+    --chart-1: #c93663;
     --chart-2: var(--color-purple);
     --chart-3: var(--color-success);
     --chart-4: var(--color-warning);
@@ -211,9 +241,9 @@
     /* The focus ring. Neutral rather than the section's pink: the ring is for
        finding the keyboard, and in pink it shouted on every field it landed
        on, and read as a second accent next to the buttons that actually wear
-       one. It is the muted text grey, which keeps it at 5:1 on a card, well
+       one. It is the muted text grey, which keeps it at 6:1 on a card, well
        over the 3:1 a focus indicator owes. */
-    --color-ring: #6e6e73;
+    --color-ring: #5f5f66;
     --color-scrollbar: #c7c7cc;
 
     /* The light that sweeps a skeleton block. Brighter than the surface it
@@ -221,6 +251,9 @@
        thin white wash. The same gesture, not the same colour. */
     --skeleton-sheen: rgb(255 255 255 / 0.75);
 
+    /* The padding inside every card, table and panel. One value at every
+       width: it used to open up to 24px from sm, which on a data table spent
+       48px of each row on margins and read as roomy rather than dense. */
     --spacing-inset: 1rem;
 
     /* ── Corners ─────────────────────────────────────────────────
@@ -248,7 +281,7 @@
     --radius-control: 4px;
     --radius-panel: 6px;
 
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
     --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
@@ -296,12 +329,13 @@
   /* The page ground sits one step BELOW the cards, not at the bottom of the
      scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
      read as a hole the app was floating over rather than the paper it is
-     printed on. Five units under the card background, the same gap the light
-     theme puts between #fafafa and #ffffff, so the two themes separate a card
-     from its ground by the same amount. */
+     printed on. Five units under the card background. The light theme's gap
+     is wider (#f4f4f5 under #ffffff), because a light ground needs a larger
+     step to read than a dark one does. */
   --color-canvas: #17171a;
   --color-surface: #2c2c2e;
   --color-border: #3a3a3c;
+  --color-border-control: #48484a;
 
   --color-foreground: #f5f5f7;
   --color-muted: #98989d;
@@ -316,15 +350,15 @@
 
 
   /* Brand */
-  --color-brand: #ed7198;
-  --color-brand-hover: #f080a5;
-  --color-on-brand: #ffffff;
-  --color-brand-edge: #ed7198;
+  --color-brand: #fafafa;
+  --color-brand-hover: #e4e4e7;
+  --color-on-brand: #18181b;
+  --color-brand-edge: #fafafa;
 
 
   /* Accent */
-  --color-accent: #ff7fa5;
-  --color-accent-soft: #382b31;
+  --color-accent: #fafafa;
+  --color-accent-soft: #323235;
 
 
   /* Purple, secondary meaning only */
@@ -365,14 +399,15 @@
   --color-pay-mileage: #d9a273;
   --color-pay-mileage-soft: #372a1e;
 
-  /* Chart series. Six of the eight are aliases of tokens this block already
+  /* Chart series. Five of the eight are aliases of tokens this block already
      redefines above, so they are already on this ground and are not repeated
-     here. These two are the palette's own, chosen for a near-black card rather
+     here. The first is the pink the accent used to be. The other two are the palette's own, chosen for a near-black card rather
      than lightened from the light theme's, and by the same rule: as far from
      the five status hues and from each other as the space allows, which lands
      the closest pair either is in at ΔE 13.2. The blue is the one colour here
      with a contrast to watch, 3.9 against the card, which is a fill and not
      text and reads. */
+  --chart-1: #ff7fa5;
   --chart-6: #4f70e8;
   --chart-7: #70ebd6;
 
@@ -413,12 +448,13 @@
     /* The page ground sits one step BELOW the cards, not at the bottom of the
        scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
        read as a hole the app was floating over rather than the paper it is
-       printed on. Five units under the card background, the same gap the light
-       theme puts between #fafafa and #ffffff, so the two themes separate a card
-       from its ground by the same amount. */
+       printed on. Five units under the card background. The light theme's gap
+       is wider (#f4f4f5 under #ffffff), because a light ground needs a larger
+       step to read than a dark one does. */
     --color-canvas: #17171a;
     --color-surface: #2c2c2e;
     --color-border: #3a3a3c;
+    --color-border-control: #48484a;
 
     --color-foreground: #f5f5f7;
     --color-muted: #98989d;
@@ -433,15 +469,15 @@
 
 
     /* Brand */
-    --color-brand: #ed7198;
-    --color-brand-hover: #f080a5;
-    --color-on-brand: #ffffff;
-    --color-brand-edge: #ed7198;
+    --color-brand: #fafafa;
+    --color-brand-hover: #e4e4e7;
+    --color-on-brand: #18181b;
+    --color-brand-edge: #fafafa;
 
 
     /* Accent */
-    --color-accent: #ff7fa5;
-    --color-accent-soft: #382b31;
+    --color-accent: #fafafa;
+    --color-accent-soft: #323235;
 
 
     /* Purple, secondary meaning only */
@@ -482,14 +518,15 @@
     --color-pay-mileage: #d9a273;
     --color-pay-mileage-soft: #372a1e;
 
-    /* Chart series. Six of the eight are aliases of tokens this block already
+    /* Chart series. Five of the eight are aliases of tokens this block already
        redefines above, so they are already on this ground and are not repeated
-       here. These two are the palette's own, chosen for a near-black card rather
+       here. The first is the pink the accent used to be. The other two are the palette's own, chosen for a near-black card rather
        than lightened from the light theme's, and by the same rule: as far from
        the five status hues and from each other as the space allows, which lands
        the closest pair either is in at ΔE 13.2. The blue is the one colour here
        with a contrast to watch, 3.9 against the card, which is a fill and not
        text and reads. */
+    --chart-1: #ff7fa5;
     --chart-6: #4f70e8;
     --chart-7: #70ebd6;
 
@@ -517,14 +554,6 @@
     --shadow-pop:
       0 8px 24px rgb(0 0 0 / 0.45),
       0 20px 48px rgb(0 0 0 / 0.35);
-  }
-}
-
-/* The inset opens up once there is room for it. One override here moves every
-   surface in the app together, which is the entire point of it being a token. */
-@media (width >= 40rem) {
-  :root {
-    --spacing-inset: 1.5rem;
   }
 }
 
@@ -593,17 +622,29 @@
    gutter, the flash before first paint) agree with the tokens. */
 html {
   color-scheme: light dark;
-  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 html.light { color-scheme: light; }
 html.dark { color-scheme: dark; }
 
+/* Greyscale smoothing in the dark theme only. On macOS it draws text thinner,
+   which is what light type on a dark ground wants, and what dark type on a
+   light one does not: there it took weight out of every stroke and read as
+   lower contrast than the colours are. Both dark selectors, as everywhere. */
+html.dark { -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  html:not(.light) { -webkit-font-smoothing: antialiased; }
+}
+
 body {
   background: var(--color-canvas);
   color: var(--color-foreground);
   font-family: var(--font-sans);
-  letter-spacing: -0.01em;
+  /* Inter's single-storey a and its flat-topped digits read as a tool rather
+     than a brochure. Tracking a hair under its default, which Inter is drawn
+     loose for at text sizes. */
+  font-feature-settings: "cv11";
+  letter-spacing: -0.006em;
 }
 
 /* Headings tighten as they grow. At 24px and up the default tracking reads
@@ -670,7 +711,8 @@ summary {
 /* ── Focus ───────────────────────────────────────────────────────
    ONE focus ring for the whole app: 1.5px of the ring colour, sitting just off
    the element rather than on its edge. On a filled control an on-the-edge ring
-   reads as part of the fill. A focused input, button, link and combobox all
+   reads as part of the fill. Fields are the exception and draw it on their
+   border (see .field-ring below). A focused input, button, link and combobox all
    look the same, and nothing else marks focus: no border colour change, no soft
    halo. Fields used to add both on top of this and the same field then read as
    one, two or three lines depending on how it had been styled and whether it
@@ -718,6 +760,36 @@ summary {
 }
 .focus-ring-within :is(button, a, [tabindex]):focus-visible {
   outline-offset: -1.5px;
+}
+
+/* A field's ring sits ON its border rather than a pixel outside it: the
+   outline covers the 1px edge exactly, so focusing a field reads as its edge
+   darkening. Off the edge it drew a second line with a hairline of white
+   between the two, which looked like a box around a box. Buttons keep the
+   offset above, where a ring on the edge would read as part of the fill.
+   `.field-ring` is on every field from CONTROL_SIZES in ui/field.tsx. */
+.field-ring:focus-visible,
+.field-ring.focus-ring-within:has(:is(input, textarea):focus-visible) {
+  outline-offset: -1px;
+}
+
+/* A combobox whose field has turned into its search (ui/combobox.tsx). The
+   caret is in an input laid over the trigger, and the trigger draws the ring
+   for it, so the ring has the trigger's own corners and sits where its own
+   would: on a field's border, inside a table cell's edge. The input draws
+   none, or there would be two. */
+[data-search-open] {
+  outline: 1px solid var(--color-ring);
+  outline-offset: 1px;
+}
+.focus-inset[data-search-open] {
+  outline-offset: -1.5px;
+}
+.field-ring[data-search-open] {
+  outline-offset: -1px;
+}
+[data-combobox-search]:focus-visible {
+  outline: none;
 }
 
 /* Subtle, unobtrusive scrollbars */
@@ -989,8 +1061,8 @@ summary {
 }
 /* Edit mode: the graphite box turns the section's pink with a soft halo, the
    blinking caret returns and the text selection is visible again. The colour
-   change is what separates the two states: pink in a sheet means "you are
-   typing here". */
+   change is what separates the two states: the accent's ink with a halo in a
+   sheet means "you are typing here". */
 .is-editing input[data-cell]:focus {
   caret-color: auto;
 }
@@ -1000,12 +1072,6 @@ summary {
 .is-editing :is(td, th):has(input[data-cell]:focus) {
   outline-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-soft); /* halo, outside the box */
-}
-/* …and solid near-black on the pink account-number cell, up from the
-   translucent mark it carries while merely selected. */
-.is-editing .bg-brand:has(input[data-cell]:focus) {
-  outline-color: var(--color-on-brand);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-on-brand) 30%, transparent);
 }
 
 /* ── Print ───────────────────────────────────────────────────────
@@ -1048,6 +1114,7 @@ summary {
     --color-canvas: #ffffff;
     --color-surface: #f2f2f4;
     --color-border: #c8c8ce;
+    --color-border-control: #b8b8be;
     --color-foreground: #000000;
     --color-muted: #45454a;
     /* One step firmer than the screen's #8a8a8f. A hairline that is merely at
@@ -1062,19 +1129,16 @@ summary {
     /* The dark palette's hues are tuned for a near-black card and read as
        washed-out highlighter on paper. A printed surplus, deficit or brand
        mark has to stay legible in ink. Each of these is ~5.2:1 on white. */
-    --color-brand: #f280a1;
+    --color-brand: #000000;
     /* Nothing hovers on paper, so it is the fill itself. It is set rather than
-       left out because leaving it out is how the dark theme's #f080a5 reaches
-       a printer. */
-    --color-brand-hover: #f280a1;
-    /* Black, and not the white the screen uses. This is a different pink: the
-       print fill is #f280a1, five steps lighter than the screen's, and white on
-       it is 2.51:1 where black is 8.38. Paper is also the one surface with no
-       backlight to carry a thin colour, and the page is going to a revisor. */
-    --color-on-brand: #000000;
-    --color-brand-edge: #d02253;
-    --color-accent: #d02253;
-    --color-accent-soft: #fdf1f5;
+       left out because leaving it out is how the dark theme's value reaches a
+       printer. */
+    --color-brand-hover: #000000;
+    --color-on-brand: #ffffff;
+    --color-brand-edge: #000000;
+    --color-accent: #000000;
+    --color-accent-soft: #e2e2e6;
+    --chart-1: #d02253;
     --color-purple: #8c4ccb;
     --color-purple-soft: #f6f2fc;
     --color-blue: #035a8a;

@@ -72,10 +72,10 @@ describe("the dark palette's two copies", () => {
 });
 
 describe("the light palette", () => {
-  // Six of the eight chart tokens are `var()` aliases of tones the dark block
+  // Five of the eight chart tokens are `var()` aliases of tones the dark block
   // already redefines, so they follow the theme without appearing in it. Same
   // for the type, spacing, radius and motion tokens, which are one value in both.
-  const LIGHT_ONLY = /^--(font|spacing|radius|ease|receipt|chart-[1-5]|chart-8)/;
+  const LIGHT_ONLY = /^--(font|spacing|radius|ease|receipt|chart-[2-5]|chart-8)/;
 
   it("has a dark counterpart for every colour it names", () => {
     const missing = Object.keys(theme).filter(

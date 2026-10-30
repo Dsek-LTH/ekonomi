@@ -247,7 +247,7 @@ export function UploadContractClient({
                     <button
                       type="button"
                       onClick={() => setNewCounterpartyName("")}
-                      className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                      className="flex items-center gap-1 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
                     >
                       <IconPlus className="size-3.5" />
                       {tc("add")}
@@ -383,7 +383,7 @@ export function UploadContractClient({
           <button
             type="button"
             onClick={() => router.push("/contracts/rental/new")}
-            className="font-medium text-accent hover:underline"
+            className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
           >
             {t("form.otherKindLink")}
           </button>

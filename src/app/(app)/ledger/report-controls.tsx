@@ -75,7 +75,7 @@ function Field({
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+      <span className="text-xs font-medium text-muted">
         {label}
       </span>
       {children}
@@ -83,10 +83,10 @@ function Field({
   );
 }
 
-// The pills are shorter than a Combobox trigger (h-9, see components/ui/field
+// The pills are shorter than a Combobox trigger (h-8, see components/ui/field
 // .tsx), and a row that mixes the two heights reads as misaligned however it is
 // aligned. Every control in the panel is therefore field-height.
-const PILLS = "[&>button]:h-11 sm:[&>button]:h-9";
+const PILLS = "[&>button]:h-11 sm:[&>button]:h-8";
 
 // One row of the panel. Hairline above, none on the first. The rows are the
 // structure, so they get the rule rather than the whole panel getting padding.
@@ -214,7 +214,7 @@ function PeriodRows({
           />
         </Field>
         {/* The height of a control, so the dash sits level with the two. */}
-        <span aria-hidden className="flex h-11 items-center text-muted sm:h-9">
+        <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
           -
         </span>
         <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">

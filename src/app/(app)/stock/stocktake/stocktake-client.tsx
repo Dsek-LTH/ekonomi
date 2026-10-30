@@ -425,7 +425,7 @@ export default function StocktakeClient({
               <button
                 type="button"
                 onClick={increasesToDelivery}
-                className="font-medium text-accent hover:underline"
+                className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
               >
                 {t("stocktakeSheet.toDelivery")}
               </button>

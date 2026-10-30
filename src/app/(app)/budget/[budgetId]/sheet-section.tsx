@@ -66,7 +66,7 @@ export function SectionCard({
               compared with, and the gap between the two. Only when there is a
               comparison to group. */}
           {showCompare && compare && (
-            <tr className="border-b border-border/60 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <tr className="border-b border-border/60 text-xs font-medium text-muted">
               <th colSpan={columns.length + 1} className="px-2 py-1.5 text-left">
                 {tGroup("budget")}
               </th>

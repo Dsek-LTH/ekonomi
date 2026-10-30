@@ -10,6 +10,7 @@ import { useQuery } from "@/components/shell/use-query";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { IconChart, IconDownload, IconViewTable } from "@/components/ui/icons";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { SkeletonSheet } from "@/components/ui/skeleton";
 import { type ComboOption } from "@/components/ui/combobox";
 
@@ -531,30 +532,7 @@ export default function LedgerClient({
     : showComparison;
 
   return (
-    <PageShell
-      title={t("title")}
-      // The same period as a table or as charts. It sat in the band as a
-      // collection switch, on the reasoning that the charts ask their own
-      // question off their own endpoint (/api/ledger/trend). True, but the
-      // band's switch only ever says whose (docs/navigation.md), and what a
-      // reader is choosing here is how the period is drawn. It stays out of
-      // the bar below, which narrows rows and means nothing to it.
-      //
-      // Hidden for a balansrapport, which has no period these charts draw. A
-      // switch that led to "not for this report" would be a control whose whole
-      // job is to disappoint. Hidden rather than left out, so its room stays and
-      // the page does not jump when the report changes kind.
-      views={{
-        label: t("charts.view"),
-        value: mode,
-        hidden: isBalance,
-        options: [
-          { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
-          { value: "CHART", label: t("charts.diagram"), icon: IconChart },
-        ],
-        onChange: (v) => setMode(v as "TABLE" | "CHART"),
-      }}
-    >
+    <PageShell title={t("title")}>
       {/* One slot, two cards. The parameters are not the same question in the
           two views: most of the report's panel says nothing to a chart, and the
           charts turn its three-way comparison into the one part of it they can
@@ -586,6 +564,46 @@ export default function LedgerClient({
         <aside
           className="mb-5 lg:mb-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:hidden"
         >
+          {/* The panel's toolbar: what the settings below produce. The same
+              period as a table or as charts, and the file to take away. Here
+              rather than on a strip of PageShell's own above the report: that
+              strip held one toggle at its far end and was a band of empty
+              header across the whole page. Never in the band, where a toggle
+              reads as one more "whose" (docs/navigation.md).
+
+              The toggle is hidden for a balansrapport, which has no period
+              these charts draw. Hidden rather than left out, so the Export
+              menu beside it does not move when the report changes kind. One
+              menu rather than a button per format: which file is wanted is one
+              question. PDF goes through the browser's print dialog, where "Save
+              as PDF" is the destination; the printout below is laid out for
+              exactly that. CSV is the table's rows, so it is offered with the
+              table only. */}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <Menu
+              label={t("export")}
+              icon={<IconDownload className="size-4" />}
+              variant="secondary"
+              size="sm"
+              align="start"
+            >
+              <MenuItem onClick={() => window.print()}>{t("exportPdf")}</MenuItem>
+              {!charting && report && report.groups.length > 0 && (
+                <MenuItem onClick={exportCsv}>{t("exportCsvExcel")}</MenuItem>
+              )}
+            </Menu>
+            <div className={cn(isBalance && "invisible")} inert={isBalance}>
+              <ViewToggle
+                aria-label={t("charts.view")}
+                value={mode}
+                options={[
+                  { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
+                  { value: "CHART", label: t("charts.diagram"), icon: IconChart },
+                ]}
+                onChange={setMode}
+              />
+            </div>
+          </div>
           {charting ? (
             <ChartParameters
               query={query}
@@ -609,27 +627,6 @@ export default function LedgerClient({
               period={period}
             />
           )}
-          {/* Under the settings it is the output of. One menu rather than a
-              button per format: which file is wanted is one question. PDF goes
-              through the browser's print dialog, where "Save as PDF" is the
-              destination; the printout below is laid out for exactly that. CSV
-              is the table's rows, so it is offered with the table only. */}
-          {data.years.length ? (
-            <div className="mt-3 print:hidden">
-              <Menu
-                label={t("export")}
-                icon={<IconDownload className="size-4" />}
-                variant="secondary"
-                size="sm"
-                align="start"
-              >
-                <MenuItem onClick={() => window.print()}>{t("exportPdf")}</MenuItem>
-                {!charting && report && report.groups.length > 0 && (
-                  <MenuItem onClick={exportCsv}>{t("exportCsvExcel")}</MenuItem>
-                )}
-              </Menu>
-            </div>
-          ) : null}
         </aside>
       )}
 

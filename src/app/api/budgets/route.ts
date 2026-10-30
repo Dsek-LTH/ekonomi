@@ -5,6 +5,7 @@ import { copyBudgetContents } from "@/lib/budget/clone";
 import { bulkTransaction } from "@/lib/server/tx";
 import { getBudgetSummaries } from "@/lib/data/budget";
 import { fail, gate } from "@/lib/api/guard";
+import { denyBudgetOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { CreateBudget } from "@/lib/api/schemas/budget";
 
@@ -32,6 +33,9 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { year, name } = parsed.data;
   const copyFromId = parsed.data.copyFromId ?? null;
+  // A new budget, copy or not, is for the year picked in the header.
+  const offYear = await denyBudgetOutsideFiscalYear(year);
+  if (offYear) return offYear;
 
   // Fail before creating anything if the chosen source is gone.
   if (copyFromId) {

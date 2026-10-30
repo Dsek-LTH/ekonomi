@@ -14,6 +14,9 @@ export interface ReviewQueue {
   ids: string[];
   /** Konterade by this viewer, so waiting on somebody else. */
   waitingOnOthers: number;
+  /** Which those are, so the list can show them as not this viewer's to
+   *  bokföra rather than leave them looking like any other. */
+  ownIds: string[];
 }
 
 export async function getReviewQueue(
@@ -42,5 +45,6 @@ export async function getReviewQueue(
   return {
     ids: ids.filter((id) => !mine.includes(id)),
     waitingOnOthers: mine.length,
+    ownIds: mine,
   };
 }

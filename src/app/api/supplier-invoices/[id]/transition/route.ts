@@ -3,26 +3,40 @@
 // status it was decided under (when), and every write restates that status, so
 // two people acting at once get a 409 rather than a muddle.
 //
-// The attest is also the kontering. Picking the cost centre and pressing
-// Attestera sends both, and the rows the attester may sign are signed in the
-// same write. Only a split onto another unit's cost centre waits, in
-// PENDING_APPROVAL, for that unit's signature.
+// The unit's fördelning is sent with its attest: the cost centres, and the
+// amount, due date and description it read off the invoice. The rows the
+// sender may sign are signed in the same write. Only a split onto another
+// unit's cost centre waits, in PENDING_APPROVAL, for that unit's signature.
+// The first fördelning is not here: it is what makes the invoice, from a
+// document in the unit's Inkorg (../../route.ts). This is the unit fördela an
+// invoice again, once its split was reopened or its signature taken back.
 //
-// Export to Fortnox is not here. It is a real call to Fortnox and gets a route
-// of its own.
+// The treasury's kontering is saved a field at a time (../route.ts PATCH) and
+// marked done here (`book`). Sending it to Fortnox is not here: it is a real
+// call to Fortnox and gets a route of its own.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import type { TxClient } from "@/lib/server/tx";
-import { attestersOf, deliverSoon, notify } from "@/lib/server/notify";
+import { deliverSoon, notify } from "@/lib/server/notify";
 import { invoiceNotice } from "@/lib/email/content";
-import { attestBlocker, awaitsKontering, isInvoiceReturnable } from "@/lib/domain/supplier-invoice";
+import {
+  awaitsAllocation,
+  exportBlocker,
+  isInvoiceReturnable,
+  isWithTreasury,
+} from "@/lib/domain/supplier-invoice";
+import { isoToDate } from "@/lib/domain/date";
+import { isoDate } from "@/lib/data/shared";
+import { readInvoiceScan } from "@/lib/server/invoice-documents";
+import { prefillData } from "@/lib/server/invoice-prefill";
 import type { SupplierInvoiceEventType, SupplierInvoiceStatus } from "@/lib/domain/types";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
 import { parseBody } from "@/lib/api/parse";
 import { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
-import { mayAttest as viewerMayAttest } from "@/lib/data/supplier-invoices";
+import { planAllocation } from "@/lib/server/invoice-allocation";
 import {
+  exportFactsOf,
   loadInvoiceFor,
   refuseChange,
   unitOwnersOf,
@@ -64,7 +78,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const parsed = await parseBody(req, TransitionSupplierInvoice);
   if (!parsed.ok) return parsed.res;
-  const { action, comment, resultUnitId, rows } = parsed.data;
+  const { action, comment, resultUnitId, rows, amount, dueDate, description } = parsed.data;
 
   const access = await loadInvoiceFor(actor, id);
   if (!access.ok) return access.res;
@@ -135,69 +149,55 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return done(invoice.status);
   }
 
-  // ── Kontera and attest ────────────────────────────────────────────────────
+  // ── Fördela and attest ────────────────────────────────────────────────────
   if (action === "attest") {
-    if (can.canKontera) {
+    if (can.canAllocate) {
       if (!rows) return fail(422, "supplierInvoice.noAllocations");
-      const blocker = attestBlocker({
+      // The amount the split is made against and the date it is due by, as
+      // the unit read them off the invoice. The page offers what the PDF
+      // says, and the treasury checks both again at the kontering.
+      const total = amount ?? invoice.amount;
+      if (total == null) return fail(422, "supplierInvoice.noAmount");
+      const due = dueDate ?? (isoDate(invoice.dueDate) || null);
+      if (!due) return fail(422, "supplierInvoice.noDueDate");
+      const planning = await planAllocation({
+        rows,
+        total,
         documentCount: invoice._count.documents,
-        rows: rows.map((r) => ({ amount: rows.length === 1 ? null : (r.amount ?? null) })),
-        invoiceAmount: invoice.amount,
+        viewer,
+        actorId: actor.id,
+        kept: invoice.allocations.map((a) => a.costCenter.code),
       });
-      if (blocker) return fail(422, blocker);
+      if (!planning.ok) return planning.res;
+      const { planned, signed, status: to, attesters } = planning.plan;
 
-      // The cost centres, by code. A retired one is refused unless the
-      // invoice already had it, so retiring one strands nothing.
-      const codes = [...new Set(rows.map((r) => r.costCenterCode.toUpperCase()))];
-      const had = new Set(invoice.allocations.map((a) => a.costCenter.code));
-      const centres = await prisma.costCenter.findMany({
-        where: { code: { in: codes } },
-        select: { id: true, code: true, active: true },
-      });
-      const byCode = new Map(centres.map((c) => [c.code, c]));
-      for (const code of codes) {
-        const c = byCode.get(code);
-        if (!c || (!c.active && !had.has(code))) {
-          return fail(422, "supplierInvoice.unknownCostCenter", { values: { code } });
-        }
-      }
-
-      const now = new Date();
-      const planned = rows.map((r, position) => {
-        const code = r.costCenterCode.toUpperCase();
-        const mine = viewerMayAttest(viewer, code);
-        return {
-          code,
-          data: {
-            costCenterId: byCode.get(code)!.id,
-            amount: rows.length === 1 ? null : (r.amount ?? null),
-            comment: r.comment ?? null,
-            position,
-            approvedById: mine ? actor.id : null,
-            approvedAt: mine ? now : null,
-          },
-        };
-      });
-      const signed = planned.filter((p) => p.data.approvedById);
-      const waiting = planned.filter((p) => !p.data.approvedById);
-      const to: SupplierInvoiceStatus = waiting.length === 0 ? "APPROVED" : "PENDING_APPROVAL";
-
-      // Whoever is left to sign. Asked without naming a submitter: the actor
-      // has signed what they could, and is left out of the mail instead.
-      const attesters = waiting.length
-        ? await attestersOf(waiting.map((w) => ({ costCenterCode: w.code })), "")
-        : [];
+      // What the PDF says fills whatever the invoice still lacks, for the
+      // treasury to check. Read before the transaction, since storage and the
+      // PDF reader are slow; the page that sent this has read it already, so
+      // it is usually kept. What the unit typed is theirs, not the PDF's.
+      const reading = await readInvoiceScan(invoice.id);
+      const typed = {
+        amount: total,
+        dueDate: isoToDate(due),
+        ...(description !== undefined && { description }),
+      };
+      const filled = prefillData({ ...invoice, ...typed }, reading.fields, reading.supplier);
+      const prefilled = ((filled.prefilled as string[] | undefined) ?? invoice.prefilled).filter(
+        (f) => f !== "amount" && f !== "dueDate",
+      );
 
       const result = await commit(() =>
         prisma.$transaction(async (tx) => {
-          await move(tx, invoice, to);
+          await move(tx, invoice, to, { ...filled, ...typed, prefilled });
           await tx.supplierInvoiceAllocation.deleteMany({ where: { invoiceId: invoice.id } });
+          // A kontering made from the split that is going goes with it.
+          await tx.supplierInvoiceLine.deleteMany({ where: { invoiceId: invoice.id } });
           await tx.supplierInvoiceAllocation.createMany({
             data: planned.map((p) => ({ ...p.data, invoiceId: invoice.id })),
           });
           if (signed.length) {
             await tx.supplierInvoiceEvent.create({
-              data: event("COST_CENTER_APPROVED", { comment, diff: { costCenters: signed.map((s) => s.code) } }),
+              data: event("COST_CENTER_APPROVED", { comment, diff: { costCenters: signed } }),
             });
           }
           if (to === "APPROVED") await tx.supplierInvoiceEvent.create({ data: event("APPROVED") });
@@ -214,7 +214,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Another unit's share of a split, signed as it stands.
     if (!can.canAttest) {
-      return refuseChange(invoice, awaitsKontering(invoice.status) || invoice.status === "PENDING_APPROVAL");
+      return refuseChange(invoice, awaitsAllocation(invoice.status) || invoice.status === "PENDING_APPROVAL");
     }
     const mine = invoice.allocations.filter((a, i) => mayAttest[i] && !a.approvedById);
     const now = new Date();
@@ -248,7 +248,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Take your own signature back ──────────────────────────────────────────
   if (action === "withdraw_attest") {
     if (!can.canWithdrawAttest) {
-      return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || invoice.status === "APPROVED");
+      return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status));
     }
     const mine = invoice.allocations.filter((a) => a.approvedById === actor.id);
     // The last signature gone, it is back to waiting for its kontering, which
@@ -273,10 +273,47 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return done(to);
   }
 
+  // ── Change the split ──────────────────────────────────────────────────────
+  // The unit that proposed it, while others are still signing. Every
+  // signature comes off, its own too, because each was given to the split as
+  // it stood. Back to waiting for its kontering, and whoever signs next is
+  // asked when the new split is sent.
+  if (action === "redistribute") {
+    if (!can.canRedistribute) return refuseChange(invoice, invoice.status === "PENDING_APPROVAL");
+    const result = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        await move(tx, invoice, "ASSIGNED");
+        await clearSignatures(tx, invoice.id);
+        await tx.supplierInvoiceEvent.create({ data: event("ATTEST_WITHDRAWN", { comment, diff: { all: true } }) });
+      }),
+    );
+    if (result instanceof NextResponse) return result;
+    return done("ASSIGNED");
+  }
+
+  // ── The treasury's kontering, done ────────────────────────────────────────
+  // Every field is already saved as it was left. This says the kontering is
+  // finished, which is only true when what is saved is enough to send. Done
+  // again on a konterad invoice (Ändra kontering), it only checks.
+  if (action === "book") {
+    if (!can.canBook) return refuseChange(invoice, isWithTreasury(invoice.status));
+    const blocker = exportBlocker(exportFactsOf(invoice));
+    if (blocker) return fail(422, blocker);
+    if (invoice.status === "BOOKED") return done("BOOKED");
+    const result = await commit(() =>
+      prisma.$transaction(async (tx) => {
+        await move(tx, invoice, "BOOKED");
+        await tx.supplierInvoiceEvent.create({ data: event("BOOKED", { comment }) });
+      }),
+    );
+    if (result instanceof NextResponse) return result;
+    return done("BOOKED");
+  }
+
   // ── Send it back ──────────────────────────────────────────────────────────
   // action === "request_changes"
   if (!can.canRequestChanges) {
-    return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || invoice.status === "APPROVED");
+    return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status));
   }
   if (!comment) return fail(422, "supplierInvoice.commentRequired");
 
