@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { Combobox } from "@/components/ui/combobox";
-import { Menu, MenuItem } from "@/components/ui/menu";
+import { EditableText } from "@/components/ui/editable-text";
 import { OverlayScroll } from "@/components/ui/overlay-scroll";
 import { SidebarGroupLabel, SidebarItem, SidebarPanel } from "@/components/ui/sidebar-list";
 import { useRole } from "@/components/shell/role-context";
@@ -16,7 +16,7 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { startRouteProgress } from "@/components/shell/route-progress";
-import { IconDots, IconGrid, IconList, IconLock, IconLockOpen, IconPencil } from "@/components/ui/icons";
+import { IconGrid, IconList, IconLock, IconLockOpen } from "@/components/ui/icons";
 import { Tag } from "@/components/ui/status-pill";
 
 import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
@@ -27,8 +27,6 @@ import { useFormat } from "@/lib/ui/use-format";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { CHANGES, RAMBUDGET, VARS, adjustmentRows, changeImpactBySheet, resultUnitLabel, resultUnitOf, groupByResultUnit } from "./budget-helpers";
 import { recomputeBudget } from "./recompute";
-import { BudgetDialog } from "./budget-dialog";
-import type { PatchBudget } from "@/lib/api/schemas/budget";
 import { useBudgetCells } from "./use-budget-cells";
 import { useComparison } from "./use-comparison";
 import { Rambudget } from "./rambudget";
@@ -243,11 +241,22 @@ export default function BudgetClient({
 
   const ev = budget.evaluated;
 
-  // The name and the antagen date, from the dialog behind the header's menu.
-  // See budget-dialog.tsx.
-  const [editing, setEditing] = useState(false);
   const { date } = useFormat();
-  const saveDetails = (body: PatchBudget) => api(`/api/budgets/${budgetId}`, "PATCH", body);
+
+  async function saveName(raw: string) {
+    const name = raw.trim();
+    if (!name) { notify.error(t("nameRequired")); return false; }
+    return api(`/api/budgets/${budgetId}`, "PATCH", { name });
+  }
+
+  // The day the möte adopted it. Emptying the field is the way back to "never
+  // adopted", for a budget recorded as decided by mistake. The year follows the
+  // date. Clearing the date leaves the year where it was.
+  async function saveAdoptedAt(value: string) {
+    return api(`/api/budgets/${budgetId}`, "PATCH", value
+      ? { adoptedAt: value, year: Number(value.slice(0, 4)) }
+      : { adoptedAt: null });
+  }
 
   // Sheets with no cost centre hold none, so they never take one out of the
   // "add" list.
@@ -329,66 +338,45 @@ export default function BudgetClient({
     if (data.id) setSelected(data.id);
   }
 
-  // The antagen date: the one fact about a budget worth keeping on screen, since
-  // it is a decision (the möte that passed it). Shown even when unset, because
-  // "Inte antagen" says the budget is missing one. Changed in the dialog.
-  const adopted = budget.adoptedAt
-    ? `${t("adoptedOn")} ${date(budget.adoptedAt)}`
-    : t("notAdopted");
-
   return (
     <PageShell
       // The name, the lock and the antagen date on one line: what the budget
-      // is. The year is not shown: it follows the antagen date. The lock chip
-      // in purple, not grey: a lock is not an absence of state, it is the
-      // authority chain saying this is adopted and only the treasurer moves it
-      // now. The date is a decision (the möte that passed it), so it is shown
-      // even unset, because "Inte antagen" says the budget is missing one. It
-      // was a subtitle on a row of its own under the name, a whole line of
-      // header for four words.
+      // is. Name and date are edited in place, as every single value in the
+      // app is (see EditableText). The year is not shown: it follows the
+      // antagen date. The lock chip in purple, not grey: a lock is not an
+      // absence of state, it is the authority chain saying this is adopted and
+      // only the treasurer moves it now. The date is a decision (the möte that
+      // passed it), so it is shown even unset, because "Inte antagen" says the
+      // budget is missing one.
       title={
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {budget.name}
+          <EditableText
+            value={budget.name}
+            label={t("changeName")}
+            placeholder={t("namePlaceholder")}
+            disabled={!canEdit}
+            onSave={saveName}
+          />
           {locked && (
             <Tag tone="purple">{tList("locked")}</Tag>
           )}
-          <span className="text-sm font-medium tracking-normal text-muted">{adopted}</span>
+          <span className="text-sm font-medium tracking-normal text-muted">
+            {budget.adoptedAt && <>{t("adoptedOn")} </>}
+            {canEdit ? (
+              <EditableText
+                value={budget.adoptedAt ?? ""}
+                type="date"
+                label={t("changeAdoptedAt")}
+                onSave={saveAdoptedAt}
+              />
+            ) : (
+              budget.adoptedAt ? date(budget.adoptedAt) : t("notAdopted")
+            )}
+          </span>
         </span>
-      }
-      // Only what edits the line it stands on. Everything that steers the
-      // budget is on the toolbar under it.
-      aside={
-        <>
-          {/* Renaming and dating the budget, as an event is renamed and
-              moved: behind a menu, in a dialog. They were edited in place,
-              and a title that turns into a text box on a click is one that
-              gets changed by mistake. */}
-          {canEdit && (
-            <Menu
-              label={t("actions")}
-              iconOnly
-              variant="ghost"
-              size="sm"
-              icon={<IconDots className="size-4" />}
-            >
-              <MenuItem onClick={() => setEditing(true)}>
-                <IconPencil className="size-4 shrink-0 text-muted" />
-                {t("edit")}
-              </MenuItem>
-            </Menu>
-          )}
-        </>
       }
       back="/budget"
     >
-      {editing && (
-        <BudgetDialog
-          name={budget.name}
-          adoptedAt={budget.adoptedAt ?? null}
-          onSave={saveDetails}
-          onClose={() => setEditing(false)}
-        />
-      )}
       {/* The toolbar: which view on the left, with its words, since two grid
           icons alone did not say which was which; on the right what the
           budget is held against, and the lock. One row whichever view is

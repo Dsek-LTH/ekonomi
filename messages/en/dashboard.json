@@ -24,67 +24,42 @@
     "EXPORT": "to export to Fortnox",
     "PURCHASES": "{count, plural, one {card purchase to account for} other {card purchases to account for}}"
   },
-  "budget": {
-    "title": "Budget and outcome {year}",
-    "subtitle": "Against {budget}. Outcome from Fortnox, last fetched {synced}.",
-    "neverSynced": "never",
-    "openBudget": "Budget",
-    "openReports": "Outcome and reports",
-    "emptyNoBudget": "There is no budget for this year yet, and no booked outcome to show.",
-    "emptyNoData": "This year's budget has no amounts yet.",
-    "colUnit": "Result unit",
-    "colIncome": "Income",
-    "colCost": "Costs",
-    "colResult": "Result",
-    "noUnit": "No result unit",
-    "noCostCenter": "No cost centre",
-    "yours": "Yours",
-    "of": "of {amount}",
-    "unbudgeted": "not budgeted",
-    "over": "{amount} over budget",
-    "budgeted": "budget {amount}",
-    "yearMarker": "The mark shows how much of the year has passed ({percent}%). Income and costs are booked outcome against budget.",
-    "titleOwn": "Your committee {year}",
-    "pace": {
-      "ON_TRACK": "On track",
-      "AHEAD": "Ahead of pace",
-      "OVER": "Over budget",
-      "hint": {
-        "ON_TRACK": "Costs are keeping pace with the year.",
-        "AHEAD": "More of the cost budget is spent than the year has passed.",
-        "OVER": "Costs are above the budget for the whole year."
-      }
-    }
-  },
-  "mineNone": "No expenses yet.",
-  "youTitle": "You",
   "todoEmpty": "Nothing is waiting on you.",
   "payoutMissing": "Add your clearing and account number under My profile, or your expenses cannot be paid out.",
-  "budgetLink": "See how the section's budget looks",
-  "viewLabel": "Show",
-  "view": {
-    "personal": "My money",
-    "unit": "My committee",
-    "section": "The section"
+  "budget": {
+    "title": "Budget",
+    "open": "Open the budget",
+    "noBudget": "There is no budget for the year yet.",
+    "allFine": "Every committee is keeping to its budget.",
+    "ownFine": "{count, plural, one {Your committee is keeping to its budget.} other {Your committees are keeping to their budgets.}}",
+    "over": "{unit} has gone over its cost budget for the whole year.",
+    "ahead": "{unit} has used {used}% of its cost budget, and {elapsed}% of the year has gone.",
+    "noUnit": "No result unit"
   },
-  "money": {
-    "onItsWayLabel": "On its way back to you",
-    "nothingOwed": "The section owes you nothing right now.",
-    "stage": {
-      "awaitingAttest": "Awaiting approval",
-      "approved": "Approved",
-      "exportedThisYear": "Sent for payout this year"
-    },
-    "count": "{count, plural, one {# expense} other {# expenses}}"
+  "upcoming": {
+    "title": "Coming up",
+    "deadline": "Last day to send in <b>{title}</b>",
+    "invoice": "Invoice from <b>{title}</b> falls due",
+    "pickup": "<b>{title}</b> is picked up",
+    "contractEnds": "The contract <b>{title}</b> ends",
+    "stockEvent": "Stock occasion: <b>{title}</b>",
+    "untitled": "an unknown supplier",
+    "empty": "Nothing planned in the next two weeks."
   },
-  "kpi": {
-    "income": "Income",
-    "cost": "Costs",
-    "result": "Result",
-    "left": "Left of cost budget",
-    "share": "{percent}% of budget",
-    "ofBudget": "of {amount}",
-    "budgeted": "budget {amount}",
-    "unbudgeted": "not budgeted"
+  "mineAndInvoicesTitle": "Your utlägg and invoices",
+  "invoicesTitle": "Invoices in your committee",
+  "allInvoices": "All invoices",
+  "invoiceUntitled": "Unknown supplier",
+  "forgotten": {
+    "title": "Forgotten",
+    "empty": "Nothing has been left lying.",
+    "untitled": "untitled",
+    "more": "and {count} more",
+    "attestWaiting": "{count, plural, one {# utlägg has} other {# utlägg have}} waited on your attest for over a week",
+    "membersBehind": "{count, plural, one {# member has} other {# members have}} purchases waiting over a month",
+    "draft": "<b>{title}</b> has not been sent in",
+    "cardPurchase": "The card purchase <b>{title}</b> is not filed",
+    "stuck": "<b>{title}</b> is still waiting on attest",
+    "invoiceOverdue": "The invoice from <b>{title}</b> is overdue"
   }
 }

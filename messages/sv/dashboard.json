@@ -24,67 +24,42 @@
     "EXPORT": "att bokföra i Fortnox",
     "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}"
   },
-  "budget": {
-    "title": "Budget och utfall {year}",
-    "subtitle": "Jämfört med {budget}. Utfall från Fortnox, senast hämtat {synced}.",
-    "neverSynced": "aldrig",
-    "openBudget": "Budgeten",
-    "openReports": "Utfall och rapporter",
-    "emptyNoBudget": "Det finns ingen budget för i år ännu, och inget bokfört utfall att visa.",
-    "emptyNoData": "Budgeten för i år har inga belopp ännu.",
-    "colUnit": "Resultatenhet",
-    "colIncome": "Intäkter",
-    "colCost": "Kostnader",
-    "colResult": "Resultat",
-    "noUnit": "Utan resultatenhet",
-    "noCostCenter": "Utan kostnadsställe",
-    "yours": "Din",
-    "of": "av {amount}",
-    "unbudgeted": "ej budgeterat",
-    "over": "{amount} över budget",
-    "budgeted": "budget {amount}",
-    "yearMarker": "Strecket visar hur stor del av året som gått ({percent} %). Intäkter och kostnader är bokfört utfall mot budget.",
-    "titleOwn": "Ditt utskott {year}",
-    "pace": {
-      "ON_TRACK": "I fas",
-      "AHEAD": "Före takten",
-      "OVER": "Över budget",
-      "hint": {
-        "ON_TRACK": "Kostnaderna följer året.",
-        "AHEAD": "Mer av kostnadsbudgeten är använt än året har gått.",
-        "OVER": "Kostnaderna är högre än budgeten för hela året."
-      }
-    }
-  },
-  "mineNone": "Inga utlägg än.",
-  "youTitle": "Du",
   "todoEmpty": "Inget väntar på dig just nu.",
   "payoutMissing": "Lägg in clearing- och kontonummer under Min profil, annars kan dina utlägg inte betalas ut.",
-  "budgetLink": "Se hur sektionens budget ser ut",
-  "viewLabel": "Visa",
-  "view": {
-    "personal": "Mina pengar",
-    "unit": "Mitt utskott",
-    "section": "Sektionen"
+  "budget": {
+    "title": "Budgeten",
+    "open": "Öppna budgeten",
+    "noBudget": "Det finns ingen budget för året ännu.",
+    "allFine": "Alla utskott följer budgeten.",
+    "ownFine": "{count, plural, one {Ditt utskott följer budgeten.} other {Dina utskott följer budgeten.}}",
+    "over": "{unit} har gått över kostnadsbudgeten för hela året.",
+    "ahead": "{unit} har använt {used} % av kostnadsbudgeten, och {elapsed} % av året har gått.",
+    "noUnit": "Utan resultatenhet"
   },
-  "money": {
-    "onItsWayLabel": "På väg tillbaka till dig",
-    "nothingOwed": "Sektionen är inte skyldig dig något just nu.",
-    "stage": {
-      "awaitingAttest": "Väntar på attest",
-      "approved": "Attesterat",
-      "exportedThisYear": "Till utbetalning i år"
-    },
-    "count": "{count, plural, one {# utlägg} other {# utlägg}}"
+  "upcoming": {
+    "title": "Kommande",
+    "deadline": "Sista dag att skicka in <b>{title}</b>",
+    "invoice": "Faktura från <b>{title}</b> förfaller",
+    "pickup": "<b>{title}</b> hämtas",
+    "contractEnds": "Avtalet <b>{title}</b> löper ut",
+    "stockEvent": "Lagertillfälle: <b>{title}</b>",
+    "untitled": "okänd leverantör",
+    "empty": "Inget inplanerat de närmaste två veckorna."
   },
-  "kpi": {
-    "income": "Intäkter",
-    "cost": "Kostnader",
-    "result": "Resultat",
-    "left": "Kvar av kostnadsbudgeten",
-    "share": "{percent} % av budget",
-    "ofBudget": "av {amount}",
-    "budgeted": "budget {amount}",
-    "unbudgeted": "ej budgeterat"
+  "mineAndInvoicesTitle": "Dina utlägg och fakturor",
+  "invoicesTitle": "Fakturor i ditt utskott",
+  "allInvoices": "Alla fakturor",
+  "invoiceUntitled": "Okänd leverantör",
+  "forgotten": {
+    "title": "Glömt",
+    "empty": "Inget har blivit liggande.",
+    "untitled": "utan namn",
+    "more": "och {count} till",
+    "attestWaiting": "{count, plural, one {# utlägg har} other {# utlägg har}} väntat på din attest i över en vecka",
+    "membersBehind": "{count, plural, one {# medlem har} other {# medlemmar har}} köp som väntat i över en månad",
+    "draft": "<b>{title}</b> är inte inskickat",
+    "cardPurchase": "Kortköpet <b>{title}</b> är inte redovisat",
+    "stuck": "<b>{title}</b> väntar fortfarande på attest",
+    "invoiceOverdue": "Fakturan från <b>{title}</b> har förfallit"
   }
 }

@@ -189,18 +189,12 @@
     }
   },
   "wizard": {
-    "step": {
-      "review": "Review",
-      "match": "Match",
-      "submit": "Submit"
-    },
     "newTitle": "New expense",
     "editTitle": "Edit {id}",
     "editTitleDraft": "Edit draft",
     "save": "Save",
     "saveDraft": "Save draft",
     "back": "Back",
-    "continue": "Continue",
     "createFailed": "Could not create the expense",
     "uploadFailed": "The upload failed",
     "saveFailed": "Could not save the expense",
@@ -226,10 +220,8 @@
     "reviewTitle": "Review and submit",
     "match": "Match",
     "paymentType": "Payment type",
-    "payoutTo": "Paid out to",
     "payoutMissing": "Add an account under My profile",
     "goesTo": "Goes to {resultUnits} for approval.",
-    "resultUnitConcerned": "the result unit concerned",
     "resubmit": "Submit again",
     "submit": "Submit for approval",
     "claim": "What is this?",

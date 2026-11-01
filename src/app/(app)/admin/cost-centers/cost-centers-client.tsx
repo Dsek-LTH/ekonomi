@@ -13,7 +13,8 @@ import { Card } from "@/components/ui/card";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { FieldGroup, Input } from "@/components/ui/field";
-import { IconDots, IconLock, IconPencil, IconPlus, IconTrash } from "@/components/ui/icons";
+import { IconDots, IconLock, IconPlus, IconTrash } from "@/components/ui/icons";
+import { EditableText } from "@/components/ui/editable-text";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { IconFortnox } from "@/components/shell/fortnox-mark";
 import { Tag } from "@/components/ui/status-pill";
@@ -45,11 +46,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
 
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ code: "", name: "" });
-  // The row being renamed, and the name being typed for it.
-  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
-  // The row whose short name is being typed. Any row, Fortnox ones included:
-  // the short name is this app's own, so the next sync leaves it alone.
-  const [shortening, setShortening] = useState<{ id: string; name: string } | null>(null);
   const [suggesting, setSuggesting] = useState(false);
 
   // What the rule would set, for the cost centres with no short name yet. Only
@@ -78,9 +74,9 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     setAdding(false);
   }
 
-  async function saveName(cc: CostCenter) {
-    const name = renaming?.name.trim();
-    if (!name) return;
+  async function saveName(cc: CostCenter, raw: string) {
+    const name = raw.trim();
+    if (!name) { notify.error(t("nameRequired")); return false; }
     const data = await mutate(`/api/cost-centers/${cc.id}`, {
       key: `name-${cc.id}`,
       method: "PATCH",
@@ -88,12 +84,13 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       error: t("renameFailed"),
       success: t("renamed", { code: cc.code, name }),
     });
-    if (data) setRenaming(null);
+    return data !== null;
   }
 
-  async function saveShortName(cc: CostCenter) {
-    if (!shortening) return;
-    const shortName = shortening.name.trim() || null;
+  // Any row, Fortnox ones included: the short name is this app's own, so the
+  // next sync leaves it alone. Emptied, it goes back to the full name.
+  async function saveShortName(cc: CostCenter, raw: string) {
+    const shortName = raw.trim() || null;
     const data = await mutate("/api/cost-centers/short-names", {
       key: `short-${cc.id}`,
       method: "PUT",
@@ -103,7 +100,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         ? t("shortNameSaved", { code: cc.code, name: shortName })
         : t("shortNameCleared", { code: cc.code }),
     });
-    if (data) setShortening(null);
+    return data !== null;
   }
 
   // Retiring is the reversible half of removing one: it drops out of the
@@ -167,38 +164,16 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       sortable: true,
       searchable: true,
       className: "font-medium",
-      cell: (c) =>
-        renaming?.id === c.id ? (
-          // Wraps rather than shrinks: in the phone card this sits in a
-          // right-aligned meta row, where input + two buttons don't fit a line.
-          <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
-            <Input
-              size="sm"
-              autoFocus
-              value={renaming.name}
-              onChange={(e) => setRenaming({ id: c.id, name: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveName(c);
-                if (e.key === "Escape") setRenaming(null);
-              }}
-              aria-label={t("colName")}
-              className="min-w-40 flex-1 text-left"
-            />
-            <Button
-              size="sm"
-              loading={pending === `name-${c.id}`}
-              disabled={!renaming.name.trim()}
-              onClick={() => saveName(c)}
-            >
-              {t("save")}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setRenaming(null)}>
-              {tCommon("cancel")}
-            </Button>
-          </div>
-        ) : (
-          c.name
-        ),
+      cell: (c) => (
+        // Only the local ones are ours to rename. A Fortnox name changed here
+        // would come back as it was on the next sync.
+        <EditableText
+          value={c.name}
+          label={t("renameAria", { code: c.code })}
+          disabled={c.source !== "LOCAL"}
+          onSave={(v) => saveName(c, v)}
+        />
+      ),
     },
     {
       key: "shortName",
@@ -207,49 +182,15 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       value: (c) => c.shortName ?? "",
       sortable: true,
       searchable: true,
-      cell: (c) =>
-        shortening?.id === c.id ? (
-          // Saved on Enter, as the rename above. Emptied and saved, it goes
-          // back to the full name.
-          <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
-            <Input
-              size="sm"
-              autoFocus
-              value={shortening.name}
-              maxLength={SHORT_NAME_MAX}
-              onChange={(e) => setShortening({ id: c.id, name: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveShortName(c);
-                if (e.key === "Escape") setShortening(null);
-              }}
-              aria-label={t("editShortName", { code: c.code })}
-              className="min-w-32 flex-1 text-left"
-            />
-            <Button size="sm" loading={pending === `short-${c.id}`} onClick={() => saveShortName(c)}>
-              {t("save")}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShortening(null)}>
-              {tCommon("cancel")}
-            </Button>
-          </div>
-        ) : (
-          // The value itself is the way in, on every row: there is no menu
-          // on a Fortnox row to put "Ändra kortnamn" in.
-          <button
-            type="button"
-            onClick={() => setShortening({ id: c.id, name: c.shortName ?? "" })}
-            aria-label={t("editShortName", { code: c.code })}
-            className="group/short inline-flex max-w-full items-center gap-1.5 rounded-control text-left hover:underline"
-          >
-            <span className={cn("truncate", !c.shortName && "text-muted")}>
-              {c.shortName ?? t("shortNameNone")}
-            </span>
-            <IconPencil
-              aria-hidden
-              className="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/short:opacity-100"
-            />
-          </button>
-        ),
+      cell: (c) => (
+        <EditableText
+          value={c.shortName ?? ""}
+          label={t("editShortName", { code: c.code })}
+          placeholder={t("shortNameNone")}
+          maxLength={SHORT_NAME_MAX}
+          onSave={(v) => saveShortName(c, v)}
+        />
+      ),
     },
     {
       key: "resultUnit",
@@ -302,10 +243,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
             loading={pending === `active-${c.id}` || pending === `delete-${c.id}`}
             icon={<IconDots className="size-4" />}
           >
-            <MenuItem onClick={() => setRenaming({ id: c.id, name: c.name })}>
-              <IconPencil className="size-4 shrink-0 text-muted" />
-              {t("rename")}
-            </MenuItem>
             <MenuItem onClick={() => setActive(c, !c.active)}>
               <IconLock className="size-4 shrink-0 text-muted" />
               {t(c.active ? "deactivate" : "activate")}

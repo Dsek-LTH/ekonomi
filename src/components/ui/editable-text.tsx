@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/ui/utils";
 import { IconPencil } from "@/components/ui/icons";
+import { DateInput } from "@/components/ui/field";
+import { isCompleteDate } from "@/lib/domain/date";
 
 // A value that is an input the whole time, dressed as plain text until you go
 // near it: transparent and borderless at rest, gaining a surface on hover and a
@@ -17,6 +19,11 @@ import { IconPencil } from "@/components/ui/icons";
 // Enter commits, Escape puts back what was there, and clicking away commits
 // too: leaving a field is how every other cell in this app is finished, and
 // silently discarding what someone typed is the worse surprise.
+//
+// This is how every single value in the app is edited: a title, a name, a
+// label, a date. Not a dialog, and not an input that appears with its own
+// Spara and Avbryt. A record with several fields is the other case, edited in
+// a dialog opened from "Ändra" in its ⋯ menu.
 //
 // The text inherits the surrounding type, so the same component is a page title
 // in one place and a table cell in another. Width comes from the content (see
@@ -34,6 +41,7 @@ export function EditableText({
   label,
   type = "text",
   placeholder,
+  maxLength,
   disabled,
   className,
   inputClassName,
@@ -48,9 +56,10 @@ export function EditableText({
   onSave: (value: string) => boolean | void | Promise<boolean | void>;
   /** Names the input, so it is reachable by voice and screen reader. */
   label: string;
-  /** "date" gives the browser's own date picker and commits a YYYY-MM-DD. */
+  /** "date" is the app's own DateInput, mask and calendar, and commits a YYYY-MM-DD. */
   type?: "text" | "number" | "date";
   placeholder?: string;
+  maxLength?: number;
   /** Read-only: the plain text, with no input behind it at all. */
   disabled?: boolean;
   className?: string;
@@ -65,24 +74,28 @@ export function EditableText({
   // Escape blurs the input, and the blur would otherwise commit the very edit
   // that was just abandoned.
   const abandoned = useRef(false);
+  // The date field's input belongs to DateInput, which keeps its own ref, so it
+  // is found by the id handed to it instead.
+  const field = () => inputRef.current ?? (document.getElementById(autoId) as HTMLInputElement | null);
 
   // Adopt a value that changed underneath us (a save landing, a router
   // refresh, another tab) but never while the field has focus, where it would
   // overwrite what someone is in the middle of typing.
   useEffect(() => {
-    if (document.activeElement !== inputRef.current) setDraft(value);
-  }, [value]);
+    const el = inputRef.current ?? document.getElementById(autoId);
+    if (document.activeElement !== el) setDraft(value);
+  }, [value, autoId]);
 
-  async function commit() {
+  async function commit(next = draft) {
     if (abandoned.current || saving) return;
-    if (draft === value) return; // nothing to write
+    if (next === value) return; // nothing to write
     setSaving(true);
-    const ok = await onSave(draft);
+    const ok = await onSave(next);
     setSaving(false);
     // Rejected: the caller has said why, and the value is still wrong, so the
     // caret goes back where it can be fixed. Accepted: the new `value` arrives
     // as a prop and the effect above syncs the draft to it.
-    if (ok === false) inputRef.current?.focus();
+    if (ok === false) field()?.focus();
   }
 
   // No input at all when it cannot be edited, rather than a disabled one: a
@@ -97,9 +110,49 @@ export function EditableText({
     );
   }
 
-  // A date input is sized by the browser around its own picker, so measuring
-  // the text would fight it. Everything else is sized by the sizer span below.
-  const autoSize = type !== "date";
+  if (type === "date") {
+    return (
+      <DateInput
+        id={autoId}
+        size="sm"
+        value={draft}
+        aria-label={label}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const next = e.target.value;
+          setDraft(next);
+          // Saved as soon as it is a whole date. A date picked from the
+          // calendar never focuses the field, so no blur would follow it.
+          if (isCompleteDate(next)) {
+            abandoned.current = false;
+            void commit(next);
+          }
+        }}
+        onFocus={() => { abandoned.current = false; }}
+        // Emptied, it clears. Left half typed, it goes back to what was saved.
+        onBlur={() => (draft === "" ? void commit() : !isCompleteDate(draft) && setDraft(value))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); field()?.blur(); }
+          if (e.key === "Escape") {
+            abandoned.current = true;
+            setDraft(value);
+            field()?.blur();
+          }
+        }}
+        // Dressed as text at rest, as the text field is, with the box
+        // appearing under the pointer and while typing. The calendar button
+        // is the sign that it can be changed, so it needs no pencil. Marked
+        // important because `cn` joins rather than merges, and the box's own
+        // border and background would otherwise win or lose by CSS order.
+        className={cn(
+          "inline-flex! w-auto! border-transparent! bg-transparent! text-inherit! text-[length:inherit]!",
+          "hover:border-border-control! hover:bg-hover! focus-within:border-border-control! focus-within:bg-background!",
+          saving && "opacity-60",
+          className,
+        )}
+      />
+    );
+  }
 
   const input = (
     <input
@@ -114,10 +167,10 @@ export function EditableText({
       // the grid below that request sizes the column, pushing the pencil away
       // from the text. One character leaves the sizer as the widest thing in
       // the column, so the box is as wide as the text and no wider.
-      size={autoSize ? 1 : undefined}
+      size={1}
       onChange={(e) => setDraft(e.target.value)}
       onFocus={() => { abandoned.current = false; }}
-      onBlur={commit}
+      onBlur={() => void commit()}
       onKeyDown={(e) => {
         if (e.key === "Enter") { e.preventDefault(); inputRef.current?.blur(); }
         if (e.key === "Escape") {
@@ -127,6 +180,7 @@ export function EditableText({
         }
       }}
       placeholder={placeholder}
+      maxLength={maxLength}
       aria-label={label}
       className={cn(
         METRICS,
@@ -144,7 +198,7 @@ export function EditableText({
         "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         type !== "text" && "tabular-nums",
         saving && "opacity-60",
-        autoSize ? "col-start-1 row-start-1 w-full min-w-0" : "w-auto [field-sizing:content]",
+        "col-start-1 row-start-1 w-full min-w-0",
         inputClassName,
       )}
     />
@@ -163,21 +217,17 @@ export function EditableText({
     </button>
   );
 
-  if (!autoSize) {
-    return <span className={cn("inline-flex items-center", className)}>{input}{pencil}</span>;
-  }
-
   return (
     // The auto-sizing grid: an invisible copy of the text sets the column's
     // width and the input fills it, so the box is exactly as wide as what it
     // holds and grows as it is typed into. No measuring, no ref, no resize
     // observer. The browser does it as ordinary layout.
     <span
-      // Baseline, not bottom: this sits inline in a sentence ("Antagen … -
-      // skapad av …"), and an inline-grid takes its baseline from the first
-      // item in its first row, the sizer, which carries exactly the text
-      // metrics of the value. Aligning by the box instead would drop it by the
-      // descender and leave the date sitting low against the words beside it.
+      // Baseline, not bottom: this can sit inline in a sentence, and an
+      // inline-grid takes its baseline from the first item in its first row,
+      // the sizer, which carries exactly the text metrics of the value.
+      // Aligning by the box instead would drop it by the descender and leave
+      // the value sitting low against the words beside it.
       className={cn("inline-grid grid-cols-[auto_auto] items-center align-baseline", className)}
     >
       <span

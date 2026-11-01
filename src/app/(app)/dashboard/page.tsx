@@ -3,55 +3,40 @@ import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
 import { getDashboardExpenses } from "@/lib/data/expenses";
 import { countUnaccountedPurchases } from "@/lib/data/bank";
 import { getBudgetOverview } from "@/lib/data/budget-overview";
+import { paceOf } from "@/lib/budget/overview";
 import { buildQueue } from "@/lib/domain/queue";
 import { canViewBookkeeping, canAccessBudget, canViewMemberScores } from "@/lib/domain/permissions";
 import { getMemberScore, getMemberScores } from "@/lib/data/member-score";
-import { getMyMoney } from "@/lib/data/my-money";
 import { getPayoutAccount } from "@/lib/data/users";
 import { ownedResultUnits } from "@/lib/server/result-units";
-import { DashboardClient } from "./dashboard-client";
-import type { DashboardView } from "./view";
+import {
+  countStaleAttests,
+  getOverdueInvoices,
+  getStuckOwn,
+  getUnitInvoices,
+  getUpcoming,
+} from "@/lib/data/dashboard";
+import { DashboardClient, type BudgetFlags, type ForgottenRow } from "./dashboard-client";
 
-// How many of your own utlägg the dashboard previews before handing you off to
-// the list built for browsing. The old page said "senaste" and then rendered
-// every one of them, which made it an unbounded copy of /expenses.
+// How many of your own utlägg, and of your units' invoices, the dashboard
+// previews before handing you off to the list built for browsing.
 //
 // It lives here, on the server, because this is what decides how many rows are
 // *fetched*. It cannot live in dashboard-client: that module is "use client",
 // and a Server Component importing a value from one gets a client reference
-// rather than the value: `take: [object Function]`, which is exactly what
-// Prisma reported when it did.
+// rather than the value.
 const MINE_PREVIEW = 5;
 
-// How many members "Släpar efter" names. Enough to see who to chase this week;
-// the rest are a click away on the profile's Medlemmar tab.
-const BEHIND_PREVIEW = 5;
+// A member whose oldest purchase has waited this long is behind enough for the
+// treasury to chase.
+const BEHIND_DAYS = 30;
 
-// Two columns. The right one is yours and the same for everybody: what is
-// waiting on you, and your own utlägg. The left one depends on who you are,
-// because most members care about their own money and only a few about the
-// section's:
-//
-//   • answering for no budget: what the section owes you (getMyMoney), and a
-//     link to the budget for the curious.
-//   • an utskottsmästare: the result units they answer for.
-//   • skattmästeriet: every result unit.
-//
-// Somebody with both of the last two picks between them, the way Mina and Alla
-// are picked on Utlägg and Bank. The choice is in the URL as `?scope=`, the
-// same as on every list, and one they may not have falls back to the first
-// they do.
-//
-// It used to be one queue table for everyone, then a budget card for everyone.
-// The second was right that people did not know the budget existed and wrong
-// about who needed to: the members who answer for one.
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ scope?: string }>;
-}) {
+// Översikt is a strip across time and two cards under it. Glömt is what should
+// already have happened, Att göra is what waits on you now, Kommande is what
+// has a date soon. Under them, the result units off pace with their budget and
+// your own latest utlägg and invoices. Figures are on the pages these link to.
+export default async function DashboardPage() {
   const user = await requireUser();
-  const params = await searchParams;
   const now = new Date();
   // The header's räkenskapsår, as the calendar year the budget is kept in.
   // Without a synced year, this one.
@@ -59,76 +44,103 @@ export default async function DashboardPage({
   const year = fiscal ? Number(fiscal.fromDate.slice(0, 4)) : now.getFullYear();
   const during = fiscal ? fiscalYearWhere(fiscal) : undefined;
 
+  // Whose units the budget card watches: every one for the treasury, the ones
+  // you answer for as an utskottsmästare, none for everybody else.
   const owned = await ownedResultUnits(user);
-  const answersForUnits = owned.names.length > 0;
-  const readsBudget = canAccessBudget(user.capabilities);
-  const views: DashboardView[] = readsBudget
-    ? [
-        ...(answersForUnits ? (["unit"] as const) : []),
-        ...(answersForUnits || canViewBookkeeping(user.capabilities) ? (["section"] as const) : []),
-      ]
-    : [];
-  if (views.length === 0) views.push("personal");
-  const view = views.find((v) => v === params.scope) ?? views[0];
+  const watchesAll = canAccessBudget(user.capabilities) && canViewBookkeeping(user.capabilities);
+  const watchesOwn = canAccessBudget(user.capabilities) && owned.names.length > 0;
 
-  const [{ queueCandidates, mine }, unaccountedPurchases, payout, overview, money, score, everyone] =
-    await Promise.all([
-      // What waits on you and your own latest, in the year too: Översikt
-      // reads the same year as every list it links to. See docs/navigation.md.
-      getDashboardExpenses(user, MINE_PREVIEW, { during }),
-      countUnaccountedPurchases(user.id, { during }),
-      getPayoutAccount(user.id),
-      view === "personal" ? null : getBudgetOverview(year),
-      view === "personal" ? getMyMoney(user.id, year) : null,
-      // A rolling year, not the header's: see lib/domain/member-score.ts.
-      getMemberScore(user.id),
-      canViewMemberScores(user.capabilities) ? getMemberScores() : null,
-    ]);
+  const [
+    { queueCandidates, mine },
+    unaccountedPurchases,
+    payout,
+    overview,
+    score,
+    everyone,
+    upcoming,
+    stuck,
+    overdue,
+    invoices,
+  ] = await Promise.all([
+    getDashboardExpenses(user, MINE_PREVIEW, { during }),
+    countUnaccountedPurchases(user.id, { during }),
+    getPayoutAccount(user.id),
+    watchesAll || watchesOwn ? getBudgetOverview(year) : null,
+    // A rolling year, not the header's: see lib/domain/member-score.ts.
+    getMemberScore(user.id),
+    canViewMemberScores(user.capabilities) ? getMemberScores() : null,
+    getUpcoming(user),
+    getStuckOwn(user.id),
+    getOverdueInvoices(user),
+    getUnitInvoices(user, MINE_PREVIEW),
+  ]);
 
-  // Only what the two cards draw. The breakdowns stay on the server until
-  // somebody opens one on the profile.
-  const oldest = score.waiting[0];
-  const ownScore = {
-    stars: score.stars,
-    next: oldest ? { title: oldest.title, startedOn: oldest.startedOn } : null,
-  };
-  const behind =
-    everyone &&
-    everyone
-      .filter((r) => r.score.waiting.length > 0)
-      .sort((a, b) => b.score.waiting[0].days - a.score.waiting[0].days)
-      .slice(0, BEHIND_PREVIEW)
-      .map((r) => ({
-        userId: r.userId,
-        name: r.name,
-        stars: r.score.stars,
-        waiting: r.score.waiting.length,
-        oldestDays: r.score.waiting[0].days,
-      }));
+  const queue = buildQueue(queueCandidates, user);
+  const staleAttests = await countStaleAttests(
+    queue.filter((q) => q.action === "ATTEST").map((q) => q.expense.id),
+  );
 
-  // Decided here rather than in the browser, so the marker does not move
+  // Glömt: counts that stand for many first, then the single things, the
+  // longest forgotten first. A draft whose filing deadline is coming up is
+  // under Kommande with its date instead, which says more than its age does.
+  const deadlineIds = new Set(upcoming.filter((u) => u.kind === "deadline").map((u) => u.id));
+  const behind = everyone?.filter((r) => (r.score.waiting[0]?.days ?? 0) > BEHIND_DAYS).length ?? 0;
+  const forgotten: ForgottenRow[] = [
+    ...(staleAttests > 0 ? [{ kind: "attestWaiting" as const, count: staleAttests }] : []),
+    ...(behind > 0 ? [{ kind: "membersBehind" as const, count: behind }] : []),
+    ...[
+      // What the redovisningsbetyg already counts as late: drafts and card
+      // purchases past its grace days.
+      ...score.waiting
+        .filter((w) => w.kind !== "submitted" && !deadlineIds.has(w.id))
+        .map((w) => ({
+          kind: w.kind === "cardPurchase" ? ("cardPurchase" as const) : ("draft" as const),
+          id: w.id,
+          title: w.title,
+          days: w.days,
+        })),
+      ...stuck.map((s) => ({ kind: "stuck" as const, ...s })),
+      ...overdue.map((o) => ({ kind: "invoiceOverdue" as const, ...o })),
+    ].sort((a, b) => b.days - a.days),
+  ];
+
+  // Decided here rather than in the browser, so the figure does not move
   // between the server's render and the client's.
-  // A past year is all gone, a future one not begun.
   const start = fiscal ? Date.parse(`${fiscal.fromDate}T00:00:00`) : new Date(year, 0, 1).getTime();
   const end = fiscal ? Date.parse(`${fiscal.toDate}T23:59:59`) : new Date(year + 1, 0, 1).getTime();
-  const yearElapsed = Math.min(1, Math.max(0, (now.getTime() - start) / (end - start)));
+  const elapsed = Math.min(1, Math.max(0, (now.getTime() - start) / (end - start)));
+
+  let budget: BudgetFlags | null = null;
+  if (overview) {
+    const units = watchesAll
+      ? overview.units
+      : overview.units.filter((u) => u.name !== null && owned.names.includes(u.name));
+    budget = {
+      budgetId: overview.budget?.id ?? null,
+      scope: watchesAll ? "all" : "own",
+      ownCount: owned.names.length,
+      elapsed: Math.round(elapsed * 100),
+      flagged: units.flatMap((u) => {
+        const pace = paceOf(u.cost, elapsed);
+        if (pace !== "OVER" && pace !== "AHEAD") return [];
+        return [{ name: u.name, pace, used: Math.round((u.cost.actual / u.cost.budget) * 100) }];
+      }),
+    };
+  }
 
   return (
     <DashboardClient
-      view={view}
-      views={views}
-      queue={buildQueue(queueCandidates, user)}
+      queue={queue}
       unaccountedPurchases={unaccountedPurchases}
       payoutMissing={!payout.clearing || !payout.account}
-      budget={overview && { overview, ownUnits: owned.names, yearElapsed }}
-      money={money}
-      showBudgetLink={readsBudget}
+      forgotten={forgotten}
+      upcoming={upcoming}
+      budget={budget}
       // Already newest first out of the query: your own list answers "where did
-      // mine get to", which reads backwards from the queue, where the oldest
-      // thing is the urgent one.
+      // mine get to", which reads backwards from the queue.
       mine={mine}
-      score={ownScore}
-      behind={behind}
+      invoices={invoices}
+      stars={score.stars}
     />
   );
 }

@@ -34,6 +34,5 @@
   },
   "behindTitle": "Falling behind",
   "behindAll": "Every member's score",
-  "ownTitle": "Your filing score",
-  "ownHint": "Submit {title} from {date} to raise it."
+  "ownTitle": "Your filing score"
 }

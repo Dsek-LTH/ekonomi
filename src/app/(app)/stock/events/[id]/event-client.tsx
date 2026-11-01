@@ -42,11 +42,12 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
+import { EditableText } from "@/components/ui/editable-text";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconDots, IconList, IconLock, IconPencil, IconSwap, IconTrash, IconViewTable, IconX } from "@/components/ui/icons";
+import { IconDots, IconList, IconLock, IconSwap, IconTrash, IconViewTable, IconX } from "@/components/ui/icons";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -57,7 +58,6 @@ import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
 import { tagsInUse } from "@/lib/stock/tags";
 import { SheetHeader, SheetSaveBar } from "./sheet-chrome";
-import { EventDialog } from "../event-dialog";
 import {
   CELL_KINDS,
   WHOLE,
@@ -76,7 +76,7 @@ import { ChangeFeed } from "@/components/stock/change-feed";
 import { Bottle } from "@/components/stock/bottle-levels";
 import { CategoryMark } from "@/components/stock/category-mark";
 import { CATEGORIES } from "@/lib/domain/categories";
-import type { WriteStockCells } from "@/lib/api/schemas/stock";
+import type { PatchStockEvent, WriteStockCells } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
 import { usePhone } from "@/lib/ui/media";
 import { formatMovementLitres } from "@/lib/ui/format";
@@ -128,7 +128,6 @@ export default function EventClient({
   const [shifted, setShifted] = useState<Record<string, { units: number; open: OpenBottles }>>({});
   const [added, setAdded] = useState<string[]>([]);
   const [column, setColumn] = useState<CellKind>("CHECKOUT");
-  const [editing, setEditing] = useState(false);
   /** The sheet, or how its figures got there. See the page's collections. */
   const [view, setView] = useState<"sheet" | "changes">("sheet");
   const locale = useLocale();
@@ -494,6 +493,23 @@ export default function EventClient({
    * an event that no longer exists cannot be the thing anybody meant to type
    * those figures into.
    */
+  // Name and date are edited in place. A night entered under the wrong day is
+  // the ordinary mistake, and moving it moves everything booked on it.
+  async function rename(raw: string) {
+    const name = raw.trim();
+    if (!name) { notify.error(t("event.field.nameRequired")); return false; }
+    return patchEvent({ name, date: event.date });
+  }
+  async function patchEvent(body: PatchStockEvent) {
+    const done = await mutate(`/api/stock/events/${event.id}`, {
+      method: "PATCH",
+      body,
+      error: t("event.editFailed"),
+      success: t("event.edited"),
+    });
+    return done !== null;
+  }
+
   async function remove() {
     const ok = await confirm({
       title: t("event.removeTitle", { name: event.name }),
@@ -814,11 +830,38 @@ export default function EventClient({
     month: "long",
     year: "numeric",
   }).format(new Date(`${event.date}T12:00:00`));
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(
+    new Date(`${event.date}T12:00:00`),
+  );
 
   return (
     <PageShell
-      title={event.name}
-      subtitle={longDate}
+      title={
+        <EditableText
+          value={event.name}
+          label={t("event.rename")}
+          placeholder={t("event.field.namePlaceholder")}
+          disabled={!canManage}
+          onSave={rename}
+        />
+      }
+      subtitle={
+        canManage ? (
+          // The weekday stays in words beside the field: a pub is
+          // "fredagens", and 2026-10-17 had to be worked out.
+          <>
+            <span className="capitalize">{weekday}</span>{" "}
+            <EditableText
+              value={event.date}
+              type="date"
+              label={t("event.changeDate")}
+              onSave={(date) => (date ? patchEvent({ name: event.name, date }) : false)}
+            />
+          </>
+        ) : (
+          longDate
+        )
+      }
       back="/stock/events"
       width="wide"
       // What applies to the whole night: how it is drawn, and the menu of what
@@ -848,10 +891,6 @@ export default function EventClient({
               size="sm"
               icon={<IconDots className="size-4" />}
             >
-              <MenuItem onClick={() => setEditing(true)}>
-                <IconPencil className="size-4 shrink-0 text-muted" />
-                {t("event.edit")}
-              </MenuItem>
               <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
                 <IconTrash className="size-4 shrink-0" />
                 {t("event.remove")}
@@ -861,12 +900,6 @@ export default function EventClient({
         </>
       }
     >
-      {editing && (
-        <EventDialog
-          event={{ id: event.id, name: event.name, date: event.date }}
-          onClose={() => setEditing(false)}
-        />
-      )}
       {view === "changes" ? (
         <Card className="overflow-hidden">
           <ChangeFeed changes={changes} scope="event" />

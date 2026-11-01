@@ -112,6 +112,7 @@
   },
   "products": {
     "new": "Ny produkt",
+    "actions": "Mer om {name}",
     "edit": "Ändra",
     "remove": "Ta bort",
     "removed": "Produkten togs bort.",
@@ -285,8 +286,8 @@
     "newHint": "Ett tillfälle är en kväll eller ett evenemang. Allt som tas ut och lämnas tillbaka bokförs på det.",
     "create": "Skapa",
     "saveFailed": "Tillfället kunde inte skapas.",
-    "edit": "Ändra tillfället",
-    "editHint": "Byter du datum flyttas allt som är bokfört på tillfället till det nya datumet, och lagervärdet räknas om.",
+    "rename": "Byt namn på tillfället",
+    "changeDate": "Flytta tillfället till ett annat datum",
     "edited": "Tillfället sparades.",
     "editFailed": "Tillfället kunde inte sparas.",
     "remove": "Ta bort tillfället",

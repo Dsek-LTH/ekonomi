@@ -149,7 +149,7 @@ that cares asks for it there.
 - Översikt's queue, your own latest utlägg and the unaccounted card purchases
   are in the year too, and so are the counts beside the nav's links, so a
   count never promises rows the list it leads to then hides.
-- It is the year of Översikt's budget figures, of the Budget list, of Utfall's
+- It is the year of Översikt's budget card, of the Budget list, of Utfall's
   report (which has no year field of its own any more) and of Bokslut
   (`/closing`, `/closing/vouchers`, `/closing/accounts`), which has no year in
   its path or list of years to pick from.

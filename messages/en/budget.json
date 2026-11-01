@@ -124,15 +124,8 @@
     "incompleteSum": "incomplete - a row could not be computed",
     "view": "View",
     "detailBudget": "Detail budget",
-    "actions": "More about the budget",
-    "edit": "Edit budget",
-    "editHint": "The name shows in the budget list and in comparisons. The adoption date decides which year the budget is for.",
-    "editSave": "Save",
-    "field": {
-      "name": "Name",
-      "adoptedAt": "Adopted",
-      "adoptedAtHint": "The day the meeting adopted the budget. Leave empty if it has not been adopted yet."
-    }
+    "changeName": "Rename the budget",
+    "changeAdoptedAt": "Change the adoption date"
   },
   "col": {
     "konto": "Account",

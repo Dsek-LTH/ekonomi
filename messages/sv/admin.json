@@ -101,7 +101,6 @@
     "newLocalSubtitle": "Skapas här, inte i Fortnox, och skickas aldrig med vid export. För sådant som inte ska bokföras på ett kostnadsställe där, till exempel alkohol som bokas på balanskonto.",
     "codeAndName": "Kod och benämning",
     "add": "Lägg till",
-    "save": "Spara",
     "created": "{code} tillagt.",
     "createFailed": "Kunde inte skapa kostnadsstället",
     "renamed": "{code} heter nu {name}.",
@@ -133,7 +132,8 @@
       "deleted": "tog bort {count}",
       "madeLocal": "gjorde {count} lokala eftersom de inte finns i Fortnox"
     },
-    "rename": "Byt namn",
+    "renameAria": "Byt namn på {code}",
+    "nameRequired": "Kostnadsstället behöver ett namn.",
     "rowActions": "Åtgärder för {code}",
     "colShortName": "Kortnamn",
     "shortNameHint": "Vad kostnadsstället heter under sin resultatenhets rubrik, till exempel i budgeten. Tomt visar hela benämningen.",

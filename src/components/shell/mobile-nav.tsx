@@ -55,7 +55,6 @@ export function MobileNav({
   onClose,
   overview,
   groups,
-  help,
   settings,
   isActive,
   counts,
@@ -66,7 +65,6 @@ export function MobileNav({
   onClose: () => void;
   overview: NavItem;
   groups: NavGroup[];
-  help: NavItem;
   /** Absent for a reader without SETTINGS. Pinned beside Help rather than
    *  sorted into a group; see the same choice in app-shell.tsx. */
   settings: NavItem | null;
@@ -192,12 +190,8 @@ export function MobileNav({
           </div>
         ))}
 
-        {/* Settings paired with Help here for the same reason the rail pins
-            them together: neither is a job, both are always there. */}
-        <div className={CARD}>
-          {settings && navRow(settings)}
-          {navRow(help)}
-        </div>
+        {/* Help is not here: it is in the header, one click from every page. */}
+        {settings && <div className={CARD}>{navRow(settings)}</div>}
 
         {/* The account block: what a page load would be too much for, and the
             one warning that cannot wait for one. */}

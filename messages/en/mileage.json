@@ -2,9 +2,6 @@
   "newTitle": "New mileage claim",
   "description": "Errand",
   "descriptionHint": "What the journey was for, e.g. \"Collect the sponsor package in Malmö\".",
-  "step": {
-    "journey": "The journey"
-  },
   "journeyDate": "Date driven",
   "dateFuture": "The journey is in the future. Correct the date to the day you drove.",
   "dateTooLate": "Older than {days} days. A mileage claim must be filed within {days} days of the journey. You can apply for a waiver: finish the journey, save it as a draft and get in touch with the skattmästare, who decides whether it is accepted anyway.",
@@ -30,7 +27,6 @@
   "km": "{km} km",
   "otherType": "Was it something else?",
   "otherTypeLink": "Make an ordinary expense instead",
-  "deadlineHint": "A mileage claim must be filed within {days} days of the journey.",
   "perJourneyHint": "If you drove several times, file one claim per journey.",
   "documentName": "Expense report",
   "documentTitle": "The expense report",
@@ -75,5 +71,9 @@
     "from": "From {date}",
     "showEarlier": "Show earlier ({count})",
     "hideEarlier": "Hide earlier"
+  },
+  "missing": {
+    "route": "route",
+    "readings": "odometer readings"
   }
 }

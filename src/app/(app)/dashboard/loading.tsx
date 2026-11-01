@@ -1,18 +1,36 @@
 import { Card } from "@/components/ui/card";
-import { Skeleton, SkeletonPage, SkeletonTable } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 
-// Two lists: what needs you, then your own.
+// The page's shape: the strip of three (Glömt, Att göra, Kommande), then two
+// cards under it.
 export default function Loading() {
   return (
-    <SkeletonPage action titleWidth="w-64">
-      {[0, 1].map((i) => (
-        <Card key={i}>
-          <div className="border-b border-border px-inset py-4">
-            <Skeleton className="h-5 w-40" />
-          </div>
-          <SkeletonTable rows={4} columns={5} toolbar={false} />
-        </Card>
-      ))}
+    <SkeletonPage width="content" action titleWidth="w-40">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {[3, 3, 3].map((rows, i) => (
+          <ListCard key={i} rows={rows} />
+        ))}
+      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        {[2, 5].map((rows, i) => (
+          <ListCard key={i} rows={rows} />
+        ))}
+      </div>
     </SkeletonPage>
+  );
+}
+
+function ListCard({ rows }: { rows: number }) {
+  return (
+    <Card>
+      <div className="border-b border-border px-inset py-4">
+        <Skeleton className="h-5 w-28" />
+      </div>
+      <div className="space-y-3 px-inset py-4">
+        {Array.from({ length: rows }, (_, r) => (
+          <Skeleton key={r} className="h-4 w-full" />
+        ))}
+      </div>
+    </Card>
   );
 }

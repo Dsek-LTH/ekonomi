@@ -131,15 +131,3 @@ export function paceOf(cost: BudgetFigure, elapsed: number): Pace | null {
   if (share > elapsed + 0.1) return "AHEAD";
   return "ON_TRACK";
 }
-
-/** Several units' figures added up, for a row of totals over them. */
-export function totalOf(units: readonly { income: BudgetFigure; cost: BudgetFigure }[]) {
-  const total = { income: zero(), cost: zero() };
-  for (const u of units) {
-    for (const side of ["income", "cost"] as const) {
-      total[side].budget += u[side].budget;
-      total[side].actual += u[side].actual;
-    }
-  }
-  return total;
-}

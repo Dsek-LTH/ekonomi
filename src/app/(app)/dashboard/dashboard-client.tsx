@@ -1,38 +1,21 @@
 "use client";
 
 import { expensesHref } from "@/app/(app)/expenses/scope";
+import { InvoiceStatusPill } from "@/app/(app)/invoices/invoice-bits";
 import { useMemo } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { NewExpenseMenu } from "@/components/new-expense-menu";
 import { Card, CardHeader } from "@/components/ui/card";
-import { EmptyNote } from "@/components/ui/empty-state";
-import { Amount } from "@/components/ui/amount";
+import { Notice } from "@/components/ui/notice";
 import { StatusPill, Tag } from "@/components/ui/status-pill";
 import { IconChevronRight } from "@/components/ui/icons";
-import { type Column } from "@/components/ui/data-table";
-import { ClientDataTable } from "@/components/ui/client-data-table";
-import { useTableControls } from "@/lib/data/use-list-query";
-import {
-  expenseAmountColumn,
-  expenseDateColumn,
-  expensePaymentTypeColumn,
-  expenseReferenceColumn,
-  expenseStatusColumn,
-  expenseTitleColumn,
-} from "@/components/columns/expense-columns";
+import { StarRating } from "@/components/member-score";
+import { cn } from "@/lib/ui/utils";
 import type { QueueAction, QueueItem } from "@/lib/domain/queue";
 import type { Expense } from "@/lib/domain/types";
-import type { BudgetOverview } from "@/lib/data/budget-overview";
-import type { MyMoney } from "@/lib/data/my-money";
-import { useFormat } from "@/lib/ui/use-format";
-import { StarRating } from "@/components/member-score";
-import { BudgetOverviewCard } from "./budget-overview-card";
-import { BudgetKpis } from "./budget-kpis";
-import { MyMoneyCard } from "./my-money-card";
-import type { DashboardView } from "./view";
+import type { UnitInvoice, UpcomingItem } from "@/lib/data/dashboard";
 
 // The queue's action reuses the app's status colours rather than inventing a
 // second language: purple is the authority chain, danger is "it came back",
@@ -57,140 +40,154 @@ const ACTION_HREF: Record<QueueAction, string> = {
 
 const ACTION_ORDER: QueueAction[] = ["FIX", "SUBMIT", "ATTEST", "BOOK", "EXPORT"];
 
-// See page.tsx for who gets which view and why.
+// Where each thing coming up is looked at.
+const UPCOMING_HREF: Record<UpcomingItem["kind"], (id: string) => string> = {
+  deadline: (id) => `/expenses/${id}`,
+  invoice: (id) => `/invoices/${id}`,
+  pickup: (id) => `/contracts/${id}`,
+  contractEnds: (id) => `/contracts/${id}`,
+  stockEvent: (id) => `/stock/events/${id}`,
+};
+
+/** How many rows Glömt shows before saying how many more there are. */
+const FORGOTTEN_SHOWN = 6;
+
+const LINK =
+  "inline-flex items-center gap-0.5 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current";
+
+/** One line under Glömt: a count standing for many, or one thing. */
+export type ForgottenRow =
+  | { kind: "attestWaiting" | "membersBehind"; count: number }
+  | { kind: "draft" | "cardPurchase" | "stuck" | "invoiceOverdue"; id: string; title: string; days: number };
+
+function forgottenHref(r: ForgottenRow): string {
+  switch (r.kind) {
+    case "attestWaiting":
+      return ACTION_HREF.ATTEST;
+    case "membersBehind":
+      return "/profile/members";
+    case "cardPurchase":
+      // Straight into an utlägg for that purchase, matched already.
+      return `/expenses/new?txn=${r.id}`;
+    case "invoiceOverdue":
+      return `/invoices/${r.id}`;
+    default:
+      return `/expenses/${r.id}`;
+  }
+}
+
+/** The result units off pace with their cost budget. See page.tsx. */
+export interface BudgetFlags {
+  budgetId: string | null;
+  /** Every unit (the treasury) or the ones the viewer answers for. */
+  scope: "all" | "own";
+  ownCount: number;
+  /** How much of the year has gone, in percent. */
+  elapsed: number;
+  flagged: { name: string | null; pace: "OVER" | "AHEAD"; used: number }[];
+}
+
+// See page.tsx for what this page is for.
 export function DashboardClient({
-  view,
-  views,
   queue,
   unaccountedPurchases,
   payoutMissing,
-  mine,
+  forgotten,
+  upcoming,
   budget,
-  money,
-  showBudgetLink,
-  score,
-  behind,
+  mine,
+  invoices,
+  stars,
 }: {
-  view: DashboardView;
-  /** The views this person may pick between. One is not a choice. */
-  views: DashboardView[];
   queue: QueueItem[];
   /** The viewer's own card purchases with no utlägg yet. */
   unaccountedPurchases: number;
   /** No clearing and account number on file, so nothing can be paid out. */
   payoutMissing: boolean;
+  forgotten: ForgottenRow[];
+  upcoming: UpcomingItem[];
+  /** Null for a viewer who answers for no budget. */
+  budget: BudgetFlags | null;
   mine: Expense[];
-  /** For the unit and section views. */
-  budget: { overview: BudgetOverview; ownUnits: string[]; yearElapsed: number } | null;
-  /** For the personal view. */
-  money: MyMoney | null;
-  showBudgetLink: boolean;
-  /** The viewer's own redovisningsbetyg, and the oldest purchase still waiting. */
-  score: OwnScore;
-  /** Who has purchases waiting the longest, for the holders of
-   *  MEMBER_SCORE_VIEW. Null for everyone else. */
-  behind: BehindRow[] | null;
+  /** The latest in the viewer's own result units. Empty for most. */
+  invoices: UnitInvoice[];
+  /** The viewer's own redovisningsbetyg. */
+  stars: number | null;
 }) {
   const t = useTranslations("dashboard");
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-
-  function setView(next: string) {
-    const q = new URLSearchParams(params.toString());
-    // `scope`, as on every list: which reading of the page is whose.
-    q.set("scope", next);
-    router.push(`${pathname}?${q.toString()}`);
-  }
-
-  const unitsInView =
-    budget &&
-    (view === "unit"
-      ? budget.overview.units.filter((u) => u.name !== null && budget.ownUnits.includes(u.name))
-      : budget.overview.units);
+  const fresh = mine.length === 0 && invoices.length === 0;
 
   return (
-    <PageShell
-      title={t("title")}
-      collections={
-        views.length > 1
-          ? {
-              label: t("viewLabel"),
-              value: view,
-              onChange: setView,
-              options: views.map((v) => ({ value: v, label: t(`view.${v}`) })),
-            }
-          : undefined
-      }
-    >
-      {/* Yours on the right, the view on the left. On a phone the right
-          column comes first: what is waiting on you outranks any figure. */}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="order-2 flex min-w-0 flex-col gap-6 lg:order-1">
-          {view === "personal" ? (
-            <>
-              {money && <MyMoneyCard money={money} />}
-              {mine.length > 0 ? <MineTable mine={mine} /> : <FirstRun />}
-              {showBudgetLink && (
-                <Link
-                  href="/budget"
-                  className="inline-flex items-center gap-1 self-start text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
-                >
-                  {t("budgetLink")}
-                  <IconChevronRight className="size-4" />
-                </Link>
-              )}
-            </>
-          ) : (
-            budget &&
-            unitsInView && (
-              <>
-                <BudgetKpis units={unitsInView} />
-                <BudgetOverviewCard
-                  overview={budget.overview}
-                  ownUnits={budget.ownUnits}
-                  yearElapsed={budget.yearElapsed}
-                  only={view === "unit" ? budget.ownUnits : undefined}
-                />
-              </>
-            )
-          )}
+    <PageShell title={t("title")} width="content" aside={<NewExpenseMenu size="sm" />}>
+      <div className="flex flex-col gap-6">
+        {payoutMissing && (
+          <Link href="/profile" className="hover:underline">
+            <Notice>{t("payoutMissing")}</Notice>
+          </Link>
+        )}
+        {/* Past, now, soon, read left to right. On a phone they stack in the
+            same order, so what has been forgotten is the first thing. */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <ForgottenCard rows={forgotten} />
+          <TodoCard queue={queue} unaccountedPurchases={unaccountedPurchases} />
+          <UpcomingCard items={upcoming} />
         </div>
-        <div className="order-1 flex flex-col gap-6 lg:order-2">
-          <YouPanel
-            queue={queue}
-            unaccountedPurchases={unaccountedPurchases}
-            payoutMissing={payoutMissing}
-            // The personal view shows them large on the left already.
-            mine={view === "personal" ? null : mine}
-            score={score}
-          />
-          {behind && behind.length > 0 && <BehindCard rows={behind} />}
-        </div>
+        {(budget || !fresh) && (
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            {budget && <BudgetCard budget={budget} />}
+            {!fresh && (
+              <div className={cn("min-w-0", !budget && "lg:col-span-2")}>
+                <MineCard mine={mine} invoices={invoices} stars={stars} />
+              </div>
+            )}
+          </div>
+        )}
+        {/* Before the first utlägg, the guide to making one. Wide on purpose
+            (its steps sit two by two), so it spans the page. */}
+        {fresh && <FirstRun />}
       </div>
     </PageShell>
   );
 }
 
-// The right column: the same for everybody. What is waiting on you as a list
-// of counts that go where the work is, a warning if you cannot be paid, the
-// way to start an utlägg, and (when the left column is the budget) your own.
-function YouPanel({
-  queue,
-  unaccountedPurchases,
-  payoutMissing,
-  mine,
-  score,
-}: {
-  queue: QueueItem[];
-  unaccountedPurchases: number;
-  payoutMissing: boolean;
-  mine: Expense[] | null;
-  score: OwnScore;
-}) {
+// What should already have happened and has not.
+function ForgottenCard({ rows }: { rows: ForgottenRow[] }) {
+  const t = useTranslations("dashboard.forgotten");
+  const when = useRelativeDays();
+  const shown = rows.slice(0, FORGOTTEN_SHOWN);
+  const more = rows.length - shown.length;
+  const b = (c: React.ReactNode) => <span className="font-medium">{c}</span>;
+
+  return (
+    <Card className="h-full">
+      <CardHeader title={t("title")} />
+      {rows.length === 0 ? (
+        <p className="px-inset py-4 text-sm text-muted">{t("empty")}</p>
+      ) : (
+        <ul className="px-2 py-2">
+          {shown.map((r) => (
+            <li key={"id" in r ? `${r.kind}-${r.id}` : r.kind}>
+              <Row href={forgottenHref(r)}>
+                <span aria-hidden className="size-2 shrink-0 rounded-full bg-danger" />
+                <span className="min-w-0 flex-1">
+                  {"count" in r
+                    ? t(r.kind, { count: r.count })
+                    : t.rich(r.kind, { title: r.title || t("untitled"), b })}
+                </span>
+                {"days" in r && <span className="shrink-0 text-xs text-muted">{when(-r.days)}</span>}
+              </Row>
+            </li>
+          ))}
+          {more > 0 && <li className="px-2 pt-1 text-xs text-muted">{t("more", { count: more })}</li>}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+// What waits on you, as counts that go where the work is.
+function TodoCard({ queue, unaccountedPurchases }: { queue: QueueItem[]; unaccountedPurchases: number }) {
   const t = useTranslations("dashboard");
-  const tScore = useTranslations("score");
-  const { date } = useFormat();
 
   const counts = useMemo(() => {
     const n = new Map<QueueAction, number>();
@@ -199,225 +196,219 @@ function YouPanel({
   }, [queue]);
 
   return (
-    <Card>
-      <CardHeader title={t("youTitle")} action={<NewExpenseMenu size="sm" />} />
-      {payoutMissing && (
-        <Link
-          href="/profile"
-          className="flex items-start gap-2 border-b border-border bg-warning-soft px-inset py-3 text-sm text-warning hover:underline"
-        >
-          {t("payoutMissing")}
-        </Link>
-      )}
-      <div className="px-inset pt-3 text-xs font-medium text-muted">{t("todoTitle")}</div>
+    <Card className="h-full">
+      <CardHeader title={t("todoTitle")} />
       {counts.length === 0 && unaccountedPurchases === 0 ? (
-        <p className="px-inset pb-4 pt-1 text-sm text-muted">{t("todoEmpty")}</p>
+        <p className="px-inset py-4 text-sm text-muted">{t("todoEmpty")}</p>
       ) : (
-        <ul className="px-2 pb-3 pt-1">
+        <ul className="px-2 py-2">
           {counts.map(({ action, count }) => (
             <li key={action}>
-              <TodoRow href={ACTION_HREF[action]} count={count} tone={ACTION_TONE[action]}>
-                {t(`todo.${action}`, { count })}
-              </TodoRow>
+              <Row href={ACTION_HREF[action]}>
+                <CountTag tone={ACTION_TONE[action]} count={count} />
+                <span className="min-w-0 flex-1">{t(`todo.${action}`, { count })}</span>
+              </Row>
             </li>
           ))}
           {unaccountedPurchases > 0 && (
             <li>
-              <TodoRow href="/bank?scope=mine" count={unaccountedPurchases} tone="warning">
-                {t("todo.PURCHASES", { count: unaccountedPurchases })}
-              </TodoRow>
+              <Row href="/bank?scope=mine">
+                <CountTag tone="warning" count={unaccountedPurchases} />
+                <span className="min-w-0 flex-1">
+                  {t("todo.PURCHASES", { count: unaccountedPurchases })}
+                </span>
+              </Row>
             </li>
           )}
         </ul>
       )}
-      {/* The member's own stars, where they look every day rather than
-          only on the profile, and what sending would raise them. Not shown
-          while there are no stars and nothing waits: a "Ny" alone says
-          nothing worth the room. */}
-      {(score.stars !== null || score.next) && (
-        <Link href="/profile" className="block border-t border-border px-inset py-3 hover:bg-hover">
-          <span className="flex items-center justify-between gap-3">
-            <span className="text-xs font-medium text-muted">{tScore("ownTitle")}</span>
-            <StarRating value={score.stars} />
-          </span>
-          {score.next && (
-            <span className="mt-1 block text-sm">
-              {tScore("ownHint", { title: score.next.title || tScore("kind.draft"), date: date(score.next.startedOn) })}
-            </span>
-          )}
-        </Link>
-      )}
-      {mine && (
-        <div className="border-t border-border">
-          <div className="flex items-center justify-between px-inset pt-3 text-xs font-medium text-muted">
-            <span>{t("mineTitle")}</span>
-            <Link href="/expenses" className="inline-flex items-center gap-0.5 text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
-              {t("allExpenses")}
-              <IconChevronRight className="size-3.5" />
-            </Link>
-          </div>
-          {mine.length === 0 ? (
-            <EmptyNote size="compact">{t("mineNone")}</EmptyNote>
-          ) : (
-            <ul className="px-2 pb-3 pt-1">
-              {mine.map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={`/expenses/${e.id}`}
-                    className="flex items-center gap-3 rounded-control px-2 py-2 hover:bg-hover"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{e.title}</span>
-                      <StatusPill status={e.status} className="mt-1" />
-                    </span>
-                    <Amount value={e.grossAmount} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    </Card>
+  );
+}
+
+// Things with a date, soonest first.
+function UpcomingCard({ items }: { items: UpcomingItem[] }) {
+  const t = useTranslations("dashboard.upcoming");
+  const when = useRelativeDays();
+  return (
+    <Card className="h-full">
+      <CardHeader title={t("title")} />
+      {items.length === 0 ? (
+        <p className="px-inset py-4 text-sm text-muted">{t("empty")}</p>
+      ) : (
+        <ul className="px-2 py-2">
+          {items.map((i) => (
+            <li key={`${i.kind}-${i.id}`}>
+              <Row href={UPCOMING_HREF[i.kind](i.id)}>
+                <span className="min-w-0 flex-1">
+                  {t.rich(i.kind, {
+                    title: i.title || t("untitled"),
+                    b: (c) => <span className="font-medium">{c}</span>,
+                  })}
+                </span>
+                <span className="shrink-0 text-xs text-muted">{when(i.inDays)}</span>
+              </Row>
+            </li>
+          ))}
+        </ul>
       )}
     </Card>
   );
 }
 
-interface OwnScore {
-  stars: number | null;
-  next: { title: string; startedOn: string } | null;
-}
+// Only the units that are off pace, each as a sentence. One that keeps up with
+// the year is not news, so the card says so in a line instead of listing it.
+function BudgetCard({ budget }: { budget: BudgetFlags }) {
+  const t = useTranslations("dashboard.budget");
+  const href = budget.budgetId ? `/budget/${budget.budgetId}` : "/budget";
 
-interface BehindRow {
-  userId: string;
-  name: string;
-  stars: number | null;
-  waiting: number;
-  oldestDays: number;
-}
-
-// For the one who chases late utlägg: the members whose purchases have waited
-// longest, each opening their breakdown on the profile's Medlemmar tab. Absent
-// when nobody is behind, rather than a card saying so every day.
-function BehindCard({ rows }: { rows: BehindRow[] }) {
-  const t = useTranslations("score");
-  const tList = useTranslations("score.list");
   return (
     <Card>
       <CardHeader
-        title={t("behindTitle")}
+        title={t("title")}
         action={
-          <Link
-            href="/profile/members"
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
-          >
-            {t("behindAll")}
-            <IconChevronRight className="size-3.5" />
+          <Link href={href} className={LINK}>
+            {t("open")}
+            <IconChevronRight className="size-4" />
           </Link>
         }
       />
-      <ul className="px-2 pb-3 pt-1">
-        {rows.map((r) => (
-          <li key={r.userId}>
-            <Link
-              href={`/profile/members?id=${r.userId}`}
-              className="flex items-center gap-3 rounded-control px-2 py-2 hover:bg-hover"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{r.name}</span>
-                <span className="block truncate text-xs text-muted">
-                  {tList("waitingSummary", { count: r.waiting, days: r.oldestDays })}
-                </span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {!budget.budgetId ? (
+        <p className="px-inset py-4 text-sm text-muted">{t("noBudget")}</p>
+      ) : budget.flagged.length === 0 ? (
+        <p className="px-inset py-4 text-sm text-muted">
+          {budget.scope === "all" ? t("allFine") : t("ownFine", { count: budget.ownCount })}
+        </p>
+      ) : (
+        <ul className="px-2 py-2">
+          {budget.flagged.map((u) => {
+            const unit = u.name ?? t("noUnit");
+            return (
+              <li key={unit}>
+                <Row href={href}>
+                  <span
+                    aria-hidden
+                    className={cn("size-2 shrink-0 rounded-full", u.pace === "OVER" ? "bg-danger" : "bg-warning")}
+                  />
+                  <span className="min-w-0 flex-1">
+                    {u.pace === "OVER"
+                      ? t("over", { unit })
+                      : t("ahead", { unit, used: u.used, elapsed: budget.elapsed })}
+                  </span>
+                </Row>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Card>
   );
 }
 
-// A row in a list rather than a button: the column is narrow, and a stack of
-// buttons reads as a toolbar. The count is a tag in the queue's colour for that
-// action, the language the lists it opens already use.
-function TodoRow({
+// Your own latest utlägg, and for an utskottsmästare the latest invoices in
+// their units, by name and where each one is. Amounts and dates are on the
+// lists, one click away.
+function MineCard({ mine, invoices, stars }: { mine: Expense[]; invoices: UnitInvoice[]; stars: number | null }) {
+  const t = useTranslations("dashboard");
+  const tScore = useTranslations("score");
+  const both = mine.length > 0 && invoices.length > 0;
+  return (
+    <Card>
+      <CardHeader
+        title={both ? t("mineAndInvoicesTitle") : invoices.length > 0 ? t("invoicesTitle") : t("mineTitle")}
+        action={
+          // The member's own stars, where they look every day. The breakdown
+          // is on the profile.
+          <Link href="/profile" title={tScore("ownTitle")} className="inline-flex">
+            <StarRating value={stars} />
+          </Link>
+        }
+      />
+      {mine.length > 0 && (
+        <Section label={both ? t("mineTitle") : null} href="/expenses" linkLabel={t("allExpenses")}>
+          {mine.map((e) => (
+            <li key={e.id}>
+              <Row href={`/expenses/${e.id}`}>
+                <span className="min-w-0 flex-1 truncate">{e.title}</span>
+                <StatusPill status={e.status} />
+              </Row>
+            </li>
+          ))}
+        </Section>
+      )}
+      {invoices.length > 0 && (
+        <Section label={both ? t("invoicesTitle") : null} href="/invoices?scope=unit" linkLabel={t("allInvoices")}>
+          {invoices.map((i) => (
+            <li key={i.id}>
+              <Row href={`/invoices/${i.id}`}>
+                <span className="min-w-0 flex-1 truncate">{i.title || t("invoiceUntitled")}</span>
+                <InvoiceStatusPill status={i.status} />
+              </Row>
+            </li>
+          ))}
+        </Section>
+      )}
+    </Card>
+  );
+}
+
+/** A list inside MineCard, with its own small heading where there are two. */
+function Section({
+  label,
   href,
-  count,
-  tone,
+  linkLabel,
   children,
 }: {
+  label: string | null;
   href: string;
-  count: number;
-  tone: React.ComponentProps<typeof Tag>["tone"];
+  linkLabel: string;
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-control px-2 py-2 text-sm hover:bg-hover"
-    >
-      <Tag tone={tone} size="sm" className="min-w-6 justify-center tabular-nums">
-        {count}
-      </Tag>
-      <span className="min-w-0 flex-1">{children}</span>
+    <div className="border-b border-border last:border-b-0">
+      <div className="flex items-center justify-between px-inset pt-3 text-xs font-medium text-muted">
+        <span>{label}</span>
+        <Link href={href} className={LINK}>
+          {linkLabel}
+          <IconChevronRight className="size-4" />
+        </Link>
+      </div>
+      <ul className="px-2 pb-2 pt-1">{children}</ul>
+    </div>
+  );
+}
+
+// "idag", "imorgon", "om 5 dagar", "för 2 dagar sedan", in the reader's
+// language. The day counts come from the server, so both renders agree.
+function useRelativeDays() {
+  const locale = useLocale();
+  return useMemo(() => {
+    const f = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    return (days: number) => f.format(days, "day");
+  }, [locale]);
+}
+
+function CountTag({ tone, count }: { tone: React.ComponentProps<typeof Tag>["tone"]; count: number }) {
+  return (
+    <Tag tone={tone} size="sm" className="min-w-6 justify-center tabular-nums">
+      {count}
+    </Tag>
+  );
+}
+
+// A row in a list rather than a button: a stack of buttons reads as a toolbar.
+function Row({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex items-center gap-3 rounded-control px-2 py-2 text-sm hover:bg-hover">
+      {children}
       <IconChevronRight className="size-4 shrink-0 text-muted" />
     </Link>
   );
 }
 
-// Your own utlägg, large, for the personal view where they are the page.
-function MineTable({ mine }: { mine: Expense[] }) {
-  const t = useTranslations("dashboard");
-  const tCol = useTranslations("expenses.col");
-  const tList = useTranslations("expenses");
-  const tPayment = useTranslations("common.payment");
-  const { date } = useFormat();
-  const controls = useTableControls();
-
-  // The utlägg, bokförings- and attestlistorna's columns, in their order, so a
-  // row here says the same things as the same row on the list it opens.
-  const columns = useMemo<Column<Expense>[]>(
-    () => [
-      expenseReferenceColumn(tCol("verification")),
-      expenseTitleColumn(tCol("title"), { reference: false }),
-      expenseDateColumn(tCol("date"), date),
-      expensePaymentTypeColumn(tCol("type"), (type) => tPayment(`${type}.label`)),
-      expenseStatusColumn(tCol("status")),
-      expenseAmountColumn(tCol("amount")),
-    ],
-    [tCol, tPayment, date],
-  );
-
-  return (
-    <Card>
-      <CardHeader
-        title={t("mineTitle")}
-        action={
-          <Link
-            href="/expenses"
-            className="inline-flex items-center gap-1 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
-          >
-            {t("allExpenses")}
-            <IconChevronRight className="size-4" />
-          </Link>
-        }
-      />
-      <ClientDataTable
-        columns={columns}
-        rows={mine}
-        controls={controls}
-        searchPlaceholder={tList("searchPlaceholder")}
-        rowKey={(e) => e.id}
-        rowHref={(e) => `/expenses/${e.id}`}
-        empty={tList("noMatch")}
-      />
-    </Card>
-  );
-}
-
 // What a functionary who has never seen this app needs: not four zeroes, but
-// the shape of the whole path and where their part of it ends. This doubles as
-// the app's only help (there is no documentation anywhere else) which is why
-// step four names the payout account, the thing that actually strands people.
+// the shape of the whole path and where their part of it ends. Step four names
+// the payout account, the thing that actually strands people.
 function FirstRun() {
   const t = useTranslations("dashboard.firstRun");
   const steps = [1, 2, 3, 4] as const;
@@ -432,13 +423,10 @@ function FirstRun() {
           {steps.map((n) => (
             <li key={n} className="flex gap-4">
               {/* Numbered because the order is the information: this is a path,
-                  not a feature list.
-                  The four circles walk the brand ramp from pink to violet, so
-                  the gradient is doing a job here rather than decorating: the
-                  colour travels the same distance the utlägg does. color-mix
-                  against the tokens rather than four fixed hexes, so the dark
-                  theme's own endpoints apply. Every stop carries the near-black
-                  label (worst 4.5:1 light, 6.7:1 dark). */}
+                  not a feature list. The four circles walk the brand ramp from
+                  pink to violet, the same distance the utlägg travels.
+                  color-mix against the tokens so the dark theme's own endpoints
+                  apply. */}
               <span
                 style={{
                   backgroundColor: `color-mix(in srgb, var(--color-brand-end) ${

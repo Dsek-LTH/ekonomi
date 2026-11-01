@@ -124,15 +124,8 @@
     "incompleteSum": "ofullständig - en rad går inte att räkna ut",
     "view": "Vy",
     "detailBudget": "Detaljbudget",
-    "actions": "Mer om budgeten",
-    "edit": "Ändra budgeten",
-    "editHint": "Namnet syns i budgetlistan och i jämförelser. Antagningsdatumet bestämmer vilket år budgeten gäller.",
-    "editSave": "Spara",
-    "field": {
-      "name": "Namn",
-      "adoptedAt": "Antagen",
-      "adoptedAtHint": "Dagen mötet antog budgeten. Lämna tomt om den inte är antagen än."
-    }
+    "changeName": "Byt namn på budgeten",
+    "changeAdoptedAt": "Ändra antagningsdatum"
   },
   "col": {
     "konto": "Konto",

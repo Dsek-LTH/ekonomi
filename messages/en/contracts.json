@@ -45,6 +45,7 @@
   "form": {
     "uploadTitle": "Upload document",
     "title": "Title",
+    "titleRequired": "The document needs a title.",
     "titleHint": "The words somebody would search for: “Sponsorship with Axis 2026”.",
     "kind": "Document type",
     "counterparty": "Counterparty",

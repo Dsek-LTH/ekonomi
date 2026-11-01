@@ -2,9 +2,6 @@
   "newTitle": "Ny milersättning",
   "description": "Ärende",
   "descriptionHint": "Vad resan gällde, t.ex. \"Hämta sponsorpaket i Malmö\".",
-  "step": {
-    "journey": "Resan"
-  },
   "journeyDate": "Resdag",
   "dateFuture": "Resan ligger i framtiden. Rätta datumet till dagen du körde.",
   "dateTooLate": "Äldre än {days} dagar. Milersättning måste redovisas inom {days} dagar från resan. Du kan ansöka om dispens: skriv klart resan, spara den som utkast och hör av dig till skattmästaren, som avgör om den tas emot ändå.",
@@ -30,7 +27,6 @@
   "km": "{km} km",
   "otherType": "Gällde det något annat?",
   "otherTypeLink": "Gör ett vanligt utlägg i stället",
-  "deadlineHint": "Milersättning redovisas inom {days} dagar från resan.",
   "perJourneyHint": "Körde du flera gånger gör du en milersättning per resa.",
   "documentName": "Utläggsräkning",
   "documentTitle": "Utläggsräkningen",
@@ -75,5 +71,9 @@
     "from": "Från {date}",
     "showEarlier": "Visa tidigare ({count})",
     "hideEarlier": "Dölj tidigare"
+  },
+  "missing": {
+    "route": "resväg",
+    "readings": "mätarställning"
   }
 }

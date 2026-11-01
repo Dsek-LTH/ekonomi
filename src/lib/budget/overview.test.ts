@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOverview, paceOf, totalOf } from "./overview";
+import { buildOverview, paceOf } from "./overview";
 
 const unitOf = (code: string) => (code.startsWith("SEX") ? "Sexmästeriet" : null);
 const names = new Map([
@@ -83,17 +83,5 @@ describe("paceOf", () => {
   });
   it("has nothing to say without a cost budget", () => {
     expect(paceOf({ budget: 0, actual: 50 }, 0.5)).toBeNull();
-  });
-});
-
-describe("totalOf", () => {
-  it("adds both sides of every unit", () => {
-    const f = (budget: number, actual: number) => ({ budget, actual });
-    expect(
-      totalOf([
-        { income: f(10, 5), cost: f(20, 8) },
-        { income: f(1, 1), cost: f(2, 2) },
-      ]),
-    ).toEqual({ income: f(11, 6), cost: f(22, 10) });
   });
 });

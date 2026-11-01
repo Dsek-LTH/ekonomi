@@ -562,7 +562,6 @@ export function AppShell({
         onClose={closeNav}
         overview={OVERVIEW}
         groups={groups}
-        help={HELP}
         settings={SETTINGS.visible(user) ? SETTINGS : null}
         isActive={isActive}
         counts={counts}

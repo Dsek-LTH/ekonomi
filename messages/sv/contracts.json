@@ -45,6 +45,7 @@
   "form": {
     "uploadTitle": "Ladda upp dokument",
     "title": "Titel",
+    "titleRequired": "Dokumentet behöver en titel.",
     "titleHint": "Så som någon skulle söka efter det: ”Sponsoravtal med Axis 2026”.",
     "kind": "Dokumenttyp",
     "counterparty": "Motpart",

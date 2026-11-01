@@ -22,6 +22,8 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Menu, MenuItem } from "@/components/ui/menu";
+import { IconDots, IconPencil, IconTrash } from "@/components/ui/icons";
 import { PurchaseDialog, SpoilageDialog, StocktakeDialog } from "../product-actions";
 import { BottleLevels } from "@/components/stock/bottle-levels";
 import { isInternalCode, validGtin } from "@/lib/stock/barcode";
@@ -352,14 +354,22 @@ export default function StockProductClient({
               title={t("product.details")}
               action={
                 canManage ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                  <Menu
+                    label={t("products.actions", { name: product.name })}
+                    iconOnly
+                    variant="ghost"
+                    size="sm"
+                    icon={<IconDots className="size-4" />}
+                  >
+                    <MenuItem onClick={() => setEditing(true)}>
+                      <IconPencil className="size-4 shrink-0 text-muted" />
                       {t("products.edit")}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={remove}>
+                    </MenuItem>
+                    <MenuItem onClick={remove} className="text-danger hover:bg-danger-soft">
+                      <IconTrash className="size-4 shrink-0" />
                       {t("products.remove")}
-                    </Button>
-                  </div>
+                    </MenuItem>
+                  </Menu>
                 ) : undefined
               }
             />

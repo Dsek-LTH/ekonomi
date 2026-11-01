@@ -29,6 +29,7 @@ import { PageShell } from "@/components/page-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DateInput, Field, Input, Textarea } from "@/components/ui/field";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Tag } from "@/components/ui/status-pill";
 import { IconTrash } from "@/components/ui/icons";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
@@ -180,7 +181,7 @@ export function ContractClient({
                   hasSignedFiles,
                 }}
                 busy={pending !== null}
-                onEdit={() => setEditing((v) => !v)}
+                onEdit={() => setEditing(true)}
                 onUpload={() => pick("ORIGINAL")}
                 onRegenerate={regenerate}
                 onUploadSigned={() => pick("SIGNED")}
@@ -191,12 +192,7 @@ export function ContractClient({
         )}
 
         {editing && canManage && (
-          <Card>
-            <CardHeader title={contract.rental ? t("detail.editRecord") : t("detail.edit")} />
-            <CardBody>
-              <EditFields contract={contract} onDone={() => setEditing(false)} />
-            </CardBody>
-          </Card>
+          <EditDialog contract={contract} onClose={() => setEditing(false)} />
         )}
 
         {contract.rental && (
@@ -222,7 +218,7 @@ export function ContractClient({
                 <ContractActions
                   state={{ status: null, isRental: false, editable: false, canManage, hasSignedFiles }}
                   busy={pending !== null}
-                  onEdit={() => setEditing((v) => !v)}
+                  onEdit={() => setEditing(true)}
                   onUpload={() => pick("ORIGINAL")}
                   onRegenerate={regenerate}
                   onUploadSigned={() => pick("SIGNED")}
@@ -325,15 +321,14 @@ export function ContractClient({
   );
 }
 
-/** The archive fields, as a form. Opened from the header's "Redigera" so the
- *  read view stays one glance rather than a component with two modes woven
- *  through it. */
-function EditFields({
+/** The archive fields, as a dialog opened from "Ändra" in the actions menu,
+ *  the way every record with several fields is edited. */
+function EditDialog({
   contract,
-  onDone,
+  onClose,
 }: {
   contract: ContractDetail;
-  onDone: () => void;
+  onClose: () => void;
 }) {
   const t = useTranslations("contracts");
   const { mutate, pending } = useMutation();
@@ -395,93 +390,100 @@ function EditFields({
       },
       success: t("detail.saved"),
     });
-    if (saved !== null) onDone();
+    if (saved !== null) onClose();
   }
 
+  const heading = contract.rental ? t("detail.editRecord") : t("detail.edit");
+
   return (
-    <div className="space-y-5">
-      <Field label={t("form.title")} requirement="required">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
-      </Field>
-      {showCounterparty && (
-        <Field
-          label={t("form.counterparty")}
-          requirement={isAgreement ? "required" : "optional"}
-        >
-          <Input
-            value={counterparty}
-            onChange={(e) => setCounterparty(e.target.value)}
-            maxLength={200}
-          />
+    <Modal label={heading} onClose={onClose} className="max-w-lg">
+      <ModalHeader title={heading} />
+      <ModalBody>
+        <Field label={t("form.title")} requirement="required">
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
         </Field>
-      )}
-      {showCounterparty && (
-        <Field label={t("form.counterpartyOrgNo")} requirement="optional">
-          <Input value={orgNo} onChange={(e) => setOrgNo(e.target.value)} maxLength={40} />
-        </Field>
-      )}
-      {isAgreement && (
-        <>
-          {!isRental && (
-            <>
-              <Field label={t("rental.renterAddress")} requirement="optional">
-                <Input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  autoComplete="street-address"
-                  maxLength={200}
-                />
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-                <Field label={t("rental.renterPostalCode")} requirement="optional">
+        {showCounterparty && (
+          <Field
+            label={t("form.counterparty")}
+            requirement={isAgreement ? "required" : "optional"}
+          >
+            <Input
+              value={counterparty}
+              onChange={(e) => setCounterparty(e.target.value)}
+              maxLength={200}
+            />
+          </Field>
+        )}
+        {showCounterparty && (
+          <Field label={t("form.counterpartyOrgNo")} requirement="optional">
+            <Input value={orgNo} onChange={(e) => setOrgNo(e.target.value)} maxLength={40} />
+          </Field>
+        )}
+        {isAgreement && (
+          <>
+            {!isRental && (
+              <>
+                <Field label={t("rental.renterAddress")} requirement="optional">
                   <Input
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    autoComplete="postal-code"
-                    inputMode="numeric"
-                    maxLength={20}
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    autoComplete="street-address"
+                    maxLength={200}
                   />
                 </Field>
-                <Field label={t("rental.renterCity")} requirement="optional">
-                  <Input
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    autoComplete="address-level2"
-                    maxLength={100}
-                  />
-                </Field>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t("form.validFrom")} requirement="optional">
-                  <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
-                </Field>
-                <Field label={t("form.validTo")} requirement="optional">
-                  <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
-                </Field>
-              </div>
-            </>
-          )}
-        </>
-      )}
-      {!isAgreement && (
-        <Field label={t("form.date")} requirement={contract.kind === "PROTOCOL" ? "required" : "optional"}>
-          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
+                <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                  <Field label={t("rental.renterPostalCode")} requirement="optional">
+                    <Input
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      autoComplete="postal-code"
+                      inputMode="numeric"
+                      maxLength={20}
+                    />
+                  </Field>
+                  <Field label={t("rental.renterCity")} requirement="optional">
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      autoComplete="address-level2"
+                      maxLength={100}
+                    />
+                  </Field>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label={t("form.validFrom")} requirement="optional">
+                    <DateInput value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+                  </Field>
+                  <Field label={t("form.validTo")} requirement="optional">
+                    <DateInput value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+                  </Field>
+                </div>
+              </>
+            )}
+          </>
+        )}
+        {!isAgreement && (
+          <Field label={t("form.date")} requirement={contract.kind === "PROTOCOL" ? "required" : "optional"}>
+            <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
+          </Field>
+        )}
+        <Field label={t("form.tags")} hint={t("form.tagsHint")} requirement="optional">
+          <Input value={tags} onChange={(e) => setTags(e.target.value)} />
         </Field>
-      )}
-      <Field label={t("form.tags")} hint={t("form.tagsHint")} requirement="optional">
-        <Input value={tags} onChange={(e) => setTags(e.target.value)} />
-      </Field>
-      <Field label={t("form.notes")} requirement="optional">
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} />
-      </Field>
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={onDone}>
-          {t("form.cancel")}
-        </Button>
-        <Button onClick={save} loading={pending !== null}>
-          {t("detail.save")}
-        </Button>
-      </div>
-    </div>
+        <Field label={t("form.notes")} requirement="optional">
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} />
+        </Field>
+      </ModalBody>
+      <ModalFooter blocker={title.trim() ? null : t("form.titleRequired")}>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            {t("form.cancel")}
+          </Button>
+          <Button onClick={save} disabled={!title.trim()} loading={pending !== null}>
+            {t("detail.save")}
+          </Button>
+        </div>
+      </ModalFooter>
+    </Modal>
   );
 }

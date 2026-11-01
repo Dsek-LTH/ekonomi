@@ -34,6 +34,5 @@
   },
   "behindTitle": "Släpar efter",
   "behindAll": "Alla medlemmars betyg",
-  "ownTitle": "Ditt redovisningsbetyg",
-  "ownHint": "Skicka in {title} från {date} för att höja det."
+  "ownTitle": "Ditt redovisningsbetyg"
 }

@@ -189,18 +189,12 @@
     }
   },
   "wizard": {
-    "step": {
-      "review": "Granska",
-      "match": "Matcha",
-      "submit": "Skicka in"
-    },
     "newTitle": "Nytt utlägg",
     "editTitle": "Redigera {id}",
     "editTitleDraft": "Redigera utkast",
     "save": "Spara",
     "saveDraft": "Spara utkast",
     "back": "Tillbaka",
-    "continue": "Fortsätt",
     "createFailed": "Kunde inte skapa utlägg",
     "uploadFailed": "Uppladdningen misslyckades",
     "saveFailed": "Kunde inte spara utlägget",
@@ -226,10 +220,8 @@
     "reviewTitle": "Granska och skicka in",
     "match": "Matchning",
     "paymentType": "Betalsätt",
-    "payoutTo": "Utbetalas till",
     "payoutMissing": "Lägg till konto i Min profil",
     "goesTo": "Skickas till {resultUnits} för attest.",
-    "resultUnitConcerned": "berörd resultatenhet",
     "resubmit": "Skicka in igen",
     "submit": "Skicka in för attest",
     "claim": "Vad gäller det?",

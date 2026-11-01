@@ -1,16 +1,12 @@
-Get intäkter up an running
 Finish implemntation of bokslut page:
 * Revisor should be able to granska all utlägg
 * Perhaps improve report feature to let revisor make reports themselves?
 * Finish the checklists
 * Create a guide on how to bokslut
-Create cron job that uses fortnox to system token to pull data daily from fortnox.
-Currently page is very inconsistent in regards to editing titles, text etc. Sometimes you do it inplace, sometimes with a modal, sometimes with an icon, sometimes save and cancel buttons dissappear. Try to unify
 Go over stale and bad comments. Many comments explain why a previous feature was removed or explains unnesseccary reasoning behind a decision.
 Go over components and code to see if anything is unused. Components used by only a few places, 1-2 can be done inline instead. Basically go over the codebase to idenity bloat and dumb code.
 Work through an optimal avtal / hyrnings flow. This whole system is wack currently.
 Ensure email reminders work for now levfakt
-Try to make the design of the webpage be more "proffesional" and "serious"
 Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
 Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
 View kvitto button is ugly
@@ -19,3 +15,4 @@ Add fun stats such as total spent, how many utlägg done etc
 Add a score system based on how long it takes for people to upload their receipts and other metrics
 wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better
 Check that program uses our own components
+Make an app of this program

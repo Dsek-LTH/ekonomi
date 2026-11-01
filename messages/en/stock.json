@@ -112,6 +112,7 @@
   },
   "products": {
     "new": "New product",
+    "actions": "More about {name}",
     "edit": "Edit",
     "remove": "Remove",
     "removed": "The product was removed.",
@@ -285,8 +286,8 @@
     "newHint": "An occasion is a night or an event. Everything taken out and brought back is booked against it.",
     "create": "Create",
     "saveFailed": "The occasion could not be created.",
-    "edit": "Edit occasion",
-    "editHint": "Changing the date moves everything booked on the occasion to the new date, and the stock value is recomputed.",
+    "rename": "Rename the occasion",
+    "changeDate": "Move the occasion to another date",
     "edited": "The occasion was saved.",
     "editFailed": "The occasion could not be saved.",
     "remove": "Remove occasion",

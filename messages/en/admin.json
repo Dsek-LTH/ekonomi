@@ -101,7 +101,6 @@
     "newLocalSubtitle": "Created here, not in Fortnox, and never sent along on export. For things that should not be booked on a cost center there, such as alcohol booked on a balance account.",
     "codeAndName": "Code and name",
     "add": "Add",
-    "save": "Save",
     "created": "{code} added.",
     "createFailed": "Could not create the cost center",
     "renamed": "{code} is now called {name}.",
@@ -133,7 +132,8 @@
       "deleted": "removed {count}",
       "madeLocal": "made {count} local since they are not in Fortnox"
     },
-    "rename": "Rename",
+    "renameAria": "Rename {code}",
+    "nameRequired": "The cost centre needs a name.",
     "rowActions": "Actions for {code}",
     "colShortName": "Short name",
     "shortNameHint": "What the cost center is called under its result unit's heading, for example in the budget. Empty shows the full name.",
