@@ -276,6 +276,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     invoiceDate: invoice.invoiceDate || null,
     dueDate: invoice.dueDate || null,
     amount: toOre(invoice.amount),
+    ocr: invoice.ocr ?? null,
     rounding: roundingOre,
     shares: invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
     lines,

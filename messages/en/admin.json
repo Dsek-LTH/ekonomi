@@ -252,6 +252,7 @@
     "voucherSeries": "Voucher series",
     "voucherSeriesHint": "The series exported vouchers land in. Nothing is posted until a series is chosen.",
     "voucherSeriesSaved": "Voucher series saved.",
+    "save": "Save",
     "saveFailed": "Could not save",
     "chart": "Chart of accounts",
     "chartSubtitle": "{count} accounts - last synced {time}",

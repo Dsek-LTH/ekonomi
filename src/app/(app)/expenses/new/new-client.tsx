@@ -45,6 +45,7 @@ import Link from "next/link";
 import { FormSection, optionCard } from "./step-chrome";
 import { ActionBar } from "@/components/action-bar";
 import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
+import { displayableFile } from "@/lib/ui/heic";
 import { uid } from "@/lib/ui/utils";
 import { underlagCaption } from "@/lib/expense/document-url";
 import { useFormat } from "@/lib/ui/use-format";
@@ -328,7 +329,22 @@ export default function NewExpenseClient({
     };
   }, [draftKey]);
 
-  function addFile(file: File) {
+  // A HEIC is made a JPEG before it is shown (see lib/ui/heic), which takes a
+  // moment. The panel shows its spinner meanwhile, and the files go through
+  // one at a time so a quick JPEG picked with a HEIC does not overtake it.
+  const [converting, setConverting] = useState(0);
+  const addQueue = useRef(Promise.resolve());
+
+  function addFile(picked: File) {
+    setConverting((n) => n + 1);
+    addQueue.current = addQueue.current.then(async () => {
+      const file = await displayableFile(picked);
+      setConverting((n) => n - 1);
+      addPendingFile(file);
+    });
+  }
+
+  function addPendingFile(file: File) {
     const id = uid();
     const previewUrl = URL.createObjectURL(file);
     setPendingFiles((files) => [...files, { id, file, previewUrl }]);
@@ -798,7 +814,7 @@ export default function NewExpenseClient({
       <ReceiptPanelSource
         documents={documents}
         onFile={addFile}
-        uploading={saving}
+        uploading={saving || converting > 0}
         multiple
         // The thumbnails along the panel's foot: the one place the documents
         // are put in order and taken off. See components/receipt/document-strip.

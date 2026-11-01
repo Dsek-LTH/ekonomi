@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/server/current-user";
 import {
   canBookkeep,
   canLogInToFortnox,
-  canViewMemberScores,
   hasAttestRole,
   isAdmin,
 } from "@/lib/domain/permissions";
@@ -58,7 +57,6 @@ export default async function ProfilePage() {
       fortnox={showsFortnox ? { session: fortnoxSession } : undefined}
       notifications={notifications}
       score={score}
-      showMembers={canViewMemberScores(user.capabilities)}
     />
   );
 }

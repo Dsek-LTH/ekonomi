@@ -3,7 +3,7 @@
 // Shared with the pages, so the shape a screen sends and the shape the route
 // accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
-import { MAX_ROUNDING } from "@/lib/domain/supplier-invoice";
+import { MAX_ROUNDING, ocrDigits } from "@/lib/domain/supplier-invoice";
 import { Clearable, Id, IsoDate, Ore, Trimmed } from "./common";
 
 /** Free text off the invoice: trimmed, capped, and clearable. */
@@ -54,7 +54,10 @@ export const PatchSupplierInvoice = z.object({
   amount: Clearable(Ore).optional(),
   /** Öresutjämning in öre, either sign, under a krona. */
   rounding: Clearable(z.number().int().min(-MAX_ROUNDING).max(MAX_ROUNDING)).optional(),
-  ocr: Text(40),
+  /** Saved as digits alone, however it was typed or pasted. Whether Fortnox
+   *  will take it is asked at Spara (exportBlocker), so a wrong one stays in
+   *  the field to be corrected rather than vanishing. */
+  ocr: Clearable(Trimmed.max(40).transform((v) => ocrDigits(v) || null)).optional(),
   bankgiro: Text(20),
   plusgiro: Text(20),
   /** "Er referens" as printed, corrected. Fortnox's YourReference. */

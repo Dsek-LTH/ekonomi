@@ -37,7 +37,6 @@ export function ProfileClient({
   fortnox,
   notifications,
   score,
-  showMembers,
 }: {
   userId: string;
   /** Whether a picture is set, which decides "Byt bild" and "Ta bort". */
@@ -53,8 +52,6 @@ export function ProfileClient({
   notifications: { kind: NotificationKind; enabled: boolean }[];
   /** The member's own redovisningsbetyg, which only they and the treasury see. */
   score: MemberScore;
-  /** Holds MEMBER_SCORE_VIEW, so the page has a Medlemmar tab. */
-  showMembers: boolean;
 }) {
   const t = useTranslations("common");
   const tProfile = useTranslations("profile");
@@ -79,11 +76,7 @@ export function ProfileClient({
   const session = fortnox?.session;
 
   return (
-    <PageShell
-      title={tNav("profile")}
-      width="content"
-      pages={showMembers ? profileTabs(tProfile, "me") : undefined}
-    >
+    <PageShell title={tNav("profile")} width="content">
       <ProfileHero userId={userId} name={name} email={email} roles={roles} score={score} hasAvatar={hasAvatar} />
 
       {/* The forms on the left, where the eye goes after the hero; the small
@@ -206,11 +199,11 @@ export function ProfileClient({
             <CardBody className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted">{t("theme")}</span>
-                <ThemeToggle />
+                <ThemeToggle round />
               </div>
               <div className="flex items-center justify-between border-t border-border pt-3">
                 <span className="text-sm text-muted">{t("language")}</span>
-                <LanguageSwitcher />
+                <LanguageSwitcher round />
               </div>
             </CardBody>
           </Card>
@@ -332,17 +325,4 @@ function ProfileHero({
       {cropping && <AvatarDialog file={cropping} onClose={() => setCropping(null)} />}
     </Card>
   );
-}
-
-/** The profile's two tabs, for the holders of MEMBER_SCORE_VIEW. Shared with
- *  members/members-client.tsx, the other of them. */
-export function profileTabs(t: (key: string) => string, value: "me" | "members") {
-  return {
-    label: t("tabs.label"),
-    value,
-    options: [
-      { value: "me", label: t("tabs.me"), href: "/profile" },
-      { value: "members", label: t("tabs.members"), href: "/profile/members" },
-    ],
-  };
 }

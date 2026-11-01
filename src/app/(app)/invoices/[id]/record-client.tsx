@@ -44,7 +44,7 @@ import {
   LABEL,
   ReturnedNotice,
   Timeline,
-  invoiceDocuments,
+  useInvoicePanelDocuments,
   useReturnToInbox,
   useTransition,
   type WorkspaceProps,
@@ -100,6 +100,7 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
   const docs = useMutation();
   const [moving, setMoving] = useState(false);
   const uncertain = invoice.exportState === "UNCERTAIN" && can.canBook;
+  const documents = useInvoicePanelDocuments(invoice);
 
   async function uploadDocument(file: File) {
     const form = new FormData();
@@ -110,7 +111,7 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
   return (
     <>
       <ReceiptPanelSource
-        documents={invoiceDocuments(invoice)}
+        documents={documents}
         onFile={can.canEditDocuments ? (f) => void uploadDocument(f) : undefined}
         uploading={docs.pending === "upload"}
         multiple={can.canEditDocuments}

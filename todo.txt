@@ -6,11 +6,9 @@ Finish implemntation of bokslut page:
 Go over stale and bad comments. Many comments explain why a previous feature was removed or explains unnesseccary reasoning behind a decision.
 Go over components and code to see if anything is unused. Components used by only a few places, 1-2 can be done inline instead. Basically go over the codebase to idenity bloat and dumb code.
 Work through an optimal avtal / hyrnings flow. This whole system is wack currently.
-Ensure email reminders work for now levfakt
 Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
 Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
 View kvitto button is ugly
-Revise milersättnings view so it reflects design in utlägg view.
 Add fun stats such as total spent, how many utlägg done etc
 Add a score system based on how long it takes for people to upload their receipts and other metrics
 wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better

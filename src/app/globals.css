@@ -696,6 +696,17 @@ table,
   color: var(--color-foreground);
 }
 
+/* The text layer over a PDF receipt is an invisible copy of the page's text,
+   there to be selected. Coloured in, it shows up in the app's font on top of
+   the PDF's own. Only the highlight should show, and it has to be
+   see-through: the text being highlighted is the canvas underneath. A fixed
+   colour rather than a theme token, because the page is white paper in either
+   theme. */
+.textLayer ::selection {
+  color: transparent;
+  background: rgb(0 100 255 / 0.25);
+}
+
 /* Tailwind's preflight resets buttons to the default arrow cursor. Anything
    clickable should say so. Done here rather than per-component so the many
    bare <button>s (table row actions, popover triggers, close buttons) are

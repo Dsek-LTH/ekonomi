@@ -13,6 +13,8 @@
 // regular enough about their labels for this to get most of them, and a field
 // whose label is not recognised is simply left empty.
 
+import { isValidOcr } from "./supplier-invoice";
+
 export interface InvoiceTextFields {
   amount?: number; // öre
   dueDate?: string; // YYYY-MM-DD
@@ -127,8 +129,10 @@ export function parseInvoiceText(
   });
 
   out.ocr = first(after(lines, /\bocr(?:-?nummer|-?nr)?\b|referensnummer/i), (s) => {
+    // One whose check digit does not add up is misread, or is some other
+    // number, and is better left for the treasurer than prefilled wrong.
     const m = s.replace(/\s/g, "").match(/^(\d{2,25})/);
-    return m ? m[1] : null;
+    return m && isValidOcr(m[1]) ? m[1] : null;
   });
 
   out.bankgiro = first(after(lines, /\b(?:bankgiro|bg)\b(?:\s*nr\.?)?/i), (s) => s.match(BG)?.[1] ?? null);

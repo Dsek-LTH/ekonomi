@@ -331,7 +331,7 @@ export function FortnoxClient({
                   loading={pending === "voucherSeries"}
                   onClick={() => saveSetting({ voucherSeries: series }, t("voucherSeriesSaved"))}
                 >
-                  {tCostCenters("save")}
+                  {t("save")}
                 </Button>
               </div>
             </FieldGroup>

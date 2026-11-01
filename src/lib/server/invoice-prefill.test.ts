@@ -26,7 +26,7 @@ async function invoicePdf(): Promise<Uint8Array> {
   at("Att betala", 350, 400);
   at("1 250,00", 480, 400);
   at("Bankgiro 5050-1055", 50, 100);
-  at("OCR 123456789012", 300, 100);
+  at("OCR 123456789015", 300, 100);
   return doc.save();
 }
 
@@ -46,7 +46,7 @@ describe("reading an invoice PDF", () => {
       invoiceNumber: "20417",
       invoiceDate: "2026-10-20",
       bankgiro: "5050-1055",
-      ocr: "123456789012",
+      ocr: "123456789015",
       supplierOrgNo: "556677-8899",
       reference: "SEX01",
     });

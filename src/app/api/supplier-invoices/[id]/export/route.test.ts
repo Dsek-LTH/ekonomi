@@ -48,7 +48,7 @@ vi.mock("@/lib/server/db", () => {
           invoiceDate: new Date("2026-10-20"),
           dueDate: new Date("2026-11-10"),
           amount: 125000,
-          ocr: "123456789012",
+          ocr: "123456789015",
           bankgiro: "5050-1055",
           plusgiro: null,
           yourReference: "SEX01",
@@ -107,7 +107,10 @@ vi.mock("@/lib/server/storage", () => ({
 vi.mock("@/lib/server/pdf-merge", () => ({
   mergeCoverAndReceipts: async () => ({ bytes: new Uint8Array([1, 2, 3]), failed: 0 }),
 }));
-vi.mock("@/lib/server/invoice-cover", () => ({ renderInvoiceCover: async () => new Uint8Array([1]) }));
+vi.mock("@/lib/server/invoice-cover", () => ({
+  invoiceCoverFacts: async () => ({}),
+  renderInvoiceCover: async () => new Uint8Array([1]),
+}));
 vi.mock("@/lib/fortnox/export", () => ({ userToken: async () => ({ ok: true, token: "t" }) }));
 
 vi.mock("@/lib/fortnox", () => {

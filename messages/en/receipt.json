@@ -35,6 +35,8 @@
   "resize": "Resize the receipt panel",
   "coverLabel": "Expense report",
   "underlagLabel": "Receipt",
+  "invoiceCoverLabel": "Attest",
+  "invoiceLabel": "Invoice",
   "documents": "Documents",
   "showDocument": "Show document {n}: {name}",
   "documentTileHint": "Click to show, drag to move",

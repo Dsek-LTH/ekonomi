@@ -14,7 +14,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/server/db";
 import { getObjectBuffer } from "@/lib/server/storage";
 import { mergeCoverAndReceipts } from "@/lib/server/pdf-merge";
-import { renderInvoiceCover } from "@/lib/server/invoice-cover";
+import { invoiceCoverFacts, renderInvoiceCover } from "@/lib/server/invoice-cover";
 import {
   FortnoxError,
   connectFileToSupplierInvoice,
@@ -25,7 +25,7 @@ import {
 } from "@/lib/fortnox";
 import { userToken } from "@/lib/fortnox/export";
 import { canBookkeep } from "@/lib/domain/permissions";
-import { exportBlocker, PAYABLE_ACCOUNT, ROUNDING_ACCOUNT } from "@/lib/domain/supplier-invoice";
+import { exportBlocker, ocrDigits, PAYABLE_ACCOUNT, ROUNDING_ACCOUNT } from "@/lib/domain/supplier-invoice";
 import { giroMismatch } from "@/lib/domain/payment-ref";
 import { oreToSEK } from "@/lib/domain/money";
 import { fail, gate } from "@/lib/api/guard";
@@ -61,12 +61,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const blocker = exportBlocker(exportFactsOf(invoice));
   if (blocker) return fail(422, blocker);
-  // What each unit signed for, for the attest page: a single row is the whole
-  // invoice, a split names its shares.
-  const shares = invoice.allocations.map((a) => ({
-    ...a,
-    share: invoice.allocations.length === 1 ? invoice.amount! : a.amount!,
-  }));
 
   // The treasurer's own Fortnox login, so Fortnox says who made it. Before the
   // lock, so needing to log in leaves nothing to clean up.
@@ -117,33 +111,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // The attest page and the invoice, as one PDF, into the supplier invoice
     // folder of Fortnox's inbox, before the invoice is made: a failure here
     // leaves nothing in Fortnox's books.
-    const users = await prisma.user.findMany({
-      where: { id: { in: invoice.allocations.flatMap((a) => (a.approvedById ? [a.approvedById] : [])) } },
-      select: { id: true, name: true },
-    });
-    const nameOf = new Map(users.map((u) => [u.id, u.name]));
-    const cover = await renderInvoiceCover({
-      supplierName: supplier.name,
-      invoiceNumber: invoice.invoiceNumber!,
-      invoiceDate: isoDate(invoice.invoiceDate),
-      dueDate: isoDate(invoice.dueDate),
-      amount: invoice.amount!,
-      description: invoice.description,
-      resultUnit: invoice.resultUnit?.name ?? null,
-      rows: shares.map((r) => ({
-        costCenter: `${r.costCenter.code} - ${r.costCenter.name}`,
-        // The accounts the kontering booked this cost centre's share on.
-        account:
-          [...new Set(invoice.lines.filter((l) => l.costCenterCode === r.costCenter.code).map((l) => l.account))].join(
-            ", ",
-          ) || "-",
-        amount: r.share,
-        attestedBy: r.approvedById ? (nameOf.get(r.approvedById) ?? null) : null,
-        attestedAt: r.approvedAt,
-        comment: r.comment,
-      })),
-      exportedBy: g.actor.name,
-    });
+    const cover = await renderInvoiceCover(
+      await invoiceCoverFacts(invoice, { supplierName: supplier.name, exportedBy: g.actor.name }),
+    );
     const documents = await prisma.supplierInvoiceDocument.findMany({
       where: { invoiceId: invoice.id },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
@@ -171,7 +141,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       invoiceDate: isoDate(invoice.invoiceDate),
       dueDate: isoDate(invoice.dueDate),
       total: oreToSEK(invoice.amount),
-      ocr: invoice.ocr,
+      ocr: invoice.ocr && ocrDigits(invoice.ocr),
       yourReference: invoice.yourReference,
       ourReference: invoice.ourReference,
       // Our number at the end, as an utlägg's is on its voucher, so the

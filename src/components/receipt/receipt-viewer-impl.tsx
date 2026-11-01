@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/TextLayer.css";
 import {
   TransformWrapper,
   TransformComponent,
@@ -32,6 +33,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,
 ).toString();
+
+// The runs of text pdf.js lays over a page. A press on one starts a selection
+// instead of a pan. The pan library builds its own selector from the class
+// name, so it takes the unprefixed form.
+const TEXT_SELECTOR = ".textLayer span";
+const TEXT_EXCLUDE = "textLayer span";
 
 // How long the container has to hold still before the PDF is re-rendered at the
 // new width. Long enough that a drag produces one render at the end rather than
@@ -260,7 +267,11 @@ export default function ReceiptViewerImpl({
   // every Page in it, at the exact moment a finger landed to start a drag,
   // which is the moment a drag can least afford one.
   const startDrag = (e: React.PointerEvent) => {
-    if (e.pointerType !== "touch") setDragging(true);
+    if (e.pointerType === "touch") return;
+    // A press on the PDF's text selects it rather than panning (see
+    // TEXT_SELECTOR), so the hand stays open.
+    if (e.target instanceof Element && e.target.closest(TEXT_SELECTOR)) return;
+    setDragging(true);
   };
   useEffect(() => {
     if (!dragging) return;
@@ -526,7 +537,12 @@ export default function ReceiptViewerImpl({
     <TransformWrapper
       minScale={0.5}
       maxScale={10}
-      doubleClick={{ mode: "zoomIn" }}
+      // Text in a PDF is selectable with a mouse, so a press on it is the start
+      // of a selection and a double-click picks a word. Both pan and zoom from
+      // anywhere else on the page. On a touchscreen there is no text layer to
+      // exclude (see `selectable`), and a finger pans wherever it lands.
+      panning={{ excluded: [TEXT_EXCLUDE] }}
+      doubleClick={{ mode: "zoomIn", excluded: [TEXT_EXCLUDE] }}
       wheel={{ step: 0.005, wheelDisabled: true }}
       trackPadPanning={{ disabled: false }}
       // The pan, on the compositor instead of the main thread.
@@ -683,6 +699,7 @@ export default function ReceiptViewerImpl({
                       width={pdfWidth}
                       pixelRatio={pixelRatio}
                       turn={turns[d.src] ?? 0}
+                      selectable={!coarse}
                       onPages={reportPages}
                     />
                   </div>
@@ -751,6 +768,7 @@ function DocumentSheet({
   width,
   pixelRatio,
   turn,
+  selectable,
   onPages,
 }: {
   doc: ViewerDocument;
@@ -761,6 +779,10 @@ function DocumentSheet({
   pixelRatio: number | undefined;
   /** Degrees clockwise the reader has turned it: 0, 90, 180 or 270. */
   turn: number;
+  /** Whether a PDF's text can be selected and copied. Off for a touchscreen,
+   *  where a drag across the text has to pan, and a layer of spans per page is
+   *  DOM a phone gains nothing from. */
+  selectable: boolean;
   /** Reports the page count up, so the viewer can ration the canvas budget
    *  across the whole stack rather than per document. */
   onPages: (src: string, pages: number) => void;
@@ -850,11 +872,15 @@ function DocumentSheet({
                 )
               }
               devicePixelRatio={pixelRatio}
-              renderTextLayer={false}
+              // The text layer is what lets an OCR number or an address be
+              // copied off a faktura instead of typed in by hand. The pan
+              // library sets user-select: none on its wrapper, so the layer
+              // takes selection back for itself.
+              renderTextLayer={selectable}
               renderAnnotationLayer={false}
               // Each page reads as a sheet, which is what tells a stack of them
               // apart from one long page.
-              className="overflow-hidden rounded-mark shadow-[var(--shadow-card)]"
+              className="overflow-hidden rounded-mark shadow-[var(--shadow-card)] [&_.textLayer]:select-text"
               // Nothing per page while it rasterises: the default is the words
               // "Loading page", and a column of those is worse than a stack
               // that simply fills in.

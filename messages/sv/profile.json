@@ -63,11 +63,6 @@
       "SUPPLIER_INVOICE_SUBMITTED": "När en leverantörsfaktura som du ska attestera skickas på attest."
     }
   },
-  "tabs": {
-    "label": "Profil",
-    "me": "Min profil",
-    "members": "Medlemmar"
-  },
   "appearance": "Utseende",
   "avatar": {
     "title": "Profilbild",

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { normaliseImage, normalisedName } from "./images";
@@ -47,6 +48,20 @@ describe("normaliseImage", () => {
 
     expect(out.mimeType).toBe("image/jpeg");
     expect(await sharp(out.full).metadata().then((m) => m.format)).toBe("jpeg");
+  });
+
+  // An iPhone photo. sharp's own libvips reads its header and then cannot
+  // decode HEVC, so this came back "unreadable" before libheif took it over.
+  // The fixture is an 80x60 red rectangle, written by macOS's `sips`.
+  it("decodes a HEIC photo", async () => {
+    const out = await normaliseImage(readFileSync(new URL("./images.test.heic", import.meta.url)));
+
+    expect(out.mimeType).toBe("image/jpeg");
+    const meta = await sharp(out.full).metadata();
+    expect([meta.width, meta.height]).toEqual([80, 60]);
+    const px = await topLeft(out.full);
+    expect(px[0]).toBeGreaterThan(180);
+    expect(px[1]).toBeLessThan(80);
   });
 
   it("names the file after what was actually stored", () => {

@@ -10,13 +10,14 @@ import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { BookPanel } from "../../book-view";
 import { useInvoiceTitle } from "../../invoice-bits";
-import { Timeline, invoiceDocuments } from "../../invoice-shared";
+import { Timeline, useInvoicePanelDocuments } from "../../invoice-shared";
 import type { WorkspaceData } from "../../load";
 
 export function InvoiceBookClient({ data }: { data: WorkspaceData }) {
   const { invoice } = data;
   const router = useProgressRouter();
   const title = useInvoiceTitle();
+  const documents = useInvoicePanelDocuments(invoice);
   const record = `/invoices/${invoice.id}`;
   return (
     <PageShell
@@ -25,7 +26,7 @@ export function InvoiceBookClient({ data }: { data: WorkspaceData }) {
       subtitle={[invoice.description && invoice.reference, invoice.resultUnitName].filter(Boolean).join(" - ") || undefined}
       back={record}
     >
-      <ReceiptPanelSource documents={invoiceDocuments(invoice)} />
+      <ReceiptPanelSource documents={documents} />
       <BookPanel {...data} onDone={() => router.push(record)} />
       <Card>
         <Timeline invoice={invoice} />

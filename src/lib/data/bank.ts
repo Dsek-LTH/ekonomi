@@ -198,10 +198,19 @@ export async function countCardlessTransactions({ during }: { during?: During } 
 /** How many of a member's own card purchases have no utlägg yet. */
 export async function countUnaccountedPurchases(
   holderId: string,
-  { during }: { during?: During } = {},
+  { during, resultUnitNames }: { during?: During; resultUnitNames?: readonly string[] } = {},
 ): Promise<number> {
   return prisma.bankTransaction.count({
-    where: { card: { holderId }, matchedExpense: { is: null }, ...(during ? { transactionDate: during } : {}) },
+    where: {
+      card: {
+        holderId,
+        // Only the cards a Min resultatenhet reading shows. See
+        // getBankTransactionPage.
+        ...(resultUnitNames ? { resultUnit: { name: { in: [...resultUnitNames] } } } : {}),
+      },
+      matchedExpense: { is: null },
+      ...(during ? { transactionDate: during } : {}),
+    },
   });
 }
 

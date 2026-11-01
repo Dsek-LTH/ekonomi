@@ -19,5 +19,5 @@ export default async function ProfileMembersPage({
   // Somebody with nothing in the year is not in the list, but a link may
   // still name them.
   const selected = id ? (rows.find((r) => r.userId === id) ?? (await getMemberScoreRow(id))) : null;
-  return <MembersClient title={t("profile")} rows={rows} selected={selected} />;
+  return <MembersClient title={t("members")} rows={rows} selected={selected} />;
 }

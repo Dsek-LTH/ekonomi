@@ -238,8 +238,8 @@ export function DocumentStrip({
 }
 
 // The picture itself where the browser can draw it, and a plain tile saying
-// what it is where it cannot: a PDF, or an iPhone's HEIC before it has been
-// converted on upload.
+// what it is where it cannot: a PDF, or an iPhone's HEIC that could not be
+// made a JPEG when it was picked (lib/ui/heic) and waits for the server to.
 function Thumb({ item }: { item: StripItem }) {
   const [failed, setFailed] = useState(false);
   const image = item.mimeType.startsWith("image/") && !/hei[cf]/.test(item.mimeType);

@@ -114,6 +114,7 @@ export function exportFactsOf(invoice: LoadedInvoice): ExportFacts {
     invoiceDate: invoice.invoiceDate,
     dueDate: invoice.dueDate,
     amount: invoice.amount,
+    ocr: invoice.ocr,
     rounding: invoice.rounding,
     shares: invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => a.amount),
     lines: invoice.lines,

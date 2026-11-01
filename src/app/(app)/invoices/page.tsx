@@ -43,7 +43,8 @@ export default async function InvoicesPage({
     getInvoiceRows(user, { ownUnits: scope === "unit" }),
     getFiscalYear(),
   ]);
-  // Keyed by scope: the table holds its tab in state, and a new scope is a
-  // new reading of the list rather than the old one re-cut.
-  return <InvoicesClient key={scope} rows={rows} scope={scope} scopes={scopes} tab={tab} fiscal={fiscal} />;
+  // Not keyed by scope: a remount would redraw the scope switch, and its pill
+  // would jump to the new scope instead of sliding there. The client follows
+  // the new scope's stage itself.
+  return <InvoicesClient rows={rows} scope={scope} scopes={scopes} tab={tab} fiscal={fiscal} />;
 }

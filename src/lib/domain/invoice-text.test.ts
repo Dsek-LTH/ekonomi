@@ -48,7 +48,7 @@ describe("parseInvoiceText", () => {
     "Moms 0%                      0,00",
     "Att betala               1 250,00",
     "Bankgiro 5050-1055",
-    "OCR 1234 5678 9012",
+    "OCR 1234 5678 9015",
   ];
 
   it("reads every field off a typical Swedish invoice", () => {
@@ -57,7 +57,7 @@ describe("parseInvoiceText", () => {
       dueDate: "2026-11-10",
       invoiceDate: "2026-10-20",
       invoiceNumber: "20417",
-      ocr: "123456789012",
+      ocr: "123456789015",
       bankgiro: "5050-1055",
       supplierOrgNo: "556677-8899",
       reference: "SEX01 Klara",

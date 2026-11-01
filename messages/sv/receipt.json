@@ -35,6 +35,8 @@
   "resize": "Ändra kvittopanelens bredd",
   "coverLabel": "Utläggsräkning",
   "underlagLabel": "Underlag",
+  "invoiceCoverLabel": "Attest",
+  "invoiceLabel": "Faktura",
   "documents": "Dokument",
   "showDocument": "Visa dokument {n}: {name}",
   "documentTileHint": "Klicka för att visa, dra för att flytta",

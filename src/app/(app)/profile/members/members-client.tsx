@@ -15,7 +15,6 @@ import { IconChevronRight } from "@/components/ui/icons";
 import { MemberScorePanel, StarRating } from "@/components/member-score";
 import { UserAvatar } from "@/components/ui/avatar";
 import type { MemberScoreRow } from "@/lib/data/member-score";
-import { profileTabs } from "../profile-client";
 
 /** Lowest first, and "Ny" after everyone with stars: nothing to go on is not
  *  a low score. Then whoever has the most waiting. */
@@ -33,13 +32,12 @@ export function MembersClient({
   rows: MemberScoreRow[];
   selected: MemberScoreRow | null;
 }) {
-  const tProfile = useTranslations("profile");
   const t = useTranslations("score.list");
   const [query, setQuery] = useState("");
 
   if (selected) {
     return (
-      <PageShell title={title} width="content" pages={profileTabs(tProfile, "members")} back="/profile/members">
+      <PageShell title={title} width="content" back="/profile/members">
         <Card>
           <CardBody className="space-y-5">
             <div className="flex items-center gap-3">
@@ -62,7 +60,7 @@ export function MembersClient({
     .sort(byConcern);
 
   return (
-    <PageShell title={title} width="content" pages={profileTabs(tProfile, "members")}>
+    <PageShell title={title} width="content">
       <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} />
       <Card>
         {shown.length === 0 ? (

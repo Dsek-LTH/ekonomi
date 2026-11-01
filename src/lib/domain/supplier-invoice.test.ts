@@ -71,6 +71,7 @@ describe("exportBlocker", () => {
     invoiceDate: "2026-10-20",
     dueDate: "2026-11-10",
     amount: 125000,
+    ocr: null,
     rounding: null,
     shares: [null],
     lines: [{ account: "5615", debit: 125000, credit: 0 }],
@@ -78,6 +79,10 @@ describe("exportBlocker", () => {
 
   it("lets a complete invoice through", () => {
     expect(exportBlocker(ready)).toBeNull();
+  });
+
+  it("takes an OCR grouped the way it is printed", () => {
+    expect(exportBlocker({ ...ready, ocr: "1234 5678-97" })).toBeNull();
   });
 
   it("counts the rounding and any credit line into what is booked", () => {
@@ -99,6 +104,10 @@ describe("exportBlocker", () => {
     [{ invoiceDate: null }, "supplierInvoice.noInvoiceDate"],
     [{ dueDate: null }, "supplierInvoice.noDueDate"],
     [{ amount: null }, "supplierInvoice.noAmount"],
+    [{ ocr: "1" }, "supplierInvoice.badOcr"],
+    [{ ocr: "1234567890" }, "supplierInvoice.badOcr"],
+    [{ ocr: "12345 abc" }, "supplierInvoice.badOcr"],
+    [{ ocr: "1".repeat(26) }, "supplierInvoice.badOcr"],
     [{ shares: [100000, 20000] }, "supplierInvoice.allocationSumMismatch"],
     [{ lines: [] }, "supplierInvoice.noLines"],
     [{ lines: [{ account: "", debit: 125000, credit: 0 }] }, "supplierInvoice.lineNoAccount"],

@@ -37,6 +37,7 @@ import {
   IconMail,
   IconMenu,
   IconReceipt,
+  IconPerson,
   IconUsers,
 } from "../ui/icons";
 import {
@@ -49,6 +50,7 @@ import {
   canViewContracts,
   canViewRentals,
   canViewStock,
+  canViewMemberScores,
   isAdmin,
 } from "@/lib/domain/permissions";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
@@ -309,6 +311,23 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+// The reader's own pages, reached from the account menu rather than the rail.
+// A section all the same, so the band over them is theirs: without it, /profile
+// was owned by no route and kept whatever tabs the previous page had.
+const PROFILE_GROUP: NavGroup = {
+  label: "profile",
+  icon: IconPerson,
+  items: [
+    { href: "/profile", label: "profile", icon: IconPerson, visible: ALL },
+    {
+      href: "/profile/members",
+      label: "members",
+      icon: IconUsers,
+      visible: (u) => canViewMemberScores(u.capabilities),
+    },
+  ],
+};
+
 /**
  * Every section of the app by route, with the name the nav gives it.
  *
@@ -323,7 +342,14 @@ const NAV_GROUPS: NavGroup[] = [
  * page reached through one of them wants the same treatment as any other.
  */
 const SECTION_LABELS: Record<string, string> = Object.fromEntries(
-  [OVERVIEW, HELP, SETTINGS, ...NAV_GROUPS.flatMap((g) => g.items), ...SETTINGS_SECTIONS].map(
+  [
+    OVERVIEW,
+    HELP,
+    SETTINGS,
+    ...NAV_GROUPS.flatMap((g) => g.items),
+    ...PROFILE_GROUP.items,
+    ...SETTINGS_SECTIONS,
+  ].map(
     (item) => [item.href, item.label],
   ),
 );
@@ -489,8 +515,11 @@ export function AppShell({
   // the page's own header (components/shell/section-nav.tsx), on the
   // section's pages and on everything under them, an utlägg or a budget, so
   // the way across to the section's other pages is always at the top.
+  const profileGroup = { ...PROFILE_GROUP, items: PROFILE_GROUP.items.filter((i) => i.visible(user)) };
   const tabSection =
-    groups.find((g) => g.items.length > 1 && g.items.some((i) => isActive(i.href))) ?? null;
+    [...groups, profileGroup].find(
+      (g) => g.items.length > 1 && g.items.some((i) => isActive(i.href)),
+    ) ?? null;
   const sectionNav: SectionNav | null = tabSection && {
     label: t(tabSection.label),
     tabsLabel: t("sectionTabs"),
@@ -523,7 +552,7 @@ export function AppShell({
   //
   // Never with a receipt panel either, which wants the foot for its own button.
   const receiptPanel = useReceiptPanelActive();
-  const topLevel = pathname === "/profile" || Object.hasOwn(SECTION_LABELS, routePath(pathname));
+  const topLevel = Object.hasOwn(SECTION_LABELS, routePath(pathname));
   const tabBar = topLevel && !receiptPanel;
 
   return (

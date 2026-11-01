@@ -15,6 +15,7 @@ import type { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoi
 import type { AccountRecord, CostCenter, ProjectRecord, SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { AttestReach, SupplierInvoiceView } from "@/lib/data/supplier-invoices";
 import { PersonName } from "@/components/ui/avatar";
+import { underlagCaption } from "@/lib/expense/document-url";
 
 /** The small capitals every label on the card is set in, as on the utlägg page. */
 export const LABEL = "text-xs font-medium text-muted";
@@ -36,6 +37,36 @@ export const invoiceDocuments = (invoice: SupplierInvoiceView) =>
     filename: d.filename,
     label: invoice.documents.length > 1 ? d.filename : undefined,
   }));
+
+/**
+ * The attest page, then the invoice's documents behind it, as an utlägg's
+ * panel stands its utläggsräkning before its underlag (lib/expense/
+ * document-url.ts): the order they are stapled in for Fortnox, captioned.
+ *
+ * Not on the fördelning, where the split the page states is still being
+ * written. And not on an invoice with no documents, whose empty panel is
+ * there to say so.
+ */
+export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
+  const t = useTranslations("receipt");
+  if (invoice.documents.length === 0) return [];
+  // A new URL whenever what the page says may have changed, so the panel
+  // draws it again rather than keeping the copy from before a signature.
+  const version = [invoice.status, invoice.updatedAt, ...invoice.allocations.map((a) => a.approvedByName ?? "")].join();
+  return [
+    {
+      src: `/api/supplier-invoices/${invoice.id}/cover?v=${encodeURIComponent(version)}`,
+      mimeType: "application/pdf",
+      label: t("invoiceCoverLabel"),
+    },
+    ...invoice.documents.map((d, i) => ({
+      src: `/api/supplier-invoice-documents/${d.id}`,
+      mimeType: d.mimeType,
+      filename: d.filename,
+      label: underlagCaption(t("invoiceLabel"), i, invoice.documents.length, d.filename),
+    })),
+  ];
+}
 
 /** An amount in kronor as the amount field writes one. */
 export const asInput = (sek: number | null) =>

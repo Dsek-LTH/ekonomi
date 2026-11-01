@@ -252,6 +252,7 @@
     "voucherSeries": "Verifikationsserie",
     "voucherSeriesHint": "Serien exporterade verifikationer hamnar i. Inget bokförs förrän en serie är vald.",
     "voucherSeriesSaved": "Verifikationsserie sparad.",
+    "save": "Spara",
     "saveFailed": "Kunde inte spara",
     "chart": "Kontoplan",
     "chartSubtitle": "{count} konton - senast synkad {time}",

@@ -7,7 +7,7 @@
 //
 // The rows arrive whole and are cut here (there are a few dozen open at a
 // time), but the tab is still in the URL, so a link lands on the same stage.
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
@@ -49,10 +49,16 @@ export function InvoicesClient({
 }) {
   const t = useTranslations("invoices");
   const title = useInvoiceTitle();
-  const controls = useUrlTab(
-    useTableControls({ tab, sortKey: "dueDate", sortDir: "asc" }),
-    invoiceDefaultTab(scope),
-  );
+  const local = useTableControls({ tab, sortKey: "dueDate", sortDir: "asc" });
+  // The table holds its stage in state, so a new scope (the switch, or Back to
+  // the other one) has to hand it the stage the URL now asks for. The search
+  // and the sort carry over, as on Utlägg.
+  const [shownScope, setShownScope] = useState(scope);
+  if (shownScope !== scope) {
+    setShownScope(scope);
+    local.setTab(tab);
+  }
+  const controls = useUrlTab(local, invoiceDefaultTab(scope));
   const setScope = useScopeSwitch(controls.tab, (s) => invoiceDefaultTab(s as InvoiceScope));
 
   // Each stage's count is the invoices on it that wait on the reader, the

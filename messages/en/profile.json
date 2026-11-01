@@ -63,11 +63,6 @@
       "SUPPLIER_INVOICE_SUBMITTED": "When a supplier invoice you are to attest is sent for attest."
     }
   },
-  "tabs": {
-    "label": "Profile",
-    "me": "My profile",
-    "members": "Members"
-  },
   "appearance": "Appearance",
   "avatar": {
     "title": "Profile picture",

@@ -7,6 +7,7 @@
 // count never promises rows the list then hides. See docs/navigation.md.
 import "server-only";
 
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import { fiscalYearWhere, type During } from "@/lib/server/fiscal-year";
 import { inFiscalYear, type FiscalYear } from "@/lib/ui/fiscal-year";
@@ -33,31 +34,47 @@ export interface NavCounts {
 }
 
 // The three parts of the Utlägg count, one query each, so the list's own tabs
-// (getExpenseTabCounts) count exactly what the nav does.
-const returnedExpenses = (viewer: Viewer, during: During | undefined) =>
+// (getExpenseTabCounts) count exactly what the nav does. `within` is the
+// list's scope, for the tabs: the nav counts across all of it.
+type Within = Prisma.ExpenseWhereInput;
+
+const returnedExpenses = (viewer: Viewer, during: During | undefined, within: Within = {}) =>
   prisma.expense.count({
-    where: { submitterId: viewer.id, status: "CHANGES_REQUESTED", ...(during ? { purchaseDate: during } : {}) },
+    where: {
+      AND: [
+        within,
+        { submitterId: viewer.id, status: "CHANGES_REQUESTED" },
+        during ? { purchaseDate: during } : {},
+      ],
+    },
   });
 
-const attestableExpenses = (viewer: Viewer, during: During | undefined) =>
+const attestableExpenses = (viewer: Viewer, during: During | undefined, within: Within = {}) =>
   hasAttestRole(viewer.capabilities)
     ? attestScopeWhere(viewer, { ownUnits: true }).then((scope) =>
         prisma.expense.count({
-          where: { AND: [scope, { status: "PENDING_APPROVAL" }, during ? { purchaseDate: during } : {}] },
+          where: { AND: [within, scope, { status: "PENDING_APPROVAL" }, during ? { purchaseDate: during } : {}] },
         }),
       )
     : Promise.resolve(0);
 
-const treasuryExpenses = (viewer: Viewer, status: "APPROVED" | "BOOKED", during: During | undefined) =>
+const treasuryExpenses = (
+  viewer: Viewer,
+  status: "APPROVED" | "BOOKED",
+  during: During | undefined,
+  within: Within = {},
+) =>
   canBookkeep(viewer.capabilities)
-    ? prisma.expense.count({ where: { status, ...(during ? { purchaseDate: during } : {}) } })
+    ? prisma.expense.count({ where: { AND: [within, { status }, during ? { purchaseDate: during } : {}] } })
     : Promise.resolve(0);
 
 /**
  * What waits on the reader under each of Utlägg's tabs, at the scope the list
- * is read at. The same rows as the nav's count, split by where they sit: your
- * own sent back under Utkast on Mina, what you attest under Att attestera on
- * your units, and the treasury's two stages on Alla.
+ * is read at. The same rows as the nav's count, split by where they sit (your
+ * own sent back under Utkast, what you attest under Att attestera, the
+ * treasury's two stages after it), and only those the scope shows. Every
+ * scope asks all four, so a stage keeps its count on whichever scope you read
+ * it, as far as the rows are there.
  */
 export async function getExpenseTabCounts(
   viewer: Viewer,
@@ -65,13 +82,17 @@ export async function getExpenseTabCounts(
   year: FiscalYear | null,
 ): Promise<Partial<Record<"draft" | "attest" | "book" | "export", number>>> {
   const during = year ? fiscalYearWhere(year) : undefined;
-  if (scope === "mine") return { draft: await returnedExpenses(viewer, during) };
-  if (scope === "unit") return { attest: await attestableExpenses(viewer, during) };
-  const [book, exp] = await Promise.all([
-    treasuryExpenses(viewer, "APPROVED", during),
-    treasuryExpenses(viewer, "BOOKED", during),
+  // The list's own scope (listScopeWhere in ./expenses), so a count never
+  // promises rows the tab then does not show.
+  const within: Within =
+    scope === "mine" ? { submitterId: viewer.id } : scope === "unit" ? await attestScopeWhere(viewer) : {};
+  const [draft, attest, book, exp] = await Promise.all([
+    returnedExpenses(viewer, during, within),
+    attestableExpenses(viewer, during, within),
+    treasuryExpenses(viewer, "APPROVED", during, within),
+    treasuryExpenses(viewer, "BOOKED", during, within),
   ]);
-  return { book, export: exp };
+  return { draft, attest, book, export: exp };
 }
 
 export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Promise<NavCounts> {

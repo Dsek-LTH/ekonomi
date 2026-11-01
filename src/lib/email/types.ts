@@ -6,7 +6,7 @@
 // from both drawings is what keeps them saying the same thing: a fact added to
 // an utlägg's summary appears in both or in neither.
 
-/** The colour of the line along the top of the card, and of the eyebrow. */
+/** What kind of mail it is, which colours the eyebrow and nothing else. */
 export type Tone = "action" | "warning" | "card";
 
 export interface Link {

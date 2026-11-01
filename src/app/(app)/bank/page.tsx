@@ -70,8 +70,11 @@ export default async function BankPage({
   const [cardless, unaccounted] = await Promise.all([
     showsCardless ? countCardlessTransactions({ during }) : 0,
     // The reader's own purchases with no utlägg yet, the nav's count for
-    // them, under Att redovisa on Mina.
-    scope === "mine" ? countUnaccountedPurchases(user.id, { during }) : 0,
+    // them, under Att redovisa on every scope that shows them.
+    countUnaccountedPurchases(user.id, {
+      during,
+      resultUnitNames: scope === "unit" ? owned.names : undefined,
+    }),
   ]);
   // "Utan kort" is a tab only while there is something on it (see
   // docs/navigation.md), so a link to it once the last one is placed lands on

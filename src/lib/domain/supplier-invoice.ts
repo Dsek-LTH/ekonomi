@@ -131,12 +131,37 @@ export function attestBlocker(f: {
 
 // ── The export ────────────────────────────────────────────────────
 
+/** An OCR number as Fortnox takes it: digits alone. Printed invoices group
+ *  them with spaces (and the odd dash), and that is how they arrive when
+ *  copied off the PDF. */
+export function ocrDigits(ocr: string): string {
+  return ocr.replace(/[\s-]/g, "");
+}
+
+/** Whether Fortnox will take it as an OCR: 2 to 25 digits, once the grouping
+ *  is gone, ending in a check digit that adds up (modulus 10, as a personnummer
+ *  does). Asked at Spara, so the export never meets Fortnox's own refusal.
+ *  The check digit is also what catches a digit typed wrong. */
+export function isValidOcr(ocr: string): boolean {
+  const digits = ocrDigits(ocr);
+  if (!/^\d{2,25}$/.test(digits)) return false;
+  // From the right: every second digit doubled, its digits summed.
+  let sum = 0;
+  for (let i = 0; i < digits.length; i++) {
+    let d = Number(digits[digits.length - 1 - i]);
+    if (i % 2 === 1) d = d * 2 > 9 ? d * 2 - 9 : d * 2;
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
 export interface ExportFacts {
   fortnoxSupplierNumber: string | null;
   invoiceNumber: string | null;
   invoiceDate: string | Date | null;
   dueDate: string | Date | null;
   amount: number | null; // öre
+  ocr: string | null;
   /** Öresutjämning, öre, signed. Booked on its own account at the export. */
   rounding: number | null;
   /** The attested split's shares, öre. Null for the one row of an unsplit
@@ -159,6 +184,7 @@ export function exportBlocker(f: ExportFacts): string | null {
   if (!f.invoiceDate) return "supplierInvoice.noInvoiceDate";
   if (!f.dueDate) return "supplierInvoice.noDueDate";
   if (!f.amount || f.amount <= 0) return "supplierInvoice.noAmount";
+  if (f.ocr && !isValidOcr(f.ocr)) return "supplierInvoice.badOcr";
   if (f.shares.length > 1) {
     const sum = f.shares.reduce<number>((s, a) => s + (a ?? 0), 0);
     if (sum !== f.amount) return "supplierInvoice.allocationSumMismatch";
