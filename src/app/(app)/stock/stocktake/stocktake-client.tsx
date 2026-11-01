@@ -47,6 +47,7 @@ import { LEVELS, bottlesAt, type Level } from "@/lib/stock/levels";
 import type { StockLevelDto } from "@/lib/data/stock";
 import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /** What has been typed and not yet booked, as typed. */
 type Draft = {
@@ -277,15 +278,14 @@ export default function StocktakeClient({
             <IconScan className="size-4" />
             {t("scan.action")}
           </Button>
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <input
-              type="checkbox"
-              checked={onlyDiffering}
-              onChange={(e) => setOnlyDiffering(e.target.checked)}
-              className="size-4 accent-[var(--color-accent)]"
-            />
+          <Checkbox
+            checked={onlyDiffering}
+            onChange={() => setOnlyDiffering((v) => !v)}
+            label={t("stocktakeSheet.onlyDiffering")}
+            className="text-muted"
+          >
             {t("stocktakeSheet.onlyDiffering")}
-          </label>
+          </Checkbox>
         </div>
       </Card>
 

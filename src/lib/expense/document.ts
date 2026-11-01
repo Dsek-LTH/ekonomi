@@ -29,6 +29,8 @@ import type {
   ExpenseCoverJourney,
   ExpenseCoverWaiver,
 } from "./cover/types";
+import { formatNumber, formatOreKr } from "@/lib/ui/format";
+import { oreToSEK } from "@/lib/domain/money";
 
 /**
  * Why an utlägg has no cover page. Each maps to a message key under
@@ -46,17 +48,6 @@ export type StoredDocument = { ok: true; key: string; filename: string };
 export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
-const nf = (digits: number) =>
-  new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-
-/** öre → "1 069,00 kr", the way the rest of the app writes money in Swedish. */
-function kr(ore: number): string {
-  return `${nf(2).format(ore / 100)} kr`;
-}
-
 /**
  * A reading, always with its tenth: "12 300,0 km".
  *
@@ -65,7 +56,7 @@ function kr(ore: number): string {
  * doing it, so the readings and the difference are all written the same way,
  * even where the tenth is a zero.
  */
-const km = (n: number): string => `${nf(1).format(n)} km`;
+const km = (n: number): string => `${formatNumber(n, 1, 1)} km`;
 
 /** An absent value is said, not left blank. Matches `orDash` in the template. */
 const DASH = "-";
@@ -149,7 +140,7 @@ function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
     rate:
       expense.mileageOrePerKm == null
         ? DASH
-        : `${nf(2).format(expense.mileageOrePerKm / 100)} kr/km`,
+        : `${formatNumber(oreToSEK(expense.mileageOrePerKm), 2, 2)} kr/km`,
   };
 }
 
@@ -223,12 +214,12 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
       name: expense.submitter.name,
       studentId: expense.submitter.studentId,
     },
-    total: kr(expense.allocations.reduce((sum, a) => sum + a.amount, 0)),
+    total: formatOreKr(expense.allocations.reduce((sum, a) => sum + a.amount, 0), { decimals: 2 }),
     allocations: expense.allocations.map((a) => ({
       // The code alone, which is what the cost centre is called in Fortnox and
       // in the budget.
       costCenter: a.costCenter.code,
-      amount: kr(a.amount),
+      amount: formatOreKr(a.amount, { decimals: 2 }),
       comment: a.comment,
       // Null rather than a placeholder: what an unattested slice reads as is
       // the page's decision, not this function's, and the template says it in

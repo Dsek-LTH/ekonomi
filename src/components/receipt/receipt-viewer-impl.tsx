@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { useMediaQuery } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
+import { Button } from "@/components/ui/button";
 
 // pdf.js parses in a Web Worker, so it needs a URL to load that worker from.
 // Resolving it through the bundler (rather than copying the file into /public)
@@ -1096,13 +1097,9 @@ function LoadFailed({
       <p className="text-sm font-medium text-foreground">{t("loadFailed")}</p>
       <p className="text-xs text-muted">{t("loadFailedHint")}</p>
       <div className="mt-1 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onRetry}
-          className="rounded-control border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-hover"
-        >
+        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
           {t("retry")}
-        </button>
+        </Button>
         {pdfHref && (
           <a
             href={pdfHref}

@@ -9,6 +9,8 @@
 // A warning, never a refusal. Two pizzas on one evening is not a mistake, and
 // only the person filling this in knows which it is.
 
+import { sekToOre } from "./money";
+
 export interface ExpenseFingerprint {
   id: string;
   reference?: string;
@@ -32,11 +34,11 @@ export function likelyDuplicates(
   const day = dayOf(claim.purchaseDate);
   if (Number.isNaN(day)) return [];
   // In öre, so a float's last digit cannot make 320 differ from 320.
-  const ore = Math.round(claim.grossAmount * 100);
+  const ore = sekToOre(claim.grossAmount);
   return existing.filter(
     (e) =>
       e.id !== claim.excludeId &&
-      Math.round(e.grossAmount * 100) === ore &&
+      sekToOre(e.grossAmount) === ore &&
       Math.abs(dayOf(e.purchaseDate) - day) <= DUPLICATE_WINDOW_DAYS * DAY,
   );
 }

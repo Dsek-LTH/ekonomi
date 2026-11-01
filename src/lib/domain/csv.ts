@@ -6,6 +6,8 @@
 // Pure by construction (see domain/boundary.test.ts): bytes and strings in,
 // strings and numbers out, no database and no filesystem.
 
+import { sekToOre } from "./money";
+
 /**
  * Split one CSV line into fields, honouring double-quoted fields (which may
  * contain the delimiter). Quotes are only special at a field boundary, and a
@@ -86,7 +88,7 @@ export function amountToOre(raw: string): number | null {
   // before asking this.
   const value = Number(s);
   if (!Number.isFinite(value)) return null;
-  return Math.round(value * 100);
+  return sekToOre(value);
 }
 
 /**

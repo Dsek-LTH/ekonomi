@@ -48,6 +48,7 @@ import {
   formatLitres,
   formatOreKr,
   formatMovementLitres,
+  formatNumber,
   formatSigned,
 } from "@/lib/ui/format";
 import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
@@ -441,7 +442,7 @@ export default function StockProductClient({
                   product.abv == null ? (
                     <span className="text-muted">-</span>
                   ) : (
-                    `${new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 2 }).format(product.abv)} %`
+                    `${formatNumber(product.abv, 0, 2)} %`
                   )
                 }
               />

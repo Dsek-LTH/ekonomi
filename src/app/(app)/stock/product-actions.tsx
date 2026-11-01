@@ -25,9 +25,7 @@ import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { LEVELS, bottlesAt, type Level, type OpenBottles } from "@/lib/stock/levels";
 import { formatOreKr } from "@/lib/ui/format";
-import { isoDay } from "@/lib/domain/date";
-
-const today = () => isoDay(new Date());
+import { today } from "@/lib/domain/date";
 
 const int = (s: string): number => {
   const n = Number(s.replace(",", ".").trim());

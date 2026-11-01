@@ -28,7 +28,8 @@ import { IconX } from "@/components/ui/icons";
 import { Amount } from "@/components/ui/amount";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { withBlankRows } from "@/lib/ui/blank-rows";
-import { oreToSEK } from "@/lib/domain/money";
+import { oreToSEK, sekToInput } from "@/lib/domain/money";
+import { formatOreKr } from "@/lib/ui/format";
 import { linePricing } from "@/lib/contract/rental/pricing";
 import { uid, cn } from "@/lib/ui/utils";
 import type { RentalItemOption } from "@/lib/data/rental-items";
@@ -149,8 +150,8 @@ export function RentalLines({
     update(id, {
       itemId: item.id,
       description: item.name,
-      unitPrice: item.dailyPriceOre === null ? "" : (item.dailyPriceOre / 100).toFixed(2),
-      replacementValue: (item.replacementValueOre / 100).toFixed(2),
+      unitPrice: item.dailyPriceOre === null ? "" : sekToInput(oreToSEK(item.dailyPriceOre)),
+      replacementValue: sekToInput(oreToSEK(item.replacementValueOre)),
     });
   };
 
@@ -394,7 +395,7 @@ export function RentalLines({
                     <td colSpan={7} className="space-y-0.5 px-2 py-1 text-xs">
                       {priced.discountOre > 0 && (
                         <p className="text-muted">
-                          {t("lineWas", { gross: `${(priced.grossOre / 100).toFixed(2)} kr` })}
+                          {t("lineWas", { gross: formatOreKr(priced.grossOre, { decimals: 2 }) })}
                         </p>
                       )}
                       {short(row) && <p className="text-danger">{t("unavailable")}</p>}

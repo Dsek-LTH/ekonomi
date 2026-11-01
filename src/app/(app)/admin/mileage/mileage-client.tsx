@@ -21,7 +21,7 @@ import { Tag } from "@/components/ui/status-pill";
 import { IconPlus, IconTrash } from "@/components/ui/icons";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { parseSEK } from "@/lib/domain/money";
+import { oreToSEK, parseSEK } from "@/lib/domain/money";
 import { AmountInput } from "@/components/ui/amount-input";
 import { ExpandToggle } from "@/components/ui/expand-toggle";
 import { rateOn } from "@/lib/mileage/rate";
@@ -29,18 +29,12 @@ import { today } from "@/lib/domain/date";
 import { useFormat } from "@/lib/ui/use-format";
 import type { MileageRateRow } from "@/lib/data/mileage";
 import type { MileageRateInput } from "@/lib/api/schemas/admin";
-
-// One formatter for both, built once rather than per row per render:
-// constructing an Intl formatter is the expensive half of using one.
-const kr = new Intl.NumberFormat("sv-SE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { formatNumber } from "@/lib/ui/format";
 
 /** 250 öre/km → "25,00", the way it is quoted. One mil is ten kilometres. */
-const perMil = (orePerKm: number) => kr.format((orePerKm * 10) / 100);
+const perMil = (orePerKm: number) => formatNumber(oreToSEK(orePerKm * 10), 2, 2);
 
-const perKm = (orePerKm: number) => kr.format(orePerKm / 100);
+const perKm = (orePerKm: number) => formatNumber(oreToSEK(orePerKm), 2, 2);
 
 export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   const t = useTranslations("mileage.rates");

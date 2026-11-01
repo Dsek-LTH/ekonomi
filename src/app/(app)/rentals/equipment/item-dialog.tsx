@@ -20,14 +20,14 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 import { AmountInput } from "@/components/ui/amount-input";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { parseSEK } from "@/lib/domain/money";
+import { oreToSEK, parseOre, sekToInput } from "@/lib/domain/money";
 import type { RentalItemRow } from "@/lib/data/rental-items";
 
 /** Kronor as typed, to öre. Blank is not zero: see `dailyPriceOre` below. */
-const toOre = (input: string) => Math.round(parseSEK(input) * 100);
+const toOre = (input: string) => parseOre(input);
 
 /** Öre to the string the amount field holds. */
-const fromOre = (ore: number | null) => (ore === null ? "" : (ore / 100).toFixed(2));
+const fromOre = (ore: number | null) => (ore === null ? "" : sekToInput(oreToSEK(ore)));
 
 export function ItemDialog({
   item,

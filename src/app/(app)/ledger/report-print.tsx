@@ -14,14 +14,11 @@ import { cn } from "@/lib/ui/utils";
 import { printLines, type Figures, type PrintLine } from "./print-layout";
 import type { LedgerReport, ResultColumn, ViewOptions } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
+import { formatNumber } from "@/lib/ui/format";
 
 // Fortnox's figures: two decimals, a space between thousands, no currency
 // (the header says SEK once).
-const NUMBER = new Intl.NumberFormat("sv-SE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-const num = (v: number | null) => (v == null ? "" : NUMBER.format(v));
+const num = (v: number | null) => (v == null ? "" : formatNumber(v, 2, 2));
 
 /** "2026-10-06, 21:47", the moment the print was asked for. */
 function stamp(d: Date): string {

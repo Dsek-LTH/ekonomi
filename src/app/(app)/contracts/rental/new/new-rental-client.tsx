@@ -48,10 +48,9 @@ import { Notice } from "@/components/ui/notice";
 import { IconPlus } from "@/components/ui/icons";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
-import { parseSEK } from "@/lib/domain/money";
 import { isCompleteDate } from "@/lib/domain/date";
 import { Amount } from "@/components/ui/amount";
-import { oreToSEK } from "@/lib/domain/money";
+import { oreToSEK, parseOre, sekToInput } from "@/lib/domain/money";
 import { rentalPricing } from "@/lib/contract/rental/pricing";
 import { SECTION } from "@/lib/contract/section";
 import { MAX_SIGNATURES } from "@/lib/api/schemas/contract";
@@ -68,8 +67,8 @@ import type { Availability } from "@/lib/data/rental-availability";
 import type { CounterpartyOption } from "@/lib/data/counterparties";
 import type { ContractDetail, RentalLineRow } from "@/lib/data/contracts";
 
-const toOre = (input: string) => (input.trim() === "" ? 0 : Math.round(parseSEK(input) * 100));
-const kr = (ore: number) => (ore / 100).toFixed(2);
+const toOre = (input: string) => (input.trim() === "" ? 0 : parseOre(input));
+const kr = (ore: number) => sekToInput(oreToSEK(ore));
 
 /** A stored line as the sheet holds it: strings, as if it had been typed. */
 const lineFromRow = (l: RentalLineRow): LineRow => ({

@@ -14,6 +14,7 @@
 // together under the prefix, so a whole mis-prefixed batch is seen, and moved,
 // as one thing instead of being scattered through the products by name.
 import { byCodePoint, productRows, type GroupableLine, type ProductRow } from "./product-groups";
+import { oreToSEK, sekToOre } from "@/lib/domain/money";
 
 /** What a section carries for its lines: the account's name, and the amount. */
 export interface SectionLine extends GroupableLine {
@@ -121,7 +122,7 @@ export function soldSections<T extends SectionLine>(lines: readonly T[], reserv:
       accountName: group[0].accountName,
       // Summed in öre and back, so a column of kronor with öre in them does not
       // come out a hair off in floating point.
-      total: group.reduce((sum, l) => sum + Math.round(l.total * 100), 0) / 100,
+      total: oreToSEK(group.reduce((sum, l) => sum + sekToOre(l.total), 0)),
       rows,
     };
   });

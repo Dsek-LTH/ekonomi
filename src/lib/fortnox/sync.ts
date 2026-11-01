@@ -20,8 +20,7 @@ import { parseSie } from "@/lib/fortnox/sie";
 import { voucherFingerprint } from "@/lib/closing/fingerprint";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { isoDay } from "@/lib/domain/date";
-
-const toOre = (sek: number) => Math.round(sek * 100);
+import { sekToOre } from "@/lib/domain/money";
 
 function* chunks<T>(arr: T[], size: number): Generator<T[]> {
   for (let i = 0; i < arr.length; i += size) yield arr.slice(i, i + size);
@@ -276,8 +275,8 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
       account,
       accountName: parsed.accounts.get(account) ?? "",
       costCenterCode: costCenterCode ?? "",
-      opening: toOre(parsed.openingBalances.get(key) ?? 0),
-      closing: toOre(parsed.closingBalances.get(key) ?? 0),
+      opening: sekToOre(parsed.openingBalances.get(key) ?? 0),
+      closing: sekToOre(parsed.closingBalances.get(key) ?? 0),
     };
   });
 
@@ -300,8 +299,8 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
           ? parsed.costCenters.get(tr.costCenterCode) ?? null
           : null,
         text: tr.text ?? null,
-        debit: tr.amount > 0 ? toOre(tr.amount) : 0,
-        credit: tr.amount < 0 ? toOre(-tr.amount) : 0,
+        debit: tr.amount > 0 ? sekToOre(tr.amount) : 0,
+        credit: tr.amount < 0 ? sekToOre(-tr.amount) : 0,
       });
     }
     voucherRecords.push({

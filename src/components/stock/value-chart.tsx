@@ -25,14 +25,14 @@ import {
 } from "@/lib/ui/chart-geometry";
 import { YGrid } from "@/components/ui/chart-axis";
 import { cn } from "@/lib/ui/utils";
+import { formatNumber } from "@/lib/ui/format";
+import { oreToSEK } from "@/lib/domain/money";
 
 export interface ValuePoint {
   date: string;
   byCategory: Record<DrinkCategory, number>;
   totalOre: number;
 }
-
-const kr = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
 
 export function StockValueChart({
   points,
@@ -127,7 +127,7 @@ export function StockValueChart({
             ticks={axis}
             y={y}
             geometry={geometry}
-            format={(v) => kr.format(v / 100)}
+            format={(v) => formatNumber(oreToSEK(v), 0, 0)}
           />
 
           <g clipPath={`url(#${clipId})`}>
@@ -196,12 +196,12 @@ export function StockValueChart({
                     style={{ background: DRINK_SERIES[c] }}
                   />
                   <dt className="min-w-0 flex-1 truncate text-muted">{t(`category.${c}`)}</dt>
-                  <dd className="tabular-nums">{kr.format(hovered.byCategory[c] / 100)}</dd>
+                  <dd className="tabular-nums">{formatNumber(oreToSEK(hovered.byCategory[c]), 0, 0)}</dd>
                 </div>
               ))}
               <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 text-xs font-medium">
                 <dt className="min-w-0 flex-1">{t("total")}</dt>
-                <dd className="tabular-nums">{kr.format(hovered.totalOre / 100)}</dd>
+                <dd className="tabular-nums">{formatNumber(oreToSEK(hovered.totalOre), 0, 0)}</dd>
               </div>
             </dl>
           </div>

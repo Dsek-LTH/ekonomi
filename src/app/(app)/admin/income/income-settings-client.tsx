@@ -37,6 +37,7 @@ import { cn } from "@/lib/ui/utils";
 
 import { IncomeSetupNotice } from "../../income/setup-notice";
 import { UnitSales } from "./unit-sales";
+import { sekToOre } from "@/lib/domain/money";
 
 type AccountKey = "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
 
@@ -123,14 +124,14 @@ export function IncomeSettingsClient({
     if (!Number.isFinite(kronor) || kronor <= 0) return;
     const ok = await mutate("/api/income/swish-fallbacks", {
       key: "addFallback",
-      body: { amount: Math.round(kronor * 100), message: newFallback.message },
+      body: { amount: sekToOre(kronor), message: newFallback.message },
       error: t("saveFailed"),
     });
     if (ok) setNewFallback({ amount: "", message: "" });
   }
 
   async function removeFallback(amountSEK: number) {
-    await mutate(`/api/income/swish-fallbacks/${Math.round(amountSEK * 100)}`, {
+    await mutate(`/api/income/swish-fallbacks/${sekToOre(amountSEK)}`, {
       key: `fallback-${amountSEK}`,
       method: "DELETE",
       error: t("saveFailed"),

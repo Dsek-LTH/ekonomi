@@ -25,11 +25,11 @@ import type { DrinkCategory } from "@/lib/domain/types";
 import type { StockStats } from "@/lib/data/stock-stats";
 import { DRINK_SERIES } from "@/lib/ui/chart-colors";
 import { cn } from "@/lib/ui/utils";
-import { formatOreKr } from "@/lib/ui/format";
+import { formatNumber, formatOreKr } from "@/lib/ui/format";
 import { isoDay } from "@/lib/domain/date";
 
 /** Already litres, not millilitres: these come out of the stats query summed. */
-const formatLitreCount = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 }).format;
+const formatLitreCount = (litres: number) => formatNumber(litres, 0, 1);
 
 
 export default function StockStatsClient({

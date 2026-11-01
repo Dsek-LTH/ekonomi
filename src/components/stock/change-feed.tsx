@@ -26,11 +26,7 @@ import type { Column } from "@/components/ui/data-table";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockChangeDto } from "@/lib/data/stock";
 import { cn } from "@/lib/ui/utils";
-
-const stamp = (iso: string) =>
-  new Intl.DateTimeFormat("sv-SE", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(iso),
-  );
+import { useFormat } from "@/lib/ui/use-format";
 
 export function ChangeFeed({
   changes,
@@ -45,6 +41,7 @@ export function ChangeFeed({
 }) {
   const t = useTranslations("stock");
   const controls = useTableControls();
+  const { dateTime } = useFormat();
 
   /** What the cell was called: the direction, and the rung when there is one. */
   const named = (c: StockChangeDto) =>
@@ -61,7 +58,7 @@ export function ChangeFeed({
       sortable: true,
       mobile: "meta",
       mobileOrder: 1,
-      cell: (c) => stamp(c.at),
+      cell: (c) => dateTime(c.at),
     },
     {
       key: "actor",

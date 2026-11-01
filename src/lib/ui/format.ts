@@ -143,11 +143,16 @@ export const formatSigned = (n: number): string => SIGNED.format(n);
  * kr/km. For a number that is not money in kronor or a volume, which have
  * their own formatters above.
  */
+const numberCache = new Map<string, Intl.NumberFormat>();
+
 export function formatNumber(n: number, min: number, max: number): string {
-  return new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: min,
-    maximumFractionDigits: max,
-  }).format(n);
+  const key = `${min}-${max}`;
+  let f = numberCache.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
+    numberCache.set(key, f);
+  }
+  return f.format(n);
 }
 
 /** Centilitres per krona, the cellar's own value-for-money figure. */

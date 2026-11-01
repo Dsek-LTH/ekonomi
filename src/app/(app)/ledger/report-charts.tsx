@@ -34,7 +34,7 @@ import {
   usePointerIndex,
 } from "@/lib/ui/chart-geometry";
 import { YGrid } from "@/components/ui/chart-axis";
-import { formatSEK } from "@/lib/ui/format";
+import { formatNumber, formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
 import type { LedgerTrend, TrendCostCenter, TrendMonth } from "@/lib/ledger/trend";
 
@@ -46,9 +46,6 @@ import type { LedgerTrend, TrendCostCenter, TrendMonth } from "@/lib/ledger/tren
 // labels that fit in the gutter, and "262 728,00 kr" repeated five times is a
 // wall of digits nobody reads.
 
-const NUM = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
-const NUM1 = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 });
-
 /**
  * One unit for a whole axis, chosen from its largest tick.
  *
@@ -57,14 +54,14 @@ const NUM1 = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 });
  * of stated once, because there is nowhere on these charts to state it once.
  */
 function axisFormat(maxAbs: number): (v: number) => string {
-  if (maxAbs >= 1_000_000) return (v) => (v === 0 ? "0" : `${NUM1.format(v / 1e6)} mkr`);
-  if (maxAbs >= 20_000) return (v) => (v === 0 ? "0" : `${NUM1.format(v / 1000)} tkr`);
-  return (v) => NUM.format(v);
+  if (maxAbs >= 1_000_000) return (v) => (v === 0 ? "0" : `${formatNumber(v / 1e6, 0, 1)} mkr`);
+  if (maxAbs >= 20_000) return (v) => (v === 0 ? "0" : `${formatNumber(v / 1000, 0, 1)} tkr`);
+  return (v) => formatNumber(v, 0, 0);
 }
 
 /** A compact figure for a bar's own label, where the axis is not there to
  *  carry the unit. */
-const money = (v: number) => `${NUM.format(v)} kr`;
+const money = (v: number) => `${formatNumber(v, 0, 0)} kr`;
 
 // Money in and money out, named rather than taken off the rotation.
 //

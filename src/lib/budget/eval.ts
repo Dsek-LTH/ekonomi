@@ -25,6 +25,8 @@
 // standing in as a zero, so an account total is either right or visibly
 // incomplete (`badAccounts`), never plausibly wrong.
 
+import { sekToOre } from "@/lib/domain/money";
+
 // ── Units ─────────────────────────────────────────────────────────
 //
 // The figures this produces are money and come out as integer öre, like every
@@ -355,7 +357,7 @@ export function evaluate(
       // stops being an arithmetic result and becomes an amount, and it is
       // rounded once, here, rather than being carried at full float precision
       // into a sum of a hundred rows and rounded at the end.
-      const ore = Number.isFinite(kr) ? Math.round(kr * 100) : 0;
+      const ore = Number.isFinite(kr) ? sekToOre(kr) : 0;
       liValues.set(li.id, ore);
       // The cell map keeps finite numbers (0 for unresolved) so the fixed point
       // stays stable; `badCells` is what says which of those zeros are answers

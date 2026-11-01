@@ -25,7 +25,7 @@ import { AllocationEditor, makeRow, type AllocationRow } from "@/components/allo
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { parseOre, parseSEK, sekToInput } from "@/lib/domain/money";
+import { parseOre, parseSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import type { KonteringRow } from "@/lib/api/schemas/supplier-invoice";
 import { attestBlocker } from "@/lib/domain/supplier-invoice";
 import { cn } from "@/lib/ui/utils";
@@ -198,7 +198,7 @@ export function AllocateForm({
   const [dueDate, setDueDate] = useState(defaults.dueDate);
   const [description, setDescription] = useState(defaults.description);
   const total = totalInput.trim() ? parseSEK(totalInput) : null;
-  const totalOre = total == null || !Number.isFinite(total) || total <= 0 ? null : Math.round(total * 100);
+  const totalOre = total == null || !Number.isFinite(total) || total <= 0 ? null : sekToOre(total);
 
   const [rows, setRowsState] = useState<AllocationRow[]>(initialRows);
   // Stable, because the editor keeps a lone row's amount equal to the total

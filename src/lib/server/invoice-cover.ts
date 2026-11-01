@@ -17,6 +17,7 @@ import { prisma } from "@/lib/server/db";
 import { typeset } from "@/lib/server/typst";
 import { isoDate } from "@/lib/data/shared";
 import type { LoadedInvoice } from "@/lib/api/supplier-invoice-access";
+import { formatOreKr } from "@/lib/ui/format";
 
 const TEMPLATE = path.join(process.cwd(), "src/lib/server/invoice-cover/invoice-cover.typ");
 
@@ -69,9 +70,6 @@ export interface InvoiceCoverData {
   exportedBy: string | null;
 }
 
-const nf = new Intl.NumberFormat("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-/** öre → "1 250,00 kr", as the utläggsräkning writes it. */
-const kr = (ore: number) => `${nf.format(ore / 100)} kr`;
 
 /** The day in Stockholm, as an ISO date. A signature at 00:30 is that day's. */
 const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
@@ -90,10 +88,10 @@ export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
     created: day(f.created),
     // What the rows add up to, as on the utläggsräkning: this page is about
     // what was attested, and the export has already checked it is the amount.
-    total: kr(f.rows.reduce((s, r) => s + r.amount, 0)),
+    total: formatOreKr(f.rows.reduce((s, r) => s + r.amount, 0), { decimals: 2 }),
     allocations: f.rows.map((r) => ({
       costCenter: r.costCenter,
-      amount: kr(r.amount),
+      amount: formatOreKr(r.amount, { decimals: 2 }),
       comment: r.comment,
       approvedBy: r.attestedBy,
       approvedAt: r.attestedAt ? day(r.attestedAt) : null,

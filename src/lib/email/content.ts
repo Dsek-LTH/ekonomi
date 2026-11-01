@@ -7,6 +7,7 @@
 // sample data. Everything returns an `Email` (types.ts) for render.tsx to draw.
 import { createTranslator } from "next-intl";
 import { oreToSEK } from "@/lib/domain/money";
+import { formatSEK } from "@/lib/ui/format";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import type { ExpenseStatus, PaymentType } from "@/lib/domain/types";
 import type { Block, Email, Tone } from "./types";
@@ -40,7 +41,6 @@ const commonT = createTranslator({ locale: "sv", messages: { common: svCommon },
 const paymentLabel = (p: PaymentType): string => commonT(`payment.${p}.label`);
 export const statusLabel = (s: ExpenseStatus): string => commonT(`status.${s}`);
 
-const sek = new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK" });
 const signedSek = new Intl.NumberFormat("sv-SE", {
   style: "currency",
   currency: "SEK",
@@ -48,7 +48,7 @@ const signedSek = new Intl.NumberFormat("sv-SE", {
 });
 
 /** An amount in öre, the way a mail shows it. */
-export const formatOre = (ore: number): string => sek.format(oreToSEK(ore));
+export const formatOre = (ore: number): string => formatSEK(oreToSEK(ore));
 
 /** A bank amount, signed both ways, so a refund reads as money coming back. */
 export const formatSignedOre = (ore: number): string => signedSek.format(oreToSEK(ore));

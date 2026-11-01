@@ -20,6 +20,7 @@ import { linePricing, rentalPricing } from "./rental/pricing";
 import { renderRentalContract, RentalRenderError } from "./rental/typst";
 import type { RentalContractData } from "./rental/types";
 import { isoDay } from "@/lib/domain/date";
+import { formatOreKr } from "@/lib/ui/format";
 
 /**
  * Why a contract has no document. Each maps to a message key under
@@ -39,14 +40,6 @@ export type RenderResult =
 export type StoreResult =
   | { ok: true; fileId: string; filename: string }
   | ({ ok: false } & DocumentFailure);
-
-const nf = new Intl.NumberFormat("sv-SE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/** öre → "1 069,00 kr", the way the rest of the app writes money in Swedish. */
-const kr = (ore: number): string => `${nf.format(ore / 100)} kr`;
 
 /** An ISO day, which is what a Swedish contract states a date as. Null in
  *  the live preview, where the period may not be chosen yet. */
@@ -137,21 +130,21 @@ export function buildRentalData(
         // With its unit, because a bare number in a column beside three money
         // columns reads as a fourth price.
         quantity: `${l.quantity} st`,
-        unitPrice: kr(l.unitPriceOre),
+        unitPrice: formatOreKr(l.unitPriceOre, { decimals: 2 }),
         // Null where nothing came off, so the column can say nothing rather
         // than "0 %" on every row of the ordinary rental.
         discount: priced.discountPercent > 0 ? `${priced.discountPercent} %` : null,
-        lineTotal: kr(priced.netOre),
-        replacementValue: kr(l.replacementValueOre),
+        lineTotal: formatOreKr(priced.netOre, { decimals: 2 }),
+        replacementValue: formatOreKr(l.replacementValueOre, { decimals: 2 }),
       };
     }),
-    subtotal: kr(pricing.subtotalOre),
+    subtotal: formatOreKr(pricing.subtotalOre, { decimals: 2 }),
     // Left out of the document entirely when nothing came off. See the field.
-    discount: pricing.discountOre > 0 ? kr(pricing.discountOre) : null,
+    discount: pricing.discountOre > 0 ? formatOreKr(pricing.discountOre, { decimals: 2 }) : null,
     // Whether the table needs a discount column at all.
     anyDiscount: pricing.anyDiscount,
-    price: kr(pricing.totalOre),
-    totalReplacement: kr(totalReplacement),
+    price: formatOreKr(pricing.totalOre, { decimals: 2 }),
+    totalReplacement: formatOreKr(totalReplacement, { decimals: 2 }),
     signatureCount: rental.signatureCount,
     terms: RENTAL_TERMS,
     termsVersion: TERMS_VERSION,

@@ -31,7 +31,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { useQuery } from "@/components/shell/use-query";
 import { isCompleteDate } from "@/lib/domain/date";
-import { parseOre, sekToInput } from "@/lib/domain/money";
+import { oreToSEK, parseOre, sekToInput, sekToOre } from "@/lib/domain/money";
 import {
   MAX_ROUNDING,
   PAYABLE_ACCOUNT,
@@ -57,9 +57,7 @@ import { useTransition, type WorkspaceProps } from "./invoice-shared";
 // head saves on its own as it is left. The lines are saved together, by Spara
 // kontering, the way an utlägg's voucher is.
 
-/** Kronor as the voucher table writes them, "1247,50", from öre. */
-const kr = (ore: number) => (ore / 100).toFixed(2).replace(".", ",");
-const toOre = (sek: number | null) => (sek == null ? null : Math.round(sek * 100));
+const toOre = (sek: number | null) => (sek == null ? null : sekToOre(sek));
 
 /**
  * The lines the table opens on: the kontering as saved, or for one not made
@@ -75,8 +73,8 @@ function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
       description: l.description ?? "",
       costCenterCode: l.costCenterCode ?? "",
       project: l.project ?? "",
-      debit: l.debit ? kr(Math.round(l.debit * 100)) : "",
-      credit: l.credit ? kr(Math.round(l.credit * 100)) : "",
+      debit: l.debit ? sekToInput(l.debit) : "",
+      credit: l.credit ? sekToInput(l.credit) : "",
     }));
   }
   const single = invoice.allocations.length === 1;
@@ -88,7 +86,7 @@ function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
     description: a.comment ?? "",
     costCenterCode: a.costCenterCode,
     project: "",
-    debit: booked[i] ? kr(booked[i]) : "",
+    debit: booked[i] ? sekToInput(oreToSEK(booked[i])) : "",
     credit: "",
   }));
 }
@@ -436,7 +434,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
         <div className="flex justify-end border-t border-border px-inset py-4">
           <BookField label={tBook("rounding")} className="w-40">
             <SavedInput
-              value={invoice.rounding ? kr(roundingOre) : ""}
+              value={invoice.rounding ? sekToInput(oreToSEK(roundingOre)) : ""}
               onSave={commitRounding}
               align="right"
             />

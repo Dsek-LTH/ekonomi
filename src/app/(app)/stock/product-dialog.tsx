@@ -25,6 +25,7 @@ import { MAX_TAG, MAX_TAGS, cleanTags, hasTag } from "@/lib/stock/tags";
 import { isInternalCode, validGtin } from "@/lib/stock/barcode";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 import { CATEGORIES } from "@/lib/domain/categories";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
 
@@ -329,23 +330,21 @@ export function ProductDialog({
           </FieldGroup>
         )}
         <div className="-mt-2 space-y-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={d.noBarcode || askingNoBarcode}
-              onChange={(e) => {
-                if (e.target.checked) setAskingNoBarcode(true);
-                else {
-                  setAskingNoBarcode(false);
-                  // Back to typing one: the section's own code is not one to
-                  // keep in the field, it would be refused as typed.
-                  setD((p) => ({ ...p, noBarcode: false, ean: isInternalCode(p.ean) ? "" : p.ean }));
-                }
-              }}
-              className="size-4 accent-[var(--color-accent)]"
-            />
+          <Checkbox
+            checked={d.noBarcode || askingNoBarcode}
+            onChange={() => {
+              if (!(d.noBarcode || askingNoBarcode)) setAskingNoBarcode(true);
+              else {
+                setAskingNoBarcode(false);
+                // Back to typing one: the section's own code is not one to
+                // keep in the field, it would be refused as typed.
+                setD((p) => ({ ...p, noBarcode: false, ean: isInternalCode(p.ean) ? "" : p.ean }));
+              }
+            }}
+            label={t("barcode.none")}
+          >
             {t("barcode.none")}
-          </label>
+          </Checkbox>
           {askingNoBarcode && !d.noBarcode && (
             <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm">
               <p>{t("barcode.confirm")}</p>

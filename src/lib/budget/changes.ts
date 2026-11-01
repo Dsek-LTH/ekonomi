@@ -16,6 +16,7 @@
 // the rest of the app stores money in. `parseAmount` is where kronor typed by
 // hand become öre, and it is the only place on this path that converts.
 import type { AccountKind } from "@/lib/budget";
+import { sekToOre } from "@/lib/domain/money";
 
 export type ChangeKind = "AVSTEG" | "FORFLYTTNING";
 
@@ -90,7 +91,7 @@ export function parseAmount(raw: string | number): number {
   const s = raw.replace(/[\s _]/g, "").replace(",", ".");
   if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
   const n = Number(s);
-  return Number.isFinite(n) ? Math.round(n * 100) : NaN;
+  return Number.isFinite(n) ? sekToOre(n) : NaN;
 }
 
 /**
