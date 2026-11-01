@@ -53,9 +53,6 @@ import type { CreateStockEntry } from "@/lib/api/schemas/stock";
 import { cn } from "@/lib/ui/utils";
 import { formatOreKr } from "@/lib/ui/format";
 
-/** Öre, to the öre, because this is read against an invoice. */
-const formatOreKr2 = (ore: number) => formatOreKr(ore, { decimals: 2 });
-
 /**
  * The sheet as it stands, unsent.
  *
@@ -418,7 +415,7 @@ export default function DeliveryClient({
         <div className="hidden space-y-3 border-t border-border px-inset py-4 lg:block">
           <div>
             <div className="text-xs text-muted">{t("delivery.total")}</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">{formatOreKr2(totalOre)}</div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums">{formatOreKr(totalOre, { decimals: 2 })}</div>
             <div className="mt-1 text-sm text-muted">{saveStatus}</div>
           </div>
           {saveButtons}
@@ -494,7 +491,7 @@ export default function DeliveryClient({
                   >
                     {product.costPriceOre == null
                       ? t("delivery.unpriced")
-                      : formatOreKr2(product.costPriceOre)}
+                      : formatOreKr(product.costPriceOre, { decimals: 2 })}
                   </td>
                   <td className="p-0 align-middle">{cellFor(product)}</td>
                   {/* The line as the invoice prints it: price times count. Blank
@@ -502,7 +499,7 @@ export default function DeliveryClient({
                       a line worth nothing. */}
                   <td className="px-2 py-1.5 text-right text-sm tabular-nums">
                     {qty > 0 && product.costPriceOre != null
-                      ? formatOreKr2(product.costPriceOre * qty)
+                      ? formatOreKr(product.costPriceOre * qty, { decimals: 2 })
                       : ""}
                   </td>
                 </tr>
@@ -561,7 +558,7 @@ export default function DeliveryClient({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="flex items-baseline gap-2">
               <span className="text-xs text-muted">{t("delivery.total")}</span>
-              <span className="text-lg font-semibold tabular-nums">{formatOreKr2(totalOre)}</span>
+              <span className="text-lg font-semibold tabular-nums">{formatOreKr(totalOre, { decimals: 2 })}</span>
             </span>
             {saveButtons}
           </div>

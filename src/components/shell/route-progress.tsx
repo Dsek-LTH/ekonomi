@@ -167,7 +167,7 @@ export function useProgressRouter(): Router {
  * The router has `back()` and nothing for going back further, and pressing
  * `back()` twice does not do it: the second call is made before the first has
  * landed. One `go` is one navigation, which is what returning to a list you
- * opened two pages ago has to be. See components/back-link.tsx.
+ * opened two pages ago has to be. See BackLink in components/shell/section-nav.tsx.
  */
 export function useHistoryGo(): (delta: number) => void {
   const router = useRouter();

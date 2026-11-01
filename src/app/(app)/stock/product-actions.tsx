@@ -26,9 +26,6 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { LEVELS, bottlesAt, type Level, type OpenBottles } from "@/lib/stock/levels";
 import { formatOreKr } from "@/lib/ui/format";
 
-/** Delivery figures are read against an invoice, so they carry their öre. */
-const formatOreKr2 = (ore: number) => formatOreKr(ore, { decimals: 2 });
-
 const today = () => new Date().toISOString().slice(0, 10);
 
 const int = (s: string): number => {
@@ -107,7 +104,7 @@ export function PurchaseDialog({
         ) : (
           count > 0 && (
             <Notice tone="info">
-              {t("notice.worth", { value: formatOreKr2(product.costPriceOre * count) })}
+              {t("notice.worth", { value: formatOreKr(product.costPriceOre * count, { decimals: 2 }) })}
             </Notice>
           )
         )}
@@ -396,7 +393,7 @@ export function SpoilageDialog({
 
         {count > 0 &&
           (writeDownOre > 0 ? (
-            <Notice tone="info">{t("spoilage.worth", { value: formatOreKr2(writeDownOre) })}</Notice>
+            <Notice tone="info">{t("spoilage.worth", { value: formatOreKr(writeDownOre, { decimals: 2 }) })}</Notice>
           ) : (
             <Notice tone="info">{t("spoilage.noValue")}</Notice>
           ))}

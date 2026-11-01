@@ -37,8 +37,7 @@ import type {
   ReceiptSummary,
 } from "@/lib/domain/types";
 import { PaymentIcon, PaymentTag } from "@/components/ui/payment-tag";
-import { MatchSection } from "./match-step";
-import { MatchHelp } from "@/components/transaction-picker";
+import { MatchHelp, TransactionPicker } from "@/components/transaction-picker";
 import { likelyDuplicates, type ExpenseFingerprint } from "@/lib/domain/duplicates";
 import { Notice } from "@/components/ui/notice";
 import Link from "next/link";
@@ -1047,11 +1046,11 @@ export default function NewExpenseClient({
             the same page now, and only there for a card. */}
         {paymentType === "CARD" && (
           <FormSection title={t("matchTitle")} hint={<MatchHelp />}>
-            <MatchSection
+            <TransactionPicker
               candidates={candidates}
-              matchId={matchId}
+              selectedId={matchId}
               onPick={setMatchId}
-              grossSEK={grossSEK}
+              amount={Math.abs(grossSEK)}
               onUseAmount={takeBankAmount}
             />
           </FormSection>

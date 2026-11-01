@@ -335,7 +335,7 @@ const PROFILE_GROUP: NavGroup = {
  * it from any list that links to it. An utlägg is opened from Utlägg, from
  * Attest, from Bokföring and from Översikt, and "← Utlägg" is the wrong answer
  * on three of those. Derived from the nav itself so a section cannot be added
- * in one place and forgotten in the other. See components/back-link.tsx.
+ * in one place and forgotten in the other. See BackLink in components/shell/section-nav.tsx.
  *
  * Settings' own sections are included too (from ./settings-sections, the same
  * list the overlay's internal nav and the landing page's cards use), since a
