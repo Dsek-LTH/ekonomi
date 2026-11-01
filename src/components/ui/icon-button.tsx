@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 

@@ -30,7 +30,7 @@ export function ContractsClient({
   const controls = useUrlTableControls(page.total);
 
   const TABS: TabFilter = useMemo(
-    () => CONTRACT_TABS.map((value) => ({ value, label: t(`tab.${value === "" ? "" : value}`) })),
+    () => CONTRACT_TABS.map((value) => ({ value, label: t(`tab.${value}`) })),
     [t],
   );
 

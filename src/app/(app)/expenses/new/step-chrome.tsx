@@ -1,5 +1,3 @@
-"use client";
-
 // The pieces the utlägg form is built from: a choice card and a titled
 // section. Its action bar along the foot is components/action-bar.tsx.
 //

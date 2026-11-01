@@ -1,5 +1,3 @@
-"use client";
-
 // The horizontal rules a chart is read against, and the figures beside them.
 //
 // Four charts drew this: the three in the utfall report and the stock value

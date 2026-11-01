@@ -1,5 +1,3 @@
-"use client";
-
 // The two smallest pieces of a budget sheet's table.
 //
 // Shared by the account block and the section card, which is why they are here
