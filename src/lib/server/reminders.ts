@@ -27,13 +27,13 @@ import {
 } from "@/lib/domain/reminders";
 import {
   formatSignedOre,
-  isoDay,
   mailLabel,
   reminderEmail,
   type ReminderItem,
   type Txn,
 } from "@/lib/email/content";
 import type { Actor } from "@/lib/api/guard";
+import { isoDay } from "@/lib/domain/date";
 
 export interface PlannedReminder {
   id: string;

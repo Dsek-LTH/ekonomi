@@ -22,14 +22,13 @@ import {
   digestEmail,
   emailT,
   formatOre,
-  isoDay,
   mailLabel,
   statusLabel,
   type ListRow,
   type Waiting,
 } from "@/lib/email/content";
 import type { Email } from "@/lib/email/types";
-import { daysAgo, isoWeek, stockholmDay, today as stockholmToday } from "@/lib/domain/date";
+import { daysAgo, isoWeek, stockholmDay, today as stockholmToday, isoDay } from "@/lib/domain/date";
 import { REIMBURSEMENT_DEADLINE_DAYS, SUBMITTABLE_STATUSES } from "@/lib/domain/status";
 
 // How close to the deadline a claim has to be before the digest mentions it.

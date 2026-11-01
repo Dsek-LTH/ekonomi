@@ -14,6 +14,7 @@
 // whose label is not recognised is simply left empty.
 
 import { isValidOcr } from "./supplier-invoice";
+import { isoDay } from "@/lib/domain/date";
 
 export interface InvoiceTextFields {
   amount?: number; // öre
@@ -48,7 +49,7 @@ export function parseDate(raw: string): string | null {
   const dd = d.padStart(2, "0");
   const iso = `${y}-${mm}-${dd}`;
   const date = new Date(`${iso}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === iso ? iso : null;
+  return !Number.isNaN(date.getTime()) && isoDay(date) === iso ? iso : null;
 }
 
 /**

@@ -9,6 +9,7 @@ import { oreToSEK } from "@/lib/domain/money";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import type { IncomeReportStatus, IncomeSource } from "@/lib/domain/types";
+import { isoDay } from "@/lib/domain/date";
 
 // Money here is SEK, not öre: these cross into the browser and are rendered
 // by <Amount>, and the repo's rule is that the database keeps öre and the
@@ -97,7 +98,6 @@ export interface IncomeReportRow {
   lines: IncomeLineRow[];
 }
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 // What a report row is loaded with, wherever it is loaded: the review screen,
 // the booked list, a batch. One include, so the four lists cannot drift into
@@ -134,7 +134,7 @@ function reportRow(r: LoadedReport): IncomeReportRow {
   return {
     id: r.id,
     source: r.source,
-    date: isoDate(r.date),
+    date: isoDay(r.date),
     total: oreToSEK(r.total),
     status: r.status,
     resultUnitId: r.resultUnitId,
@@ -288,8 +288,8 @@ export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
     batch: batch && {
       id: batch.id,
       source: batch.source,
-      fromDate: isoDate(batch.fromDate),
-      toDate: isoDate(batch.toDate),
+      fromDate: isoDay(batch.fromDate),
+      toDate: isoDay(batch.toDate),
     },
     reports: reports.map(reportRow),
     reviewed,

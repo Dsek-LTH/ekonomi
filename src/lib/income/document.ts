@@ -32,6 +32,7 @@ import { incomeDocumentKey, putObject } from "@/lib/server/storage";
 import { IntaktError, IntaktNotConfiguredError, renderDocument } from "./client";
 import { distributionsFor } from "./report";
 import type { IncomeDocument } from "./types";
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * Why a report has no document. Each maps to a message key under
@@ -89,7 +90,7 @@ export async function renderIncomeDocument(
   if (!report) return { ok: false, reason: "reportNotFound" };
 
   const isFee = report.source === "ZETTLE_FEE";
-  const dateStr = report.date.toISOString().slice(0, 10);
+  const dateStr = isoDay(report.date);
   const filename = isFee
     ? `avgift-${dateStr}.pdf`
     : `${report.resultUnit?.income?.key ?? "intakt"}-${dateStr}.pdf`;

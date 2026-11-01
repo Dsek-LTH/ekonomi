@@ -7,6 +7,7 @@ import { prisma } from "@/lib/server/db";
 import { effectiveKind } from "@/lib/budget";
 import { evaluate } from "@/lib/budget/eval";
 import { evaluatorInputs } from "@/lib/budget/inputs";
+import { isoDay } from "@/lib/domain/date";
 
 export type ComparisonMode = "NONE" | "PRIOR" | "BUDGET";
 
@@ -104,7 +105,7 @@ export async function budgetOptions(): Promise<BudgetOption[]> {
     id: b.id,
     year: b.year,
     name: b.name,
-    adoptedAt: b.adoptedAt ? b.adoptedAt.toISOString().slice(0, 10) : null,
+    adoptedAt: b.adoptedAt ? isoDay(b.adoptedAt) : null,
     locked: b.lockedAt !== null,
   }));
 }

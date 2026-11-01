@@ -7,6 +7,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
+import { isoDay } from "@/lib/domain/date";
 
 export interface MileageRateRow {
   id: string;
@@ -27,7 +28,7 @@ export async function getMileageRateRows(): Promise<MileageRateRow[]> {
   return rows.map((r) => ({
     id: r.id,
     orePerKm: r.orePerKm,
-    validFrom: r.validFrom.toISOString().slice(0, 10),
+    validFrom: isoDay(r.validFrom),
     note: r.note ?? undefined,
     createdBy: r.createdBy?.name ?? undefined,
   }));

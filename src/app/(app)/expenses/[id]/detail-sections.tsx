@@ -16,7 +16,6 @@ import { namedStops } from "@/lib/mileage/claim";
 import { ButtonLink } from "@/components/ui/button";
 import { PaymentTag } from "@/components/ui/payment-tag";
 import { StatusPill } from "@/components/ui/status-pill";
-import { IconCheck } from "@/components/ui/icons";
 import { Amount } from "@/components/ui/amount";
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
@@ -24,50 +23,14 @@ import { cn } from "@/lib/ui/utils";
 import { formatNumber } from "@/lib/ui/format";
 import { bookingTrail } from "@/lib/domain/review";
 import { PersonName } from "@/components/ui/avatar";
-
-/** The small capitals every label and column head on the card is set in. */
-export const LABEL = "text-xs font-medium text-muted";
-
-/**
- * One part of the card below the strip, ruled off from the part above.
- *
- * `flush` drops the side padding for a table that runs to the card's edges and
- * carries the inset on its own first and last cells, so its columns still line
- * up with the text of every other section.
- */
-export function InspectorSection({
-  title,
-  aside,
-  action,
-  flush = false,
-  endsInTable = false,
-  children,
-}: {
-  title?: string;
-  /** Beside the title, in body text: the voucher's number and date. */
-  aside?: React.ReactNode;
-  action?: React.ReactNode;
-  flush?: boolean;
-  /** The last row of a table carries 8px of padding of its own, so the
-   *  section keeps only 8px under it, to match the 16px above the heading. */
-  endsInTable?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("border-t border-border pt-4", endsInTable ? "pb-2" : "pb-4")}>
-      {(title || action) && (
-        <div className="mb-2 flex min-h-6 items-center justify-between gap-3 px-inset">
-          <h2 className="flex min-w-0 items-baseline gap-3">
-            <span className={LABEL}>{title}</span>
-            {aside && <span className="truncate text-sm">{aside}</span>}
-          </h2>
-          {action}
-        </div>
-      )}
-      <div className={cn(!flush && "px-inset")}>{children}</div>
-    </section>
-  );
-}
+import {
+  AllocationTable,
+  AttestedBy,
+  InspectorSection,
+  LABEL,
+  StripCell,
+  VoucherTable,
+} from "@/components/record-card";
 
 /**
  * The head of the card: where the utlägg stands, and what you can do about it.
@@ -86,24 +49,6 @@ export function ExpenseSummary({ expense, actions }: { expense: Expense; actions
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 px-inset py-4">
       <StatusPill status={expense.status} className="mt-1.5" />
       {actions}
-    </div>
-  );
-}
-
-/** One cell of the fact strip: a label in small capitals, the value under it. */
-function StripCell({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={cn("min-w-0 bg-background px-inset py-3", className)}>
-      <p className={LABEL}>{label}</p>
-      <div className="mt-1 min-w-0 text-sm">{children}</div>
     </div>
   );
 }
@@ -238,85 +183,21 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
   );
 }
 
-/**
- * The cost distribution as the invoice's line items: cost centre, amount, who
- * attested it, and the sum as the last line.
- *
- * The column heads are the section's title, the way they are on paper. The
- * total is added up from the rows rather than copied from the expense, so a
- * split that does not match the amount above is visible as two numbers that
- * disagree.
- *
- * On a phone the attest column is dropped and its content moves under the
- * cost centre's name. Three columns on 329px of card left the name about
- * 110px, which for a Swedish compound is the first syllable and an ellipsis.
- * The amount stays in its own column at every width, since it is the one
- * thing here that must never be cut.
- */
+/** The cost distribution, as AllocationTable draws one. */
 export function AllocationSection({ allocations }: { allocations: Expense["allocations"] }) {
   const t = useTranslations("expenses.detail");
-  const total = allocations.reduce((sum, a) => sum + a.amount, 0);
-
-  const attest = (a: Expense["allocations"][number]) =>
-    a.approvedById ? (
-      <span className="inline-flex min-w-0 max-w-full items-center gap-1 text-success">
-        <IconCheck className="size-3.5 shrink-0" />
-        <span className="truncate">{a.approvedByName}</span>
-      </span>
-    ) : (
-      <span className="text-muted">{a.resultUnit ?? t("awaitingApproval")}</span>
-    );
-
   return (
-    // pb-2, not pb-4: the last row carries 8px of its own padding, and the
-    // two together left more room under the table than above it.
-    <section className="border-t border-border px-inset pb-2 pt-4">
-      <table className="w-full table-fixed text-sm">
-        <caption className="sr-only">{t("distribution")}</caption>
-        <thead>
-          <tr className="text-left">
-            <th className={cn(LABEL, "pb-2 pr-3")}>{t("allocationCostCenter")}</th>
-            <th className={cn(LABEL, "w-32 pb-2 text-right")}>{t("amount")}</th>
-            <th className={cn(LABEL, "hidden w-[38%] pb-2 pl-6 sm:table-cell")}>
-              {t("allocationApproval")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {allocations.map((a) => (
-            <tr key={a.id} className="border-t border-border align-top">
-              <td className="py-2 pr-3">
-                <div className="truncate">
-                  <span className="font-medium tabular-nums">{a.costCenterCode}</span>
-                  <span className="ml-2 text-muted">{a.costCenterName}</span>
-                </div>
-                <div className="mt-0.5 truncate text-xs sm:hidden">{attest(a)}</div>
-                {a.comment && <p className="mt-1 text-xs italic text-muted">{a.comment}</p>}
-              </td>
-              <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                <Amount value={a.amount} signed />
-              </td>
-              <td className="hidden truncate py-2 pl-6 text-xs leading-5 sm:table-cell">
-                {attest(a)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        {allocations.length > 1 && (
-          <tfoot>
-            {/* The same hairline as between the rows, so the total reads as
-                the last line of the list, set apart by its weight alone. */}
-            <tr className="border-t border-border font-semibold">
-              <td className="py-2 pr-3">{t("allocationTotal")}</td>
-              <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                <Amount value={total} signed />
-              </td>
-              <td className="hidden sm:table-cell" />
-            </tr>
-          </tfoot>
-        )}
-      </table>
-    </section>
+    <AllocationTable
+      caption={t("distribution")}
+      lines={allocations.map((a) => ({
+        ...a,
+        attest: a.approvedById ? (
+          <AttestedBy name={a.approvedByName} />
+        ) : (
+          <span className="text-muted">{a.resultUnit ?? t("awaitingApproval")}</span>
+        ),
+      }))}
+    />
   );
 }
 
@@ -361,7 +242,6 @@ export function VerificationSection({
   const people = bookingPeople(revisions);
   const ownText = (d: string | undefined) =>
     d && d.trim() !== verification.description.trim() ? d : undefined;
-  const hasProject = verification.lines.some((l) => l.project);
 
   return (
     <InspectorSection
@@ -391,74 +271,18 @@ export function VerificationSection({
       <p className="-mt-1 mb-3 truncate px-inset text-xs text-muted">
         <span className="tabular-nums">{date(verification.date)}</span> - {verification.description}
       </p>
-      {/* From sm, a column each for debit and credit. Below it the two become
-          one amount with the side written beside it: a line of a double entry
-          is a debit *or* a credit, never both, so nothing is dropped. The cost
-          centre moves under the account name on a phone for the same reason
-          the allocation table's attest does: a fifth column on 329px leaves
-          the name nothing.
-
-          Hidden with `hidden`/`sm:table-cell` on both the head and the body,
-          so every row shows the same set and the columns stay in step. */}
-      {/* The project column only when a line has one: most vouchers carry
-          none, and an empty column would take the name's room for nothing. */}
-      <table className="w-full table-fixed text-sm">
-        <thead>
-          <tr className="text-left">
-            <th className={cn(LABEL, "w-16 pb-2 pl-inset")}>{t("account")}</th>
-            <th className={cn(LABEL, "pb-2 pl-3")}>{t("accountName")}</th>
-            <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>{t("costCenterShort")}</th>
-            {hasProject && (
-              <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>{t("projectShort")}</th>
-            )}
-            <th className={cn(LABEL, "w-28 pb-2 pl-3 pr-inset text-right sm:hidden")}>{t("amount")}</th>
-            <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 text-right sm:table-cell")}>{t("debit")}</th>
-            <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 pr-inset text-right sm:table-cell")}>
-              {t("credit")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {verification.lines.map((l) => {
-            const text = ownText(l.description);
-            return (
-              <tr key={l.id} className="border-t border-border align-top">
-                <td className="py-2 pl-inset font-medium tabular-nums">{l.account}</td>
-                <td className="py-2 pl-3">
-                  <span className="block truncate">{l.accountName}</span>
-                  {l.costCenterCode && (
-                    <span className="block text-xs text-muted sm:hidden">{l.costCenterCode}</span>
-                  )}
-                  {l.project && (
-                    <span className="block text-xs text-muted sm:hidden">
-                      {t("projectShort")} {l.project}
-                    </span>
-                  )}
-                  {text && <span className="block truncate text-xs text-muted">{text}</span>}
-                </td>
-                <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">
-                  {l.costCenterCode}
-                </td>
-                {hasProject && (
-                  <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">{l.project}</td>
-                )}
-                <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums sm:hidden">
-                  <Amount value={l.debit || l.credit} />
-                  <span className="ml-1.5 text-xs text-muted">
-                    {l.debit ? t("debitShort") : t("creditShort")}
-                  </span>
-                </td>
-                <td className="hidden whitespace-nowrap py-2 pl-3 text-right tabular-nums sm:table-cell">
-                  {l.debit ? <Amount value={l.debit} /> : null}
-                </td>
-                <td className="hidden whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums sm:table-cell">
-                  {l.credit ? <Amount value={l.credit} /> : null}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <VoucherTable
+        lines={verification.lines.map((l) => ({
+          key: l.id,
+          account: l.account,
+          accountName: l.accountName,
+          costCenter: l.costCenterCode,
+          project: l.project,
+          note: ownText(l.description),
+          debit: l.debit,
+          credit: l.credit,
+        }))}
+      />
       {/* Who konterade it, signed at the foot the way a paper voucher is. The
           person who bokför it next is not to be the same one, and before this
           it was only to be found in the history. */}

@@ -7,6 +7,7 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { freeOver, shortfalls, type Booking, type Shortfall } from "@/lib/contract/availability";
+import { isoDay } from "@/lib/domain/date";
 /**
  * Every catalogue line held over a period, as bookings the rule can read.
  *
@@ -47,12 +48,12 @@ async function bookingsOver(
   return rows.map((r) => ({
     itemId: r.itemId!,
     quantity: r.quantity,
-    from: day(r.rental.pickupAt),
+    from: isoDay(r.rental.pickupAt),
     // Gear that has already come back is free again from the day it came back,
     // whatever the contract said. An early return that kept the slot booked
     // would have the app refusing to lend out a Soundboks that is sitting on
     // the shelf.
-    to: day(r.rental.returnedAt ?? r.rental.returnAt),
+    to: isoDay(r.rental.returnedAt ?? r.rental.returnAt),
   }));
 }
 
@@ -131,4 +132,3 @@ export async function nameShortfalls(
   }));
 }
 
-const day = (d: Date): string => d.toISOString().slice(0, 10);

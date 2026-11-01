@@ -25,18 +25,17 @@ import { AllocationEditor, makeRow, type AllocationRow } from "@/components/allo
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { parseOre, parseSEK } from "@/lib/domain/money";
+import { parseOre, parseSEK, sekToInput } from "@/lib/domain/money";
 import type { KonteringRow } from "@/lib/api/schemas/supplier-invoice";
 import { attestBlocker } from "@/lib/domain/supplier-invoice";
 import { cn } from "@/lib/ui/utils";
 import type { CostCenter } from "@/lib/domain/types";
 import type { AttestReach } from "@/lib/data/supplier-invoices";
+import { LABEL } from "@/components/record-card";
 import { useInvoiceTitle } from "../../invoice-bits";
 import {
   ActionBar,
-  LABEL,
   ReturnedNotice,
-  asInput,
   invoiceDocuments,
   useReturnToInbox,
   useTransition,
@@ -102,11 +101,11 @@ export function InvoiceAllocateClient({
           ? invoice.allocations.map((a) =>
               makeRow(
                 a.costCenterCode,
-                asInput(a.amount ?? (invoice.allocations.length === 1 ? defaults.amount : null)),
+                sekToInput(a.amount ?? (invoice.allocations.length === 1 ? defaults.amount : null)),
                 a.comment ?? "",
               ),
             )
-          : [makeRow(invoice.suggestedCostCenter ?? "", asInput(defaults.amount))]
+          : [makeRow(invoice.suggestedCostCenter ?? "", sekToInput(defaults.amount))]
       }
       defaults={defaults}
       fromScan={fromScan}
@@ -195,7 +194,7 @@ export function AllocateForm({
   const tAttest = useTranslations("invoices.attest");
   const tErr = useTranslations("errors");
 
-  const [totalInput, setTotalInput] = useState(asInput(defaults.amount));
+  const [totalInput, setTotalInput] = useState(sekToInput(defaults.amount));
   const [dueDate, setDueDate] = useState(defaults.dueDate);
   const [description, setDescription] = useState(defaults.description);
   const total = totalInput.trim() ? parseSEK(totalInput) : null;

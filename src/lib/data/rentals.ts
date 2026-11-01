@@ -19,6 +19,7 @@ import {
   rentalState,
   type RentalState,
 } from "@/lib/contract/rental-state";
+import { isoDay } from "@/lib/domain/date";
 
 export interface RentalRow {
   id: string;
@@ -98,10 +99,10 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
     .filter((c): c is typeof c & { rental: NonNullable<typeof c.rental> } => c.rental !== null)
     .map((c) => {
       const facts = {
-        pickupAt: day(c.rental.pickupAt),
-        returnAt: day(c.rental.returnAt),
-        returnedAt: c.rental.returnedAt ? day(c.rental.returnedAt) : null,
-        checkedAt: c.rental.checkedAt ? day(c.rental.checkedAt) : null,
+        pickupAt: isoDay(c.rental.pickupAt),
+        returnAt: isoDay(c.rental.returnAt),
+        returnedAt: c.rental.returnedAt ? isoDay(c.rental.returnedAt) : null,
+        checkedAt: c.rental.checkedAt ? isoDay(c.rental.checkedAt) : null,
       };
       return {
         id: c.id,
@@ -151,10 +152,10 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
   for (const r of rows) {
     const state = rentalState(
       {
-        pickupAt: day(r.pickupAt),
-        returnAt: day(r.returnAt),
-        returnedAt: r.returnedAt ? day(r.returnedAt) : null,
-        checkedAt: r.checkedAt ? day(r.checkedAt) : null,
+        pickupAt: isoDay(r.pickupAt),
+        returnAt: isoDay(r.returnAt),
+        returnedAt: r.returnedAt ? isoDay(r.returnedAt) : null,
+        checkedAt: r.checkedAt ? isoDay(r.checkedAt) : null,
       },
       today,
     );
@@ -163,4 +164,3 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
   return counts;
 }
 
-const day = (d: Date): string => d.toISOString().slice(0, 10);

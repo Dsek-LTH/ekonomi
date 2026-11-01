@@ -65,7 +65,7 @@ export function productDisplayName(line: GroupableLine): string {
 // Byte order, as Go's `slices.Sort` gives for strings, rather than a
 // locale-aware collation: the document sorts one way and this has to sort the
 // same way, and "å after z" is what both of these do.
-const byCodePoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+export const byCodePoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 export function productRows<T extends GroupableLine>(lines: readonly T[]): ProductRow<T>[] {
   const byName = new Map<string, T[]>();

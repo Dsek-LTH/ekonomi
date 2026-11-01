@@ -19,6 +19,7 @@ import type { ChecklistEntry } from "@/lib/data/closing-checklist";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import { closingSections } from "./sections";
+import { isoDay } from "@/lib/domain/date";
 
 export default function ChecklistClient({
   year,
@@ -116,7 +117,7 @@ function ChecklistRow({
   const [toNext, setToNext] = useState(item.noteToNextYear);
 
   const isDone = isItemDone(item);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDay(new Date());
   const overdue = !isDone && item.dueDate !== null && item.dueDate < today;
   const url = `/api/closing/${yearId}/checklist/${item.id}`;
 

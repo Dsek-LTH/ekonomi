@@ -15,6 +15,7 @@ import { getStockEvent } from "@/lib/data/stock";
 import { assertAllPossible } from "@/lib/server/stock-state";
 import { replayProduct } from "@/lib/server/stock-replay";
 import { bulkTransaction } from "@/lib/server/tx";
+import { isoDay } from "@/lib/domain/date";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -90,7 +91,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json({
     id: saved.id,
     name: saved.name,
-    date: saved.date.toISOString().slice(0, 10),
+    date: isoDay(saved.date),
   });
 }
 

@@ -37,6 +37,7 @@ import type {
   ContractKind,
   ContractStatus,
 } from "@/lib/domain/types";
+import { isoDay } from "@/lib/domain/date";
 
 /** A row in the archive table. */
 export interface ContractSummary {
@@ -235,9 +236,9 @@ export async function getContractPage(
       status: contractStatus(c),
       title: c.title,
       counterparty: c.agreement?.counterparty ?? null,
-      validFrom: isoDay(c.agreement?.validFrom ?? null),
-      validTo: isoDay(c.agreement?.validTo ?? null),
-      date: isoDay(c.date),
+      validFrom: isoDayOrNull(c.agreement?.validFrom ?? null),
+      validTo: isoDayOrNull(c.agreement?.validTo ?? null),
+      date: isoDayOrNull(c.date),
       tags: c.tags,
       fileCount: c._count.files,
       createdAt: c.createdAt.toISOString(),
@@ -286,9 +287,9 @@ export async function getContract(
     counterpartyCity: c.agreement?.counterpartyCity ?? null,
     counterpartyEmail: c.agreement?.counterpartyEmail ?? null,
     counterpartyPhone: c.agreement?.counterpartyPhone ?? null,
-    validFrom: isoDay(c.agreement?.validFrom ?? null),
-    validTo: isoDay(c.agreement?.validTo ?? null),
-    date: isoDay(c.date),
+    validFrom: isoDayOrNull(c.agreement?.validFrom ?? null),
+    validTo: isoDayOrNull(c.agreement?.validTo ?? null),
+    date: isoDayOrNull(c.date),
     tags: c.tags,
     notes: c.notes,
     termsVersion: c.agreement?.termsVersion ?? null,
@@ -354,4 +355,4 @@ export async function getContractTags(scope: ContractScope): Promise<string[]> {
 }
 
 /** A `@db.Date` column as the ISO day it names, with no timezone in the way. */
-const isoDay = (d: Date | null): string | null => d?.toISOString().slice(0, 10) ?? null;
+const isoDayOrNull = (d: Date | null): string | null => (d ? isoDay(d) : null);

@@ -100,3 +100,18 @@ export function pickFault(stock: BottleStock, pick: Pick): PickFault | null {
   return null;
 }
 
+/** A row's effect on the open bottles, as "80 % → 40 %" or "+ 60 %". Written
+ *  out rather than as four numbers, because what a reader wants from the column
+ *  is which bottle moved where. */
+export function levelSummary(open: Record<number, number>): string {
+  const left = LEVELS.filter((l) => (open[l] ?? 0) < 0);
+  const arrived = LEVELS.filter((l) => (open[l] ?? 0) > 0);
+  const part = (levels: number[]) =>
+    levels
+      .map((l) => `${Math.abs(open[l] ?? 0) > 1 ? `${Math.abs(open[l] ?? 0)}×` : ""}${l} %`)
+      .join(", ");
+  if (left.length && arrived.length) return `${part(left)} → ${part(arrived)}`;
+  if (left.length) return `− ${part(left)}`;
+  if (arrived.length) return `+ ${part(arrived)}`;
+  return "";
+}

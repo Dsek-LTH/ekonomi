@@ -1,6 +1,7 @@
 // The rules of the bokslut checklist that are not about the database: when an
 // item is due, and whether it is done.
 import type { ClosingCheck } from "@/lib/domain/types";
+import { isoDay } from "@/lib/domain/date";
 
 /** Every check the app can answer, in the order the template editor lists them. */
 export const CLOSING_CHECKS: readonly ClosingCheck[] = [
@@ -25,7 +26,7 @@ export function dueDateFor(yearEnd: string, offset: number | null): string | nul
   if (offset === null) return null;
   const d = new Date(`${yearEnd}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + offset);
-  return d.toISOString().slice(0, 10);
+  return isoDay(d);
 }
 
 /**

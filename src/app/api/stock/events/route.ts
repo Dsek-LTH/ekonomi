@@ -10,6 +10,7 @@ import { parseBody } from "@/lib/api/parse";
 import { CreateStockEvent } from "@/lib/api/schemas/stock";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockEvents } from "@/lib/data/stock";
+import { isoDay } from "@/lib/domain/date";
 
 export async function GET() {
   const g = await gate(canViewStock, "stock.noAccess");
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     select: { id: true, name: true, date: true },
   });
   return NextResponse.json(
-    { id: event.id, name: event.name, date: event.date.toISOString().slice(0, 10), entries: 0 },
+    { id: event.id, name: event.name, date: isoDay(event.date), entries: 0 },
     { status: 201 },
   );
 }

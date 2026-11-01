@@ -40,6 +40,7 @@ import { useFiscalYear } from "@/components/shell/fiscal-year-context";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import { useBookingPresence } from "./use-booking-presence";
 import { OthersBookingNotice, UpdatedElsewhere } from "./presence-notices";
+import { isoDay } from "@/lib/domain/date";
 
 // The rows are the shared editor's shape. See components/voucher-editor.tsx.
 type Row = VoucherEditorRow;
@@ -195,7 +196,7 @@ export default function BookExpenseClient({
     () =>
       expense?.verification?.date.slice(0, 10) ||
       expense?.purchaseDate ||
-      new Date().toISOString().slice(0, 10),
+      isoDay(new Date()),
   );
   const [textSuffix, setTextSuffix] = useState(() => {
     const full = expense?.verification?.description ?? expense?.title ?? "";

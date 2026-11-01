@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
-import { parseSEK } from "@/lib/domain/money";
+import { parseSEK, sekToInput } from "@/lib/domain/money";
 import { AmountInput } from "@/components/ui/amount-input";
 import { CONTROL_CELL, CONTROL_SIZES } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
@@ -42,10 +42,6 @@ interface Props {
   onChange: (rows: AllocationRow[]) => void;
 }
 
-// As the form's own amount field writes one, so a row filled in for you reads
-// the same as one typed.
-const asInput = (sek: number) => (Math.round(sek * 100) / 100).toFixed(2).replace(".", ",");
-
 // The table's columns, from the container's 2xl up: cost centre, comment,
 // amount, and the narrow one the cross sits in.
 const COLS = "@2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_9rem_2.25rem]";
@@ -69,7 +65,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   useEffect(() => {
     if (!only) return;
     if (Math.abs(parseSEK(only.amount) - grossAmount) < 0.005) return;
-    onChange([{ ...only, amount: grossAmount ? asInput(grossAmount) : "" }]);
+    onChange([{ ...only, amount: grossAmount ? sekToInput(grossAmount) : "" }]);
   }, [only, grossAmount, onChange]);
 
   function update(id: string, patch: Partial<AllocationRow>) {

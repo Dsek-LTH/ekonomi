@@ -20,7 +20,7 @@ import {
 } from "@/lib/stock/expiry";
 import { OPEN_SUM, openOf } from "@/lib/server/stock-state";
 import type { StockEntry } from "@/lib/generated/prisma/client";
-import { today } from "@/lib/domain/date";
+import { today, isoDay } from "@/lib/domain/date";
 
 export interface StockProductDto {
   id: string;
@@ -51,9 +51,6 @@ export interface StockLevelDto extends StockProductDto {
    *  bookkeeping fault rather than a fact; the overview says so. */
   impossible: boolean;
 }
-
-/** One movement of a night, inside a log line that stands for several. */
-const day = (d: Date): string => d.toISOString().slice(0, 10);
 
 /** Null becomes absent. A DTO field that is not there reads better than one
  *  that is there holding nothing. */
@@ -280,13 +277,13 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       productId: r.productId,
       productName: r.product.name,
       productKind: r.product.kind,
-      occurredAt: day(r.occurredAt),
-      recordedAt: day(r.createdAt),
+      occurredAt: isoDay(r.occurredAt),
+      recordedAt: isoDay(r.createdAt),
       actorName: r.actor.name,
     };
 
     if (r.kind === "COUNT") {
-      const key = `${r.productId}|${day(r.occurredAt)}`;
+      const key = `${r.productId}|${isoDay(r.occurredAt)}`;
       let line = counts.get(key);
       if (!line) {
         line = {
@@ -621,7 +618,7 @@ export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
     return {
       id: event.id,
       name: event.name,
-      date: day(event.date),
+      date: isoDay(event.date),
       entries: count,
       products: products.size,
       soldValueOre,
@@ -697,7 +694,7 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
   return {
     id: event.id,
     name: event.name,
-    date: day(event.date),
+    date: isoDay(event.date),
     entries: entries.length,
     products: byProduct.size,
     soldValueOre: lines.reduce((sum, l) => sum + l.soldValueOre, 0),
@@ -762,7 +759,7 @@ export async function getProductEvents(productId: string): Promise<ProductEventD
   const rows = new Map<string, typeof entries>();
   for (const e of entries) {
     if (!e.eventId || !e.event) continue;
-    named.set(e.eventId, { name: e.event.name, date: day(e.event.date) });
+    named.set(e.eventId, { name: e.event.name, date: isoDay(e.event.date) });
     rows.set(e.eventId, [...(rows.get(e.eventId) ?? []), e]);
   }
 
@@ -859,7 +856,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
   const counts = new Map<string, CellarRowDto>();
   for (const e of entries) {
     if (e.kind === "COUNT") {
-      const key = day(e.occurredAt);
+      const key = isoDay(e.occurredAt);
       let row = counts.get(key);
       if (!row) {
         row = {
@@ -886,7 +883,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
     rows.push({
       id: e.id,
       at: e.createdAt.toISOString(),
-      occurredAt: day(e.occurredAt),
+      occurredAt: isoDay(e.occurredAt),
       kind: e.kind,
       actorName: e.actor.name,
       units: e.units,
@@ -1075,7 +1072,7 @@ const asStep = (m: {
 }): ShelfStep => {
   const open = openOf(m);
   return {
-    occurredAt: day(m.occurredAt),
+    occurredAt: isoDay(m.occurredAt),
     units: m.units,
     openUnits: open[80] + open[60] + open[40] + open[20],
   };
@@ -1086,9 +1083,9 @@ const asDelivery = (
   e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "checkedAt">,
 ) => ({
   id: e.id,
-  occurredAt: day(e.occurredAt),
-  bestBefore: e.bestBefore ? day(e.bestBefore) : null,
-  checkedAt: e.checkedAt ? day(e.checkedAt) : null,
+  occurredAt: isoDay(e.occurredAt),
+  bestBefore: e.bestBefore ? isoDay(e.bestBefore) : null,
+  checkedAt: e.checkedAt ? isoDay(e.checkedAt) : null,
 });
 
 /**

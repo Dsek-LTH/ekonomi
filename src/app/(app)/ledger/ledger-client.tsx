@@ -42,6 +42,7 @@ import {
   type RowView,
   type ViewOptions,
 } from "./report-types";
+import { isoDay } from "@/lib/domain/date";
 
 // Month names come from the locale rather than a table of our own: they are
 // the one piece of wording here that Intl already knows in every language.
@@ -64,15 +65,14 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  */
 function monthsOf(year: LedgerYear): { key: string; from: string; to: string; index: number; y: number }[] {
   const out: { key: string; from: string; to: string; index: number; y: number }[] = [];
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
   const start = new Date(`${year.fromDate}T00:00:00Z`);
   const end = new Date(`${year.toDate}T00:00:00Z`);
   const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
   while (cursor <= end) {
     const y = cursor.getUTCFullYear();
     const m = cursor.getUTCMonth();
-    const first = iso(cursor);
-    const last = iso(new Date(Date.UTC(y, m + 1, 0)));
+    const first = isoDay(cursor);
+    const last = isoDay(new Date(Date.UTC(y, m + 1, 0)));
     out.push({
       key: `${y}-${String(m + 1).padStart(2, "0")}`,
       from: first < year.fromDate ? year.fromDate : first,

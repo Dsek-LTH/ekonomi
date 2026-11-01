@@ -25,6 +25,7 @@ import {
   financialYearIdForCalendarYear,
   getActualsByAccountCostCenter,
 } from "@/lib/ledger";
+import { isoDay } from "@/lib/domain/date";
 
 /** A budget as the list and the compare picker know it: a year and a name. */
 export interface BudgetSummary {
@@ -65,7 +66,7 @@ export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
     name: b.name,
     // Date-only: the column is a DATE, and slicing the ISO string keeps it the
     // day it was stored as rather than a timestamp the client would re-zone.
-    adoptedAt: b.adoptedAt ? b.adoptedAt.toISOString().slice(0, 10) : null,
+    adoptedAt: b.adoptedAt ? isoDay(b.adoptedAt) : null,
     createdAt: b.createdAt.toISOString(),
     lockedAt: b.lockedAt?.toISOString() ?? null,
   }));
@@ -207,7 +208,7 @@ export async function getEvaluatedBudget(
     // gives "…T00:00:00.000Z", and midnight UTC read in a browser west of it is
     // the day before, which for the day a meeting sat is simply the wrong
     // answer. So the day itself travels and no zone gets a say in it.
-    adoptedAt: budget.adoptedAt ? budget.adoptedAt.toISOString().slice(0, 10) : null,
+    adoptedAt: budget.adoptedAt ? isoDay(budget.adoptedAt) : null,
     createdBy: { name: budget.createdBy.name },
     lockedAt: budget.lockedAt?.toISOString() ?? null,
     lockedBy: budget.lockedBy ? { name: budget.lockedBy.name } : null,

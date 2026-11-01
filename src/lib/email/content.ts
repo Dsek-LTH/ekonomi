@@ -12,6 +12,7 @@ import type { ExpenseStatus, PaymentType } from "@/lib/domain/types";
 import type { Block, Email, Tone } from "./types";
 import svEmail from "../../../messages/sv/email.json";
 import svCommon from "../../../messages/sv/common.json";
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * The address links in a mail point at. A mail is read outside the app, so
@@ -51,9 +52,6 @@ export const formatOre = (ore: number): string => sek.format(oreToSEK(ore));
 
 /** A bank amount, signed both ways, so a refund reads as money coming back. */
 export const formatSignedOre = (ore: number): string => signedSek.format(oreToSEK(ore));
-
-/** A calendar day as the app writes it. */
-export const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
 const stockholmMinute = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",

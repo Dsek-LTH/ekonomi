@@ -162,7 +162,7 @@ export function VoucherEditor({
 }) {
   const t = useTranslations("book");
   const tAlloc = useTranslations("allocation");
-  const tDetail = useTranslations("expenses.detail");
+  const tVoucher = useTranslations("common.voucher");
 
   const accountName = (number: string) =>
     accounts.find((a) => a.number === number.trim())?.name ?? "";
@@ -667,7 +667,7 @@ export function VoucherEditor({
                       // type, and a screen reader reading this row would otherwise
                       // announce the field as nothing at all. The account names
                       // which row it is.
-                      aria-label={`${tDetail("debit")} ${r.account || ""}`.trim()}
+                      aria-label={`${tVoucher("debit")} ${r.account || ""}`.trim()}
                     />
                   )}
                 </td>
@@ -683,7 +683,7 @@ export function VoucherEditor({
                         value: r.credit,
                         onChange: (v) => patchAmount(r.id, "credit", v),
                       })}
-                      aria-label={`${tDetail("credit")} ${r.account || ""}`.trim()}
+                      aria-label={`${tVoucher("credit")} ${r.account || ""}`.trim()}
                       className={amountInput}
                     />
                   )}

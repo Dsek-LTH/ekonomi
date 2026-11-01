@@ -43,11 +43,11 @@ import { useTableControls } from "@/lib/data/use-list-query";
 import { useFormat } from "@/lib/ui/use-format";
 import { DateInput } from "@/components/ui/field";
 import { isCompleteDate } from "@/lib/domain/date";
+import { LABEL } from "@/components/record-card";
 import { DueLabel } from "../invoice-bits";
 import type { InboxDocument } from "@/lib/data/invoice-inbox";
 import type { InboxHealth } from "@/lib/data/supplier-invoices";
 
-const LABEL = "text-xs font-medium text-muted";
 const HOME = "/invoices/inbox";
 
 /** The tabs, each a question somebody has to answer about the documents in

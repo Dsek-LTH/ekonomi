@@ -36,6 +36,7 @@ import { oreToSEK } from "@/lib/domain/money";
 import { pageBounds, type ListQuery, type RowPage } from "@/lib/data/list-query";
 import { prisma } from "@/lib/server/db";
 import { bookedByOf } from "@/lib/server/review";
+import { isoDay } from "@/lib/domain/date";
 
 export interface ClosingYear {
   /** Fortnox's financial-year id, which is what the URL carries. */
@@ -102,7 +103,6 @@ export interface ClosingProgress {
 export const CLOSING_TABS = ["all", "expense", "income", "none", "disagrees"] as const;
 export type ClosingTab = (typeof CLOSING_TABS)[number];
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 function toYear(
   y: { id: number; fromDate: Date; toDate: Date; lastSyncAt: Date | null },
@@ -111,8 +111,8 @@ function toYear(
   return {
     id: y.id,
     year: y.fromDate.getUTCFullYear(),
-    fromDate: isoDate(y.fromDate),
-    toDate: isoDate(y.toDate),
+    fromDate: isoDay(y.fromDate),
+    toDate: isoDay(y.toDate),
     lastSyncAt: y.lastSyncAt?.toISOString() ?? null,
     vouchers,
   };
@@ -149,7 +149,7 @@ async function backfillFingerprints(ids: readonly string[]): Promise<Map<string,
   const hashes = new Map(
     vouchers.map((v) => [
       v.id,
-      voucherFingerprint({ date: isoDate(v.date), description: v.description, rows: v.rows }),
+      voucherFingerprint({ date: isoDay(v.date), description: v.description, rows: v.rows }),
     ]),
   );
   await prisma.$transaction(
@@ -221,7 +221,7 @@ async function appVouchersFor(year: ClosingYear): Promise<AppVoucher[]> {
         ownBooking: !!exporter && (bookedBy.get(v.expense.id) ?? []).includes(exporter),
       };
     } else if (v.incomeReport) {
-      source = { kind: "income", id: v.incomeReport.id, date: isoDate(v.incomeReport.date) };
+      source = { kind: "income", id: v.incomeReport.id, date: isoDay(v.incomeReport.date) };
     }
     if (!source) return [];
     return [
@@ -312,7 +312,7 @@ async function yearVouchers(
     const series = v.series.toUpperCase();
     return {
       key: voucherKey(series, v.number),
-      date: isoDate(v.date),
+      date: isoDay(v.date),
       description: v.description,
       debit,
       contentHash: v.contentHash ?? filled.get(v.id)!,

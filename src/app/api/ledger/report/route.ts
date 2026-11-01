@@ -17,6 +17,7 @@ import {
 } from "@/lib/ledger/comparison";
 import type { ReportKind } from "@/lib/ledger/bas";
 import { prisma } from "@/lib/server/db";
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * What the printed report's header says about where it came from, as Fortnox
@@ -126,8 +127,8 @@ export async function GET(req: Request) {
     period: periodOf(period),
     // The period as days, for the printed header ("2026-01-01 - 2026-03-31").
     periodDates: {
-      from: period.from.toISOString().slice(0, 10),
-      to: period.to.toISOString().slice(0, 10),
+      from: isoDay(period.from),
+      to: isoDay(period.to),
     },
     meta,
     report,

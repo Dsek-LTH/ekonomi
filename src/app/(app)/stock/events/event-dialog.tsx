@@ -15,8 +15,9 @@ import { DateInput, Field, Input } from "@/components/ui/field";
 import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { CreateStockEvent } from "@/lib/api/schemas/stock";
+import { isoDay } from "@/lib/domain/date";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoDay(new Date());
 
 export function EventDialog({ onClose }: { onClose: () => void }) {
   const t = useTranslations("stock");

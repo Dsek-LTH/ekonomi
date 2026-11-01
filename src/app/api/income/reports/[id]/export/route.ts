@@ -28,6 +28,7 @@ import { incomeVoucherSeries } from "@/lib/income/voucher";
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import { getObjectBuffer } from "@/lib/server/storage";
+import { isoDay } from "@/lib/domain/date";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -65,7 +66,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   // whatever has been exported since, including by someone else in the last
   // minute. Before the file upload deliberately: a refusal here leaves nothing
   // behind at all.
-  const voucherDate = verification.date.toISOString().slice(0, 10);
+  const voucherDate = isoDay(verification.date);
   const existing = await fortnoxIncomeVouchers(voucherDate, voucherDate);
   const duplicate = existing.byKey.get(incomeVoucherKey(voucherDate, verification.description));
   if (duplicate) {
@@ -106,7 +107,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   try {
     created = await createVoucher(token, {
       series,
-      date: verification.date.toISOString().slice(0, 10),
+      date: isoDay(verification.date),
       description: verification.description,
       rows,
     });

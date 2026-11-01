@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/server/db";
 import { oreToSEK } from "@/lib/domain/money";
 import { costCenterWhere } from "./cost-center-filter";
+import { isoDay } from "@/lib/domain/date";
 
 export interface LedgerYear {
   id: number; // Fortnox financial-year id
@@ -21,8 +22,8 @@ export async function getLedgerYears(): Promise<LedgerYear[]> {
     id: y.id,
     year: y.fromDate.getUTCFullYear(),
     lastSyncAt: y.lastSyncAt?.toISOString() ?? null,
-    fromDate: y.fromDate.toISOString().slice(0, 10),
-    toDate: y.toDate.toISOString().slice(0, 10),
+    fromDate: isoDay(y.fromDate),
+    toDate: isoDay(y.toDate),
   }));
 }
 
@@ -78,7 +79,7 @@ export async function getLedgerRows(
   });
   return rows.map((r) => ({
     id: r.id,
-    date: r.voucher.date.toISOString().slice(0, 10),
+    date: isoDay(r.voucher.date),
     voucher: `${r.voucher.series}-${r.voucher.number}`,
     description: r.voucher.description,
     text: r.text,

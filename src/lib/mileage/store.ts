@@ -9,9 +9,7 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { valueJourney, type JourneyInput } from "./claim";
 import type { MileageRateLike } from "./rate";
-
-/** ISO date out of a `@db.Date` column, with no timezone in the way. */
-const iso = (d: Date): string => d.toISOString().slice(0, 10);
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * Every rate ever recorded, newest first.
@@ -26,7 +24,7 @@ export async function getMileageRates(): Promise<MileageRateLike[]> {
     orderBy: { validFrom: "desc" },
     select: { orePerKm: true, validFrom: true },
   });
-  return rows.map((r) => ({ orePerKm: r.orePerKm, validFrom: iso(r.validFrom) }));
+  return rows.map((r) => ({ orePerKm: r.orePerKm, validFrom: isoDay(r.validFrom) }));
 }
 
 /**

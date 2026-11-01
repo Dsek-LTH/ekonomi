@@ -20,7 +20,7 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { expenseDocumentKey, putObject } from "@/lib/server/storage";
 import { journeyKm, namedStops } from "@/lib/mileage/claim";
-import { daysAgo } from "@/lib/domain/date";
+import { daysAgo, isoDay } from "@/lib/domain/date";
 import { CoverRenderError, renderCover } from "./cover/typst";
 import { bookingNamesOf, type BookingNames } from "@/lib/server/review";
 import type {
@@ -71,7 +71,7 @@ const km = (n: number): string => `${nf(1).format(n)} km`;
 const DASH = "-";
 
 const isoDate = (d: Date | null | undefined): string | null =>
-  d ? d.toISOString().slice(0, 10) : null;
+  d ? isoDay(d) : null;
 
 /** How each payment type is worded on the page. Fixed Swedish, not a
  *  translation lookup: see the note on ExpenseCoverData. */

@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import { Notice } from "@/components/ui/notice";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
-import { commaForm } from "@/lib/domain/money";
 import type { InvoiceCapabilities } from "@/lib/domain/supplier-invoice";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
@@ -15,10 +14,8 @@ import type { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoi
 import type { AccountRecord, CostCenter, ProjectRecord, SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { AttestReach, SupplierInvoiceView } from "@/lib/data/supplier-invoices";
 import { PersonName } from "@/components/ui/avatar";
+import { LABEL } from "@/components/record-card";
 import { underlagCaption } from "@/lib/expense/document-url";
-
-/** The small capitals every label on the card is set in, as on the utlägg page. */
-export const LABEL = "text-xs font-medium text-muted";
 
 /** The bar along the card's foot, held at the bottom of the screen. */
 export function ActionBar({ children }: { children: React.ReactNode }) {
@@ -67,10 +64,6 @@ export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
     })),
   ];
 }
-
-/** An amount in kronor as the amount field writes one. */
-export const asInput = (sek: number | null) =>
-  sek == null ? "" : commaForm((Math.round(sek * 100) / 100).toFixed(2));
 
 export interface WorkspaceProps {
   invoice: SupplierInvoiceView;

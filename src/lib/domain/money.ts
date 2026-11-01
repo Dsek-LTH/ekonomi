@@ -51,6 +51,13 @@ const AMOUNT_INPUT = /^[\d\s]*(?:[.,]\d{0,2})?$/;
  */
 export const commaForm = (input: string): string => input.replace(/\./g, ",");
 
+/**
+ * An amount in kronor as an amount field writes one, "1250,00", so a field
+ * filled in for you reads the same as one typed. Empty for no amount.
+ */
+export const sekToInput = (sek: number | null): string =>
+  sek == null ? "" : commaForm(oreToSEK(sekToOre(sek)).toFixed(2));
+
 /** Whether `input` is on its way to being an amount. See AMOUNT_INPUT. */
 export function isAmountInput(input: string): boolean {
   return AMOUNT_INPUT.test(input);

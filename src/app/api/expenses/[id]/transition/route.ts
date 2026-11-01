@@ -35,7 +35,7 @@ import { getMileageRates } from "@/lib/mileage/store";
 import { cancelsOut } from "@/lib/domain/matching";
 import { attestersOf, deliverSoon, holdersOf, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
-import { isFutureDate } from "@/lib/domain/date";
+import { isFutureDate, isoDay } from "@/lib/domain/date";
 import type { ExpenseStatus } from "@/lib/generated/prisma/client";
 
 // Note: export (BOOKED → EXPORTED) is NOT here. It's a real Fortnox API call,
@@ -527,7 +527,7 @@ export async function POST(
     // The claim has to be one the deadline actually stops. A draft with no date
     // yet is not late; it is unfinished, and `isLateReimbursement` says so by
     // wanting a whole date.
-    const purchaseDate = expense.purchaseDate?.toISOString().slice(0, 10) ?? "";
+    const purchaseDate = expense.purchaseDate ? isoDay(expense.purchaseDate) : "";
     if (!isLateReimbursement(purchaseDate, expense.paymentType)) {
       return fail(422, "expense.nothingToWaive", {
         values: { days: REIMBURSEMENT_DEADLINE_DAYS },
@@ -600,7 +600,7 @@ export async function POST(
     // so this catches the rows that predate that rule. Sending one on for
     // attest is exactly where it would stop being the submitter's to fix.
     // Stored as @db.Date, i.e. midnight UTC, so the ISO day is the day meant.
-    if (isFutureDate(expense.purchaseDate.toISOString().slice(0, 10))) {
+    if (isFutureDate(isoDay(expense.purchaseDate))) {
       return fail(422, "expense.futureDate");
     }
     // The filing deadline, and the place it really bites: an eget utlägg handed
@@ -615,7 +615,7 @@ export async function POST(
     if (
       !expense.deadlineWaivedAt &&
       isLateReimbursement(
-        expense.purchaseDate.toISOString().slice(0, 10),
+        isoDay(expense.purchaseDate),
         expense.paymentType,
       )
     ) {
@@ -641,7 +641,7 @@ export async function POST(
         {
           // Whole and not in the future by the two checks above, so the date
           // this is valued against is the one the claim will be paid on.
-          date: expense.purchaseDate.toISOString().slice(0, 10),
+          date: isoDay(expense.purchaseDate),
           odometerStart:
             expense.odometerStart == null ? null : Number(expense.odometerStart),
           odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),

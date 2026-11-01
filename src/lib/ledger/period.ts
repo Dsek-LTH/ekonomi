@@ -11,6 +11,7 @@ import "server-only";
 
 import { getLedgerYears, type LedgerYear } from ".";
 import { parseCostCenters } from "./cost-center-filter";
+import { isoDay } from "@/lib/domain/date";
 
 // The period's ends as the query writes them. A day ("YYYY-MM-DD") is that
 // day. A month ("YYYY-MM"), which is what the report asked in before it took
@@ -90,6 +91,6 @@ export async function resolveLedgerPeriod(url: URL): Promise<LedgerPeriod | null
 
 /** The period as the response reports it back: "YYYY-MM-DD" at each end. */
 export const periodOf = (p: Pick<LedgerPeriod, "from" | "to">) => ({
-  from: p.from.toISOString().slice(0, 10),
-  to: p.to.toISOString().slice(0, 10),
+  from: isoDay(p.from),
+  to: isoDay(p.to),
 });

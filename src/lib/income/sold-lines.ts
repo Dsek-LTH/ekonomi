@@ -13,7 +13,7 @@
 // verksamhet has ("s0 - Briska Hallon" when nobody owns s0). Those are drawn
 // together under the prefix, so a whole mis-prefixed batch is seen, and moved,
 // as one thing instead of being scattered through the products by name.
-import { productRows, type GroupableLine, type ProductRow } from "./product-groups";
+import { byCodePoint, productRows, type GroupableLine, type ProductRow } from "./product-groups";
 
 /** What a section carries for its lines: the account's name, and the amount. */
 export interface SectionLine extends GroupableLine {
@@ -51,8 +51,6 @@ export function unplacedPrefix(name: string): { prefix: string; rest: string } |
   const m = PREFIX.exec(name.trim());
   return m ? { prefix: m[1], rest: m[2].trim() } : null;
 }
-
-const byCodePoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** `text` without the prefix `key` at its start, or unchanged if it has another. */
 function stripPrefix(text: string, key: string): string {

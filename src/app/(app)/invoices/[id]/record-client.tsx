@@ -37,11 +37,18 @@ import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import type { FortnoxStatus } from "@/lib/domain/types";
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
-import { InspectorSection } from "../../expenses/[id]/detail-sections";
+import {
+  AllocationTable,
+  AttestedBy,
+  InspectorSection,
+  LABEL,
+  StripCell,
+  VoucherTable,
+  type VoucherLine,
+} from "@/components/record-card";
 import { UncertainExport } from "../book-view";
 import { DueLabel, InvoiceStatusPill, useInvoiceTitle } from "../invoice-bits";
 import {
-  LABEL,
   ReturnedNotice,
   Timeline,
   useInvoicePanelDocuments,
@@ -470,17 +477,6 @@ function MoveSection({
   );
 }
 
-/** One cell of the fact strip, as on an utlägg's: a label in small capitals,
- *  the value under it. */
-function StripCell({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
-  return (
-    <div className={cn("min-w-0 bg-background px-inset py-3", className)}>
-      <p className={LABEL}>{label}</p>
-      <div className="mt-1 min-w-0 truncate text-sm">{children}</div>
-    </div>
-  );
-}
-
 /**
  * The three facts every reader comes for, in ruled columns under the status,
  * the same three in every state: how much, by when, and whose. The first two
@@ -492,17 +488,17 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
   const tRecord = useTranslations("invoices.record");
   return (
     <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-3">
-      <StripCell label={t("amount")} className="col-span-2 sm:col-span-1">
+      <StripCell label={t("amount")} className="col-span-2 sm:col-span-1" truncate>
         {invoice.amount == null ? (
           <span className="text-muted">-</span>
         ) : (
           <span className="text-base font-semibold tabular-nums">{formatSEK(invoice.amount)}</span>
         )}
       </StripCell>
-      <StripCell label={t("dueDate")}>
+      <StripCell label={t("dueDate")} truncate>
         {invoice.dueDate ? <DueLabel dueDate={invoice.dueDate} /> : <span className="text-muted">-</span>}
       </StripCell>
-      <StripCell label={tRecord("unit")}>{invoice.resultUnitName ?? "-"}</StripCell>
+      <StripCell label={tRecord("unit")} truncate>{invoice.resultUnitName ?? "-"}</StripCell>
     </div>
   );
 }
@@ -513,7 +509,6 @@ function SplitSection({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.record");
   const tK = useTranslations("invoices.kontering");
   const share = (a: Allocation) => a.amount ?? (invoice.allocations.length === 1 ? invoice.amount : null);
-  const total = invoice.allocations.reduce((s, a) => s + (share(a) ?? 0), 0);
 
   if (invoice.allocations.length === 0) {
     return (
@@ -523,58 +518,21 @@ function SplitSection({ invoice }: { invoice: SupplierInvoiceView }) {
     );
   }
 
-  const attest = (a: Allocation) =>
-    a.approvedByName ? (
-      <span className="inline-flex min-w-0 max-w-full items-center gap-1 text-success">
-        <IconCheck className="size-3.5 shrink-0" />
-        <span className="truncate">{a.approvedByName}</span>
-      </span>
-    ) : a.canAttest && invoice.status === "PENDING_APPROVAL" ? (
-      <span className="font-medium text-purple">{tK("yoursToAttest")}</span>
-    ) : (
-      <span className="text-muted">{a.resultUnit ?? "-"}</span>
-    );
-
   return (
-    <section className="border-t border-border px-inset pb-2 pt-4">
-      <table className="w-full table-fixed text-sm">
-        <caption className="sr-only">{t("split")}</caption>
-        <thead>
-          <tr className="text-left">
-            <th className={cn(LABEL, "pb-2 pr-3")}>{t("costCenter")}</th>
-            <th className={cn(LABEL, "w-32 pb-2 text-right")}>{t("amount")}</th>
-            <th className={cn(LABEL, "hidden w-[38%] pb-2 pl-6 sm:table-cell")}>{t("attestColumn")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoice.allocations.map((a) => (
-            <tr key={a.id} className="border-t border-border align-top">
-              <td className="py-2 pr-3">
-                <div className="truncate">
-                  <span className="font-medium tabular-nums">{a.costCenterCode}</span>
-                  <span className="ml-2 text-muted">{a.costCenterName}</span>
-                </div>
-                <div className="mt-0.5 truncate text-xs sm:hidden">{attest(a)}</div>
-                {a.comment && <p className="mt-1 text-xs italic text-muted">{a.comment}</p>}
-              </td>
-              <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                {share(a) == null ? <span className="text-muted">-</span> : formatSEK(share(a)!)}
-              </td>
-              <td className="hidden truncate py-2 pl-6 text-xs leading-5 sm:table-cell">{attest(a)}</td>
-            </tr>
-          ))}
-        </tbody>
-        {invoice.allocations.length > 1 && (
-          <tfoot>
-            <tr className="border-t border-border font-semibold">
-              <td className="py-2 pr-3">{t("total")}</td>
-              <td className="whitespace-nowrap py-2 text-right tabular-nums">{formatSEK(total)}</td>
-              <td className="hidden sm:table-cell" />
-            </tr>
-          </tfoot>
-        )}
-      </table>
-    </section>
+    <AllocationTable
+      caption={t("split")}
+      lines={invoice.allocations.map((a) => ({
+        ...a,
+        amount: share(a),
+        attest: a.approvedByName ? (
+          <AttestedBy name={a.approvedByName} />
+        ) : a.canAttest && invoice.status === "PENDING_APPROVAL" ? (
+          <span className="font-medium text-purple">{tK("yoursToAttest")}</span>
+        ) : (
+          <span className="text-muted">{a.resultUnit ?? "-"}</span>
+        ),
+      }))}
+    />
   );
 }
 
@@ -590,23 +548,21 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
   const tBook = useTranslations("invoices.book");
   const { date } = useFormat();
 
-  const toOre = (sek: number | null) => (sek == null ? 0 : Math.round(sek * 100));
-  const rounding = toOre(invoice.rounding);
-  const lines = [
+  const rounding = invoice.rounding ?? 0;
+  const lines: VoucherLine[] = [
     ...invoice.lines.map((l) => ({
       key: l.id,
       account: l.account,
-      name: l.accountName ?? "",
-      costCenter: l.costCenterCode ?? "",
-      debit: toOre(l.debit),
-      credit: toOre(l.credit),
+      accountName: l.accountName ?? "",
+      costCenter: l.costCenterCode,
+      debit: l.debit ?? 0,
+      credit: l.credit ?? 0,
     })),
     ...(rounding
-      ? [{ key: "rounding", account: String(ROUNDING_ACCOUNT), name: tBook("rounding"), costCenter: "", debit: Math.max(rounding, 0), credit: Math.max(-rounding, 0) }]
+      ? [{ key: "rounding", account: String(ROUNDING_ACCOUNT), accountName: tBook("rounding"), debit: Math.max(rounding, 0), credit: Math.max(-rounding, 0) }]
       : []),
-    { key: "payable", account: String(PAYABLE_ACCOUNT), name: tBook("payable"), costCenter: "", debit: 0, credit: toOre(invoice.amount) },
+    { key: "payable", account: String(PAYABLE_ACCOUNT), accountName: tBook("payable"), debit: 0, credit: invoice.amount ?? 0 },
   ];
-  const kr = (ore: number) => (ore ? formatSEK(ore / 100) : "");
 
   const facts: [string, React.ReactNode][] = [
     [tField("supplierName"), invoice.supplierName ?? "-"],
@@ -645,28 +601,7 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
           </div>
         ))}
       </dl>
-      <table className="w-full table-fixed text-sm">
-        <thead>
-          <tr className="text-left">
-            <th className={cn(LABEL, "w-16 pb-2 pl-inset")}>{t("account")}</th>
-            <th className={cn(LABEL, "pb-2 pl-3")}>{t("accountName")}</th>
-            <th className={cn(LABEL, "hidden w-20 pb-2 pl-3 sm:table-cell")}>{t("costCenterShort")}</th>
-            <th className={cn(LABEL, "w-28 pb-2 pl-3 text-right")}>{t("debit")}</th>
-            <th className={cn(LABEL, "w-28 pb-2 pl-3 pr-inset text-right")}>{t("credit")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((l) => (
-            <tr key={l.key} className="border-t border-border align-top">
-              <td className="py-2 pl-inset font-medium tabular-nums">{l.account}</td>
-              <td className="truncate py-2 pl-3">{l.name}</td>
-              <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">{l.costCenter}</td>
-              <td className="whitespace-nowrap py-2 pl-3 text-right tabular-nums">{kr(l.debit)}</td>
-              <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums">{kr(l.credit)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <VoucherTable lines={lines} />
     </InspectorSection>
   );
 }

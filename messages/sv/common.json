@@ -145,5 +145,22 @@
     "BOOKED": "Konterad",
     "EXPORTED": "I Fortnox"
   },
-  "dateOutsideFiscalYear": "Datumet ligger utanför räkenskapsåret {year}. Byt år i sidhuvudet för att lägga in det där."
+  "dateOutsideFiscalYear": "Datumet ligger utanför räkenskapsåret {year}. Byt år i sidhuvudet för att lägga in det där.",
+  "allocation": {
+    "costCenter": "Kostnadsställe",
+    "amount": "Belopp",
+    "attest": "Attest",
+    "total": "Totalt"
+  },
+  "voucher": {
+    "account": "Konto",
+    "accountName": "Benämning",
+    "costCenterShort": "Kst",
+    "projectShort": "Proj",
+    "amount": "Belopp",
+    "debit": "Debet",
+    "credit": "Kredit",
+    "debitShort": "D",
+    "creditShort": "K"
+  }
 }

@@ -13,8 +13,7 @@ import "server-only";
 import { join } from "node:path";
 import nodemailer, { type Transporter } from "nodemailer";
 import { LOGO_CID } from "@/lib/email/render";
-
-const isProduction = process.env.NODE_ENV === "production";
+import { isProduction } from "@/lib/server/env";
 
 export interface Mail {
   to: string;

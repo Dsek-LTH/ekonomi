@@ -9,7 +9,7 @@ import {
   isQuietDraftEdit,
   isRecallable,
 } from "@/lib/domain/status";
-import { isFutureDate } from "@/lib/domain/date";
+import { isFutureDate, isoDay } from "@/lib/domain/date";
 import { isMatchable } from "@/lib/domain/matching";
 import { exportLock } from "@/lib/domain/export-claim";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -84,7 +84,7 @@ export async function PATCH(
   // Stored as @db.Date, i.e. midnight UTC, so the ISO day is the day meant.
   // Declared here rather than beside the diff below because the mileage
   // valuation needs it first.
-  const dateStr = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  const dateStr = (d: Date | null) => (d ? isoDay(d) : null);
   // In the year picked in the header, so the utlägg is in the list it was made
   // from. The same allowance as the future check above: only when this edit is
   // what sets the date.

@@ -14,7 +14,7 @@ import "server-only";
 
 import { S3_DEFAULTS } from "@/lib/s3-config";
 
-const isProduction = process.env.NODE_ENV === "production";
+export const isProduction = process.env.NODE_ENV === "production";
 
 // `next build` runs with NODE_ENV=production but on a machine that has no
 // business holding production secrets, a CI runner, or a Docker build step.

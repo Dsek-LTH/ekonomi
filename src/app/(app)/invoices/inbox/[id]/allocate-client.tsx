@@ -10,10 +10,10 @@ import { Notice } from "@/components/ui/notice";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useProgressRouter } from "@/components/shell/route-progress";
+import { sekToInput } from "@/lib/domain/money";
 import type { CostCenter } from "@/lib/domain/types";
 import type { AttestReach } from "@/lib/data/supplier-invoices";
 import type { InboxDocument } from "@/lib/data/invoice-inbox";
-import { asInput } from "../../invoice-shared";
 import { AllocateForm, type AllocateDefaults } from "../../[id]/allocate/allocate-client";
 
 export function DocumentAllocateClient({
@@ -74,7 +74,7 @@ export function DocumentAllocateClient({
         )
       }
       unitName={d.resultUnitName}
-      initialRows={[makeRow(suggestedCostCenter ?? "", asInput(defaults.amount))]}
+      initialRows={[makeRow(suggestedCostCenter ?? "", sekToInput(defaults.amount))]}
       defaults={defaults}
       fromScan={fromScan}
       mail={d.note ? { fromName: d.fromName, fromAddress: d.fromAddress ?? "", note: d.note } : null}

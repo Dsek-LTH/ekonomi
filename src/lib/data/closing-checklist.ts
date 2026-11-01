@@ -8,6 +8,7 @@ import { getClosingProgress, type ClosingYear } from "@/lib/data/closing";
 import { oreToSEK } from "@/lib/domain/money";
 import type { ClosingCheck, Role } from "@/lib/domain/types";
 import { prisma } from "@/lib/server/db";
+import { isoDay } from "@/lib/domain/date";
 
 export interface TemplateItem {
   id: string;
@@ -48,7 +49,6 @@ export interface BalanceAccount {
   accountNote: string;
 }
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const range = (year: ClosingYear) => ({
   gte: new Date(`${year.fromDate}T00:00:00.000Z`),
   lte: new Date(`${year.toDate}T00:00:00.000Z`),
@@ -247,7 +247,7 @@ export async function getChecklist(year: ClosingYear): Promise<ChecklistEntry[] 
     title: i.title,
     howTo: i.howTo,
     ownerRole: i.ownerRole,
-    dueDate: i.dueDate ? isoDate(i.dueDate) : null,
+    dueDate: i.dueDate ? isoDay(i.dueDate) : null,
     checkKey: i.check,
     check: i.check ? (checks.get(i.check) ?? null) : null,
     doneAt: i.doneAt?.toISOString() ?? null,

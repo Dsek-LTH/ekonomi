@@ -145,5 +145,22 @@
     "BOOKED": "Booked",
     "EXPORTED": "In Fortnox"
   },
-  "dateOutsideFiscalYear": "The date is outside the financial year {year}. Switch year in the header to enter it there."
+  "dateOutsideFiscalYear": "The date is outside the financial year {year}. Switch year in the header to enter it there.",
+  "allocation": {
+    "costCenter": "Cost center",
+    "amount": "Amount",
+    "attest": "Approval",
+    "total": "Total"
+  },
+  "voucher": {
+    "account": "Account",
+    "accountName": "Name",
+    "costCenterShort": "CC",
+    "projectShort": "Proj",
+    "amount": "Amount",
+    "debit": "Debit",
+    "credit": "Credit",
+    "debitShort": "Dr",
+    "creditShort": "Cr"
+  }
 }

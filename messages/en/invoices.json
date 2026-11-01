@@ -219,12 +219,7 @@
     "unit": "Result unit",
     "waitingFor": "Waiting for {units}",
     "split": "Cost split",
-    "costCenter": "Cost centre",
-    "account": "Account",
-    "amount": "Amount",
-    "total": "Total",
     "fortnoxLine": "Supplier invoice {number}, created {date}",
-    "attestColumn": "Attest",
     "book": "Book",
     "allocate": "Allocate",
     "send": "Send to Fortnox",
@@ -239,11 +234,7 @@
     "sendWarningsTitle": "Worth a look before it is sent",
     "warning": {
       "overdue": "{days, plural, one {The due date passed # day ago.} other {The due date passed # days ago.}}"
-    },
-    "accountName": "Account name",
-    "costCenterShort": "CC",
-    "debit": "Debit",
-    "credit": "Credit"
+    }
   },
   "notAllocated": "Not allocated yet",
   "fromForwarder": "From {name}",

@@ -44,6 +44,7 @@ import { deliverSoon, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
 import { RECEIPT_ORDER } from "@/lib/data/receipt-order";
 import { exportReviewBlocker } from "@/lib/server/review";
+import { isoDay } from "@/lib/domain/date";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -222,7 +223,7 @@ async function exportHolding(
   try {
     created = await createVoucher(token, {
       series,
-      date: verification.date.toISOString().slice(0, 10),
+      date: isoDay(verification.date),
       description: voucherText(verification.description, expense.reference),
       rows,
     });

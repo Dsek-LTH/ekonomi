@@ -37,7 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/field";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { StockLevelDto, StockLogRowDto } from "@/lib/data/stock";
-import { LEVELS } from "@/lib/stock/levels";
+import { levelSummary } from "@/lib/stock/levels";
 import type { StockEntryKind } from "@/lib/domain/types";
 import { formatOreKr, formatSigned } from "@/lib/ui/format";
 
@@ -57,22 +57,6 @@ const KINDS: StockEntryKind[] = [
 /** Colour carries direction, not kind: in is in, whatever it was called. */
 const toneFor = (n: number) =>
   n > 0 ? "text-success" : n < 0 ? "text-foreground" : "text-muted";
-
-/** A row's effect on the open bottles, as "80 % → 40 %" or "+ 60 %". Written
- *  out rather than as four numbers, because what a reader wants from the column
- *  is which bottle moved where. */
-function levelSummary(open: Record<number, number>): string {
-  const left = LEVELS.filter((l) => (open[l] ?? 0) < 0);
-  const arrived = LEVELS.filter((l) => (open[l] ?? 0) > 0);
-  const part = (levels: number[]) =>
-    levels
-      .map((l) => `${Math.abs(open[l] ?? 0) > 1 ? `${Math.abs(open[l] ?? 0)}×` : ""}${l} %`)
-      .join(", ");
-  if (left.length && arrived.length) return `${part(left)} → ${part(arrived)}`;
-  if (left.length) return `− ${part(left)}`;
-  if (arrived.length) return `+ ${part(arrived)}`;
-  return "";
-}
 
 export default function StockLogClient({
   log,

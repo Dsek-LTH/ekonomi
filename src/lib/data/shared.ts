@@ -14,7 +14,8 @@
 //     which surfaces as a hydration mismatch when the HTML and the RSC payload
 //     come from two executions.
 import "server-only";
+import { isoDay } from "@/lib/domain/date";
 
 /** A date column as the `YYYY-MM-DD` string the UI types expect. */
 export const isoDate = (d: Date | null | undefined) =>
-  d ? d.toISOString().slice(0, 10) : "";
+  d ? isoDay(d) : "";

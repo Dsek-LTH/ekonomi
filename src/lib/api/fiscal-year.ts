@@ -8,6 +8,7 @@ import type { NextResponse } from "next/server";
 import { fail } from "@/lib/api/guard";
 import { getFiscalYear } from "@/lib/server/fiscal-year";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * A 422 for a date outside the picked year, or null when it is in it. Null as
@@ -18,7 +19,7 @@ export async function denyOutsideFiscalYear(
   date: string | Date | null | undefined,
 ): Promise<NextResponse | null> {
   if (!date) return null;
-  const day = typeof date === "string" ? date : date.toISOString().slice(0, 10);
+  const day = typeof date === "string" ? date : isoDay(date);
   const year = await getFiscalYear();
   if (!outsideFiscalYear(year, day)) return null;
   return fail(422, "fiscalYear.outside", { values: { year: fiscalYearLabel(year!) } });

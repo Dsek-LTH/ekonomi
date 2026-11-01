@@ -26,6 +26,7 @@ import type { StockStats } from "@/lib/data/stock-stats";
 import { DRINK_SERIES } from "@/lib/ui/chart-colors";
 import { cn } from "@/lib/ui/utils";
 import { formatOreKr } from "@/lib/ui/format";
+import { isoDay } from "@/lib/domain/date";
 
 /** Already litres, not millilitres: these come out of the stats query summed. */
 const formatLitreCount = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 }).format;
@@ -93,7 +94,7 @@ export default function StockStatsClient({
     const d = new Date(`${today}T12:00:00Z`);
     d.setUTCMonth(d.getUTCMonth() - months);
     d.setUTCDate(d.getUTCDate() - days);
-    return d.toISOString().slice(0, 10);
+    return isoDay(d);
   };
   const ranges = [
     { key: "week", from: back(0, 6) },

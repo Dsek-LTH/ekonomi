@@ -20,12 +20,11 @@ import {
   AllocationSection,
   ExpenseSummary,
   FactStrip,
-  InspectorSection,
-  LABEL,
   NotesSection,
   TimelineSection,
   VerificationSection,
 } from "./detail-sections";
+import { InspectorSection, LABEL } from "@/components/record-card";
 import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
 import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";

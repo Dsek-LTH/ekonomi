@@ -8,6 +8,7 @@
 // distributions that become the voucher's credit rows, so a disagreement would
 // be a voucher that did not match its own evidence.
 import type { IncomeAccountDistribution, IncomeFeeReportDto, IncomeReportDto } from "./types";
+import { isoDay } from "@/lib/domain/date";
 
 /** The stored shape this reads. Structural, so it is testable without Prisma. */
 interface StoredReport {
@@ -29,7 +30,6 @@ export interface StoredLine {
   total: number;
 }
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 /**
  * Sum the lines by account, in account order.
@@ -56,7 +56,7 @@ export function distributionsFor(lines: readonly StoredLine[]): IncomeAccountDis
 }
 
 export function toReportDto(report: StoredReport): IncomeReportDto {
-  const date = isoDate(report.date);
+  const date = isoDay(report.date);
   const committee = report.resultUnit?.income?.key ?? "";
   return {
     key: `${committee}-${date}`,
@@ -80,7 +80,7 @@ export function toReportDto(report: StoredReport): IncomeReportDto {
 }
 
 export function toFeeReportDto(report: StoredReport): IncomeFeeReportDto {
-  const date = isoDate(report.date);
+  const date = isoDay(report.date);
   return {
     key: `avgift-${date}`,
     date,

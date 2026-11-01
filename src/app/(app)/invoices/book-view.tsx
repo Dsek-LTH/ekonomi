@@ -31,7 +31,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { useQuery } from "@/components/shell/use-query";
 import { isCompleteDate } from "@/lib/domain/date";
-import { parseOre } from "@/lib/domain/money";
+import { parseOre, sekToInput } from "@/lib/domain/money";
 import {
   MAX_ROUNDING,
   PAYABLE_ACCOUNT,
@@ -45,7 +45,7 @@ import { formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
 import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
-import { asInput, useTransition, type WorkspaceProps } from "./invoice-shared";
+import { useTransition, type WorkspaceProps } from "./invoice-shared";
 
 // ── The form ──────────────────────────────────────────────────────
 //
@@ -371,7 +371,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
             </BookField>
             <BookField label={tFields("invoiceNumber")}>{text("invoiceNumber")}</BookField>
             <BookField label={tBook("total")}>
-              <SavedInput amount value={asInput(invoice.amount)} onSave={(v) => commit("amount", v)} />
+              <SavedInput amount value={sekToInput(invoice.amount)} onSave={(v) => commit("amount", v)} />
             </BookField>
           </div>
 

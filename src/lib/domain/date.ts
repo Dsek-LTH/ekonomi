@@ -11,8 +11,12 @@ export function isCompleteDate(value: string): boolean {
   // The regex only proves the shape; round-tripping proves the day is real, so
   // "2026-02-30" doesn't roll over into March.
   const d = new Date(`${value}T00:00:00Z`);
-  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+  return !isNaN(d.getTime()) && isoDay(d) === value;
 }
+
+/** The UTC calendar day of an instant, as `YYYY-MM-DD`. For a `@db.Date`
+ *  column, which Prisma hands back as midnight UTC. */
+export const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
 /**
  * An ISO day as the instant that names it, or null when there is no day.
@@ -87,7 +91,7 @@ export function addMonths(value: string, months: number): string {
     Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
   ).getUTCDate();
   target.setUTCDate(Math.min(d, lastDay));
-  return target.toISOString().slice(0, 10);
+  return isoDay(target);
 }
 
 // The ISO week a day falls in, as "2026-W41": Monday to Sunday, and the year is

@@ -14,6 +14,7 @@ import type { IncomeSource } from "@/lib/domain/types";
 import { incomeVoucherKey, type FortnoxIncomeVouchers } from "./duplicate";
 import type { IncomeFeeReportDto, IncomeReportDto } from "./types";
 import { incomeVoucherDescription } from "./voucher";
+import { isoDay } from "@/lib/domain/date";
 
 interface CreateBatchResult {
   batchId: string;
@@ -90,7 +91,7 @@ function existingFortnoxVoucher(
   description: string,
 ): string | null {
   if (!existing?.checked) return null;
-  return existing.byKey.get(incomeVoucherKey(date.toISOString().slice(0, 10), description)) ?? null;
+  return existing.byKey.get(incomeVoucherKey(isoDay(date), description)) ?? null;
 }
 
 /**
@@ -124,7 +125,7 @@ async function existingReports(
 }
 
 const dayKey = (resultUnitId: string | null, date: Date) =>
-  `${resultUnitId ?? ""}|${date.toISOString().slice(0, 10)}`;
+  `${resultUnitId ?? ""}|${isoDay(date)}`;
 
 /**
  * Store a fetch of sales reports as a batch of drafts.

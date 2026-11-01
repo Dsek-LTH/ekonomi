@@ -19,6 +19,7 @@ import { RENTAL_TERMS, TERMS_VERSION } from "./rental/terms";
 import { linePricing, rentalPricing } from "./rental/pricing";
 import { renderRentalContract, RentalRenderError } from "./rental/typst";
 import type { RentalContractData } from "./rental/types";
+import { isoDay } from "@/lib/domain/date";
 
 /**
  * Why a contract has no document. Each maps to a message key under
@@ -47,11 +48,9 @@ const nf = new Intl.NumberFormat("sv-SE", {
 /** öre → "1 069,00 kr", the way the rest of the app writes money in Swedish. */
 const kr = (ore: number): string => `${nf.format(ore / 100)} kr`;
 
-/** An ISO day, which is what a Swedish contract states a date as. */
-const day = (d: Date): string => d.toISOString().slice(0, 10);
-
-/** The same, for the live preview, where the period may not be chosen yet. */
-const dayOrNull = (d: Date | null): string | null => (d ? day(d) : null);
+/** An ISO day, which is what a Swedish contract states a date as. Null in
+ *  the live preview, where the period may not be chosen yet. */
+const dayOrNull = (d: Date | null): string | null => (d ? isoDay(d) : null);
 
 /**
  * Everything the document needs, and nothing else.
@@ -127,7 +126,7 @@ export function buildRentalData(
     counterpartyEmail: contract.counterpartyEmail,
     counterpartyPhone: contract.counterpartyPhone,
     title: contract.title,
-    drawn: day(contract.createdAt),
+    drawn: isoDay(contract.createdAt),
     pickupAt: dayOrNull(rental.pickupAt),
     returnAt: dayOrNull(rental.returnAt),
     purpose: rental.purpose,

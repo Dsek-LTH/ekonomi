@@ -19,6 +19,7 @@ import { rememberRegister } from "@/lib/server/supplier-register";
 import { parseSie } from "@/lib/fortnox/sie";
 import { voucherFingerprint } from "@/lib/closing/fingerprint";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { isoDay } from "@/lib/domain/date";
 
 const toOre = (sek: number) => Math.round(sek * 100);
 
@@ -417,7 +418,7 @@ export async function syncSuppliers(token: string): Promise<SupplierSyncResult> 
 /** The financial year a date falls in, or the newest one Fortnox knows. */
 function yearContaining(
   years: readonly FortnoxFinancialYear[],
-  date = new Date().toISOString().slice(0, 10),
+  date = isoDay(new Date()),
 ): FortnoxFinancialYear | undefined {
   return years.find((y) => y.fromDate <= date && date <= y.toDate) ?? years[0];
 }

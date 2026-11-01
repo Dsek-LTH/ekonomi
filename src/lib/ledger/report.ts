@@ -9,7 +9,7 @@
 // Amounts leave this module in SEK, already oriented for display (see lib/bas):
 // income and equity read positive, costs read negative.
 import { prisma } from "@/lib/server/db";
-import { costCenterMatcher } from "./cost-center-filter";
+import { NO_CC, costCenterMatcher } from "./cost-center-filter";
 import { oreToSEK } from "@/lib/domain/money";
 // The wire shapes live in ./report-shape, which the ledger screen imports
 // too. They are the contract between this module and that one, and a
@@ -35,8 +35,6 @@ import {
   type BasSection,
   type ReportKind,
 } from "./bas";
-
-const NO_CC = ""; // the "no cost centre" bucket key
 
 // One account within one cost centre, in raw öre (debit − credit) before the
 // display orientation is applied.

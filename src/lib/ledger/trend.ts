@@ -20,10 +20,7 @@
 import { prisma } from "@/lib/server/db";
 import { orient, sectionsFor, type BasSection } from "./bas";
 import { oreToSEK } from "@/lib/domain/money";
-import { costCenterMatcher, costCenterWhere } from "./cost-center-filter";
-
-/** The bucket key for rows carrying no cost centre. The report uses the same. */
-const NO_CC = "";
+import { NO_CC, costCenterMatcher, costCenterWhere } from "./cost-center-filter";
 
 /** The BAS section that is money coming in. Everything else in a result report
  *  is money going out, which is what makes `income`/`costs` a split of two. */

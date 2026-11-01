@@ -6,7 +6,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
-import { stockholmDay, today } from "@/lib/domain/date";
+import { stockholmDay, today, isoDay } from "@/lib/domain/date";
 import {
   SCORE_WINDOW_DAYS,
   memberScore,
@@ -18,7 +18,6 @@ import {
 /** Statuses an utlägg is only in once every row is attested. */
 const ATTESTED = new Set(["APPROVED", "BOOKED", "EXPORTED"]);
 
-const dateDay = (d: Date) => d.toISOString().slice(0, 10); // a @db.Date column
 const momentDay = (d: Date) => stockholmDay.format(d); // a timestamp, on the section's calendar
 const later = (a: string, b: string) => (a > b ? a : b);
 
@@ -82,7 +81,7 @@ async function load(submitterIds: string[] | null, now: string) {
   };
 
   for (const e of expenses) {
-    const bought = e.purchaseDate ? dateDay(e.purchaseDate) : momentDay(e.createdAt);
+    const bought = e.purchaseDate ? isoDay(e.purchaseDate) : momentDay(e.createdAt);
     // A card purchase can only be sent once its bank row is in the app to
     // match, so its clock waits for the import. Without a row it has not
     // started.
@@ -110,7 +109,7 @@ async function load(submitterIds: string[] | null, now: string) {
       id: t.id,
       description: t.description,
       amount: t.amount,
-      startedOn: later(dateDay(t.transactionDate), momentDay(t.importedAt)),
+      startedOn: later(isoDay(t.transactionDate), momentDay(t.importedAt)),
     });
   }
   return byMember;

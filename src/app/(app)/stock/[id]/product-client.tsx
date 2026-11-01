@@ -40,7 +40,7 @@ import type { Column } from "@/components/ui/data-table";
 import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { EntryDialog } from "../entry-dialog";
-import { LEVELS, bottlesAt } from "@/lib/stock/levels";
+import { LEVELS, bottlesAt, levelSummary } from "@/lib/stock/levels";
 import { alcoholPerKrona } from "@/lib/stock/onhand";
 import { cn } from "@/lib/ui/utils";
 import {
@@ -51,18 +51,6 @@ import {
   formatSigned,
 } from "@/lib/ui/format";
 import { systembolagetSearchUrl } from "@/lib/stock/systembolaget";
-
-/** A row's effect on the open bottles, as "80 % → 40 %" or "+ 60 %". */
-function levelSummary(open: Record<number, number>): string {
-  const left = LEVELS.filter((l) => (open[l] ?? 0) < 0);
-  const arrived = LEVELS.filter((l) => (open[l] ?? 0) > 0);
-  const part = (levels: number[]) =>
-    levels.map((l) => `${Math.abs(open[l] ?? 0) > 1 ? `${Math.abs(open[l] ?? 0)}×` : ""}${l} %`).join(", ");
-  if (left.length && arrived.length) return `${part(left)} → ${part(arrived)}`;
-  if (left.length) return `− ${part(left)}`;
-  if (arrived.length) return `+ ${part(arrived)}`;
-  return "";
-}
 
 export default function StockProductClient({
   product,
