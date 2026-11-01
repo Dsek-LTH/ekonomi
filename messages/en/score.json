@@ -32,7 +32,5 @@
     "waitingSummary": "{count, plural, one {# purchase waiting} other {# purchases waiting}}, oldest {days} days",
     "upToDate": "Nothing waiting"
   },
-  "behindTitle": "Falling behind",
-  "behindAll": "Every member's score",
   "ownTitle": "Your filing score"
 }

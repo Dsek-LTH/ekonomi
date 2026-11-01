@@ -1,7 +1,4 @@
 {
-  "name": "Namn",
-  "email": "E-post",
-  "roles": "Roller",
   "payoutTitle": "Utbetalningskonto",
   "payoutDescription": "Används när kassören betalar ut godkända utlägg du lagt ut för egna pengar.",
   "clearing": "Clearingnummer",

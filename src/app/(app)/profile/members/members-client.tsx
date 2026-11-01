@@ -93,7 +93,7 @@ export function MembersClient({
 }
 
 /** "2 köp väntar, äldsta 44 dagar", or that nothing does. */
-export function WaitingSummary({ row }: { row: Pick<MemberScoreRow, "score"> }) {
+function WaitingSummary({ row }: { row: Pick<MemberScoreRow, "score"> }) {
   const t = useTranslations("score.list");
   const { waiting } = row.score;
   if (waiting.length === 0) return <>{t("upToDate")}</>;

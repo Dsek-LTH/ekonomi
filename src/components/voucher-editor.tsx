@@ -65,7 +65,7 @@ export const makeVoucherRow = (patch: Partial<VoucherEditorRow> = {}): VoucherEd
  * is written. Every caller has to drop them before it counts, validates or posts
  * anything: `filledVoucherRows`.
  */
-export const isBlankVoucherRow = (r: VoucherEditorRow) =>
+const isBlankVoucherRow = (r: VoucherEditorRow) =>
   !r.account.trim() &&
   !r.description.trim() &&
   !r.costCenterCode.trim() &&

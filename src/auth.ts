@@ -214,7 +214,7 @@ async function syncAuthentikUser(identity: {
  */
 const SESSION_MAX_AGE = 24 * 60 * 60;
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth } = NextAuth({
   providers,
   /**
    * A JWT, and a strictly immutable one: it is written when you sign in and

@@ -119,7 +119,7 @@ async function assignCtx(): Promise<AssignCtx> {
   };
 }
 
-export async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promise<MessageOutcome> {
+async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promise<MessageOutcome> {
   if (await prisma.inboundMail.findUnique({ where: { gmailId }, select: { id: true } })) return "skipped";
 
   const msg = await getMessage(c, gmailId);

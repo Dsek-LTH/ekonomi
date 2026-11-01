@@ -41,22 +41,12 @@ const Ctx = createContext<{
   slot: HTMLElement | null;
   /** The page says whether it is one of the section's own (see PageHeader). */
   reportOwn: (own: boolean | null) => void;
-  /** The nav route the page is lit under, which for a page reached from
-   *  several sections is the one you came from. See carriedSection. */
-  active: string | null;
 }>({
   nav: null,
   slot: null,
   reportOwn: () => {},
-  active: null,
 });
 export const SectionNavProvider = Ctx.Provider;
-
-/** The nav route this page is lit under (`/approvals` for an utlägg opened
- *  from the attest queue). */
-export function useActiveSection(): string | null {
-  return useContext(Ctx).active;
-}
 
 /**
  * The band at the top of the main column, for a page in a section: its tabs,

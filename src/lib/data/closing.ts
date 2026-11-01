@@ -402,7 +402,7 @@ export async function getClosingProgress(year: ClosingYear): Promise<ClosingProg
   return progressOf(vouchers, orphaned);
 }
 
-export function parseClosingTab(tab: string): ClosingTab {
+function parseClosingTab(tab: string): ClosingTab {
   return (CLOSING_TABS as readonly string[]).includes(tab) ? (tab as ClosingTab) : "all";
 }
 

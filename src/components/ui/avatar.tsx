@@ -16,7 +16,7 @@ const SIZES = {
 
 export type AvatarSize = keyof typeof SIZES;
 
-export function Avatar({
+function Avatar({
   initials,
   src,
   size = "sm",
@@ -69,7 +69,7 @@ export function AvatarProvider({
 }
 
 /** A member's picture URL, versioned so a new one is never read from cache. */
-export function useAvatarSrc(userId: string | null | undefined): string | undefined {
+function useAvatarSrc(userId: string | null | undefined): string | undefined {
   const versions = useContext(AvatarVersions);
   const v = userId ? versions[userId] : undefined;
   return v ? `/api/users/${userId}/avatar?v=${v}` : undefined;

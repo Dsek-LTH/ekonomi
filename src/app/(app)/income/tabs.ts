@@ -10,7 +10,7 @@ export const INCOME_TABS = ["review", "booked", "exported", "all"] as const;
 export type IncomeTab = (typeof INCOME_TABS)[number];
 
 /** Which status each stage holds. "all" holds every one. */
-export const INCOME_TAB_STATUS: Record<Exclude<IncomeTab, "all">, IncomeReportStatus> = {
+const INCOME_TAB_STATUS: Record<Exclude<IncomeTab, "all">, IncomeReportStatus> = {
   review: "DRAFT",
   booked: "BOOKED",
   exported: "EXPORTED",

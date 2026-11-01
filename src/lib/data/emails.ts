@@ -50,7 +50,7 @@ export interface EmailLogPage {
 }
 
 /** How many rows a list starts with, and how many more each "Visa fler" adds. */
-export const EMAIL_LOG_PAGE = 50;
+const EMAIL_LOG_PAGE = 50;
 const MAX_TAKE = 1000;
 
 function status(r: { sentAt: Date | null; lastError: string | null; attempts: number }): EmailStatus {

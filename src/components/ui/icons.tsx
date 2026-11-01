@@ -168,16 +168,6 @@ export const IconBox = (p: P) => (
   </Svg>
 );
 
-// The stockroom rather than one crate in it: a roofline over a door, the
-// silhouette a single IconBox does not have. For the group; the crate stays
-// on the item that is actually about one thing on a shelf.
-export const IconWarehouse = (p: P) => (
-  <Svg {...p}>
-    <path d="M3 10 12 4l9 6v10H3V10Z" />
-    <path d="M8 20v-6h8v6" />
-  </Svg>
-);
-
 // A barcode between the corners of a viewfinder. The scanning control, whether
 // or not there is a camera behind it. The same button also takes a code typed
 // in, or fired at the field by a handheld reader.

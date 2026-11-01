@@ -768,7 +768,7 @@ export function AppShell({
             {/* The section's band, drawn here rather than by the page so that it
                 stays put while the page under it changes. See section-nav.tsx. */}
             <SectionNavProvider
-              value={{ nav: sectionNav, slot: sectionSlot, reportOwn: setPageOwn, active: activeSection }}
+              value={{ nav: sectionNav, slot: sectionSlot, reportOwn: setPageOwn }}
             >
               {sectionNav && (
                 <SectionBand

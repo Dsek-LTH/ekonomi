@@ -1,10 +1,8 @@
 // A flat grid of labelled facts, for reading a record inside a card.
 //
-// Not DetailList. That draws its own rounded border, which suits a list
-// standing on a page (the profile, the wizard's review step) and reads as a
-// second card when it is put inside one. Here the card is the frame, so the
-// facts sit straight on it: a small label over each value, two across where
-// the column is wide enough.
+// No border of its own: here the card is the frame, so the facts sit straight
+// on it. A small label over each value, two across where the column is wide
+// enough.
 //
 // A container query rather than a viewport breakpoint, because this page sits
 // beside a document panel that can be dragged, so its width changes while the

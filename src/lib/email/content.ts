@@ -36,7 +36,7 @@ export const emailT = createTranslator({
 
 // Payment types and statuses are worded the way the app words them.
 const commonT = createTranslator({ locale: "sv", messages: { common: svCommon }, namespace: "common" });
-export const paymentLabel = (p: PaymentType): string => commonT(`payment.${p}.label`);
+const paymentLabel = (p: PaymentType): string => commonT(`payment.${p}.label`);
 export const statusLabel = (s: ExpenseStatus): string => commonT(`status.${s}`);
 
 const sek = new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK" });

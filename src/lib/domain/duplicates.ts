@@ -19,7 +19,7 @@ export interface ExpenseFingerprint {
   purchaseDate: string;
 }
 
-export const DUPLICATE_WINDOW_DAYS = 3;
+const DUPLICATE_WINDOW_DAYS = 3;
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayOf = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);

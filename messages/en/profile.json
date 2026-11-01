@@ -1,7 +1,4 @@
 {
-  "name": "Name",
-  "email": "Email",
-  "roles": "Roles",
   "payoutTitle": "Payout account",
   "payoutDescription": "Used when the treasurer pays out approved expenses you covered with your own money.",
   "clearing": "Clearing number",

@@ -91,7 +91,7 @@ export type SelectFilter = {
 export type SelectFilters = SelectFilter | SelectFilter[];
 
 /** Either spelling, as a list. */
-export const asFilters = (filter: SelectFilters | undefined): SelectFilter[] =>
+const asFilters = (filter: SelectFilters | undefined): SelectFilter[] =>
   filter ? (Array.isArray(filter) ? filter : [filter]) : [];
 
 /**

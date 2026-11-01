@@ -120,7 +120,7 @@ export function normalisedName(filename: string, mimeType: NormalisedMime): stri
 }
 
 /** The side of a stored profile picture, in px. */
-export const AVATAR_SIZE = 256;
+const AVATAR_SIZE = 256;
 
 // A profile picture, from whatever the member cropped. The crop dialog already
 // sends a square, so `cover` only matters for a request that did not come from

@@ -1,13 +1,11 @@
 {
   "title": "Dokument",
   "emptyTitle": "Inga dokument ännu",
-  "emptyDescription": "Ladda upp ett dokument som redan finns, eller skriv ett nytt uthyrningsavtal.",
   "searchPlaceholder": "Sök titel, motpart eller tagg",
   "noMatch": "Inga dokument matchar sökningen",
   "uploadExisting": "Ladda upp dokument",
   "drawRental": "Skriv uthyrningsavtal",
   "upload": "Ladda upp",
-  "scopeLabel": "Visa",
   "tab": {
     "": "Alla",
     "draft": "Utkast",
@@ -59,7 +57,6 @@
     "notesHint": "För den som hittar avtalet härnäst. Står inte i något dokument.",
     "fileHint": "PDF eller en bild av ett påskrivet papper. Max {max} MB.",
     "save": "Arkivera dokumentet",
-    "saved": "Dokumentet är arkiverat",
     "cancel": "Avbryt",
     "sectionAgreement": "Dokumentet",
     "sectionAgreementHint": "Vad det är och vem det är med.",
@@ -82,13 +79,11 @@
     "fileIsSignedHint": "Då blir avtalet signerat. Annars sparas det som ett utkast tills det undertecknade avtalet laddas upp."
   },
   "detail": {
-    "back": "Dokument",
     "documents": "Dokument",
     "noDocuments": "Inget dokument uppladdat ännu.",
     "addDocument": "Lägg till dokument",
     "details": "Uppgifter",
     "notes": "Anteckningar",
-    "download": "Öppna",
     "deleteFile": "Ta bort fil",
     "deleteFileConfirm": "Ta bort {filename} ur arkivet?",
     "deleteContract": "Ta bort dokument",

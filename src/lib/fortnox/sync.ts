@@ -415,7 +415,7 @@ export async function syncSuppliers(token: string): Promise<SupplierSyncResult> 
 }
 
 /** The financial year a date falls in, or the newest one Fortnox knows. */
-export function yearContaining(
+function yearContaining(
   years: readonly FortnoxFinancialYear[],
   date = new Date().toISOString().slice(0, 10),
 ): FortnoxFinancialYear | undefined {

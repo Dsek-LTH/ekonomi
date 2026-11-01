@@ -228,8 +228,7 @@ export function SkeletonCard({
   );
 }
 
-// The bordered label/value list used by the profile and the wizard's review
-// step: DetailList's rule spacing, with the value side short.
+// A bordered label/value list, a row per fact with the value side short.
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
     <div className="divide-y divide-border rounded-panel border border-border" aria-hidden>

@@ -17,7 +17,7 @@ export function InvoiceStatusPill({ status }: { status: SupplierInvoiceStatus })
 
 /** How close it is to due: plain more than a week out, warned within the
  *  week, alarmed inside three days and once passed. */
-export function dueTone(days: number | null): "plain" | "warning" | "danger" {
+function dueTone(days: number | null): "plain" | "warning" | "danger" {
   if (days == null || days > 7) return "plain";
   return days < 3 ? "danger" : "warning";
 }

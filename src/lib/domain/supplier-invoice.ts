@@ -48,16 +48,6 @@ export function bookedShares(shares: readonly number[], rounding: number): numbe
   return shares.map((s, i) => (i === largest ? s - rounding : s));
 }
 
-/** Every status, in the order an invoice passes through them. */
-export const INVOICE_STATUSES: readonly SupplierInvoiceStatus[] = [
-  "ASSIGNED",
-  "PENDING_APPROVAL",
-  "CHANGES_REQUESTED",
-  "APPROVED",
-  "BOOKED",
-  "EXPORTED",
-];
-
 /**
  * How each status reads, in the colours an utlägg's do (STATUS_TONE): neutral
  * while it waits on its unit, purple while another unit still has to sign,

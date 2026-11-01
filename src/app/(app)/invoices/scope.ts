@@ -15,7 +15,7 @@ export const INVOICE_TABS = ["attest", "book", "send", "exported", "all"] as con
 export type InvoiceTab = (typeof INVOICE_TABS)[number];
 
 /** Which rows each stage holds. "all" holds every one. */
-export const INVOICE_TAB_HOLDS: Record<InvoiceTab, (r: SupplierInvoiceRow) => boolean> = {
+const INVOICE_TAB_HOLDS: Record<InvoiceTab, (r: SupplierInvoiceRow) => boolean> = {
   attest: (r) => r.status === "ASSIGNED" || r.status === "PENDING_APPROVAL" || r.status === "CHANGES_REQUESTED",
   book: (r) => r.status === "APPROVED",
   send: (r) => r.status === "BOOKED",
@@ -28,7 +28,7 @@ export const INVOICE_TAB_HOLDS: Record<InvoiceTab, (r: SupplierInvoiceRow) => bo
  * for one nobody has read a date off. The nav's count asks the same, see
  * lib/data/nav-counts.ts.
  */
-export const invoiceYearDate = (r: Pick<SupplierInvoiceRow, "invoiceDate" | "receivedAt">) =>
+const invoiceYearDate = (r: Pick<SupplierInvoiceRow, "invoiceDate" | "receivedAt">) =>
   r.invoiceDate || r.receivedAt;
 
 /**

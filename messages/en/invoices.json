@@ -1,9 +1,7 @@
 {
   "title": "Supplier invoices",
-  "upload": "Add invoice",
   "unnamed": "Invoice",
   "empty": "No supplier invoices",
-  "emptyDescription": "Supplier invoices land here once they have been given to a result unit from the inbox.",
   "searchPlaceholder": "Search what it is for, supplier or unit",
   "noMatch": "No invoices match.",
   "scopeLabel": "Scope",
@@ -20,10 +18,7 @@
   },
   "col": {
     "reference": "No.",
-    "supplier": "Supplier",
-    "invoiceNumber": "Invoice no.",
     "unit": "Result unit",
-    "received": "Received",
     "dueDate": "Due",
     "status": "Status",
     "amount": "Amount",

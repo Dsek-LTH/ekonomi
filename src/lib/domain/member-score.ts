@@ -30,7 +30,7 @@ const RECENT_DAYS = 182;
 
 /** A purchase not sent yet is not late until this many days have passed. It
  *  is also the bar for five stars. */
-export const GRACE_DAYS = 7;
+const GRACE_DAYS = 7;
 
 /** Fewer counted purchases than this and there are no stars yet, only "new". */
 export const MIN_COUNTED = 3;

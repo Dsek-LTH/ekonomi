@@ -37,7 +37,7 @@ interface AuthResult {
  * prepends its own, and the Gmail API returns headers in the order they stand
  * in the mail, so the first one naming mx.google.com is the one Gmail wrote.
  */
-export function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
+function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
   const ours = headers.find((h) => h.trim().toLowerCase().startsWith("mx.google.com"));
   if (!ours) return null;
   return ours

@@ -76,7 +76,7 @@ export function StarRating({
 }
 
 /** Sent within the grace week, of everything sent. */
-export const withinWeek = (s: MemberScore) => {
+const withinWeek = (s: MemberScore) => {
   const sent = s.items.filter((i) => i.kind === "submitted");
   return { count: sent.filter((i) => i.stars === 5).length, of: sent.length };
 };

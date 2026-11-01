@@ -1,13 +1,11 @@
 {
   "title": "Documents",
   "emptyTitle": "No documents yet",
-  "emptyDescription": "Upload a document you already have, or draw a new rental contract.",
   "searchPlaceholder": "Search title, counterparty or tag",
   "noMatch": "No documents match your search",
   "uploadExisting": "Upload document",
   "drawRental": "Draw up rental contract",
   "upload": "Upload",
-  "scopeLabel": "Show",
   "tab": {
     "": "All",
     "draft": "Drafts",
@@ -59,7 +57,6 @@
     "notesHint": "For whoever finds this next. Not printed on any document.",
     "fileHint": "A PDF, or a photo of a signed piece of paper. Max {max} MB.",
     "save": "File the document",
-    "saved": "Document filed",
     "cancel": "Cancel",
     "sectionAgreement": "The document",
     "sectionAgreementHint": "What it is and who it is with.",
@@ -82,13 +79,11 @@
     "fileIsSignedHint": "Then the contract is marked signed. Otherwise it is filed as a draft until the signed copy is uploaded."
   },
   "detail": {
-    "back": "Documents",
     "documents": "Documents",
     "noDocuments": "No document uploaded yet.",
     "addDocument": "Add document",
     "details": "Details",
     "notes": "Notes",
-    "download": "Open",
     "deleteFile": "Remove file",
     "deleteFileConfirm": "Remove {filename} from the archive?",
     "deleteContract": "Delete document",

@@ -55,7 +55,7 @@ interface MatchableTransaction {
  * when only the amount differs. The bank's Transdag and the receipt's date are
  * usually the same day; a weekend or a slow terminal moves it by one or two.
  */
-export const NEAR_DAYS = 3;
+const NEAR_DAYS = 3;
 
 /**
  * Why a row cannot settle this claim.

@@ -32,7 +32,5 @@
     "waitingSummary": "{count, plural, one {# köp väntar} other {# köp väntar}}, äldsta {days} dagar",
     "upToDate": "Inget väntar"
   },
-  "behindTitle": "Släpar efter",
-  "behindAll": "Alla medlemmars betyg",
   "ownTitle": "Ditt redovisningsbetyg"
 }

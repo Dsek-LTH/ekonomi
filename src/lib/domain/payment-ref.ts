@@ -36,7 +36,7 @@ export function giroMismatch(
 
 /** An org number as digits only. A VAT number ("SE556677889901") is the org
  *  number inside a country code and a trailing 01, and is taken as that. */
-export const orgNoDigits = (orgNo: string | null | undefined): string | null => {
+const orgNoDigits = (orgNo: string | null | undefined): string | null => {
   const raw = (orgNo ?? "").trim();
   let d = raw.replace(/\D/g, "");
   if (/^SE/i.test(raw) && d.length === 12 && d.endsWith("01")) d = d.slice(0, 10);
