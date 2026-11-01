@@ -20,6 +20,14 @@
     "done": "Exported",
     "all": "All"
   },
+  "tabMine": {
+    "draft": "Drafts",
+    "attest": "Awaiting approval",
+    "book": "Awaiting booking",
+    "export": "Awaiting export",
+    "done": "Exported",
+    "all": "All"
+  },
   "col": {
     "date": "Date",
     "title": "Expense",

@@ -562,6 +562,7 @@ export default function LedgerClient({
       {hasPanel && (
         // Its own scroll only if the window is too short for every parameter.
         <aside
+          data-tour="ledger-params"
           className="mb-5 lg:mb-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:hidden"
         >
           {/* The panel's toolbar: what the settings below produce. The same
@@ -579,7 +580,7 @@ export default function LedgerClient({
               as PDF" is the destination; the printout below is laid out for
               exactly that. CSV is the table's rows, so it is offered with the
               table only. */}
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3" data-tour="ledger-tools">
             <Menu
               label={t("export")}
               icon={<IconDownload className="size-4" />}

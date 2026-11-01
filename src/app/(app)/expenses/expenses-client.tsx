@@ -80,15 +80,19 @@ export function ExpensesClient({
   //
   // No predicates: these are names the server matches on (STATUS_TAB in
   // lib/data/expenses.ts), so the rows arrive already narrowed.
+  //
+  // On Mina the stages are named for what the utlägg waits on. "Att attestera"
+  // reads as a task for the reader, and on your own utlägg somebody else does it.
+  const tabLabels = showOwnOnly ? "tabMine" : "tab";
   const tabs: TabFilter = useMemo(
     () =>
       EXPENSE_TABS.map((value) => ({
         value,
-        label: t(`tab.${value}`),
+        label: t(`${tabLabels}.${value}`),
         badge: waiting[value] || undefined,
         waiting: true,
       })),
-    [t, waiting],
+    [t, tabLabels, waiting],
   );
 
   // "Nothing here at all" and "nothing matching what you asked for" are

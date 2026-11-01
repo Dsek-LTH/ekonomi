@@ -147,6 +147,7 @@
   "inkorg": {
     "title": "Inbox",
     "upload": "Add documents",
+    "mailIn": "Invoices can also be mailed to {address} from a dsek.se address.",
     "uploaded": "{name} is in the inbox",
     "emptyTitle": "The inbox is empty",
     "emptyDescription": "Invoices mailed in land here, and the documents of invoices that are sent back. You can also add PDFs yourself.",

@@ -290,51 +290,55 @@ export function BudgetListClient({
                   what it waits for. Two is the fewest that makes a comparison;
                   there is no upper bound, the compare view gives each budget
                   its own column. */}
-              {picked.length >= 2 ? (
-                <ButtonLink
-                  variant="secondary"
-                  size="sm"
-                  href={`/budget/compare?b=${picked.join(",")}`}
-                >
-                  <IconCompare className="size-4" />
-                  {t("compareCount", { count: picked.length })}
-                </ButtonLink>
-              ) : (
-                <Button variant="secondary" size="sm" disabled title={t("compareHint")}>
-                  <IconCompare className="size-4" />
-                  {t("compare")}
-                </Button>
-              )}
+              <span className="flex" data-tour="budget-compare">
+                {picked.length >= 2 ? (
+                  <ButtonLink
+                    variant="secondary"
+                    size="sm"
+                    href={`/budget/compare?b=${picked.join(",")}`}
+                  >
+                    <IconCompare className="size-4" />
+                    {t("compareCount", { count: picked.length })}
+                  </ButtonLink>
+                ) : (
+                  <Button variant="secondary" size="sm" disabled title={t("compareHint")}>
+                    <IconCompare className="size-4" />
+                    {t("compare")}
+                  </Button>
+                )}
+              </span>
               {admin && (
               // Not a form in a dropdown: two ways to start, each one click.
-              <Menu
-                label={t("new")}
-                icon={<IconPlus className="size-4" />}
-                loading={pending === "create"}
-              >
-                <MenuItem onClick={createEmpty}>
-                  {t("newEmpty", { year: String(thisYear) })}
-                </MenuItem>
-                {budgets.length > 0 && (
-                  <>
-                    <MenuSeparator />
-                    <MenuLabel>{t("copyExisting")}</MenuLabel>
-                    {budgets.map((b) => (
-                      <MenuItem key={b.id} onClick={() => copyBudget(b)}>
-                        <span className="tabular-nums text-muted">{b.year}</span>
-                        <span className="truncate">{b.name}</span>
-                      </MenuItem>
-                    ))}
-                    <MenuNote>{t("basedOnHint")}</MenuNote>
-                  </>
-                )}
-                <MenuSeparator />
-                <MenuItem onClick={() => fileRef.current?.click()}>
-                  <IconUpload className="size-4" />
-                  {t("importCsv")}
-                </MenuItem>
-                <MenuNote>{t("importHint")}</MenuNote>
-              </Menu>
+              <span className="flex" data-tour="budget-new">
+                <Menu
+                  label={t("new")}
+                  icon={<IconPlus className="size-4" />}
+                  loading={pending === "create"}
+                >
+                  <MenuItem onClick={createEmpty}>
+                    {t("newEmpty", { year: String(thisYear) })}
+                  </MenuItem>
+                  {budgets.length > 0 && (
+                    <>
+                      <MenuSeparator />
+                      <MenuLabel>{t("copyExisting")}</MenuLabel>
+                      {budgets.map((b) => (
+                        <MenuItem key={b.id} onClick={() => copyBudget(b)}>
+                          <span className="tabular-nums text-muted">{b.year}</span>
+                          <span className="truncate">{b.name}</span>
+                        </MenuItem>
+                      ))}
+                      <MenuNote>{t("basedOnHint")}</MenuNote>
+                    </>
+                  )}
+                  <MenuSeparator />
+                  <MenuItem onClick={() => fileRef.current?.click()}>
+                    <IconUpload className="size-4" />
+                    {t("importCsv")}
+                  </MenuItem>
+                  <MenuNote>{t("importHint")}</MenuNote>
+                </Menu>
+              </span>
               )}
             </div>
           }

@@ -436,7 +436,7 @@ export function DataTable<T>({
         // border, so the tabs keep to the bottom whatever height the summary
         // brings, and the summary centres itself in what is left.
         <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-inset">
-          <div className="min-w-0">
+          <div className="min-w-0" data-tour="stage-tabs">
             <FilterTabs
               options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge, waiting: o.waiting }))}
               value={activeTab?.value ?? ""}
@@ -551,6 +551,7 @@ export function DataTable<T>({
           )}
           {action && (
             <div
+              data-tour="list-action"
               className={cn(
                 "flex items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none",
                 !toolbarSummary && "sm:ml-auto",

@@ -192,6 +192,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
             ref={collect(i)}
             href={href(o.value)}
             aria-current={o.value === value ? "page" : undefined}
+            data-tour={`scope:${o.value}`}
             className={item(o.value === value)}
           >
             {o.label}
@@ -213,6 +214,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
           role="tab"
           aria-selected={o.value === value}
           onClick={() => onChange(o.value)}
+          data-tour={`scope:${o.value}`}
           className={item(o.value === value)}
         >
           {o.label}

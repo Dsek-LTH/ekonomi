@@ -614,6 +614,8 @@ export async function getInvoice(
 export interface InboxHealth {
   /** Whether the Gmail integration is configured at all. */
   enabled: boolean;
+  /** The address invoices are mailed to, or null when not configured. */
+  address: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
   watchExpiresAt: string | null;
@@ -639,8 +641,10 @@ export async function getInboxHealth(): Promise<InboxHealth> {
       select: { id: true, fromAddress: true, subject: true, rejectReason: true, receivedAt: true },
     }),
   ]);
+  const config = gmailConfig();
   return {
-    enabled: gmailConfig() !== null,
+    enabled: config !== null,
+    address: config?.mailbox ?? null,
     lastSyncAt: state?.lastSyncAt?.toISOString() ?? null,
     lastError: state?.lastError ?? null,
     watchExpiresAt: state?.watchExpiresAt?.toISOString() ?? null,

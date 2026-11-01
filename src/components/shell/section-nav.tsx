@@ -316,7 +316,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
   return (
     // `-mb-px` so the line lies over the row's divider rather than a pixel
     // above it.
-    <nav aria-label={label} className="-mb-px flex min-w-0 flex-1">
+    <nav aria-label={label} className="-mb-px flex min-w-0 flex-1" data-tour="section-tabs">
       {/* Scrolls sideways on a phone rather than wrapping: four tabs of Lager
           do not fit 343px, and a second row of tabs reads as a second level. */}
       <div className="relative flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">

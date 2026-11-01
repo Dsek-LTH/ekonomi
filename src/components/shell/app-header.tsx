@@ -29,6 +29,7 @@ import {
 } from "@/lib/ui/fiscal-year";
 import { cn } from "@/lib/ui/utils";
 import { IconFortnox } from "./fortnox-mark";
+import { useGuides } from "./guide";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -111,6 +112,7 @@ export function AppHeader({
             click from every page instead of two. */}
         <Link
           href="/faq"
+          data-tour="faq"
           aria-current={pathname === "/faq" ? "page" : undefined}
           className={cn(
             "flex h-8 items-center gap-2 rounded-control px-2.5 text-sm font-medium transition-colors hover:bg-hover",
@@ -153,7 +155,7 @@ export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
 
   return (
     // The reason it is grey, on hover, since a disabled button says nothing.
-    <span title={applies ? undefined : t("fiscalYearNotHere")}>
+    <span title={applies ? undefined : t("fiscalYearNotHere")} data-tour="fiscal-year">
       {/* The year alone on the button. What it is a year of goes to the
           accessible name, since a bare number says nothing to a screen
           reader. */}
@@ -231,10 +233,13 @@ function FortnoxStatusButton({
 function AccountMenu({ user }: { user: CurrentUser }) {
   const t = useTranslations("common");
   const tNav = useTranslations("nav");
+  const tGuides = useTranslations("guides");
   const router = useProgressRouter();
+  const { pageGuide, start, hold } = useGuides();
   return (
     <Menu
       label={tNav("accountMenu")}
+      holdOpen={hold === "account"}
       trigger={<UserAvatar userId={user.id} name={user.name} />}
       triggerClassName="flex rounded-full transition-opacity hover:opacity-80"
     >
@@ -244,13 +249,21 @@ function AccountMenu({ user }: { user: CurrentUser }) {
       </div>
       <MenuItem onClick={() => router.push("/profile")}>{tNav("profile")}</MenuItem>
       <MenuSeparator />
+      {/* The guides, whole, to run again: this page's, and the round of the
+          app from Översikt. Each starts by itself once, with what is new. */}
+      <p className="px-2.5 pb-1 pt-1.5 text-xs font-medium text-muted">{tGuides("menuHeading")}</p>
+      {pageGuide && pageGuide.id !== "start" && (
+        <MenuItem onClick={() => start(pageGuide.id)}>{tGuides("thisPage")}</MenuItem>
+      )}
+      <MenuItem onClick={() => start("start")}>{tGuides("tour")}</MenuItem>
+      <MenuSeparator />
       {/* Switches rather than items: they act in place, and the menu stays
           open so the reader sees what they did. */}
-      <div className="flex items-center justify-between gap-4 px-2.5 py-1.5">
+      <div className="flex items-center justify-between gap-4 px-2.5 py-1.5" data-tour="theme">
         <span className="text-sm">{t("theme")}</span>
         <ThemeToggle round />
       </div>
-      <div className="flex items-center justify-between gap-4 px-2.5 py-1.5">
+      <div className="flex items-center justify-between gap-4 px-2.5 py-1.5" data-tour="language">
         <span className="text-sm">{t("language")}</span>
         <LanguageSwitcher round />
       </div>

@@ -199,6 +199,13 @@ model User {
   avatarKey       String?
   avatarUpdatedAt DateTime?
 
+  // The guide steps this member has been shown, as `<guide>.<step>`
+  // (lib/domain/guides.ts). Steps rather than whole guides, so a member given
+  // more later is shown only what is new. Here rather than in the browser so a
+  // guide seen on a laptop does not start again on a phone. An id no longer in
+  // the list is simply ignored.
+  seenGuideSteps String[] @default([])
+
   active Boolean @default(true)
 
   submittedExpenses    Expense[]                @relation("ExpenseSubmitter")

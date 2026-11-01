@@ -317,7 +317,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
           target="_blank"
           rel="noreferrer"
           title={t("openFull")}
-          className="block size-full"
+          className="relative block size-full"
         >
           <Image
             src={block.src}

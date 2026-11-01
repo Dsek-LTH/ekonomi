@@ -1,0 +1,221 @@
+{
+  "menuHeading": "Guider",
+  "thisPage": "Guide för den här sidan",
+  "tour": "Rundtur i appen",
+  "progress": "Steg {n} av {total}",
+  "progressNew": "Nytt för dig, {n} av {total}",
+  "next": "Nästa",
+  "back": "Tillbaka",
+  "skip": "Hoppa över",
+  "done": "Klar",
+  "start": {
+    "welcome": {
+      "title": "Välkommen till Ekonomi",
+      "body": "Här lämnar du utlägg, attesterar och följer sektionens pengar. Vi går snabbt igenom vad som finns. Varje sida har sedan en egen kort guide första gången du öppnar den."
+    },
+    "todo": {
+      "title": "Att göra",
+      "body": "Allt som väntar på dig samlas här, oavsett om det är ett utlägg, en faktura eller ett kortköp. Klicka på en rad så kommer du rätt."
+    },
+    "groupExpenses": {
+      "title": "Utlägg",
+      "body": "Lämna in utlägg och redovisa köp med sektionens kort."
+    },
+    "groupInvoices": {
+      "title": "Leverantörsfakturor",
+      "body": "Fakturor till sektionen, från inkorgen tills de ligger i Fortnox."
+    },
+    "groupBookkeeping": {
+      "title": "Bokföring",
+      "body": "Sektionens intäkter och årets bokslut."
+    },
+    "groupBudget": {
+      "title": "Budget & utfall",
+      "body": "Budgetarna, och vad som faktiskt har bokförts."
+    },
+    "groupStock": {
+      "title": "Lager",
+      "body": "Varorna, försäljningstillfällena och lagrets historik."
+    },
+    "groupRental": {
+      "title": "Uthyrning",
+      "body": "Uthyrningar och utrustningen som hyrs ut."
+    },
+    "groupAdmin": {
+      "title": "Avtal",
+      "body": "Sektionens avtal och motparterna i dem."
+    },
+    "settings": {
+      "title": "Inställningar",
+      "body": "Roller, kostnadsställen, Fortnox och resten av appens inställningar."
+    },
+    "year": {
+      "title": "Räkenskapsår",
+      "body": "Året gäller alla sidor på en gång. Det avgränsar det som redan är klart, så att förra årets bokförda inte blandas med årets."
+    },
+    "help": {
+      "title": "Frågor & svar",
+      "body": "Osäker på ett kvitto eller en regel? Svaren finns under Frågor & svar."
+    },
+    "theme": {
+      "title": "Tema",
+      "body": "Ljust eller mörkt läge. Här under finns också guiderna, om du vill se dem igen."
+    },
+    "language": {
+      "title": "Språk",
+      "body": "Appen finns på svenska och engelska."
+    }
+  },
+  "expenses": {
+    "intro": {
+      "title": "Utlägg",
+      "body": "Har du betalat något för sektionen, med egna pengar eller med ett sektionskort, redovisar du det här. Varje utlägg går igenom samma steg tills det är bokfört."
+    },
+    "new": {
+      "title": "Nytt utlägg",
+      "body": "Här lägger du till ett utlägg. Fota kvittot, skriv vad det gällde och välj kostnadsställe. Milersättning för bil finns i samma meny."
+    },
+    "stages": {
+      "title": "Var är utlägget?",
+      "body": "Flikarna visar var ett utlägg är. Utkast är ditt att lämna in eller rätta. Sedan kommer Att attestera, där den resultatansvariga godkänner, Att kontera och Att bokföra hos skattmästeriet, och till sist Bokförda."
+    },
+    "scopeMine": {
+      "title": "Mina",
+      "body": "Det du själv har lämnat in. Här ser du alltid var dina utlägg är."
+    },
+    "scopeUnit": {
+      "title": "Min resultatenhet",
+      "body": "Utlägg på kostnadsställena du ansvarar för. Under Att attestera väntar de på dig. Öppna ett utlägg för att attestera det eller be om ändringar."
+    },
+    "scopeAll": {
+      "title": "Alla",
+      "body": "Hela sektionens utlägg. Under Att kontera konterar du dem, och under Att bokföra skickar du dem till Fortnox med Granska och bokför på utläggets sida."
+    }
+  },
+  "bank": {
+    "intro": {
+      "title": "Bankhändelser",
+      "body": "Köpen från sektionens konto och kort. Varje kortköp ska redovisas med ett kvitto, precis som ett utlägg."
+    },
+    "unaccounted": {
+      "title": "Att redovisa",
+      "body": "Kortköp som ännu saknar kvitto. Öppna ett köp och gör det till ett utlägg med kvittot. Ju snabbare, desto bättre redovisningsbetyg."
+    },
+    "scopeMine": {
+      "title": "Mina",
+      "body": "Köpen med ditt eget sektionskort."
+    },
+    "scopeUnit": {
+      "title": "Min resultatenhet",
+      "body": "Kortköpen på dina kostnadsställen, så att du ser vad din enhet har handlat."
+    },
+    "scopeAll": {
+      "title": "Alla",
+      "body": "Hela bankflödet, också betalningar som inte gjorts med kort."
+    },
+    "import": {
+      "title": "Importera",
+      "body": "Här läser du in kontoutdrag från banken. Köpen kopplas sedan till kort och utlägg."
+    }
+  },
+  "inbox": {
+    "intro": {
+      "title": "Inkorg",
+      "body": "Varje leverantörsfaktura börjar här som ett dokument, mejlat eller uppladdat. Den blir en faktura när en resultatenhet har fördelat den."
+    },
+    "unit": {
+      "title": "Din enhets dokument",
+      "body": "Dokument som din enhet har fått hamnar här. Öppna ett, fördela beloppet på dina kostnadsställen och attestera, så går det vidare till Fakturor."
+    },
+    "sort": {
+      "title": "Att sortera",
+      "body": "Nya dokument som ingen enhet har fått än. Ge vart och ett till den enhet det gäller."
+    },
+    "units": {
+      "title": "Hos enheterna",
+      "body": "Dokument som en enhet har fått men inte fördelat än. Här ser du vad som väntar hos vem."
+    },
+    "upload": {
+      "title": "Ladda upp",
+      "body": "Ladda upp en faktura som kommit på papper eller som fil. Fakturor som mejlas till inkorgens adress kommer hit av sig själva."
+    }
+  },
+  "invoices": {
+    "intro": {
+      "title": "Fakturor",
+      "body": "Leverantörsfakturorna, från att de har fördelats tills de ligger i Fortnox. Öppna en rad för att se hela fakturan och vad som har hänt med den."
+    },
+    "stages": {
+      "title": "Stegen",
+      "body": "Att attestera hos enheten, sedan Att kontera och Att skicka hos skattmästeriet, och till sist I Fortnox."
+    },
+    "scopeUnit": {
+      "title": "Min resultatenhet",
+      "body": "Fakturor på dina kostnadsställen. Under Att attestera väntar de på dig."
+    },
+    "scopeAll": {
+      "title": "Alla",
+      "body": "Hela sektionens fakturor. Kontera en faktura på dess sida och skicka den till Fortnox därifrån."
+    }
+  },
+  "income": {
+    "intro": {
+      "title": "Intäkter",
+      "body": "Sektionens försäljning, en rapport per dag. Rapporterna hämtas, granskas och bokförs, och skickas sedan till Fortnox."
+    },
+    "actions": {
+      "title": "Hämta, granska, exportera",
+      "body": "Hämta period läser in nya dagar. Granska och bokför går igenom dem en i taget. Exportera alla skickar de bokförda till Fortnox."
+    },
+    "stages": {
+      "title": "Stegen",
+      "body": "Att bokföra är dagar som ingen har granskat än. Att exportera är bokförda men inte skickade. Exporterade ligger i Fortnox."
+    }
+  },
+  "budget": {
+    "intro": {
+      "title": "Budget",
+      "body": "Sektionens budgetar, en eller flera per år. Öppna en budget för att se den i detalj eller som ram per resultatenhet."
+    },
+    "compare": {
+      "title": "Jämför",
+      "body": "Bocka i två eller fler budgetar i listan och jämför dem sida vid sida."
+    },
+    "new": {
+      "title": "Ny budget",
+      "body": "Skapa en tom budget, kopiera en befintlig eller läs in en från CSV."
+    }
+  },
+  "ledger": {
+    "intro": {
+      "title": "Utfall & rapporter",
+      "body": "Det som faktiskt har bokförts i Fortnox, jämfört med budgeten. Siffrorna hämtas från Fortnox varje natt."
+    },
+    "params": {
+      "title": "Välj rapport",
+      "body": "Här väljer du rapport, period och resultatenhet. Resultatrapporten visar intäkter och kostnader, balansrapporten tillgångar och skulder."
+    },
+    "tools": {
+      "title": "Tabell, diagram och export",
+      "body": "Visa perioden som tabell eller diagram, och ta med rapporten som PDF eller till Excel."
+    }
+  },
+  "stock": {
+    "intro": {
+      "title": "Lager",
+      "body": "Sektionens varor och hur mycket som finns av varje. Öppna en produkt för att se dess historik och ändra den."
+    },
+    "sections": {
+      "title": "Lagrets sidor",
+      "body": "Tillfällen är försäljningar och evenemang där varor gick åt. Historik visar alla rörelser och statistik över tid."
+    },
+    "attention": {
+      "title": "Behöver ses över",
+      "body": "Produkter där något inte går ihop: ett saldo under noll, en avvikelse vid inventeringen eller en streckkod som inte stämmer."
+    },
+    "manage": {
+      "title": "Registrera",
+      "body": "Registrera en leverans eller en inventering för alla produkter på en gång, eller lägg till en ny produkt."
+    }
+  }
+}

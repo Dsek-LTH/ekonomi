@@ -140,7 +140,9 @@ export function PageShell({
   className?: string;
 }) {
   return (
-    <div className={cn(PAGE_WIDTH[width], className)}>
+    // `data-tour-page`: the page has rendered, not its skeleton, so a guide
+    // looking for a control on it knows when to stop (components/shell/guide.tsx).
+    <div className={cn(PAGE_WIDTH[width], className)} data-tour-page>
       {/* Sectioned, not merely separated: blocks on a page stand 16px apart, and
           the header sits 24px above the first of them. The header itself is
           drawn by PageHeader, which also knows whether this page is in a

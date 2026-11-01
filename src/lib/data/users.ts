@@ -111,3 +111,12 @@ export const getAvatarVersions = cache(async (): Promise<Record<string, number>>
   });
   return Object.fromEntries(rows.map((r) => [r.id, r.avatarUpdatedAt!.getTime()]));
 });
+
+/** The guide steps this member has been shown. See lib/domain/guides.ts. */
+export const getSeenGuideSteps = cache(async (userId: string): Promise<string[]> => {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { seenGuideSteps: true },
+  });
+  return u?.seenGuideSteps ?? [];
+});

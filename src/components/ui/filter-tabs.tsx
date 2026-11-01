@@ -124,6 +124,7 @@ export function FilterTabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
+            data-tour={`tab:${opt.value}`}
             className={cn(
               "inline-flex items-center gap-1.5 border-b-2 pb-2.5 pt-2 text-sm font-medium transition-colors",
               // Filling, a tab is a share of the row and its label sits in the

@@ -1,0 +1,221 @@
+{
+  "menuHeading": "Guides",
+  "thisPage": "Guide for this page",
+  "tour": "Tour of the app",
+  "progress": "Step {n} of {total}",
+  "progressNew": "New for you, {n} of {total}",
+  "next": "Next",
+  "back": "Back",
+  "skip": "Skip",
+  "done": "Done",
+  "start": {
+    "welcome": {
+      "title": "Welcome to Finance",
+      "body": "This is where you submit expenses, attest and follow the section's money. We'll quickly go over what is here. Each page then has a short guide of its own the first time you open it."
+    },
+    "todo": {
+      "title": "To do",
+      "body": "Everything waiting on you is gathered here, whether it is an expense, an invoice or a card purchase. Click a row to go straight to it."
+    },
+    "groupExpenses": {
+      "title": "Expenses",
+      "body": "Submit expenses and account for purchases made with the section's cards."
+    },
+    "groupInvoices": {
+      "title": "Supplier invoices",
+      "body": "Invoices to the section, from the inbox until they are in Fortnox."
+    },
+    "groupBookkeeping": {
+      "title": "Bookkeeping",
+      "body": "The section's income and the year-end close."
+    },
+    "groupBudget": {
+      "title": "Budget & outcome",
+      "body": "The budgets, and what has actually been booked."
+    },
+    "groupStock": {
+      "title": "Stock",
+      "body": "The products, sales events and stock history."
+    },
+    "groupRental": {
+      "title": "Rentals",
+      "body": "Rentals and the equipment that is rented out."
+    },
+    "groupAdmin": {
+      "title": "Agreements",
+      "body": "The section's agreements and the parties to them."
+    },
+    "settings": {
+      "title": "Settings",
+      "body": "Roles, cost centres, Fortnox and the rest of the app's settings."
+    },
+    "year": {
+      "title": "Financial year",
+      "body": "The year applies to every page at once. It narrows what is already finished, so last year's booked items are not mixed in with this year's."
+    },
+    "help": {
+      "title": "FAQ",
+      "body": "Unsure about a receipt or a rule? The answers are under FAQ."
+    },
+    "theme": {
+      "title": "Theme",
+      "body": "Light or dark mode. The guides are here too, if you want to see them again."
+    },
+    "language": {
+      "title": "Language",
+      "body": "The app is available in Swedish and English."
+    }
+  },
+  "expenses": {
+    "intro": {
+      "title": "Expenses",
+      "body": "If you paid for something for the section, with your own money or a section card, you account for it here. Every expense goes through the same steps until it is booked."
+    },
+    "new": {
+      "title": "New expense",
+      "body": "Add an expense here. Take a photo of the receipt, say what it was for and pick a cost centre. Mileage for a car is in the same menu."
+    },
+    "stages": {
+      "title": "Where is my expense?",
+      "body": "The tabs show where an expense is. Drafts are yours to submit or correct. Then To attest, where the person responsible approves, To book and To export with the treasury, and finally Exported."
+    },
+    "scopeMine": {
+      "title": "Mine",
+      "body": "What you submitted yourself. You can always see where your expenses are here."
+    },
+    "scopeUnit": {
+      "title": "My result unit",
+      "body": "Expenses on the cost centres you answer for. Under To attest they are waiting on you. Open one to attest it or ask for changes."
+    },
+    "scopeAll": {
+      "title": "All",
+      "body": "The whole section's expenses. Book them under To book, and send them to Fortnox under To export with Review and post on the expense's page."
+    }
+  },
+  "bank": {
+    "intro": {
+      "title": "Bank transactions",
+      "body": "Purchases from the section's account and cards. Every card purchase needs a receipt, just like an expense."
+    },
+    "unaccounted": {
+      "title": "To account for",
+      "body": "Card purchases still missing a receipt. Open one and turn it into an expense with the receipt. The sooner, the better your accounting score."
+    },
+    "scopeMine": {
+      "title": "Mine",
+      "body": "Purchases made with your own section card."
+    },
+    "scopeUnit": {
+      "title": "My result unit",
+      "body": "Card purchases on your cost centres, so you can see what your unit has bought."
+    },
+    "scopeAll": {
+      "title": "All",
+      "body": "The whole bank feed, payments made without a card included."
+    },
+    "import": {
+      "title": "Import",
+      "body": "Read in bank statements here. The purchases are then matched to cards and expenses."
+    }
+  },
+  "inbox": {
+    "intro": {
+      "title": "Inbox",
+      "body": "Every supplier invoice starts here as a document, emailed or uploaded. It becomes an invoice once a result unit has allocated it."
+    },
+    "unit": {
+      "title": "Your unit's documents",
+      "body": "Documents given to your unit land here. Open one, split the amount over your cost centres and attest it, and it moves on to Invoices."
+    },
+    "sort": {
+      "title": "To sort",
+      "body": "New documents no unit has been given yet. Give each one to the unit it concerns."
+    },
+    "units": {
+      "title": "With the units",
+      "body": "Documents a unit has been given but not allocated yet. See what is waiting with whom."
+    },
+    "upload": {
+      "title": "Upload",
+      "body": "Upload an invoice that came on paper or as a file. Invoices emailed to the inbox's address arrive here by themselves."
+    }
+  },
+  "invoices": {
+    "intro": {
+      "title": "Invoices",
+      "body": "Supplier invoices, from allocation until they are in Fortnox. Open a row to see the whole invoice and what has happened to it."
+    },
+    "stages": {
+      "title": "The steps",
+      "body": "To attest with the unit, then To book and To send with the treasury, and finally In Fortnox."
+    },
+    "scopeUnit": {
+      "title": "My result unit",
+      "body": "Invoices on your cost centres. Under To attest they are waiting on you."
+    },
+    "scopeAll": {
+      "title": "All",
+      "body": "The whole section's invoices. Book an invoice on its page and send it to Fortnox from there."
+    }
+  },
+  "income": {
+    "intro": {
+      "title": "Income",
+      "body": "The section's sales, one report per day. Reports are fetched, reviewed and booked, then sent to Fortnox."
+    },
+    "actions": {
+      "title": "Fetch, review, export",
+      "body": "Fetch a period reads in new days. Review and book goes through them one at a time. Export all sends the booked ones to Fortnox."
+    },
+    "stages": {
+      "title": "The steps",
+      "body": "To book is days nobody has reviewed yet. To export is booked but not sent. Exported is in Fortnox."
+    }
+  },
+  "budget": {
+    "intro": {
+      "title": "Budget",
+      "body": "The section's budgets, one or more per year. Open a budget to see it in detail or as a frame per result unit."
+    },
+    "compare": {
+      "title": "Compare",
+      "body": "Tick two or more budgets in the list and compare them side by side."
+    },
+    "new": {
+      "title": "New budget",
+      "body": "Create an empty budget, copy an existing one or read one in from CSV."
+    }
+  },
+  "ledger": {
+    "intro": {
+      "title": "Outcome & reports",
+      "body": "What has actually been booked in Fortnox, compared with the budget. The figures are fetched from Fortnox every night."
+    },
+    "params": {
+      "title": "Pick a report",
+      "body": "Choose the report, period and result unit here. The income statement shows income and costs, the balance sheet assets and liabilities."
+    },
+    "tools": {
+      "title": "Table, chart and export",
+      "body": "Show the period as a table or a chart, and take the report away as a PDF or to Excel."
+    }
+  },
+  "stock": {
+    "intro": {
+      "title": "Stock",
+      "body": "The section's products and how much there is of each. Open a product to see its history and change it."
+    },
+    "sections": {
+      "title": "Stock pages",
+      "body": "Events are sales and occasions where stock was used. History shows every movement and statistics over time."
+    },
+    "attention": {
+      "title": "Need a look",
+      "body": "Products where something does not add up: a balance below zero, a difference at the stocktake or a barcode that is wrong."
+    },
+    "manage": {
+      "title": "Register",
+      "body": "Register a delivery or a stocktake for every product at once, or add a new product."
+    }
+  }
+}

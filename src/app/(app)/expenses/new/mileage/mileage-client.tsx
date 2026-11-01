@@ -35,7 +35,7 @@ import { PageShell } from "@/components/page-shell";
 import Link from "next/link";
 import { PaymentTag } from "@/components/ui/payment-tag";
 import { wizardChrome } from "../wizard-chrome";
-import { FormSection } from "../step-chrome";
+import { Card, CardBody } from "@/components/ui/card";
 import { ActionBar } from "@/components/action-bar";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
@@ -380,163 +380,165 @@ export default function MileageClient({
         emptyDescription={t("documentPending")}
       />
 
-      <FormSection>
-        <Field label={t("description")} hint={t("descriptionHint")} requirement="required">
-          <Input
-            autoFocus
-            onFocus={selectOnce}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </Field>
+      <Card>
+        <CardBody className="space-y-3">
+          <Field label={t("description")} hint={t("descriptionHint")} requirement="required">
+            <Input
+              autoFocus
+              onFocus={selectOnce}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </Field>
 
-        <Field
-          label={t("journeyDate")}
-          requirement="required"
-          error={
-            dateIncomplete
-              ? tWizard("dateIncomplete")
-              : dateInFuture
-                ? t("dateFuture")
-                : dateOutsideYear
-                  ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
-                  : undefined
-          }
-          // A hint, not an error: the day is a real one and the form takes
-          // it. See the same field in the receipt wizard.
-          hint={dateTooLate ? t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS }) : undefined}
-        >
-          <DateInput
-            min={fiscalYear?.fromDate}
-            max={fiscalYear?.toDate}
-            value={journeyDate}
-            onChange={(e) => setJourneyDate(e.target.value)}
-          />
-        </Field>
+          <Field
+            label={t("journeyDate")}
+            requirement="required"
+            error={
+              dateIncomplete
+                ? tWizard("dateIncomplete")
+                : dateInFuture
+                  ? t("dateFuture")
+                  : dateOutsideYear
+                    ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                    : undefined
+            }
+            // A hint, not an error: the day is a real one and the form takes
+            // it. See the same field in the receipt wizard.
+            hint={dateTooLate ? t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS }) : undefined}
+          >
+            <DateInput
+              min={fiscalYear?.fromDate}
+              max={fiscalYear?.toDate}
+              value={journeyDate}
+              onChange={(e) => setJourneyDate(e.target.value)}
+            />
+          </Field>
 
-        {/* Where the journey went, above the readings because that is the
-            order it is remembered in, and because it is the half that makes
-            the other half mean anything. Two readings prove a car moved; only
-            the route says the moving was the section's errand. Skatteverket
-            asks for both, and `claimBlocker` refuses to send one without the
-            other.
+          {/* Where the journey went, above the readings because that is the
+              order it is remembered in, and because it is the half that makes
+              the other half mean anything. Two readings prove a car moved; only
+              the route says the moving was the section's errand. Skatteverket
+              asks for both, and `claimBlocker` refuses to send one without the
+              other.
 
-            A list rather than a "from" and a "to": an errand that called at
-            the wholesaler and then the Systembolaget before going home is one
-            journey with four stops. Coming back is that first place typed
-            again at the end, which is also what makes a 42 km reading agree
-            with a shop 21 km away. */}
-        <FieldGroup label={t("route.label")} hint={t("route.hint")} requirement="required">
-          <div className="space-y-2">
-            {stops.map((stop, i) => (
-              <div key={i} className="flex items-center gap-2">
-                {/* Numbered rather than labelled "Från" and "Till": with a
-                    variable number of rows only the first and last would have
-                    a name, and the ones between are the point. */}
-                <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted">
-                  {i + 1}
-                </span>
-                <Input
-                  value={stop}
-                  aria-label={t("route.stop", { n: i + 1 })}
-                  placeholder={i === 0 ? t("route.firstPlaceholder") : t("route.nextPlaceholder")}
-                  onChange={(e) => setStops(stops.map((s, j) => (j === i ? e.target.value : s)))}
-                />
-                <IconButton
-                  tone="danger"
-                  label={t("route.removeStop")}
-                  // Two is the fewest a journey can have, so the last pair
-                  // stays put. Emptying a row is still how you clear one.
-                  disabled={stops.length <= 2}
-                  onClick={() => setStops(stops.filter((_, j) => j !== i))}
-                >
-                  <IconX className="size-4" />
-                </IconButton>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-4 pt-2">
-            <button
-              type="button"
-              onClick={() => setStops([...stops, ""])}
-              disabled={stops.length >= MAX_STOPS}
-              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
-            >
-              {t("route.addStop")}
-            </button>
-            {/* The common shape, in one press. Nearly every errand ends where
-                it began, and typing "Kårhuset, Lund" a second time is the kind
-                of retyping people skip. */}
-            {stops.length < MAX_STOPS &&
-              stops[0].trim() !== "" &&
-              stops[stops.length - 1].trim() !== stops[0].trim() && (
-                <button
-                  type="button"
-                  onClick={() => setStops([...stops, stops[0]])}
-                  className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
-                >
-                  {t("route.addReturn")}
-                </button>
-              )}
-          </div>
-        </FieldGroup>
-
-        {/* The two readings, side by side because they are one measurement
-            taken twice, and in the order they happen. */}
-        <FieldGroup label={t("odometer.label")} hint={t("odometer.hint")} requirement="required">
-          <div className="grid grid-cols-2 gap-3 sm:gap-5">
-            {odometerField(t("odometer.start"), startText, setStartText)}
-            {odometerField(t("odometer.end"), endText, setEndText)}
-          </div>
-          {/* Readings that are there but cannot be right, said in full. The
-              ones simply not filled in yet are in the action bar's list. */}
-          {(journeyBlocker === "notForward" || journeyBlocker === "noRate") && (
-            <p className="mt-2 text-xs text-warning">{t(`blocker.${journeyBlocker}`)}</p>
-          )}
-        </FieldGroup>
-
-        {/* The distance and what it comes to: neither typed, both shown. The
-            subtraction is stated rather than only its answer, so somebody
-            checking their own claim can see where the figure came from. */}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-control bg-surface px-3.5 py-3">
-          <span className="text-sm text-muted">
-            {valued.km == null
-              ? t("total")
-              : t("sum", {
-                  km: km(valued.km),
-                  rate: valued.orePerKm == null ? "-" : money(valued.orePerKm / 100),
-                })}
-          </span>
-          <span className="text-lg font-semibold tabular-nums">{money(grossSEK)} kr</span>
-        </div>
-
-        <FieldGroup label={tWizard("distribution")} requirement="required">
-          <AllocationEditor
-            costCenters={selectableCostCenters}
-            grossAmount={grossSEK}
-            value={allocations}
-            onChange={setAllocations}
-          />
-        </FieldGroup>
-
-        {/* Three journeys are three claims, and the way back for somebody who
-            picked the wrong item on the "Nytt utlägg" menu. */}
-        <p className="text-xs text-muted">
-          {t("perJourneyHint")}
-          {!editing && (
-            <>
-              {" "}
-              {t("otherType")}{" "}
-              <Link
-                href="/expenses/new"
-                className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              A list rather than a "from" and a "to": an errand that called at
+              the wholesaler and then the Systembolaget before going home is one
+              journey with four stops. Coming back is that first place typed
+              again at the end, which is also what makes a 42 km reading agree
+              with a shop 21 km away. */}
+          <FieldGroup label={t("route.label")} hint={t("route.hint")} requirement="required">
+            <div className="space-y-2">
+              {stops.map((stop, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {/* Numbered rather than labelled "Från" and "Till": with a
+                      variable number of rows only the first and last would have
+                      a name, and the ones between are the point. */}
+                  <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted">
+                    {i + 1}
+                  </span>
+                  <Input
+                    value={stop}
+                    aria-label={t("route.stop", { n: i + 1 })}
+                    placeholder={i === 0 ? t("route.firstPlaceholder") : t("route.nextPlaceholder")}
+                    onChange={(e) => setStops(stops.map((s, j) => (j === i ? e.target.value : s)))}
+                  />
+                  <IconButton
+                    tone="danger"
+                    label={t("route.removeStop")}
+                    // Two is the fewest a journey can have, so the last pair
+                    // stays put. Emptying a row is still how you clear one.
+                    disabled={stops.length <= 2}
+                    onClick={() => setStops(stops.filter((_, j) => j !== i))}
+                  >
+                    <IconX className="size-4" />
+                  </IconButton>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => setStops([...stops, ""])}
+                disabled={stops.length >= MAX_STOPS}
+                className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
               >
-                {t("otherTypeLink")}
-              </Link>
-            </>
-          )}
-        </p>
-      </FormSection>
+                {t("route.addStop")}
+              </button>
+              {/* The common shape, in one press. Nearly every errand ends where
+                  it began, and typing "Kårhuset, Lund" a second time is the kind
+                  of retyping people skip. */}
+              {stops.length < MAX_STOPS &&
+                stops[0].trim() !== "" &&
+                stops[stops.length - 1].trim() !== stops[0].trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setStops([...stops, stops[0]])}
+                    className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                  >
+                    {t("route.addReturn")}
+                  </button>
+                )}
+            </div>
+          </FieldGroup>
+
+          {/* The two readings, side by side because they are one measurement
+              taken twice, and in the order they happen. */}
+          <FieldGroup label={t("odometer.label")} hint={t("odometer.hint")} requirement="required">
+            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+              {odometerField(t("odometer.start"), startText, setStartText)}
+              {odometerField(t("odometer.end"), endText, setEndText)}
+            </div>
+            {/* Readings that are there but cannot be right, said in full. The
+                ones simply not filled in yet are in the action bar's list. */}
+            {(journeyBlocker === "notForward" || journeyBlocker === "noRate") && (
+              <p className="mt-2 text-xs text-warning">{t(`blocker.${journeyBlocker}`)}</p>
+            )}
+          </FieldGroup>
+
+          {/* The distance and what it comes to: neither typed, both shown. The
+              subtraction is stated rather than only its answer, so somebody
+              checking their own claim can see where the figure came from. */}
+          <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-control bg-surface px-3.5 py-3">
+            <span className="text-sm text-muted">
+              {valued.km == null
+                ? t("total")
+                : t("sum", {
+                    km: km(valued.km),
+                    rate: valued.orePerKm == null ? "-" : money(valued.orePerKm / 100),
+                  })}
+            </span>
+            <span className="text-lg font-semibold tabular-nums">{money(grossSEK)} kr</span>
+          </div>
+
+          <FieldGroup label={tWizard("distribution")} requirement="required">
+            <AllocationEditor
+              costCenters={selectableCostCenters}
+              grossAmount={grossSEK}
+              value={allocations}
+              onChange={setAllocations}
+            />
+          </FieldGroup>
+
+          {/* Three journeys are three claims, and the way back for somebody who
+              picked the wrong item on the "Nytt utlägg" menu. */}
+          <p className="text-xs text-muted">
+            {t("perJourneyHint")}
+            {!editing && (
+              <>
+                {" "}
+                {t("otherType")}{" "}
+                <Link
+                  href="/expenses/new"
+                  className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                >
+                  {t("otherTypeLink")}
+                </Link>
+              </>
+            )}
+          </p>
+        </CardBody>
+      </Card>
 
       <ActionBar
         summary={

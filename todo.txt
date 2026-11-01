@@ -7,7 +7,6 @@ Go over stale and bad comments. Many comments explain why a previous feature was
 Go over components and code to see if anything is unused. Components used by only a few places, 1-2 can be done inline instead. Basically go over the codebase to idenity bloat and dumb code.
 Work through an optimal avtal / hyrnings flow. This whole system is wack currently.
 Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
-Helper system for first time users (even previous user but with elevated privileges). A guide that shows how everything works.
 View kvitto button is ugly
 Add fun stats such as total spent, how many utlägg done etc
 Add a score system based on how long it takes for people to upload their receipts and other metrics

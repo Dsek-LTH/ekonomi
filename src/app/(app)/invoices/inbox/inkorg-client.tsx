@@ -269,7 +269,7 @@ export function InkorgClient({
           rows={rows}
           controls={controls}
           tabs={tabs}
-          action={triage ? <UploadButton upload={upload} /> : undefined}
+          action={triage ? <UploadButton upload={upload} address={health?.address ?? null} /> : undefined}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
           // The open row's link closes it again; any other opens that one.
@@ -310,11 +310,12 @@ function useUpload() {
   return { send, busy: count > 0 };
 }
 
-function UploadButton({ upload }: { upload: ReturnType<typeof useUpload> }) {
+function UploadButton({ upload, address }: { upload: ReturnType<typeof useUpload>; address: string | null }) {
   const t = useTranslations("invoices.inkorg");
   const picker = useRef<HTMLInputElement>(null);
   return (
     <>
+      {address && <span className="text-xs text-muted">{t("mailIn", { address })}</span>}
       <input
         ref={picker}
         type="file"
@@ -327,7 +328,7 @@ function UploadButton({ upload }: { upload: ReturnType<typeof useUpload> }) {
           for (const f of files) void upload.send(f);
         }}
       />
-      <Button size="sm" variant="accentOutline" loading={upload.busy} onClick={() => picker.current?.click()}>
+      <Button size="sm" variant="primary" loading={upload.busy} onClick={() => picker.current?.click()}>
         <IconUpload className="size-4" />
         {t("upload")}
       </Button>

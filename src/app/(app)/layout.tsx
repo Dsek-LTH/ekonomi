@@ -15,7 +15,8 @@ import { NotificationBanners, NotificationsProvider } from "@/components/shell/n
 import { ConfirmProvider } from "@/components/confirm-dialog";
 import { FortnoxAuthResult } from "@/components/shell/fortnox-auth-result";
 import { requireUser } from "@/lib/server/current-user";
-import { getAvatarVersions, userHoldsCard } from "@/lib/data/users";
+import { getAvatarVersions, getSeenGuideSteps, userHoldsCard } from "@/lib/data/users";
+import { GuideProvider } from "@/components/shell/guide";
 import { AvatarProvider } from "@/components/ui/avatar";
 import { getFortnoxCompany, getFortnoxSession } from "@/lib/data/fortnox";
 import { getNavCounts } from "@/lib/data/nav-counts";
@@ -44,7 +45,7 @@ export default async function AppLayout({
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
   const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
-  const [holdsCard, fortnoxSession, fortnoxCompany, cookieStore, counts, fiscalYears, fiscalYear, avatars] = await Promise.all([
+  const [holdsCard, fortnoxSession, fortnoxCompany, cookieStore, counts, fiscalYears, fiscalYear, avatars, guides] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     booksInFortnox ? getFortnoxCompany() : null,
@@ -62,6 +63,9 @@ export default async function AppLayout({
     // Who has a profile picture, so a face can be drawn beside any name. See
     // components/ui/avatar.tsx.
     getAvatarVersions(),
+    // Which guide steps the reader has been shown, so each comes up by
+    // itself only once. See components/shell/guide.tsx.
+    getSeenGuideSteps(currentUser.id),
   ]);
   // Read here rather than in the client so the frame renders in its stored
   // shape on the first paint instead of settling into it after hydration, a
@@ -95,6 +99,9 @@ export default async function AppLayout({
             defaultCollapsed={receiptCollapsed}
             defaultWidth={receiptWidth}
           >
+          {/* Around the shell, whose account menu starts a guide, and the
+              settings overlay, which a guide dims along with everything else. */}
+          <GuideProvider seen={guides}>
             {/* `fortnox` absent is "this reader has no Fortnox login of their
                 own", which is most of them, and the nav shows nothing at all.
                 Present with a null session is the treasury signed out. The
@@ -116,6 +123,7 @@ export default async function AppLayout({
                 inside it: the app's own sidebar is exactly what this must
                 not touch. */}
             {modal}
+          </GuideProvider>
           </ReceiptPanelProvider>
         </ConfirmProvider>
       </NotificationsProvider>

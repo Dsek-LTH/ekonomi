@@ -41,11 +41,11 @@ import { MatchHelp, TransactionPicker } from "@/components/transaction-picker";
 import { likelyDuplicates, type ExpenseFingerprint } from "@/lib/domain/duplicates";
 import { Notice } from "@/components/ui/notice";
 import Link from "next/link";
-import { FormSection, optionCard } from "./step-chrome";
+import { Card, CardBody } from "@/components/ui/card";
 import { ActionBar } from "@/components/action-bar";
 import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
 import { displayableFile } from "@/lib/ui/heic";
-import { uid } from "@/lib/ui/utils";
+import { cn, uid } from "@/lib/ui/utils";
 import { underlagCaption } from "@/lib/expense/document-url";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
@@ -62,6 +62,17 @@ import type { AllocationRow } from "@/components/allocation-editor";
  * this says what they mean, once, for the whole claim.
  */
 type Direction = "out" | "return";
+
+/** A choice card for how the purchase was paid. Locked cards are shown muted. */
+const optionCard = (selected: boolean, locked = false) =>
+  cn(
+    "w-full rounded-control border px-4 py-3 text-left transition-colors",
+    selected
+      ? "border-accent bg-accent-soft"
+      : locked
+        ? "border-border opacity-50"
+        : "border-border hover:bg-hover",
+  );
 
 /** What the wizard is holding: every field it fills in, and nothing derived. */
 type WizardDraft = {
@@ -834,226 +845,234 @@ export default function NewExpenseClient({
       <div className="space-y-6">
         {/* One card, no headings: the fields say what they are, and a
             heading over every two of them was height spent saying it again. */}
-        <FormSection>
-          {/* The first thing asked for, so the first thing focused: this
-              step opens with the receipt beside it and one question to
-              answer, and reaching for the mouse to answer it is a step
-              nobody needs. Selected as well as focused, which only matters
-              when an existing utlägg is being edited, because then the title is
-              already there and typing should replace it. */}
-          {/* Before anything else, because it is the question everything
-              below it depends on: what the figures mean, whether the 60-day
-              deadline applies, whether a payout account is wanted, and
-              whether this wizard has a Matcha step at all.
+        <Card>
+          <CardBody className="space-y-3">
+            {/* The first thing asked for, so the first thing focused: this
+                step opens with the receipt beside it and one question to
+                answer, and reaching for the mouse to answer it is a step
+                nobody needs. Selected as well as focused, which only matters
+                when an existing utlägg is being edited, because then the title is
+                already there and typing should replace it. */}
+            {/* Before anything else, because it is the question everything
+                below it depends on: what the figures mean, whether the 60-day
+                deadline applies, whether a payout account is wanted, and
+                whether this wizard has a Matcha step at all.
 
-              One group, not two. The direction and the payment type were
-              asked separately, at the top and the bottom of this same card,
-              and they are one question with three answers. Split, the date
-              three fields down was being judged against a payment type
-              nobody had reached yet: a four-month-old card purchase came up
-              as "too old to file" and Continue stayed dead until you scrolled
-              past the fördelning to change it.
+                One group, not two. The direction and the payment type were
+                asked separately, at the top and the bottom of this same card,
+                and they are one question with three answers. Split, the date
+                three fields down was being judged against a payment type
+                nobody had reached yet: a four-month-old card purchase came up
+                as "too old to file" and Continue stayed dead until you scrolled
+                past the fördelning to change it.
 
-              Not asked at all where there is one answer. Somebody with no
-              card can only be laying out their own money, and a lone card
-              nobody chose reads as a group that is broken. */}
-          {claimOptions.length > 1 && (
-            <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
-              {/* A container query, not a viewport one, because the width
-                  these three have is not the window's. The receipt panel is
-                  ~520px of it and the nav rail another 64, so at 941px with
-                  the panel open this column is about 320px: `sm:grid-cols-3`
-                  was true and there were three 100px cards in it. `@xl` is
-                  the column being wide enough for three, whatever the window
-                  is doing and whether the panel is open or shut.
+                Not asked at all where there is one answer. Somebody with no
+                card can only be laying out their own money, and a lone card
+                nobody chose reads as a group that is broken. */}
+            {claimOptions.length > 1 && (
+              <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
+                {/* A container query, not a viewport one, because the width
+                    these three have is not the window's. The receipt panel is
+                    ~520px of it and the nav rail another 64, so at 941px with
+                    the panel open this column is about 320px: `sm:grid-cols-3`
+                    was true and there were three 100px cards in it. `@xl` is
+                    the column being wide enough for three, whatever the window
+                    is doing and whether the panel is open or shut.
 
-                  42rem, not the 36 that three cards technically fit in: at 36
-                  each one is 184px wide and "Sektionskort, retur" is most of
-                  that. Stacked is never broken, only taller, so the threshold
-                  is where three read comfortably rather than where they last
-                  fit.
+                    42rem, not the 36 that three cards technically fit in: at 36
+                    each one is 184px wide and "Sektionskort, retur" is most of
+                    that. Stacked is never broken, only taller, so the threshold
+                    is where three read comfortably rather than where they last
+                    fit.
 
-                  The same trick the fördelning below already uses. */}
-              <div className="@container">
-                <div className="grid gap-3 @2xl:grid-cols-3">
-                  {claimOptions.map((c) => {
-                    // The icon in its own colour, which is the same mark the
-                    // list will show this claim with afterwards. Learning it
-                    // here is the point: choosing (or, locked, simply seeing)
-                    // is the one moment they are side by side with their
-                    // meanings spelled out.
-                    //
-                    // `min-w-0` on the label, so a long one wraps inside the
-                    // card rather than pushing the icon out of it.
-                    const content = (
-                      <>
-                        <span className="flex items-start gap-2">
-                          <PaymentIcon
-                            type={CLAIMS[c].paymentType}
-                            className="mt-0.5 size-4 shrink-0"
-                          />
-                          <span className="min-w-0 text-sm font-medium">
-                            {t(`claimOption.${c}`)}
+                    The same trick the fördelning below already uses. */}
+                <div className="@container">
+                  <div className="grid gap-3 @2xl:grid-cols-3">
+                    {claimOptions.map((c) => {
+                      // The icon in its own colour, which is the same mark the
+                      // list will show this claim with afterwards. Learning it
+                      // here is the point: choosing (or, locked, simply seeing)
+                      // is the one moment they are side by side with their
+                      // meanings spelled out.
+                      //
+                      // `min-w-0` on the label, so a long one wraps inside the
+                      // card rather than pushing the icon out of it.
+                      const content = (
+                        <>
+                          <span className="flex items-start gap-2">
+                            <PaymentIcon
+                              type={CLAIMS[c].paymentType}
+                              className="mt-0.5 size-4 shrink-0"
+                            />
+                            <span className="min-w-0 text-sm font-medium">
+                              {t(`claimOption.${c}`)}
+                            </span>
                           </span>
-                        </span>
-                        <span className="mt-0.5 block text-xs text-muted">
-                          {t(`claimHint.${c}`)}
-                        </span>
-                      </>
-                    );
-                    // Opened from one purchase there is nothing to press:
-                    // the money already left that way, and the other two
-                    // cards are shown, muted, only so the reader can see
-                    // what this one wasn't.
-                    return locked ? (
-                      <div key={c} className={optionCard(claim === c, true)}>
-                        {content}
-                      </div>
-                    ) : (
-                      <button
-                        key={c}
-                        onClick={() => chooseClaim(c)}
-                        className={optionCard(claim === c)}
-                        aria-pressed={claim === c}
-                      >
-                        {content}
-                      </button>
-                    );
-                  })}
+                          <span className="mt-0.5 block text-xs text-muted">
+                            {t(`claimHint.${c}`)}
+                          </span>
+                        </>
+                      );
+                      // Opened from one purchase there is nothing to press:
+                      // the money already left that way, and the other two
+                      // cards are shown, muted, only so the reader can see
+                      // what this one wasn't.
+                      return locked ? (
+                        <div key={c} className={optionCard(claim === c, true)}>
+                          {content}
+                        </div>
+                      ) : (
+                        <button
+                          key={c}
+                          onClick={() => chooseClaim(c)}
+                          className={optionCard(claim === c)}
+                          aria-pressed={claim === c}
+                        >
+                          {content}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              {locked && (
-                <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
-              )}
-            </FieldGroup>
-          )}
+                {locked && (
+                  <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
+                )}
+              </FieldGroup>
+            )}
 
-          <Field label={t("description")} requirement="required">
-            <Input
-              // Not on a phone. There it opens no keyboard (iOS will not
-              // raise one without a tap) and only puts a caret in a field the
-              // receipt panel is covering, while the page reads as somebody
-              // typing and puts the receipt button away.
-              autoFocus={!phone}
-              onFocus={selectOnce}
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-          </Field>
+            <Field label={t("description")} requirement="required">
+              <Input
+                // Not on a phone. There it opens no keyboard (iOS will not
+                // raise one without a tap) and only puts a caret in a field the
+                // receipt panel is covering, while the page reads as somebody
+                // typing and puts the receipt button away.
+                autoFocus={!phone}
+                onFocus={selectOnce}
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </Field>
 
-          {/* Two up at every width, not only from sm. A date and an amount
-              are short fields, ten characters and eight, and a column of
-              full-width boxes on a phone makes a four-field form look like a
-              long one and pushes the fördelning below the fold. `gap-3`
-              rather than `gap-5` while they are sharing 329px. */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-5">
-            <Field
-              label={t("purchaseDate")}
-              requirement="required"
-              error={
-                dateIncomplete
-                  ? t("dateIncomplete")
-                  : dateInFuture
-                    ? t("dateFuture")
-                    : dateOutsideYear
-                      ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
-                      : undefined
-              }
-              // A hint rather than an error: the date is a real day and the
-              // form accepts it. What it cannot do is be sent without a
-              // dispens, and marking the field invalid would be saying the
-              // submitter typed something wrong when they typed the truth.
-              hint={dateTooLate ? tooLateHint : undefined}
-            >
-              <DateInput
-                min={fiscalYear?.fromDate}
-                max={fiscalYear?.toDate}
-                value={form.purchaseDate}
-                onChange={(e) =>
-                  setForm({ ...form, purchaseDate: e.target.value })
+            {/* Two up at every width, not only from sm. A date and an amount
+                are short fields, ten characters and eight, and a column of
+                full-width boxes on a phone makes a four-field form look like a
+                long one and pushes the fördelning below the fold. `gap-3`
+                rather than `gap-5` while they are sharing 329px. */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+              <Field
+                label={t("purchaseDate")}
+                requirement="required"
+                error={
+                  dateIncomplete
+                    ? t("dateIncomplete")
+                    : dateInFuture
+                      ? t("dateFuture")
+                      : dateOutsideYear
+                        ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                        : undefined
                 }
-              />
-            </Field>
-            {/* The keypad, the guard and the separator all live in
-                AmountInput now, including the sign button, which is the only
-                way to reach a negative amount on a phone: no mobile numeric
-                keypad has a minus key. A return is the same utlägg with the
-                sign flipped, so it is a case this field has to allow. */}
-            {/* FieldGroup, not Field: the label carries a control of its
-                own, and a <label> forwards a click anywhere in its box to
-                the first labelable element inside it, which here would be
-                one of the two direction buttons.
-
-                The direction rides the label's line rather than standing
-                above the box, so this cell is exactly as tall as the date
-                beside it. Which way the money goes is not a minus typed into
-                the figure: no phone number pad has the key, and a word says
-                it where a character has to be noticed. */}
-            <Field label={t("amount")} requirement="required">
-              <AmountInput
-                value={form.gross}
-                onChange={(gross: string) => {
-                  setForm({ ...form, gross });
-                  // A single row is the whole amount, so it follows it.
-                  if (allocations.length === 1) {
-                    setAllocations([{ ...allocations[0], amount: gross }]);
+                // A hint rather than an error: the date is a real day and the
+                // form accepts it. What it cannot do is be sent without a
+                // dispens, and marking the field invalid would be saying the
+                // submitter typed something wrong when they typed the truth.
+                hint={dateTooLate ? tooLateHint : undefined}
+              >
+                <DateInput
+                  min={fiscalYear?.fromDate}
+                  max={fiscalYear?.toDate}
+                  value={form.purchaseDate}
+                  onChange={(e) =>
+                    setForm({ ...form, purchaseDate: e.target.value })
                   }
-                }}
+                />
+              </Field>
+              {/* The keypad, the guard and the separator all live in
+                  AmountInput now, including the sign button, which is the only
+                  way to reach a negative amount on a phone: no mobile numeric
+                  keypad has a minus key. A return is the same utlägg with the
+                  sign flipped, so it is a case this field has to allow. */}
+              {/* FieldGroup, not Field: the label carries a control of its
+                  own, and a <label> forwards a click anywhere in its box to
+                  the first labelable element inside it, which here would be
+                  one of the two direction buttons.
+
+                  The direction rides the label's line rather than standing
+                  above the box, so this cell is exactly as tall as the date
+                  beside it. Which way the money goes is not a minus typed into
+                  the figure: no phone number pad has the key, and a word says
+                  it where a character has to be noticed. */}
+              <Field label={t("amount")} requirement="required">
+                <AmountInput
+                  value={form.gross}
+                  onChange={(gross: string) => {
+                    setForm({ ...form, gross });
+                    // A single row is the whole amount, so it follows it.
+                    if (allocations.length === 1) {
+                      setAllocations([{ ...allocations[0], amount: gross }]);
+                    }
+                  }}
+                />
+              </Field>
+            </div>
+
+            {duplicates.length > 0 && (
+              <Notice>
+                <p>{t("duplicateLead", { count: duplicates.length })}</p>
+                <ul className="mt-1 space-y-0.5">
+                  {duplicates.map((d) => (
+                    <li key={d.id}>
+                      <Link
+                        href={`/expenses/${d.id}`}
+                        target="_blank"
+                        className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                      >
+                        {d.reference ? `${d.reference} - ` : ""}
+                        {d.title || t("duplicateUntitled")}
+                      </Link>
+                      <span className="text-muted">
+                        {" "}
+                        {t("duplicateDetail", {
+                          date: date(d.purchaseDate),
+                          amount: formatSEK(d.grossAmount),
+                        })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-muted">{t("duplicateHint")}</p>
+              </Notice>
+            )}
+
+            <FieldGroup label={t("distribution")} requirement="required">
+              <AllocationEditor
+                costCenters={selectableCostCenters}
+                grossAmount={magnitude}
+                value={allocations}
+                onChange={setAllocations}
               />
-            </Field>
-          </div>
-
-          {duplicates.length > 0 && (
-            <Notice>
-              <p>{t("duplicateLead", { count: duplicates.length })}</p>
-              <ul className="mt-1 space-y-0.5">
-                {duplicates.map((d) => (
-                  <li key={d.id}>
-                    <Link
-                      href={`/expenses/${d.id}`}
-                      target="_blank"
-                      className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
-                    >
-                      {d.reference ? `${d.reference} - ` : ""}
-                      {d.title || t("duplicateUntitled")}
-                    </Link>
-                    <span className="text-muted">
-                      {" "}
-                      {t("duplicateDetail", {
-                        date: date(d.purchaseDate),
-                        amount: formatSEK(d.grossAmount),
-                      })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-1 text-muted">{t("duplicateHint")}</p>
-            </Notice>
-          )}
-
-          <FieldGroup label={t("distribution")} requirement="required">
-            <AllocationEditor
-              costCenters={selectableCostCenters}
-              grossAmount={magnitude}
-              value={allocations}
-              onChange={setAllocations}
-            />
-          </FieldGroup>
-        </FormSection>
+            </FieldGroup>
+          </CardBody>
+        </Card>
 
         {/* A card purchase is settled by the bank row it was, so which one is
             the last thing asked. It was a step of its own; it is a section of
             the same page now, and only there for a card. */}
         {paymentType === "CARD" && (
-          <FormSection title={t("matchTitle")} hint={<MatchHelp />}>
-            <TransactionPicker
-              candidates={candidates}
-              selectedId={matchId}
-              onPick={setMatchId}
-              amount={Math.abs(grossSEK)}
-              onUseAmount={takeBankAmount}
-            />
-          </FormSection>
+          <Card>
+            <CardBody className="space-y-3">
+              <h2 className="flex items-center gap-1.5 text-base font-semibold">
+                {t("matchTitle")}
+                <MatchHelp />
+              </h2>
+              <TransactionPicker
+                candidates={candidates}
+                selectedId={matchId}
+                onPick={setMatchId}
+                amount={Math.abs(grossSEK)}
+                onUseAmount={takeBankAmount}
+              />
+            </CardBody>
+          </Card>
         )}
       </div>
 

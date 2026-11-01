@@ -196,7 +196,7 @@ function TodoCard({ queue, unaccountedPurchases }: { queue: QueueItem[]; unaccou
   }, [queue]);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-tour="todo">
       <CardHeader title={t("todoTitle")} />
       {counts.length === 0 && unaccountedPurchases === 0 ? (
         <p className="px-inset py-4 text-sm text-muted">{t("todoEmpty")}</p>

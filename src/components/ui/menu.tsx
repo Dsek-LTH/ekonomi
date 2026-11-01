@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { IconChevronDown } from "@/components/ui/icons";
@@ -37,6 +37,7 @@ export function Menu({
   trigger,
   triggerClassName,
   narrow = false,
+  holdOpen = false,
   className,
   children,
 }: {
@@ -90,6 +91,12 @@ export function Menu({
   narrow?: boolean;
   /** Which edge the panel lines up with, "end" hangs it left of the button. */
   align?: "start" | "end";
+  /**
+   * Open whatever the reader does, for as long as it is true: a guide showing
+   * what is inside (the account menu's theme and language). A press outside
+   * or Escape closes only what the reader opened themselves.
+   */
+  holdOpen?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -102,7 +109,17 @@ export function Menu({
   // Where the trigger is on screen, kept current while open. Held in state
   // rather than read at paint, because the panel is positioned against it from
   // outside its subtree. See lib/ui/anchored-panel.ts, shared with the combobox.
-  const [rect, setRect] = useAnchorRect(open, triggerRef, panelRef, close);
+  const shown = open || holdOpen;
+  const [rect, setRect] = useAnchorRect(shown, triggerRef, panelRef, close);
+
+  // Held open from outside, so nobody pressed the trigger to measure it.
+  // Measured in a frame rather than in the effect itself, which would render
+  // twice for one change.
+  useEffect(() => {
+    if (!holdOpen) return;
+    const frame = requestAnimationFrame(() => setRect(triggerRef.current?.getBoundingClientRect() ?? null));
+    return () => cancelAnimationFrame(frame);
+  }, [holdOpen, setRect]);
 
   function toggle() {
     setOpen((o) => {
@@ -141,7 +158,7 @@ export function Menu({
           type="button"
           disabled={disabled}
           aria-haspopup="menu"
-          aria-expanded={open}
+          aria-expanded={shown}
           aria-label={label}
           title={label}
           onClick={toggle}
@@ -157,7 +174,7 @@ export function Menu({
           disabled={disabled}
           loading={loading}
           aria-haspopup="menu"
-          aria-expanded={open}
+          aria-expanded={shown}
           // Named even when the word is not drawn.
           aria-label={accessibleName ?? (compact || iconOnly ? label : undefined)}
           title={compact || iconOnly ? label : undefined}
@@ -175,7 +192,7 @@ export function Menu({
             <IconChevronDown
               className={cn(
                 "size-4 transition-transform duration-200 ease-[var(--ease-out-quint)]",
-                open && "rotate-180",
+                shown && "rotate-180",
                 // Nothing to point at once the label is gone. The icon is the
                 // whole button, and a chevron beside it is half the width again
                 // for no more meaning.
@@ -198,7 +215,7 @@ export function Menu({
           z-[210] is the combobox's layer, and for the same reason: both are
           popovers over a field, both have to clear a modal at z-[200], and both
           belong under the notifications at z-[220]. */}
-      {open && rect && createPortal(
+      {shown && rect && createPortal(
         <div
           ref={panelRef}
           role="menu"

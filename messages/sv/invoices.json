@@ -147,6 +147,7 @@
   "inkorg": {
     "title": "Inkorg",
     "upload": "Lägg till dokument",
+    "mailIn": "Fakturor kan också mejlas till {address} från en dsek.se-adress.",
     "uploaded": "{name} ligger i inkorgen",
     "emptyTitle": "Inkorgen är tom",
     "emptyDescription": "Fakturor som mejlas in hamnar här, och dokumenten från fakturor som skickas tillbaka. Du kan också lägga till PDF:er själv.",

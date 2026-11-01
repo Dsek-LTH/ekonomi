@@ -17,6 +17,7 @@ import { NavCount } from "./nav-count";
 import { SectionBand, SectionNavProvider, type SectionNav } from "./section-nav";
 import { AppHeader, FiscalYearPicker, type FiscalYears } from "./app-header";
 import { FiscalYearProvider } from "./fiscal-year-context";
+import { useGuides } from "./guide";
 import {
   IconArchive,
   IconBox,
@@ -420,6 +421,12 @@ export function AppShell({
   // way down and its click would open it again.
   useDismissOnOutside(navOpen, [navRef, navToggleRef], () => setNavOpen(false));
 
+  // A guide showing what is in the nav holds it open over the reader's own
+  // choice, and lets it go again when it moves on. See components/shell/guide.tsx.
+  const { hold } = useGuides();
+  const navShown = navOpen || hold === "nav";
+  const menuShown = menuOpen || hold === "phone-menu";
+
   useEffect(() => {
     if (!menuOpen) return;
     // Below md the document is what scrolls and the menu is covering all of it,
@@ -468,6 +475,7 @@ export function AppShell({
       icon: item.icon,
       active: isActive(item.href),
       count: counts[item.href] ?? 0,
+      tour: item === SETTINGS ? "nav-settings" : undefined,
     });
 
   // One row of the nav: a section, or one of the pages that stand on their own
@@ -478,18 +486,22 @@ export function AppShell({
     icon: Icon,
     active,
     count,
+    tour,
   }: {
     href: string;
     label: string;
     icon: NavItem["icon"];
     active: boolean;
     count: number;
+    /** What a guide calls the row (lib/domain/guides.ts). */
+    tour?: string;
   }) => {
     return (
       <Link
         key={href}
         href={href}
         onClick={closeNav}
+        data-tour={tour}
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex h-8 items-center gap-2.5 rounded-control px-2 text-sm transition-colors",
@@ -587,7 +599,7 @@ export function AppShell({
       )}
 
       <MobileNav
-        open={menuOpen}
+        open={menuShown}
         onClose={closeNav}
         overview={OVERVIEW}
         groups={groups}
@@ -602,7 +614,7 @@ export function AppShell({
         user={user}
         fortnox={fortnox}
         fiscal={fiscal}
-        navOpen={navOpen}
+        navOpen={navShown}
         navToggleRef={navToggleRef}
         onToggleNav={() => setNavOpen(!navOpen)}
         waiting={Object.values(counts).some((n) => n > 0)}
@@ -622,14 +634,14 @@ export function AppShell({
         <div
           id="app-nav"
           ref={navRef}
-          inert={!navOpen}
+          inert={!navShown}
           className={cn(
             "absolute inset-y-0 left-0 z-30 hidden w-64 print:hidden md:block",
             // `translate` and not `transform`: Tailwind 4's translate-x
             // utilities set the `translate` property, so a transition on
             // `transform` let the panel snap rather than slide.
             "transition-[translate,visibility] duration-250 ease-out",
-            navOpen ? "translate-x-0" : "invisible -translate-x-full",
+            navShown ? "translate-x-0" : "invisible -translate-x-full",
           )}
         >
           <aside className="flex h-full w-64 flex-col border-r border-border bg-background shadow-xl">
@@ -656,6 +668,7 @@ export function AppShell({
                     icon: group.icon,
                     active: group.items.some((i) => isActive(i.href)),
                     count: group.items.reduce((n, i) => n + (counts[i.href] ?? 0), 0),
+                    tour: `nav-group:${group.label}`,
                   }),
                 )}
               </div>

@@ -34,7 +34,8 @@ import { UserAvatar } from "../ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { IconFortnox } from "./fortnox-mark";
-import { IconCheck, IconChevronRight } from "../ui/icons";
+import { useGuides } from "./guide";
+import { IconCheck, IconChevronRight, IconHelp } from "../ui/icons";
 import type { NavGroup, NavItem } from "./app-shell";
 import { NavCount } from "./nav-count";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
@@ -76,7 +77,9 @@ export function MobileNav({
 }) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
+  const tGuides = useTranslations("guides");
   const pathname = usePathname();
+  const { pageGuide, start } = useGuides();
 
   // The open menu covers the page, so Tab stays in it. `inert` already keeps a
   // closed one out of the way; this is the other half, the page behind an open
@@ -179,7 +182,7 @@ export function MobileNav({
         <div className={CARD}>{navRow(overview)}</div>
 
         {groups.map((group) => (
-          <div key={group.label}>
+          <div key={group.label} data-tour={`nav-group:${group.label}`}>
             {/* The rail turns a group heading into a rule, because a word in a
                 64px column is noise. Here there is room for the word, which is
                 the whole point of the shape: a caption over the card it names. */}
@@ -191,7 +194,32 @@ export function MobileNav({
         ))}
 
         {/* Help is not here: it is in the header, one click from every page. */}
-        {settings && <div className={CARD}>{navRow(settings)}</div>}
+        {settings && (
+          <div className={CARD} data-tour="nav-settings">
+            {navRow(settings)}
+          </div>
+        )}
+
+        {/* The guides, to run again, as in the desktop's account menu. */}
+        <div>
+          <p className="mb-1.5 px-4 text-xs font-medium text-muted">{tGuides("menuHeading")}</p>
+          <div className={CARD}>
+            {[...(pageGuide && pageGuide.id !== "start" ? [pageGuide.id] : []), "start" as const].map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  onClose();
+                  start(id);
+                }}
+                className={cn(ROW, "text-left active:bg-surface")}
+              >
+                <IconHelp className="size-5 shrink-0 text-muted" />
+                <span className="min-w-0 flex-1">{id === "start" ? tGuides("tour") : tGuides("thisPage")}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* The account block: what a page load would be too much for, and the
             one warning that cannot wait for one. */}
@@ -225,11 +253,11 @@ export function MobileNav({
               />
             </a>
           )}
-          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5" data-tour="theme">
             <span className="text-sm font-medium">{tc("theme")}</span>
             <ThemeToggle />
           </div>
-          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5" data-tour="language">
             <span className="text-sm font-medium">{tc("language")}</span>
             <LanguageSwitcher />
           </div>

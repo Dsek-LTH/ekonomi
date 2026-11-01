@@ -20,6 +20,14 @@
     "done": "Bokförda",
     "all": "Alla"
   },
+  "tabMine": {
+    "draft": "Utkast",
+    "attest": "Väntar på attest",
+    "book": "Väntar på kontering",
+    "export": "Väntar på bokföring",
+    "done": "Bokförda",
+    "all": "Alla"
+  },
   "col": {
     "date": "Datum",
     "title": "Utlägg",

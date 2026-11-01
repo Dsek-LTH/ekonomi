@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
 import { ALL_KINDS, SWITCHABLE_KINDS } from "@/lib/domain/notifications";
+import { GUIDE_STEP_IDS } from "@/lib/domain/guides";
 import { SHORT_NAME_MAX } from "@/lib/domain/cost-center-short-name";
 import type { NotificationKind } from "@/lib/domain/types";
 
@@ -233,6 +234,12 @@ export const PutNotificationPreference = z.object({
   enabled: z.boolean(),
 });
 export type PutNotificationPreference = z.infer<typeof PutNotificationPreference>;
+
+/** PUT /api/profile/guides: guide steps the reader has been shown. */
+export const PutSeenGuideSteps = z.object({
+  steps: z.array(z.enum(GUIDE_STEP_IDS as [string, ...string[]])).min(1).max(GUIDE_STEP_IDS.length),
+});
+export type PutSeenGuideSteps = z.infer<typeof PutSeenGuideSteps>;
 
 /**
  * POST /api/users/[id]/test-email: send one member a test mail of any kind,
