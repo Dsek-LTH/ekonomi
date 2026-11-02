@@ -15,3 +15,11 @@ Check that program uses our own components
 Make an app of this program
 Make this app generic so other guilds can use it
 Vinst uppdelning helper
+
+Göra datum för kontering tydligare vid granskning
+Se vilka som granskar vilka utlägg
+Fylla debit automatiskt med belopp
+Ändra datum vid fel
+Fixa rotera knappen vid liggande kvitton
+Mer stats kring hur ofta man attesterar rätt, hur mycket skickas tillbaka osv
+Medlemmar utan utlägg
