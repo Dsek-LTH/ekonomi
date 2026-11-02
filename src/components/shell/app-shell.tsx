@@ -89,19 +89,6 @@ export type NavGroup = {
 
 const ALL = () => true;
 
-// How wide a page may grow. One cap per section, not two: the nav lies over
-// the page rather than beside it, so it never costs the row width.
-//
-// The cap is on the page, not on the main column. The column is the full width
-// of the window, so the section band at its top (which has a background of its
-// own) reaches both edges; capped with the page, it stopped short on a wide
-// screen and the canvas showed beside it. The page sits at the column's left,
-// under the band's first tab, rather than centred under a band that is not.
-const CONTENT_MAX = {
-  budget: "max-w-[1792px]",
-  default: "max-w-[1472px]",
-};
-
 // The landing page, not the first section. It used to point straight at
 // /admin/fortnox, on the reasoning that the sidebar lists the sections so there
 // was nothing for an index to add. True at this width and false on a phone,
@@ -557,7 +544,6 @@ export function AppShell({
   const sectionKey = activeSection === null ? null : SECTION_LABELS[activeSection];
   const section = sectionKey ? t(sectionKey) : null;
 
-  const caps = pathname.startsWith("/budget") ? CONTENT_MAX.budget : CONTENT_MAX.default;
   // Marks <html> while a field has the keyboard up, for the receipt button.
   useTypingFlag(pathname);
   const receiptTab = useReceiptTabShowing();
@@ -797,11 +783,12 @@ export function AppShell({
                   slotRef={setSectionSlot}
                 />
               )}
-              {/* The page, at its section's cap and left-aligned. The band above
-                  it is not capped. See CONTENT_MAX. */}
-              <div className={caps}>
-                <FiscalYearProvider value={fiscal?.selected ?? null}>{children}</FiscalYearProvider>
-              </div>
+              {/* The page, as wide as the column, at every screen size and zoom.
+                  It used to be capped at a fixed number of pixels, which left a
+                  strip of empty canvas beside it on any window wider than that.
+                  A page that wants less asks for it itself (PageShell's
+                  `width`). */}
+              <FiscalYearProvider value={fiscal?.selected ?? null}>{children}</FiscalYearProvider>
             </SectionNavProvider>
           </main>
         </div>
