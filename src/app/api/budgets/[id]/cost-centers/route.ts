@@ -40,7 +40,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!costCenterId) return fail(422, "request.costCenterIdRequired");
 
   const cc = await appendInOrder({ model: "budget", id: budgetId }, async (tx) => {
-    const last = await tx.budgetCostCenter.findFirst({ where: { budgetId }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
+    const last = await tx.budgetCostCenter.findFirst({
+      where: { budgetId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
     return tx.budgetCostCenter.create({
       data: { budgetId, costCenterId, sortOrder: nextSortOrder(last) },
       include: { costCenter: true },

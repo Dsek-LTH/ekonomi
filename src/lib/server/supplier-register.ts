@@ -26,7 +26,9 @@ export async function rememberRegister(list: readonly FortnoxSupplier[]): Promis
 export type KnownSupplier = { number: string; name: string };
 
 /** A function matching a scan to the register, loaded once for a batch. */
-export async function supplierMatcher(): Promise<(fields: InvoiceTextFields) => KnownSupplier | null> {
+export async function supplierMatcher(): Promise<
+  (fields: InvoiceTextFields) => KnownSupplier | null
+> {
   const register = await prisma.supplier.findMany();
   return (fields) => {
     const hit = matchSupplier(fields, register);

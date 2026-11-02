@@ -5,11 +5,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, receiptKey } from "@/lib/server/storage";
-import {
-  isNormalisableImage,
-  normaliseImage,
-  normalisedName,
-} from "@/lib/server/images";
+import { isNormalisableImage, normaliseImage, normalisedName } from "@/lib/server/images";
 import { isEditable, isQuietDraftEdit, isRecallable } from "@/lib/domain/status";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import { fail, gate } from "@/lib/api/guard";
@@ -26,10 +22,7 @@ const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 const MAX_BODY_BYTES = MAX_BYTES + 1024 * 1024;
 
 // POST /api/expenses/:id/receipts: multipart form-data, field "file".
-export async function POST(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: expenseId } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
@@ -167,10 +160,7 @@ export async function POST(
 }
 
 // GET /api/expenses/:id/receipts: list a receipt's metadata (not the bytes).
-export async function GET(
-  _req: Request,
-  ctx: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: expenseId } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;

@@ -4,8 +4,7 @@ import { parseBankCsv } from "./bank-csv";
 // Every sample below is invented: the clearing and account numbers are zeroes
 // and the purchases are made up. A real bank export must never be checked in
 // (see .gitignore) and nothing here needs one.
-const HEADER =
-  "Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp";
+const HEADER = "Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp";
 const COMMENT = "* Transaktionsrapport Period 2026-01-01 - 2026-03-31 Skapad 2026-03-31 20:06 CEST";
 
 // One data row, with only the parts the parser reads worth varying. `date` sets
@@ -73,7 +72,9 @@ describe("parseBankCsv", () => {
   });
 
   it("pulls the card number off the end of the reference", () => {
-    const result = parseBankCsv(file(row({ referens: "KAFFEBAREN LUND K1234", amount: "-149.50" })));
+    const result = parseBankCsv(
+      file(row({ referens: "KAFFEBAREN LUND K1234", amount: "-149.50" })),
+    );
 
     expect(result.transactions[0].description).toBe("KAFFEBAREN LUND");
     expect(result.transactions[0].cardLast4).toBe("1234");

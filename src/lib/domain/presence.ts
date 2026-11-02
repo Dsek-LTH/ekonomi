@@ -69,11 +69,7 @@ export interface PresenceAnswer {
  *
  * `hiddenSince` is when the tab was last hidden, or null while it is visible.
  */
-export function isIdle(
-  now: number,
-  lastActivityAt: number,
-  hiddenSince: number | null,
-): boolean {
+export function isIdle(now: number, lastActivityAt: number, hiddenSince: number | null): boolean {
   if (hiddenSince !== null && now - hiddenSince >= HIDDEN_GRACE_MS) return true;
   return now - lastActivityAt >= IDLE_MS;
 }

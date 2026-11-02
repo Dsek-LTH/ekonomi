@@ -216,7 +216,9 @@ describe("cellFault", () => {
     // Undoing a homecoming takes the cans off the shelf again, and they have to
     // still be there.
     const cells = cellTotals([stored({ units: -50 }), stored({ kind: "RETURN", units: 20 })]);
-    expect(cellFault(cans, { sealed: 5, open: {} }, saved(cells), back(), 0)).toBe("notThatManySealed");
+    expect(cellFault(cans, { sealed: 5, open: {} }, saved(cells), back(), 0)).toBe(
+      "notThatManySealed",
+    );
     expect(cellFault(cans, { sealed: 40, open: {} }, saved(cells), back(), 0)).toBeNull();
   });
 
@@ -253,10 +255,7 @@ describe("cellFault, before anything is saved", () => {
     // clearing Ut while Spill still read 1 was "more than went out". The Ut
     // cell was held back from the save and only the spill was cleared.
     const cleared = new Map<string, number>();
-    const booked = cellTotals([
-      stored({ units: -8 }),
-      stored({ kind: "WASTE", spilledQty: 1 }),
-    ]);
+    const booked = cellTotals([stored({ units: -8 }), stored({ kind: "WASTE", spilledQty: 1 })]);
     const state = { sheet: cleared, booked };
     expect(cellFault(cans, shelf, state, out(), 0)).toBeNull();
     expect(cellFault(cans, shelf, state, spill(), 0)).toBeNull();
@@ -268,9 +267,7 @@ describe("cellFault, before anything is saved", () => {
     const typed = cellTotals([stored({ units: -150 })]);
     const state = { sheet: typed, booked: new Map<string, number>() };
     expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 150)).toBeNull();
-    expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 201)).toBe(
-      "notThatManySealed",
-    );
+    expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 201)).toBe("notThatManySealed");
   });
 });
 
@@ -470,6 +467,8 @@ describe("cellFault, counted in bottles", () => {
   it("leaves cans alone, where the two questions are one", () => {
     const out10 = cellTotals([stored({ units: -10 })]);
     expect(cellFault(cans, { sealed: 50, open: {} }, saved(out10), back(), 10)).toBeNull();
-    expect(cellFault(cans, { sealed: 50, open: {} }, saved(out10), back(), 11)).toBe("moreThanWentOut");
+    expect(cellFault(cans, { sealed: 50, open: {} }, saved(out10), back(), 11)).toBe(
+      "moreThanWentOut",
+    );
   });
 });

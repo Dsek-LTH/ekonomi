@@ -1,6 +1,7 @@
 // Money is stored everywhere in the DB as an integer number of öre (1 SEK = 100
 // öre) to avoid floating-point drift. The UI works in SEK. These are the single
 // pair of converters. Do not hand-roll `* 100` / `/ 100` elsewhere.
+import { evaluate } from "@/lib/domain/arithmetic";
 
 /** öre (integer) → SEK (decimal), for display/serialisation. */
 export function oreToSEK(ore: number | null | undefined): number {
@@ -27,7 +28,8 @@ export function sekToOre(sek: number | null | undefined): number {
  * `inputmode` and behind no pattern, and a figure somebody cannot type on the
  * machine they are holding is not a figure a form may ask for. There is no
  * operator to type either, for the same reason: a receipt of several lines is
- * several rows, one figure each.
+ * several rows, one figure each. The voucher's cells are the one exception
+ * (see SUM_INPUT).
  *
  * Partial input has to pass, since this is tested on every keystroke: "12," and
  * "" are both on the way to a number.
@@ -64,6 +66,37 @@ export function isAmountInput(input: string): boolean {
 }
 
 /**
+ * What may stand in a voucher's debit or credit cell while it is being typed:
+ * an amount, or a sum of them (`1250*0,25+40`). A leading "=" is taken too,
+ * as a spreadsheet and the budget sheets write one.
+ *
+ * The voucher is written at a desk, on a keyboard that has the operators, so
+ * it can take what the phone-first fields above cannot. The sum is worked out
+ * when the cell is left (see `settleAmount`).
+ */
+const SUM_INPUT = /^\s*=?[\d\s.,+\-*/()]*$/;
+
+export const isSumInput = (input: string): boolean => SUM_INPUT.test(input);
+
+/** Whether a cell holds a sum still to be worked out, not a plain amount. */
+export const isSum = (input: string): boolean => /^=|[+\-*/()]/.test(input.trim());
+
+const sumOf = (input: string): number | null => evaluate(input.trim().replace(/^=/, ""));
+
+/**
+ * A cell as it is left: a sum becomes its answer, to the öre and written the
+ * way an amount field writes one ("312,50"). A plain amount comes back as it
+ * was. Null for a sum that does not add up, or adds up to less than nothing,
+ * since a figure here is a magnitude and the column says which way it goes.
+ */
+export function settleAmount(input: string): string | null {
+  if (!isSum(input)) return input;
+  const sek = sumOf(input);
+  if (sek === null || sek < 0) return null;
+  return sekToInput(sek);
+}
+
+/**
  * Parse a user-entered amount string ("1 234,50" / "1234.5") into SEK.
  *
  * Reads a sign even though no field lets one be typed: what comes back from the
@@ -71,6 +104,9 @@ export function isAmountInput(input: string): boolean {
  * return has to read it before it can show its magnitude.
  */
 export function parseSEK(input: string): number {
+  // A voucher cell can hold a sum while it is being typed. Read as its answer,
+  // so the totals under the table follow along before the cell is left.
+  if (isSum(input)) return sumOf(input) ?? 0;
   const normalised = input.replace(/\s/g, "").replace(",", ".");
   const n = Number(normalised);
   return Number.isFinite(n) ? n : 0;

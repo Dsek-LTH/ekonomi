@@ -56,7 +56,8 @@ export async function setCostCenterShortNames(
 ): Promise<number> {
   const counts = await prisma.$transaction(
     names.map(
-      (n) => prisma.$executeRaw`UPDATE "CostCenter" SET "shortName" = ${n.shortName} WHERE "id" = ${n.id}`,
+      (n) =>
+        prisma.$executeRaw`UPDATE "CostCenter" SET "shortName" = ${n.shortName} WHERE "id" = ${n.id}`,
     ),
   );
   return counts.reduce((a, b) => a + b, 0);
@@ -68,7 +69,10 @@ export async function setCostCenterShortNames(
  * `updatedAt` on every row it upserts, and only a sync touches a Fortnox row
  * (they are read-only here), so the latest one is when it last ran.
  */
-export async function getCostCenterSyncStatus(): Promise<{ count: number; lastSyncAt: string | null }> {
+export async function getCostCenterSyncStatus(): Promise<{
+  count: number;
+  lastSyncAt: string | null;
+}> {
   const agg = await prisma.costCenter.aggregate({
     where: { source: "FORTNOX" },
     _count: true,

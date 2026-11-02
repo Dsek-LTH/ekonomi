@@ -1,7 +1,5 @@
 {
   "title": "Översikt",
-  "mineTitle": "Dina utlägg",
-  "allExpenses": "Alla utlägg",
   "firstRun": {
     "title": "Så funkar ett utlägg",
     "lead": "Har du lagt ut egna pengar för sektionen, eller handlat med ett sektionskort? Det är här du får tillbaka dem.",
@@ -15,16 +13,6 @@
     "step4Body": "Utbetalning till ditt konto. Lägg in clearing- och kontonummer under Min profil, annars fastnar utlägget där.",
     "cta": "Skapa ditt första utlägg"
   },
-  "todoTitle": "Att göra",
-  "todo": {
-    "FIX": "{count, plural, one {utlägg att åtgärda} other {utlägg att åtgärda}}",
-    "SUBMIT": "{count, plural, one {utkast att skicka in} other {utkast att skicka in}}",
-    "ATTEST": "att attestera",
-    "BOOK": "att kontera",
-    "EXPORT": "att bokföra i Fortnox",
-    "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}"
-  },
-  "todoEmpty": "Inget väntar på dig just nu.",
   "payoutMissing": "Lägg in clearing- och kontonummer under Min profil, annars kan dina utlägg inte betalas ut.",
   "budget": {
     "title": "Budgeten",
@@ -36,30 +24,52 @@
     "ahead": "{unit} har använt {used} % av kostnadsbudgeten, och {elapsed} % av året har gått.",
     "noUnit": "Utan resultatenhet"
   },
-  "upcoming": {
-    "title": "Kommande",
-    "deadline": "Sista dag att skicka in <b>{title}</b>",
+  "invoicesTitle": "Fakturor i ditt utskott",
+  "allInvoices": "Alla fakturor",
+  "invoiceUntitled": "Okänd leverantör",
+  "turn": {
+    "title": "Din tur",
+    "empty": "Inget väntar på dig just nu.",
+    "untitled": "utan namn",
+    "draft": "Skicka in <b>{title}</b>",
+    "cardPurchase": "Redovisa kortköpet <b>{title}</b>",
+    "invoiceOverdue": "Fakturan från <b>{title}</b> har förfallit",
+    "deadline": "Skicka in <b>{title}</b>",
+    "lastDay": "sista dag {when}",
+    "stale": "{count, plural, one {# över en vecka} other {# över en vecka}}",
+    "count": {
+      "FIX": "{count, plural, one {utlägg att åtgärda} other {utlägg att åtgärda}}",
+      "SUBMIT": "{count, plural, one {utkast att skicka in} other {utkast att skicka in}}",
+      "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}",
+      "ATTEST": "att attestera",
+      "BOOK": "att kontera",
+      "EXPORT": "att bokföra i Fortnox",
+      "OVERDUE": "{count, plural, one {annan förfallen faktura} other {andra förfallna fakturor}}",
+      "MEMBERS_BEHIND": "{count, plural, one {medlem har köp som väntat i över en månad} other {medlemmar har köp som väntat i över en månad}}"
+    },
+    "more": {
+      "SUBMIT": "{count, plural, one {annat utkast att skicka in} other {andra utkast att skicka in}}",
+      "PURCHASES": "{count, plural, one {annat kortköp att redovisa} other {andra kortköp att redovisa}}"
+    }
+  },
+  "waiting": {
+    "title": "Väntar på andra",
+    "all": "Alla utlägg",
+    "empty": "Inget av dina utlägg ligger hos någon annan just nu.",
+    "untitled": "Utan namn",
+    "PENDING_APPROVAL": "Väntar på attest",
+    "APPROVED": "Skattmästeriet konterar",
+    "BOOKED": "Skattmästeriet bokför i Fortnox",
+    "days": "{count, plural, =0 {idag} one {# dag} other {# dagar}}",
+    "more": "och {count} till"
+  },
+  "calendar": {
+    "title": "Kalender",
     "invoice": "Faktura från <b>{title}</b> förfaller",
     "pickup": "<b>{title}</b> hämtas",
     "contractEnds": "Avtalet <b>{title}</b> löper ut",
     "stockEvent": "Lagertillfälle: <b>{title}</b>",
-    "untitled": "okänd leverantör",
-    "empty": "Inget inplanerat de närmaste två veckorna."
-  },
-  "mineAndInvoicesTitle": "Dina utlägg och fakturor",
-  "invoicesTitle": "Fakturor i ditt utskott",
-  "allInvoices": "Alla fakturor",
-  "invoiceUntitled": "Okänd leverantör",
-  "forgotten": {
-    "title": "Glömt",
-    "empty": "Inget har blivit liggande.",
-    "untitled": "utan namn",
-    "more": "och {count} till",
-    "attestWaiting": "{count, plural, one {# utlägg har} other {# utlägg har}} väntat på din attest i över en vecka",
-    "membersBehind": "{count, plural, one {# medlem har} other {# medlemmar har}} köp som väntat i över en månad",
-    "draft": "<b>{title}</b> är inte inskickat",
-    "cardPurchase": "Kortköpet <b>{title}</b> är inte redovisat",
-    "stuck": "<b>{title}</b> väntar fortfarande på attest",
-    "invoiceOverdue": "Fakturan från <b>{title}</b> har förfallit"
+    "deadline": "Sista dag att skicka in <b>{title}</b>",
+    "untitled": "okänd leverantör"
   }
 }

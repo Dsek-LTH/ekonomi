@@ -1,7 +1,7 @@
 // Prisma client singleton. Prisma 7 uses the query compiler + a driver
 // adapter, so we connect through node-postgres (PrismaPg). The singleton
 // guard prevents exhausting connections under Next.js hot-reload.
-import "server-only"
+import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";

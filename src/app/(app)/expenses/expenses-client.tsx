@@ -27,7 +27,6 @@ import { useFormat } from "@/lib/ui/use-format";
 import { useBookingColumn } from "./booking-column";
 import { EXPENSE_TABS, expenseDefaultTab, type ExpenseScope, type ExpenseTab } from "./scope";
 
-
 export function ExpensesClient({
   page,
   waiting,
@@ -106,64 +105,67 @@ export function ExpensesClient({
     controls.query || controls.dateFrom || controls.dateTo || controls.tab !== "all",
   );
 
-  const columns: Column<Expense>[] = useMemo(() => [
-    picks.column,
-    expenseReferenceColumn(t("col.verification")),
-    expenseTitleColumn(t("col.title"), { reference: false }),
-    expenseDateColumn(t("col.date"), date),
-    expensePaymentTypeColumn(t("col.type"), (type) => tPayment(`${type}.label`)),
-    expenseSubmitterColumn(t("col.submitter"), showOwnOnly),
-    expenseStatusColumn(t("col.status")),
-    {
-      key: "attest",
-      header: t("col.attest"),
-      // Off the phone row. It is a line per allocation (a tick, a name and a
-      // cost centre each) which is a column of its own on a table and cannot
-      // be a clause in a one-line summary. The same thing, laid out for a
-      // narrow screen, is on the utlägg's own page under Fördelning.
-      mobile: "hide",
-      cell: (e) =>
-        e.allocations.length === 0 ? (
-          <span className="text-muted">-</span>
-        ) : (
-          <div className="space-y-0.5">
-            {e.allocations.map((a) => {
-              const attested = !!a.approvedById;
-              return (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-1.5 whitespace-nowrap text-xs"
-                  title={
-                    attested
-                      ? t("attest.attestedBy", {
-                          name: a.approvedByName ?? "-",
-                          date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
-                        })
-                      : t("attest.waitingResultUnit", {
-                          resultUnit: a.resultUnit ?? t("attest.noResultUnit"),
-                        })
-                  }
-                >
-                  {/* The slot is kept when it is empty, so a waiting name
+  const columns: Column<Expense>[] = useMemo(
+    () => [
+      picks.column,
+      expenseReferenceColumn(t("col.verification")),
+      expenseTitleColumn(t("col.title"), { reference: false }),
+      expenseDateColumn(t("col.date"), date),
+      expensePaymentTypeColumn(t("col.type"), (type) => tPayment(`${type}.label`)),
+      expenseSubmitterColumn(t("col.submitter"), showOwnOnly),
+      expenseStatusColumn(t("col.status")),
+      {
+        key: "attest",
+        header: t("col.attest"),
+        // Off the phone row. It is a line per allocation (a tick, a name and a
+        // cost centre each) which is a column of its own on a table and cannot
+        // be a clause in a one-line summary. The same thing, laid out for a
+        // narrow screen, is on the utlägg's own page under Fördelning.
+        mobile: "hide",
+        cell: (e) =>
+          e.allocations.length === 0 ? (
+            <span className="text-muted">-</span>
+          ) : (
+            <div className="space-y-0.5">
+              {e.allocations.map((a) => {
+                const attested = !!a.approvedById;
+                return (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-1.5 whitespace-nowrap text-xs"
+                    title={
+                      attested
+                        ? t("attest.attestedBy", {
+                            name: a.approvedByName ?? "-",
+                            date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
+                          })
+                        : t("attest.waitingResultUnit", {
+                            resultUnit: a.resultUnit ?? t("attest.noResultUnit"),
+                          })
+                    }
+                  >
+                    {/* The slot is kept when it is empty, so a waiting name
                       lines up with an attested one under it. */}
-                  <span className="flex size-3.5 shrink-0 items-center justify-center">
-                    {attested && <IconCheck className="size-3.5 text-success" />}
-                  </span>
-                  <span className={attested ? "font-medium" : "text-muted"}>
-                    {attested ? a.approvedByName : (a.resultUnit ?? t("attest.waiting"))}
-                  </span>
-                  {e.allocations.length > 1 && (
-                    <span className="text-muted">{a.costCenterCode}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ),
-    },
-    expenseAmountColumn(t("col.amount")),
-    ...(booking.column ? [booking.column] : []),
-  ], [t, tPayment, showOwnOnly, date, picks.column, booking.column]);
+                    <span className="flex size-3.5 shrink-0 items-center justify-center">
+                      {attested && <IconCheck className="size-3.5 text-success" />}
+                    </span>
+                    <span className={attested ? "font-medium" : "text-muted"}>
+                      {attested ? a.approvedByName : (a.resultUnit ?? t("attest.waiting"))}
+                    </span>
+                    {e.allocations.length > 1 && (
+                      <span className="text-muted">{a.costCenterCode}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ),
+      },
+      expenseAmountColumn(t("col.amount")),
+      ...(booking.column ? [booking.column] : []),
+    ],
+    [t, tPayment, showOwnOnly, date, picks.column, booking.column],
+  );
 
   return (
     <PageShell

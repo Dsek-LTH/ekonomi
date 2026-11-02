@@ -232,13 +232,10 @@ export function NewRentalClient({
     { from: string; to: string; rows: Map<string, Availability> } | undefined
   >(undefined);
 
-  const periodReady =
-    isCompleteDate(pickupAt) && isCompleteDate(returnAt) && returnAt >= pickupAt;
+  const periodReady = isCompleteDate(pickupAt) && isCompleteDate(returnAt) && returnAt >= pickupAt;
 
   const free =
-    periodReady && fetched?.from === pickupAt && fetched.to === returnAt
-      ? fetched.rows
-      : undefined;
+    periodReady && fetched?.from === pickupAt && fetched.to === returnAt ? fetched.rows : undefined;
 
   useEffect(() => {
     if (!periodReady) return;
@@ -513,7 +510,7 @@ export function NewRentalClient({
                       <button
                         type="button"
                         onClick={() => setNewCounterpartyName("")}
-                        className="flex items-center gap-1 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                        className="flex items-center gap-1 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                       >
                         <IconPlus className="size-3.5" />
                         {tc("add")}
@@ -521,7 +518,10 @@ export function NewRentalClient({
                     }
                   >
                     <Combobox
-                      options={counterpartyOptions.map((c) => ({ value: c.id, label: c.name }))}
+                      options={counterpartyOptions.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                      }))}
                       value={counterpartyId ?? ""}
                       onChange={pickCounterparty}
                       allowClear
@@ -538,7 +538,11 @@ export function NewRentalClient({
                       archive: a contract the section may have to enforce over a
                       broken speaker needs somebody it can actually name. */}
                   <Field label={t("rental.renterOrgNo")} requirement="required">
-                    <Input value={orgNo} onChange={(e) => setOrgNo(e.target.value)} maxLength={40} />
+                    <Input
+                      value={orgNo}
+                      onChange={(e) => setOrgNo(e.target.value)}
+                      maxLength={40}
+                    />
                   </Field>
                 </div>
 
@@ -606,7 +610,9 @@ export function NewRentalClient({
                   error={
                     signatureCount === "" || signaturesValid
                       ? undefined
-                      : t("rental.signatureCountInvalid", { max: MAX_SIGNATURES })
+                      : t("rental.signatureCountInvalid", {
+                          max: MAX_SIGNATURES,
+                        })
                   }
                 >
                   <div className="max-w-24">
@@ -644,7 +650,11 @@ export function NewRentalClient({
             {/* Kept, and optional. The villkor say the gear must be used "på
                 det sätt den är avsedd för", and that clause needs something to
                 point at. */}
-            <Field label={t("rental.purpose")} hint={t("rental.purposeHint")} requirement="required">
+            <Field
+              label={t("rental.purpose")}
+              hint={t("rental.purposeHint")}
+              requirement="required"
+            >
               <Input value={purpose} onChange={(e) => setPurpose(e.target.value)} maxLength={500} />
             </Field>
           </CardBody>
@@ -734,7 +744,7 @@ export function NewRentalClient({
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      className="text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                      className="text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                       onClick={lendFree}
                     >
                       {t("rental.lendFree")}
@@ -743,7 +753,6 @@ export function NewRentalClient({
                 )}
               </div>
             </div>
-
           </CardBody>
         </Card>
 

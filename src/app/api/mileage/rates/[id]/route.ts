@@ -18,7 +18,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const existing = await prisma.mileageRate.findUnique({ where: { id } });
   if (!existing) return fail(404, "mileage.rateNotFound");
 
-  const clash = await prisma.mileageRate.findUnique({ where: { validFrom: new Date(validFrom) } });
+  const clash = await prisma.mileageRate.findUnique({
+    where: { validFrom: new Date(validFrom) },
+  });
   if (clash && clash.id !== id) {
     return fail(409, "mileage.rateExists", { values: { date: validFrom } });
   }

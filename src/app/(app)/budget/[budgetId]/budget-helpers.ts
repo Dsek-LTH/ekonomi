@@ -43,7 +43,8 @@ export const resultUnitOfSheet = (s: { key: string; resultUnit: string | null })
 export function prettyFormula(formulaText: string): string {
   const s = formulaText.trim();
   if (!s.startsWith("=")) return s;
-  return s.slice(1)
+  return s
+    .slice(1)
     .replace(/\*/g, " × ")
     .replace(/\//g, " ÷ ")
     .replace(/\+/g, " + ")
@@ -64,7 +65,10 @@ function normalizeMul(s: string): string {
       // A number or ")" on the left, and a number, "(" or a variable on the
       // right → this 'x' is multiplication. Never convert after a letter, so
       // identifiers like MAXx stay intact.
-      if (/[\d)]/.test(prev) && /[\d(A-Za-z_]/.test(next)) { out += "*"; continue; }
+      if (/[\d)]/.test(prev) && /[\d(A-Za-z_]/.test(next)) {
+        out += "*";
+        continue;
+      }
     }
     out += c;
   }
@@ -83,7 +87,8 @@ export function normalizeFormula(raw: string): string {
   // no spaces around arithmetic operators (but keep commas, so account(CC, ACCT)
   // tokens round-trip). This keeps a focus→blur with no edit a true no-op.
   const body = normalizeMul(lead ? s.slice(1) : s)
-    .replace(/×/g, "*").replace(/÷/g, "/")
+    .replace(/×/g, "*")
+    .replace(/÷/g, "/")
     .replace(/\s*([*/+\-()])\s*/g, "$1")
     .trim();
   if (lead) return "=" + body;
@@ -154,10 +159,12 @@ export const fmtScalar = (n: number | undefined) =>
 // figures. Anything involving a comparison goes through `sheetTotals` in
 // lib/budget/compare.ts, which counts the other side's rows as well.
 export function ccTotals(cc: BudgetCC, ev: Evaluated | undefined): Totals {
-  let income = 0, cost = 0;
+  let income = 0,
+    cost = 0;
   for (const a of cc.accounts) {
     const t = ev?.accounts[`${sheetKey(cc)}:${a.accountCode}`] ?? 0;
-    if (effectiveKind(a.accountCode) === "INCOME") income += t; else cost += t;
+    if (effectiveKind(a.accountCode) === "INCOME") income += t;
+    else cost += t;
   }
   return { income, cost, result: income - cost };
 }
@@ -225,13 +232,20 @@ export function changeImpactBySheet(budget: Budget): Map<string, number> {
 // Bucket by result unit, preserving the incoming order of both the buckets and
 // their contents. Shared by the sidebar (which groups cost centres) and the
 // Rambudget table (which groups pre-totalled rows), hence the accessor.
-export function groupByResultUnit<T>(items: T[], resultUnitOf: (x: T) => string | null): { resultUnit: string; items: T[] }[] {
+export function groupByResultUnit<T>(
+  items: T[],
+  resultUnitOf: (x: T) => string | null,
+): { resultUnit: string; items: T[] }[] {
   const groups: { resultUnit: string; items: T[] }[] = [];
   const byName = new Map<string, T[]>();
   for (const it of items) {
     const com = resultUnitOf(it) || OTHER;
     let bucket = byName.get(com);
-    if (!bucket) { bucket = []; byName.set(com, bucket); groups.push({ resultUnit: com, items: bucket }); }
+    if (!bucket) {
+      bucket = [];
+      byName.set(com, bucket);
+      groups.push({ resultUnit: com, items: bucket });
+    }
     bucket.push(it);
   }
   return groups;

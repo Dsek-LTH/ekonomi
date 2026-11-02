@@ -34,7 +34,13 @@ export function BottleLevels({
 
   if (kind === "UNIT") {
     return (
-      <span className={cn("tabular-nums", big ? "text-2xl font-semibold" : "", sealed === 0 && "text-muted")}>
+      <span
+        className={cn(
+          "tabular-nums",
+          big ? "text-2xl font-semibold" : "",
+          sealed === 0 && "text-muted",
+        )}
+      >
         {t("holding.unit", { units: sealed })}
       </span>
     );
@@ -50,7 +56,9 @@ export function BottleLevels({
     <span role="img" aria-label={label} title={label} className="inline-flex items-center gap-1.5">
       <span className={cn("inline-flex items-center gap-0.5", sealed === 0 && "opacity-40")}>
         <Bottle level={100} big={big} />
-        <span className={cn("tabular-nums", big ? "text-2xl font-semibold leading-none" : "text-sm")}>
+        <span
+          className={cn("tabular-nums", big ? "text-2xl font-semibold leading-none" : "text-sm")}
+        >
           {sealed}
         </span>
       </span>

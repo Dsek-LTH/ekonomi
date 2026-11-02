@@ -77,9 +77,7 @@ export function displayStatus(
  * as long as the contract exists: an archive whose labels freeze the moment a
  * document is signed keeps its first reader's typos forever.
  */
-export function canEditRental(contract: {
-  files: readonly { role: ContractFileRole }[];
-}): boolean {
+export function canEditRental(contract: { files: readonly { role: ContractFileRole }[] }): boolean {
   return !contract.files.some((f) => isSigned(f.role) || isImmutable(f.role));
 }
 

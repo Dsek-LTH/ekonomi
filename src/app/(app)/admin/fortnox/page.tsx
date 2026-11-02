@@ -7,20 +7,24 @@ import { getFortnoxStatus, getFortnoxSyncStatus, getSupplierSyncStatus } from "@
 import { getProjectSyncStatus } from "@/lib/data/projects";
 import { getLedgerYears } from "@/lib/ledger";
 import { FortnoxClient } from "./fortnox-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("fortnox");
 
 export default async function AdminFortnoxPage() {
   const user = await requirePage(canAccessSettings);
 
-  const [fortnox, accounts, settings, ledgerYears, costCenters, projects, suppliers, lastSync] = await Promise.all([
-    getFortnoxStatus(user.id),
-    getAccounts(),
-    getBookkeepingSettings(),
-    getLedgerYears(),
-    getCostCenterSyncStatus(),
-    getProjectSyncStatus(),
-    getSupplierSyncStatus(),
-    getFortnoxSyncStatus(),
-  ]);
+  const [fortnox, accounts, settings, ledgerYears, costCenters, projects, suppliers, lastSync] =
+    await Promise.all([
+      getFortnoxStatus(user.id),
+      getAccounts(),
+      getBookkeepingSettings(),
+      getLedgerYears(),
+      getCostCenterSyncStatus(),
+      getProjectSyncStatus(),
+      getSupplierSyncStatus(),
+      getFortnoxSyncStatus(),
+    ]);
 
   return (
     <PageShell title="Fortnox">

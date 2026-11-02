@@ -25,7 +25,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // columnValues: { [columnId]: string }: merged into the line's `values` JSON
   // (empty string clears that column's cell).
   if (body.columnValues) {
-    const cur = await prisma.budgetLineItem.findUnique({ where: { id }, select: { values: true } });
+    const cur = await prisma.budgetLineItem.findUnique({
+      where: { id },
+      select: { values: true },
+    });
     const merged: Record<string, string> = { ...(cur?.values as Record<string, string>) };
     for (const [k, v] of Object.entries(body.columnValues)) {
       if (v.trim() === "") delete merged[k];

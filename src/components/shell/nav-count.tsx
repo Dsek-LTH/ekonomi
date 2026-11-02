@@ -35,7 +35,9 @@ export function NavCount({
           ? "h-4 min-w-4 bg-foreground text-[10px] text-background"
           : cn(
               "h-[18px] min-w-[18px] text-[11px]",
-              alert ? "action-fill text-white" : cn("text-muted", active ? "bg-background" : "bg-surface"),
+              alert
+                ? "action-fill text-white"
+                : cn("text-muted", active ? "bg-background" : "bg-surface"),
             ),
         className,
       )}

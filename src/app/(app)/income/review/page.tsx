@@ -7,6 +7,9 @@ import { requirePage } from "@/lib/server/current-user";
 
 import IncomeReviewClient from "../review-client";
 import { loadReviewContext } from "../review-context";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("incomeReview");
 
 export default async function IncomeReviewPage({
   searchParams,

@@ -30,7 +30,10 @@ export type {
 export type Budget = BudgetPayload & { evaluated: Evaluated };
 
 // A buffered new-row / variable draft.
-export interface Draft { description: string; expression: string }
+export interface Draft {
+  description: string;
+  expression: string;
+}
 
 /**
  * What has been copied, and what it was. Ids rather than contents: the server
@@ -67,18 +70,34 @@ export type ApiFn = (
 // The page's `useMutation().mutate`, as the sheets need it: the shared write
 // path, so a rejected cell edit reports the server's reason the same way every
 // other write in the app does.
-export type MutateFn = ReturnType<typeof import("@/components/shell/use-mutation").useMutation>["mutate"];
+export type MutateFn = ReturnType<
+  typeof import("@/components/shell/use-mutation").useMutation
+>["mutate"];
 
 export interface CellArgs {
-  id: string; field: string; actual: string; className?: string; placeholder?: string; mono?: boolean;
-  url: string; payload: (v: string) => Record<string, unknown>;
+  id: string;
+  field: string;
+  actual: string;
+  className?: string;
+  placeholder?: string;
+  mono?: boolean;
+  url: string;
+  payload: (v: string) => Record<string, unknown>;
   gated?: boolean; // budget-sheet cell: navigable + read-only until edit mode
 }
 export type CellFn = (a: CellArgs) => ReactNode;
 
 export interface FormulaArgs {
-  id: string; field: string; raw: string; computed: number | undefined; sheet: string;
-  bad?: boolean; placeholder?: string; url: string; payload: (v: string) => Record<string, unknown>; className?: string;
+  id: string;
+  field: string;
+  raw: string;
+  computed: number | undefined;
+  sheet: string;
+  bad?: boolean;
+  placeholder?: string;
+  url: string;
+  payload: (v: string) => Record<string, unknown>;
+  className?: string;
   // "value" (default): show the evaluated value when idle, formula on focus.
   // "formula": always show the formula (used where a separate value column exists).
   display?: "value" | "formula";

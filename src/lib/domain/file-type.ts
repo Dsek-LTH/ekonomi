@@ -18,12 +18,7 @@
  * actually recognised. An array would be a second list to keep in step.
  */
 type ReceiptType =
-  | "image/jpeg"
-  | "image/png"
-  | "image/webp"
-  | "image/heic"
-  | "image/heif"
-  | "application/pdf";
+  "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif" | "application/pdf";
 
 /** Bytes needed to recognise any of the formats above (HEIC's brand ends at 12). */
 export const SNIFF_BYTES = 12;

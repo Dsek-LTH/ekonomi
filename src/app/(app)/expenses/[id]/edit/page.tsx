@@ -9,16 +9,15 @@ import { isEditable } from "@/lib/domain/status";
 import { getMileageRates } from "@/lib/mileage/store";
 import NewExpenseClient from "../../new/new-client";
 import MileageClient from "../../new/mileage/mileage-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("editExpense");
 
 // Editing reuses the form the utlägg was made on, pre-filled from it: the
 // wizard for a purchase, the mileage form for a milersättning. Which one is not
 // a preference: the two describe different things, and the wizard has no way
 // to ask for odometer readings or to leave the amount alone.
-export default async function EditExpensePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser();
 

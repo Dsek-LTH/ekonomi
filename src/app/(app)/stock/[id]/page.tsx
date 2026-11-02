@@ -10,12 +10,11 @@ import {
 } from "@/lib/data/stock";
 import { tagsInUse } from "@/lib/stock/tags";
 import StockProductClient from "./product-client";
+import { titled } from "@/lib/server/page-title";
 
-export default async function StockProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export const generateMetadata = titled("product");
+
+export default async function StockProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePage(canViewStock);
 

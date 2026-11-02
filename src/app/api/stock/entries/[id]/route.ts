@@ -85,7 +85,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },
-    select: { id: true, kind: true, category: true, unitMl: true, nominalMl: true, costPriceOre: true },
+    select: {
+      id: true,
+      kind: true,
+      category: true,
+      unitMl: true,
+      nominalMl: true,
+      costPriceOre: true,
+    },
   });
   if (!product) return fail(404, "stock.productNotFound");
 
@@ -155,7 +162,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },
-    select: { id: true, kind: true, category: true, unitMl: true, nominalMl: true, costPriceOre: true },
+    select: {
+      id: true,
+      kind: true,
+      category: true,
+      unitMl: true,
+      nominalMl: true,
+      costPriceOre: true,
+    },
   });
   if (!product) return fail(404, "stock.productNotFound");
 

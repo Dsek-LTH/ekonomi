@@ -44,7 +44,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   if (unit.id === doc.resultUnitId) {
     const result = await commit(async () =>
-      applied(await prisma.supplierInvoiceDocument.updateMany({ where, data: due }), "supplierInvoice.changedMeanwhile"),
+      applied(
+        await prisma.supplierInvoiceDocument.updateMany({ where, data: due }),
+        "supplierInvoice.changedMeanwhile",
+      ),
     );
     if (result instanceof Response) return result;
     return new Response(null, { status: 204 });
@@ -77,7 +80,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           {
             id: doc.id,
             title: cleanSubject(doc.inboundMail?.subject) ?? null,
-            dueDate: dueDate === undefined ? doc.dueDate : due.dueDate ?? null,
+            dueDate: dueDate === undefined ? doc.dueDate : (due.dueDate ?? null),
           },
           { actor: g.actor.name, unit: unit.name },
         ),

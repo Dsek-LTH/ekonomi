@@ -3,6 +3,9 @@ import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
 import { getBalanceAccounts } from "@/lib/data/closing-checklist";
 import AccountsClient from "./accounts-client";
 import { NoClosingYear, getOpenClosingYear } from "../year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("closingAccounts");
 
 // The year's balance accounts, each marked as reconciled in Fortnox or not.
 // The reconciliation is Fortnox's job; this is the record that it was done.

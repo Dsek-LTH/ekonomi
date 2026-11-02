@@ -5,12 +5,11 @@ import { contractScopeOf } from "@/lib/data/contract-scope";
 import { getContract } from "@/lib/data/contracts";
 import { today } from "@/lib/domain/date";
 import { ContractClient } from "./contract-client";
+import { titled } from "@/lib/server/page-title";
 
-export default async function ContractPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export const generateMetadata = titled("contract");
+
+export default async function ContractPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePage(canViewRentals);
 

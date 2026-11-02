@@ -33,9 +33,9 @@ describe("rentalState", () => {
   });
 
   it("stops being overdue once it is back, even if it came back late", () => {
-    expect(
-      rentalState(rental({ returnAt: "2026-09-01", returnedAt: "2026-09-05" }), TODAY),
-    ).toBe("AWAITING_CHECK");
+    expect(rentalState(rental({ returnAt: "2026-09-01", returnedAt: "2026-09-05" }), TODAY)).toBe(
+      "AWAITING_CHECK",
+    );
   });
 
   it("waits for the check before it is closed", () => {
@@ -47,8 +47,8 @@ describe("rentalState", () => {
   it("closes once it has been checked, which is the last thing anybody does", () => {
     // The deposit used to hold a checked rental open until it went back. The
     // section has never taken one, so accepting the gear is now the end of it.
-    expect(
-      rentalState(rental({ returnedAt: "2026-09-04", checkedAt: "2026-09-05" }), TODAY),
-    ).toBe("CLOSED");
+    expect(rentalState(rental({ returnedAt: "2026-09-04", checkedAt: "2026-09-05" }), TODAY)).toBe(
+      "CLOSED",
+    );
   });
 });

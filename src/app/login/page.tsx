@@ -1,9 +1,23 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
 import { getDevUsers } from "./dev-users";
 import { LoginClient } from "./login-client";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
+
+// The one public page, so the one page that asks to be indexed. The canonical
+// drops ?callbackUrl and ?error, so every variant counts as the same page.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("login");
+  return {
+    title: { absolute: t("title") },
+    description: t("seoDescription"),
+    alternates: { canonical: "/login" },
+    robots: { index: true, follow: false },
+  };
+}
 
 /**
  * A path on this site, or the dashboard. Only a single leading slash passes:
@@ -11,9 +25,7 @@ type SearchParams = { [key: string]: string | string[] | undefined };
  */
 function localPath(value: string | string[] | undefined): string {
   const v = Array.isArray(value) ? value[0] : value;
-  return v && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\")
-    ? v
-    : "/dashboard";
+  return v && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") ? v : "/dashboard";
 }
 
 // Auth.js sends a refused sign-in back here as `?error=<type>`. Only two of its
@@ -26,11 +38,7 @@ function errorKey(value: string | string[] | undefined) {
   return "failed";
 }
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const callbackUrl = localPath(params.callbackUrl);
 

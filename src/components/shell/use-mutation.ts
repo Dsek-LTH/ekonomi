@@ -79,8 +79,16 @@ export function useMutation() {
       url: string,
       opts: MutateOptions = {},
     ): Promise<T | null> => {
-      const { key = url, method = "POST", body, contentType, error, success, refresh = true, onError } =
-        opts;
+      const {
+        key = url,
+        method = "POST",
+        body,
+        contentType,
+        error,
+        success,
+        refresh = true,
+        onError,
+      } = opts;
       const raw = isRawBody(body);
       const type = raw ? contentType : body === undefined ? undefined : "application/json";
       setPending(key);

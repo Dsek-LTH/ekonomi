@@ -54,9 +54,7 @@ export default function AppError({
       {/* The one string worth showing: it is what lets someone say *which*
           failure they hit, and it means nothing without the server log. */}
       {error.digest && (
-        <p className="text-center text-xs text-muted">
-          {t("digest", { digest: error.digest })}
-        </p>
+        <p className="text-center text-xs text-muted">{t("digest", { digest: error.digest })}</p>
       )}
     </div>
   );

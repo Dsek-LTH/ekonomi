@@ -16,7 +16,11 @@ const line = (over: Partial<StoredLine> = {}): StoredLine => ({
 
 describe("distributionsFor", () => {
   it("sums lines sharing an account", () => {
-    const got = distributionsFor([line(), line(), line({ account: "3011", accountName: "Öl", total: 5000 })]);
+    const got = distributionsFor([
+      line(),
+      line(),
+      line({ account: "3011", accountName: "Öl", total: 5000 }),
+    ]);
 
     expect(got).toEqual([
       { account: "3000", description: "Försäljning inom Sverige", total: 2600 },
@@ -39,11 +43,16 @@ describe("distributionsFor", () => {
     // More refunded than sold against an account. It still has to reach the
     // voucher (as a debit row) or the voucher would not balance.
     const got = distributionsFor([line({ total: 1300 }), line({ total: -2000 })]);
-    expect(got).toEqual([{ account: "3000", description: "Försäljning inom Sverige", total: -700 }]);
+    expect(got).toEqual([
+      { account: "3000", description: "Försäljning inom Sverige", total: -700 },
+    ]);
   });
 
   it("sums to the same total as the lines", () => {
-    const lines = [line({ total: 1300 }), line({ account: "3011", accountName: "Öl", total: 5000 })];
+    const lines = [
+      line({ total: 1300 }),
+      line({ account: "3011", accountName: "Öl", total: 5000 }),
+    ];
     const distributed = distributionsFor(lines).reduce((s, d) => s + d.total, 0);
     expect(distributed).toBe(lines.reduce((s, l) => s + l.total, 0));
   });
@@ -90,7 +99,16 @@ describe("toFeeReportDto", () => {
       date: new Date("2026-01-02T00:00:00.000Z"),
       total: 4200,
       resultUnit: null,
-      lines: [line({ name: "Zettle fee", account: "6570", accountName: "Bankkostnader", quantity: 7, unitPrice: 600, total: 4200 })],
+      lines: [
+        line({
+          name: "Zettle fee",
+          account: "6570",
+          accountName: "Bankkostnader",
+          quantity: 7,
+          unitPrice: 600,
+          total: 4200,
+        }),
+      ],
     });
 
     expect(dto.key).toBe("avgift-2026-01-02");

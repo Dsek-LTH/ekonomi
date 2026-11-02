@@ -8,7 +8,15 @@
 // as long as a guide runs, so a stray click cannot submit or delete anything.
 // A guide stays on its page: nothing in one navigates, and the reader leaving
 // (Back, say) ends it. The only thing it opens is a menu, to show what is in it.
-import { createContext, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -87,7 +95,11 @@ export function placeCard(
   const clamp = (v: number, max: number) => Math.max(EDGE, Math.min(v, max));
   const maxLeft = view.width - EDGE - card.width;
   const maxTop = view.height - EDGE - card.height;
-  if (!spot) return { top: clamp((view.height - card.height) / 2, maxTop), left: clamp((view.width - card.width) / 2, maxLeft) };
+  if (!spot)
+    return {
+      top: clamp((view.height - card.height) / 2, maxTop),
+      left: clamp((view.width - card.width) / 2, maxLeft),
+    };
 
   const below = spot.top + spot.height + GAP;
   const above = spot.top - GAP - card.height;
@@ -192,7 +204,8 @@ export function GuideProvider({
     const theirs = guide.steps.filter((s) => (s.visible?.(user) ?? true) && present(s));
     const steps = asked ? theirs : theirs.filter((s) => !seen.has(guideStepId(guide, s)));
     if (steps.length === 0) return;
-    returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    returnFocus.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setReady(null);
     setRun({
       guide,
@@ -253,7 +266,14 @@ export function GuideProvider({
 
   const step = run?.steps[run.index];
   // A step with a target shows once it is found, one without at once.
-  const shown = !run || !step ? null : !step.target ? { target: null } : ready?.index === run.index ? ready : null;
+  const shown =
+    !run || !step
+      ? null
+      : !step.target
+        ? { target: null }
+        : ready?.index === run.index
+          ? ready
+          : null;
   const hold: GuideHold = step?.opens ? (phone ? "phone-menu" : step.opens) : null;
 
   return (
@@ -294,7 +314,10 @@ function GuideLayer({
   // Only ever drawn in the browser (a portal, opened by a guide starting), so
   // the window is there to start from.
   const [size, setSize] = useState({ width: 320, height: 180 });
-  const [view, setView] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  const [view, setView] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
   // The lit box, and which control it was measured for. One box for the whole
   // guide, never taken down between steps, so it can slide from one control
   // to the next. A card in the middle shrinks it to a point there. It starts
@@ -317,7 +340,12 @@ function GuideLayer({
       if (target !== undefined) {
         const r = target?.getBoundingClientRect();
         const box = r
-          ? { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 }
+          ? {
+              top: r.top - PAD,
+              left: r.left - PAD,
+              width: r.width + PAD * 2,
+              height: r.height + PAD * 2,
+            }
           : centre(window.innerWidth, window.innerHeight);
         setSpot((s) => (s.for === target && same(s.box, box) ? s : { box, for: target }));
       }
@@ -408,7 +436,9 @@ function GuideLayer({
             : "opacity-0",
         )}
       >
-        <p className="text-xs text-muted">{t(run.fresh ? "progressNew" : "progress", { n: run.index + 1, total })}</p>
+        <p className="text-xs text-muted">
+          {t(run.fresh ? "progressNew" : "progress", { n: run.index + 1, total })}
+        </p>
         <h2 id="guide-title" className="mt-1 text-base font-semibold">
           {t(`${run.guide.id}.${step.key}.title`)}
         </h2>
@@ -437,4 +467,9 @@ function GuideLayer({
 }
 
 /** The lit box for a card in the middle: a point at the window's centre. */
-const centre = (width: number, height: number): Box => ({ top: height / 2, left: width / 2, width: 0, height: 0 });
+const centre = (width: number, height: number): Box => ({
+  top: height / 2,
+  left: width / 2,
+  width: 0,
+  height: 0,
+});

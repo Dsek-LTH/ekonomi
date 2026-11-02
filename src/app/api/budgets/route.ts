@@ -39,7 +39,10 @@ export async function POST(req: Request) {
 
   // Fail before creating anything if the chosen source is gone.
   if (copyFromId) {
-    const source = await prisma.budget.findUnique({ where: { id: copyFromId }, select: { id: true } });
+    const source = await prisma.budget.findUnique({
+      where: { id: copyFromId },
+      select: { id: true },
+    });
     if (!source) return fail(404, "budget.sourceNotFound");
   }
 

@@ -40,7 +40,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   // All of them, once each. A partial list would leave the rest wherever
   // their old positions happen to fall among the new ones.
   const have = new Set(expense.receipts.map((r) => r.id));
-  if (ids.length !== have.size || new Set(ids).size !== ids.length || ids.some((id) => !have.has(id))) {
+  if (
+    ids.length !== have.size ||
+    new Set(ids).size !== ids.length ||
+    ids.some((id) => !have.has(id))
+  ) {
     return fail(422, "receipt.orderMismatch");
   }
 

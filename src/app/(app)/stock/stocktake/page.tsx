@@ -3,6 +3,9 @@ import { canManageStock } from "@/lib/domain/permissions";
 import { getStockLevels } from "@/lib/data/stock";
 import { today } from "@/lib/domain/date";
 import StocktakeClient from "./stocktake-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stocktake");
 
 // Gated on managing rather than viewing, like the delivery sheet beside it:
 // the page is nothing but a way of writing to the log.

@@ -11,6 +11,9 @@ import { incomeSetupSteps } from "@/lib/income/setup";
 import { requirePage } from "@/lib/server/current-user";
 
 import { IncomeSettingsClient } from "./income-settings-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("salesSettings");
 
 // Inställningar → Försäljning: everything income needs, on one page and in the
 // order it is set up. See income-settings-client.tsx.
@@ -29,7 +32,9 @@ export default async function AdminIncomePage() {
   // the accounts, so a retired one still shows as what it is rather than as an
   // empty picker.
   const assigned = [
-    ...resultUnits.flatMap((u) => (u.income?.defaultCostCenterCode ? [u.income.defaultCostCenterCode] : [])),
+    ...resultUnits.flatMap((u) =>
+      u.income?.defaultCostCenterCode ? [u.income.defaultCostCenterCode] : [],
+    ),
     ...(config.settings.zettleFeeCostCenterCode ? [config.settings.zettleFeeCostCenterCode] : []),
   ];
   const { zettleClearingAccount, swishClearingAccount, zettleFeeAccount } = config.settings;

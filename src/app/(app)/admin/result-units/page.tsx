@@ -5,6 +5,9 @@ import { canAccessSettings } from "@/lib/domain/permissions";
 import { getResultUnits, getUnassignedCostCenters } from "@/lib/data/result-units";
 import { intaktConfigured } from "@/lib/income/client";
 import { ResultUnitsClient } from "./result-units-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("resultUnits");
 
 export default async function AdminResultUnitsPage() {
   await requirePage(canAccessSettings);
@@ -16,9 +19,7 @@ export default async function AdminResultUnitsPage() {
   ]);
 
   return (
-    <PageShell
-      title={t("title")}
-    >
+    <PageShell title={t("title")}>
       <ResultUnitsClient
         resultUnits={resultUnits}
         unassigned={unassigned}

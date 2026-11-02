@@ -63,7 +63,9 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * financial year can begin or end inside a month, so the first and last are
  * clipped to the year rather than assumed to be whole.
  */
-function monthsOf(year: LedgerYear): { key: string; from: string; to: string; index: number; y: number }[] {
+function monthsOf(
+  year: LedgerYear,
+): { key: string; from: string; to: string; index: number; y: number }[] {
   const out: { key: string; from: string; to: string; index: number; y: number }[] = [];
   const start = new Date(`${year.fromDate}T00:00:00Z`);
   const end = new Date(`${year.toDate}T00:00:00Z`);
@@ -205,44 +207,51 @@ export default function LedgerClient({
    * The trend fetch below has no such echo, which is exactly why it is
    * declarative and this is not.
    */
-  const load = useCallback(async (q: QueryState) => {
-    const id = ++latest.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ kind: q.kind, group: q.group, compare: q.compare });
-      if (q.year != null) params.set("year", String(q.year));
-      if (q.from) params.set("from", q.from);
-      if (q.to) params.set("to", q.to);
-      // Absent means every cost centre; an empty one means the rows carrying none.
-      for (const cc of q.costCenters) params.append("costCenter", cc);
-      if (q.budget) params.set("budget", q.budget);
-      if (q.prior) params.set("prior", "1");
-      const res = await fetch(`/api/ledger/report?${params.toString()}`);
-      const json = await res.json();
-      if (id !== latest.current) return;
-      // Through resolveApiError, not `json.error` raw: that field carries a
-      // message *code*, and printing it put "auth.signedOut" on screen.
-      if (!res.ok) throw new Error(resolveApiError(tAll, json) ?? t("loadFailed"));
-      setData(json);
-      // The server clamps the period to the financial year and picks a default
-      // one, so the controls follow what it actually reported on.
-      setQuery((cur) => ({
-        ...cur,
-        year: json.year?.id ?? null,
-        from: json.period?.from ?? null,
-        to: json.period?.to ?? null,
-        // The server resolves which budget was used (the locked one unless
-        // asked otherwise), so the picker shows what was compared.
-        budget: json.budget ?? null,
-      }));
-    } catch (e) {
-      if (id !== latest.current) return;
-      setError(e instanceof Error ? e.message : tCommon("error.network"));
-    } finally {
-      if (id === latest.current) setLoading(false);
-    }
-  }, [t, tAll, tCommon]);
+  const load = useCallback(
+    async (q: QueryState) => {
+      const id = ++latest.current;
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          kind: q.kind,
+          group: q.group,
+          compare: q.compare,
+        });
+        if (q.year != null) params.set("year", String(q.year));
+        if (q.from) params.set("from", q.from);
+        if (q.to) params.set("to", q.to);
+        // Absent means every cost centre; an empty one means the rows carrying none.
+        for (const cc of q.costCenters) params.append("costCenter", cc);
+        if (q.budget) params.set("budget", q.budget);
+        if (q.prior) params.set("prior", "1");
+        const res = await fetch(`/api/ledger/report?${params.toString()}`);
+        const json = await res.json();
+        if (id !== latest.current) return;
+        // Through resolveApiError, not `json.error` raw: that field carries a
+        // message *code*, and printing it put "auth.signedOut" on screen.
+        if (!res.ok) throw new Error(resolveApiError(tAll, json) ?? t("loadFailed"));
+        setData(json);
+        // The server clamps the period to the financial year and picks a default
+        // one, so the controls follow what it actually reported on.
+        setQuery((cur) => ({
+          ...cur,
+          year: json.year?.id ?? null,
+          from: json.period?.from ?? null,
+          to: json.period?.to ?? null,
+          // The server resolves which budget was used (the locked one unless
+          // asked otherwise), so the picker shows what was compared.
+          budget: json.budget ?? null,
+        }));
+      } catch (e) {
+        if (id !== latest.current) return;
+        setError(e instanceof Error ? e.message : tCommon("error.network"));
+      } finally {
+        if (id === latest.current) setLoading(false);
+      }
+    },
+    [t, tAll, tCommon],
+  );
 
   /**
    * The same period, cut for the charts. See /api/ledger/trend.
@@ -506,7 +515,10 @@ export default function LedgerClient({
       t,
     });
     const stamp = `${query.from ?? ""}--${query.to ?? ""}`;
-    downloadCsv(`${t("csv.filename")}-${t(isBalance ? "csv.balance" : "csv.result")}-${stamp}.csv`, csv);
+    downloadCsv(
+      `${t("csv.filename")}-${t(isBalance ? "csv.balance" : "csv.result")}-${stamp}.csv`,
+      csv,
+    );
   }
 
   /**
@@ -527,9 +539,7 @@ export default function LedgerClient({
   // The comparison clause is dropped on the charts unless it is a budget: a
   // prior-year column is a real thing about the report and nothing the charts
   // draw, so naming it here would describe a screen nobody is looking at.
-  const summaryComparison = charting
-    ? data?.comparison === "BUDGET"
-    : showComparison;
+  const summaryComparison = charting ? data?.comparison === "BUDGET" : showComparison;
 
   return (
     <PageShell title={t("title")}>
@@ -559,13 +569,13 @@ export default function LedgerClient({
           "print:block print:h-auto!",
         )}
       >
-      {hasPanel && (
-        // Its own scroll only if the window is too short for every parameter.
-        <aside
-          data-tour="ledger-params"
-          className="mb-5 lg:mb-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:hidden"
-        >
-          {/* The panel's toolbar: what the settings below produce. The same
+        {hasPanel && (
+          // Its own scroll only if the window is too short for every parameter.
+          <aside
+            data-tour="ledger-params"
+            className="mb-5 lg:mb-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:hidden"
+          >
+            {/* The panel's toolbar: what the settings below produce. The same
               period as a table or as charts, and the file to take away. Here
               rather than on a strip of PageShell's own above the report: that
               strip held one toggle at its far end and was a band of empty
@@ -580,203 +590,213 @@ export default function LedgerClient({
               as PDF" is the destination; the printout below is laid out for
               exactly that. CSV is the table's rows, so it is offered with the
               table only. */}
-          <div className="mb-3 flex items-center justify-between gap-3" data-tour="ledger-tools">
-            <Menu
-              label={t("export")}
-              icon={<IconDownload className="size-4" />}
-              variant="secondary"
-              size="sm"
-              align="start"
-            >
-              <MenuItem onClick={() => window.print()}>{t("exportPdf")}</MenuItem>
-              {!charting && report && report.groups.length > 0 && (
-                <MenuItem onClick={exportCsv}>{t("exportCsvExcel")}</MenuItem>
-              )}
-            </Menu>
-            <div className={cn(isBalance && "invisible")} inert={isBalance}>
-              <ViewToggle
-                aria-label={t("charts.view")}
-                value={mode}
-                options={[
-                  { value: "TABLE", label: t("charts.table"), icon: IconViewTable },
-                  { value: "CHART", label: t("charts.diagram"), icon: IconChart },
-                ]}
-                onChange={setMode}
-              />
+            <div className="mb-3 flex items-center justify-between gap-3" data-tour="ledger-tools">
+              <Menu
+                label={t("export")}
+                icon={<IconDownload className="size-4" />}
+                variant="secondary"
+                size="sm"
+                align="start"
+              >
+                <MenuItem onClick={() => window.print()}>{t("exportPdf")}</MenuItem>
+                {!charting && report && report.groups.length > 0 && (
+                  <MenuItem onClick={exportCsv}>{t("exportCsvExcel")}</MenuItem>
+                )}
+              </Menu>
+              <div className={cn(isBalance && "invisible")} inert={isBalance}>
+                <ViewToggle
+                  aria-label={t("charts.view")}
+                  value={mode}
+                  options={[
+                    {
+                      value: "TABLE",
+                      label: t("charts.table"),
+                      icon: IconViewTable,
+                    },
+                    {
+                      value: "CHART",
+                      label: t("charts.diagram"),
+                      icon: IconChart,
+                    },
+                  ]}
+                  onChange={setMode}
+                />
+              </div>
             </div>
-          </div>
-          {charting ? (
-            <ChartParameters
-              query={query}
-              onQuery={update}
-              costCenters={costCenters}
-              budgets={data.budgets}
-              synced={syncedNote}
-              period={period}
-            />
-          ) : (
-            <ReportParameters
-              query={query}
-              onQuery={update}
-              costCenters={costCenters}
-              budgets={data.budgets}
-              diff={view.diff}
-              onDiff={(diff) => setView((v) => ({ ...v, diff }))}
-              columns={columns}
-              onColumns={changeColumns}
-              synced={syncedNote}
-              period={period}
-            />
-          )}
-        </aside>
-      )}
+            {charting ? (
+              <ChartParameters
+                query={query}
+                onQuery={update}
+                costCenters={costCenters}
+                budgets={data.budgets}
+                synced={syncedNote}
+                period={period}
+              />
+            ) : (
+              <ReportParameters
+                query={query}
+                onQuery={update}
+                costCenters={costCenters}
+                budgets={data.budgets}
+                diff={view.diff}
+                onDiff={(diff) => setView((v) => ({ ...v, diff }))}
+                columns={columns}
+                onColumns={changeColumns}
+                synced={syncedNote}
+                period={period}
+              />
+            )}
+          </aside>
+        )}
 
-      {/* A column that hands its leftover height to the report's scrollport.
+        {/* A column that hands its leftover height to the report's scrollport.
           `overflow-y-auto` is only a fallback: the charts are not a scrollport
           of their own, and a tall chart view still has to be reachable. */}
-      <div className="min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto print:block print:overflow-visible">
-      {error ? (
-        <EmptyState title={t("loadFailed")} description={error} />
-      ) : loading ? (
-        // Changing a parameter re-queries the whole report, which is the slowest
-        // fetch in the app. While it runs, the report's own skeleton stands in
-        // its scrollport: same columns, same headings, rows to come. The charts
-        // have no columns to borrow and keep the generic sheet.
-        charting ? (
-          <SkeletonSheet rows={14} columns={5} />
-        ) : (
-          <div
-            className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
-            style={reportSurfaceVars(reportColumns(shape))}
-          >
-            <ReportScroller className="min-h-0 flex-1">
-              <ReportSkeleton shape={shape} />
-            </ReportScroller>
-          </div>
-        )
-      ) : !data?.years.length ? (
-        <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
-      ) : (
-        <div
-          className="space-y-5 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
-          style={reportSurfaceVars(reportColumns(shape))}
-        >
-          {/* On paper the panel is gone, so this is the only thing
+        <div className="min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto print:block print:overflow-visible">
+          {error ? (
+            <EmptyState title={t("loadFailed")} description={error} />
+          ) : loading ? (
+            // Changing a parameter re-queries the whole report, which is the slowest
+            // fetch in the app. While it runs, the report's own skeleton stands in
+            // its scrollport: same columns, same headings, rows to come. The charts
+            // have no columns to borrow and keep the generic sheet.
+            charting ? (
+              <SkeletonSheet rows={14} columns={5} />
+            ) : (
+              <div
+                className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+                style={reportSurfaceVars(reportColumns(shape))}
+              >
+                <ReportScroller className="min-h-0 flex-1">
+                  <ReportSkeleton shape={shape} />
+                </ReportScroller>
+              </div>
+            )
+          ) : !data?.years.length ? (
+            <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
+          ) : (
+            <div
+              className="space-y-5 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+              style={reportSurfaceVars(reportColumns(shape))}
+            >
+              {/* On paper the panel is gone, so this is the only thing
               that says what was printed. The charts' heading. The table prints
               as a report of its own, in Fortnox's form, below. */}
-          <div className={cn("hidden", charting && "print:block")}>
-            <h2 className="text-lg font-semibold">
-              {documentTitle}
-              {fortnox.companyName ? ` - ${fortnox.companyName}` : ""}
-            </h2>
-            <p className="mt-0.5 text-sm text-muted">
-              {[
-                selectedYear ? t("financialYear", { year: selectedYear.year }) : null,
-                periodLabel,
-                costCenterLabel,
-                summaryComparison ? t("comparedWith", { comparison: comparisonPhrase }) : null,
-              ]
-                .filter(Boolean)
-                .join(" - ")}
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              {t("printedAt", { time: dateTime(new Date().toISOString()) })}
-            </p>
-          </div>
+              <div className={cn("hidden", charting && "print:block")}>
+                <h2 className="text-lg font-semibold">
+                  {documentTitle}
+                  {fortnox.companyName ? ` - ${fortnox.companyName}` : ""}
+                </h2>
+                <p className="mt-0.5 text-sm text-muted">
+                  {[
+                    selectedYear ? t("financialYear", { year: selectedYear.year }) : null,
+                    periodLabel,
+                    costCenterLabel,
+                    summaryComparison ? t("comparedWith", { comparison: comparisonPhrase }) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" - ")}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {t("printedAt", { time: dateTime(new Date().toISOString()) })}
+                </p>
+              </div>
 
-          {/* Above the branch: a comparison that could not be applied is as
+              {/* Above the branch: a comparison that could not be applied is as
               true of the charts as of the table, and the charts pace against
               exactly the budget this warns is missing. */}
-          {comparisonMissing && (
-            <p className="text-sm text-warning">
-              {data.comparisonRequested === "BUDGET"
-                ? t("noBudgetForYear", { year: selectedYear?.year ?? t("theYear") })
-                : t("priorYearNotSynced")}
-            </p>
-          )}
-          {/* Last year's columns asked for and nothing to fill them with. Said
+              {comparisonMissing && (
+                <p className="text-sm text-warning">
+                  {data.comparisonRequested === "BUDGET"
+                    ? t("noBudgetForYear", {
+                        year: selectedYear?.year ?? t("theYear"),
+                      })
+                    : t("priorYearNotSynced")}
+                </p>
+              )}
+              {/* Last year's columns asked for and nothing to fill them with. Said
               outright, or the empty columns read as a year of zeroes. */}
-          {!charting && data.priorAvailable === false && (
-            <p className="text-sm text-warning">{t("priorColumnsUnavailable")}</p>
-          )}
+              {!charting && data.priorAvailable === false && (
+                <p className="text-sm text-warning">{t("priorColumnsUnavailable")}</p>
+              )}
 
-          {charting ? (
-            trendError ? (
-              <EmptyState title={t("charts.loadFailed")} description={trendError} />
-            ) : trendLoading || !trend ? (
-              // The same skeleton the table uses, in the same place, so
-              // switching views does not also change what waiting looks like.
-              <SkeletonSheet rows={10} columns={4} />
-            ) : (
-              <ReportCharts
-                data={trend}
-                monthLabel={chartMonthLabel}
-                noCostCenterLabel={t("noCostCenter")}
-              />
-            )
-          ) : (
-            <>
-          {report && report.groups.length > 0 && (
-            <ReportPrint
-              report={report}
-              view={view}
-              columns={columns}
-              showComparison={showComparison}
-              comparison={data.comparison}
-              companyName={data.meta?.companyName ?? fortnox.companyName ?? null}
-              orgNumber={data.meta?.orgNumber ?? null}
-              latestVouchers={data.meta?.latestVouchers ?? []}
-              financialYear={
-                selectedYear
-                  ? { from: selectedYear.fromDate.slice(0, 10), to: selectedYear.toDate.slice(0, 10) }
-                  : null
-              }
-              period={data.periodDates ?? null}
-              costCenter={query.costCenters.length === 0 ? null : costCenterLabel}
-              comparedWith={showComparison ? comparisonFull : null}
-            />
-          )}
+              {charting ? (
+                trendError ? (
+                  <EmptyState title={t("charts.loadFailed")} description={trendError} />
+                ) : trendLoading || !trend ? (
+                  // The same skeleton the table uses, in the same place, so
+                  // switching views does not also change what waiting looks like.
+                  <SkeletonSheet rows={10} columns={4} />
+                ) : (
+                  <ReportCharts
+                    data={trend}
+                    monthLabel={chartMonthLabel}
+                    noCostCenterLabel={t("noCostCenter")}
+                  />
+                )
+              ) : (
+                <>
+                  {report && report.groups.length > 0 && (
+                    <ReportPrint
+                      report={report}
+                      view={view}
+                      columns={columns}
+                      showComparison={showComparison}
+                      comparison={data.comparison}
+                      companyName={data.meta?.companyName ?? fortnox.companyName ?? null}
+                      orgNumber={data.meta?.orgNumber ?? null}
+                      latestVouchers={data.meta?.latestVouchers ?? []}
+                      financialYear={
+                        selectedYear
+                          ? {
+                              from: selectedYear.fromDate.slice(0, 10),
+                              to: selectedYear.toDate.slice(0, 10),
+                            }
+                          : null
+                      }
+                      period={data.periodDates ?? null}
+                      costCenter={query.costCenters.length === 0 ? null : costCenterLabel}
+                      comparedWith={showComparison ? comparisonFull : null}
+                    />
+                  )}
 
-          {!report || report.groups.length === 0 ? (
-            <EmptyNote size="page">
-              {t("noRowsInPeriod")}
-            </EmptyNote>
-          ) : (
-            <>
-              {/* Every group card in one scrollport: the columns then line up
+                  {!report || report.groups.length === 0 ? (
+                    <EmptyNote size="page">{t("noRowsInPeriod")}</EmptyNote>
+                  ) : (
+                    <>
+                      {/* Every group card in one scrollport: the columns then line up
                   across cost centres because they are laid out by the same
                   grid, not because anything keeps them in step. From lg it is
                   also the only thing on the page that scrolls. */}
-              <ReportScroller className="min-h-0 flex-1 print:hidden">
-                <div className="space-y-5">
-                  {report.groups.map((g) => (
-                    <ReportGroupCard
-                      key={g.costCenterCode ?? "none"}
-                      group={g}
-                      groupMode={query.group}
-                      shape={shape}
-                      openKey={openKey}
-                      rows={rows}
-                      onToggle={toggleRow}
-                    />
-                  ))}
-                  {/* After the last account, the way a printed report closes. */}
-                  <ReportResult
-                    report={report}
-                    shape={shape}
-                    label={t("calculatedResult")}
-                  />
-                </div>
-              </ReportScroller>
-            </>
-          )}
-            </>
+                      <ReportScroller className="min-h-0 flex-1 print:hidden">
+                        <div className="space-y-5">
+                          {report.groups.map((g) => (
+                            <ReportGroupCard
+                              key={g.costCenterCode ?? "none"}
+                              group={g}
+                              groupMode={query.group}
+                              shape={shape}
+                              openKey={openKey}
+                              rows={rows}
+                              onToggle={toggleRow}
+                            />
+                          ))}
+                          {/* After the last account, the way a printed report closes. */}
+                          <ReportResult
+                            report={report}
+                            shape={shape}
+                            label={t("calculatedResult")}
+                          />
+                        </div>
+                      </ReportScroller>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
-      </div>
       </div>
     </PageShell>
   );
 }
-

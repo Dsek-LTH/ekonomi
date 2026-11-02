@@ -79,10 +79,7 @@ export const unitCostOre = (held: Valued): number | null =>
  * shelf worth nothing when it plainly is not, rather than a total quietly
  * built on a guess. The register form says so before the row is written.
  */
-export function purchaseValueOre(
-  units: number,
-  unitCostOre: number | null | undefined,
-): number {
+export function purchaseValueOre(units: number, unitCostOre: number | null | undefined): number {
   if (unitCostOre == null) return 0;
   return Math.round(unitCostOre * units);
 }

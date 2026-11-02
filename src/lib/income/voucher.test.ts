@@ -149,8 +149,18 @@ describe("buildFeeVoucherLines", () => {
     });
 
     expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatchObject({ account: "6570", debit: 4200, credit: 0, costCenterId: "cc-skatt" });
-    expect(lines[1]).toMatchObject({ account: "1930", debit: 0, credit: 4200, costCenterId: null });
+    expect(lines[0]).toMatchObject({
+      account: "6570",
+      debit: 4200,
+      credit: 0,
+      costCenterId: "cc-skatt",
+    });
+    expect(lines[1]).toMatchObject({
+      account: "1930",
+      debit: 0,
+      credit: 4200,
+      costCenterId: null,
+    });
     expect(voucherBlocker(lines)).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 {
   "title": "The D-Guilds economy",
   "description": "Sign in with your D-Guild account to continue",
+  "seoDescription": "Sign in to the D-Guild's finance system for expenses, receipts, budgets and bookkeeping.",
   "loginPrompt": "Continue with your D-Guild account",
   "errors": {
     "denied": "Sign-in was refused. Your account has no student id.",

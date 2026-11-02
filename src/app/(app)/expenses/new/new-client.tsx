@@ -257,9 +257,8 @@ export default function NewExpenseClient({
   // show: seeing which of them this is beats being told only that it's fixed.
   // `presetTxn` always holds a card (it came from that card's own bank feed),
   // so this never disagrees with `cardAllowed` about there being three to show.
-  const claimOptions: Claim[] = presetTxn || cardAllowed
-    ? (["card", "cardReturn", "own"] as Claim[])
-    : (["own"] as Claim[]);
+  const claimOptions: Claim[] =
+    presetTxn || cardAllowed ? (["card", "cardReturn", "own"] as Claim[]) : (["own"] as Claim[]);
   const locked = Boolean(presetTxn);
 
   const chooseClaim = (next: Claim) =>
@@ -405,7 +404,11 @@ export default function NewExpenseClient({
         const have = new Set(files.map((f) => f.id));
         const restored = kept
           .filter((k) => !have.has(k.id))
-          .map((k) => ({ id: k.id, file: k.file, previewUrl: URL.createObjectURL(k.file) }));
+          .map((k) => ({
+            id: k.id,
+            file: k.file,
+            previewUrl: URL.createObjectURL(k.file),
+          }));
         return restored.length > 0 ? [...files, ...restored] : files;
       });
     });
@@ -435,7 +438,6 @@ export default function NewExpenseClient({
       .sort((a, b) => a.r - b.r)
       .map(({ d }) => d);
   }, [uploadedReceipts, pendingFiles, order]);
-
 
   // Put every waiting document in the archive. Part of saving now, so it can
   // fail the save: an utlägg whose document didn't make it is not saved but
@@ -539,7 +541,8 @@ export default function NewExpenseClient({
       form: { ...d.form, gross },
       matchId: txn.id,
       // A single row is the whole amount, so it follows it, as typing does.
-      allocations: d.allocations.length === 1 ? [{ ...d.allocations[0], amount: gross }] : d.allocations,
+      allocations:
+        d.allocations.length === 1 ? [{ ...d.allocations[0], amount: gross }] : d.allocations,
     }));
   }
   // The date field is a mask, so it can be left half-typed ("2026", "2026-07").
@@ -553,7 +556,8 @@ export default function NewExpenseClient({
   // from the list it was made from. Not for a date the utlägg already had,
   // which the route lets stand as well.
   const dateOutsideYear =
-    form.purchaseDate !== (existing?.purchaseDate ?? "") && outsideFiscalYear(fiscalYear, form.purchaseDate);
+    form.purchaseDate !== (existing?.purchaseDate ?? "") &&
+    outsideFiscalYear(fiscalYear, form.purchaseDate);
   // Past the 60-day deadline for an eget utlägg. Depends on the payment type,
   // which is picked further down this same step, so switching to "Eget utlägg"
   // lights this up on an old receipt then and there.
@@ -631,7 +635,7 @@ export default function NewExpenseClient({
     hasReceipt,
     // Only a match that still cancels out counts, so a stale one shows the
     // "match it first" hint rather than letting submit fail at the server.
-    matchedTransactionId: matchDone ? matchId ?? undefined : undefined,
+    matchedTransactionId: matchDone ? (matchId ?? undefined) : undefined,
     submitterHasPayout: Boolean(payoutClearing && payoutAccount),
     // False, and it cannot be anything else here: a dispens is granted against
     // an utlägg that already exists, by somebody who is not the person filling
@@ -769,8 +773,16 @@ export default function NewExpenseClient({
   // detail page, and the merged PDF Fortnox gets uses the same numbering.
   const receiptFiles = docs.map((d) =>
     d.kind === "uploaded"
-      ? { src: `/api/receipts/${d.receipt.id}`, mimeType: d.receipt.mimeType, filename: d.receipt.filename }
-      : { src: d.pending.previewUrl, mimeType: d.pending.file.type, filename: d.pending.file.name },
+      ? {
+          src: `/api/receipts/${d.receipt.id}`,
+          mimeType: d.receipt.mimeType,
+          filename: d.receipt.filename,
+        }
+      : {
+          src: d.pending.previewUrl,
+          mimeType: d.pending.file.type,
+          filename: d.pending.file.name,
+        },
   );
   const documents = receiptFiles.map((d, i) => ({
     ...d,
@@ -806,11 +818,7 @@ export default function NewExpenseClient({
   }
 
   return (
-    <PageShell
-      title={chrome.title}
-      back={chrome.back}
-      width="content"
-    >
+    <PageShell title={chrome.title} back={chrome.back} width="content">
       {/* The panel takes documents as well as showing them: with none
           uploaded yet it stands open beside the form as the dropzone, which
           is why this wizard has no upload step of its own. Once one is
@@ -934,9 +942,7 @@ export default function NewExpenseClient({
                     })}
                   </div>
                 </div>
-                {locked && (
-                  <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>
-                )}
+                {locked && <p className="mt-2 text-xs text-muted">{t("paymentTypeFixed")}</p>}
               </FieldGroup>
             )}
 
@@ -968,7 +974,9 @@ export default function NewExpenseClient({
                     : dateInFuture
                       ? t("dateFuture")
                       : dateOutsideYear
-                        ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                        ? tCommon("dateOutsideFiscalYear", {
+                            year: fiscalYearLabel(fiscalYear!),
+                          })
                         : undefined
                 }
                 // A hint rather than an error: the date is a real day and the
@@ -981,9 +989,7 @@ export default function NewExpenseClient({
                   min={fiscalYear?.fromDate}
                   max={fiscalYear?.toDate}
                   value={form.purchaseDate}
-                  onChange={(e) =>
-                    setForm({ ...form, purchaseDate: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
                 />
               </Field>
               {/* The keypad, the guard and the separator all live in
@@ -1024,7 +1030,7 @@ export default function NewExpenseClient({
                       <Link
                         href={`/expenses/${d.id}`}
                         target="_blank"
-                        className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                        className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                       >
                         {d.reference ? `${d.reference} - ` : ""}
                         {d.title || t("duplicateUntitled")}
@@ -1106,8 +1112,7 @@ export default function NewExpenseClient({
         submit={
           submittable
             ? {
-                label:
-                  existing?.status === "CHANGES_REQUESTED" ? t("resubmit") : t("submit"),
+                label: existing?.status === "CHANGES_REQUESTED" ? t("resubmit") : t("submit"),
                 onClick: submitExpense,
                 disabled: !canPersist || Boolean(blocker),
                 loading: exit === "submit",

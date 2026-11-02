@@ -52,7 +52,14 @@ const orgNoDigits = (orgNo: string | null | undefined): string | null => {
  * A giro match is a match on where the money goes, so it is only as good as
  * the giro. The export still checks it against the register (giroMismatch).
  */
-export function matchSupplier<S extends { orgNo: string | null; bankgiro: string | null; plusgiro: string | null; active: boolean }>(
+export function matchSupplier<
+  S extends {
+    orgNo: string | null;
+    bankgiro: string | null;
+    plusgiro: string | null;
+    active: boolean;
+  },
+>(
   invoice: { supplierOrgNo?: string | null; bankgiro?: string | null; plusgiro?: string | null },
   register: readonly S[],
 ): S | null {

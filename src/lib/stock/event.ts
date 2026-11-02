@@ -121,10 +121,7 @@ export interface TagTotals {
  * three running figures are therefore signed sums rather than magnitudes, and
  * only `sold` is floored.
  */
-export function tagTotals(
-  product: TagSubject,
-  movements: readonly TagMovement[],
-): TagTotals {
+export function tagTotals(product: TagSubject, movements: readonly TagMovement[]): TagTotals {
   let out = 0;
   let back = 0;
   let spilled = 0;

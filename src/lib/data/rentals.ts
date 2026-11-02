@@ -14,11 +14,7 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { pageBounds, type ListQuery, type RowPage } from "@/lib/data/list-query";
-import {
-  RENTAL_TAB,
-  rentalState,
-  type RentalState,
-} from "@/lib/contract/rental-state";
+import { RENTAL_TAB, rentalState, type RentalState } from "@/lib/contract/rental-state";
 import { isoDay } from "@/lib/domain/date";
 
 export interface RentalRow {
@@ -64,7 +60,11 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
       OR: [
         { title: { contains: q.q, mode: "insensitive" } },
         { agreement: { counterparty: { contains: q.q, mode: "insensitive" } } },
-        { rental: { lines: { some: { description: { contains: q.q, mode: "insensitive" } } } } },
+        {
+          rental: {
+            lines: { some: { description: { contains: q.q, mode: "insensitive" } } },
+          },
+        },
       ],
     });
   }
@@ -163,4 +163,3 @@ export async function getRentalStateCounts(today: string): Promise<Record<Rental
   }
   return counts;
 }
-

@@ -108,7 +108,10 @@ export interface MemberScore {
 
 const DAY_MS = 86_400_000;
 const daysBetween = (from: string, to: string) =>
-  Math.max(0, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS));
+  Math.max(
+    0,
+    Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS),
+  );
 
 /** One member's score, as of `today` (YYYY-MM-DD). */
 export function memberScore(input: {

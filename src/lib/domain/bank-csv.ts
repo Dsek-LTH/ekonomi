@@ -80,9 +80,7 @@ export function parseBankCsv(text: string): ParseResult {
     const naturalKey = `${kontonr}|${bokfdag}|${transdag}|${referens}|${cols[10].trim()}`;
     const occ = occurrence.get(naturalKey) ?? 0;
     occurrence.set(naturalKey, occ + 1);
-    const importHash = createHash("sha256")
-      .update(`${naturalKey}|${occ}`)
-      .digest("hex");
+    const importHash = createHash("sha256").update(`${naturalKey}|${occ}`).digest("hex");
 
     transactions.push({ transactionDate: date, description, amount, cardLast4, importHash });
   }

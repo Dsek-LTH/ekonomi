@@ -14,7 +14,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { budgetLabel, joinSnapshots, snapshotOf, type Joined, type Snapshot } from "@/lib/budget/compare";
+import {
+  budgetLabel,
+  joinSnapshots,
+  snapshotOf,
+  type Joined,
+  type Snapshot,
+} from "@/lib/budget/compare";
 import { useQuery } from "@/components/shell/use-query";
 import type { Budget } from "./budget-types";
 
@@ -22,11 +28,18 @@ import type { Budget } from "./budget-types";
 // a budget id; "" is no comparison at all.
 const ACTUALS = "__actuals__";
 
-interface BudgetSummary { id: string; year: number; name: string }
+interface BudgetSummary {
+  id: string;
+  year: number;
+  name: string;
+}
 
 // Flat, and every label leads with its year, the picker searches on the label,
 // so typing "2025" narrows to that year without needing grouped sections.
-interface CompareOption { value: string; label: string }
+interface CompareOption {
+  value: string;
+  label: string;
+}
 
 export interface Comparison {
   /** This budget, and, when one is picked, what it is being held against. */
@@ -55,12 +68,14 @@ export function useComparison(budget: Budget) {
   );
 
   const options = useMemo<CompareOption[]>(() => {
-    const out: CompareOption[] = [{
-      value: ACTUALS,
-      label: budget.actualsSynced
-        ? `Utfall ${budget.actualsYear}`
-        : `Utfall ${budget.actualsYear ?? budget.year} (ej synkat)`,
-    }];
+    const out: CompareOption[] = [
+      {
+        value: ACTUALS,
+        label: budget.actualsSynced
+          ? `Utfall ${budget.actualsYear}`
+          : `Utfall ${budget.actualsYear ?? budget.year} (ej synkat)`,
+      },
+    ];
     for (const b of budgets ?? []) {
       if (b.id === budget.id) continue; // never against itself
       out.push({ value: b.id, label: budgetLabel(b) });
@@ -73,7 +88,12 @@ export function useComparison(budget: Budget) {
 
     if (target === ACTUALS) {
       const label = `Utfall ${budget.actualsYear ?? budget.year}`;
-      const actuals: Snapshot = { id: ACTUALS, label, sheets: budget.actuals ?? [], vars: {} };
+      const actuals: Snapshot = {
+        id: ACTUALS,
+        label,
+        sheets: budget.actuals ?? [],
+        vars: {},
+      };
       return { joined: joinSnapshots([own, actuals]), otherLabel: label };
     }
     // Still loading, or the budget went away. This budget on its own rather

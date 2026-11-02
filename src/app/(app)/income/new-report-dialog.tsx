@@ -63,7 +63,10 @@ export function NewReportDialog({
 
   const [resultUnitId, setResultUnitId] = useState("");
 
-  const unitOptions: ComboOption[] = targets.map((u) => ({ value: u.resultUnitId, label: u.name }));
+  const unitOptions: ComboOption[] = targets.map((u) => ({
+    value: u.resultUnitId,
+    label: u.name,
+  }));
 
   // The verksamhet's report for exactly this source and day, if the queue
   // already holds one. Said before anything is pressed rather than after: the

@@ -37,7 +37,9 @@ describe("contractScopeOf", () => {
   });
 
   it("prefers the wider grant when somebody holds both", () => {
-    expect(contractScopeOf(viewer("CONTRACT_VIEW", "RENTAL_VIEW"))).toEqual({ kind: "everything" });
+    expect(contractScopeOf(viewer("CONTRACT_VIEW", "RENTAL_VIEW"))).toEqual({
+      kind: "everything",
+    });
   });
 });
 

@@ -40,7 +40,8 @@ export async function PUT(req: Request) {
   // section's and confers nothing however it is stored. Refused here rather
   // than stored and silently ignored at sign-in, which would be a row that
   // looks like a grant and is not.
-  if (!isSectionGroup(group)) return fail(422, "authority.groupOutsideSection", { values: { group } });
+  if (!isSectionGroup(group))
+    return fail(422, "authority.groupOutsideSection", { values: { group } });
 
   // A result unit that does not exist cannot be answered for. The foreign key
   // would refuse this anyway; saying so plainly beats a 500 from the driver.

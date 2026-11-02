@@ -59,6 +59,15 @@ export async function getCounterpartyRows(): Promise<CounterpartyRow[]> {
 export async function getCounterpartyOptions(): Promise<CounterpartyOption[]> {
   return prisma.counterparty.findMany({
     orderBy: BY_NAME,
-    select: { id: true, name: true, orgNo: true, address: true, postalCode: true, city: true, email: true, phone: true },
+    select: {
+      id: true,
+      name: true,
+      orgNo: true,
+      address: true,
+      postalCode: true,
+      city: true,
+      email: true,
+      phone: true,
+    },
   });
 }

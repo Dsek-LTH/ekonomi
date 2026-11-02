@@ -16,8 +16,11 @@ const account = (
   lines: { key: string; description: string; value: number }[] = [],
 ): CompareAccount => ({ code, name: `Konto ${code}`, kind, total, lines });
 
-const side = (id: string, sheets: Snapshot["sheets"], vars: Record<string, number> = {}): Snapshot =>
-  ({ id, label: id, sheets, vars });
+const side = (
+  id: string,
+  sheets: Snapshot["sheets"],
+  vars: Record<string, number> = {},
+): Snapshot => ({ id, label: id, sheets, vars });
 
 describe("compareKey", () => {
   // The cost-centre code is the one thing that means the same in every budget.
@@ -54,19 +57,31 @@ describe("lineKeys", () => {
   // The n-th "Övrigt" can only be known in the context of the rest, which is
   // why this takes the whole account at once.
   it("tells repeated descriptions apart by their position", () => {
-    expect(lineKeys([
-      { description: "Övrigt" },
-      { description: "Tröjor" },
-      { description: "Övrigt" },
-    ])).toEqual(["övrigt", "tröjor", "övrigt~1"]);
+    expect(
+      lineKeys([{ description: "Övrigt" }, { description: "Tröjor" }, { description: "Övrigt" }]),
+    ).toEqual(["övrigt", "tröjor", "övrigt~1"]);
   });
 });
 
 describe("joinSnapshots", () => {
   it("puts each side's figure in its own column", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sexmästeriet", resultUnit: "Sex", accounts: [account("4010", "COST", 100)] }]),
-      side("b", [{ key: "SEX02", name: "Sexmästeriet", resultUnit: "Sex", accounts: [account("4010", "COST", 150)] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sexmästeriet",
+          resultUnit: "Sex",
+          accounts: [account("4010", "COST", 100)],
+        },
+      ]),
+      side("b", [
+        {
+          key: "SEX02",
+          name: "Sexmästeriet",
+          resultUnit: "Sex",
+          accounts: [account("4010", "COST", 150)],
+        },
+      ]),
     ]);
     expect(joined.sheets).toHaveLength(1);
     expect(joined.sheets[0].accounts[0].totals).toEqual([100, 150]);
@@ -75,8 +90,22 @@ describe("joinSnapshots", () => {
   // The blank is usually the finding, so it is never a reason to drop the row.
   it("keeps a sheet only one side has, blank in the other column", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 100)] }]),
-      side("b", [{ key: "KM01", name: "Källaren", resultUnit: null, accounts: [account("4010", "COST", 50)] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 100)],
+        },
+      ]),
+      side("b", [
+        {
+          key: "KM01",
+          name: "Källaren",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 50)],
+        },
+      ]),
     ]);
     expect(joined.sheets.map((s) => s.key)).toEqual(["SEX02", "KM01"]);
     expect(joined.sheets[0].accounts[0].totals).toEqual([100, undefined]);
@@ -85,7 +114,14 @@ describe("joinSnapshots", () => {
 
   it("records which sides have a sheet at all, a sheet may exist and total zero", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 0)] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 0)],
+        },
+      ]),
       side("b", []),
     ]);
     expect(joined.sheets[0].present).toEqual([true, false]);
@@ -95,10 +131,22 @@ describe("joinSnapshots", () => {
 
   it("keeps an account only the second side has", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 100)] }]),
-      side("b", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [
-        account("4010", "COST", 100), account("4020", "COST", 25),
-      ] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 100)],
+        },
+      ]),
+      side("b", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 100), account("4020", "COST", 25)],
+        },
+      ]),
     ]);
     const codes = joined.sheets[0].accounts.map((a) => a.code);
     expect(codes).toEqual(["4010", "4020"]);
@@ -107,15 +155,29 @@ describe("joinSnapshots", () => {
 
   it("joins the rows inside an account", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [
-        account("4010", "COST", 100, [{ key: "tröjor", description: "Tröjor", value: 100 }]),
-      ] }]),
-      side("b", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [
-        account("4010", "COST", 130, [
-          { key: "tröjor", description: "Tröjor", value: 80 },
-          { key: "märken", description: "Märken", value: 50 },
-        ]),
-      ] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [
+            account("4010", "COST", 100, [{ key: "tröjor", description: "Tröjor", value: 100 }]),
+          ],
+        },
+      ]),
+      side("b", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [
+            account("4010", "COST", 130, [
+              { key: "tröjor", description: "Tröjor", value: 80 },
+              { key: "märken", description: "Märken", value: 50 },
+            ]),
+          ],
+        },
+      ]),
     ]);
     const lines = joined.sheets[0].accounts[0].lines;
     expect(lines.map((l) => l.key)).toEqual(["tröjor", "märken"]);
@@ -126,8 +188,22 @@ describe("joinSnapshots", () => {
   // The budget in front of you keeps its own arrangement and its own wording.
   it("takes order and labels from the first side that mentions something", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sexmästeriet", resultUnit: null, accounts: [account("4010", "COST", 1)] }]),
-      side("b", [{ key: "SEX02", name: "Sexet (omdöpt)", resultUnit: null, accounts: [account("4010", "COST", 2)] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sexmästeriet",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 1)],
+        },
+      ]),
+      side("b", [
+        {
+          key: "SEX02",
+          name: "Sexet (omdöpt)",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 2)],
+        },
+      ]),
     ]);
     expect(joined.sheets[0].name).toBe("Sexmästeriet");
     expect(joined.sheets[0].accounts[0].name).toBe("Konto 4010");
@@ -154,9 +230,30 @@ describe("joinSnapshots", () => {
 
   it("joins any number of sides", () => {
     const joined = joinSnapshots([
-      side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 1)] }]),
-      side("b", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 2)] }]),
-      side("c", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [account("4010", "COST", 3)] }]),
+      side("a", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 1)],
+        },
+      ]),
+      side("b", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 2)],
+        },
+      ]),
+      side("c", [
+        {
+          key: "SEX02",
+          name: "Sex",
+          resultUnit: null,
+          accounts: [account("4010", "COST", 3)],
+        },
+      ]),
     ]);
     expect(joined.sheets[0].accounts[0].totals).toEqual([1, 2, 3]);
   });
@@ -168,13 +265,22 @@ describe("joinSnapshots", () => {
 
 describe("sheetTotals", () => {
   const joined = joinSnapshots([
-    side("a", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [
-      account("3010", "INCOME", 1000),
-      account("4010", "COST", 400),
-    ] }]),
-    side("b", [{ key: "SEX02", name: "Sex", resultUnit: null, accounts: [
-      account("3010", "INCOME", 800),
-    ] }]),
+    side("a", [
+      {
+        key: "SEX02",
+        name: "Sex",
+        resultUnit: null,
+        accounts: [account("3010", "INCOME", 1000), account("4010", "COST", 400)],
+      },
+    ]),
+    side("b", [
+      {
+        key: "SEX02",
+        name: "Sex",
+        resultUnit: null,
+        accounts: [account("3010", "INCOME", 800)],
+      },
+    ]),
   ]);
 
   it("splits income from cost and takes the difference", () => {

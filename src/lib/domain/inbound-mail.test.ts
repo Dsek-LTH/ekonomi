@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  autoAssign,
-  cleanSubject,
-  parseAddress,
-  rejectReason,
-  splitForward,
-} from "./inbound-mail";
+import { autoAssign, cleanSubject, parseAddress, rejectReason, splitForward } from "./inbound-mail";
 
 describe("parseAddress", () => {
   it.each([
@@ -28,12 +22,16 @@ describe("rejectReason", () => {
   const gmail = (results: string) => `mx.google.com; ${results}`;
 
   it("takes a dsek.se sender DMARC passed", () => {
-    const h = [gmail("dkim=pass header.i=@dsek.se; spf=pass; dmarc=pass (p=NONE) header.from=dsek.se")];
+    const h = [
+      gmail("dkim=pass header.i=@dsek.se; spf=pass; dmarc=pass (p=NONE) header.from=dsek.se"),
+    ];
     expect(rejectReason(anna, h, "dsek.se")).toBeNull();
   });
 
   it("takes a verified DKIM signature from the domain without DMARC", () => {
-    expect(rejectReason(anna, [gmail("dkim=pass header.i=@dsek.se header.s=google")], "dsek.se")).toBeNull();
+    expect(
+      rejectReason(anna, [gmail("dkim=pass header.i=@dsek.se header.s=google")], "dsek.se"),
+    ).toBeNull();
   });
 
   it("refuses another domain however well it authenticates", () => {
@@ -84,7 +82,8 @@ describe("splitForward", () => {
   });
 
   it("understands a Swedish Gmail", () => {
-    const text = "Hej!\n\n---------- Vidarebefordrat meddelande ---------\nFrån: faktura@lundsslap.se\n";
+    const text =
+      "Hej!\n\n---------- Vidarebefordrat meddelande ---------\nFrån: faktura@lundsslap.se\n";
     expect(splitForward(text)).toEqual({ note: "Hej!", originalFrom: "faktura@lundsslap.se" });
   });
 
@@ -135,7 +134,11 @@ describe("autoAssign", () => {
     autoAssign({ text, units, costCenters, forwarderUnitIds });
 
   it("goes by a cost centre code", () => {
-    expect(run("Kontera på sex01 tack")).toEqual({ resultUnitId: "sex", rule: "costCenter", match: "SEX01" });
+    expect(run("Kontera på sex01 tack")).toEqual({
+      resultUnitId: "sex",
+      rule: "costCenter",
+      match: "SEX01",
+    });
   });
 
   it("goes by several codes of one unit", () => {
@@ -167,7 +170,11 @@ describe("autoAssign", () => {
   });
 
   it("falls back to the forwarder's only unit", () => {
-    expect(run("", ["cafe"])).toEqual({ resultUnitId: "cafe", rule: "forwarder", match: "Caféutskottet" });
+    expect(run("", ["cafe"])).toEqual({
+      resultUnitId: "cafe",
+      rule: "forwarder",
+      match: "Caféutskottet",
+    });
   });
 
   it("does not guess for a forwarder with two units", () => {

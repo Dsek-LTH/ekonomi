@@ -160,7 +160,11 @@ export function printLines(group: ReportGroup, kind: ReportKind): PrintLine[] {
         lines.push({ kind: "partTotal", label: item.part, figures: partTotal });
       } else {
         if (item.onlyIf && within(item.onlyIf.from, item.onlyIf.to).length === 0) continue;
-        lines.push({ kind: "result", label: item.result, figures: figuresOf(within(first, item.upTo)) });
+        lines.push({
+          kind: "result",
+          label: item.result,
+          figures: figuresOf(within(first, item.upTo)),
+        });
       }
     }
     lines.push({ kind: "total", label: block.total, figures: figuresOf(inBlock) });

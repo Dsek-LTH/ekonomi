@@ -138,11 +138,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           assignedAt: new Date(),
         });
         await tx.supplierInvoiceEvent.create({
-          data: event("ASSIGNED", { comment, diff: { from: invoice.resultUnit?.name ?? null, to: unit.name } }),
+          data: event("ASSIGNED", {
+            comment,
+            diff: { from: invoice.resultUnit?.name ?? null, to: unit.name },
+          }),
         });
-        await notify(tx, "SUPPLIER_INVOICE_ASSIGNED", owners, about("assigned", { unit: unit.name }), {
-          exclude: [actor.id],
-        });
+        await notify(
+          tx,
+          "SUPPLIER_INVOICE_ASSIGNED",
+          owners,
+          about("assigned", { unit: unit.name }),
+          {
+            exclude: [actor.id],
+          },
+        );
       }),
     );
     if (result instanceof NextResponse) return result;
@@ -189,7 +198,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const result = await commit(() =>
         prisma.$transaction(async (tx) => {
           await move(tx, invoice, to, { ...filled, ...typed, prefilled });
-          await tx.supplierInvoiceAllocation.deleteMany({ where: { invoiceId: invoice.id } });
+          await tx.supplierInvoiceAllocation.deleteMany({
+            where: { invoiceId: invoice.id },
+          });
           // A kontering made from the split that is going goes with it.
           await tx.supplierInvoiceLine.deleteMany({ where: { invoiceId: invoice.id } });
           await tx.supplierInvoiceAllocation.createMany({
@@ -197,7 +208,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           });
           if (signed.length) {
             await tx.supplierInvoiceEvent.create({
-              data: event("COST_CENTER_APPROVED", { comment, diff: { costCenters: signed } }),
+              data: event("COST_CENTER_APPROVED", {
+                comment,
+                diff: { costCenters: signed },
+              }),
             });
           }
           if (to === "APPROVED") await tx.supplierInvoiceEvent.create({ data: event("APPROVED") });
@@ -214,7 +228,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Another unit's share of a split, signed as it stands.
     if (!can.canAttest) {
-      return refuseChange(invoice, awaitsAllocation(invoice.status) || invoice.status === "PENDING_APPROVAL");
+      return refuseChange(
+        invoice,
+        awaitsAllocation(invoice.status) || invoice.status === "PENDING_APPROVAL",
+      );
     }
     const mine = invoice.allocations.filter((a, i) => mayAttest[i] && !a.approvedById);
     const now = new Date();
@@ -230,7 +247,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           "supplierInvoice.alreadyAttested",
         );
         await tx.supplierInvoiceEvent.create({
-          data: event("COST_CENTER_APPROVED", { comment, diff: { costCenters: mine.map((a) => a.costCenter.code) } }),
+          data: event("COST_CENTER_APPROVED", {
+            comment,
+            diff: { costCenters: mine.map((a) => a.costCenter.code) },
+          }),
         });
         const remaining = await tx.supplierInvoiceAllocation.count({
           where: { invoiceId: invoice.id, approvedById: null },
@@ -248,13 +268,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Take your own signature back ──────────────────────────────────────────
   if (action === "withdraw_attest") {
     if (!can.canWithdrawAttest) {
-      return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status));
+      return refuseChange(
+        invoice,
+        invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status),
+      );
     }
     const mine = invoice.allocations.filter((a) => a.approvedById === actor.id);
     // The last signature gone, it is back to waiting for its kontering, which
     // is where the person who withdrew it can change it. Others' signatures
     // stay on their rows.
-    const othersSigned = invoice.allocations.some((a) => a.approvedById && a.approvedById !== actor.id);
+    const othersSigned = invoice.allocations.some(
+      (a) => a.approvedById && a.approvedById !== actor.id,
+    );
     const to: SupplierInvoiceStatus = othersSigned ? "PENDING_APPROVAL" : "ASSIGNED";
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {
@@ -266,7 +291,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           STALE,
         );
         await move(tx, invoice, to);
-        await tx.supplierInvoiceEvent.create({ data: event("ATTEST_WITHDRAWN", { comment }) });
+        await tx.supplierInvoiceEvent.create({
+          data: event("ATTEST_WITHDRAWN", { comment }),
+        });
       }),
     );
     if (result instanceof NextResponse) return result;
@@ -284,7 +311,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       prisma.$transaction(async (tx) => {
         await move(tx, invoice, "ASSIGNED");
         await clearSignatures(tx, invoice.id);
-        await tx.supplierInvoiceEvent.create({ data: event("ATTEST_WITHDRAWN", { comment, diff: { all: true } }) });
+        await tx.supplierInvoiceEvent.create({
+          data: event("ATTEST_WITHDRAWN", { comment, diff: { all: true } }),
+        });
       }),
     );
     if (result instanceof NextResponse) return result;
@@ -313,7 +342,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Send it back ──────────────────────────────────────────────────────────
   // action === "request_changes"
   if (!can.canRequestChanges) {
-    return refuseChange(invoice, invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status));
+    return refuseChange(
+      invoice,
+      invoice.status === "PENDING_APPROVAL" || isWithTreasury(invoice.status),
+    );
   }
   if (!comment) return fail(422, "supplierInvoice.commentRequired");
 
@@ -323,7 +355,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await move(tx, invoice, "CHANGES_REQUESTED");
       await clearSignatures(tx, invoice.id);
       await tx.supplierInvoiceEvent.create({ data: event("CHANGES_REQUESTED", { comment }) });
-      await notify(tx, "SUPPLIER_INVOICE_ASSIGNED", owners, about("returned"), { exclude: [actor.id] });
+      await notify(tx, "SUPPLIER_INVOICE_ASSIGNED", owners, about("returned"), {
+        exclude: [actor.id],
+      });
     }),
   );
   if (result instanceof NextResponse) return result;

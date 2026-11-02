@@ -236,7 +236,16 @@ export function ReceiptPanelProvider({
   const setWidth = useCallback((w: number) => setWidthState(w), []);
 
   const value = useMemo(
-    () => ({ source, setSource, collapsed, setCollapsed, width, setWidth, footerSlot, setFooterSlot }),
+    () => ({
+      source,
+      setSource,
+      collapsed,
+      setCollapsed,
+      width,
+      setWidth,
+      footerSlot,
+      setFooterSlot,
+    }),
     [source, collapsed, setCollapsed, width, setWidth, footerSlot],
   );
 
@@ -324,19 +333,16 @@ export function ReceiptPanelSource({
     arrangeRef.current = arrange;
   });
   const arrangeKey = arrange ? JSON.stringify([arrange.keys, Boolean(arrange.disabled)]) : "";
-  const stableArrange = useMemo<Arrange | undefined>(
-    () => {
-      if (!arrangeKey) return undefined;
-      const [keys, disabled] = JSON.parse(arrangeKey) as [string[], boolean];
-      return {
-        keys,
-        disabled,
-        onReorder: (next) => arrangeRef.current?.onReorder(next),
-        onRemove: (key) => arrangeRef.current?.onRemove(key),
-      };
-    },
-    [arrangeKey],
-  );
+  const stableArrange = useMemo<Arrange | undefined>(() => {
+    if (!arrangeKey) return undefined;
+    const [keys, disabled] = JSON.parse(arrangeKey) as [string[], boolean];
+    return {
+      keys,
+      disabled,
+      onReorder: (next) => arrangeRef.current?.onReorder(next),
+      onRemove: (key) => arrangeRef.current?.onRemove(key),
+    };
+  }, [arrangeKey]);
 
   // Through a ref, so a handler redefined on every render of the page doesn't
   // re-register the source on every render, which would set state during
@@ -387,7 +393,18 @@ export function ReceiptPanelSource({
       arrange: stableArrange,
     });
     return () => setSource(null);
-  }, [docsKey, copyKey, accepts, uploading, multiple, stableOnFile, emptyTitle, emptyDescription, stableArrange, setSource]);
+  }, [
+    docsKey,
+    copyKey,
+    accepts,
+    uploading,
+    multiple,
+    stableOnFile,
+    emptyTitle,
+    emptyDescription,
+    stableArrange,
+    setSource,
+  ]);
 
   return null;
 }
@@ -743,87 +760,88 @@ export function ReceiptPanelColumn() {
   );
 
   const arrange = source.arrange;
-  const body = source.docs.length > 0 ? (
-    arrange ? (
-      <>
-        <ReceiptViewer
-          documents={source.docs}
-          className="min-h-0 flex-1"
-          navigation={{ jumpTo, onCurrentChange: setCurrentDoc }}
-        />
-        <DocumentStrip
-          items={source.docs.map((d, i) => ({ ...d, key: arrange.keys[i] ?? d.src }))}
-          // Clamped, so taking off the last one never marks a tile that is gone.
-          current={Math.min(currentDoc, source.docs.length - 1)}
-          onSelect={(index) => {
-            setCurrentDoc(index);
-            setJumpTo((j) => ({ index, seq: (j?.seq ?? 0) + 1 }));
-          }}
-          onReorder={arrange.onReorder}
-          onRemove={arrange.onRemove}
-          onAdd={upload ? pick : undefined}
-          disabled={Boolean(arrange.disabled) || Boolean(upload?.uploading)}
-        />
-      </>
-    ) : (
-      <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
-    )
-  ) : !upload ? (
-    // Nothing to show and nowhere to put one: the panel stays and says so,
-    // rather than vanishing and letting the page reflow around its absence.
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center text-muted">
-      <IconReceipt className="size-8" />
-      <p className="mt-3 text-sm font-medium text-foreground">{source.empty?.title}</p>
-      {source.empty?.description && (
-        <p className="mt-1 max-w-[22rem] text-xs">{source.empty.description}</p>
-      )}
-    </div>
-  ) : (
-    // The empty panel *is* the dropzone. It fills the panel rather than sitting
-    // in it as a box: the whole column is the target, which is what someone
-    // dragging a photo across the screen is aiming at anyway.
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center transition-colors",
-        over && "bg-accent-soft/40",
-      )}
-    >
-      {upload?.uploading ? (
-        // The same tile the dropzone rests in, with the arrow swapped for the
-        // spinner, so starting an upload reads as this one thing getting to
-        // work, rather than a differently-coloured object appearing in its
-        // place. It used to be a brand-filled tile on `animate-pulse`, which
-        // flashed without turning: motion that says "look here" rather than
-        // "still going", and reduced-motion stopped it dead.
-        <div role="status" className="flex flex-col items-center">
-          <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
-            <Spinner size="lg" />
-          </span>
-          <p className="mt-4 text-sm font-medium">{t("uploading")}</p>
-          <p className="mt-1 text-xs text-muted">{t("uploadingHint")}</p>
-        </div>
-      ) : (
+  const body =
+    source.docs.length > 0 ? (
+      arrange ? (
         <>
-          <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
-            <IconUpload className="size-6" />
-          </span>
-          {/* Dragging is a desktop idea; on a phone the button is the whole
-              interaction, so the wording changes with the screen. */}
-          <p className="mt-4 hidden text-sm font-medium md:block">
-            {upload?.copy?.lead ?? t("dropzone")}
-          </p>
-          <p className="mt-4 text-sm font-medium md:hidden">
-            {upload?.copy?.leadShort ?? t("pickReceiptLead")}
-          </p>
-          <p className="mt-1 text-xs text-muted">{upload?.copy?.fileTypes ?? t("fileTypes")}</p>
-          <Button className="mt-5" onClick={pick}>
-            <IconUpload className="size-4" />
-            {upload?.copy?.action ?? t("pickReceipt")}
-          </Button>
+          <ReceiptViewer
+            documents={source.docs}
+            className="min-h-0 flex-1"
+            navigation={{ jumpTo, onCurrentChange: setCurrentDoc }}
+          />
+          <DocumentStrip
+            items={source.docs.map((d, i) => ({ ...d, key: arrange.keys[i] ?? d.src }))}
+            // Clamped, so taking off the last one never marks a tile that is gone.
+            current={Math.min(currentDoc, source.docs.length - 1)}
+            onSelect={(index) => {
+              setCurrentDoc(index);
+              setJumpTo((j) => ({ index, seq: (j?.seq ?? 0) + 1 }));
+            }}
+            onReorder={arrange.onReorder}
+            onRemove={arrange.onRemove}
+            onAdd={upload ? pick : undefined}
+            disabled={Boolean(arrange.disabled) || Boolean(upload?.uploading)}
+          />
         </>
-      )}
-    </div>
-  );
+      ) : (
+        <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
+      )
+    ) : !upload ? (
+      // Nothing to show and nowhere to put one: the panel stays and says so,
+      // rather than vanishing and letting the page reflow around its absence.
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center text-muted">
+        <IconReceipt className="size-8" />
+        <p className="mt-3 text-sm font-medium text-foreground">{source.empty?.title}</p>
+        {source.empty?.description && (
+          <p className="mt-1 max-w-[22rem] text-xs">{source.empty.description}</p>
+        )}
+      </div>
+    ) : (
+      // The empty panel *is* the dropzone. It fills the panel rather than sitting
+      // in it as a box: the whole column is the target, which is what someone
+      // dragging a photo across the screen is aiming at anyway.
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center transition-colors",
+          over && "bg-accent-soft/40",
+        )}
+      >
+        {upload?.uploading ? (
+          // The same tile the dropzone rests in, with the arrow swapped for the
+          // spinner, so starting an upload reads as this one thing getting to
+          // work, rather than a differently-coloured object appearing in its
+          // place. It used to be a brand-filled tile on `animate-pulse`, which
+          // flashed without turning: motion that says "look here" rather than
+          // "still going", and reduced-motion stopped it dead.
+          <div role="status" className="flex flex-col items-center">
+            <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
+              <Spinner size="lg" />
+            </span>
+            <p className="mt-4 text-sm font-medium">{t("uploading")}</p>
+            <p className="mt-1 text-xs text-muted">{t("uploadingHint")}</p>
+          </div>
+        ) : (
+          <>
+            <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
+              <IconUpload className="size-6" />
+            </span>
+            {/* Dragging is a desktop idea; on a phone the button is the whole
+              interaction, so the wording changes with the screen. */}
+            <p className="mt-4 hidden text-sm font-medium md:block">
+              {upload?.copy?.lead ?? t("dropzone")}
+            </p>
+            <p className="mt-4 text-sm font-medium md:hidden">
+              {upload?.copy?.leadShort ?? t("pickReceiptLead")}
+            </p>
+            <p className="mt-1 text-xs text-muted">{upload?.copy?.fileTypes ?? t("fileTypes")}</p>
+            <Button className="mt-5" onClick={pick}>
+              <IconUpload className="size-4" />
+              {upload?.copy?.action ?? t("pickReceipt")}
+            </Button>
+          </>
+        )}
+      </div>
+    );
 
   const viewer = (
     <>
@@ -842,7 +860,10 @@ export function ReceiptPanelColumn() {
       )}
       {/* Where a page's ReceiptPanelFooter lands. Takes no room while none
           does, so every other page's panel is exactly as it was. */}
-      <div ref={setFooterSlot} className="shrink-0 border-t border-border bg-background empty:hidden" />
+      <div
+        ref={setFooterSlot}
+        className="shrink-0 border-t border-border bg-background empty:hidden"
+      />
       {upload && (
         <input
           ref={fileInput}

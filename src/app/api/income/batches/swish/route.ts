@@ -51,7 +51,10 @@ export async function POST(req: Request) {
   const existing = await fortnoxIncomeVouchers(from, to);
 
   try {
-    const reports = routeSwishPayments(routing.table, await fetchSwishPayments(from, to, bytes, filename));
+    const reports = routeSwishPayments(
+      routing.table,
+      await fetchSwishPayments(from, to, bytes, filename),
+    );
     if (reports.length === 0) return fail(422, "income.noReports");
 
     const result = await createSalesBatch(
@@ -71,7 +74,8 @@ export async function POST(req: Request) {
       // A 400 from the service is about this file (a header it did not
       // recognise, a row it could not read) so its message is the useful part
       // and is passed through rather than replaced.
-      if (e.status === 400) return fail(422, "income.csvRejected", { values: { detail: e.message } });
+      if (e.status === 400)
+        return fail(422, "income.csvRejected", { values: { detail: e.message } });
       return fail(502, "income.fetchFailed", { values: { detail: e.message } });
     }
     throw e;

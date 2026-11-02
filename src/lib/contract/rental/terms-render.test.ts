@@ -22,7 +22,12 @@ const compiler = NodeCompiler.create({
 });
 
 const withTerms = (terms: readonly TermsSection[]): RentalContractData => ({
-  lessor: { name: "D-sektionen", orgNo: "845003-2878", address: "Gatan 1", postalLine: "223 63 Lund" },
+  lessor: {
+    name: "D-sektionen",
+    orgNo: "845003-2878",
+    address: "Gatan 1",
+    postalLine: "223 63 Lund",
+  },
   counterparty: "F-sektionen",
   counterpartyOrgNo: "845002-5678",
   counterpartyAddress: "Gatan 2",
@@ -35,8 +40,14 @@ const withTerms = (terms: readonly TermsSection[]): RentalContractData => ({
   returnAt: "2026-09-21",
   purpose: null,
   lines: [
-    { description: "Högtalare", quantity: "1 st", unitPrice: "1,00 kr",
-      discount: null, lineTotal: "1,00 kr", replacementValue: "1,00 kr" },
+    {
+      description: "Högtalare",
+      quantity: "1 st",
+      unitPrice: "1,00 kr",
+      discount: null,
+      lineTotal: "1,00 kr",
+      replacementValue: "1,00 kr",
+    },
   ],
   anyDiscount: false,
   subtotal: "1,00 kr",

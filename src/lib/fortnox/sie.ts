@@ -155,10 +155,7 @@ export function parseSie(text: string): ParsedSie {
         const cc = costCenterFromObjects(t[3] ?? "{}");
         const balance = Number(t[4] ?? 0);
         if (!account || !cc || Number.isNaN(balance)) break;
-        (t[0] === "#OIB" ? openingBalances : closingBalances).set(
-          balanceKey(account, cc),
-          balance,
-        );
+        (t[0] === "#OIB" ? openingBalances : closingBalances).set(balanceKey(account, cc), balance);
         break;
       }
       case "#VER": {

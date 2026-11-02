@@ -19,11 +19,7 @@ describe("voucherBlocker", () => {
 
   it("passes a voucher split across several cost accounts", () => {
     expect(
-      voucherBlocker([
-        line("1930", 0, 25000),
-        line("4010", 15000, 0),
-        line("5010", 10000, 0),
-      ]),
+      voucherBlocker([line("1930", 0, 25000), line("4010", 15000, 0), line("5010", 10000, 0)]),
     ).toBeNull();
   });
 
@@ -33,15 +29,11 @@ describe("voucherBlocker", () => {
   });
 
   it("refuses a row with no account", () => {
-    expect(voucherBlocker([line("1930", 0, 25000), line("", 25000, 0)])).toBe(
-      "accountRequired",
-    );
+    expect(voucherBlocker([line("1930", 0, 25000), line("", 25000, 0)])).toBe("accountRequired");
   });
 
   it("treats a blank account as missing, not as an account", () => {
-    expect(voucherBlocker([line("1930", 0, 25000), line("   ", 25000, 0)])).toBe(
-      "accountRequired",
-    );
+    expect(voucherBlocker([line("1930", 0, 25000), line("   ", 25000, 0)])).toBe("accountRequired");
   });
 
   it("refuses negative amounts, a return flips the rows, not the sign", () => {
@@ -61,9 +53,7 @@ describe("voucherBlocker", () => {
   });
 
   it("refuses an unbalanced voucher", () => {
-    expect(voucherBlocker([line("1930", 0, 25000), line("4010", 24900, 0)])).toBe(
-      "unbalanced",
-    );
+    expect(voucherBlocker([line("1930", 0, 25000), line("4010", 24900, 0)])).toBe("unbalanced");
   });
 
   it("refuses an empty voucher by its empty rows, not by its balance", () => {
@@ -77,7 +67,9 @@ describe("voucherBlocker", () => {
   // The reason the rule counts in öre: 0,1 + 0,2 in kronor is not 0,3, so a
   // voucher balanced to the öre could read as unbalanced by a float's width.
   it("balances exactly at öre resolution", () => {
-    expect(voucherBlocker([line("1930", 0, 30), line("4010", 10, 0), line("5010", 20, 0)])).toBeNull();
+    expect(
+      voucherBlocker([line("1930", 0, 30), line("4010", 10, 0), line("5010", 20, 0)]),
+    ).toBeNull();
   });
 
   // A return: the same rows the other way round, and still balanced.

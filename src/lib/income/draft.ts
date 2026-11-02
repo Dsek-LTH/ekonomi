@@ -110,7 +110,8 @@ export async function createDraftReport(input: CreateDraftInput): Promise<DraftR
     });
     const draft = siblings.find((r) => r.status === "DRAFT");
     if (draft) return { ok: true as const, id: draft.id, created: false };
-    if (siblings.length > 0) return { ok: false as const, reason: "moveDestinationBooked" as const };
+    if (siblings.length > 0)
+      return { ok: false as const, reason: "moveDestinationBooked" as const };
 
     const created = await tx.incomeReport.create({
       select: { id: true },

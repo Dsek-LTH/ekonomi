@@ -10,9 +10,7 @@ import type { FortnoxStatus } from "@/lib/domain/types";
 // A user's live personal Fortnox session, or null when they have none (or it
 // has run past its cap). Just the session, for /profile, which has no use for
 // the org's service connection.
-export async function getFortnoxSession(
-  userId: string,
-): Promise<FortnoxStatus["session"] | null> {
+export async function getFortnoxSession(userId: string): Promise<FortnoxStatus["session"] | null> {
   const session = await prisma.fortnoxUserSession.findUnique({ where: { userId } });
   if (!session || session.sessionExpiresAt.getTime() <= Date.now()) return null;
   return {
@@ -58,7 +56,10 @@ export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> 
 }
 
 /** The kept supplier register: how many, and when it was last read. */
-export async function getSupplierSyncStatus(): Promise<{ count: number; lastSyncAt: string | null }> {
+export async function getSupplierSyncStatus(): Promise<{
+  count: number;
+  lastSyncAt: string | null;
+}> {
   const agg = await prisma.supplier.aggregate({ _count: true, _max: { syncedAt: true } });
   return { count: agg._count, lastSyncAt: agg._max.syncedAt?.toISOString() ?? null };
 }

@@ -11,10 +11,6 @@ export function safeName(filename: string): string {
 
 // Stable, collision-free key. The receiptId (a uuid) guarantees uniqueness;
 // the expenseId prefix keeps a receipt's objects grouped.
-export function receiptKey(
-  expenseId: string,
-  receiptId: string,
-  filename: string,
-): string {
+export function receiptKey(expenseId: string, receiptId: string, filename: string): string {
   return `receipts/${expenseId}/${receiptId}-${safeName(filename)}`;
 }

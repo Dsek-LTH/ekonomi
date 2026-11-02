@@ -54,7 +54,9 @@ export async function pdfLines(bytes: Uint8Array): Promise<string[]> {
     for (let p = 1; p <= Math.min(doc.numPages, MAX_PAGES); p++) {
       const page = await doc.getPage(p);
       const content = await page.getTextContent();
-      const items = (content.items as TextItem[]).filter((i) => typeof i.str === "string" && i.str.trim());
+      const items = (content.items as TextItem[]).filter(
+        (i) => typeof i.str === "string" && i.str.trim(),
+      );
       const rows: { y: number; parts: { x: number; s: string }[] }[] = [];
       for (const it of items) {
         const [x, y] = [it.transform[4], it.transform[5]];

@@ -16,7 +16,6 @@ export function LoginClient({
   /** Who the dev sign-in offers. Empty in production, where there is none. */
   devUsers: DevUser[];
 }) {
-
   const t = useTranslations("login");
   const tDev = useTranslations("login.dev");
   const tRole = useTranslations("common.role");
@@ -28,17 +27,9 @@ export function LoginClient({
             tile with a card shadow and a white text colour, none of which had
             anything to render: an 80px symbol overflowing an empty box. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/symbol_rosa.svg"
-          alt="D-sektionen"
-          className="mx-auto mb-7 h-20 w-auto"
-        />
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="mx-auto mt-2 max-w-xs text-[15px] text-muted">
-          {t("description")}
-        </p>
+        <img src="/symbol_rosa.svg" alt="D-sektionen" className="mx-auto mb-7 h-20 w-auto" />
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mx-auto mt-2 max-w-xs text-[15px] text-muted">{t("description")}</p>
 
         {error && (
           <p
@@ -60,16 +51,12 @@ export function LoginClient({
 
         {devUsers.length > 0 && (
           <div className="mt-8 rounded-panel border border-dashed border-border p-4 text-left">
-            <p className="mb-3 text-xs font-medium text-muted">
-              {tDev("heading")}
-            </p>
+            <p className="mb-3 text-xs font-medium text-muted">{tDev("heading")}</p>
             <div className="space-y-2">
               {devUsers.map((u) => (
                 <button
                   key={u.studentId}
-                  onClick={() =>
-                    signIn("dev", { studentId: u.studentId, callbackUrl })
-                  }
+                  onClick={() => signIn("dev", { studentId: u.studentId, callbackUrl })}
                   className="flex h-11 w-full items-center rounded-control border border-border-control bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-8"
                 >
                   {u.name} - {u.roles.map((r) => tRole(r)).join(", ")}

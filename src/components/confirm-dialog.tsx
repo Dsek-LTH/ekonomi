@@ -145,9 +145,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <h2 id={titleId} className="text-base font-semibold">{pending.title}</h2>
+                <h2 id={titleId} className="text-base font-semibold">
+                  {pending.title}
+                </h2>
                 {pending.message && (
-                  <p id={messageId} className="mt-1 text-sm text-muted">{pending.message}</p>
+                  <p id={messageId} className="mt-1 text-sm text-muted">
+                    {pending.message}
+                  </p>
                 )}
               </div>
             </div>

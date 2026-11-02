@@ -83,7 +83,12 @@ export function InvoiceRecordClient({
     .filter(Boolean)
     .join(" - ");
   return (
-    <PageShell width="content" title={title(invoice)} subtitle={subtitle || undefined} back={backHref}>
+    <PageShell
+      width="content"
+      title={title(invoice)}
+      subtitle={subtitle || undefined}
+      back={backHref}
+    >
       <InvoiceRecord {...data} backHref={backHref} fortnox={fortnox} />
     </PageShell>
   );
@@ -100,7 +105,9 @@ export function InvoiceMissing() {
   );
 }
 
-function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: FortnoxStatus | null }) {
+function InvoiceRecord(
+  props: WorkspaceProps & { backHref: string; fortnox: FortnoxStatus | null },
+) {
   const { invoice, can, backHref, fortnox } = props;
   const tDetail = useTranslations("invoices.detail");
   const router = useProgressRouter();
@@ -112,7 +119,10 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
   async function uploadDocument(file: File) {
     const form = new FormData();
     form.append("file", file);
-    await docs.mutate(`/api/supplier-invoices/${invoice.id}/documents`, { body: form, key: "upload" });
+    await docs.mutate(`/api/supplier-invoices/${invoice.id}/documents`, {
+      body: form,
+      key: "upload",
+    });
   }
 
   return (
@@ -151,14 +161,22 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
             onGone={() => router.push(backHref)}
           />
         </div>
-        {moving && <MoveSection invoice={invoice} resultUnits={props.resultUnits} onDone={() => setMoving(false)} />}
+        {moving && (
+          <MoveSection
+            invoice={invoice}
+            resultUnits={props.resultUnits}
+            onDone={() => setMoving(false)}
+          />
+        )}
 
         <FactStrip invoice={invoice} />
 
         {invoice.mail?.note && (
           <InspectorSection title={tDetail("note")}>
             <p className="whitespace-pre-line text-sm">
-              <span className="font-medium">{invoice.mail.fromName ?? invoice.mail.fromAddress}:</span>{" "}
+              <span className="font-medium">
+                {invoice.mail.fromName ?? invoice.mail.fromAddress}:
+              </span>{" "}
               {invoice.mail.note}
             </p>
           </InspectorSection>
@@ -166,7 +184,9 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
 
         <SplitSection invoice={invoice} />
 
-        {(invoice.status === "BOOKED" || invoice.status === "EXPORTED") && <BookingSection {...props} />}
+        {(invoice.status === "BOOKED" || invoice.status === "EXPORTED") && (
+          <BookingSection {...props} />
+        )}
 
         <Timeline invoice={invoice} />
       </Card>
@@ -177,12 +197,22 @@ function InvoiceRecord(props: WorkspaceProps & { backHref: string; fortnox: Fort
 /** Who it waits on, beside the status, when that is somebody else. */
 function WaitingOn({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.record");
-  if (invoice.status !== "PENDING_APPROVAL" && invoice.status !== "ASSIGNED" && invoice.status !== "CHANGES_REQUESTED") {
+  if (
+    invoice.status !== "PENDING_APPROVAL" &&
+    invoice.status !== "ASSIGNED" &&
+    invoice.status !== "CHANGES_REQUESTED"
+  ) {
     return null;
   }
   const units =
     invoice.status === "PENDING_APPROVAL"
-      ? [...new Set(invoice.allocations.filter((a) => !a.approvedByName).map((a) => a.resultUnit ?? a.costCenterCode))]
+      ? [
+          ...new Set(
+            invoice.allocations
+              .filter((a) => !a.approvedByName)
+              .map((a) => a.resultUnit ?? a.costCenterCode),
+          ),
+        ]
       : [invoice.resultUnitName ?? "-"];
   return <span className="text-sm text-muted">{t("waitingFor", { units: units.join(", ") })}</span>;
 }
@@ -192,7 +222,13 @@ function WaitingOn({ invoice }: { invoice: SupplierInvoiceView }) {
  * bokföring warns. None of it stops the sending, except a Fortnox connection
  * the section does not have.
  */
-function SendNotice({ invoice, fortnox }: { invoice: SupplierInvoiceView; fortnox: FortnoxStatus | null }) {
+function SendNotice({
+  invoice,
+  fortnox,
+}: {
+  invoice: SupplierInvoiceView;
+  fortnox: FortnoxStatus | null;
+}) {
   const t = useTranslations("invoices.record");
   const tWs = useTranslations("invoices.workspace");
   const tField = useTranslations("invoices.field");
@@ -261,7 +297,9 @@ function RecordActions({
   const router = useProgressRouter();
   const tr = useTransition(invoice.id);
   const sender = useMutation();
-  const back = useReturnToInbox(invoice.id, (status) => (status === "RETURNED" ? onGone() : undefined));
+  const back = useReturnToInbox(invoice.id, (status) =>
+    status === "RETURNED" ? onGone() : undefined,
+  );
   const unit = invoice.resultUnitName ?? "-";
   const withTreasury = invoice.status === "APPROVED" || invoice.status === "BOOKED";
 
@@ -304,7 +342,8 @@ function RecordActions({
       confirmLabel: tAction("redistribute"),
     });
     // Reopened, the split is the unit's to make again, on its page.
-    if (ok && (await tr.run({ action: "redistribute" }))) router.push(`/invoices/${invoice.id}/allocate`);
+    if (ok && (await tr.run({ action: "redistribute" })))
+      router.push(`/invoices/${invoice.id}/allocate`);
   }
 
   // Sending to Fortnox, asked first: a supplier invoice made there cannot be
@@ -365,10 +404,22 @@ function RecordActions({
         onClick: () => void send(),
         disabledReason: sendReason ?? undefined,
       },
-      can.canAttest && { key: "not_ours", label: tAttest("notOurs"), onClick: () => void notOurs() },
-      can.canRedistribute && { key: "redistribute", label: tAction("redistribute"), onClick: () => void redistribute() },
+      can.canAttest && {
+        key: "not_ours",
+        label: tAttest("notOurs"),
+        onClick: () => void notOurs(),
+      },
+      can.canRedistribute && {
+        key: "redistribute",
+        label: tAction("redistribute"),
+        onClick: () => void redistribute(),
+      },
       can.canRequestChanges &&
-        withTreasury && { key: "send_back", label: tBook("sendBack", { unit }), onClick: () => void sendBack() },
+        withTreasury && {
+          key: "send_back",
+          label: tBook("sendBack", { unit }),
+          onClick: () => void sendBack(),
+        },
       can.canWithdrawAttest && {
         key: "withdraw",
         label: tAction("withdraw_attest"),
@@ -385,14 +436,18 @@ function RecordActions({
   ).filter((a): a is Action => a !== false);
 
   // Sending it back is never what the page is waiting for, so it never leads.
-  const [primary, ...rest] = [...actions.filter((a) => !a.danger), ...actions.filter((a) => a.danger)];
+  const [primary, ...rest] = [
+    ...actions.filter((a) => !a.danger),
+    ...actions.filter((a) => a.danger),
+  ];
   const busy = tr.busy || back.busy || sender.busy;
   if (!primary) return null;
 
   // The main action leads only when it is the invoice's next step. One that
   // is only ever quiet (moving it, sending it back) stays in the menu even
   // alone, so the header never offers it as the thing to do.
-  const quiet = (a: Action) => ["redistribute", "withdraw", "move", "send_back", "not_ours", "return"].includes(a.key);
+  const quiet = (a: Action) =>
+    ["redistribute", "withdraw", "move", "send_back", "not_ours", "return"].includes(a.key);
   const lead = quiet(primary) ? null : primary;
   const menu = lead ? rest : [primary, ...rest];
 
@@ -463,7 +518,9 @@ function MoveSection({
       <div className="max-w-sm">
         <Combobox
           size="sm"
-          options={resultUnits.filter((u) => u.id !== invoice.resultUnitId).map((u) => ({ value: u.id, label: u.name }))}
+          options={resultUnits
+            .filter((u) => u.id !== invoice.resultUnitId)
+            .map((u) => ({ value: u.id, label: u.name }))}
           value=""
           onChange={async (v) => {
             if (v && (await tr.run({ action: "assign", resultUnitId: v }))) onDone();
@@ -496,9 +553,15 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
         )}
       </StripCell>
       <StripCell label={t("dueDate")} truncate>
-        {invoice.dueDate ? <DueLabel dueDate={invoice.dueDate} /> : <span className="text-muted">-</span>}
+        {invoice.dueDate ? (
+          <DueLabel dueDate={invoice.dueDate} />
+        ) : (
+          <span className="text-muted">-</span>
+        )}
       </StripCell>
-      <StripCell label={tRecord("unit")} truncate>{invoice.resultUnitName ?? "-"}</StripCell>
+      <StripCell label={tRecord("unit")} truncate>
+        {invoice.resultUnitName ?? "-"}
+      </StripCell>
     </div>
   );
 }
@@ -508,12 +571,15 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
 function SplitSection({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.record");
   const tK = useTranslations("invoices.kontering");
-  const share = (a: Allocation) => a.amount ?? (invoice.allocations.length === 1 ? invoice.amount : null);
+  const share = (a: Allocation) =>
+    a.amount ?? (invoice.allocations.length === 1 ? invoice.amount : null);
 
   if (invoice.allocations.length === 0) {
     return (
       <InspectorSection title={t("split")}>
-        <p className="text-sm text-muted">{t("notAllocated", { unit: invoice.resultUnitName ?? "-" })}</p>
+        <p className="text-sm text-muted">
+          {t("notAllocated", { unit: invoice.resultUnitName ?? "-" })}
+        </p>
       </InspectorSection>
     );
   }
@@ -559,9 +625,23 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
       credit: l.credit ?? 0,
     })),
     ...(rounding
-      ? [{ key: "rounding", account: String(ROUNDING_ACCOUNT), accountName: tBook("rounding"), debit: Math.max(rounding, 0), credit: Math.max(-rounding, 0) }]
+      ? [
+          {
+            key: "rounding",
+            account: String(ROUNDING_ACCOUNT),
+            accountName: tBook("rounding"),
+            debit: Math.max(rounding, 0),
+            credit: Math.max(-rounding, 0),
+          },
+        ]
       : []),
-    { key: "payable", account: String(PAYABLE_ACCOUNT), accountName: tBook("payable"), debit: 0, credit: invoice.amount ?? 0 },
+    {
+      key: "payable",
+      account: String(PAYABLE_ACCOUNT),
+      accountName: tBook("payable"),
+      debit: 0,
+      credit: invoice.amount ?? 0,
+    },
   ];
 
   const facts: [string, React.ReactNode][] = [
@@ -569,8 +649,12 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
     [tField("invoiceNumber"), invoice.invoiceNumber ?? "-"],
     [tField("invoiceDate"), invoice.invoiceDate ? date(invoice.invoiceDate) : "-"],
     [tField("ocr"), invoice.ocr ?? "-"],
-    ...(invoice.bankgiro ? [[tField("bankgiro"), invoice.bankgiro] as [string, React.ReactNode]] : []),
-    ...(invoice.plusgiro ? [[tField("plusgiro"), invoice.plusgiro] as [string, React.ReactNode]] : []),
+    ...(invoice.bankgiro
+      ? [[tField("bankgiro"), invoice.bankgiro] as [string, React.ReactNode]]
+      : []),
+    ...(invoice.plusgiro
+      ? [[tField("plusgiro"), invoice.plusgiro] as [string, React.ReactNode]]
+      : []),
   ];
 
   return (
@@ -578,7 +662,13 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
       title={t("booking")}
       aside={
         invoice.fortnoxGivenNumber && (
-          <span title={t("fortnoxLine", { number: invoice.fortnoxGivenNumber, date: invoice.exportedAt ? date(invoice.exportedAt) : "-" })} className="font-medium tabular-nums">
+          <span
+            title={t("fortnoxLine", {
+              number: invoice.fortnoxGivenNumber,
+              date: invoice.exportedAt ? date(invoice.exportedAt) : "-",
+            })}
+            className="font-medium tabular-nums"
+          >
             {t("fortnoxNumber", { number: invoice.fortnoxGivenNumber })}
           </span>
         )

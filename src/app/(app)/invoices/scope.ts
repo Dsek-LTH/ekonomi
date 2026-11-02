@@ -16,7 +16,8 @@ export type InvoiceTab = (typeof INVOICE_TABS)[number];
 
 /** Which rows each stage holds. "all" holds every one. */
 const INVOICE_TAB_HOLDS: Record<InvoiceTab, (r: SupplierInvoiceRow) => boolean> = {
-  attest: (r) => r.status === "ASSIGNED" || r.status === "PENDING_APPROVAL" || r.status === "CHANGES_REQUESTED",
+  attest: (r) =>
+    r.status === "ASSIGNED" || r.status === "PENDING_APPROVAL" || r.status === "CHANGES_REQUESTED",
   book: (r) => r.status === "APPROVED",
   send: (r) => r.status === "BOOKED",
   exported: (r) => r.status === "EXPORTED",

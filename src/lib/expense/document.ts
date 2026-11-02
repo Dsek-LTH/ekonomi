@@ -61,8 +61,7 @@ const km = (n: number): string => `${formatNumber(n, 1, 1)} km`;
 /** An absent value is said, not left blank. Matches `orDash` in the template. */
 const DASH = "-";
 
-const isoDate = (d: Date | null | undefined): string | null =>
-  d ? isoDay(d) : null;
+const isoDate = (d: Date | null | undefined): string | null => (d ? isoDay(d) : null);
 
 /** How each payment type is worded on the page. Fixed Swedish, not a
  *  translation lookup: see the note on ExpenseCoverData. */
@@ -214,7 +213,10 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
       name: expense.submitter.name,
       studentId: expense.submitter.studentId,
     },
-    total: formatOreKr(expense.allocations.reduce((sum, a) => sum + a.amount, 0), { decimals: 2 }),
+    total: formatOreKr(
+      expense.allocations.reduce((sum, a) => sum + a.amount, 0),
+      { decimals: 2 },
+    ),
     allocations: expense.allocations.map((a) => ({
       // The code alone, which is what the cost centre is called in Fortnox and
       // in the budget.

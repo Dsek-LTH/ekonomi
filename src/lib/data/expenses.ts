@@ -98,8 +98,13 @@ type SummaryRow = Awaited<
   ReturnType<typeof prisma.expense.findFirstOrThrow<{ include: typeof summaryInclude }>>
 >;
 
-function fortnoxLabel(v: { fortnoxSeries: string | null; fortnoxNumber: number | null }): string | undefined {
-  return v.fortnoxSeries && v.fortnoxNumber != null ? `${v.fortnoxSeries}-${v.fortnoxNumber}` : undefined;
+function fortnoxLabel(v: {
+  fortnoxSeries: string | null;
+  fortnoxNumber: number | null;
+}): string | undefined {
+  return v.fortnoxSeries && v.fortnoxNumber != null
+    ? `${v.fortnoxSeries}-${v.fortnoxNumber}`
+    : undefined;
 }
 
 // One shape for the booked voucher, whether or not its rows were loaded.
@@ -157,9 +162,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
             orePerKm: e.mileageOrePerKm,
           }
         : undefined,
-    submitterHasPayout: Boolean(
-      e.submitter.bankClearingNumber && e.submitter.bankAccountNumber,
-    ),
+    submitterHasPayout: Boolean(e.submitter.bankClearingNumber && e.submitter.bankAccountNumber),
     verification: e.verification ? mapVerification(e.verification) : undefined,
     // All three columns or none: the route writes and clears them together, so
     // a half-set dispens would be a row nobody wrote. Reading it as absent is
@@ -202,10 +205,7 @@ type AttestCtx = {
 };
 
 async function attestCtx(viewer: Viewer): Promise<AttestCtx> {
-  const [owned, prefixes] = await Promise.all([
-    ownedResultUnits(viewer),
-    getPrefixes(),
-  ]);
+  const [owned, prefixes] = await Promise.all([ownedResultUnits(viewer), getPrefixes()]);
   return {
     viewerId: viewer.id,
     viewerRoles: viewer.roles,
@@ -466,10 +466,7 @@ export async function getDashboardExpenses(
 
 // Full single expense for the detail page. Adds the event timeline and the
 // verification's voucher lines on top of the summary shape.
-export async function getExpense(
-  id: string,
-  viewer?: Viewer,
-): Promise<Expense | null> {
+export async function getExpense(id: string, viewer?: Viewer): Promise<Expense | null> {
   // The scope goes into the lookup rather than after it: an expense the viewer
   // may not see is simply not found, which is the answer both callers want
   // anyway (the page renders notFound, the API answers 404).

@@ -62,10 +62,7 @@ const SIMPLE_TRANSITIONS: Record<
   },
 };
 
-export async function POST(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
@@ -84,7 +81,12 @@ export async function POST(
       // Only whether one exists, since submitting asks nothing else of it.
       receipts: { select: { id: true }, take: 1 },
       submitter: {
-        select: { name: true, roles: true, bankClearingNumber: true, bankAccountNumber: true },
+        select: {
+          name: true,
+          roles: true,
+          bankClearingNumber: true,
+          bankAccountNumber: true,
+        },
       },
     },
   });
@@ -259,9 +261,15 @@ export async function POST(
             comment: comment || null,
           },
         });
-        await notify(tx, "EXPENSE_ATTEST_WITHDRAWN", [expense.submitterId], about("attestWithdrawn"), {
-          exclude: [actorId],
-        });
+        await notify(
+          tx,
+          "EXPENSE_ATTEST_WITHDRAWN",
+          [expense.submitterId],
+          about("attestWithdrawn"),
+          {
+            exclude: [actorId],
+          },
+        );
       }),
     );
     if (withdrawn instanceof NextResponse) return withdrawn;
@@ -375,9 +383,15 @@ export async function POST(
         await tx.expenseEvent.create({
           data: { expenseId: expense.id, type: "CHANGES_REQUESTED", actorId, comment },
         });
-        await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
-          exclude: [actorId],
-        });
+        await notify(
+          tx,
+          "EXPENSE_CHANGES_REQUESTED",
+          [expense.submitterId],
+          about("changesRequested"),
+          {
+            exclude: [actorId],
+          },
+        );
       }),
     );
     if (reopened instanceof NextResponse) return reopened;
@@ -614,10 +628,7 @@ export async function POST(
     // dispens columns on Expense.
     if (
       !expense.deadlineWaivedAt &&
-      isLateReimbursement(
-        isoDay(expense.purchaseDate),
-        expense.paymentType,
-      )
+      isLateReimbursement(isoDay(expense.purchaseDate), expense.paymentType)
     ) {
       return fail(422, "expense.reimbursementTooLate", {
         values: { days: REIMBURSEMENT_DEADLINE_DAYS },
@@ -642,8 +653,7 @@ export async function POST(
           // Whole and not in the future by the two checks above, so the date
           // this is valued against is the one the claim will be paid on.
           date: isoDay(expense.purchaseDate),
-          odometerStart:
-            expense.odometerStart == null ? null : Number(expense.odometerStart),
+          odometerStart: expense.odometerStart == null ? null : Number(expense.odometerStart),
           odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
           stops: expense.journeyStops,
         },
@@ -707,9 +717,7 @@ export async function POST(
         // back for changes and re-submitted keeps the number it was already known
         // by. To everyone who has seen it, it is the same utlägg.
         const reference =
-          action === "submit" && expense.reference === null
-            ? await claimReference(tx)
-            : undefined;
+          action === "submit" && expense.reference === null ? await claimReference(tx) : undefined;
         // The status this transition was permitted from has to still be the
         // status it is in. Two submits of the same draft would both have passed
         // the check above and both written, and the second would have found a
@@ -739,9 +747,15 @@ export async function POST(
             { exclude: [actorId, expense.submitterId] },
           );
         } else {
-          await notify(tx, "EXPENSE_CHANGES_REQUESTED", [expense.submitterId], about("changesRequested"), {
-            exclude: [actorId],
-          });
+          await notify(
+            tx,
+            "EXPENSE_CHANGES_REQUESTED",
+            [expense.submitterId],
+            about("changesRequested"),
+            {
+              exclude: [actorId],
+            },
+          );
         }
         return reference ?? expense.reference;
       }),

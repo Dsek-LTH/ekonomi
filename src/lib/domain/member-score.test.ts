@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { memberScore, starsForDays, type ScoreCardPurchase, type ScoreExpense } from "./member-score";
+import {
+  memberScore,
+  starsForDays,
+  type ScoreCardPurchase,
+  type ScoreExpense,
+} from "./member-score";
 
 const TODAY = "2026-10-28";
 
@@ -11,7 +16,11 @@ function day(daysAgo: number): string {
 }
 
 /** Bought `daysAgo` days ago and sent `after` days later, or never. */
-function sent(daysAgo: number, after: number | null, extra: Partial<ScoreExpense> = {}): ScoreExpense {
+function sent(
+  daysAgo: number,
+  after: number | null,
+  extra: Partial<ScoreExpense> = {},
+): ScoreExpense {
   return {
     id: `e${daysAgo}-${after}`,
     title: "Kvitto",

@@ -22,7 +22,8 @@ export interface IncomeConfigProblem {
   blocker: IncomeConfigBlocker;
 }
 
-type RoutingResult = { ok: true; table: RoutingTable } | { ok: false; blocker: IncomeConfigBlocker };
+type RoutingResult =
+  { ok: true; table: RoutingTable } | { ok: false; blocker: IncomeConfigBlocker };
 
 /**
  * Everything wrong with the routing table, in the order it has to be fixed.
@@ -31,7 +32,11 @@ type RoutingResult = { ok: true; table: RoutingTable } | { ok: false; blocker: I
  * left to do before anyone fetches, instead of a fetch stopping at one of them
  * and leaving the next to be found by trying again.
  */
-function routingProblems(committees: number, prefixes: number, fallback: Route | null): IncomeConfigProblem[] {
+function routingProblems(
+  committees: number,
+  prefixes: number,
+  fallback: Route | null,
+): IncomeConfigProblem[] {
   const problems: IncomeConfigProblem[] = [];
   if (committees === 0) problems.push({ blocker: "noCommittees" });
   if (prefixes === 0) problems.push({ blocker: "noPrefixes" });
@@ -87,7 +92,9 @@ export async function loadRoutingTable(): Promise<RoutingResult> {
   return {
     ok: true,
     table: {
-      prefixes: new Map(prefixes.map((p) => [p.code.toLowerCase(), { key: p.income.key, account: p.account }])),
+      prefixes: new Map(
+        prefixes.map((p) => [p.code.toLowerCase(), { key: p.income.key, account: p.account }]),
+      ),
       fallback,
       swishAmountGuesses: new Map(amountGuesses.map((g) => [g.amount, g.message])),
       accountNames: new Map(accounts.map((a) => [a.number, a.name])),

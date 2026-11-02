@@ -56,12 +56,16 @@ const data: RentalContractData = {
 };
 
 /** The families the PDF actually embeds, without the subset prefix. */
-const embeddedFonts = (bytes: Uint8Array): string[] => [
-  ...new Set(
-    [...Buffer.from(bytes).toString("latin1").matchAll(/\/BaseFont\s*\/[A-Z]{6}\+([A-Za-z0-9-]+)/g)]
-      .map((m) => m[1].replace(/-Identity-H$/, "")),
-  ),
-].sort();
+const embeddedFonts = (bytes: Uint8Array): string[] =>
+  [
+    ...new Set(
+      [
+        ...Buffer.from(bytes)
+          .toString("latin1")
+          .matchAll(/\/BaseFont\s*\/[A-Z]{6}\+([A-Za-z0-9-]+)/g),
+      ].map((m) => m[1].replace(/-Identity-H$/, "")),
+    ),
+  ].sort();
 
 describe("the uthyrningsavtal is set in the guild's hand", () => {
   it("embeds Domitian and TeX Gyre Heros, and nothing else", async () => {

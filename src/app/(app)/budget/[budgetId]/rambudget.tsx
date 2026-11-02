@@ -9,7 +9,14 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet, type Totals } from "@/lib/budget/compare";
-import { resultUnitLabel, resultUnitOfSheet, diffClass, fmt, fmtSigned, groupByResultUnit } from "./budget-helpers";
+import {
+  resultUnitLabel,
+  resultUnitOfSheet,
+  diffClass,
+  fmt,
+  fmtSigned,
+  groupByResultUnit,
+} from "./budget-helpers";
 import type { Comparison } from "./use-comparison";
 import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
 
@@ -21,15 +28,29 @@ const numCls = "px-3 py-1.5 text-right tabular-nums";
 type Row = { sheet: JoinedSheet; own: Totals; other: Totals; impact: number };
 type Pair = { own: Totals; other: Totals; impact: number };
 
-const add = (a: Totals, b: Totals): Totals =>
-  ({ income: a.income + b.income, cost: a.cost + b.cost, result: a.result + b.result });
+const add = (a: Totals, b: Totals): Totals => ({
+  income: a.income + b.income,
+  cost: a.cost + b.cost,
+  result: a.result + b.result,
+});
 
-const sum = (rows: Row[]): Pair => rows.reduce<Pair>(
-  (a, r) => ({ own: add(a.own, r.own), other: add(a.other, r.other), impact: a.impact + r.impact }),
-  { own: ZERO_TOTALS, other: ZERO_TOTALS, impact: 0 },
-);
+const sum = (rows: Row[]): Pair =>
+  rows.reduce<Pair>(
+    (a, r) => ({
+      own: add(a.own, r.own),
+      other: add(a.other, r.other),
+      impact: a.impact + r.impact,
+    }),
+    { own: ZERO_TOTALS, other: ZERO_TOTALS, impact: 0 },
+  );
 
-export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: {
+export function Rambudget({
+  comparison,
+  ccIdOf,
+  impactOf,
+  showImpact,
+  onPick,
+}: {
   comparison: Comparison;
   /** The sheet in THIS budget a joined row belongs to, if it has one. */
   ccIdOf: (key: string) => string | undefined;
@@ -66,15 +87,25 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
         <thead>
           <tr className="border-b border-border text-xs text-muted">
             <th className="px-3 py-2 text-left font-medium">{tAlloc("costCenter")}</th>
-            <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>{t("income")}</th>
+            <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>
+              {t("income")}
+            </th>
             <th className={cn("font-medium", numCls)}>{t("costs")}</th>
             <th className={cn("font-medium", numCls)}>{t("result")}</th>
             {/* What the adopted budget said, beside what it says now. A transfer
                 nets to nothing across its resultUnit, so this column is mostly
                 deviations, which is the point of it. */}
-            {showImpact && <th title={t("changesHint")} className={cn("font-medium", numCls)}>{t("changes")}</th>}
+            {showImpact && (
+              <th title={t("changesHint")} className={cn("font-medium", numCls)}>
+                {t("changes")}
+              </th>
+            )}
             {showImpact && <th className={cn("font-medium", numCls)}>{t("original")}</th>}
-            {showCompare && <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>{comparison.otherLabel}</th>}
+            {showCompare && (
+              <th data-rule="l" className={cn("border-l border-border font-medium", numCls)}>
+                {comparison.otherLabel}
+              </th>
+            )}
             {showCompare && <th className={cn("font-medium", numCls)}>Diff</th>}
           </tr>
           <tr className="border-b-2 border-border bg-surface font-semibold">
@@ -104,15 +135,30 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
                   >
                     {/* Under its result unit's heading, so the short name where
                         one is set, with the full name on hover. */}
-                    <td className="px-3 py-1.5" title={row.sheet.shortName ? row.sheet.name : undefined}>
-                      {/^[@#]/.test(row.sheet.key)
-                        ? row.sheet.name
-                        : <><span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}{nameUnderUnit(row.sheet)}</>}
+                    <td
+                      className="px-3 py-1.5"
+                      title={row.sheet.shortName ? row.sheet.name : undefined}
+                    >
+                      {/^[@#]/.test(row.sheet.key) ? (
+                        row.sheet.name
+                      ) : (
+                        <>
+                          <span className="font-mono text-xs text-muted">{row.sheet.key}</span>{" "}
+                          {nameUnderUnit(row.sheet)}
+                        </>
+                      )}
                       {/* Only the other side has this one. There is no sheet
                           here to open, and nothing budgeted to put beside it. */}
                       {!id && <span className="ml-2 text-xs">- {t("notInThisBudget")}</span>}
                     </td>
-                    <Amounts own={row.own} other={row.other} impact={row.impact} showCompare={showCompare} showImpact={showImpact} soft />
+                    <Amounts
+                      own={row.own}
+                      other={row.other}
+                      impact={row.impact}
+                      showCompare={showCompare}
+                      showImpact={showImpact}
+                      soft
+                    />
                   </tr>
                 );
               })}
@@ -129,39 +175,96 @@ export function Rambudget({ comparison, ccIdOf, impactOf, showImpact, onPick }: 
 // divider used on the cost-centre rows. `data-rule="l"` marks the cells that
 // carry a left divider; it only does anything in <thead>, where the pinned
 // cells have to redraw their own rules (see globals.css).
-function Amounts({ own, other, impact, showCompare, showImpact, soft }: {
-  own: Totals; other: Totals; impact: number; showCompare: boolean; showImpact: boolean; soft?: boolean;
+function Amounts({
+  own,
+  other,
+  impact,
+  showCompare,
+  showImpact,
+  soft,
+}: {
+  own: Totals;
+  other: Totals;
+  impact: number;
+  showCompare: boolean;
+  showImpact: boolean;
+  soft?: boolean;
 }) {
   const divider = soft ? "border-l border-border/50" : "border-l border-border";
   return (
     <>
-      <td data-rule="l" className={cn(divider, numCls)}>{fmt(own.income)}</td>
+      <td data-rule="l" className={cn(divider, numCls)}>
+        {fmt(own.income)}
+      </td>
       <td className={numCls}>{fmt(own.cost)}</td>
       <td className={cn(numCls, diffClass(own.result, true))}>{fmtSigned(own.result)}</td>
       {/* Blank rather than a zero where nothing has been changed: a column of
           "0" would read as a finding, and the finding is that there is none. */}
-      {showImpact && <td className={cn(numCls, impact !== 0 && diffClass(impact, true))}>{impact === 0 ? "" : fmtSigned(impact)}</td>}
-      {showImpact && <td className={cn(numCls, "text-muted")}>{impact === 0 ? "" : fmtSigned(own.result - impact)}</td>}
-      {showCompare && <td data-rule="l" className={cn(divider, numCls)}>{fmtSigned(other.result)}</td>}
-      {showCompare && <td className={cn(numCls, diffClass(other.result - own.result, true))}>{fmtSigned(other.result - own.result)}</td>}
+      {showImpact && (
+        <td className={cn(numCls, impact !== 0 && diffClass(impact, true))}>
+          {impact === 0 ? "" : fmtSigned(impact)}
+        </td>
+      )}
+      {showImpact && (
+        <td className={cn(numCls, "text-muted")}>
+          {impact === 0 ? "" : fmtSigned(own.result - impact)}
+        </td>
+      )}
+      {showCompare && (
+        <td data-rule="l" className={cn(divider, numCls)}>
+          {fmtSigned(other.result)}
+        </td>
+      )}
+      {showCompare && (
+        <td className={cn(numCls, diffClass(other.result - own.result, true))}>
+          {fmtSigned(other.result - own.result)}
+        </td>
+      )}
     </>
   );
 }
 
-function FragmentGroup({ resultUnit, own, other, impact, showCompare, showImpact, children }: {
-  resultUnit: string; own: Totals; other: Totals; impact: number;
-  showCompare: boolean; showImpact: boolean; children: React.ReactNode;
+function FragmentGroup({
+  resultUnit,
+  own,
+  other,
+  impact,
+  showCompare,
+  showImpact,
+  children,
+}: {
+  resultUnit: string;
+  own: Totals;
+  other: Totals;
+  impact: number;
+  showCompare: boolean;
+  showImpact: boolean;
+  children: React.ReactNode;
 }) {
   const t = useTranslations("budget.rambudget");
   return (
     <>
       <tr className="border-b border-border bg-surface">
-        <td className="px-3 py-1.5 text-xs font-medium text-muted" colSpan={4 + (showCompare ? 2 : 0) + (showImpact ? 2 : 0)}>{resultUnit}</td>
+        <td
+          className="px-3 py-1.5 text-xs font-medium text-muted"
+          colSpan={4 + (showCompare ? 2 : 0) + (showImpact ? 2 : 0)}
+        >
+          {resultUnit}
+        </td>
       </tr>
       {children}
       <tr className="border-b border-border text-sm font-medium">
-        <td className="px-3 py-1.5 pl-6 text-muted">{t("groupTotal", { resultUnit: resultUnit.toLowerCase() })}</td>
-        <Amounts own={own} other={other} impact={impact} showCompare={showCompare} showImpact={showImpact} soft />
+        <td className="px-3 py-1.5 pl-6 text-muted">
+          {t("groupTotal", { resultUnit: resultUnit.toLowerCase() })}
+        </td>
+        <Amounts
+          own={own}
+          other={other}
+          impact={impact}
+          showCompare={showCompare}
+          showImpact={showImpact}
+          soft
+        />
       </tr>
     </>
   );

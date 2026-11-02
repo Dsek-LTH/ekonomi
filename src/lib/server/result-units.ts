@@ -37,10 +37,7 @@ export const getPrefixes = cache(async (): Promise<PrefixRow[]> => {
 });
 
 // The result unit a cost-centre code belongs to, or null when no prefix matches.
-export function resultUnitForCode(
-  code: string,
-  prefixes: PrefixRow[],
-): PrefixRow | null {
+export function resultUnitForCode(code: string, prefixes: PrefixRow[]): PrefixRow | null {
   const c = code.trim().toUpperCase();
   return prefixes.find((p) => c.startsWith(p.value)) ?? null;
 }

@@ -59,24 +59,24 @@ export default function ChecklistClient({
     >
       {items === null ? (
         <EmptyState
-            title={tList("notStarted")}
-            description={tList("notStartedBody")}
-            action={
-              canWork ? (
-                <Button
-                  loading={pending === "start"}
-                  onClick={() =>
-                    mutate(`/api/closing/${year.id}/checklist`, {
-                      key: "start",
-                      error: tList("startFailed"),
-                    })
-                  }
-                >
-                  {tList("start")}
-                </Button>
-              ) : undefined
-            }
-          />
+          title={tList("notStarted")}
+          description={tList("notStartedBody")}
+          action={
+            canWork ? (
+              <Button
+                loading={pending === "start"}
+                onClick={() =>
+                  mutate(`/api/closing/${year.id}/checklist`, {
+                    key: "start",
+                    error: tList("startFailed"),
+                  })
+                }
+              >
+                {tList("start")}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <Card>
           <CardHeader
@@ -168,7 +168,10 @@ function ChecklistRow({
           )}
           {!item.check && item.doneAt && (
             <span className="text-xs text-muted">
-              {t("doneBy", { name: item.doneBy ?? t("someone"), when: dateTime(item.doneAt) })}
+              {t("doneBy", {
+                name: item.doneBy ?? t("someone"),
+                when: dateTime(item.doneAt),
+              })}
             </span>
           )}
           {item.fromLastYear && (

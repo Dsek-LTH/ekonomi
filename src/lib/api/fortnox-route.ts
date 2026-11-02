@@ -18,9 +18,7 @@ export async function denyNoFortnox(): Promise<NextResponse | null> {
   return (await getConnection()) ? null : fail(409, "fortnox.notConnected");
 }
 
-type ServiceGate =
-  | { ok: true; actor: Actor; token: string }
-  | { ok: false; res: NextResponse };
+type ServiceGate = { ok: true; actor: Actor; token: string } | { ok: false; res: NextResponse };
 
 /**
  * Gate a route that acts on Fortnox as the organisation, and hand it a service

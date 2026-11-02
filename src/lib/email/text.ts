@@ -17,7 +17,8 @@ function blockText(b: Block): string[] {
     case "transactions":
       return [
         ...b.rows.map(
-          (r) => `${r.date} - ${r.description} - ${r.amount}${r.refund ? ` (${b.refundLabel})` : ""}`,
+          (r) =>
+            `${r.date} - ${r.description} - ${r.amount}${r.refund ? ` (${b.refundLabel})` : ""}`,
         ),
         ...(b.more ? [b.more] : []),
       ];
@@ -25,9 +26,7 @@ function blockText(b: Block): string[] {
       return [b.items.map((s) => `${s.value} ${s.label}`).join(", ")];
     case "list":
       return [
-        ...b.rows.map((r) =>
-          [r.title, r.sub, r.amount ?? r.pill].filter(Boolean).join(", "),
-        ),
+        ...b.rows.map((r) => [r.title, r.sub, r.amount ?? r.pill].filter(Boolean).join(", ")),
         ...(b.more ? [b.more] : []),
       ];
     case "section":

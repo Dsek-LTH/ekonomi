@@ -23,9 +23,7 @@ const TEMPLATE = path.join(process.cwd(), "src/lib/contract/rental/rental-contra
  */
 export class RentalRenderError extends Error {}
 
-export const renderRentalContract: RentalContractRenderer = async (
-  data: RentalContractData,
-) => {
+export const renderRentalContract: RentalContractRenderer = async (data: RentalContractData) => {
   try {
     return await typeset(TEMPLATE, data, "the rental contract");
   } catch (e) {

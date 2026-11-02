@@ -18,7 +18,10 @@ async function loadLocal(id: string): Promise<Local> {
   const cc = await prisma.costCenter.findUnique({ where: { id } });
   if (!cc) return { ok: false, res: fail(404, "costCenter.notFound") };
   if (cc.source !== "LOCAL") {
-    return { ok: false, res: fail(409, "costCenter.fortnoxOwned", { values: { code: cc.code } }) };
+    return {
+      ok: false,
+      res: fail(409, "costCenter.fortnoxOwned", { values: { code: cc.code } }),
+    };
   }
   return { ok: true, cc };
 }

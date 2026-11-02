@@ -45,7 +45,14 @@ export function gmailConfig(): GmailConfig | null {
   const topic = e.GMAIL_PUBSUB_TOPIC;
   const pushAudience = e.GMAIL_PUSH_AUDIENCE;
   const pushServiceAccount = e.GMAIL_PUSH_SERVICE_ACCOUNT;
-  if (!mailbox || !serviceAccount || !privateKey || !topic || !pushAudience || !pushServiceAccount) {
+  if (
+    !mailbox ||
+    !serviceAccount ||
+    !privateKey ||
+    !topic ||
+    !pushAudience ||
+    !pushServiceAccount
+  ) {
     return null;
   }
   return {
@@ -75,7 +82,10 @@ export class GmailError extends Error {
 const b64url = (data: Buffer | string) => Buffer.from(data).toString("base64url");
 
 /** A JWT signed with the service account's key, for the token exchange. */
-export function serviceAccountAssertion(c: GmailConfig, now = Math.floor(Date.now() / 1000)): string {
+export function serviceAccountAssertion(
+  c: GmailConfig,
+  now = Math.floor(Date.now() / 1000),
+): string {
   const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const claims = b64url(
     JSON.stringify({
@@ -133,7 +143,10 @@ async function call<T>(c: GmailConfig, path: string, init: RequestInit = {}): Pr
   });
   const json = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } };
   if (!res.ok) {
-    throw new GmailError(`Gmail ${path.split("?")[0]}: ${json.error?.message ?? res.status}`, res.status);
+    throw new GmailError(
+      `Gmail ${path.split("?")[0]}: ${json.error?.message ?? res.status}`,
+      res.status,
+    );
   }
   return json;
 }
@@ -144,7 +157,11 @@ async function call<T>(c: GmailConfig, path: string, init: RequestInit = {}): Pr
 export async function watch(c: GmailConfig): Promise<{ historyId: string; expiration: Date }> {
   const r = await call<{ historyId: string; expiration: string }>(c, "/watch", {
     method: "POST",
-    body: JSON.stringify({ topicName: c.topic, labelIds: ["INBOX"], labelFilterBehavior: "INCLUDE" }),
+    body: JSON.stringify({
+      topicName: c.topic,
+      labelIds: ["INBOX"],
+      labelFilterBehavior: "INCLUDE",
+    }),
   });
   return { historyId: r.historyId, expiration: new Date(Number(r.expiration)) };
 }
@@ -197,7 +214,10 @@ export async function recentMessages(c: GmailConfig, days: number): Promise<stri
       maxResults: "100",
       ...(page ? { pageToken: page } : {}),
     });
-    const r = await call<{ messages?: { id: string }[]; nextPageToken?: string }>(c, `/messages?${q}`);
+    const r = await call<{ messages?: { id: string }[]; nextPageToken?: string }>(
+      c,
+      `/messages?${q}`,
+    );
     for (const m of r.messages ?? []) ids.push(m.id);
     page = r.nextPageToken;
   } while (page);
@@ -223,7 +243,11 @@ export interface GmailMessage {
 export const getMessage = (c: GmailConfig, id: string) =>
   call<GmailMessage>(c, `/messages/${encodeURIComponent(id)}?format=full`);
 
-export async function getAttachment(c: GmailConfig, messageId: string, attachmentId: string): Promise<Buffer> {
+export async function getAttachment(
+  c: GmailConfig,
+  messageId: string,
+  attachmentId: string,
+): Promise<Buffer> {
   const r = await call<{ data: string }>(
     c,
     `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,

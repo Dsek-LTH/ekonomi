@@ -164,9 +164,7 @@ describe("POST /api/stock/entries", () => {
   it("will not take out stock that is not there", async () => {
     // The shelf holds four; a night wants six.
     h.sums = { ...h.sums, units: 4 };
-    const res = await post(
-      delivery({ kind: "CHECKOUT", units: -6, eventId: "ev1" }),
-    );
+    const res = await post(delivery({ kind: "CHECKOUT", units: -6, eventId: "ev1" }));
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({ error: "stock.notThatManySealed" });
     expect(h.create).not.toHaveBeenCalled();
@@ -224,7 +222,13 @@ describe("POST /api/stock/entries", () => {
       const res = await post(delivery({ kind: "WASTE", units: 0, spilledQty: 2, eventId: "ev1" }));
       expect(res.status).toBe(201);
       const data = h.create.mock.calls[0][0].data;
-      expect(data).toMatchObject({ kind: "WASTE", units: 0, spilledQty: 2, open80: 0, open20: 0 });
+      expect(data).toMatchObject({
+        kind: "WASTE",
+        units: 0,
+        spilledQty: 2,
+        open80: 0,
+        open20: 0,
+      });
       // The feed logs the figure somebody typed, which on a spill is its own.
       expect(h.change.mock.calls[0][0].data.toQty).toBe(2);
     });

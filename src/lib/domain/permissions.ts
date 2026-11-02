@@ -64,8 +64,7 @@ export const canUnexport = (caps: readonly Capability[]) => has(caps, "EXPORT_UN
 
 /** May bokföra an utlägg they konterade themselves, past the two-person rule.
  *  Only matters while that rule is on. See lib/domain/review.ts. */
-export const canReviewOwnBooking = (caps: readonly Capability[]) =>
-  has(caps, "REVIEW_OWN_BOOKING");
+export const canReviewOwnBooking = (caps: readonly Capability[]) => has(caps, "REVIEW_OWN_BOOKING");
 
 /** May reach Inställningar, and therefore edit authority itself, which is why
  *  lib/server/capabilities.ts refuses to let the last holder go. */
@@ -137,8 +136,7 @@ export const canManageRentals = (caps: readonly Capability[]) =>
  *  Not a claim that the holder may bind the section. That is firmateckning, and
  *  it is decided outside this app: the signed document shows who signed and in what
  *  capacity, rather than this app ruling on it. */
-export const canManageContracts = (caps: readonly Capability[]) =>
-  has(caps, "CONTRACT_MANAGE");
+export const canManageContracts = (caps: readonly Capability[]) => has(caps, "CONTRACT_MANAGE");
 
 // ── Reminders ─────────────────────────────────────────────────────
 

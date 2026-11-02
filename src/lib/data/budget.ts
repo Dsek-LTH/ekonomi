@@ -13,18 +13,11 @@ import { prisma } from "@/lib/server/db";
 import { resultUnitNameForCode, getPrefixes } from "@/lib/server/result-units";
 import { evaluate } from "@/lib/budget/eval";
 import { evaluatorInputs } from "@/lib/budget/inputs";
-import {
-  toEvaluated,
-  type BudgetPayload,
-  type EvaluatedBudgetPayload,
-} from "@/lib/budget/payload";
+import { toEvaluated, type BudgetPayload, type EvaluatedBudgetPayload } from "@/lib/budget/payload";
 import { EXTRA_COLUMN_KEYS } from "@/lib/budget/grid";
 import { effectiveKind } from "@/lib/budget";
 import type { CompareSheet } from "@/lib/budget/compare";
-import {
-  financialYearIdForCalendarYear,
-  getActualsByAccountCostCenter,
-} from "@/lib/ledger";
+import { financialYearIdForCalendarYear, getActualsByAccountCostCenter } from "@/lib/ledger";
 import { isoDay } from "@/lib/domain/date";
 
 /** A budget as the list and the compare picker know it: a year and a name. */
@@ -58,7 +51,14 @@ export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
     // under Postgres's default for ascending order, which is what we want. An
     // unadopted draft belongs after everything that was actually decided.
     orderBy: [{ year: "desc" }, { adoptedAt: "asc" }, { createdAt: "asc" }],
-    select: { id: true, year: true, name: true, adoptedAt: true, createdAt: true, lockedAt: true },
+    select: {
+      id: true,
+      year: true,
+      name: true,
+      adoptedAt: true,
+      createdAt: true,
+      lockedAt: true,
+    },
   });
   return budgets.map((b) => ({
     id: b.id,
@@ -143,7 +143,10 @@ export async function getEvaluatedBudget(
             orderBy: { accountCode: "asc" },
             include: {
               lineItems: { orderBy: { sortOrder: "asc" } },
-              comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, id: true } } } },
+              comments: {
+                orderBy: { createdAt: "asc" },
+                include: { author: { select: { name: true, id: true } } },
+              },
             },
           },
         },
@@ -261,7 +264,11 @@ export async function getEvaluatedBudget(
       createdBy: { name: ch.createdBy.name },
       revokedAt: ch.revokedAt?.toISOString() ?? null,
       revokedBy: ch.revokedBy ? { name: ch.revokedBy.name } : null,
-      entries: ch.entries.map((e) => ({ id: e.id, accountId: e.accountId, amount: e.amount })),
+      entries: ch.entries.map((e) => ({
+        id: e.id,
+        accountId: e.accountId,
+        amount: e.amount,
+      })),
     })),
     ...(figures ? { evaluated: toEvaluated(figures) } : {}),
     ...outcome,

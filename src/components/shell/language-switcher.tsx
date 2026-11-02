@@ -46,11 +46,9 @@ export function LanguageSwitcher({ round = false }: { round?: boolean }) {
           aria-pressed={locale === value}
           title={label}
           className={cn(
-          "overflow-hidden flex size-9 items-center justify-center border border-border-control bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
+            "overflow-hidden flex size-9 items-center justify-center border border-border-control bg-background text-muted transition-colors hover:bg-hover hover:text-foreground",
             round ? "rounded-full" : "rounded-control",
-            locale === value
-              ? ""
-              : "border-border opacity-50 hover:opacity-100 focus:opacity-100",
+            locale === value ? "" : "border-border opacity-50 hover:opacity-100 focus:opacity-100",
           )}
         >
           <Flag className="size-[24px] rounded-full" />

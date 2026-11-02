@@ -165,7 +165,9 @@ export function matchCandidates<T extends MatchableTransaction>(
             : null;
       const on = day(txn.transactionDate);
       const daysOff =
-        Number.isNaN(bought) || Number.isNaN(on) ? null : Math.round(Math.abs(on - bought) / 86_400_000);
+        Number.isNaN(bought) || Number.isNaN(on)
+          ? null
+          : Math.round(Math.abs(on - bought) / 86_400_000);
       return {
         txn,
         selectable: blocked === null,

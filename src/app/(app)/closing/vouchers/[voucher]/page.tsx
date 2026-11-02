@@ -6,6 +6,9 @@ import { reviewPassFor } from "@/lib/closing/review";
 import { getClosingVoucher } from "@/lib/data/closing";
 import ClosingVoucherClient from "./voucher-client";
 import { getOpenClosingYear } from "../../year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("closingVoucher");
 
 // One voucher as the ledger has it, what the app holds behind it, and its
 // review. Keyed on series and number ("A-12") rather than the row's id, which a

@@ -53,7 +53,9 @@ describe("reading an invoice PDF", () => {
   });
 
   it("reads nothing from something that is not a PDF, and does not throw", async () => {
-    expect(await readInvoicePdf(new TextEncoder().encode("not a pdf"), "application/pdf")).toEqual({});
+    expect(await readInvoicePdf(new TextEncoder().encode("not a pdf"), "application/pdf")).toEqual(
+      {},
+    );
     expect(await readInvoicePdf(new Uint8Array([1, 2, 3]), "image/jpeg")).toEqual({});
   });
 });
@@ -81,7 +83,9 @@ describe("prefillData", () => {
       prefilled: ["supplierOrgNo", "supplierName"],
     });
     // A name somebody typed stays, and so does a supplier already picked.
-    expect(prefillData({ supplierName: "Släpet", fortnoxSupplierNumber: "7" }, {}, supplier)).toEqual({});
+    expect(
+      prefillData({ supplierName: "Släpet", fortnoxSupplierNumber: "7" }, {}, supplier),
+    ).toEqual({});
   });
 
   it("is nothing at all when there is nothing to fill", () => {

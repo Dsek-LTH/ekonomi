@@ -91,9 +91,7 @@ export function ContractActions({
       >
         {/* For a rental the agreement itself is changed on its form, above.
             What this opens is the filing around it: title, tags and notes. */}
-        <MenuItem onClick={onEdit}>
-          {isRental ? t("detail.editRecord") : t("detail.edit")}
-        </MenuItem>
+        <MenuItem onClick={onEdit}>{isRental ? t("detail.editRecord") : t("detail.edit")}</MenuItem>
         {status === "DRAFT" && isRental && (
           <MenuItem onClick={onUploadSigned}>
             <IconUpload className="size-4" />

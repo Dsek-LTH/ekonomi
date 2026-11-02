@@ -99,13 +99,16 @@ async function checkPaymentLine(
   expense: { paymentType: PaymentType; grossAmount: number | null },
 ): Promise<{ code: string; account: string } | null> {
   const settings = await loadBookkeepingSettings();
-  const account = expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
+  const account =
+    expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
   // Not chosen yet, so there is no payment row to book. Said as such, rather
   // than as a voucher that is somehow missing its payment line.
   if (!account) {
     return {
       code:
-        expense.paymentType === "CARD" ? "settings.bankAccountUnset" : "settings.memberDebtAccountUnset",
+        expense.paymentType === "CARD"
+          ? "settings.bankAccountUnset"
+          : "settings.memberDebtAccountUnset",
       account: "",
     };
   }
@@ -160,7 +163,7 @@ const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
     account: l.account,
     accountName: l.accountName,
     description: l.description,
-    costCenterId: l.costCenterCode ? idByCode.get(l.costCenterCode) ?? null : null,
+    costCenterId: l.costCenterCode ? (idByCode.get(l.costCenterCode) ?? null) : null,
     project: l.project,
     debit: l.debit,
     credit: l.credit,
@@ -231,10 +234,7 @@ async function prepareVoucher(
 
 // The verification's date and heading. The caller may set both, and each falls
 // back to what the utlägg already says.
-function voucherMeta(
-  body: BookVoucher,
-  fallback: { date: Date; description: string },
-) {
+function voucherMeta(body: BookVoucher, fallback: { date: Date; description: string }) {
   return {
     date: body.date ? new Date(body.date) : fallback.date,
     description: body.description || fallback.description,
@@ -345,9 +345,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // while this app records the new one.
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "free") {
-    return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
-      values: { name: expense.exportClaimedBy?.name ?? "-" },
-    });
+    return fail(
+      409,
+      lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain",
+      {
+        values: { name: expense.exportClaimedBy?.name ?? "-" },
+      },
+    );
   }
   // BOOKED, checked above, is the status konteringen sets with its voucher.
   const verification = expense.verification;

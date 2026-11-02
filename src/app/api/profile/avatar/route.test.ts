@@ -14,7 +14,13 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "maja",
-  loadUser: async () => ({ name: "Maja", email: "m@dsek.se", studentId: "x", roles: [], capabilities: [] }),
+  loadUser: async () => ({
+    name: "Maja",
+    email: "m@dsek.se",
+    studentId: "x",
+    roles: [],
+    capabilities: [],
+  }),
 }));
 
 vi.mock("@/lib/server/db", () => ({
@@ -37,7 +43,9 @@ const upload = (bytes: Uint8Array, type = "image/png") => {
 
 const png = async () =>
   new Uint8Array(
-    await sharp({ create: { width: 600, height: 400, channels: 3, background: "#f280a1" } }).png().toBuffer(),
+    await sharp({ create: { width: 600, height: 400, channels: 3, background: "#f280a1" } })
+      .png()
+      .toBuffer(),
   );
 
 beforeEach(() => {
@@ -55,7 +63,10 @@ describe("uploading a profile picture", () => {
     const meta = await sharp(body).metadata();
     expect([meta.format, meta.width, meta.height]).toEqual(["webp", 256, 256]);
     expect(h.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "maja" }, data: expect.objectContaining({ avatarKey: key }) }),
+      expect.objectContaining({
+        where: { id: "maja" },
+        data: expect.objectContaining({ avatarKey: key }),
+      }),
     );
   });
 
@@ -78,7 +89,10 @@ describe("removing it", () => {
     h.before = { avatarKey: "avatars/maja/1.webp" };
     const res = await DELETE();
     expect(res.status).toBe(204);
-    expect(h.update).toHaveBeenCalledWith({ where: { id: "maja" }, data: { avatarKey: null, avatarUpdatedAt: null } });
+    expect(h.update).toHaveBeenCalledWith({
+      where: { id: "maja" },
+      data: { avatarKey: null, avatarUpdatedAt: null },
+    });
     expect(h.del).toHaveBeenCalledWith("avatars/maja/1.webp");
   });
 });

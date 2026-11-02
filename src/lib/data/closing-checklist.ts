@@ -108,7 +108,11 @@ export async function getBalanceAccounts(year: ClosingYear): Promise<BalanceAcco
         opening: oreToSEK(b.opening),
         closing: oreToSEK(b.closing),
         reconciled: mark
-          ? { at: mark.reconciledAt.toISOString(), by: mark.reconciledBy?.name ?? null, note: mark.note }
+          ? {
+              at: mark.reconciledAt.toISOString(),
+              by: mark.reconciledBy?.name ?? null,
+              note: mark.note,
+            }
           : null,
         accountNote: noteOf.get(b.account) ?? "",
       };
@@ -134,7 +138,9 @@ async function runChecks(
           const remaining = await prisma.expense.count({
             where: {
               purchaseDate: during,
-              status: { in: ["PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED", "BOOKED"] },
+              status: {
+                in: ["PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED", "BOOKED"],
+              },
             },
           });
           results.set(key, { remaining, href: "/expenses?scope=all" });
@@ -142,7 +148,11 @@ async function runChecks(
         }
         case "CARD_PURCHASES_ACCOUNTED": {
           const remaining = await prisma.bankTransaction.count({
-            where: { transactionDate: during, amount: { lt: 0 }, matchedExpense: { is: null } },
+            where: {
+              transactionDate: during,
+              amount: { lt: 0 },
+              matchedExpense: { is: null },
+            },
           });
           results.set(key, { remaining, href: "/bank?scope=all" });
           break;
@@ -168,7 +178,9 @@ async function runChecks(
         case "LEDGER_SYNCED": {
           // Synced after the last thing this app sent to Fortnox. Something
           // booked by hand in Fortnox afterwards is beyond what the app can see.
-          const last = await prisma.verification.aggregate({ _max: { exportedAt: true } });
+          const last = await prisma.verification.aggregate({
+            _max: { exportedAt: true },
+          });
           const exportedAt = last._max.exportedAt;
           const synced =
             year.lastSyncAt !== null &&
@@ -194,10 +206,16 @@ async function runChecks(
   if (progress) {
     const href = "/closing/vouchers";
     if (keys.has("TREASURY_REVIEWED")) {
-      results.set("TREASURY_REVIEWED", { remaining: progress.total - progress.settled.PREPARER, href });
+      results.set("TREASURY_REVIEWED", {
+        remaining: progress.total - progress.settled.PREPARER,
+        href,
+      });
     }
     if (keys.has("AUDITORS_REVIEWED")) {
-      results.set("AUDITORS_REVIEWED", { remaining: progress.total - progress.settled.AUDITOR, href });
+      results.set("AUDITORS_REVIEWED", {
+        remaining: progress.total - progress.settled.AUDITOR,
+        href,
+      });
     }
   }
   return results;
@@ -236,7 +254,11 @@ export async function getChecklist(year: ClosingYear): Promise<ChecklistEntry[] 
     prevId === null || templateIds.length === 0
       ? []
       : prisma.checklistItem.findMany({
-          where: { financialYear: prevId, templateId: { in: templateIds }, noteToNextYear: { not: "" } },
+          where: {
+            financialYear: prevId,
+            templateId: { in: templateIds },
+            noteToNextYear: { not: "" },
+          },
           select: { templateId: true, noteToNextYear: true },
         }),
   ]);

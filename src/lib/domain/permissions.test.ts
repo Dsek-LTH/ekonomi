@@ -90,7 +90,12 @@ describe("the defaults the section starts from", () => {
   });
 
   it("keeps the treasury out of the revisorer's pass", () => {
-    for (const role of ["SKATTMASTARE", "ORDFORANDE", "VICE_SKATTMASTARE", "SKATTFORMAN"] as Role[]) {
+    for (const role of [
+      "SKATTMASTARE",
+      "ORDFORANDE",
+      "VICE_SKATTMASTARE",
+      "SKATTFORMAN",
+    ] as Role[]) {
       expect(canAuditReview(defaults(role))).toBe(false);
     }
   });
@@ -120,11 +125,7 @@ describe("the defaults the section starts from", () => {
   });
 
   it("shows the attest queue to everyone who could ever attest something", () => {
-    for (const role of [
-      "SKATTMASTARE",
-      "ORDFORANDE",
-      "RESULTATANSVARIG",
-    ] as Role[]) {
+    for (const role of ["SKATTMASTARE", "ORDFORANDE", "RESULTATANSVARIG"] as Role[]) {
       expect(hasAttestRole(defaults(role))).toBe(true);
     }
     // The skattförman books rather than attests, and the vice no longer

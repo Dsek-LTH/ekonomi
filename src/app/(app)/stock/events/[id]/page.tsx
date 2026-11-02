@@ -3,6 +3,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockChanges, getStockLevels, getStockEvent } from "@/lib/data/stock";
 import EventClient from "./event-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockEvent");
 
 export default async function StockEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

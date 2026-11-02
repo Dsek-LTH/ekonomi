@@ -53,29 +53,31 @@ export async function POST(req: Request) {
   const clash = (await eanTaken(ean)) ?? (await nameTaken(body.name));
   if (clash) return clash;
 
-  const product = await prisma.stockProduct.create({
-    data: {
-      name: body.name,
-      kind: body.kind,
-      category: body.category,
-      abv: body.abv ?? null,
-      unitMl: body.unitMl ?? null,
-      nominalMl: body.nominalMl ?? null,
-      ean,
-      costPriceOre: body.costPriceOre ?? null,
-      shelfLifeMonths: body.shelfLifeMonths ?? null,
-      systembolagetId: body.systembolagetId ?? null,
-      // Cleaned by the schema; the fallback is only the field being left out,
-      // which a product with nothing to label itself is entitled to do.
-      tags: body.tags ?? [],
-    },
-    select: { id: true },
-  }).catch((err: unknown) => {
-    // The same collision, arriving between the check above and this line.
-    // Vanishingly rare and still worth answering properly.
-    if (isCollision(err)) return null;
-    throw err;
-  });
+  const product = await prisma.stockProduct
+    .create({
+      data: {
+        name: body.name,
+        kind: body.kind,
+        category: body.category,
+        abv: body.abv ?? null,
+        unitMl: body.unitMl ?? null,
+        nominalMl: body.nominalMl ?? null,
+        ean,
+        costPriceOre: body.costPriceOre ?? null,
+        shelfLifeMonths: body.shelfLifeMonths ?? null,
+        systembolagetId: body.systembolagetId ?? null,
+        // Cleaned by the schema; the fallback is only the field being left out,
+        // which a product with nothing to label itself is entitled to do.
+        tags: body.tags ?? [],
+      },
+      select: { id: true },
+    })
+    .catch((err: unknown) => {
+      // The same collision, arriving between the check above and this line.
+      // Vanishingly rare and still worth answering properly.
+      if (isCollision(err)) return null;
+      throw err;
+    });
   if (!product) return fail(409, "stock.eanTaken", { values: { name: body.name } });
   return NextResponse.json({ id: product.id }, { status: 201 });
 }

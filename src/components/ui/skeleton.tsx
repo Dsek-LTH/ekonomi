@@ -21,20 +21,11 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 // Paragraph-shaped filler. The last line is short, the way a real one is.
-function SkeletonText({
-  lines = 3,
-  className,
-}: {
-  lines?: number;
-  className?: string;
-}) {
+function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
     <div className={cn("space-y-2", className)}>
       {Array.from({ length: lines }, (_, i) => (
-        <Skeleton
-          key={i}
-          className={cn("h-4", i === lines - 1 ? "w-2/5" : "w-full")}
-        />
+        <Skeleton key={i} className={cn("h-4", i === lines - 1 ? "w-2/5" : "w-full")} />
       ))}
     </div>
   );
@@ -66,12 +57,7 @@ export function SkeletonPage({
 }) {
   const t = useTranslations("common");
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-label={t("loading")}
-      className={PAGE_WIDTH[width]}
-    >
+    <div role="status" aria-busy="true" aria-label={t("loading")} className={PAGE_WIDTH[width]}>
       {/* Inside a section of the nav, its name and tabs are drawn for real
           and only the page's own parts wait. See PageHeaderSkeleton. */}
       <PageHeaderSkeleton
@@ -169,10 +155,7 @@ export function SkeletonTable({
                 {cols.map((c) => (
                   <td key={c} className="px-2.5 py-3 first:pl-inset last:pr-inset">
                     <Skeleton
-                      className={cn(
-                        "h-4",
-                        c === 0 ? ROW_WIDTHS[r % ROW_WIDTHS.length] : "w-16",
-                      )}
+                      className={cn("h-4", c === 0 ? ROW_WIDTHS[r % ROW_WIDTHS.length] : "w-16")}
                     />
                   </td>
                 ))}
@@ -245,13 +228,7 @@ export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
 // A budget sheet: dense gridlines, a pinned header block, no filter bar. The
 // spreadsheet screens read nothing like the rest of the app, so their
 // placeholder shouldn't either.
-export function SkeletonSheet({
-  rows = 12,
-  columns = 6,
-}: {
-  rows?: number;
-  columns?: number;
-}) {
+export function SkeletonSheet({ rows = 12, columns = 6 }: { rows?: number; columns?: number }) {
   const cols = Array.from({ length: columns }, (_, i) => i);
   return (
     <Card className="overflow-hidden">
@@ -264,10 +241,7 @@ export function SkeletonSheet({
           <div key={r} className="flex items-center gap-3 px-inset py-2.5">
             <Skeleton className={cn("h-3.5 min-w-0 flex-1", ROW_WIDTHS[r % ROW_WIDTHS.length])} />
             {cols.map((c) => (
-              <Skeleton
-                key={c}
-                className={cn("h-3.5 w-16 shrink-0", c > 1 && "hidden lg:block")}
-              />
+              <Skeleton key={c} className={cn("h-3.5 w-16 shrink-0", c > 1 && "hidden lg:block")} />
             ))}
           </div>
         ))}

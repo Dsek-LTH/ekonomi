@@ -15,12 +15,7 @@ import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
 import type { RowPage } from "@/lib/data/list-query";
-import type {
-  ClosingProgress,
-  ClosingTab,
-  ClosingVoucher,
-  ClosingYear,
-} from "@/lib/data/closing";
+import type { ClosingProgress, ClosingTab, ClosingVoucher, ClosingYear } from "@/lib/data/closing";
 import { VOUCHER_FLAGS } from "@/lib/closing/flags";
 import { REVIEW_PASSES, REVIEW_PICKS, type ReviewPass } from "@/lib/closing/review";
 import { useFormat } from "@/lib/ui/use-format";
@@ -117,14 +112,12 @@ export default function ClosingVouchersClient({
       mobile: "status",
       cell: (v) => <EvidenceTag evidence={v.evidence} />,
     },
-    ...REVIEW_PASSES.map(
-      (p): Column<ClosingVoucher> => ({
-        key: `review-${p}`,
-        header: tReview(`pass.${p}`),
-        mobile: "status",
-        cell: (v) => <ReviewTag state={v.review[p]} />,
-      }),
-    ),
+    ...REVIEW_PASSES.map((p): Column<ClosingVoucher> => ({
+      key: `review-${p}`,
+      header: tReview(`pass.${p}`),
+      mobile: "status",
+      cell: (v) => <ReviewTag state={v.review[p]} />,
+    })),
     {
       key: "comments",
       header: <span className="sr-only">{t("col.comments")}</span>,

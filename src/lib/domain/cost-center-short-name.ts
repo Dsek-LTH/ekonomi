@@ -27,11 +27,15 @@ const SEPARATOR = /^\s*[-:/\u2013\u2014]\s*/;
  * Sexmästeriet is not "s fond", since no separator follows, and a name that is
  * only the unit's name has nothing left to be called.
  */
-export function suggestShortName(name: string, resultUnit: string | null | undefined): string | null {
+export function suggestShortName(
+  name: string,
+  resultUnit: string | null | undefined,
+): string | null {
   const unit = resultUnit?.trim();
   if (!unit) return null;
   const full = name.trim();
-  if (full.slice(0, unit.length).toLocaleLowerCase("sv") !== unit.toLocaleLowerCase("sv")) return null;
+  if (full.slice(0, unit.length).toLocaleLowerCase("sv") !== unit.toLocaleLowerCase("sv"))
+    return null;
   const after = full.slice(unit.length);
   const sep = SEPARATOR.exec(after);
   if (!sep) return null;

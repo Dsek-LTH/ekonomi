@@ -32,11 +32,7 @@ import { useProgressRouter } from "@/components/shell/route-progress";
  *  `waive_deadline` is here for a second reason as well: the dispens is a
  *  decision the section has to be able to read back years later, and the reason
  *  is printed on the utläggsräkning. */
-type Explained =
-  | "request_changes"
-  | "return_approved"
-  | "unexport"
-  | "waive_deadline";
+type Explained = "request_changes" | "return_approved" | "unexport" | "waive_deadline";
 
 /** Which label opens the dialog for each of them. Was a nested ternary that had
  *  to grow a branch per action; this grows a line. */
@@ -54,8 +50,7 @@ const EXPLAINED_TITLE: Record<Explained, string> = {
  * being tested here, so with the section connected and your own login expired
  * the button looked ready and failed on click.
  */
-const canExportNow = (fortnox: FortnoxStatus) =>
-  fortnox.connected && Boolean(fortnox.session);
+const canExportNow = (fortnox: FortnoxStatus) => fortnox.connected && Boolean(fortnox.session);
 
 type Action = {
   key: string;
@@ -96,10 +91,7 @@ export function ExpenseActions({
   /** Bokföring: the voucher sent to Fortnox from here. */
   onExport: () => void;
   busy: boolean;
-  onTransition: (
-    action: "submit" | "approve" | Explained,
-    comment?: string,
-  ) => Promise<boolean>;
+  onTransition: (action: "submit" | "approve" | Explained, comment?: string) => Promise<boolean>;
   onWithdrawAttest: () => void;
   onRecall: () => void;
   onRevokeDeadlineWaiver: () => void;
@@ -133,107 +125,109 @@ export function ExpenseActions({
   // Ordered by which one the utlägg is waiting for: the first available becomes
   // the button, the rest go in the menu. Editing is last because it's always
   // possible on an open utlägg. It's the fallback when nothing else is.
-  const actions: Action[] = ([
-    can.canBook && {
-      key: "book",
-      label: t("book"),
-      href: `/expenses/${expenseId}/book`,
-    },
-    // Bokföring, done here: this page is where the voucher is looked over,
-    // and this is the last step. Dead when it could not go through, with the
-    // reason on the button rather than in a notice over the page.
-    can.canExport &&
-      (() => {
-        const reason = !canExportNow(fortnox)
-          ? fortnox.connected
-            ? t("fortnoxNotSignedIn")
-            : t("fortnoxNotConnected")
-          : exportBlock;
-        return {
-          key: "export",
-          label: t("review"),
-          onClick: onExport,
-          disabled: reason !== null,
-          disabledReason: reason ?? undefined,
-        };
-      })(),
-    // Ahead of "Skicka in", because on a late utlägg it is what stands between
-    // the two: nobody can submit until the dispens is given, and the person
-    // reading this page is the only one who can give it.
-    can.canWaiveDeadline && {
-      key: "waive_deadline",
-      label: t("waiveDeadline"),
-      onClick: () => explain("waive_deadline"),
-    },
-    can.canSubmit && {
-      key: "submit",
-      label: t("submit"),
-      icon: <IconCheck className="size-4" />,
-      onClick: () => onTransition("submit"),
-    },
-    can.canApprove && {
-      key: "approve",
-      label: t("approve"),
-      icon: <IconCheck className="size-4" />,
-      onClick: () => onTransition("approve"),
-    },
-    can.canRequestChanges && {
-      key: "request_changes",
-      label: t("requestChanges"),
-      onClick: () => explain("request_changes"),
-    },
-    can.canReturn && {
-      key: "return_approved",
-      label: t("reopen"),
-      onClick: () => explain("return_approved"),
-    },
-    can.canUnexport && {
-      key: "unexport",
-      label: t("unexport"),
-      icon: <IconUndo className="size-4" />,
-      onClick: () => explain("unexport"),
-    },
-    can.canWithdrawAttest && {
-      key: "withdraw_attest",
-      label: t("withdrawAttest"),
-      icon: <IconUndo className="size-4" />,
-      onClick: onWithdrawAttest,
-    },
-    // The submitter's own, and never offered beside the attester's: one is
-    // taking back a signature, the other the whole claim, and the two are
-    // available to different people at different moments.
-    can.canRecall && {
-      key: "recall",
-      label: t("recall"),
-      icon: <IconUndo className="size-4" />,
-      onClick: onRecall,
-    },
-    can.canRevokeDeadlineWaiver && {
-      key: "revoke_deadline_waiver",
-      label: t("revokeDeadlineWaiver"),
-      icon: <IconUndo className="size-4" />,
-      onClick: onRevokeDeadlineWaiver,
-    },
-    // Behind the actions that move the utlägg itself, and ahead of editing: it
-    // is for somebody else's turn, so it leads only when nothing else here is
-    // the viewer's to do.
-    can.canRemind && {
-      key: "remind",
-      label: t("remind"),
-      onClick: onRemind,
-    },
-    can.canEdit && {
-      key: "edit",
-      label: t("edit"),
-      href: `/expenses/${expenseId}/edit`,
-    },
-    can.canDelete && {
-      key: "delete",
-      label: t("delete"),
-      onClick: onDelete,
-      danger: true,
-    },
-  ] as (Action | false)[]).filter((a): a is Action => a !== false);
+  const actions: Action[] = (
+    [
+      can.canBook && {
+        key: "book",
+        label: t("book"),
+        href: `/expenses/${expenseId}/book`,
+      },
+      // Bokföring, done here: this page is where the voucher is looked over,
+      // and this is the last step. Dead when it could not go through, with the
+      // reason on the button rather than in a notice over the page.
+      can.canExport &&
+        (() => {
+          const reason = !canExportNow(fortnox)
+            ? fortnox.connected
+              ? t("fortnoxNotSignedIn")
+              : t("fortnoxNotConnected")
+            : exportBlock;
+          return {
+            key: "export",
+            label: t("review"),
+            onClick: onExport,
+            disabled: reason !== null,
+            disabledReason: reason ?? undefined,
+          };
+        })(),
+      // Ahead of "Skicka in", because on a late utlägg it is what stands between
+      // the two: nobody can submit until the dispens is given, and the person
+      // reading this page is the only one who can give it.
+      can.canWaiveDeadline && {
+        key: "waive_deadline",
+        label: t("waiveDeadline"),
+        onClick: () => explain("waive_deadline"),
+      },
+      can.canSubmit && {
+        key: "submit",
+        label: t("submit"),
+        icon: <IconCheck className="size-4" />,
+        onClick: () => onTransition("submit"),
+      },
+      can.canApprove && {
+        key: "approve",
+        label: t("approve"),
+        icon: <IconCheck className="size-4" />,
+        onClick: () => onTransition("approve"),
+      },
+      can.canRequestChanges && {
+        key: "request_changes",
+        label: t("requestChanges"),
+        onClick: () => explain("request_changes"),
+      },
+      can.canReturn && {
+        key: "return_approved",
+        label: t("reopen"),
+        onClick: () => explain("return_approved"),
+      },
+      can.canUnexport && {
+        key: "unexport",
+        label: t("unexport"),
+        icon: <IconUndo className="size-4" />,
+        onClick: () => explain("unexport"),
+      },
+      can.canWithdrawAttest && {
+        key: "withdraw_attest",
+        label: t("withdrawAttest"),
+        icon: <IconUndo className="size-4" />,
+        onClick: onWithdrawAttest,
+      },
+      // The submitter's own, and never offered beside the attester's: one is
+      // taking back a signature, the other the whole claim, and the two are
+      // available to different people at different moments.
+      can.canRecall && {
+        key: "recall",
+        label: t("recall"),
+        icon: <IconUndo className="size-4" />,
+        onClick: onRecall,
+      },
+      can.canRevokeDeadlineWaiver && {
+        key: "revoke_deadline_waiver",
+        label: t("revokeDeadlineWaiver"),
+        icon: <IconUndo className="size-4" />,
+        onClick: onRevokeDeadlineWaiver,
+      },
+      // Behind the actions that move the utlägg itself, and ahead of editing: it
+      // is for somebody else's turn, so it leads only when nothing else here is
+      // the viewer's to do.
+      can.canRemind && {
+        key: "remind",
+        label: t("remind"),
+        onClick: onRemind,
+      },
+      can.canEdit && {
+        key: "edit",
+        label: t("edit"),
+        href: `/expenses/${expenseId}/edit`,
+      },
+      can.canDelete && {
+        key: "delete",
+        label: t("delete"),
+        onClick: onDelete,
+        danger: true,
+      },
+    ] as (Action | false)[]
+  ).filter((a): a is Action => a !== false);
 
   // Deleting is never what the page is waiting for, so it never leads.
   const [primary, ...rest] = [

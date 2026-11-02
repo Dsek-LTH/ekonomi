@@ -38,7 +38,9 @@ export function ShortNamesDialog({
   const picked = suggestions.filter((s) => rows[s.cc.id].on);
   const allOn = picked.length === suggestions.length;
   const blocker =
-    picked.length === 0 || picked.some((s) => !rows[s.cc.id].name.trim()) ? t("suggestBlocked") : null;
+    picked.length === 0 || picked.some((s) => !rows[s.cc.id].name.trim())
+      ? t("suggestBlocked")
+      : null;
 
   const set = (id: string, patch: Partial<{ on: boolean; name: string }>) =>
     setRows((r) => ({ ...r, [id]: { ...r[id], ...patch } }));
@@ -47,7 +49,9 @@ export function ShortNamesDialog({
     const data = await mutate("/api/cost-centers/short-names", {
       key: "save",
       method: "PUT",
-      body: { names: picked.map((s) => ({ id: s.cc.id, shortName: rows[s.cc.id].name.trim() })) },
+      body: {
+        names: picked.map((s) => ({ id: s.cc.id, shortName: rows[s.cc.id].name.trim() })),
+      },
       error: t("suggestFailed"),
       success: t("suggestSaved", { count: picked.length }),
     });
@@ -65,7 +69,9 @@ export function ShortNamesDialog({
               indeterminate={!allOn && picked.length > 0}
               onChange={() => {
                 const on = !allOn;
-                setRows((r) => Object.fromEntries(Object.entries(r).map(([id, v]) => [id, { ...v, on }])));
+                setRows((r) =>
+                  Object.fromEntries(Object.entries(r).map(([id, v]) => [id, { ...v, on }])),
+                );
               }}
               label={t("suggestAll")}
             >

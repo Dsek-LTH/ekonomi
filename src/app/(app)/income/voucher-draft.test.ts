@@ -85,7 +85,10 @@ describe("defaultRows", () => {
   it("books a net refund as a debit, not a negative credit", () => {
     // A ledger can represent the row the other way round; it cannot represent a
     // negative credit.
-    const r = report({ total: -80, lines: [{ account: "3010", total: -80 }] } as Partial<IncomeReportRow>);
+    const r = report({
+      total: -80,
+      lines: [{ account: "3010", total: -80 }],
+    } as Partial<IncomeReportRow>);
     const [row] = defaultRows(r, settings);
     expect(row.debit).toBe("80.00");
     expect(row.credit).toBe("");
@@ -113,7 +116,11 @@ describe("voucherFor", () => {
   });
 
   it("credits it for a fee, which is money leaving", () => {
-    const r = report({ source: "ZETTLE_FEE", total: 42, lines: [] } as Partial<IncomeReportRow>);
+    const r = report({
+      source: "ZETTLE_FEE",
+      total: 42,
+      lines: [],
+    } as Partial<IncomeReportRow>);
     const v = draft(r);
     expect(v.clearing).toBe("1580");
     expect(v.locked.credit).toBe(42);
@@ -122,7 +129,10 @@ describe("voucherFor", () => {
   });
 
   it("credits it for a day that came to a net refund", () => {
-    const r = report({ total: -80, lines: [{ account: "3010", total: -80 }] } as Partial<IncomeReportRow>);
+    const r = report({
+      total: -80,
+      lines: [{ account: "3010", total: -80 }],
+    } as Partial<IncomeReportRow>);
     const v = draft(r);
     expect(v.locked.credit).toBe(80);
     expect(v.balanced).toBe(true);

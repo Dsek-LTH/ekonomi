@@ -68,8 +68,7 @@ export async function GET(req: Request) {
   const { years, selected, yearStart, from, to, costCenterCodes } = period;
 
   const kind: ReportKind = url.searchParams.get("kind") === "BALANCE" ? "BALANCE" : "RESULT";
-  const group: GroupMode =
-    url.searchParams.get("group") === "SPECIFIED" ? "SPECIFIED" : "SUMMED";
+  const group: GroupMode = url.searchParams.get("group") === "SPECIFIED" ? "SPECIFIED" : "SUMMED";
   const compareParam = url.searchParams.get("compare");
   const compare: ComparisonMode =
     compareParam === "PRIOR" || compareParam === "BUDGET" ? compareParam : "NONE";

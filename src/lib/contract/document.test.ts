@@ -73,9 +73,7 @@ describe("buildRentalData", () => {
         ...contract,
         rental: {
           ...contract.rental,
-          lines: contract.rental.lines.map((l, i) =>
-            i === 0 ? { ...l, discountPercent: 30 } : l,
-          ),
+          lines: contract.rental.lines.map((l, i) => (i === 0 ? { ...l, discountPercent: 30 } : l)),
         },
       },
       LESSOR,

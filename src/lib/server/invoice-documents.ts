@@ -89,7 +89,11 @@ async function readScan(where: { invoiceId: string } | { id: string }): Promise<
  * Put a document from the Inkorg on an invoice. Throws DocumentTaken when it
  * is no longer in the Inkorg, which the caller answers with a 409.
  */
-export async function attachDocument(tx: TxClient, doc: { id: string }, invoice: { id: string }): Promise<void> {
+export async function attachDocument(
+  tx: TxClient,
+  doc: { id: string },
+  invoice: { id: string },
+): Promise<void> {
   const last = await tx.supplierInvoiceDocument.aggregate({
     where: { invoiceId: invoice.id },
     _max: { position: true },

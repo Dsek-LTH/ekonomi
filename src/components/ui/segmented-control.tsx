@@ -77,9 +77,7 @@ export function SegmentedControl<T extends string>({
                   "rounded-mark px-1.5 py-0.5 text-xs tabular-nums",
                   // On the pink pill the badge darkens rather than lightens,
                   // a white wash on this fill is nearly invisible.
-                  active
-                    ? "bg-on-brand/15 text-on-brand"
-                    : "bg-accent-soft text-accent",
+                  active ? "bg-on-brand/15 text-on-brand" : "bg-accent-soft text-accent",
                 )}
               >
                 {opt.badge}

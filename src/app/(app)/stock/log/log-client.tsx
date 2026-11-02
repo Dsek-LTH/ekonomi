@@ -55,8 +55,7 @@ const KINDS: StockEntryKind[] = [
 ];
 
 /** Colour carries direction, not kind: in is in, whatever it was called. */
-const toneFor = (n: number) =>
-  n > 0 ? "text-success" : n < 0 ? "text-foreground" : "text-muted";
+const toneFor = (n: number) => (n > 0 ? "text-success" : n < 0 ? "text-foreground" : "text-muted");
 
 export default function StockLogClient({
   log,
@@ -235,7 +234,7 @@ export default function StockLogClient({
       cell: (r) => (
         <>
           {r.expenseId && (
-            <Link href={`/expenses/${r.expenseId}`} className="text-accent">
+            <Link href={`/expenses/${r.expenseId}`} className="text-link">
               {r.expenseReference ?? t("log.expense")}
             </Link>
           )}
@@ -305,7 +304,10 @@ export default function StockLogClient({
                   size="sm"
                   values={filter.kinds}
                   onChange={(v) => setMany("kind", v)}
-                  options={KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) }))}
+                  options={KINDS.map((k) => ({
+                    value: k,
+                    label: t(`kind.${k}`),
+                  }))}
                   placeholder={t("log.filter.allKinds")}
                   clearLabel={t("log.filter.allKinds")}
                   aria-label={t("log.filter.kind")}
@@ -401,10 +403,7 @@ function Parts({ row }: { row: StockLogRowDto }) {
   return (
     <ul className="divide-y divide-border/60 py-1 text-xs">
       {row.parts?.map((part) => (
-        <li
-          key={`${part.kind}-${part.level}`}
-          className="flex items-baseline gap-3 py-1.5"
-        >
+        <li key={`${part.kind}-${part.level}`} className="flex items-baseline gap-3 py-1.5">
           <span className="w-16 shrink-0 font-medium">
             {part.kind === "COUNT" ? t("log.counted") : t(`kind.${part.kind}`)}
           </span>

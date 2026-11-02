@@ -1,5 +1,5 @@
-// What Översikt reads besides the queue and the budget: what has been
-// forgotten, what is coming up, and the invoices in your units.
+// What Översikt reads besides the queue and the budget: what is late, what of
+// yours waits on others, what is coming up, and the invoices in your units.
 //
 // Each part reads only what its viewer may already reach on the page it links
 // to, gated by the same capability as that page.
@@ -8,7 +8,12 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import { today } from "@/lib/domain/date";
-import { canSeeInvoices, canViewContracts, canViewRentals, canViewStock } from "@/lib/domain/permissions";
+import {
+  canSeeInvoices,
+  canViewContracts,
+  canViewRentals,
+  canViewStock,
+} from "@/lib/domain/permissions";
 import type { SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { Viewer } from "./expense-scope";
 import { invoiceScopeWhere, invoiceViewerOf } from "./supplier-invoices";
@@ -17,9 +22,10 @@ import { isoDate } from "./shared";
 const DAY_MS = 86_400_000;
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const plusDays = (iso: string, n: number) => isoDate(new Date(day(iso).getTime() + n * DAY_MS));
-const daysUntil = (from: string, to: string) => Math.round((day(to).getTime() - day(from).getTime()) / DAY_MS);
+const daysUntil = (from: string, to: string) =>
+  Math.round((day(to).getTime() - day(from).getTime()) / DAY_MS);
 
-// ── Forgotten ─────────────────────────────────────────────────────
+// ── Late, and waiting ─────────────────────────────────────────────────────
 
 /** An utlägg sent in and not attested for this long is stuck. */
 const STUCK_DAYS = 14;
@@ -49,14 +55,44 @@ async function staleSince(ids: string[], olderThan: number): Promise<Map<string,
   return out;
 }
 
-/** Your own utlägg that have waited on attest longer than STUCK_DAYS. */
-export async function getStuckOwn(userId: string): Promise<{ id: string; title: string; days: number }[]> {
-  const pending = await prisma.expense.findMany({
-    where: { submitterId: userId, status: "PENDING_APPROVAL" },
-    select: { id: true, title: true },
+/** One of your own utlägg that has left you and not yet reached Fortnox. */
+export interface WaitingOwn {
+  id: string;
+  title: string;
+  status: "PENDING_APPROVAL" | "APPROVED" | "BOOKED";
+  /** Days since it was last sent in. */
+  days: number;
+  /** Waiting on attest longer than STUCK_DAYS. */
+  stuck: boolean;
+}
+
+/**
+ * Your own utlägg that wait on somebody else: on attest, or on the treasury to
+ * kontera or bokföra them. The longest waiting first, since that is the one
+ * worth asking about. Not limited to the räkenskapsår: one still moving is
+ * still yours to follow, whatever year it was bought in.
+ */
+export async function getWaitingOnOthers(userId: string): Promise<WaitingOwn[]> {
+  const rows = await prisma.expense.findMany({
+    where: { submitterId: userId, status: { in: ["PENDING_APPROVAL", "APPROVED", "BOOKED"] } },
+    select: { id: true, title: true, status: true },
   });
-  const stale = await staleSince(pending.map((e) => e.id), STUCK_DAYS);
-  return pending.flatMap((e) => (stale.has(e.id) ? [{ ...e, days: stale.get(e.id)! }] : []));
+  const since = await staleSince(
+    rows.map((e) => e.id),
+    -1,
+  );
+  return rows
+    .map((e) => {
+      const days = since.get(e.id) ?? 0;
+      const status = e.status as WaitingOwn["status"];
+      return {
+        ...e,
+        status,
+        days,
+        stuck: status === "PENDING_APPROVAL" && days > STUCK_DAYS,
+      };
+    })
+    .sort((a, b) => b.days - a.days);
 }
 
 /** How many of these (the viewer's attest queue) have waited past a week. */
@@ -125,11 +161,15 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
       },
       select: { id: true, title: true, purchaseDate: true },
     }),
-    // Not yet due. One already past it is under Glömt instead.
+    // Not yet due. One already past it is a late row under Din tur instead.
     canSeeInvoices(caps)
       ? invoiceViewerOf(viewer).then((v) =>
           prisma.supplierInvoice.findMany({
-            where: { ...invoiceScopeWhere(v), status: { not: "EXPORTED" }, dueDate: { gte: from, lte: ahead } },
+            where: {
+              ...invoiceScopeWhere(v),
+              status: { not: "EXPORTED" },
+              dueDate: { gte: from, lte: ahead },
+            },
             orderBy: { dueDate: "asc" },
             take: UPCOMING_TAKE,
             select: { id: true, supplierName: true, description: true, dueDate: true },
@@ -141,7 +181,11 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
           where: { pickupAt: { gte: from, lte: ahead } },
           orderBy: { pickupAt: "asc" },
           take: UPCOMING_TAKE,
-          select: { contractId: true, pickupAt: true, contract: { select: { title: true } } },
+          select: {
+            contractId: true,
+            pickupAt: true,
+            contract: { select: { title: true } },
+          },
         })
       : [],
     canViewContracts(caps)
@@ -149,7 +193,11 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
           where: { validTo: { gte: from, lte: day(plusDays(now, CONTRACT_AHEAD_DAYS)) } },
           orderBy: { validTo: "asc" },
           take: UPCOMING_TAKE,
-          select: { contractId: true, validTo: true, contract: { select: { title: true } } },
+          select: {
+            contractId: true,
+            validTo: true,
+            contract: { select: { title: true } },
+          },
         })
       : [],
     canViewStock(caps)
@@ -187,7 +235,12 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
       title: a.contract.title,
       date: isoDate(a.validTo),
     })),
-    ...events.map((e) => ({ kind: "stockEvent" as const, id: e.id, title: e.name, date: isoDate(e.date) })),
+    ...events.map((e) => ({
+      kind: "stockEvent" as const,
+      id: e.id,
+      title: e.name,
+      date: isoDate(e.date),
+    })),
   ];
   return items
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -215,5 +268,9 @@ export async function getUnitInvoices(viewer: Viewer, take: number): Promise<Uni
     take,
     select: { id: true, supplierName: true, description: true, status: true },
   });
-  return rows.map((i) => ({ id: i.id, title: i.supplierName ?? i.description ?? "", status: i.status }));
+  return rows.map((i) => ({
+    id: i.id,
+    title: i.supplierName ?? i.description ?? "",
+    status: i.status,
+  }));
 }

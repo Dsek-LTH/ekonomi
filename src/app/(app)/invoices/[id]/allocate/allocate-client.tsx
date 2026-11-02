@@ -70,13 +70,20 @@ export function InvoiceAllocateClient({
   async function uploadDocument(file: File) {
     const form = new FormData();
     form.append("file", file);
-    await docs.mutate(`/api/supplier-invoices/${invoice.id}/documents`, { body: form, key: "upload" });
+    await docs.mutate(`/api/supplier-invoices/${invoice.id}/documents`, {
+      body: form,
+      key: "upload",
+    });
   }
 
   return (
     <AllocateForm
       title={title(invoice)}
-      subtitle={[invoice.description && invoice.reference, invoice.resultUnitName].filter(Boolean).join(" - ") || undefined}
+      subtitle={
+        [invoice.description && invoice.reference, invoice.resultUnitName]
+          .filter(Boolean)
+          .join(" - ") || undefined
+      }
       back={record}
       panel={
         <ReceiptPanelSource
@@ -206,7 +213,10 @@ export function AllocateForm({
   const setRows = useCallback((next: AllocationRow[]) => setRowsState(next), []);
   const split = rows.length > 1;
 
-  const unitOf = useMemo(() => new Map(costCenters.map((c) => [c.code, c.resultUnit ?? null])), [costCenters]);
+  const unitOf = useMemo(
+    () => new Map(costCenters.map((c) => [c.code, c.resultUnit ?? null])),
+    [costCenters],
+  );
   const mayAttest = (code: string) => reach.all || reach.units.includes(unitOf.get(code) ?? "");
 
   // The unit's own cost centres first: that is nearly always the answer.
@@ -240,12 +250,18 @@ export function AllocateForm({
   const picked = rows.filter((r) => r.costCenterCode);
   const others = [
     ...new Set(
-      picked.filter((r) => !mayAttest(r.costCenterCode)).map((r) => unitOf.get(r.costCenterCode) ?? r.costCenterCode),
+      picked
+        .filter((r) => !mayAttest(r.costCenterCode))
+        .map((r) => unitOf.get(r.costCenterCode) ?? r.costCenterCode),
     ),
   ];
   const mineCount = picked.filter((r) => mayAttest(r.costCenterCode)).length;
   const label =
-    others.length === 0 ? tAction("attest") : mineCount > 0 ? tAttest("attestAndSend") : tAction("sendForAttest");
+    others.length === 0
+      ? tAction("attest")
+      : mineCount > 0
+        ? tAttest("attestAndSend")
+        : tAction("sendForAttest");
 
   return (
     <PageShell width="content" title={title} subtitle={subtitle} back={back}>
@@ -255,10 +271,23 @@ export function AllocateForm({
       <Card>
         <section className="space-y-4 px-inset py-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label={tField("amount")} hint={fromScan.amount ? t("fromScan") : undefined} requirement="required">
-              <AmountInput suffix="kr" value={totalInput} onChange={setTotalInput} inputClassName="text-right" />
+            <Field
+              label={tField("amount")}
+              hint={fromScan.amount ? t("fromScan") : undefined}
+              requirement="required"
+            >
+              <AmountInput
+                suffix="kr"
+                value={totalInput}
+                onChange={setTotalInput}
+                inputClassName="text-right"
+              />
             </Field>
-            <Field label={tField("dueDate")} hint={fromScan.dueDate ? t("fromScan") : undefined} requirement="required">
+            <Field
+              label={tField("dueDate")}
+              hint={fromScan.dueDate ? t("fromScan") : undefined}
+              requirement="required"
+            >
               <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
           </div>
@@ -272,14 +301,22 @@ export function AllocateForm({
           </Field>
           {mail?.note && (
             <blockquote className="whitespace-pre-line border-l-2 border-border pl-3 text-sm text-muted">
-              <span className="font-medium text-foreground">{mail.fromName ?? mail.fromAddress}:</span> {mail.note}
+              <span className="font-medium text-foreground">
+                {mail.fromName ?? mail.fromAddress}:
+              </span>{" "}
+              {mail.note}
             </blockquote>
           )}
         </section>
 
         <section className="border-t border-border px-inset py-5">
           <FieldGroup label={tAttest("distribution")}>
-            <AllocationEditor costCenters={options} grossAmount={totalOre == null ? 0 : totalOre / 100} value={rows} onChange={setRows} />
+            <AllocationEditor
+              costCenters={options}
+              grossAmount={totalOre == null ? 0 : totalOre / 100}
+              value={rows}
+              onChange={setRows}
+            />
           </FieldGroup>
         </section>
 

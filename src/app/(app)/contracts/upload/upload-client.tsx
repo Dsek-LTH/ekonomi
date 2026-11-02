@@ -135,9 +135,7 @@ export function UploadContractClient({
   const showCounterparty = kind !== "PROTOCOL";
   const ready =
     title.trim() !== "" &&
-    (isAgreement
-      ? counterparty.trim() !== ""
-      : kind !== "PROTOCOL" || isCompleteDate(date));
+    (isAgreement ? counterparty.trim() !== "" : kind !== "PROTOCOL" || isCompleteDate(date));
 
   async function save() {
     const created = await mutate<{ id: string }>("/api/contracts", {
@@ -152,7 +150,10 @@ export function UploadContractClient({
         date: dateOrNull(date),
         // Split here and normalised on the server, which is the only place that
         // decides what a tag looks like. See lib/contract/tags.ts.
-        tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
+        tags: tags
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         notes: notes.trim() || null,
       },
       // No success message: the upload below may still fail, and saying "saved"
@@ -186,11 +187,7 @@ export function UploadContractClient({
   const busy = pending !== null;
 
   return (
-    <PageShell
-      title={t("form.uploadTitle")}
-      width="content"
-      back="/contracts"
-    >
+    <PageShell title={t("form.uploadTitle")} width="content" back="/contracts">
       {/* The panel is where the document goes and where it is read, which is
           one place rather than two. Declared with `onFile` and nothing to show,
           so it opens as a dropzone and becomes a viewer the moment a file
@@ -247,7 +244,7 @@ export function UploadContractClient({
                     <button
                       type="button"
                       onClick={() => setNewCounterpartyName("")}
-                      className="flex items-center gap-1 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                      className="flex items-center gap-1 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                     >
                       <IconPlus className="size-3.5" />
                       {tc("add")}
@@ -256,7 +253,10 @@ export function UploadContractClient({
                 >
                   <Combobox
                     autoFocus
-                    options={counterpartyOptions.map((c) => ({ value: c.id, label: c.name }))}
+                    options={counterpartyOptions.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                    }))}
                     value={counterpartyId ?? ""}
                     onChange={pickCounterparty}
                     allowClear
@@ -383,7 +383,7 @@ export function UploadContractClient({
           <button
             type="button"
             onClick={() => router.push("/contracts/rental/new")}
-            className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+            className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
           >
             {t("form.otherKindLink")}
           </button>

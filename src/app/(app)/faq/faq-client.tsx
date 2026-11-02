@@ -69,8 +69,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   // carries the search and the anchor, so a click stops applying once the thing
   // it was a reaction to is gone.
   const clickKey = (id: string) => `${query}\u0000${hash}\u0000${id}`;
-  const isOpen = (id: string) =>
-    toggled.has(clickKey(id)) ? !opensItself(id) : opensItself(id);
+  const isOpen = (id: string) => (toggled.has(clickKey(id)) ? !opensItself(id) : opensItself(id));
 
   const toggle = (id: string) =>
     setToggled((prev) => {
@@ -81,8 +80,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
     });
 
   const inCategory = (s: FaqSection) => category === ALL || s.id === category;
-  const matched = (s: FaqSection) =>
-    matches ? s.items.filter((i) => matches.has(i.id)) : s.items;
+  const matched = (s: FaqSection) => (matches ? s.items.filter((i) => matches.has(i.id)) : s.items);
 
   const visible = sections
     .filter(inCategory)
@@ -139,9 +137,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
 
       {visible.map((section) => (
         <section key={section.id} className="space-y-3">
-          <h2 className="text-xs font-medium text-muted">
-            {section.label}
-          </h2>
+          <h2 className="text-xs font-medium text-muted">{section.label}</h2>
           {/* overflow-hidden so a hovered first or last question doesn't
               paint its background square over the card's corners. */}
           <Card className="divide-y divide-border overflow-hidden">
@@ -280,7 +276,10 @@ function Block({ block }: { block: FaqBlock }) {
       // gets a button rather than a line of text.
       return (
         <p>
-          <a href={block.href} className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
+          <a
+            href={block.href}
+            className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+          >
             {block.v}
           </a>
         </p>
@@ -334,9 +333,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">
           <IconReceipt className="size-7 text-faint" />
           <p className="text-sm font-medium text-muted">{t("imageMissing")}</p>
-          <code className="break-all text-xs leading-tight text-muted">
-            {block.expected}
-          </code>
+          <code className="break-all text-xs leading-tight text-muted">{block.expected}</code>
         </div>
       )}
     </div>

@@ -147,7 +147,9 @@ describe("attesting", () => {
       status: "BOOKED",
       allocations: [alloc({ canAttest: true, approvedById: "me" })],
     });
-    expect(expenseCapabilities(booked, viewer(["RESULTATANSVARIG"], "me")).canWithdrawAttest).toBe(false);
+    expect(expenseCapabilities(booked, viewer(["RESULTATANSVARIG"], "me")).canWithdrawAttest).toBe(
+      false,
+    );
   });
 });
 
@@ -172,7 +174,13 @@ describe("submitting a milersättning", () => {
       status: "DRAFT",
       submitterId: "member",
       purchaseDate: today(),
-      mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 },
+      mileage: {
+        ...JOURNEY,
+        odometerStart: 12300,
+        odometerEnd: 12342,
+        km: 42,
+        orePerKm: 250,
+      },
       ...over,
     });
   const owner = viewer(["ORDINARIE"], "member");
@@ -186,7 +194,13 @@ describe("submitting a milersättning", () => {
   it("is refused while the readings do not make a journey", () => {
     const can = expenseCapabilities(
       mileage({
-        mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: null, km: null, orePerKm: 250 },
+        mileage: {
+          ...JOURNEY,
+          odometerStart: 12300,
+          odometerEnd: null,
+          km: null,
+          orePerKm: 250,
+        },
       }),
       owner,
     );
@@ -197,7 +211,13 @@ describe("submitting a milersättning", () => {
   it("is refused while nothing has priced the day it was driven", () => {
     const can = expenseCapabilities(
       mileage({
-        mileage: { ...JOURNEY, odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: null },
+        mileage: {
+          ...JOURNEY,
+          odometerStart: 12300,
+          odometerEnd: 12342,
+          km: 42,
+          orePerKm: null,
+        },
       }),
       owner,
     );
@@ -267,9 +287,7 @@ describe("dispens från redovisningsfristen", () => {
     // the section set is the treasurer's, the same as locking a budget.
     expect(expenseCapabilities(late(), viewer(["SKATTMASTARE"])).canWaiveDeadline).toBe(true);
     expect(expenseCapabilities(late(), viewer(["ORDFORANDE"])).canWaiveDeadline).toBe(false);
-    expect(expenseCapabilities(late(), viewer(["VICE_SKATTMASTARE"])).canWaiveDeadline).toBe(
-      false,
-    );
+    expect(expenseCapabilities(late(), viewer(["VICE_SKATTMASTARE"])).canWaiveDeadline).toBe(false);
     expect(expenseCapabilities(late(), viewer(["ORDINARIE"], "member")).canWaiveDeadline).toBe(
       false,
     );
@@ -282,7 +300,12 @@ describe("dispens från redovisningsfristen", () => {
     for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
       expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(true);
     }
-    for (const status of ["PENDING_APPROVAL", "APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
+    for (const status of [
+      "PENDING_APPROVAL",
+      "APPROVED",
+      "BOOKED",
+      "EXPORTED",
+    ] as ExpenseStatus[]) {
       expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(false);
     }
   });
@@ -296,9 +319,7 @@ describe("dispens från redovisningsfristen", () => {
     );
     // Nor on a sektionskort purchase, however old: the money is already the
     // section's and the deadline was never over it.
-    expect(
-      expenseCapabilities(late({ paymentType: "CARD" }), skattm).canWaiveDeadline,
-    ).toBe(false);
+    expect(expenseCapabilities(late({ paymentType: "CARD" }), skattm).canWaiveDeadline).toBe(false);
   });
 
   it("becomes the offer to take it back, once given", () => {
@@ -324,9 +345,9 @@ describe("dispens från redovisningsfristen", () => {
     expect(expenseCapabilities(waived, owner).submitBlocker).toBeNull();
     expect(expenseCapabilities(waived, owner).canSubmit).toBe(true);
 
-    expect(
-      expenseCapabilities({ ...waived, submitterHasPayout: false }, owner).submitBlocker,
-    ).toBe("payout");
+    expect(expenseCapabilities({ ...waived, submitterHasPayout: false }, owner).submitBlocker).toBe(
+      "payout",
+    );
   });
 });
 
@@ -404,9 +425,9 @@ describe("taking your own submission back", () => {
   it("is not offered to anybody else", () => {
     // A resultatansvarig sees the utlägg and may attest it. Neither makes the
     // claim theirs to withdraw.
-    expect(
-      expenseCapabilities(waiting(), viewer(["RESULTATANSVARIG"], "other")).canRecall,
-    ).toBe(false);
+    expect(expenseCapabilities(waiting(), viewer(["RESULTATANSVARIG"], "other")).canRecall).toBe(
+      false,
+    );
   });
 
   it("is not offered once it is actually attested", () => {
@@ -464,7 +485,9 @@ describe("reminding", () => {
 
   it("is offered while the utlägg is waiting on its submitter", () => {
     for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
-      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(true);
+      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(
+        true,
+      );
     }
   });
 
@@ -475,7 +498,9 @@ describe("reminding", () => {
 
   it("is not offered once the utlägg is signed", () => {
     for (const status of ["APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
-      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(false);
+      expect(expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"])).canRemind).toBe(
+        false,
+      );
     }
   });
 });

@@ -91,7 +91,9 @@ export default function SettingsOverlayLayout({ children }: { children: React.Re
                   // A tint, not the brand fill: that is the primary button's
                   // register, and a "you are here" in it competed with the
                   // section's own buttons for the eye.
-                  active ? "bg-accent-soft font-semibold text-accent" : "text-foreground hover:bg-hover",
+                  active
+                    ? "bg-accent-soft font-semibold text-accent"
+                    : "text-foreground hover:bg-hover",
                 )}
               >
                 <Icon className="size-[18px] shrink-0" />

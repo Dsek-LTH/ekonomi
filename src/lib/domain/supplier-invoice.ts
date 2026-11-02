@@ -208,7 +208,11 @@ export interface InvoiceFacts {
   resultUnitId: string | null;
   /** Per row: whether it is signed, by whom, and whether this viewer may sign
    *  it. Worked out per row by the caller with canAttestAllocation. */
-  allocations: readonly { approved: boolean; approvedById?: string | null; viewerMayAttest: boolean }[];
+  allocations: readonly {
+    approved: boolean;
+    approvedById?: string | null;
+    viewerMayAttest: boolean;
+  }[];
 }
 
 /** The resultatansvarig of the unit the invoice was given to. */
@@ -258,8 +262,7 @@ export function invoiceCapabilities(
   const s = invoice.status;
   const owner = ownsUnit(viewer, invoice);
 
-  const allocate =
-    awaitsAllocation(s) && (owner || triage || isAdmin(viewer.capabilities));
+  const allocate = awaitsAllocation(s) && (owner || triage || isAdmin(viewer.capabilities));
   const pendingMine = invoice.allocations.some((a) => a.viewerMayAttest && !a.approved);
   const signedByMe = invoice.allocations.some((a) => a.approvedById === viewer.id);
 

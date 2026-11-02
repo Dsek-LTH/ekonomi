@@ -61,7 +61,11 @@ export function MembersClient({
 
   return (
     <PageShell title={title} width="content">
-      <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} />
+      <SearchInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t("search")}
+      />
       <Card>
         {shown.length === 0 ? (
           <EmptyNote>{rows.length === 0 ? t("empty") : t("noMatch")}</EmptyNote>

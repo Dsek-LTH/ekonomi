@@ -58,7 +58,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
               <button
                 type="button"
                 onClick={() => setEditing(i)}
-                className="text-left font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                className="text-left font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
               >
                 {i.name}
               </button>
@@ -143,10 +143,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
       </Card>
 
       {editing !== null && (
-        <ItemDialog
-          item={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-        />
+        <ItemDialog item={editing === "new" ? null : editing} onClose={() => setEditing(null)} />
       )}
     </>
   );

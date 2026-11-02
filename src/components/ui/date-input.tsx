@@ -47,9 +47,7 @@ export function DateInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cursorBefore = e.target.selectionStart ?? e.target.value.length;
-    const digitsBeforeCursor = e.target.value
-      .slice(0, cursorBefore)
-      .replace(/\D/g, "").length;
+    const digitsBeforeCursor = e.target.value.slice(0, cursorBefore).replace(/\D/g, "").length;
 
     const formatted = formatDate(e.target.value);
 

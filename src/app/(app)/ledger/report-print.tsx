@@ -105,7 +105,7 @@ export function ReportPrint({
 
   // The figure a line is read by: the period on a result report, the closing
   // balance on a balance one. What the deviation and the share are taken of.
-  const value = (f: Figures) => (isBalance ? f.closing ?? 0 : f.amount);
+  const value = (f: Figures) => (isBalance ? (f.closing ?? 0) : f.amount);
   const cell = (c: Column, f: Figures) => {
     switch (c) {
       case "opening":
@@ -137,10 +137,7 @@ export function ReportPrint({
         <tr key={key}>
           <td
             colSpan={2 + columns.length}
-            className={cn(
-              "pt-2 font-semibold",
-              line.kind === "heading" && "pt-3 text-[10pt]",
-            )}
+            className={cn("pt-2 font-semibold", line.kind === "heading" && "pt-3 text-[10pt]")}
           >
             {t(`printout.layout.${line.label}`)}
           </td>
@@ -167,10 +164,7 @@ export function ReportPrint({
     return (
       <tr
         key={key}
-        className={cn(
-          "font-semibold",
-          line.kind !== "partTotal" && "border-t border-black/40",
-        )}
+        className={cn("font-semibold", line.kind !== "partTotal" && "border-t border-black/40")}
       >
         <td colSpan={2} className="pr-2 pb-1">
           {label}

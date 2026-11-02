@@ -80,7 +80,9 @@ describe("parseInvoiceText", () => {
   });
 
   it("never takes the section's own org number for the supplier's", () => {
-    expect(parseInvoiceText(["Kund org.nr 845003-2878"], { ownOrgNo: "845003-2878" }).supplierOrgNo).toBeUndefined();
+    expect(
+      parseInvoiceText(["Kund org.nr 845003-2878"], { ownOrgNo: "845003-2878" }).supplierOrgNo,
+    ).toBeUndefined();
   });
 
   it("finds nothing in nothing, which is what a scanned invoice gives", () => {

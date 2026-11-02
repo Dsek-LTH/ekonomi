@@ -149,7 +149,10 @@ export function formatNumber(n: number, min: number, max: number): string {
   const key = `${min}-${max}`;
   let f = numberCache.get(key);
   if (!f) {
-    f = new Intl.NumberFormat("sv-SE", { minimumFractionDigits: min, maximumFractionDigits: max });
+    f = new Intl.NumberFormat("sv-SE", {
+      minimumFractionDigits: min,
+      maximumFractionDigits: max,
+    });
     numberCache.set(key, f);
   }
   return f.format(n);
@@ -173,6 +176,5 @@ export const formatClPerKrona = (cl: number): string => KR_2.format(cl);
  * purpose: that guard is nearly always a count, and `n &&` yields the number
  * rather than `false` when it is zero.
  */
-export const sentence = (
-  ...clauses: (string | number | false | null | undefined)[]
-): string => `${clauses.filter((c) => typeof c === "string" && c).join(", ")}.`;
+export const sentence = (...clauses: (string | number | false | null | undefined)[]): string =>
+  `${clauses.filter((c) => typeof c === "string" && c).join(", ")}.`;

@@ -123,25 +123,30 @@ const defaultTableControls: Required<TableControlDefaults> = {
 
 export function useTableControls(defaults: TableControlDefaults = {}): ClientControls {
   const d = { ...defaultTableControls, ...defaults };
-  const [tab, setTabRaw]           = useState(d.tab);
-  const [picks, setPicksRaw]       = useState(d.picks);
-  const [query, setQueryRaw]       = useState(d.query);
+  const [tab, setTabRaw] = useState(d.tab);
+  const [picks, setPicksRaw] = useState(d.picks);
+  const [query, setQueryRaw] = useState(d.query);
   const [dateFrom, setDateFromRaw] = useState(d.dateFrom);
-  const [dateTo, setDateToRaw]     = useState(d.dateTo);
+  const [dateTo, setDateToRaw] = useState(d.dateTo);
   const [pageSize, setPageSizeRaw] = useState<PageSize>(d.pageSize);
-  const [page, setPage]            = useState(d.page);
-  const [sortKey, setSortKey]      = useState<string | null>(d.sortKey);
-  const [sortDir, setSortDir]      = useState<SortDir>(d.sortDir);
-  const [view, setViewRaw]         = useState(d.view);
+  const [page, setPage] = useState(d.page);
+  const [sortKey, setSortKey] = useState<string | null>(d.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(d.sortDir);
+  const [view, setViewRaw] = useState(d.view);
 
-  const withReset = <A,>(set: (v: A) => void) => (v: A) => { setPage(0); set(v); };
-  const setTab       = withReset(setTabRaw);
-  const setPicks     = withReset(setPicksRaw);
-  const setQuery     = withReset(setQueryRaw);
-  const setDateFrom  = withReset(setDateFromRaw);
-  const setDateTo    = withReset(setDateToRaw);
-  const setPageSize  = withReset(setPageSizeRaw);
-  const setView      = withReset(setViewRaw);
+  const withReset =
+    <A,>(set: (v: A) => void) =>
+    (v: A) => {
+      setPage(0);
+      set(v);
+    };
+  const setTab = withReset(setTabRaw);
+  const setPicks = withReset(setPicksRaw);
+  const setQuery = withReset(setQueryRaw);
+  const setDateFrom = withReset(setDateFromRaw);
+  const setDateTo = withReset(setDateToRaw);
+  const setPageSize = withReset(setPageSizeRaw);
+  const setView = withReset(setViewRaw);
   // Three state writes React batches into one render. Nothing to merge here,
   // unlike the URL-backed version below.
   const clearFilters = () => {
@@ -163,7 +168,30 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
 
   const paginate = <T,>(items: T[]): T[] => items.slice(page * pageSize, (page + 1) * pageSize);
 
-  return { tab, setTab, picks, setPicks, query, setQuery, dateFrom, setDateFrom, dateTo, setDateTo, clearFilters, pageSize, setPageSize, page, setPage, paginate, sortKey, sortDir, toggleSort, view, setView, server: false };
+  return {
+    tab,
+    setTab,
+    picks,
+    setPicks,
+    query,
+    setQuery,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    clearFilters,
+    pageSize,
+    setPageSize,
+    page,
+    setPage,
+    paginate,
+    sortKey,
+    sortDir,
+    toggleSort,
+    view,
+    setView,
+    server: false,
+  };
 }
 
 // ── The same controls, kept in the URL ────────────────────────────
@@ -298,8 +326,10 @@ export function useUrlTableControls(
   // row would both be merged onto the state the first one started from and the
   // second would undo the first. Anything that changes two things at once
   // says so in a single commit, as `clearFilters` does.
-  const set = <K extends keyof ListQuery>(key: K) => (v: ListQuery[K]) =>
-    commit({ [key]: v, page: 0 } as Partial<ListQuery>);
+  const set =
+    <K extends keyof ListQuery>(key: K) =>
+    (v: ListQuery[K]) =>
+      commit({ [key]: v, page: 0 } as Partial<ListQuery>);
 
   // The three controls that are typed into rather than clicked. None of them
   // can wait for a round trip per keystroke. See useUrlDraft.

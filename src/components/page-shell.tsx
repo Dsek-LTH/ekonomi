@@ -32,7 +32,11 @@ export interface Views {
   /** Names the toggle for a screen reader. */
   label: string;
   value: string;
-  options: { value: string; label: string; icon: (p: { className?: string }) => React.ReactNode }[];
+  options: {
+    value: string;
+    label: string;
+    icon: (p: { className?: string }) => React.ReactNode;
+  }[];
   onChange: (value: string) => void;
   /** Keep the toggle's room but not the toggle, as `collectionsHidden`. */
   hidden?: boolean;
@@ -164,7 +168,12 @@ export function PageShell({
       />
 
       {(pages || views) && (
-        <div className={cn("mb-4 flex items-end justify-between gap-4", pages && "border-b border-border")}>
+        <div
+          className={cn(
+            "mb-4 flex items-end justify-between gap-4",
+            pages && "border-b border-border",
+          )}
+        >
           {pages ? <PageTabs {...pages} /> : <span />}
           {views && (
             <div className={cn("pb-1.5", views.hidden && "invisible")} inert={views.hidden}>

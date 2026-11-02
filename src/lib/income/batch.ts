@@ -124,8 +124,7 @@ async function existingReports(
   return { booked, unbookedIds };
 }
 
-const dayKey = (resultUnitId: string | null, date: Date) =>
-  `${resultUnitId ?? ""}|${isoDay(date)}`;
+const dayKey = (resultUnitId: string | null, date: Date) => `${resultUnitId ?? ""}|${isoDay(date)}`;
 
 /**
  * Store a fetch of sales reports as a batch of drafts.

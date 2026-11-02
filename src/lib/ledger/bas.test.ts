@@ -57,4 +57,3 @@ describe("the two reports together", () => {
     expect(balance.to).toBeLessThan(result.from);
   });
 });
-

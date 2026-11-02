@@ -43,7 +43,11 @@ export async function resolveBudgetAccount(
   // pickable and was silently filed as a cost, so a bank balance could sit in a
   // column of expenses with nothing to say it was wrong.
   if (!isResultAccount(account.number)) {
-    return { ok: false, error: "budgetAccount.notResultAccount", values: { code: account.number } };
+    return {
+      ok: false,
+      error: "budgetAccount.notResultAccount",
+      values: { code: account.number },
+    };
   }
   // And on the side its number puts it on. 3xxx is income, 4xxx-8xxx is cost,
   // and that is what the ledger will report whatever a budget says about it.

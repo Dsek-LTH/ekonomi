@@ -65,13 +65,19 @@ export function claimExport(expenseId: string, userId: string): Promise<Taken> {
     if (row.exportClaimState) {
       // Free only because it was abandoned before anything was sent. Taken
       // over, which is safe (see CLAIM_ABANDONED_MS), and worth a line.
-      console.warn(`[export] ${expenseId}: taking over a lock abandoned at ${row.exportClaimedAt?.toISOString()}`);
+      console.warn(
+        `[export] ${expenseId}: taking over a lock abandoned at ${row.exportClaimedAt?.toISOString()}`,
+      );
     }
 
     const token = new Date();
     await tx.expense.update({
       where: { id: expenseId },
-      data: { exportClaimedById: userId, exportClaimedAt: token, exportClaimState: "CLAIMED" },
+      data: {
+        exportClaimedById: userId,
+        exportClaimedAt: token,
+        exportClaimState: "CLAIMED",
+      },
     });
     return { ok: true, claim: { expenseId, token } };
   });

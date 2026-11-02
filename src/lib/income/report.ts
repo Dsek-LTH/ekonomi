@@ -30,7 +30,6 @@ export interface StoredLine {
   total: number;
 }
 
-
 /**
  * Sum the lines by account, in account order.
  *

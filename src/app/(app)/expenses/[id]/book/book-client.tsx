@@ -193,10 +193,7 @@ export default function BookExpenseClient({
   // `||` rather than `??`: purchaseDate is "" when the utlägg has none (see
   // isoDate in lib/data/shared.ts), and an empty string has to fall through.
   const [date, setDate] = useState(
-    () =>
-      expense?.verification?.date.slice(0, 10) ||
-      expense?.purchaseDate ||
-      isoDay(new Date()),
+    () => expense?.verification?.date.slice(0, 10) || expense?.purchaseDate || isoDay(new Date()),
   );
   const [textSuffix, setTextSuffix] = useState(() => {
     const full = expense?.verification?.description ?? expense?.title ?? "";
@@ -251,9 +248,7 @@ export default function BookExpenseClient({
       <EmptyState
         title={expense.status === "EXPORTED" ? t("lockedTitle") : t("notBookableTitle")}
         description={
-          expense.status === "EXPORTED"
-            ? t("lockedDescription")
-            : t("notBookableDescription")
+          expense.status === "EXPORTED" ? t("lockedDescription") : t("notBookableDescription")
         }
         action={<ButtonLink href={`/expenses/${expense.id}`}>{t("toExpense")}</ButtonLink>}
       />
@@ -399,7 +394,6 @@ export default function BookExpenseClient({
       back={returnHref}
       width="wide"
     >
-
       {/* The receipt stands beside the whole frame, full height, and stays put
           while this table scrolls, which is the entire point of booking with
           it open. Declared here, rendered by the shell. */}
@@ -425,110 +419,119 @@ export default function BookExpenseClient({
           )}
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
-          <Field
-            label={t("voucherDate")}
-            requirement="required"
-            error={
-              dateOutsideYear
-                ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
-                : undefined
-            }
-          >
-            {/* Where the booking starts, so it is where the cursor starts. The
+              <Field
+                label={t("voucherDate")}
+                requirement="required"
+                error={
+                  dateOutsideYear
+                    ? tCommon("dateOutsideFiscalYear", {
+                        year: fiscalYearLabel(fiscalYear!),
+                      })
+                    : undefined
+                }
+              >
+                {/* Where the booking starts, so it is where the cursor starts. The
                 field already holds a date, the utlägg's own, so it is
                 selected as well as focused: the mask takes eight digits and no
                 more, and typing into a full one would otherwise do nothing at
                 all. Once, on arrival; clicking back in later to fix a single
                 digit behaves as it should. */}
-            <DateInput
-              min={fiscalYear?.fromDate}
-              max={fiscalYear?.toDate}
-              autoFocus
-              onFocus={selectOnce}
-              size="sm"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </Field>
-          <Field label={t("voucherText")} requirement="optional">
-            {/* Prefix and input are one field, so the ring goes round the pair
+                <DateInput
+                  min={fiscalYear?.fromDate}
+                  max={fiscalYear?.toDate}
+                  autoFocus
+                  onFocus={selectOnce}
+                  size="sm"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </Field>
+              <Field label={t("voucherText")} requirement="optional">
+                {/* Prefix and input are one field, so the ring goes round the pair
                 (focus-ring-within draws it on the box and suppresses the
                 input's own (see globals.css). */}
-            <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
-              {/* The prefix comes from the submitter's identity, so its width is
+                <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
+                  {/* The prefix comes from the submitter's identity, so its width is
                   out of our hands. Nowrap-and-never-shrink made the box wider
                   than the card body on a long one; it truncates instead, and the
                   input keeps a usable minimum before that ever happens. */}
-              <span className="min-w-0 truncate font-medium text-muted" title={t("prefixLocked")}>
-                {textPrefix}
-              </span>
-              <input
-                value={textSuffix}
-                onChange={(e) => setTextSuffix(e.target.value)}
-                placeholder={t("voucherTextPlaceholder")}
-                aria-label={t("voucherTextAria")}
-                className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted"
-              />
-            </div>
-          </Field>
-        </CardBody>
-      </Card>
+                  <span
+                    className="min-w-0 truncate font-medium text-muted"
+                    title={t("prefixLocked")}
+                  >
+                    {textPrefix}
+                  </span>
+                  <input
+                    value={textSuffix}
+                    onChange={(e) => setTextSuffix(e.target.value)}
+                    placeholder={t("voucherTextPlaceholder")}
+                    aria-label={t("voucherTextAria")}
+                    className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted"
+                  />
+                </div>
+              </Field>
+            </CardBody>
+          </Card>
 
-      <Card>
-        <VoucherEditor
-          rows={rows}
-          onChange={setRows}
-          accounts={accounts}
-          costCenters={costCenters}
-          projects={projects}
-          // The payment row. Which account the money comes from follows from
-          // the payment type, and the amount is the expense's, so there is
-          // nothing here to choose, and no ✕ to remove it with.
-          locked={{
-            account: paymentAccount,
-            accountName: accountName(paymentAccount),
-            debit: payment.debit,
-            credit: payment.credit,
-            hint: t("lockedRowHint"),
-            label: t("lockedRow"),
-          }}
-          totalDebit={totalDebit}
-          totalCredit={totalCredit}
-        />
+          <Card>
+            <VoucherEditor
+              rows={rows}
+              onChange={setRows}
+              accounts={accounts}
+              costCenters={costCenters}
+              projects={projects}
+              // The payment row. Which account the money comes from follows from
+              // the payment type, and the amount is the expense's, so there is
+              // nothing here to choose, and no ✕ to remove it with.
+              locked={{
+                account: paymentAccount,
+                accountName: accountName(paymentAccount),
+                debit: payment.debit,
+                credit: payment.credit,
+                hint: t("lockedRowHint"),
+                label: t("lockedRow"),
+              }}
+              totalDebit={totalDebit}
+              totalCredit={totalCredit}
+            />
 
-        {revenueAccounts.length > 0 && (
-          <div className="px-inset pb-4">
-            <Notice>{t("revenueAccounts", { list: revenueAccounts.join(", ") })}</Notice>
-          </div>
-        )}
+            {revenueAccounts.length > 0 && (
+              <div className="px-inset pb-4">
+                <Notice>{t("revenueAccounts", { list: revenueAccounts.join(", ") })}</Notice>
+              </div>
+            )}
 
-        {!paymentAccountKnown && (
-          <div className="px-inset pb-4">
-            <Notice>
-              {paymentAccountSetting === null
-                ? t(expense.paymentType === "CARD" ? "bankAccountUnset" : "memberDebtAccountUnset")
-                : t("unknownPaymentAccount", { account: paymentAccount })}
-            </Notice>
-          </div>
-        )}
+            {!paymentAccountKnown && (
+              <div className="px-inset pb-4">
+                <Notice>
+                  {paymentAccountSetting === null
+                    ? t(
+                        expense.paymentType === "CARD"
+                          ? "bankAccountUnset"
+                          : "memberDebtAccountUnset",
+                      )
+                    : t("unknownPaymentAccount", { account: paymentAccount })}
+                </Notice>
+              </div>
+            )}
 
-        <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-          <BalanceChip balanced={balanced} difference={formatSEK(diff)} />
+            <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
+              <BalanceChip balanced={balanced} difference={formatSEK(diff)} />
 
-          <div className="flex items-center gap-2.5">
-            {/* Why the button is dead. Without it, making the chip tell the
+              <div className="flex items-center gap-2.5">
+                {/* Why the button is dead. Without it, making the chip tell the
                 truth about a balanced voucher would have left an unpicked
                 account with no signal at all: a green chip over a button that
                 quietly refuses. It says nothing when the balance chip is
                 already saying it. */}
-            <VoucherBlockerChip blocker={blocker} />
-            <Button onClick={save} loading={submitting} disabled={!canSubmit}>
-              <IconCheck className="size-4" />
-              {mode === "edit" ? t("saveChanges") : t("book")}
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
+                <VoucherBlockerChip blocker={blocker} />
+                <Button onClick={save} loading={submitting} disabled={!canSubmit}>
+                  <IconCheck className="size-4" />
+                  {mode === "edit" ? t("saveChanges") : t("book")}
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
         </div>
       </div>
     </PageShell>

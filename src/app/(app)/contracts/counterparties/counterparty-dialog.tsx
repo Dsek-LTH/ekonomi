@@ -97,11 +97,7 @@ export function CounterpartyDialog({
   }
 
   return (
-    <Modal
-      label={counterparty ? t("edit") : t("add")}
-      onClose={onClose}
-      className="max-w-lg"
-    >
+    <Modal label={counterparty ? t("edit") : t("add")} onClose={onClose} className="max-w-lg">
       <ModalHeader
         title={counterparty ? t("edit") : t("add")}
         subtitle={

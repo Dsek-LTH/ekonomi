@@ -3,6 +3,8 @@ import {
   commaForm,
   groupForm,
   isAmountInput,
+  isSumInput,
+  settleAmount,
   oreToSEK,
   parseOre,
   parseSEK,
@@ -75,8 +77,6 @@ describe("parseSEK", () => {
     expect(parseSEK("-")).toBe(0);
   });
 });
-
-
 
 describe("parseOre", () => {
   it("goes from typed text straight to integer öre", () => {
@@ -167,5 +167,41 @@ describe("commaForm", () => {
 
   it("leaves a lone minus alone", () => {
     expect(commaForm("-")).toBe("-");
+  });
+});
+
+describe("settleAmount", () => {
+  it("works a sum out to the öre, in comma form", () => {
+    expect(settleAmount("1250*0,25+40")).toBe("352,50");
+    expect(settleAmount("100/3")).toBe("33,33");
+    expect(settleAmount("(10+5)*2")).toBe("30,00");
+    expect(settleAmount("=12*3")).toBe("36,00");
+    expect(settleAmount("=150")).toBe("150,00");
+  });
+
+  it("leaves a plain amount as typed", () => {
+    expect(settleAmount("1 234,5")).toBe("1 234,5");
+    expect(settleAmount("")).toBe("");
+  });
+
+  it("refuses a sum that does not add up or goes below nothing", () => {
+    expect(settleAmount("12+")).toBeNull();
+    expect(settleAmount("(1+2")).toBeNull();
+    expect(settleAmount("5/0")).toBeNull();
+    expect(settleAmount("10-20")).toBeNull();
+  });
+
+  it("is what parseSEK reads a sum as", () => {
+    expect(parseSEK("1250*0,25+40")).toBe(352.5);
+    expect(parseSEK("12+")).toBe(0);
+  });
+});
+
+describe("isSumInput", () => {
+  it("takes digits, separators, spaces, operators and brackets only", () => {
+    expect(isSumInput("1 250*0,25+(40-2)/2")).toBe(true);
+    expect(isSumInput("12a")).toBe(false);
+    expect(isSumInput("=12*3")).toBe(true);
+    expect(isSumInput("1=2")).toBe(false);
   });
 });

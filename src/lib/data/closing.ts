@@ -103,7 +103,6 @@ export interface ClosingProgress {
 export const CLOSING_TABS = ["all", "expense", "income", "none", "disagrees"] as const;
 export type ClosingTab = (typeof CLOSING_TABS)[number];
 
-
 function toYear(
   y: { id: number; fromDate: Date; toDate: Date; lastSyncAt: Date | null },
   vouchers: number,
@@ -142,7 +141,13 @@ async function backfillFingerprints(ids: readonly string[]): Promise<Map<string,
       date: true,
       description: true,
       rows: {
-        select: { account: true, costCenterCode: true, text: true, debit: true, credit: true },
+        select: {
+          account: true,
+          costCenterCode: true,
+          text: true,
+          debit: true,
+          credit: true,
+        },
       },
     },
   });

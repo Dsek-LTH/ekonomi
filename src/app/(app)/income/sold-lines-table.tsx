@@ -102,7 +102,9 @@ export function SoldLinesTable({
                     <Checkbox
                       checked={picked.length > 0 && picked.length === lines.length}
                       indeterminate={picked.length > 0 && picked.length < lines.length}
-                      onChange={() => onPick(picked.length === lines.length ? [] : lines.map((l) => l.id))}
+                      onChange={() =>
+                        onPick(picked.length === lines.length ? [] : lines.map((l) => l.id))
+                      }
                       label={t("move.selectAll")}
                     />
                   </th>
@@ -110,10 +112,20 @@ export function SoldLinesTable({
               )}
               <th className="px-3 py-2 font-medium">{t("lines.product")}</th>
               <th className="w-20 px-3 py-2 font-medium">{t("lines.account")}</th>
-              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("lines.quantity")}</th>
-              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("lines.unitPriceKr")}</th>
-              {discounts && <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("lines.discountKr")}</th>}
-              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t("lines.totalKr")}</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                {t("lines.quantity")}
+              </th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                {t("lines.unitPriceKr")}
+              </th>
+              {discounts && (
+                <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                  {t("lines.discountKr")}
+                </th>
+              )}
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                {t("lines.totalKr")}
+              </th>
             </tr>
           </thead>
           {sections.map((section) => (
@@ -126,7 +138,9 @@ export function SoldLinesTable({
                   <span className="tnum text-foreground">{section.account}</span>
                   {section.accountName && <span> - {section.accountName}</span>}
                 </td>
-                <td className="tnum px-3 py-1.5 text-right text-xs font-medium">{figure(section.total)}</td>
+                <td className="tnum px-3 py-1.5 text-right text-xs font-medium">
+                  {figure(section.total)}
+                </td>
               </tr>
               {section.rows.map((row) => {
                 if (row.kind === "group") {
@@ -156,7 +170,9 @@ export function SoldLinesTable({
                               checked={all}
                               indeterminate={!all && ids.some((id) => picked.includes(id))}
                               onChange={() => togglePick(ids, !all)}
-                              label={t("lines.selectPrefix", { prefix: row.prefix })}
+                              label={t("lines.selectPrefix", {
+                                prefix: row.prefix,
+                              })}
                             />
                           </td>
                         </>
@@ -167,11 +183,21 @@ export function SoldLinesTable({
                             {row.prefix}
                           </span>
                           <span className="text-xs text-muted">
-                            {t("lines.unknownPrefix", { count: row.lines.length })}
+                            {t("lines.unknownPrefix", {
+                              count: row.lines.length,
+                            })}
                           </span>
                           {canMove && (
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => onMove(ids)}>
-                              {t("lines.movePrefix", { prefix: row.prefix, count: row.lines.length })}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => onMove(ids)}
+                            >
+                              {t("lines.movePrefix", {
+                                prefix: row.prefix,
+                                count: row.lines.length,
+                              })}
                             </Button>
                           )}
                         </span>
@@ -187,7 +213,10 @@ export function SoldLinesTable({
                   // components/ui/drag.tsx.
                   <tr
                     key={row.key}
-                    className={cn("group [&>td]:align-middle", dragging?.includes(line.id) && "opacity-40")}
+                    className={cn(
+                      "group [&>td]:align-middle",
+                      dragging?.includes(line.id) && "opacity-40",
+                    )}
                   >
                     {canMove && (
                       <>
@@ -200,7 +229,13 @@ export function SoldLinesTable({
                               // selection; dragging an unchecked one is about
                               // that row alone.
                               const lineIds = picked.includes(line.id) ? picked : [line.id];
-                              e.dataTransfer.setData("incomeLines", JSON.stringify({ reportId, lineIds }));
+                              e.dataTransfer.setData(
+                                "incomeLines",
+                                JSON.stringify({
+                                  reportId,
+                                  lineIds,
+                                }),
+                              );
                               e.dataTransfer.effectAllowed = "move";
                               onDragStart(lineIds);
                             }}
@@ -213,7 +248,9 @@ export function SoldLinesTable({
                             onChange={() => togglePick([line.id], !picked.includes(line.id))}
                             // The whole name: out of the table "Ost" is not a
                             // product.
-                            label={t("move.selectLine", { product: name })}
+                            label={t("move.selectLine", {
+                              product: name,
+                            })}
                           />
                         </td>
                       </>
@@ -244,7 +281,9 @@ export function SoldLinesTable({
                             if (v !== line.account) onAccount(line.id, v);
                           }}
                           disabled={busy}
-                          aria-label={t("lines.accountFor", { product: name })}
+                          aria-label={t("lines.accountFor", {
+                            product: name,
+                          })}
                         />
                       ) : (
                         // Editable in place. A sale that fell to the reserv is
@@ -255,7 +294,9 @@ export function SoldLinesTable({
                           disabled={busy}
                           onClick={() => setEditing(line.id)}
                           title={t("lines.changeAccount")}
-                          aria-label={t("lines.accountFor", { product: name })}
+                          aria-label={t("lines.accountFor", {
+                            product: name,
+                          })}
                           className="tnum -mx-1.5 rounded-control px-1.5 py-0.5 text-left hover:bg-hover"
                         >
                           {line.account}
@@ -269,7 +310,9 @@ export function SoldLinesTable({
                         {line.discount ? figure(line.discount) : ""}
                       </td>
                     )}
-                    <td className="tnum px-3 py-1.5 text-right font-medium">{figure(line.total)}</td>
+                    <td className="tnum px-3 py-1.5 text-right font-medium">
+                      {figure(line.total)}
+                    </td>
                   </tr>
                 );
               })}

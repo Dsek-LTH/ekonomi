@@ -9,11 +9,7 @@ import { Tag } from "@/components/ui/status-pill";
 import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
 import { useFormat } from "@/lib/ui/use-format";
-import {
-  RENTAL_STATE_TONE,
-  RENTAL_TABS,
-  type RentalState,
-} from "@/lib/contract/rental-state";
+import { RENTAL_STATE_TONE, RENTAL_TABS, type RentalState } from "@/lib/contract/rental-state";
 import type { RentalRow } from "@/lib/data/rentals";
 import type { RowPage } from "@/lib/data/list-query";
 
@@ -128,7 +124,9 @@ export function RentalsClient({
           // row. A second detail screen showing the same rental from an
           // operational angle would be two pages disagreeing about one thing.
           rowHref={(r) => `/contracts/${r.id}`}
-          empty={page.total === 0 && !narrowed && controls.tab === "" ? t("emptyTitle") : t("noMatch")}
+          empty={
+            page.total === 0 && !narrowed && controls.tab === "" ? t("emptyTitle") : t("noMatch")
+          }
         />
       </Card>
     </PageShell>

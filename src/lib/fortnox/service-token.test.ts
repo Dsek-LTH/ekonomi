@@ -78,10 +78,19 @@ describe("getServiceToken", () => {
   });
 
   it("clears a recorded failure once a refresh goes through", async () => {
-    answer(200, { access_token: "new-access", refresh_token: "new-refresh", expires_in: 3600, scope: "" });
+    answer(200, {
+      access_token: "new-access",
+      refresh_token: "new-refresh",
+      expires_in: 3600,
+      scope: "",
+    });
     expect(await getServiceToken()).toBe("new-access");
     expect(h.updates).toEqual([
-      expect.objectContaining({ refreshToken: "new-refresh", refreshFailedAt: null, refreshError: null }),
+      expect.objectContaining({
+        refreshToken: "new-refresh",
+        refreshFailedAt: null,
+        refreshError: null,
+      }),
     ]);
   });
 

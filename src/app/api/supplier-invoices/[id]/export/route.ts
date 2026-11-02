@@ -25,7 +25,12 @@ import {
 } from "@/lib/fortnox";
 import { userToken } from "@/lib/fortnox/export";
 import { canBookkeep } from "@/lib/domain/permissions";
-import { exportBlocker, ocrDigits, PAYABLE_ACCOUNT, ROUNDING_ACCOUNT } from "@/lib/domain/supplier-invoice";
+import {
+  exportBlocker,
+  ocrDigits,
+  PAYABLE_ACCOUNT,
+  ROUNDING_ACCOUNT,
+} from "@/lib/domain/supplier-invoice";
 import { giroMismatch } from "@/lib/domain/payment-ref";
 import { oreToSEK } from "@/lib/domain/money";
 import { fail, gate } from "@/lib/api/guard";
@@ -75,9 +80,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     supplier = await getSupplier(await getServiceToken(), invoice.fortnoxSupplierNumber!);
   } catch (e) {
-    if (e instanceof FortnoxError && e.status === 403) return fail(403, "fortnox.missingSupplierScope");
+    if (e instanceof FortnoxError && e.status === 403)
+      return fail(403, "fortnox.missingSupplierScope");
     if (e instanceof FortnoxError && e.status === 409) return fail(409, e.message);
-    if (e instanceof FortnoxError && e.status === 404) return fail(422, "supplierInvoice.supplierGone");
+    if (e instanceof FortnoxError && e.status === 404)
+      return fail(422, "supplierInvoice.supplierGone");
     throw e;
   }
   const mismatch = giroMismatch(invoice, supplier);
@@ -96,7 +103,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const claimedAt = new Date();
   const { count } = await prisma.supplierInvoice.updateMany({
     where: { id: invoice.id, status: "BOOKED", exportClaimedAt: null },
-    data: { exportClaimedAt: claimedAt, exportClaimedById: g.actor.id, exportClaimState: "CLAIMED" },
+    data: {
+      exportClaimedAt: claimedAt,
+      exportClaimedById: g.actor.id,
+      exportClaimState: "CLAIMED",
+    },
   });
   if (count === 0) return fail(409, "supplierInvoice.exportInProgress");
   const ours = { id: invoice.id, exportClaimedAt: claimedAt };
@@ -112,7 +123,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // folder of Fortnox's inbox, before the invoice is made: a failure here
     // leaves nothing in Fortnox's books.
     const cover = await renderInvoiceCover(
-      await invoiceCoverFacts(invoice, { supplierName: supplier.name, exportedBy: g.actor.name }),
+      await invoiceCoverFacts(invoice, {
+        supplierName: supplier.name,
+        exportedBy: g.actor.name,
+      }),
     );
     const documents = await prisma.supplierInvoiceDocument.findMany({
       where: { invoiceId: invoice.id },
@@ -120,14 +134,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       select: { objectKey: true, mimeType: true },
     });
     const files = await Promise.all(
-      documents.map(async (d) => ({ bytes: (await getObjectBuffer(d.objectKey)).bytes, mimeType: d.mimeType })),
+      documents.map(async (d) => ({
+        bytes: (await getObjectBuffer(d.objectKey)).bytes,
+        mimeType: d.mimeType,
+      })),
     );
     const merged = await mergeCoverAndReceipts(cover, files);
-    const name = `Leverantorsfaktura ${invoice.invoiceNumber} ${supplier.name}`.replace(/[^\w .-]/g, "_");
-    fileId = await uploadInboxFile(token, Buffer.from(merged.bytes), `${name}.pdf`, "application/pdf", "inbox_s");
+    const name = `Leverantorsfaktura ${invoice.invoiceNumber} ${supplier.name}`.replace(
+      /[^\w .-]/g,
+      "_",
+    );
+    fileId = await uploadInboxFile(
+      token,
+      Buffer.from(merged.bytes),
+      `${name}.pdf`,
+      "application/pdf",
+      "inbox_s",
+    );
   } catch (e) {
     await release();
-    if (e instanceof FortnoxError) return fail(e.status && e.status < 500 ? e.status : 502, e.message);
+    if (e instanceof FortnoxError)
+      return fail(e.status && e.status < 500 ? e.status : 502, e.message);
     throw e;
   }
 
@@ -146,9 +173,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       ourReference: invoice.ourReference,
       // Our number at the end, as an utlägg's is on its voucher, so the
       // invoice in Fortnox can be traced back to the one here.
-      comments: [invoice.description, invoice.reference && `(${invoice.reference})`].filter(Boolean).join(" ") || null,
+      comments:
+        [invoice.description, invoice.reference && `(${invoice.reference})`]
+          .filter(Boolean)
+          .join(" ") || null,
       payableAccount: PAYABLE_ACCOUNT,
-      ...(invoice.rounding && { rounding: { account: ROUNDING_ACCOUNT, amount: oreToSEK(invoice.rounding) } }),
+      ...(invoice.rounding && {
+        rounding: { account: ROUNDING_ACCOUNT, amount: oreToSEK(invoice.rounding) },
+      }),
       // The kontering as the treasurer saved it. With the rounding, its
       // lines book exactly the amount to pay (exportBlocker).
       rows: invoice.lines.map((l) => ({
@@ -165,7 +197,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await release();
       return fail((e as FortnoxError).status!, (e as Error).message);
     }
-    await prisma.supplierInvoice.updateMany({ where: ours, data: { exportClaimState: "UNCERTAIN" } });
+    await prisma.supplierInvoice.updateMany({
+      where: ours,
+      data: { exportClaimState: "UNCERTAIN" },
+    });
     console.error(`[supplier-invoices] ${invoice.id}: export outcome unknown`, e);
     return fail(502, "supplierInvoice.exportUncertain");
   }
@@ -184,7 +219,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       },
     });
     await tx.supplierInvoiceEvent.create({
-      data: { invoiceId: invoice.id, type: "EXPORTED", actorId: g.actor.id, comment: givenNumber },
+      data: {
+        invoiceId: invoice.id,
+        type: "EXPORTED",
+        actorId: g.actor.id,
+        comment: givenNumber,
+      },
     });
   });
 
@@ -196,7 +236,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await connectFileToSupplierInvoice(token, fileId, givenNumber);
   } catch (e) {
     attachFailed = e instanceof Error ? e.message : String(e);
-    console.error(`[supplier-invoices] ${invoice.id}: could not attach the PDF to ${givenNumber}`, e);
+    console.error(
+      `[supplier-invoices] ${invoice.id}: could not attach the PDF to ${givenNumber}`,
+      e,
+    );
   }
 
   return NextResponse.json({ id: invoice.id, status: "EXPORTED", givenNumber, attachFailed });

@@ -172,7 +172,6 @@ vi.mock("@/lib/server/pdf-merge", () => ({
 
 vi.mock("@/lib/server/review", () => ({
   exportReviewBlocker: async () => h.reviewBlocker,
-
 }));
 
 const { POST } = await import("./route");
@@ -197,10 +196,12 @@ beforeEach(() => {
   h.event.mockResolvedValue({});
   h.claimState = null;
   h.claimedAt = null;
-  h.expenseUpdateMany.mockImplementation(async ({ data }: { data: { exportClaimState?: string } }) => {
-    if (data.exportClaimState === "SENT") h.calls.push("markSent");
-    return { count: 1 };
-  });
+  h.expenseUpdateMany.mockImplementation(
+    async ({ data }: { data: { exportClaimState?: string } }) => {
+      if (data.exportClaimState === "SENT") h.calls.push("markSent");
+      return { count: 1 };
+    },
+  );
 });
 
 describe("POST /api/expenses/[id]/export", () => {
@@ -267,7 +268,13 @@ describe("POST /api/expenses/[id]/export", () => {
         { account: 4010, debit: 450, credit: 0, costCenter: "SEX01" },
         // The local one is not sent as a cost centre. Its code goes into the
         // row text, so the row can still be told apart in Fortnox.
-        { account: 2440, debit: 0, credit: 450, costCenter: undefined, description: "(INTERN)" },
+        {
+          account: 2440,
+          debit: 0,
+          credit: 450,
+          costCenter: undefined,
+          description: "(INTERN)",
+        },
       ],
     });
   });

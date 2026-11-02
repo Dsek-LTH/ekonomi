@@ -3,15 +3,39 @@ import { cookies } from "next/headers";
 import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { serverEnv } from "@/lib/server/env";
 import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
 import { cn } from "@/lib/ui/utils";
 import "./globals.css";
 
 // The tab title follows the reader's language like everything else, so it has
 // to be built per request rather than exported as a constant.
+//
+// Almost everything here sits behind a sign-in, so the one page a search engine
+// or a chat link preview ever sees is /login. The defaults are therefore
+// "do not index", and app/login/page.tsx is the single page that opts back in.
+// metadataBase is what turns the relative canonical and og:image paths into
+// absolute URLs, which crawlers and preview bots require.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
-  return { title: t("title"), description: t("description") };
+  const locale = await getLocale();
+  const title = t("title");
+  const description = t("description");
+  return {
+    metadataBase: new URL(serverEnv("APP_URL")),
+    title: { default: title, template: `%s | ${title}` },
+    description,
+    applicationName: title,
+    robots: { index: false, follow: false },
+    openGraph: {
+      type: "website",
+      siteName: title,
+      title,
+      description,
+      locale: locale === "sv" ? "sv_SE" : "en_GB",
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 /**
@@ -52,31 +76,6 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
  *  outside globals.css, because a <meta> tag cannot read a custom property. */
 const CANVAS = { light: "#f4f4f5", dark: "#17171a" } as const;
 
-// The visual direction, recorded where the built output can be audited against
-// it. Survives the production build on purpose. Grep the emitted HTML for
-// "seed aab31d9b" to confirm the contract is still shipping.
-//
-// Every hex in it is a token in app/globals.css and has to keep saying what the
-// token says. The tokens are the record and this follows them.
-const DIRECTION_CONTRACT = `<!--
-THESIS: A section's money app that reads as a finance tool. It refuses the two
-defaults on either side: generic dashboard-blue, and a themed toy. Colour is a system
-with jobs, not a skin.
-OWN-WORLD: D-sektionen's pink #f280a1 as the one action fill, in a flat blend with a
-white label, and for the current page, scope and tab and the first chart series;
-ink #18181b for the accent and links (inverted in dark);
-#8b5fc7 for a budget's standing (locked, adopted); cards drawn by hairline alone;
-Inter, tabular figures on every number.
-STORY: An ordinarie sees one filled button per screen and it is the way forward.
-Skattmästeriet sees status in colours that never lie and columns of digits that line up.
-FIRST VIEWPORT: Header with the section mark, page title, the primary action as the
-only filled button on the screen, dense table below with amounts right-aligned and tabular.
-FORM: the category standard, taken as the standing exit over assigned direction 6
-(Inbetalningskortet); mode operate, seed aab31d9b.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
-review, the verdict, and DESIGN.md
--->`;
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -104,7 +103,6 @@ export default async function RootLayout({
     // cookie, so there is no difference of our own for it to hide.
     <html lang={locale} className={cn("h-full", inter.variable, theme)} suppressHydrationWarning>
       <body className="min-h-full">
-        <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>

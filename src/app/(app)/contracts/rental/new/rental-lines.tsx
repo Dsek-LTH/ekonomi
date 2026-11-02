@@ -195,7 +195,10 @@ export function RentalLines({
       update(r.id, { discountUnit: "kr", discount: kr.toFixed(2) });
     } else {
       const percent = gross > 0 ? Math.round((toOre(r.discount) / gross) * 100) : 0;
-      update(r.id, { discountUnit: "percent", discount: String(Math.min(100, Math.max(0, percent))) });
+      update(r.id, {
+        discountUnit: "percent",
+        discount: String(Math.min(100, Math.max(0, percent))),
+      });
     }
   };
 
@@ -255,7 +258,10 @@ export function RentalLines({
                         // from, and keeping the id would claim a provenance
                         // it has lost.
                         onChange={(e) =>
-                          update(row.id, { description: e.target.value, itemId: null })
+                          update(row.id, {
+                            description: e.target.value,
+                            itemId: null,
+                          })
                         }
                         placeholder={t("description")}
                         aria-label={t("description")}
@@ -395,7 +401,11 @@ export function RentalLines({
                     <td colSpan={7} className="space-y-0.5 px-2 py-1 text-xs">
                       {priced.discountOre > 0 && (
                         <p className="text-muted">
-                          {t("lineWas", { gross: formatOreKr(priced.grossOre, { decimals: 2 }) })}
+                          {t("lineWas", {
+                            gross: formatOreKr(priced.grossOre, {
+                              decimals: 2,
+                            }),
+                          })}
                         </p>
                       )}
                       {short(row) && <p className="text-danger">{t("unavailable")}</p>}

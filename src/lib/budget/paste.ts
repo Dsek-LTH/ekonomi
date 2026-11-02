@@ -43,7 +43,12 @@ export function rebindFormula(formula: string, copied: ReadonlyMap<string, strin
 export function rebindCopiedRefs(
   row: RowFormulas,
   copied: ReadonlyMap<string, string>,
-): { expression: string; quantity: string | null; unitPrice: string | null; values: Record<string, string> } | null {
+): {
+  expression: string;
+  quantity: string | null;
+  unitPrice: string | null;
+  values: Record<string, string>;
+} | null {
   const values: Record<string, string> =
     row.values && typeof row.values === "object" && !Array.isArray(row.values)
       ? (row.values as Record<string, string>)
@@ -54,7 +59,10 @@ export function rebindCopiedRefs(
     quantity: row.quantity === null ? null : rebindFormula(row.quantity, copied),
     unitPrice: row.unitPrice === null ? null : rebindFormula(row.unitPrice, copied),
     values: Object.fromEntries(
-      Object.entries(values).map(([k, v]) => [k, typeof v === "string" ? rebindFormula(v, copied) : v]),
+      Object.entries(values).map(([k, v]) => [
+        k,
+        typeof v === "string" ? rebindFormula(v, copied) : v,
+      ]),
     ) as Record<string, string>,
   };
 

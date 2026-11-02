@@ -4,6 +4,9 @@ import { canBookkeep } from "@/lib/domain/permissions";
 import { loadWorkspace } from "../../load";
 import { InvoiceMissing } from "../record-client";
 import { InvoiceBookClient } from "./book-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("bookInvoice");
 
 // Kontera a levfaktura, as an utlägg's kontering is: the treasury completes it
 // from the PDF and Fortnox's supplier register and saves it. Sending it to

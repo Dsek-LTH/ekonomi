@@ -21,7 +21,9 @@ function png(alphaTopHalf: number): Promise<Buffer> {
       raw[i + 3] = y < H / 2 ? alphaTopHalf : 255;
     }
   }
-  return sharp(raw, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
+  return sharp(raw, { raw: { width: W, height: H, channels: 4 } })
+    .png()
+    .toBuffer();
 }
 
 const topLeft = async (buf: Buffer) =>
@@ -37,7 +39,11 @@ describe("normaliseImage", () => {
     expect(out.mimeType).toBe("image/png");
     const px = await topLeft(out.full);
     expect(px[3]).toBe(0);
-    expect(await sharp(out.full).stats().then((s) => s.isOpaque)).toBe(false);
+    expect(
+      await sharp(out.full)
+        .stats()
+        .then((s) => s.isOpaque),
+    ).toBe(false);
   });
 
   // An alpha channel is not transparency. Screenshots are PNGs with a fully
@@ -47,7 +53,11 @@ describe("normaliseImage", () => {
     const out = await normaliseImage(await png(255));
 
     expect(out.mimeType).toBe("image/jpeg");
-    expect(await sharp(out.full).metadata().then((m) => m.format)).toBe("jpeg");
+    expect(
+      await sharp(out.full)
+        .metadata()
+        .then((m) => m.format),
+    ).toBe("jpeg");
   });
 
   // An iPhone photo. sharp's own libvips reads its header and then cannot

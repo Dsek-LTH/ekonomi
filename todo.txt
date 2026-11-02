@@ -13,3 +13,5 @@ Add a score system based on how long it takes for people to upload their receipt
 wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better
 Check that program uses our own components
 Make an app of this program
+Make this app generic so other guilds can use it
+Vinst uppdelning helper

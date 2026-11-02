@@ -26,7 +26,10 @@ function Star({ fill, className, ink }: { fill: number; className: string; ink: 
       </svg>
       {/* The filled part, cut to the fraction this star holds: a half star is
           the left half of one. */}
-      <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+      <span
+        className="absolute inset-y-0 left-0 overflow-hidden"
+        style={{ width: `${fill * 100}%` }}
+      >
         <svg viewBox="0 0 24 24" className={cn(ink, className)} aria-hidden>
           <path d={STAR_PATH} fill="currentColor" />
         </svg>
@@ -116,7 +119,9 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
         </div>
         <div>
           <dt className="text-xs text-muted">{t("firstTime")}</dt>
-          <dd className="text-sm font-medium tabular-nums">{t("firstTimeValue", score.firstTime)}</dd>
+          <dd className="text-sm font-medium tabular-nums">
+            {t("firstTimeValue", score.firstTime)}
+          </dd>
         </div>
       </dl>
 
@@ -128,9 +133,12 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
             {score.waiting.map((i) => (
               <li key={i.id} className="flex items-center gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{i.title || t(`kind.${waitingKind(i)}`)}</p>
+                  <p className="truncate text-sm font-medium">
+                    {i.title || t(`kind.${waitingKind(i)}`)}
+                  </p>
                   <p className="text-xs text-muted">
-                    {t(`kind.${waitingKind(i)}`)} - {date(i.startedOn)} - {t("waitedDays", { days: i.days })}
+                    {t(`kind.${waitingKind(i)}`)} - {date(i.startedOn)} -{" "}
+                    {t("waitedDays", { days: i.days })}
                   </p>
                 </div>
                 <StarRating value={i.stars} />
@@ -157,13 +165,18 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
                   {i.kind === "cardPurchase" ? (
                     <p className="truncate text-sm font-medium">{i.title}</p>
                   ) : (
-                    <Link href={`/expenses/${i.id}`} className="block truncate text-sm font-medium hover:underline">
+                    <Link
+                      href={`/expenses/${i.id}`}
+                      className="block truncate text-sm font-medium hover:underline"
+                    >
                       {i.title}
                     </Link>
                   )}
                   <p className="text-xs text-muted">
                     {date(i.startedOn)} -{" "}
-                    {i.kind === "submitted" ? t("tookDays", { days: i.days }) : t("waitedDays", { days: i.days })}
+                    {i.kind === "submitted"
+                      ? t("tookDays", { days: i.days })
+                      : t("waitedDays", { days: i.days })}
                   </p>
                 </div>
                 <StarRating value={i.stars} />

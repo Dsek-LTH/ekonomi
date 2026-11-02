@@ -14,7 +14,14 @@ const h = vi.hoisted(() => ({
   events: [] as unknown[],
   create: vi.fn(),
   connect: vi.fn(),
-  supplier: { number: "12", name: "Lunds Släp AB", orgNo: null, bankgiro: "5050-1055", plusgiro: null, active: true },
+  supplier: {
+    number: "12",
+    name: "Lunds Släp AB",
+    orgNo: null,
+    bankgiro: "5050-1055",
+    plusgiro: null,
+    active: true,
+  },
 }));
 
 vi.mock("@/lib/server/current-user", () => ({
@@ -89,7 +96,10 @@ vi.mock("@/lib/server/db", () => {
       user: { findMany: async () => [{ id: "klara", name: "Klara Ström" }] },
       resultUnit: { findMany: async () => [] },
       $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-        fn({ supplierInvoice: { updateMany }, supplierInvoiceEvent: { create: async (a: unknown) => h.events.push(a) } }),
+        fn({
+          supplierInvoice: { updateMany },
+          supplierInvoiceEvent: { create: async (a: unknown) => h.events.push(a) },
+        }),
     },
   };
 });
@@ -102,7 +112,10 @@ vi.mock("@/lib/server/result-units", () => ({
 }));
 
 vi.mock("@/lib/server/storage", () => ({
-  getObjectBuffer: async () => ({ bytes: Buffer.from("%PDF-1.4"), contentType: "application/pdf" }),
+  getObjectBuffer: async () => ({
+    bytes: Buffer.from("%PDF-1.4"),
+    contentType: "application/pdf",
+  }),
 }));
 vi.mock("@/lib/server/pdf-merge", () => ({
   mergeCoverAndReceipts: async () => ({ bytes: new Uint8Array([1, 2, 3]), failed: 0 }),
@@ -148,7 +161,8 @@ const call = (body: object = {}) =>
     { params: Promise.resolve({ id: "inv1" }) },
   );
 
-const states = () => h.updates.map((u) => u.data.exportClaimState ?? (u.data.status === "EXPORTED" ? "DONE" : null));
+const states = () =>
+  h.updates.map((u) => u.data.exportClaimState ?? (u.data.status === "EXPORTED" ? "DONE" : null));
 
 beforeEach(() => {
   h.invoice = {};
@@ -166,7 +180,11 @@ describe("export", () => {
   it("makes the supplier invoice with the attested kontering, and records it", async () => {
     const res = await call();
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ status: "EXPORTED", givenNumber: "4711", attachFailed: null });
+    expect(await res.json()).toMatchObject({
+      status: "EXPORTED",
+      givenNumber: "4711",
+      attachFailed: null,
+    });
     expect(h.create.mock.calls[0][1]).toMatchObject({
       supplierNumber: "12",
       invoiceNumber: "20417",
@@ -192,7 +210,11 @@ describe("export", () => {
     h.create.mockRejectedValue(new FortnoxError("Kontot finns inte", 400));
     const res = await call();
     expect(res.status).toBe(400);
-    expect(h.updates.at(-1)!.data).toEqual({ exportClaimedAt: null, exportClaimedById: null, exportClaimState: null });
+    expect(h.updates.at(-1)!.data).toEqual({
+      exportClaimedAt: null,
+      exportClaimedById: null,
+      exportClaimState: null,
+    });
   });
 
   it("keeps the lock, uncertain, when Fortnox did not answer", async () => {
@@ -213,7 +235,10 @@ describe("export", () => {
     h.supplier = { ...h.supplier, bankgiro: "999-9999" };
     const res = await call();
     expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ error: "supplierInvoice.giroMismatch", giroMismatch: true });
+    expect(await res.json()).toMatchObject({
+      error: "supplierInvoice.giroMismatch",
+      giroMismatch: true,
+    });
     expect(h.updates).toHaveLength(0);
     expect((await call({ confirmGiro: true })).status).toBe(200);
   });
@@ -221,7 +246,10 @@ describe("export", () => {
   it("is still exported when only attaching the PDF failed", async () => {
     h.connect.mockRejectedValue(new Error("connect failed"));
     const res = await call();
-    expect(await res.json()).toMatchObject({ status: "EXPORTED", attachFailed: "connect failed" });
+    expect(await res.json()).toMatchObject({
+      status: "EXPORTED",
+      attachFailed: "connect failed",
+    });
   });
 
   it("refuses an invoice that is not complete", async () => {

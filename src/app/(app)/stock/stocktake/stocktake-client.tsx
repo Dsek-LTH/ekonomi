@@ -98,10 +98,12 @@ export default function StocktakeClient({
 
   const differences = (p: StockLevelDto) => {
     const sealed = figure(draft.sealed[p.id]) - p.onHand.units;
-    const open = LEVELS.map(
-      (l) => figure(draft.open[p.id]?.[l]) - bottlesAt(p.onHand.open, l),
-    );
-    return { sealed, open, any: sealed !== 0 || (p.kind === "VOLUME" && open.some((n) => n !== 0)) };
+    const open = LEVELS.map((l) => figure(draft.open[p.id]?.[l]) - bottlesAt(p.onHand.open, l));
+    return {
+      sealed,
+      open,
+      any: sealed !== 0 || (p.kind === "VOLUME" && open.some((n) => n !== 0)),
+    };
   };
 
   const countedProducts = products.filter((p) => counted(p.id));
@@ -125,7 +127,12 @@ export default function StocktakeClient({
       const key = "stock:delivery:draft";
       const raw = window.localStorage.getItem(key);
       const d = raw
-        ? (JSON.parse(raw) as { rows: string[]; typed: Record<string, string>; occurredAt?: string; note?: string })
+        ? (JSON.parse(raw) as {
+            rows: string[];
+            typed: Record<string, string>;
+            occurredAt?: string;
+            note?: string;
+          })
         : { rows: [], typed: {}, occurredAt: draft.occurredAt, note: "" };
       for (const { p, n } of increases) {
         if (!d.rows.includes(p.id)) d.rows.push(p.id);
@@ -306,7 +313,9 @@ export default function StocktakeClient({
                     {l} %
                   </th>
                 ))}
-                <th className={cn(head, "w-[15%] text-right")}>{t("stocktakeSheet.col.difference")}</th>
+                <th className={cn(head, "w-[15%] text-right")}>
+                  {t("stocktakeSheet.col.difference")}
+                </th>
               </tr>
             </thead>
             {groups.length === 0 && (
@@ -333,12 +342,20 @@ export default function StocktakeClient({
                   const isCounted = counted(p.id);
                   const diff = differences(p);
                   const expectedOpen = LEVELS.filter((l) => bottlesAt(p.onHand.open, l) > 0)
-                    .map((l) => t("stocktakeSheet.openAt", { count: bottlesAt(p.onHand.open, l), level: l }))
+                    .map((l) =>
+                      t("stocktakeSheet.openAt", {
+                        count: bottlesAt(p.onHand.open, l),
+                        level: l,
+                      }),
+                    )
                     .join(", ");
                   return (
                     <tr
                       key={p.id}
-                      className={cn("divide-x divide-border border-b border-border last:border-b-0", isCounted && "bg-accent-soft/20")}
+                      className={cn(
+                        "divide-x divide-border border-b border-border last:border-b-0",
+                        isCounted && "bg-accent-soft/20",
+                      )}
                     >
                       <td className="truncate px-3 py-2 font-medium" title={p.name}>
                         {p.name}
@@ -347,7 +364,9 @@ export default function StocktakeClient({
                         <span className="block">
                           {t("stocktakeSheet.logSealed", {
                             count: p.onHand.units,
-                            unit: volume ? t("stocktakeSheet.sealedShort") : t("stocktakeSheet.unitsShort"),
+                            unit: volume
+                              ? t("stocktakeSheet.sealedShort")
+                              : t("stocktakeSheet.unitsShort"),
                           })}
                         </span>
                         {expectedOpen && <span className="block text-xs">{expectedOpen}</span>}
@@ -361,7 +380,9 @@ export default function StocktakeClient({
                           value={draft.sealed[p.id] ?? ""}
                           onChange={(e) => typeSealed(p.id, e.target.value)}
                           placeholder="-"
-                          aria-label={t("stocktakeSheet.countFor", { name: p.name })}
+                          aria-label={t("stocktakeSheet.countFor", {
+                            name: p.name,
+                          })}
                           className={cn(cell, isCounted && "bg-warning-soft/40 font-medium")}
                         />
                       </td>
@@ -374,7 +395,11 @@ export default function StocktakeClient({
                               onChange={(e) => typeOpen(p.id, l, e.target.value)}
                               placeholder="0"
                               aria-label={t("stocktakeSheet.openFor", { name: p.name, level: l })}
-                              className={cn(cell, (draft.open[p.id]?.[l] ?? "") !== "" && "bg-warning-soft/40 font-medium")}
+                              className={cn(
+                                cell,
+                                (draft.open[p.id]?.[l] ?? "") !== "" &&
+                                  "bg-warning-soft/40 font-medium",
+                              )}
                             />
                           </td>
                         ) : (
@@ -413,7 +438,10 @@ export default function StocktakeClient({
       <ActionBar
         summary={
           <span className="font-medium">
-            {t("stocktakeSheet.progress", { counted: countedProducts.length, total: products.length })}
+            {t("stocktakeSheet.progress", {
+              counted: countedProducts.length,
+              total: products.length,
+            })}
           </span>
         }
         missing={[]}
@@ -425,7 +453,7 @@ export default function StocktakeClient({
               <button
                 type="button"
                 onClick={increasesToDelivery}
-                className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
               >
                 {t("stocktakeSheet.toDelivery")}
               </button>

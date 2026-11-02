@@ -29,31 +29,24 @@ export function SectionCard({
   ghosts: JoinedAccount[];
   total: number;
 }) {
-  const {
-    columns,
-    compare,
-    gutWidth,
-    actionsWidth,
-    narrow,
-    showCompare,
-    staticWidth,
-    tCol,
-  } = useSheet();
+  const { columns, compare, gutWidth, actionsWidth, narrow, showCompare, staticWidth, tCol } =
+    useSheet();
   const tGroup = useTranslations("budget.compareGroups");
   // No longer a drop zone. An account used to be dragged onto the other card to
   // reclassify it; its number decides the side now, so the card is just a card.
   return (
     <div className="budget-grid overflow-x-auto rounded-panel border border-border bg-background">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold">
-          {label}
-        </h3>
+        <h3 className="text-sm font-semibold">{label}</h3>
         <span className="text-sm tabular-nums text-muted">{fmt(total)}</span>
       </div>
       <table className="w-full border-collapse text-sm table-fixed">
         <colgroup>
           <col style={{ width: gutWidth }} />
-          {columns.map((col) => { const w = staticWidth(col); return <col key={col.key} style={w ? { width: w } : undefined} />; })}
+          {columns.map((col) => {
+            const w = staticWidth(col);
+            return <col key={col.key} style={w ? { width: w } : undefined} />;
+          })}
           {/* Wide enough for their headings on one line ("Utfall 2026",
               "Jämfört med") and a six-figure amount with its sign. At 104 and
               96 the headings wrapped. */}
@@ -70,8 +63,12 @@ export function SectionCard({
               <th colSpan={columns.length + 1} className="px-2 py-1.5 text-left">
                 {tGroup("budget")}
               </th>
-              <th className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right")}>{tGroup("other")}</th>
-              <th className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right")}>{tGroup("diff")}</th>
+              <th className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right")}>
+                {tGroup("other")}
+              </th>
+              <th className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right")}>
+                {tGroup("diff")}
+              </th>
               <th />
             </tr>
           )}
@@ -79,16 +76,38 @@ export function SectionCard({
             {narrow ? (
               <th className="p-0" />
             ) : (
-              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted">#</th>
+              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted">
+                #
+              </th>
             )}
             {columns.map((col) => (
-              <Hc key={col.key} letter={col.letter} align={col.kind === "number" ? "right" : undefined}>{col.custom ? col.name : tCol(col.name)}</Hc>
+              <Hc
+                key={col.key}
+                letter={col.letter}
+                align={col.kind === "number" ? "right" : undefined}
+              >
+                {col.custom ? col.name : tCol(col.name)}
+              </Hc>
             ))}
             {showCompare && compare && (
-              <th className={cn(COMPARE_GROUP.other, "truncate whitespace-nowrap px-2 py-2 text-right font-medium")} title={compare.label}>{compare.label}</th>
+              <th
+                className={cn(
+                  COMPARE_GROUP.other,
+                  "truncate whitespace-nowrap px-2 py-2 text-right font-medium",
+                )}
+                title={compare.label}
+              >
+                {compare.label}
+              </th>
             )}
             {showCompare && (
-              <th title={tGroup("diffHint")} className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-2 text-right font-medium")}>
+              <th
+                title={tGroup("diffHint")}
+                className={cn(
+                  COMPARE_GROUP.diff,
+                  "whitespace-nowrap px-2 py-2 text-right font-medium",
+                )}
+              >
                 {tGroup("diffColumn")}
               </th>
             )}

@@ -39,8 +39,7 @@ export async function getReviewQueue(
   const exempt = canReviewOwnBooking(viewer.capabilities);
 
   const mine = ids.filter(
-    (id) =>
-      reviewBlocker({ exempt, viewerId: viewer.id, bookedBy: by.get(id) ?? [] }) !== null,
+    (id) => reviewBlocker({ exempt, viewerId: viewer.id, bookedBy: by.get(id) ?? [] }) !== null,
   );
   return {
     ids: ids.filter((id) => !mine.includes(id)),

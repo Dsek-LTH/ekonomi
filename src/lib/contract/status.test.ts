@@ -6,14 +6,20 @@ const TODAY = "2026-09-06";
 describe("contractStatus", () => {
   it("is signed once the signed copy is in the archive", () => {
     expect(
-      contractStatus({ kind: "CONTRACT", files: [{ role: "GENERATED" }, { role: "SIGNED" }] }),
+      contractStatus({
+        kind: "CONTRACT",
+        files: [{ role: "GENERATED" }, { role: "SIGNED" }],
+      }),
     ).toBe("SIGNED");
   });
 
   it("is a draft until then, whatever else has been uploaded", () => {
     expect(contractStatus({ kind: "CONTRACT", files: [] })).toBe("DRAFT");
     expect(
-      contractStatus({ kind: "CONTRACT", files: [{ role: "ORIGINAL" }, { role: "ATTACHMENT" }] }),
+      contractStatus({
+        kind: "CONTRACT",
+        files: [{ role: "ORIGINAL" }, { role: "ATTACHMENT" }],
+      }),
     ).toBe("DRAFT");
   });
 

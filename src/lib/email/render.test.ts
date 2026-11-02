@@ -20,7 +20,10 @@ const base: Email = {
   orOpen: "Eller öppna länken: https://example.test/expenses/e1",
   footer: {
     reason: "Du får det här mejlet eftersom du kan attestera utlägget.",
-    settings: { label: "Välj vilka mejl du får under Profil.", url: "https://example.test/profile" },
+    settings: {
+      label: "Välj vilka mejl du får under Profil.",
+      url: "https://example.test/profile",
+    },
     org: "D-sektionen inom TLTH",
   },
   brand: { name: "Ekonomi", org: "D-sektionen inom TLTH" },
@@ -33,7 +36,12 @@ describe("renderHtml", () => {
     const html = await renderHtml({
       ...base,
       blocks: [
-        { kind: "comment", author: "Maja", when: "idag", text: '<img src=x onerror="alert(1)">' },
+        {
+          kind: "comment",
+          author: "Maja",
+          when: "idag",
+          text: '<img src=x onerror="alert(1)">',
+        },
       ],
     });
     expect(html).not.toContain("<img src=x");
@@ -68,7 +76,14 @@ describe("renderText", () => {
           kind: "transactions",
           head: { date: "Datum", description: "Beskrivning", amount: "Belopp" },
           refundLabel: "Återbetalning",
-          rows: [{ date: "2026-10-06", description: "Q*nelly.com", amount: "+1 144,00 kr", refund: true }],
+          rows: [
+            {
+              date: "2026-10-06",
+              description: "Q*nelly.com",
+              amount: "+1 144,00 kr",
+              refund: true,
+            },
+          ],
         },
       ],
     });

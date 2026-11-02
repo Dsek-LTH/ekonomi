@@ -2,6 +2,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getAuthority } from "@/lib/data/authority";
 import { RolesClient } from "./roles-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("roles");
 
 // The PageShell is the client's own: its header carries the Grupper /
 // Behörigheter switch, which is state on that side.

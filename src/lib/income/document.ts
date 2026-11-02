@@ -81,7 +81,10 @@ export async function renderIncomeDocument(
     where: { id: reportId },
     include: {
       resultUnit: {
-        select: { name: true, income: { select: { key: true, properName: true, description: true } } },
+        select: {
+          name: true,
+          income: { select: { key: true, properName: true, description: true } },
+        },
       },
       costCenter: { select: { name: true } },
       lines: { orderBy: { sortOrder: "asc" } },
@@ -106,7 +109,7 @@ export async function renderIncomeDocument(
     kind: isFee ? "fee" : "income",
     paymentType: report.source === "SWISH" ? "Swish" : "Zettle",
     unit,
-    description: isFee ? FEE_TITLE : (income?.description || unit),
+    description: isFee ? FEE_TITLE : income?.description || unit,
     date: dateStr,
     attestation: { name: attestation.name, stilId: attestation.studentId },
     lines: report.lines.map((l) => ({

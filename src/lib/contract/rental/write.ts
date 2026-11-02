@@ -28,9 +28,7 @@ export async function refuseRental(d: CreateRental, exclude?: string): Promise<R
   // Catalogue ids are checked before anything is written. An id that names no
   // item would otherwise be silently dropped by the SetNull relation, and the
   // line would lose the only trail back to what it was drawn from.
-  const itemIds = [
-    ...new Set(d.lines.map((l) => l.itemId).filter((v): v is string => Boolean(v))),
-  ];
+  const itemIds = [...new Set(d.lines.map((l) => l.itemId).filter((v): v is string => Boolean(v)))];
   if (itemIds.length > 0) {
     const known = await prisma.rentalItem.count({ where: { id: { in: itemIds } } });
     if (known !== itemIds.length) return fail(422, "contract.itemNotFound");
@@ -64,7 +62,9 @@ export async function refuseRental(d: CreateRental, exclude?: string): Promise<R
   if (clashes.length > 0) {
     const named = await nameShortfalls(clashes);
     return fail(409, "contract.itemsUnavailable", {
-      values: { items: named.map((n) => `${n.name} (${n.owned - n.booked}/${n.wanted})`).join(", ") },
+      values: {
+        items: named.map((n) => `${n.name} (${n.owned - n.booked}/${n.wanted})`).join(", "),
+      },
     });
   }
 

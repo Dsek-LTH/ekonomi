@@ -17,7 +17,10 @@ import { pdfLines } from "./pdf-text";
 import type { KnownSupplier } from "./supplier-register";
 
 /** The fields the text of this PDF gives, or none for anything else. */
-export async function readInvoicePdf(bytes: Uint8Array, mimeType: string): Promise<InvoiceTextFields> {
+export async function readInvoicePdf(
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<InvoiceTextFields> {
   if (mimeType !== "application/pdf") return {};
   return parseInvoiceText(await pdfLines(bytes), { ownOrgNo: SECTION.orgNo });
 }
@@ -36,7 +39,9 @@ const COLUMNS = {
   reference: "yourReference",
 } as const satisfies Record<keyof InvoiceTextFields, string>;
 
-type Current = Partial<Record<(typeof COLUMNS)[keyof typeof COLUMNS] | "supplierName" | "fortnoxSupplierNumber", unknown>> & {
+type Current = Partial<
+  Record<(typeof COLUMNS)[keyof typeof COLUMNS] | "supplierName" | "fortnoxSupplierNumber", unknown>
+> & {
   prefilled?: string[];
 };
 
@@ -59,14 +64,18 @@ export function prefillData(
   for (const [field, column] of Object.entries(COLUMNS) as [keyof InvoiceTextFields, string][]) {
     const value = fields[field];
     if (value === undefined || current[column as keyof Current] != null) continue;
-    data[column] = field === "dueDate" || field === "invoiceDate" ? isoToDate(value as string) : value;
+    data[column] =
+      field === "dueDate" || field === "invoiceDate" ? isoToDate(value as string) : value;
     filled.push(column);
   }
   if (supplier && current.supplierName == null) {
     data.supplierName = supplier.name;
     filled.push("supplierName");
   }
-  if (supplier && current.fortnoxSupplierNumber == null) data.fortnoxSupplierNumber = supplier.number;
+  if (supplier && current.fortnoxSupplierNumber == null)
+    data.fortnoxSupplierNumber = supplier.number;
   if (Object.keys(data).length === 0) return {};
-  return filled.length ? { ...data, prefilled: [...new Set([...(current.prefilled ?? []), ...filled])] } : data;
+  return filled.length
+    ? { ...data, prefilled: [...new Set([...(current.prefilled ?? []), ...filled])] }
+    : data;
 }

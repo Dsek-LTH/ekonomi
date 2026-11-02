@@ -39,7 +39,11 @@ export const SAMPLE_INVOICE = {
 };
 
 export const SAMPLE_TRANSACTIONS = [
-  { transactionDate: new Date("2026-10-02"), description: "ICA KVANTUM MALMBORGS", amount: -11790 },
+  {
+    transactionDate: new Date("2026-10-02"),
+    description: "ICA KVANTUM MALMBORGS",
+    amount: -11790,
+  },
   { transactionDate: new Date("2026-10-03"), description: "CLAS OHLSON 0421", amount: -43200 },
   { transactionDate: new Date("2026-10-06"), description: "Q*nelly.com", amount: 114400 },
   { transactionDate: new Date("2026-10-07"), description: "DOLLARSTORE LUND", amount: -4000 },
@@ -152,7 +156,11 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
   return digestEmail(name, "2026-W41", {
     unmatched: SAMPLE_TRANSACTIONS.slice(1, 3),
     deadline: [
-      { title: "Tågbiljetter till SM-veckan", sub: "Utkast, köpt 2026-08-17", pill: "6 dagar kvar" },
+      {
+        title: "Tågbiljetter till SM-veckan",
+        sub: "Utkast, köpt 2026-08-17",
+        pill: "6 dagar kvar",
+      },
     ],
     attest: [
       {

@@ -4,6 +4,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getMileageRateRows } from "@/lib/data/mileage";
 import { MileageRatesClient } from "./mileage-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("mileageRates");
 
 export default async function AdminMileagePage() {
   await requirePage(canAccessSettings);

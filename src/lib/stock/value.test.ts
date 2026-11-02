@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { costBasis, costOfRemoval, purchaseValueOre, revalue, unitCostOre, valueDelta } from "./value";
+import {
+  costBasis,
+  costOfRemoval,
+  purchaseValueOre,
+  revalue,
+  unitCostOre,
+  valueDelta,
+} from "./value";
 import type { StockEntryKind } from "@/lib/domain/types";
 
 describe("costOfRemoval", () => {
@@ -111,9 +118,9 @@ describe("purchaseValueOre", () => {
 
 describe("valueDelta", () => {
   it("prices a delivery from the product's own cost", () => {
-    expect(valueDelta({ qty: 0, valueOre: 0 }, { kind: "PURCHASE", units: 24, unitCostOre: 1200 })).toBe(
-      28_800,
-    );
+    expect(
+      valueDelta({ qty: 0, valueOre: 0 }, { kind: "PURCHASE", units: 24, unitCostOre: 1200 }),
+    ).toBe(28_800);
   });
 
   it("prices what leaves at the moving average", () => {

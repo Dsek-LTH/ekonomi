@@ -46,7 +46,6 @@ interface Props {
 // amount, and the narrow one the cross sits in.
 const COLS = "@2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_9rem_2.25rem]";
 
-
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
   // Only ever the row `add` just made. Rows restored from a draft, and the one
@@ -86,7 +85,11 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange([...value, row]);
   }
 
-  const ccOptions = costCenters.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}`, short: c.code }));
+  const ccOptions = costCenters.map((c) => ({
+    value: c.code,
+    label: `${c.code} - ${c.name}`,
+    short: c.code,
+  }));
 
   const comment = cn(
     "min-w-0 w-full border border-border-control bg-background italic text-muted",
@@ -210,7 +213,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               // empty until somebody says how much.
               onClick={add}
               disabled={single ? costCenters.length < 2 : value.length >= costCenters.length}
-              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
+              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
             >
               {single ? t("split") : t("add")}
             </button>
@@ -240,12 +243,23 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
  * (BalanceChip in voucher-editor.tsx): green when they do, the difference in
  * red when they don't, said as what is left or what is too much.
  */
-function BalanceChip({ balanced, left, gross }: { balanced: boolean; left: number; gross: number }) {
+function BalanceChip({
+  balanced,
+  left,
+  gross,
+}: {
+  balanced: boolean;
+  left: number;
+  gross: number;
+}) {
   const t = useTranslations("allocation");
-  const chip = "inline-flex items-center gap-1.5 rounded-control px-2.5 py-0.5 text-xs font-medium tabular-nums";
+  const chip =
+    "inline-flex items-center gap-1.5 rounded-control px-2.5 py-0.5 text-xs font-medium tabular-nums";
   // Nothing to meet yet: not a fault of the rows, so not red.
-  if (gross === 0) return <span className={cn(chip, "bg-surface text-muted")}>{t("noAmount")}</span>;
-  if (balanced) return <span className={cn(chip, "bg-success-soft text-success")}>{t("balancedChip")}</span>;
+  if (gross === 0)
+    return <span className={cn(chip, "bg-surface text-muted")}>{t("noAmount")}</span>;
+  if (balanced)
+    return <span className={cn(chip, "bg-success-soft text-success")}>{t("balancedChip")}</span>;
   return (
     <span className={cn(chip, "bg-danger-soft text-danger")}>
       {left > 0 ? t("left", { amount: formatSEK(left) }) : t("over", { amount: formatSEK(-left) })}

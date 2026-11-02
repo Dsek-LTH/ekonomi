@@ -51,10 +51,13 @@ export interface InboxDocument {
  * than the units, as the frame's other links ask it.
  */
 export const canSeeInvoiceInbox = (v: Pick<Viewer, "roles" | "capabilities">): boolean =>
-  canTriageInvoices(v.capabilities) || isAdmin(v.capabilities) || v.roles.includes("RESULTATANSVARIG");
+  canTriageInvoices(v.capabilities) ||
+  isAdmin(v.capabilities) ||
+  v.roles.includes("RESULTATANSVARIG");
 
 /** Whether the viewer sees every document, whoever it was given to. */
-const seesAll = (v: InvoiceViewerCtx) => canTriageInvoices(v.capabilities) || isAdmin(v.capabilities);
+const seesAll = (v: InvoiceViewerCtx) =>
+  canTriageInvoices(v.capabilities) || isAdmin(v.capabilities);
 
 function inboxWhere(v: InvoiceViewerCtx): Prisma.SupplierInvoiceDocumentWhereInput {
   if (seesAll(v)) return { invoiceId: null };
@@ -73,11 +76,21 @@ const SELECT = {
   resultUnit: { select: { name: true } },
   uploadedBy: { select: { name: true } },
   inboundMail: {
-    select: { fromName: true, fromAddress: true, subject: true, note: true, originalFrom: true, receivedAt: true },
+    select: {
+      fromName: true,
+      fromAddress: true,
+      subject: true,
+      note: true,
+      originalFrom: true,
+      receivedAt: true,
+    },
   },
 } satisfies Prisma.SupplierInvoiceDocumentSelect;
 
-function view(v: InvoiceViewerCtx, d: Prisma.SupplierInvoiceDocumentGetPayload<{ select: typeof SELECT }>): InboxDocument {
+function view(
+  v: InvoiceViewerCtx,
+  d: Prisma.SupplierInvoiceDocumentGetPayload<{ select: typeof SELECT }>,
+): InboxDocument {
   return {
     id: d.id,
     filename: d.filename,

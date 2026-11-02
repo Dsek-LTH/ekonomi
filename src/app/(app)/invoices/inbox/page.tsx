@@ -5,13 +5,20 @@ import { getAssignableResultUnits, getInboxHealth } from "@/lib/data/supplier-in
 import { canTriageInvoices } from "@/lib/domain/permissions";
 import { ownedResultUnits } from "@/lib/server/result-units";
 import { InkorgClient } from "./inkorg-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("invoiceInbox");
 
 // The levfaktura Inkorg: every document no invoice has yet. Where forwarded
 // PDFs and hand uploads land, and where the documents of an invoice sent back
 // return to. Triage gives each to a result unit, or deletes it. A unit's
 // resultatansvarig reads the same page narrowed to what was given to them,
 // and fördelar each, which makes it an invoice, or says it is not theirs.
-export default async function InvoiceInboxPage({ searchParams }: { searchParams: Promise<{ doc?: string }> }) {
+export default async function InvoiceInboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ doc?: string }>;
+}) {
   const user = await requireUser();
   if (!canSeeInvoiceInbox(user)) redirect("/dashboard");
   const triage = canTriageInvoices(user.capabilities);

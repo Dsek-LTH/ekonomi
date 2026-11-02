@@ -76,9 +76,10 @@ export function autoScrollStep(scroller: HTMLElement | null, pointerY: number): 
   const { top, bottom } = edgesOf(scroller, pointerY);
   // Up wins a tie. Both bands only overlap on a viewport shorter than 144px,
   // where neither answer is better and picking one keeps this total.
-  const dy = top < bottom
-    ? -edgeVelocity(top, BAND, MAX_PER_FRAME)
-    : edgeVelocity(bottom, BAND, MAX_PER_FRAME);
+  const dy =
+    top < bottom
+      ? -edgeVelocity(top, BAND, MAX_PER_FRAME)
+      : edgeVelocity(bottom, BAND, MAX_PER_FRAME);
   if (dy === 0) return false;
 
   const before = scroller ? scroller.scrollTop : window.scrollY;

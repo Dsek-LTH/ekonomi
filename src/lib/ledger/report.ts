@@ -28,13 +28,7 @@ import type {
   ReportGroup,
   ReportSection,
 } from "./report-shape";
-import {
-  accountRangeFor,
-  orient,
-  sectionsFor,
-  type BasSection,
-  type ReportKind,
-} from "./bas";
+import { accountRangeFor, orient, sectionsFor, type BasSection, type ReportKind } from "./bas";
 
 // One account within one cost centre, in raw öre (debit − credit) before the
 // display orientation is applied.
@@ -66,11 +60,7 @@ function inRange(account: string, kind: ReportKind): boolean {
 }
 
 // Sum the ledger over a date window, keyed by account + cost centre.
-async function movements(
-  financialYear: number,
-  from: Date,
-  to: Date,
-): Promise<Map<string, Cell>> {
+async function movements(financialYear: number, from: Date, to: Date): Promise<Map<string, Cell>> {
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "accountName", "costCenterCode", "costCenterName"],
     // The row's own year and date, not the voucher's (same values, but this
@@ -112,12 +102,7 @@ async function openingBalances(
   const balances = await prisma.ledgerAccountBalance.findMany({ where: { financialYear } });
 
   const out = new Map<string, Cell>();
-  const add = (
-    account: string,
-    accountName: string,
-    cc: string,
-    amount: number,
-  ) => {
+  const add = (account: string, accountName: string, cc: string, amount: number) => {
     const key = `${account}|${cc}`;
     const cell = out.get(key);
     if (cell) cell.opening += amount;

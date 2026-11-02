@@ -9,7 +9,10 @@ const grid: Grid = [
   ["a4", "b4", "c4"],
 ];
 const all = () => true;
-const not = (...blocked: string[]) => (c: string) => !blocked.includes(c);
+const not =
+  (...blocked: string[]) =>
+  (c: string) =>
+    !blocked.includes(c);
 
 describe("findCell", () => {
   it("gives a cell's place", () => {

@@ -51,7 +51,12 @@ const line = (n: number): RentalContractLine => ({
 });
 
 const base: RentalContractData = {
-  lessor: { name: "D-sektionen inom TLTH", orgNo: "845003-2878", address: "Box 118", postalLine: "221 00 Lund" },
+  lessor: {
+    name: "D-sektionen inom TLTH",
+    orgNo: "845003-2878",
+    address: "Box 118",
+    postalLine: "221 00 Lund",
+  },
   counterparty: "F-sektionen inom TLTH",
   counterpartyOrgNo: "845002-5678",
   counterpartyAddress: "Ole Römers väg 3",
@@ -84,14 +89,18 @@ const layout = (data: RentalContractData): Mark[] =>
 
 // Line marks are only placed in text parts, so these are the clauses the
 // template can report on. See `mark` in the template for why.
-const clausesOpeningWithText = RENTAL_TERMS.flatMap((c, i) => (c.body[0]?.kind === "text" ? [i] : []));
+const clausesOpeningWithText = RENTAL_TERMS.flatMap((c, i) =>
+  c.body[0]?.kind === "text" ? [i] : [],
+);
 const lastClause = RENTAL_TERMS[RENTAL_TERMS.length - 1];
 const endsWithText = lastClause.body[lastClause.body.length - 1]?.kind === "text";
 
 // Every text part that is followed directly by a table or a list.
 const introductions = RENTAL_TERMS.flatMap((c, clause) =>
   c.body.flatMap((b, part) =>
-    b.kind === "text" && c.body[part + 1] && c.body[part + 1].kind !== "text" ? [{ clause, part }] : [],
+    b.kind === "text" && c.body[part + 1] && c.body[part + 1].kind !== "text"
+      ? [{ clause, part }]
+      : [],
   ),
 );
 
@@ -103,14 +112,23 @@ const cases = [1, 5].flatMap((signatureCount) =>
   [null, "Sittning i iDét"].flatMap((purpose) =>
     Array.from({ length: 30 }, (_, i) => ({
       name: `${i + 1} lines, ${purpose ? "a purpose" : "no purpose"}, ${signatureCount} signature(s)`,
-      data: { ...base, purpose, signatureCount, lines: Array.from({ length: i + 1 }, (_, n) => line(n + 1)) },
+      data: {
+        ...base,
+        purpose,
+        signatureCount,
+        lines: Array.from({ length: i + 1 }, (_, n) => line(n + 1)),
+      },
     })),
   ),
 );
 
 const results = cases.map(({ name, data }) => ({ name, marks: layout(data) }));
-const pageOf = (marks: Mark[], kind: Mark["kind"], clause: number | null = null, part: number | null = null) =>
-  marks.find((m) => m.kind === kind && m.clause === clause && m.part === part)?.page;
+const pageOf = (
+  marks: Mark[],
+  kind: Mark["kind"],
+  clause: number | null = null,
+  part: number | null = null,
+) => marks.find((m) => m.kind === kind && m.clause === clause && m.part === part)?.page;
 
 describe("rental contract page layout", () => {
   it("has a text part at the end of the last clause to hold the signatures to", () => {
@@ -134,7 +152,9 @@ describe("rental contract page layout", () => {
 
   it.each(results)("$name: no clause heading is parted from its first line", ({ marks }) => {
     for (const i of clausesOpeningWithText) {
-      expect(pageOf(marks, "head", i), `§ ${i + 1} ${RENTAL_TERMS[i].heading}`).toBe(pageOf(marks, "body", i));
+      expect(pageOf(marks, "head", i), `§ ${i + 1} ${RENTAL_TERMS[i].heading}`).toBe(
+        pageOf(marks, "body", i),
+      );
     }
   });
 
@@ -142,12 +162,15 @@ describe("rental contract page layout", () => {
     expect(introductions.length).toBeGreaterThan(0);
   });
 
-  it.each(results)("$name: no sentence is parted from the table or list it introduces", ({ marks }) => {
-    for (const { clause, part } of introductions) {
-      const where = `§ ${clause + 1}, part ${part + 1}`;
-      const lead = pageOf(marks, "lead", clause, part);
-      expect(lead, where).toBeDefined();
-      expect(lead, where).toBe(pageOf(marks, "follows", clause, part));
-    }
-  });
+  it.each(results)(
+    "$name: no sentence is parted from the table or list it introduces",
+    ({ marks }) => {
+      for (const { clause, part } of introductions) {
+        const where = `§ ${clause + 1}, part ${part + 1}`;
+        const lead = pageOf(marks, "lead", clause, part);
+        expect(lead, where).toBeDefined();
+        expect(lead, where).toBe(pageOf(marks, "follows", clause, part));
+      }
+    },
+  );
 });

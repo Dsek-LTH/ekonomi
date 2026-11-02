@@ -4,6 +4,9 @@ import { getLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/request";
 import { loadFaq, type FaqBlock, type FaqSection } from "./faq-content";
 import { FaqClient } from "./faq-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("faq");
 
 // Where the example photos go, and what they may be called. The content names a
 // basename only (`valid-store`), so replacing a JPG with a PNG, or adding the

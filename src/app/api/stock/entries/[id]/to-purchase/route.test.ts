@@ -73,7 +73,12 @@ describe("POST /api/stock/entries/:id/to-purchase", () => {
     const res = await post();
     expect(res.status).toBe(201);
     const { data } = h.created.mock.calls[0][0] as { data: Record<string, unknown> };
-    expect(data).toMatchObject({ kind: "PURCHASE", units: 6, unitCostOre: 26900, occurredAt: day });
+    expect(data).toMatchObject({
+      kind: "PURCHASE",
+      units: 6,
+      unitCostOre: 26900,
+      occurredAt: day,
+    });
     expect((data.createdAt as Date).getTime()).toBe(counted.getTime() - 1);
     expect(h.replayed).toHaveBeenCalledWith("prod");
   });

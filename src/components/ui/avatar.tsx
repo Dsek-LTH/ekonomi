@@ -87,7 +87,14 @@ export function UserAvatar({
   size?: AvatarSize;
   className?: string;
 }) {
-  return <Avatar initials={initialsOf(name)} src={useAvatarSrc(userId)} size={size} className={className} />;
+  return (
+    <Avatar
+      initials={initialsOf(name)}
+      src={useAvatarSrc(userId)}
+      size={size}
+      className={className}
+    />
+  );
 }
 
 /**

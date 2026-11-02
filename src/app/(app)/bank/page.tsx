@@ -1,13 +1,21 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { canBookkeep, canViewBookkeeping } from "@/lib/domain/permissions";
-import { countCardlessTransactions, countUnaccountedPurchases, getBankTransactionPage, getCards } from "@/lib/data/bank";
+import {
+  countCardlessTransactions,
+  countUnaccountedPurchases,
+  getBankTransactionPage,
+  getCards,
+} from "@/lib/data/bank";
 import { userHoldsCard } from "@/lib/data/users";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { ownedResultUnits } from "@/lib/server/result-units";
 import BankClient from "./bank-client";
 import { bankDefaultTab, type BankScope } from "./scope";
 import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("bank");
 
 // One feed, three readings of it.
 //
@@ -29,19 +37,12 @@ import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
 // admin has put under a result unit they answer for (Card.resultUnit). It is
 // for reading. Redovisa stays with the holder, and deleting and placing cards
 // stay with bookkeeping, both of which the client already decides per row.
-export default async function BankPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
+export default async function BankPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const user = await requireUser();
   const params = await searchParams;
 
   const canSeeAll = canViewBookkeeping(user.capabilities);
-  const [holdsCard, owned] = await Promise.all([
-    userHoldsCard(user.id),
-    ownedResultUnits(user),
-  ]);
+  const [holdsCard, owned] = await Promise.all([userHoldsCard(user.id), ownedResultUnits(user)]);
   const answersForUnits = owned.names.length > 0;
 
   // The readings this person has, in the order the track draws them.

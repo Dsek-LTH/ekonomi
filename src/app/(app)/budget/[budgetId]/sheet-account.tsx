@@ -15,17 +15,18 @@ import { Combobox } from "@/components/ui/combobox";
 import { DragHandle } from "@/components/ui/drag";
 import { IconComment, IconElbow } from "@/components/ui/icons";
 import { fmt, fmtSigned } from "./budget-helpers";
-import { withAccount, withComment, withoutAccount, withoutComment, withoutLine } from "./patch-budget";
+import {
+  withAccount,
+  withComment,
+  withoutAccount,
+  withoutComment,
+  withoutLine,
+} from "./patch-budget";
 import { CompareCells } from "./sheet-cells";
 import { useSheet, type SheetValue } from "./sheet-context";
 import type { Account, Comment, LineItem } from "./budget-types";
 
-function lineCell(
-  sheet: SheetValue,
-  col: ColumnDef,
-  li: LineItem,
-  account: Account,
-) {
+function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Account) {
   const {
     badLine,
     ccCode,
@@ -40,33 +41,62 @@ function lineCell(
     tCol,
   } = sheet;
   const k = col.key;
-  if (k === "konto") return (
-    // The account-number column, on a row that has no number of its own. What
-    // it holds instead is the elbow: down out of the account above, right into
-    // this row, the same mark the income screen puts on a product's variant,
-    // and the same reading. The grip keeps the left of the cell; `ml-auto`
-    // holds the elbow against the row it points at, whether or not the grip
-    // is there to be seen.
-    <td key={k} className="border-r border-border/60 p-0">
-      <span className="flex items-center py-1.5 pl-1.5 pr-2">
-        {isAdmin && (
-          <DragHandle
-            onPointerDown={(e) => startLineDrag(e, account, li)}
-            className={cn(
-              "flex items-center text-faint hover:text-muted",
-              draggingLineId === li.id && "text-muted opacity-100",
-            )}
-            title={t("dragToReorder")}
-          />
-        )}
-        <IconElbow className="ml-auto size-3.5 shrink-0 text-faint" />
-      </span>
+  if (k === "konto")
+    return (
+      // The account-number column, on a row that has no number of its own. What
+      // it holds instead is the elbow: down out of the account above, right into
+      // this row, the same mark the income screen puts on a product's variant,
+      // and the same reading. The grip keeps the left of the cell; `ml-auto`
+      // holds the elbow against the row it points at, whether or not the grip
+      // is there to be seen.
+      <td key={k} className="border-r border-border/60 p-0">
+        <span className="flex items-center py-1.5 pl-1.5 pr-2">
+          {isAdmin && (
+            <DragHandle
+              onPointerDown={(e) => startLineDrag(e, account, li)}
+              className={cn(
+                "flex items-center text-faint hover:text-muted",
+                draggingLineId === li.id && "text-muted opacity-100",
+              )}
+              title={t("dragToReorder")}
+            />
+          )}
+          <IconElbow className="ml-auto size-3.5 shrink-0 text-faint" />
+        </span>
+      </td>
+    );
+  if (k === "beskrivning")
+    return (
+      <td key={k} className="border-r border-border/60 p-0">
+        {renderCell({
+          id: li.id,
+          field: "description",
+          actual: li.description,
+          className: "pl-5 text-muted",
+          placeholder: tCol("beskrivning"),
+          url: liUrl(li.id),
+          payload: (v) => ({ description: v }),
+          gated: true,
+        })}
+      </td>
+    );
+  const val = ev.lineItems[li.id];
+  return (
+    <td key={k} className="border-r border-border/60 p-0 text-right">
+      {renderFormula({
+        id: li.id,
+        field: "expression",
+        raw: li.expression,
+        computed: val,
+        sheet: ccCode,
+        bad: badLine.has(li.id),
+        placeholder: "0",
+        url: liUrl(li.id),
+        payload: (v) => ({ expression: v }),
+        gated: true,
+      })}
     </td>
   );
-  if (k === "beskrivning")
-    return <td key={k} className="border-r border-border/60 p-0">{renderCell({ id: li.id, field: "description", actual: li.description, className: "pl-5 text-muted", placeholder: tCol("beskrivning"), url: liUrl(li.id), payload: (v) => ({ description: v }), gated: true })}</td>;
-  const val = ev.lineItems[li.id];
-  return <td key={k} className="border-r border-border/60 p-0 text-right">{renderFormula({ id: li.id, field: "expression", raw: li.expression, computed: val, sheet: ccCode, bad: badLine.has(li.id), placeholder: "0", url: liUrl(li.id), payload: (v) => ({ expression: v }), gated: true })}</td>;
 }
 
 export function AccountBlock({ account }: { account: Account }) {
@@ -150,7 +180,10 @@ export function AccountBlock({ account }: { account: Account }) {
           <td className="border-r border-border/60 px-2 py-2 text-center font-mono text-sm font-semibold">
             {account.accountCode}
           </td>
-          <td className="border-r border-border/60 px-3 py-2 text-sm font-medium" colSpan={columns.length - 2}>
+          <td
+            className="border-r border-border/60 px-3 py-2 text-sm font-medium"
+            colSpan={columns.length - 2}
+          >
             {account.accountName}
           </td>
           <td
@@ -175,7 +208,8 @@ export function AccountBlock({ account }: { account: Account }) {
       <tr data-account-row={account.id} className="group bg-background">
         {gut(
           grid.accountRow.get(`${ccCode}|${account.id}`),
-          isAdmin && tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
+          isAdmin &&
+            tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
         )}
         {/* No grip. An account used to be draggable from one section to the
             other, which set an override saying a cost account was income. The
@@ -205,29 +239,37 @@ export function AccountBlock({ account }: { account: Account }) {
               placeholder={tBook("accountPlaceholder")}
               searchPlaceholder={tBook("accountSearch")}
               emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
+              // Centred like the voucher table's account, and like this
+              // cell when the sheet is read against the utfall.
+              align="center"
               buttonClassName="px-2 py-1.5 font-mono text-sm font-medium text-foreground"
               chevronClassName="text-faint"
               aria-label={t("accountNumber")}
             />
           ) : (
-            <div className="px-2 py-1.5 font-mono text-sm font-medium text-foreground">
+            <div className="px-2 py-1.5 text-center font-mono text-sm font-medium text-foreground">
               {account.accountCode}
             </div>
           )}
         </td>
         {/* Read-only: the name follows the account code from the chart. */}
-        <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
+        <td
+          className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold"
+          colSpan={columns.length - 1}
+        >
           {account.accountName}
         </td>
         {actualPad}
         <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
           <span className="flex items-center">
-            {isAdmin && del(
-              () => api(`/api/budget-accounts/${account.id}`, "DELETE", undefined, (b) =>
-                withoutAccount(b, account.id),
-              ),
-              t("removeAccount"),
-            )}
+            {isAdmin &&
+              del(
+                () =>
+                  api(`/api/budget-accounts/${account.id}`, "DELETE", undefined, (b) =>
+                    withoutAccount(b, account.id),
+                  ),
+                t("removeAccount"),
+              )}
           </span>
         </td>
       </tr>
@@ -268,13 +310,18 @@ export function AccountBlock({ account }: { account: Account }) {
           )}
           {columns.map((col) => lineCell(sheet, col, li, account))}
           {showCompare && (
-            <CompareCells other={cmpLines.get(keys[i])?.values[1]} own={ev.lineItems[li.id]} incomeLike={incomeLike} />
+            <CompareCells
+              other={cmpLines.get(keys[i])?.values[1]}
+              own={ev.lineItems[li.id]}
+              incomeLike={incomeLike}
+            />
           )}
           <td className="px-1 text-left text-muted">
-            {isAdmin && del(
-              () => api(liUrl(li.id), "DELETE", undefined, (b) => withoutLine(b, li.id)),
-              tAlloc("removeRow"),
-            )}
+            {isAdmin &&
+              del(
+                () => api(liUrl(li.id), "DELETE", undefined, (b) => withoutLine(b, li.id)),
+                tAlloc("removeRow"),
+              )}
           </td>
         </tr>
       ))}
@@ -286,26 +333,34 @@ export function AccountBlock({ account }: { account: Account }) {
         <tr key={row.change.id} className="border-t border-border/40 bg-warning-soft/40">
           {gut(undefined)}
           {columns.map((col) => {
-            if (col.key === "beskrivning") return (
-              <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
-                <span className="flex items-center gap-1.5 pl-3">
-                  <span className="shrink-0 font-medium text-warning">
-                    {tChanges("label", { kind: row.change.kind, seq: row.change.seq })}
+            if (col.key === "beskrivning")
+              return (
+                <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
+                  <span className="flex items-center gap-1.5 pl-3">
+                    <span className="shrink-0 font-medium text-warning">
+                      {tChanges("label", {
+                        kind: row.change.kind,
+                        seq: row.change.seq,
+                      })}
+                    </span>
+                    <span className="min-w-0 truncate text-muted" title={row.change.reason}>
+                      {row.change.reason}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted">
+                      {date(row.change.createdAt)}
+                    </span>
                   </span>
-                  <span className="min-w-0 truncate text-muted" title={row.change.reason}>
-                    {row.change.reason}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted">
-                    {date(row.change.createdAt)}
-                  </span>
-                </span>
-              </td>
-            );
-            if (col.key === "expression") return (
-              <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-right font-medium tabular-nums">
-                {fmtSigned(row.amount)}
-              </td>
-            );
+                </td>
+              );
+            if (col.key === "expression")
+              return (
+                <td
+                  key={col.key}
+                  className="border-r border-border/60 px-2 py-1.5 text-right font-medium tabular-nums"
+                >
+                  {fmtSigned(row.amount)}
+                </td>
+              );
             return <td key={col.key} className="border-r border-border/60" />;
           })}
           {actualPad}
@@ -333,12 +388,40 @@ export function AccountBlock({ account }: { account: Account }) {
         // account, including an account with no rows of its own, which has
         // nothing else to aim at.
         <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
-        <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
+          <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
           {columns.map((col) => {
-            const base = "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted focus:bg-accent-soft/40";
-            const onEnter = (e: React.KeyboardEvent) => { if (e.key === "Enter") createLine(account.id); };
-            if (col.key === "beskrivning") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={t("newLine")} value={d.description} onChange={(e) => setDraft(account.id, { description: e.target.value })} onKeyDown={onEnter} placeholder={t("newLine")} className={cn(base, "pl-5 text-sm text-muted")} /></td>;
-            if (col.key === "expression") return <td key={col.key} className="border-r border-border/60 p-0"><input aria-label={tCol("expression")} value={d.expression} onChange={(e) => setDraft(account.id, { expression: e.target.value })} onKeyDown={onEnter} onBlur={() => createLine(account.id)} placeholder={tCol("expression").toLowerCase()} className={cn(base, "text-right font-mono text-xs")} /></td>;
+            const base =
+              "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted focus:bg-accent-soft/40";
+            const onEnter = (e: React.KeyboardEvent) => {
+              if (e.key === "Enter") createLine(account.id);
+            };
+            if (col.key === "beskrivning")
+              return (
+                <td key={col.key} className="border-r border-border/60 p-0">
+                  <input
+                    aria-label={t("newLine")}
+                    value={d.description}
+                    onChange={(e) => setDraft(account.id, { description: e.target.value })}
+                    onKeyDown={onEnter}
+                    placeholder={t("newLine")}
+                    className={cn(base, "pl-5 text-sm text-muted")}
+                  />
+                </td>
+              );
+            if (col.key === "expression")
+              return (
+                <td key={col.key} className="border-r border-border/60 p-0">
+                  <input
+                    aria-label={tCol("expression")}
+                    value={d.expression}
+                    onChange={(e) => setDraft(account.id, { expression: e.target.value })}
+                    onKeyDown={onEnter}
+                    onBlur={() => createLine(account.id)}
+                    placeholder={tCol("expression").toLowerCase()}
+                    className={cn(base, "text-right font-mono text-xs")}
+                  />
+                </td>
+              );
             return <td key={col.key} className="border-r border-border/60" />;
           })}
           {actualPad}
@@ -350,7 +433,10 @@ export function AccountBlock({ account }: { account: Account }) {
           two trailing cells carry the compared figure and its diff vs budget. */}
       <tr className="border-t border-border/60 bg-surface">
         {gut(undefined)}
-        <td colSpan={columns.length - 1} className="px-2 py-1.5 text-right text-xs font-medium text-muted">
+        <td
+          colSpan={columns.length - 1}
+          className="px-2 py-1.5 text-right text-xs font-medium text-muted"
+        >
           {t("sum")}
           {/* What the account said before the changes, the number that was
               voted through, kept beside the one in force so neither has to be
@@ -369,12 +455,29 @@ export function AccountBlock({ account }: { account: Account }) {
             </span>
           )}
         </td>
-        <td className={cn("px-2 py-1.5 text-right font-semibold tabular-nums", totalIncomplete && "text-warning", total !== undefined && total < 0 && !totalIncomplete && "text-danger")}>{fmt(total)}</td>
-        {showCompare && <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />}
+        <td
+          className={cn(
+            "px-2 py-1.5 text-right font-semibold tabular-nums",
+            totalIncomplete && "text-warning",
+            total !== undefined && total < 0 && !totalIncomplete && "text-danger",
+          )}
+        >
+          {fmt(total)}
+        </td>
+        {showCompare && (
+          <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />
+        )}
         <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
           {canComment && (
             <button
-              onClick={() => setOpenComments((s) => { const n = new Set(s); if (n.has(account.id)) n.delete(account.id); else n.add(account.id); return n; })}
+              onClick={() =>
+                setOpenComments((s) => {
+                  const n = new Set(s);
+                  if (n.has(account.id)) n.delete(account.id);
+                  else n.add(account.id);
+                  return n;
+                })
+              }
               title={t("comments")}
               aria-label={t("commentsCount", { count: account.comments.length })}
               aria-expanded={open}
@@ -398,25 +501,35 @@ export function AccountBlock({ account }: { account: Account }) {
               it keeps the app's focus ring and this row draws no cell box. */}
           <td colSpan={totalCols} className="sheet-field px-4 py-3">
             <div className="space-y-2">
-              {account.comments.length === 0 && <p className="text-xs text-muted">{t("noComments")}</p>}
+              {account.comments.length === 0 && (
+                <p className="text-xs text-muted">{t("noComments")}</p>
+              )}
               {account.comments.map((cm) => (
                 <div key={cm.id} className="group flex items-start gap-2 text-sm">
                   <span className="shrink-0 font-medium">{cm.author.name}</span>
                   <span className="flex-1 text-muted">{cm.body}</span>
                   {(cm.author.id === userId || isAdmin) && (
-                    <span className="shrink-0">{del(
-                      () => api(`/api/budget-comments/${cm.id}`, "DELETE", undefined, (b) =>
-                        withoutComment(b, cm.id),
-                      ),
-                      t("removeComment"),
-                    )}</span>
+                    <span className="shrink-0">
+                      {del(
+                        () =>
+                          api(`/api/budget-comments/${cm.id}`, "DELETE", undefined, (b) =>
+                            withoutComment(b, cm.id),
+                          ),
+                        t("removeComment"),
+                      )}
+                    </span>
                   )}
                 </div>
               ))}
               {canComment && (
                 <input
                   value={commentDraft[account.id] ?? ""}
-                  onChange={(e) => setCommentDraft((m) => ({ ...m, [account.id]: e.target.value }))}
+                  onChange={(e) =>
+                    setCommentDraft((m) => ({
+                      ...m,
+                      [account.id]: e.target.value,
+                    }))
+                  }
                   onKeyDown={async (e) => {
                     if (e.key !== "Enter") return;
                     const body = (commentDraft[account.id] ?? "").trim();
@@ -454,7 +567,10 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
         <td className="border-r border-border/60 px-2 py-1.5 font-mono text-sm font-medium">
           {account.code}
         </td>
-        <td className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold" colSpan={columns.length - 1}>
+        <td
+          className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold"
+          colSpan={columns.length - 1}
+        >
           {account.name}
           <span className="ml-2 text-xs font-normal">- {tRam("notInThisBudget")}</span>
         </td>

@@ -1,6 +1,7 @@
 {
   "title": "D-sektionens ekonomi",
   "description": "Logga in med ditt D-sektionskonto för att komma vidare",
+  "seoDescription": "Logga in på D-sektionens ekonomisystem för utlägg, kvitton, budget och bokföring.",
   "loginPrompt": "Fortsätt med ditt D-sektionskonto",
   "errors": {
     "denied": "Inloggningen nekades. Ditt konto saknar ett student-id.",

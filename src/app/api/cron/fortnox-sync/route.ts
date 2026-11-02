@@ -34,6 +34,7 @@ export async function POST(req: Request) {
   if (!result) return NextResponse.json({ skipped: "running" }, { status: 202 });
 
   const failed =
-    Object.values(result).some((s) => !Array.isArray(s) && !s.ok) || result.ledger.some((s) => !s.ok);
+    Object.values(result).some((s) => !Array.isArray(s) && !s.ok) ||
+    result.ledger.some((s) => !s.ok);
   return NextResponse.json(result, { status: failed ? 502 : 200 });
 }

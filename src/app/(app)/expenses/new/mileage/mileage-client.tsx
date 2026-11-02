@@ -120,9 +120,7 @@ export default function MileageClient({
   const editing = Boolean(existing);
   const [title, setTitle] = useState(() => existing?.title ?? "");
   const [journeyDate, setJourneyDate] = useState(() => existing?.purchaseDate ?? "");
-  const [startText, setStartText] = useState(() =>
-    showOdometer(existing?.mileage?.odometerStart),
-  );
+  const [startText, setStartText] = useState(() => showOdometer(existing?.mileage?.odometerStart));
   const [endText, setEndText] = useState(() => showOdometer(existing?.mileage?.odometerEnd));
   /**
    * Every place the car stopped, in order.
@@ -400,7 +398,9 @@ export default function MileageClient({
                 : dateInFuture
                   ? t("dateFuture")
                   : dateOutsideYear
-                    ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
+                    ? tCommon("dateOutsideFiscalYear", {
+                        year: fiscalYearLabel(fiscalYear!),
+                      })
                     : undefined
             }
             // A hint, not an error: the day is a real one and the form takes
@@ -461,7 +461,7 @@ export default function MileageClient({
                 type="button"
                 onClick={() => setStops([...stops, ""])}
                 disabled={stops.length >= MAX_STOPS}
-                className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
+                className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
               >
                 {t("route.addStop")}
               </button>
@@ -474,7 +474,7 @@ export default function MileageClient({
                   <button
                     type="button"
                     onClick={() => setStops([...stops, stops[0]])}
-                    className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                    className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                   >
                     {t("route.addReturn")}
                   </button>
@@ -530,7 +530,7 @@ export default function MileageClient({
                 {t("otherType")}{" "}
                 <Link
                   href="/expenses/new"
-                  className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                  className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                 >
                   {t("otherTypeLink")}
                 </Link>
@@ -556,7 +556,11 @@ export default function MileageClient({
         missingLabel={tWizard("missingLabel")}
         note={
           submittable && blocker ? (
-            <SubmitBlockerNote blocker={blocker} paymentType="MILEAGE" className="text-xs text-warning" />
+            <SubmitBlockerNote
+              blocker={blocker}
+              paymentType="MILEAGE"
+              className="text-xs text-warning"
+            />
           ) : undefined
         }
         onSave={saveDraft}
@@ -567,7 +571,9 @@ export default function MileageClient({
           submittable
             ? {
                 label:
-                  existing?.status === "CHANGES_REQUESTED" ? tWizard("resubmit") : tWizard("submit"),
+                  existing?.status === "CHANGES_REQUESTED"
+                    ? tWizard("resubmit")
+                    : tWizard("submit"),
                 onClick: submitClaim,
                 disabled: !canPersist || Boolean(blocker),
                 loading: exit === "submit",

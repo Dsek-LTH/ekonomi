@@ -100,11 +100,7 @@ export function SidebarPanel({
         </div>
 
         {open && (
-          <Modal
-            label={sheetLabel ?? ""}
-            onClose={() => setOpen(false)}
-            className="max-w-md"
-          >
+          <Modal label={sheetLabel ?? ""} onClose={() => setOpen(false)} className="max-w-md">
             <ModalHeader title={sheetLabel ?? ""} />
             {/* The panel's own tree, unwrapped: it already brings its rules,
                 its headings and its own inner scroller, and a ModalBody's
@@ -165,7 +161,9 @@ export function SidebarItem({
         "w-full px-4 py-2.5 text-left text-sm",
         // The fill and an ink bar at the start, so the picked row is not
         // told from a hovered one by a step of grey alone.
-        active ? "bg-accent-soft text-accent shadow-[inset_2px_0_0_var(--color-accent)]" : "hover:bg-hover",
+        active
+          ? "bg-accent-soft text-accent shadow-[inset_2px_0_0_var(--color-accent)]"
+          : "hover:bg-hover",
         className,
       )}
     >

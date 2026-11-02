@@ -30,7 +30,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // gap left by earlier edits cannot make the swap a no-op.
     [steps[at], steps[to]] = [steps[to], steps[at]];
     for (const [i, s] of steps.entries()) {
-      await tx.checklistTemplateItem.update({ where: { id: s.id }, data: { sortOrder: (i + 1) * 10 } });
+      await tx.checklistTemplateItem.update({
+        where: { id: s.id },
+        data: { sortOrder: (i + 1) * 10 },
+      });
     }
     return new Response(null, { status: 204 });
   });

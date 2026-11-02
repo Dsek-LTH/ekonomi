@@ -18,7 +18,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const item = await appendInOrder({ model: "budgetAccount", id: accountId }, async (tx) => {
-    const last = await tx.budgetLineItem.findFirst({ where: { accountId }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
+    const last = await tx.budgetLineItem.findFirst({
+      where: { accountId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
     return tx.budgetLineItem.create({
       data: { accountId, description, expression, sortOrder: nextSortOrder(last) },
     });

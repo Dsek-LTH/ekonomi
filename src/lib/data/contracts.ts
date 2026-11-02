@@ -32,11 +32,7 @@ import {
 import { normaliseTag } from "@/lib/contract/tags";
 import { contractStatus } from "@/lib/contract/status";
 import { contractScopeWhere, type ContractScope } from "@/lib/data/contract-scope";
-import type {
-  ContractFileRole,
-  ContractKind,
-  ContractStatus,
-} from "@/lib/domain/types";
+import type { ContractFileRole, ContractKind, ContractStatus } from "@/lib/domain/types";
 import { isoDay } from "@/lib/domain/date";
 
 /** A row in the archive table. */

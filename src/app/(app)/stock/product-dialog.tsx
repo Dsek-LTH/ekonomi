@@ -87,7 +87,6 @@ const int = (s: string): number | undefined => {
   return n == null ? undefined : Math.round(n);
 };
 
-
 export function ProductDialog({
   product,
   name,
@@ -187,14 +186,14 @@ export function ProductDialog({
           : !d.noBarcode && isInternalCode(d.ean) && d.ean.trim() !== ownCode
             ? "internalCodeTyped"
             : num(d.abv) == null
-          ? "abvRequired"
-          : isVolume && !int(d.nominalMl)
-            ? "calibrationNoVolume"
-            : !isVolume && !int(d.unitMl)
-              ? "sizeRequired"
-              : num(d.costPrice) == null
-                ? "costRequired"
-                : null;
+              ? "abvRequired"
+              : isVolume && !int(d.nominalMl)
+                ? "calibrationNoVolume"
+                : !isVolume && !int(d.unitMl)
+                  ? "sizeRequired"
+                  : num(d.costPrice) == null
+                    ? "costRequired"
+                    : null;
 
   /**
    * Why the save button is dead, in one sentence, or null when it is not.
@@ -278,9 +277,7 @@ export function ProductDialog({
         {d.noBarcode ? (
           <FieldGroup label={t("products.field.ean")}>
             <p className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-muted">
-              {ownCode
-                ? t("barcode.ownCode", { code: ownCode })
-                : t("barcode.willGetOwn")}
+              {ownCode ? t("barcode.ownCode", { code: ownCode }) : t("barcode.willGetOwn")}
             </p>
           </FieldGroup>
         ) : (
@@ -338,7 +335,11 @@ export function ProductDialog({
                 setAskingNoBarcode(false);
                 // Back to typing one: the section's own code is not one to
                 // keep in the field, it would be refused as typed.
-                setD((p) => ({ ...p, noBarcode: false, ean: isInternalCode(p.ean) ? "" : p.ean }));
+                setD((p) => ({
+                  ...p,
+                  noBarcode: false,
+                  ean: isInternalCode(p.ean) ? "" : p.ean,
+                }));
               }
             }}
             label={t("barcode.none")}
@@ -402,7 +403,10 @@ export function ProductDialog({
             <Combobox
               value={d.kind}
               onChange={(v) => set("kind", v as StockKind)}
-              options={KIND_OPTIONS.map((k) => ({ value: k, label: t(`kindName.${k}`) }))}
+              options={KIND_OPTIONS.map((k) => ({
+                value: k,
+                label: t(`kindName.${k}`),
+              }))}
               aria-label={t("products.field.kind")}
             />
           </FieldGroup>
@@ -414,7 +418,10 @@ export function ProductDialog({
             <Combobox
               value={d.category}
               onChange={(v) => set("category", v as DrinkCategory)}
-              options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
+              options={CATEGORIES.map((c) => ({
+                value: c,
+                label: t(`category.${c}`),
+              }))}
               searchPlaceholder={t("products.field.categorySearch")}
               aria-label={t("products.field.category")}
             />
@@ -502,7 +509,12 @@ export function ProductDialog({
           <div className="space-y-2">
             <TagChips
               tags={d.tags}
-              onRemove={(tag) => set("tags", d.tags.filter((x) => x !== tag))}
+              onRemove={(tag) =>
+                set(
+                  "tags",
+                  d.tags.filter((x) => x !== tag),
+                )
+              }
               removeLabel={(tag) => t("products.field.tagRemove", { tag })}
             />
             {/* A picker that also invents: the list is every tag the cellar

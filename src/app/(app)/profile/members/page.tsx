@@ -3,6 +3,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canViewMemberScores } from "@/lib/domain/permissions";
 import { getMemberScoreRow, getMemberScores } from "@/lib/data/member-score";
 import { MembersClient } from "./members-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("members");
 
 // The profile's Medlemmar tab: every member's redovisningsbetyg, for
 // the holders of MEMBER_SCORE_VIEW. `?id=` opens one member's breakdown, which

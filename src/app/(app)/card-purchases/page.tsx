@@ -1,4 +1,7 @@
 import { permanentRedirect } from "next/navigation";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("cardPurchases");
 
 // Kortköp is Bankhändelser scoped to you.
 //

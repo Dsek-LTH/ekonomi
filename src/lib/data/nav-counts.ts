@@ -53,7 +53,14 @@ const attestableExpenses = (viewer: Viewer, during: During | undefined, within: 
   hasAttestRole(viewer.capabilities)
     ? attestScopeWhere(viewer, { ownUnits: true }).then((scope) =>
         prisma.expense.count({
-          where: { AND: [within, scope, { status: "PENDING_APPROVAL" }, during ? { purchaseDate: during } : {}] },
+          where: {
+            AND: [
+              within,
+              scope,
+              { status: "PENDING_APPROVAL" },
+              during ? { purchaseDate: during } : {},
+            ],
+          },
         }),
       )
     : Promise.resolve(0);
@@ -65,7 +72,9 @@ const treasuryExpenses = (
   within: Within = {},
 ) =>
   canBookkeep(viewer.capabilities)
-    ? prisma.expense.count({ where: { AND: [within, { status }, during ? { purchaseDate: during } : {}] } })
+    ? prisma.expense.count({
+        where: { AND: [within, { status }, during ? { purchaseDate: during } : {}] },
+      })
     : Promise.resolve(0);
 
 /**
@@ -85,7 +94,11 @@ export async function getExpenseTabCounts(
   // The list's own scope (listScopeWhere in ./expenses), so a count never
   // promises rows the tab then does not show.
   const within: Within =
-    scope === "mine" ? { submitterId: viewer.id } : scope === "unit" ? await attestScopeWhere(viewer) : {};
+    scope === "mine"
+      ? { submitterId: viewer.id }
+      : scope === "unit"
+        ? await attestScopeWhere(viewer)
+        : {};
   const [draft, attest, book, exp] = await Promise.all([
     returnedExpenses(viewer, during, within),
     attestableExpenses(viewer, during, within),
@@ -97,31 +110,35 @@ export async function getExpenseTabCounts(
 
 export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Promise<NavCounts> {
   const during = year ? fiscalYearWhere(year) : undefined;
-  const invoiceRows = canSeeInvoices(viewer.capabilities) ? getInvoiceRows(viewer) : Promise.resolve([]);
-  const [returned, bank, cardless, attest, approved, booked, invoiceInbox, rows] = await Promise.all([
-    // Only what came back, not the drafts: a draft is somewhere the member
-    // left off on purpose, and a count that never goes away is one nobody
-    // reads.
-    returnedExpenses(viewer, during),
-    countUnaccountedPurchases(viewer.id, { during }),
-    canBookkeep(viewer.capabilities) ? countCardlessTransactions({ during }) : 0,
-    attestableExpenses(viewer, during),
-    treasuryExpenses(viewer, "APPROVED", during),
-    treasuryExpenses(viewer, "BOOKED", during),
-    canSeeInvoiceInbox(viewer) ? countInboxDocuments(viewer) : 0,
-    // The rows rather than a count, because whether an invoice waits on the
-    // viewer is invoiceWaitsOn's answer per row, and writing it again as a
-    // query is how the badge and the list would come to disagree. A section's
-    // open invoices are a few dozen.
-    invoiceRows,
-  ]);
+  const invoiceRows = canSeeInvoices(viewer.capabilities)
+    ? getInvoiceRows(viewer)
+    : Promise.resolve([]);
+  const [returned, bank, cardless, attest, approved, booked, invoiceInbox, rows] =
+    await Promise.all([
+      // Only what came back, not the drafts: a draft is somewhere the member
+      // left off on purpose, and a count that never goes away is one nobody
+      // reads.
+      returnedExpenses(viewer, during),
+      countUnaccountedPurchases(viewer.id, { during }),
+      canBookkeep(viewer.capabilities) ? countCardlessTransactions({ during }) : 0,
+      attestableExpenses(viewer, during),
+      treasuryExpenses(viewer, "APPROVED", during),
+      treasuryExpenses(viewer, "BOOKED", during),
+      canSeeInvoiceInbox(viewer) ? countInboxDocuments(viewer) : 0,
+      // The rows rather than a count, because whether an invoice waits on the
+      // viewer is invoiceWaitsOn's answer per row, and writing it again as a
+      // query is how the badge and the list would come to disagree. A section's
+      // open invoices are a few dozen.
+      invoiceRows,
+    ]);
   return {
     expenses: returned + attest + approved + booked,
     bank: bank + cardless,
     invoiceInbox,
     // Dated as the Fakturor list dates them (invoiceYearDate in
     // app/(app)/invoices/scope.ts): its own date, else when it arrived.
-    invoices: rows.filter((r) => r.waitsOnViewer && (!year || inFiscalYear(year, r.invoiceDate || r.receivedAt)))
-      .length,
+    invoices: rows.filter(
+      (r) => r.waitsOnViewer && (!year || inFiscalYear(year, r.invoiceDate || r.receivedAt)),
+    ).length,
   };
 }

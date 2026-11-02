@@ -2,15 +2,15 @@ import Link from "next/link";
 import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 
-type Variant = "primary" | "secondary" | "ghost" | "quiet" | "accentOutline" | "danger" | "dangerOutline";
+type Variant =
+  "primary" | "secondary" | "ghost" | "quiet" | "accentOutline" | "danger" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
 // A flat pink blend with a white label (see .action-fill in globals.css).
 // The only thing on a screen allowed to wear it, so it marks the action
 // register.
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "action-fill text-white border active:scale-[0.98]",
+  primary: "action-fill text-white border active:scale-[0.98]",
   secondary:
     "bg-background text-foreground border border-border-control hover:bg-hover active:scale-[0.98]",
   ghost: "text-accent hover:bg-accent-soft",
@@ -23,8 +23,7 @@ const VARIANTS: Record<Variant, string> = {
   // controls in Inställningar, one step firmer.
   accentOutline:
     "bg-background text-accent border border-accent hover:bg-accent-soft active:scale-[0.98]",
-  danger:
-    "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
+  danger: "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
   // Destructive but not the primary path: sign out, delete an utlägg.
   dangerOutline:
     "bg-background text-danger border border-border-control hover:bg-danger-soft hover:border-danger",

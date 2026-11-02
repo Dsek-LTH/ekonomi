@@ -28,12 +28,9 @@ describe("hasTag", () => {
 
 describe("tagsInUse", () => {
   it("is every tag the products carry, once each", () => {
-    expect(
-      tagsInUse([
-        { tags: ["whisky", "rök"] },
-        { tags: ["Whisky"] },
-        { tags: [] },
-      ]),
-    ).toEqual(["rök", "whisky"]);
+    expect(tagsInUse([{ tags: ["whisky", "rök"] }, { tags: ["Whisky"] }, { tags: [] }])).toEqual([
+      "rök",
+      "whisky",
+    ]);
   });
 });

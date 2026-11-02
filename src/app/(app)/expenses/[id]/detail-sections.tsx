@@ -44,7 +44,13 @@ import {
  * On a phone the actions wrap under the status and take the full row, which is
  * what ExpenseActions is built to do below sm.
  */
-export function ExpenseSummary({ expense, actions }: { expense: Expense; actions: React.ReactNode }) {
+export function ExpenseSummary({
+  expense,
+  actions,
+}: {
+  expense: Expense;
+  actions: React.ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 px-inset py-4">
       <StatusPill status={expense.status} className="mt-1.5" />
@@ -105,7 +111,9 @@ export function NotesSection({ expense }: { expense: Expense }) {
               name: expense.deadlineWaiver.by,
               date: date(expense.deadlineWaiver.at),
             })}
-            <span className="mt-0.5 block text-xs italic text-muted">{expense.deadlineWaiver.reason}</span>
+            <span className="mt-0.5 block text-xs italic text-muted">
+              {expense.deadlineWaiver.reason}
+            </span>
           </Fact>
         )}
       </dl>
@@ -164,7 +172,9 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
       <Fact label={t("odometer.label")}>
         <span className="tabular-nums">
           {reading(journey.odometerStart)}
-          <span aria-hidden className="mx-1.5 text-muted">→</span>
+          <span aria-hidden className="mx-1.5 text-muted">
+            →
+          </span>
           {reading(journey.odometerEnd)}
           <span className="ml-1.5 text-muted">km</span>
         </span>
@@ -174,7 +184,9 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
           {journey.km == null ? "-" : t("km", { km: formatNumber(journey.km, 0, 1) })}
           {journey.orePerKm != null && (
             <span className="ml-3 text-xs text-muted">
-              {t("rates.perKm", { amount: formatNumber(journey.orePerKm / 100, 2, 2) })}
+              {t("rates.perKm", {
+                amount: formatNumber(journey.orePerKm / 100, 2, 2),
+              })}
             </span>
           )}
         </span>
@@ -292,7 +304,9 @@ export function VerificationSection({
             <dt className={LABEL}>{t("bookedBy")}</dt>
             <dd>
               <span className="font-medium">{people.booker}</span>
-              <span className="text-muted">, <span className="tabular-nums">{date(people.at)}</span></span>
+              <span className="text-muted">
+                , <span className="tabular-nums">{date(people.at)}</span>
+              </span>
             </dd>
           </div>
           {people.amenders.length > 0 && (
@@ -350,7 +364,10 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
       <h2 className={cn(LABEL, "mb-2")}>{t("history")}</h2>
       <ol className="space-y-1.5 text-xs">
         {revisions.map((r) => (
-          <li key={r.id} className="grid grid-cols-[minmax(0,1fr)] gap-x-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <li
+            key={r.id}
+            className="grid grid-cols-[minmax(0,1fr)] gap-x-4 sm:grid-cols-[10rem_minmax(0,1fr)]"
+          >
             <span className="tabular-nums text-muted">{dateTime(r.date)}</span>
             <span className="min-w-0">
               <span className={cn("font-medium", EVENT_TONE[r.action])}>{tEvent(r.action)}</span>

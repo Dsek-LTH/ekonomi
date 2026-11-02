@@ -87,7 +87,10 @@ export default function IncomeClient({
   const { pending, mutate } = useMutation();
   const confirm = useConfirm();
   const router = useProgressRouter();
-  const controls = useUrlTab(useTableControls({ tab, sortKey: "date", sortDir: "desc" }), defaultTab);
+  const controls = useUrlTab(
+    useTableControls({ tab, sortKey: "date", sortDir: "desc" }),
+    defaultTab,
+  );
 
   // Which day's intäktsräkning the shell's document panel is showing. By id
   // rather than by URL, so the row it belongs to can say so.
@@ -262,7 +265,9 @@ export default function IncomeClient({
         r.reviewedByName ? (
           <div className="min-w-0">
             <span className="block truncate">{r.reviewedByName}</span>
-            {r.reviewedAt && <span className="block text-xs text-muted">{formatDate(r.reviewedAt)}</span>}
+            {r.reviewedAt && (
+              <span className="block text-xs text-muted">{formatDate(r.reviewedAt)}</span>
+            )}
           </div>
         ) : (
           "-"
@@ -341,22 +346,24 @@ export default function IncomeClient({
   ];
 
   return (
-    <PageShell
-      title={t("title")}
-    >
-
+    <PageShell title={t("title")}>
       {/* The stored intäktsräkning, these bytes, not a fresh render: they are
           what the voucher was booked on and what Fortnox was given. */}
       <ReceiptPanelSource
         documentUrl={viewing ? `/api/income/reports/${viewing}/document` : null}
         mimeType="application/pdf"
-        filename={viewed ? `${t(`source.${viewed.source}`)} - ${formatDate(viewed.date)}` : undefined}
+        filename={
+          viewed ? `${t(`source.${viewed.source}`)} - ${formatDate(viewed.date)}` : undefined
+        }
       />
 
       <IncomeSetupNotice steps={setup} canSetUp={canSetUp} />
 
       {fetchOpen && (
-        <FetchDialog ready={setup.every((s) => !s.blocksFetch)} onClose={() => setFetchOpen(false)} />
+        <FetchDialog
+          ready={setup.every((s) => !s.blocksFetch)}
+          onClose={() => setFetchOpen(false)}
+        />
       )}
 
       <Card>

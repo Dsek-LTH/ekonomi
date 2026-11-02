@@ -4,6 +4,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getRoleHolders } from "@/lib/data/users";
 import { UsersClient } from "./users-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("users");
 
 export default async function AdminUsersPage() {
   await requirePage(canAccessSettings);

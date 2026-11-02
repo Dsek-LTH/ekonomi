@@ -22,10 +22,7 @@ import { PageShell } from "@/components/page-shell";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
-import {
-  filledVoucherRows,
-  type VoucherEditorRow,
-} from "@/components/voucher-editor";
+import { filledVoucherRows, type VoucherEditorRow } from "@/components/voucher-editor";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -67,11 +64,7 @@ import { FetchDialog, FetchPanel } from "./fetch-panel";
 import { IncomeSetupNotice } from "./setup-notice";
 import type { IncomeSetupStep } from "@/lib/income/setup";
 import { MoveLinesDialog, accountOptions, suggestedAccount, type MoveRequest } from "./move-dialog";
-import {
-  NewReportDialog,
-  type NewReportRequest,
-  type NewReportSource,
-} from "./new-report-dialog";
+import { NewReportDialog, type NewReportRequest, type NewReportSource } from "./new-report-dialog";
 
 export default function IncomeReviewClient({
   queue,
@@ -183,7 +176,6 @@ export default function IncomeReviewClient({
     return () => controller.abort();
   }, [selected, drafts]);
 
-
   const rowsFor = (report: IncomeReportRow) => edits[report.id] ?? defaultRows(report, settings);
   const setRows = (report: IncomeReportRow, rows: VoucherEditorRow[]) =>
     setEdits((e) => ({ ...e, [report.id]: rows }));
@@ -200,7 +192,11 @@ export default function IncomeReviewClient({
    */
   const rowSignature = (rows: VoucherEditorRow[]) =>
     filledVoucherRows(rows)
-      .map((r) => [r.account.trim(), r.costCenterCode.trim(), r.description.trim(), r.debit, r.credit].join("|"))
+      .map((r) =>
+        [r.account.trim(), r.costCenterCode.trim(), r.description.trim(), r.debit, r.credit].join(
+          "|",
+        ),
+      )
       .join(";");
   const isEdited = (report: IncomeReportRow) => {
     const rows = edits[report.id];
@@ -489,7 +485,8 @@ export default function IncomeReviewClient({
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const el = e.target instanceof HTMLElement ? e.target : null;
-      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)))
+        return;
       const index = drafts.findIndex((d) => d.id === selected.id);
       const to = e.key === "j" ? drafts[index + 1] : e.key === "k" ? drafts[index - 1] : undefined;
       if (to) {
@@ -524,17 +521,16 @@ export default function IncomeReviewClient({
   // own fees, which are nobody's takings and have no verksamhet to move to.
   const canMove = Boolean(
     selected &&
-      selected.source !== "ZETTLE_FEE" &&
-      selected.resultUnitId &&
-      selected.lines.length > 0 &&
-      moveTargets.some((u) => u.resultUnitId !== selected.resultUnitId),
+    selected.source !== "ZETTLE_FEE" &&
+    selected.resultUnitId &&
+    selected.lines.length > 0 &&
+    moveTargets.some((u) => u.resultUnitId !== selected.resultUnitId),
   );
   // Read rather than kept in step: a selection belongs to the day it was made
   // on, so on any other day there is none.
   const picked = selection.reportId === selected?.id ? selection.lineIds : [];
   const moveOpen = Boolean(selected && moveFor === selected.id);
-  const pick = (lineIds: string[]) =>
-    selected && setSelection({ reportId: selected.id, lineIds });
+  const pick = (lineIds: string[]) => selected && setSelection({ reportId: selected.id, lineIds });
   // What the account column offers: this day's own verksamhet's accounts first,
   // then the chart. Same list, same order, as the move dialog's.
   const lineAccountOptions = accountOptions(
@@ -605,11 +601,7 @@ export default function IncomeReviewClient({
       {drafts.length === 0 ? (
         // Nothing to book, so fetching is the only thing to do here, and the
         // form is the page rather than a dialog behind a button.
-        <FetchPanel
-          ready={ready}
-          title={t("empty.title")}
-          subtitle={t("empty.description")}
-        />
+        <FetchPanel ready={ready} title={t("empty.title")} subtitle={t("empty.description")} />
       ) : mode === "table" ? (
         <Card>
           <CardHeader
@@ -668,9 +660,7 @@ export default function IncomeReviewClient({
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="min-w-0 truncate">
                     {selected.unitName ?? t("table.fees")}
-                    <span className="ml-1.5 text-xs text-muted">
-                      {formatDate(selected.date)}
-                    </span>
+                    <span className="ml-1.5 text-xs text-muted">{formatDate(selected.date)}</span>
                   </span>
                   <Amount value={selected.total} />
                 </span>
@@ -685,13 +675,21 @@ export default function IncomeReviewClient({
                 way through the queue is down it. */}
             <div className="shrink-0 border-b border-border px-4 py-2.5">
               <span className="block text-sm font-medium">
-                {t("review.progress", { reviewed: queue.reviewed, total: queue.reviewed + drafts.length })}
+                {t("review.progress", {
+                  reviewed: queue.reviewed,
+                  total: queue.reviewed + drafts.length,
+                })}
                 {/* How far through it you are, since the way through is one
                     day at a time. */}
-                <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+                <span
+                  className="mt-1.5 block h-1 overflow-hidden rounded-full bg-surface-2"
+                  aria-hidden
+                >
                   <span
                     className="block h-full rounded-full bg-accent"
-                    style={{ width: `${(100 * queue.reviewed) / Math.max(1, queue.reviewed + drafts.length)}%` }}
+                    style={{
+                      width: `${(100 * queue.reviewed) / Math.max(1, queue.reviewed + drafts.length)}%`,
+                    }}
                   />
                 </span>
               </span>
@@ -721,10 +719,15 @@ export default function IncomeReviewClient({
                       <button
                         type="button"
                         onClick={() =>
-                          setNewFor({ date: group.date, source: sourceFor(group.reports) })
+                          setNewFor({
+                            date: group.date,
+                            source: sourceFor(group.reports),
+                          })
                         }
                         title={t("newReport.action")}
-                        aria-label={t("newReport.actionFor", { date: formatDate(group.date) })}
+                        aria-label={t("newReport.actionFor", {
+                          date: formatDate(group.date),
+                        })}
                         className="-my-1 flex size-6 shrink-0 items-center justify-center rounded-control text-muted transition hover:bg-accent-soft hover:text-accent"
                       >
                         <IconPlus className="size-3.5" />
@@ -787,7 +790,12 @@ export default function IncomeReviewClient({
                 than an icon: it used to be one, squeezed into the header beside
                 the progress and the view toggle, in a 16rem column. */}
             <div className="shrink-0 border-t border-border p-2">
-              <Button variant="ghost" size="sm" className="w-full" onClick={() => setFetchOpen(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => setFetchOpen(true)}
+              >
                 <IconDownload className="size-4" />
                 {t("fetch.title")}
               </Button>
@@ -987,9 +995,7 @@ export default function IncomeReviewClient({
           onCreate={createReport}
         />
       )}
-      {fetchOpen && (
-        <FetchDialog ready={ready} onClose={() => setFetchOpen(false)} />
-      )}
+      {fetchOpen && <FetchDialog ready={ready} onClose={() => setFetchOpen(false)} />}
     </PageShell>
   );
 }

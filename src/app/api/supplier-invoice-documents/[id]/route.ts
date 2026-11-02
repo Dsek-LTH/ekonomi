@@ -23,7 +23,10 @@ async function findDocument(id: string) {
 }
 
 /** Whether the actor may see this document at all. */
-async function maySee(actor: Actor, doc: { id: string; invoiceId: string | null }): Promise<boolean> {
+async function maySee(
+  actor: Actor,
+  doc: { id: string; invoiceId: string | null },
+): Promise<boolean> {
   if (doc.invoiceId === null) return (await loadInboxDocumentFor(actor, doc.id)).ok;
   return (await loadInvoiceFor(actor, doc.invoiceId)).ok;
 }
@@ -84,7 +87,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     try {
       await deleteObject(doc.objectKey);
     } catch (e) {
-      console.error(`[supplier-invoices] document ${doc.id}: could not delete object, keeping row`, e);
+      console.error(
+        `[supplier-invoices] document ${doc.id}: could not delete object, keeping row`,
+        e,
+      );
       return "storage" as const;
     }
     await tx.supplierInvoiceDocument.delete({ where: { id: doc.id } });

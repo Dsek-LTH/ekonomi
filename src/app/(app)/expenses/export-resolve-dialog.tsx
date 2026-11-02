@@ -56,7 +56,12 @@ export function ExportResolveDialog({
   async function submit() {
     const body: ResolveExport =
       outcome === "exists"
-        ? { outcome, series: series.trim(), number: parsedNumber, comment: comment.trim() || undefined }
+        ? {
+            outcome,
+            series: series.trim(),
+            number: parsedNumber,
+            comment: comment.trim() || undefined,
+          }
         : { outcome, comment: comment.trim() };
     const done = await mutate(`/api/expenses/${expenseId}/export/resolve`, {
       body,

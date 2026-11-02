@@ -94,7 +94,12 @@ export function TransactionPicker({
 
   if (picked && !changing) {
     return (
-      <div className={cn(ROW, "rounded-panel border border-accent bg-accent-soft/40 px-3 py-2.5 text-sm")}>
+      <div
+        className={cn(
+          ROW,
+          "rounded-panel border border-accent bg-accent-soft/40 px-3 py-2.5 text-sm",
+        )}
+      >
         <span className="tabular-nums text-muted">{day(picked.txn.transactionDate)}</span>
         <span className="flex min-w-0 items-center gap-2">
           <IconCheck className="size-4 shrink-0 text-success" />
@@ -106,7 +111,7 @@ export function TransactionPicker({
             type="button"
             onClick={() => setChanging(true)}
             disabled={busy}
-            className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current disabled:opacity-40"
+            className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
           >
             {t("change")}
           </button>
@@ -204,13 +209,18 @@ function CandidateRow({
   // looks for on a row it expected to be able to pick.
   const tag =
     c.blocked === "amount"
-      ? { tone: "warning" as const, text: `${c.offBy > 0 ? "+" : "−"}${formatSEK(Math.abs(c.offBy))}` }
+      ? {
+          tone: "warning" as const,
+          text: `${c.offBy > 0 ? "+" : "−"}${formatSEK(Math.abs(c.offBy))}`,
+        }
       : c.blocked === "direction"
         ? { tone: "neutral" as const, text: txn.amount > 0 ? t("incoming") : t("outgoing") }
         : c.blocked === "taken"
           ? {
               tone: "neutral" as const,
-              text: txn.matchedExpenseRef ? t("takenBy", { reference: txn.matchedExpenseRef }) : t("taken"),
+              text: txn.matchedExpenseRef
+                ? t("takenBy", { reference: txn.matchedExpenseRef })
+                : t("taken"),
             }
           : null;
 

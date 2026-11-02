@@ -16,7 +16,8 @@ function translator(messages: Record<string, string>) {
 }
 
 const t = translator({
-  "errors.expense.payoutRequired": "Lägg till clearing- och kontonummer i Min profil innan du skickar in",
+  "errors.expense.payoutRequired":
+    "Lägg till clearing- och kontonummer i Min profil innan du skickar in",
   "errors.expense.costCenterRequired": "Välj minst ett kostnadsställe",
   "common.action.goToProfile": "Till Min profil",
 });

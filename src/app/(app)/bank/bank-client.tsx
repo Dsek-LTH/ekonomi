@@ -119,11 +119,14 @@ export default function BankClient({
   const tabs: TabFilter = BANK_TABS.filter((v) => v !== "nocard" || cardless > 0).map((value) => ({
     value,
     label: t(`tab.${value}`),
-    badge: value === "nocard" ? cardless : value === "unaccounted" ? unaccounted || undefined : undefined,
+    badge:
+      value === "nocard"
+        ? cardless
+        : value === "unaccounted"
+          ? unaccounted || undefined
+          : undefined,
     waiting: value === "nocard" ? placesCards : value === "unaccounted",
   }));
-
-
 
   async function upload(file: File) {
     // The CSV is posted as-is; only the summary line is ours to build.
@@ -287,45 +290,47 @@ export default function BankClient({
           tabs={tabs}
           // On the list's own toolbar, like every other list's action: an
           // import adds rows to what is below it.
-          action={canImport && (
-            <>
-              {canImport && (
-                <>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".csv,text/csv"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) upload(f);
-                    }}
-                  />
+          action={
+            canImport && (
+              <>
+                {canImport && (
+                  <>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) upload(f);
+                      }}
+                    />
 
-                  <span className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      loading={importing}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      <IconUpload className="size-4" />
-                      {t("pickCsv")}
-                    </Button>
-                    <InfoHint label={t("csvHelp.label")}>
-                      <span className="block font-medium text-foreground">
-                        {t("csvHelp.title")}
-                      </span>
-                      <span className="mt-1 block">{t("csvHelp.source")}</span>
-                      <span className="mt-1.5 block">{t("csvHelp.format")}</span>
-                      <span className="mt-1.5 block">{t("csvHelp.cards")}</span>
-                      <span className="mt-1.5 block">{t("csvHelp.duplicates")}</span>
-                      <span className="mt-1.5 block">{t("csvHelp.limits")}</span>
-                    </InfoHint>
-                  </span>
-                </>
-              )}
-            </>
-          )}
+                    <span className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        loading={importing}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        <IconUpload className="size-4" />
+                        {t("pickCsv")}
+                      </Button>
+                      <InfoHint label={t("csvHelp.label")}>
+                        <span className="block font-medium text-foreground">
+                          {t("csvHelp.title")}
+                        </span>
+                        <span className="mt-1 block">{t("csvHelp.source")}</span>
+                        <span className="mt-1.5 block">{t("csvHelp.format")}</span>
+                        <span className="mt-1.5 block">{t("csvHelp.cards")}</span>
+                        <span className="mt-1.5 block">{t("csvHelp.duplicates")}</span>
+                        <span className="mt-1.5 block">{t("csvHelp.limits")}</span>
+                      </InfoHint>
+                    </span>
+                  </>
+                )}
+              </>
+            )
+          }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(tx) => tx.id}
           empty={t("noMatch")}
@@ -354,7 +359,8 @@ export default function BankClient({
  * column. Only the edge differs, and only the changeable one shows it, on
  * hover.
  */
-const CARD_BOX = "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-8 md:w-44 md:px-2.5";
+const CARD_BOX =
+  "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-8 md:w-44 md:px-2.5";
 
 function CardCell({
   tx,
@@ -393,10 +399,23 @@ function CardCell({
   // The row as the pick leaves it, until the refreshed one carries the same
   // thing. Same shape either way, so the cell has one thing to draw.
   const card = picked ? cards.find((c) => c.id === picked) : undefined;
-  const row: BankTransaction =
-    card ? { ...tx, cardId: card.id, cardLast4: card.last4, cardHolderId: card.holderId, cardHolderName: card.holderName }
-    : picked === "" ? { ...tx, cardId: undefined, cardLast4: undefined, cardHolderId: undefined, cardHolderName: undefined }
-    : tx;
+  const row: BankTransaction = card
+    ? {
+        ...tx,
+        cardId: card.id,
+        cardLast4: card.last4,
+        cardHolderId: card.holderId,
+        cardHolderName: card.holderName,
+      }
+    : picked === ""
+      ? {
+          ...tx,
+          cardId: undefined,
+          cardLast4: undefined,
+          cardHolderId: undefined,
+          cardHolderName: undefined,
+        }
+      : tx;
 
   // The server refuses to move the card under a matched purchase: a match is
   // only allowed between an utlägg and its submitter's own card, so the match
@@ -426,7 +445,10 @@ function CardCell({
         <button
           type="button"
           onClick={() => setPicking(true)}
-          className={cn(CARD_BOX, "border-transparent text-left transition-colors hover:border-border-control hover:bg-background")}
+          className={cn(
+            CARD_BOX,
+            "border-transparent text-left transition-colors hover:border-border-control hover:bg-background",
+          )}
         >
           <span className="min-w-0 flex-1">
             <BankCardHolder tx={row} />

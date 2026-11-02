@@ -47,9 +47,7 @@ export class PdfMergeError extends Error {}
 /** What this can staple on. Exactly what a stored receipt can be. Images are
  *  normalised to JPEG or PNG at upload (lib/server/images.ts). */
 export function isMergeableReceipt(mimeType: string): boolean {
-  return (
-    mimeType === "application/pdf" || mimeType === "image/jpeg" || mimeType === "image/png"
-  );
+  return mimeType === "application/pdf" || mimeType === "image/jpeg" || mimeType === "image/png";
 }
 
 /**

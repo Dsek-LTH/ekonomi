@@ -71,11 +71,13 @@ beforeEach(() => {
   h.capabilities = ["STOCK_MANAGE"];
   h.event = { id: "ev1" };
   h.moved = 0;
-  h.update.mockReset().mockImplementation(async ({ data }: { data: { name: string; date: Date } }) => ({
-    id: "ev1",
-    name: data.name,
-    date: data.date,
-  }));
+  h.update
+    .mockReset()
+    .mockImplementation(async ({ data }: { data: { name: string; date: Date } }) => ({
+      id: "ev1",
+      name: data.name,
+      date: data.date,
+    }));
   h.updateMany.mockReset().mockImplementation(async () => ({ count: h.moved }));
   h.replay.mockClear();
   h.assertAllPossible.mockReset().mockResolvedValue(undefined);

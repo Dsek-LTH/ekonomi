@@ -1,7 +1,5 @@
 {
   "title": "Overview",
-  "mineTitle": "Your expenses",
-  "allExpenses": "All expenses",
   "firstRun": {
     "title": "How an expense works",
     "lead": "Spent your own money for the guild, or paid with a guild card? This is where you get it back.",
@@ -15,16 +13,6 @@
     "step4Body": "Paid out to your account. Add your clearing and account number under My profile, or the expense will stall there.",
     "cta": "Create your first expense"
   },
-  "todoTitle": "To do",
-  "todo": {
-    "FIX": "{count, plural, one {expense to fix} other {expenses to fix}}",
-    "SUBMIT": "{count, plural, one {draft to submit} other {drafts to submit}}",
-    "ATTEST": "to approve",
-    "BOOK": "to book",
-    "EXPORT": "to export to Fortnox",
-    "PURCHASES": "{count, plural, one {card purchase to account for} other {card purchases to account for}}"
-  },
-  "todoEmpty": "Nothing is waiting on you.",
   "payoutMissing": "Add your clearing and account number under My profile, or your expenses cannot be paid out.",
   "budget": {
     "title": "Budget",
@@ -36,30 +24,52 @@
     "ahead": "{unit} has used {used}% of its cost budget, and {elapsed}% of the year has gone.",
     "noUnit": "No result unit"
   },
-  "upcoming": {
-    "title": "Coming up",
-    "deadline": "Last day to send in <b>{title}</b>",
+  "invoicesTitle": "Invoices in your committee",
+  "allInvoices": "All invoices",
+  "invoiceUntitled": "Unknown supplier",
+  "turn": {
+    "title": "Your turn",
+    "empty": "Nothing is waiting on you.",
+    "untitled": "untitled",
+    "draft": "Send in <b>{title}</b>",
+    "cardPurchase": "Account for the card purchase <b>{title}</b>",
+    "invoiceOverdue": "The invoice from <b>{title}</b> is overdue",
+    "deadline": "Send in <b>{title}</b>",
+    "lastDay": "last day {when}",
+    "stale": "{count, plural, one {# over a week old} other {# over a week old}}",
+    "count": {
+      "FIX": "{count, plural, one {expense to fix} other {expenses to fix}}",
+      "SUBMIT": "{count, plural, one {draft to submit} other {drafts to submit}}",
+      "PURCHASES": "{count, plural, one {card purchase to account for} other {card purchases to account for}}",
+      "ATTEST": "to approve",
+      "BOOK": "to book",
+      "EXPORT": "to export to Fortnox",
+      "OVERDUE": "{count, plural, one {other overdue invoice} other {other overdue invoices}}",
+      "MEMBERS_BEHIND": "{count, plural, one {member has purchases waiting over a month} other {members have purchases waiting over a month}}"
+    },
+    "more": {
+      "SUBMIT": "{count, plural, one {other draft to submit} other {other drafts to submit}}",
+      "PURCHASES": "{count, plural, one {other card purchase to account for} other {other card purchases to account for}}"
+    }
+  },
+  "waiting": {
+    "title": "Waiting on others",
+    "all": "All expenses",
+    "empty": "None of your expenses are with anyone else right now.",
+    "untitled": "Untitled",
+    "PENDING_APPROVAL": "Waiting on attest",
+    "APPROVED": "The treasury is booking it",
+    "BOOKED": "The treasury is exporting it to Fortnox",
+    "days": "{count, plural, =0 {today} one {# day} other {# days}}",
+    "more": "and {count} more"
+  },
+  "calendar": {
+    "title": "Calendar",
     "invoice": "Invoice from <b>{title}</b> falls due",
     "pickup": "<b>{title}</b> is picked up",
     "contractEnds": "The contract <b>{title}</b> ends",
     "stockEvent": "Stock occasion: <b>{title}</b>",
-    "untitled": "an unknown supplier",
-    "empty": "Nothing planned in the next two weeks."
-  },
-  "mineAndInvoicesTitle": "Your utlägg and invoices",
-  "invoicesTitle": "Invoices in your committee",
-  "allInvoices": "All invoices",
-  "invoiceUntitled": "Unknown supplier",
-  "forgotten": {
-    "title": "Forgotten",
-    "empty": "Nothing has been left lying.",
-    "untitled": "untitled",
-    "more": "and {count} more",
-    "attestWaiting": "{count, plural, one {# utlägg has} other {# utlägg have}} waited on your attest for over a week",
-    "membersBehind": "{count, plural, one {# member has} other {# members have}} purchases waiting over a month",
-    "draft": "<b>{title}</b> has not been sent in",
-    "cardPurchase": "The card purchase <b>{title}</b> is not filed",
-    "stuck": "<b>{title}</b> is still waiting on attest",
-    "invoiceOverdue": "The invoice from <b>{title}</b> is overdue"
+    "deadline": "Last day to send in <b>{title}</b>",
+    "untitled": "an unknown supplier"
   }
 }

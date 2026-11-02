@@ -79,7 +79,8 @@ export const documentUrl = (report: IncomeReportRow) =>
 // Empty when the setting is not chosen yet: the row shows no account, the
 // voucher is blocked on it, and the booking route names the missing setting.
 const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
-  (report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount) ?? "";
+  (report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount) ??
+  "";
 
 /**
  * Which cost centre this day's rows start on.
@@ -109,7 +110,10 @@ export function costCentreFor(report: IncomeReportRow, settings: IncomeSettingsR
  * editing and the two agree exactly. Zero-valued accounts are dropped for the
  * same reason they are there: a row for nothing is noise in the ledger.
  */
-export function defaultRows(report: IncomeReportRow, settings: IncomeSettingsRow): VoucherEditorRow[] {
+export function defaultRows(
+  report: IncomeReportRow,
+  settings: IncomeSettingsRow,
+): VoucherEditorRow[] {
   const costCenterCode = costCentreFor(report, settings);
 
   if (report.source === "ZETTLE_FEE") {

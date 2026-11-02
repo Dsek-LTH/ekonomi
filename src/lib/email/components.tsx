@@ -77,8 +77,7 @@ const TAG: Record<TagTone, { color: string; background: string }> = {
 
 // Inter where the reader has it, which is rare, and the system face otherwise.
 // A web font would mean a request to Google from every inbox that opens one.
-const FONT =
-  "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
 // React Email's Text comes with a margin and a line height of its own; every
 // use here sets both, so this is the reset they start from.
@@ -88,8 +87,13 @@ const t = (style: CSSProperties): CSSProperties => ({ margin: 0, fontFamily: FON
 const NUM: CSSProperties = { fontVariantNumeric: "tabular-nums" };
 
 const muted = t({ fontSize: 12, lineHeight: "18px", color: C.muted });
-const box: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: R.panel, borderCollapse: "separate" };
-const ruled = (first: boolean): CSSProperties => (first ? {} : { borderTop: `1px solid ${C.border}` });
+const box: CSSProperties = {
+  border: `1px solid ${C.border}`,
+  borderRadius: R.panel,
+  borderCollapse: "separate",
+};
+const ruled = (first: boolean): CSSProperties =>
+  first ? {} : { borderTop: `1px solid ${C.border}` };
 
 /**
  * A few cells side by side, only as wide as what is in them: the logo beside
@@ -141,25 +145,73 @@ function ExpenseCard({ block }: { block: Extract<Block, { kind: "expense" }> }) 
     <Section style={{ ...box, padding: "16px 20px" }}>
       <Row>
         <Column style={{ verticalAlign: "bottom" }}>
-          {block.reference && <Text style={t({ ...NUM, fontSize: 13, lineHeight: "18px", color: C.muted })}>{block.reference}</Text>}
-          <Text style={t({ fontSize: 16, lineHeight: "22px", fontWeight: 600, color: C.text })}>{block.title}</Text>
+          {block.reference && (
+            <Text style={t({ ...NUM, fontSize: 13, lineHeight: "18px", color: C.muted })}>
+              {block.reference}
+            </Text>
+          )}
+          <Text
+            style={t({
+              fontSize: 16,
+              lineHeight: "22px",
+              fontWeight: 600,
+              color: C.text,
+            })}
+          >
+            {block.title}
+          </Text>
         </Column>
-        <Column align="right" style={{ verticalAlign: "bottom", whiteSpace: "nowrap", paddingLeft: 16 }}>
-          <Text style={t({ ...NUM, fontSize: 20, lineHeight: "26px", fontWeight: 600, color: C.text })}>{block.amount}</Text>
+        <Column
+          align="right"
+          style={{ verticalAlign: "bottom", whiteSpace: "nowrap", paddingLeft: 16 }}
+        >
+          <Text
+            style={t({
+              ...NUM,
+              fontSize: 20,
+              lineHeight: "26px",
+              fontWeight: 600,
+              color: C.text,
+            })}
+          >
+            {block.amount}
+          </Text>
         </Column>
       </Row>
       {rows.length > 0 && <Hr style={{ borderColor: C.border, margin: "12px 0 6px" }} />}
       {rows.map((pair, i) => (
         <Row key={i}>
           {pair.map((f) => (
-            <Column key={f.label} style={{ width: "50%", verticalAlign: "top", padding: "6px 8px 6px 0" }}>
+            <Column
+              key={f.label}
+              style={{ width: "50%", verticalAlign: "top", padding: "6px 8px 6px 0" }}
+            >
               <Text style={muted}>{f.label}</Text>
               {f.tag ? (
                 <Text style={t({ paddingTop: 4, fontSize: 12, lineHeight: "16px" })}>
-                  <span style={{ ...TAG[f.tag], fontWeight: 500, padding: "2px 6px", borderRadius: R.control }}>{f.value}</span>
+                  <span
+                    style={{
+                      ...TAG[f.tag],
+                      fontWeight: 500,
+                      padding: "2px 6px",
+                      borderRadius: R.control,
+                    }}
+                  >
+                    {f.value}
+                  </span>
                 </Text>
               ) : (
-                <Text style={t({ ...NUM, paddingTop: 2, fontSize: 14, lineHeight: "20px", color: C.text })}>{f.value}</Text>
+                <Text
+                  style={t({
+                    ...NUM,
+                    paddingTop: 2,
+                    fontSize: 14,
+                    lineHeight: "20px",
+                    color: C.text,
+                  })}
+                >
+                  {f.value}
+                </Text>
               )}
             </Column>
           ))}
@@ -182,18 +234,50 @@ function Comment({ block }: { block: Extract<Block, { kind: "comment" }> }) {
       <Inline>
         <td
           align="center"
-          style={{ width: 26, height: 26, backgroundColor: C.ink, borderRadius: 13, verticalAlign: "middle" }}
+          style={{
+            width: 26,
+            height: 26,
+            backgroundColor: C.ink,
+            borderRadius: 13,
+            verticalAlign: "middle",
+          }}
         >
-          <Text style={t({ fontSize: 11, lineHeight: "26px", fontWeight: 600, color: "#ffffff" })}>{initials}</Text>
+          <Text
+            style={t({
+              fontSize: 11,
+              lineHeight: "26px",
+              fontWeight: 600,
+              color: "#ffffff",
+            })}
+          >
+            {initials}
+          </Text>
         </td>
         <td style={{ paddingLeft: 8, verticalAlign: "middle" }}>
-          <Text style={t({ fontSize: 13, lineHeight: "18px", fontWeight: 600, color: C.text })}>{block.author}</Text>
+          <Text
+            style={t({
+              fontSize: 13,
+              lineHeight: "18px",
+              fontWeight: 600,
+              color: C.text,
+            })}
+          >
+            {block.author}
+          </Text>
         </td>
         <td style={{ paddingLeft: 8, verticalAlign: "middle" }}>
           <Text style={muted}>{block.when}</Text>
         </td>
       </Inline>
-      <Text style={t({ paddingTop: 8, fontSize: 15, lineHeight: "23px", color: C.text, whiteSpace: "pre-line" })}>
+      <Text
+        style={t({
+          paddingTop: 8,
+          fontSize: 15,
+          lineHeight: "23px",
+          color: C.text,
+          whiteSpace: "pre-line",
+        })}
+      >
         {block.text}
       </Text>
     </Section>
@@ -201,7 +285,11 @@ function Comment({ block }: { block: Extract<Block, { kind: "comment" }> }) {
 }
 
 function More({ text }: { text?: string }) {
-  return text ? <Text style={t({ paddingTop: 8, fontSize: 13, lineHeight: "18px", color: C.muted })}>{text}</Text> : null;
+  return text ? (
+    <Text style={t({ paddingTop: 8, fontSize: 13, lineHeight: "18px", color: C.muted })}>
+      {text}
+    </Text>
+  ) : null;
 }
 
 function TransactionTable({ block }: { block: Extract<Block, { kind: "transactions" }> }) {
@@ -211,25 +299,57 @@ function TransactionTable({ block }: { block: Extract<Block, { kind: "transactio
     <>
       <Section style={box}>
         <Row style={{ backgroundColor: C.surface }}>
-          <Column style={{ padding: "10px 16px", width: 96 }}><Text style={head}>{block.head.date}</Text></Column>
-          <Column style={{ padding: "10px 16px" }}><Text style={head}>{block.head.description}</Text></Column>
-          <Column align="right" style={{ padding: "10px 16px" }}><Text style={head}>{block.head.amount}</Text></Column>
+          <Column style={{ padding: "10px 16px", width: 96 }}>
+            <Text style={head}>{block.head.date}</Text>
+          </Column>
+          <Column style={{ padding: "10px 16px" }}>
+            <Text style={head}>{block.head.description}</Text>
+          </Column>
+          <Column align="right" style={{ padding: "10px 16px" }}>
+            <Text style={head}>{block.head.amount}</Text>
+          </Column>
         </Row>
         {block.rows.map((r, i) => (
           <Row key={i}>
             <Column style={{ ...cell, ...ruled(false), width: 96, whiteSpace: "nowrap" }}>
-              <Text style={t({ ...NUM, fontSize: 14, lineHeight: "20px", color: C.muted })}>{r.date}</Text>
+              <Text
+                style={t({
+                  ...NUM,
+                  fontSize: 14,
+                  lineHeight: "20px",
+                  color: C.muted,
+                })}
+              >
+                {r.date}
+              </Text>
             </Column>
             <Column style={{ ...cell, ...ruled(false) }}>
-              <Text style={t({ fontSize: 14, lineHeight: "20px", color: C.text })}>{r.description}</Text>
+              <Text style={t({ fontSize: 14, lineHeight: "20px", color: C.text })}>
+                {r.description}
+              </Text>
               {r.refund && (
-                <Text style={t({ fontSize: 12, lineHeight: "16px", fontWeight: 500, color: C.success })}>
+                <Text
+                  style={t({
+                    fontSize: 12,
+                    lineHeight: "16px",
+                    fontWeight: 500,
+                    color: C.success,
+                  })}
+                >
                   {block.refundLabel}
                 </Text>
               )}
             </Column>
             <Column align="right" style={{ ...cell, ...ruled(false), whiteSpace: "nowrap" }}>
-              <Text style={t({ ...NUM, fontSize: 14, lineHeight: "20px", fontWeight: 500, color: r.refund ? C.success : C.text })}>
+              <Text
+                style={t({
+                  ...NUM,
+                  fontSize: 14,
+                  lineHeight: "20px",
+                  fontWeight: 500,
+                  color: r.refund ? C.success : C.text,
+                })}
+              >
                 {r.amount}
               </Text>
             </Column>
@@ -254,10 +374,35 @@ function Stats({ block }: { block: Extract<Block, { kind: "stats" }> }) {
         ...(i ? [<Column key={`gap${i}`} style={{ width: `${GAP}%` }} />] : []),
         <Column
           key={s.label}
-          style={{ width, verticalAlign: "top", backgroundColor: SOFT[s.tone], borderRadius: R.panel, padding: "14px 16px" }}
+          style={{
+            width,
+            verticalAlign: "top",
+            backgroundColor: SOFT[s.tone],
+            borderRadius: R.panel,
+            padding: "14px 16px",
+          }}
         >
-          <Text style={t({ ...NUM, fontSize: 24, lineHeight: "30px", fontWeight: 600, color: STRONG[s.tone] })}>{s.value}</Text>
-          <Text style={t({ paddingTop: 4, fontSize: 12, lineHeight: "16px", color: C.muted })}>{s.label}</Text>
+          <Text
+            style={t({
+              ...NUM,
+              fontSize: 24,
+              lineHeight: "30px",
+              fontWeight: 600,
+              color: STRONG[s.tone],
+            })}
+          >
+            {s.value}
+          </Text>
+          <Text
+            style={t({
+              paddingTop: 4,
+              fontSize: 12,
+              lineHeight: "16px",
+              color: C.muted,
+            })}
+          >
+            {s.label}
+          </Text>
         </Column>,
       ])}
     </Row>
@@ -271,18 +416,64 @@ function ItemList({ block }: { block: Extract<Block, { kind: "list" }> }) {
         {block.rows.map((r, i) => (
           <Row key={i}>
             <Column style={{ padding: "12px 16px", ...ruled(i === 0) }}>
-              <Text style={t({ fontSize: 14, lineHeight: "20px", fontWeight: 500, color: C.text })}>{r.title}</Text>
-              {r.sub && <Text style={t({ paddingTop: 2, fontSize: 12, lineHeight: "16px", color: C.muted })}>{r.sub}</Text>}
+              <Text
+                style={t({
+                  fontSize: 14,
+                  lineHeight: "20px",
+                  fontWeight: 500,
+                  color: C.text,
+                })}
+              >
+                {r.title}
+              </Text>
+              {r.sub && (
+                <Text
+                  style={t({
+                    paddingTop: 2,
+                    fontSize: 12,
+                    lineHeight: "16px",
+                    color: C.muted,
+                  })}
+                >
+                  {r.sub}
+                </Text>
+              )}
             </Column>
-            <Column align="right" style={{ padding: "12px 16px", verticalAlign: "middle", whiteSpace: "nowrap", ...ruled(i === 0) }}>
+            <Column
+              align="right"
+              style={{
+                padding: "12px 16px",
+                verticalAlign: "middle",
+                whiteSpace: "nowrap",
+                ...ruled(i === 0),
+              }}
+            >
               {r.pill ? (
                 <Text style={t({ fontSize: 12, lineHeight: "16px" })}>
-                  <span style={{ backgroundColor: C.warningSoft, color: C.warning, fontWeight: 500, padding: "2px 6px", borderRadius: R.control }}>
+                  <span
+                    style={{
+                      backgroundColor: C.warningSoft,
+                      color: C.warning,
+                      fontWeight: 500,
+                      padding: "2px 6px",
+                      borderRadius: R.control,
+                    }}
+                  >
                     {r.pill}
                   </span>
                 </Text>
               ) : r.amount ? (
-                <Text style={t({ ...NUM, fontSize: 14, lineHeight: "20px", fontWeight: 500, color: C.text })}>{r.amount}</Text>
+                <Text
+                  style={t({
+                    ...NUM,
+                    fontSize: 14,
+                    lineHeight: "20px",
+                    fontWeight: 500,
+                    color: C.text,
+                  })}
+                >
+                  {r.amount}
+                </Text>
               ) : null}
             </Column>
           </Row>
@@ -296,8 +487,14 @@ function ItemList({ block }: { block: Extract<Block, { kind: "list" }> }) {
 function DigestSection({ block }: { block: Extract<Block, { kind: "section" }> }) {
   return (
     <Section>
-      <Text style={t({ fontSize: 16, lineHeight: "22px", fontWeight: 600, color: C.text })}>{block.title}</Text>
-      {block.hint && <Text style={t({ paddingTop: 4, fontSize: 14, lineHeight: "21px", color: C.muted })}>{block.hint}</Text>}
+      <Text style={t({ fontSize: 16, lineHeight: "22px", fontWeight: 600, color: C.text })}>
+        {block.title}
+      </Text>
+      {block.hint && (
+        <Text style={t({ paddingTop: 4, fontSize: 14, lineHeight: "21px", color: C.muted })}>
+          {block.hint}
+        </Text>
+      )}
       {block.blocks.map((inner, i) => (
         <Section key={i} style={{ paddingTop: 12 }}>
           <BlockView block={inner} />
@@ -305,7 +502,10 @@ function DigestSection({ block }: { block: Extract<Block, { kind: "section" }> }
       ))}
       {block.link && (
         <Text style={t({ paddingTop: 12, fontSize: 14, lineHeight: "20px" })}>
-          <A href={block.link.url} style={{ color: C.ink, fontWeight: 500, textDecoration: "none" }}>
+          <A
+            href={block.link.url}
+            style={{ color: C.ink, fontWeight: 500, textDecoration: "none" }}
+          >
             {block.link.label} &rarr;
           </A>
         </Text>
@@ -355,7 +555,14 @@ export function EmailDocument({
         <title>{e.subject}</title>
       </Head>
       <Preview>{e.intro ?? e.heading}</Preview>
-      <Body style={{ margin: 0, padding: "32px 16px", backgroundColor: C.ground, fontFamily: FONT }}>
+      <Body
+        style={{
+          margin: 0,
+          padding: "32px 16px",
+          backgroundColor: C.ground,
+          fontFamily: FONT,
+        }}
+      >
         <Container style={{ maxWidth: 560, width: "100%" }}>
           <Section
             style={{
@@ -366,18 +573,42 @@ export function EmailDocument({
             }}
           >
             <Row>
-              <Column style={{ paddingBottom: 20, borderBottom: `1px solid ${C.border}`, verticalAlign: "middle" }}>
+              <Column
+                style={{
+                  paddingBottom: 20,
+                  borderBottom: `1px solid ${C.border}`,
+                  verticalAlign: "middle",
+                }}
+              >
                 <Inline>
                   <td style={{ verticalAlign: "middle" }}>
                     <Img src={logoSrc} alt="" width="21" height="28" style={{ display: "block" }} />
                   </td>
                   <td style={{ paddingLeft: 10, verticalAlign: "middle" }}>
-                    <Text style={t({ fontSize: 15, lineHeight: "20px", fontWeight: 600, color: C.text })}>{e.brand.name}</Text>
+                    <Text
+                      style={t({
+                        fontSize: 15,
+                        lineHeight: "20px",
+                        fontWeight: 600,
+                        color: C.text,
+                      })}
+                    >
+                      {e.brand.name}
+                    </Text>
                   </td>
                 </Inline>
               </Column>
-              <Column align="right" style={{ paddingBottom: 20, borderBottom: `1px solid ${C.border}`, verticalAlign: "middle" }}>
-                <Text style={t({ fontSize: 13, lineHeight: "18px", color: C.muted })}>{e.brand.org}</Text>
+              <Column
+                align="right"
+                style={{
+                  paddingBottom: 20,
+                  borderBottom: `1px solid ${C.border}`,
+                  verticalAlign: "middle",
+                }}
+              >
+                <Text style={t({ fontSize: 13, lineHeight: "18px", color: C.muted })}>
+                  {e.brand.org}
+                </Text>
               </Column>
             </Row>
 
@@ -392,14 +623,36 @@ export function EmailDocument({
             >
               {e.eyebrow}
             </Text>
-            <Heading as="h1" style={t({ paddingTop: 4, fontSize: 22, lineHeight: "28px", fontWeight: 600, letterSpacing: "-0.01em", color: C.text })}>
+            <Heading
+              as="h1"
+              style={t({
+                paddingTop: 4,
+                fontSize: 22,
+                lineHeight: "28px",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: C.text,
+              })}
+            >
               {e.heading}
             </Heading>
-            {e.intro && <Text style={t({ paddingTop: 8, fontSize: 15, lineHeight: "23px", color: C.text })}>{e.intro}</Text>}
+            {e.intro && (
+              <Text
+                style={t({
+                  paddingTop: 8,
+                  fontSize: 15,
+                  lineHeight: "23px",
+                  color: C.text,
+                })}
+              >
+                {e.intro}
+              </Text>
+            )}
 
             {e.blocks.map((b, i) => {
               // Sections in the digest are set apart by a rule; anything else by space.
-              const ruleBefore = b.kind === "section" && i > 0 && e.blocks[i - 1].kind === "section";
+              const ruleBefore =
+                b.kind === "section" && i > 0 && e.blocks[i - 1].kind === "section";
               return (
                 <Section key={i} style={{ paddingTop: b.kind === "section" ? 24 : 20 }}>
                   {ruleBefore && <Hr style={{ borderColor: C.border, margin: "0 0 24px" }} />}
@@ -411,7 +664,11 @@ export function EmailDocument({
             {e.action && (
               <Section style={{ paddingTop: 20 }}>
                 <ActionButton link={e.action} />
-                {e.orOpen && <Text style={{ ...muted, paddingTop: 10, wordBreak: "break-all" }}>{e.orOpen}</Text>}
+                {e.orOpen && (
+                  <Text style={{ ...muted, paddingTop: 10, wordBreak: "break-all" }}>
+                    {e.orOpen}
+                  </Text>
+                )}
               </Section>
             )}
           </Section>

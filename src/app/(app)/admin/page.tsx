@@ -7,6 +7,9 @@ import { IconChevronRight } from "@/components/ui/icons";
 import { SETTINGS_SECTIONS } from "@/components/shell/settings-sections";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { requirePage } from "@/lib/server/current-user";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("settings");
 
 // Where Inställningar opens.
 //
@@ -44,9 +47,7 @@ export default async function AdminPage() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">{tNav(s.label)}</span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  {t(`section.${s.blurb}`)}
-                </span>
+                <span className="mt-0.5 block text-xs text-muted">{t(`section.${s.blurb}`)}</span>
               </span>
               <IconChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-faint" />
             </Link>

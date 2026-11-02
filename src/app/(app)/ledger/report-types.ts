@@ -47,7 +47,6 @@ export interface LedgerYear {
   toDate: string;
 }
 
-
 export interface BudgetOption {
   id: string;
   year: number; // its own, not necessarily the year being reported on

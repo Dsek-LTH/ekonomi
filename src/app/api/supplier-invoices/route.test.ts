@@ -44,7 +44,9 @@ vi.mock("@/lib/server/invoice-documents", () => ({
 }));
 vi.mock("@/lib/server/invoice-allocation", () => ({ planAllocation: h.plan }));
 vi.mock("@/lib/server/notify", () => ({ notify: h.notify, deliverSoon: () => {} }));
-vi.mock("@/lib/api/supplier-invoice-access", () => ({ loadInboxDocumentFor: async () => h.access }));
+vi.mock("@/lib/api/supplier-invoice-access", () => ({
+  loadInboxDocumentFor: async () => h.access,
+}));
 
 const { POST } = await import("./route");
 const call = (body: object) =>
@@ -68,7 +70,13 @@ const doc = {
   resultUnit: { id: "sex", name: "Sexmästeriet" },
   inboundMail: null,
 };
-const allowed = { canAllocate: true, canDecline: true, canAssign: false, canDelete: false, canSee: true };
+const allowed = {
+  canAllocate: true,
+  canDecline: true,
+  canAssign: false,
+  canDelete: false,
+  canSee: true,
+};
 const body = {
   documentId: "d1",
   rows: [{ costCenterCode: "SEX1" }],
@@ -79,7 +87,14 @@ const body = {
 
 const row = (code: string, signed: boolean) => ({
   code,
-  data: { costCenterId: code, amount: null, comment: null, position: 0, approvedById: signed ? "maja" : null, approvedAt: null },
+  data: {
+    costCenterId: code,
+    amount: null,
+    comment: null,
+    position: 0,
+    approvedById: signed ? "maja" : null,
+    approvedAt: null,
+  },
 });
 
 beforeEach(() => {
@@ -95,7 +110,12 @@ beforeEach(() => {
 
 describe("making an invoice by fördelning a document", () => {
   it("is refused for a document no unit has been given", async () => {
-    h.access = { ok: true, doc: { ...doc, resultUnitId: null, resultUnit: null }, viewer: {}, can: { ...allowed, canAllocate: false } };
+    h.access = {
+      ok: true,
+      doc: { ...doc, resultUnitId: null, resultUnit: null },
+      viewer: {},
+      can: { ...allowed, canAllocate: false },
+    };
     const res = await call(body);
     expect(res.status).toBe(409);
     expect((await res.json()).error).toBe("supplierInvoice.documentNotAssigned");

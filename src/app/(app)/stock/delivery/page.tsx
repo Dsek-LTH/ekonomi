@@ -3,6 +3,9 @@ import { canManageStock } from "@/lib/domain/permissions";
 import { getStockLevels } from "@/lib/data/stock";
 import { today } from "@/lib/domain/date";
 import DeliveryClient from "./delivery-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockDelivery");
 
 // Gated on managing rather than viewing, unlike the rest of the stock screens:
 // this page is nothing but a way of writing to the log, so somebody who may

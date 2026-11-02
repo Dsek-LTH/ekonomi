@@ -147,8 +147,7 @@ const day = (d: Date): string => stockholmDay.format(d);
  * left at the checkout that carried it out of the door, and counting it here
  * as well would charge the section twice for one bottle.
  */
-const destroyed = (kind: StockEntryKind): boolean =>
-  kind === "WASTE" || kind === "SPOILAGE";
+const destroyed = (kind: StockEntryKind): boolean => kind === "WASTE" || kind === "SPOILAGE";
 
 /**
  * What a movement takes off the shelf for good, as a positive figure.
@@ -163,14 +162,8 @@ const destroyed = (kind: StockEntryKind): boolean =>
  * different question, "how much of this left the shelf", and a bottle on the
  * floor left it.
  */
-const gone = (
-  kind: StockEntryKind,
-  valueDeltaOre: number,
-  withSpill: boolean,
-): number =>
-  kind === "CHECKOUT" || kind === "RETURN" || (withSpill && destroyed(kind))
-    ? -valueDeltaOre
-    : 0;
+const gone = (kind: StockEntryKind, valueDeltaOre: number, withSpill: boolean): number =>
+  kind === "CHECKOUT" || kind === "RETURN" || (withSpill && destroyed(kind)) ? -valueDeltaOre : 0;
 
 /**
  * Everything the statistics page shows, in two queries.

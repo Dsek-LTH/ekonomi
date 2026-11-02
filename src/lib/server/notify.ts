@@ -41,7 +41,10 @@ export async function notify(
   kind: NotificationKind,
   recipientIds: Iterable<string>,
   email: Email | ((recipient: { id: string; name: string }) => Email),
-  opts: { exclude?: Iterable<string | null | undefined>; dedupeKey?: (id: string) => string } = {},
+  opts: {
+    exclude?: Iterable<string | null | undefined>;
+    dedupeKey?: (id: string) => string;
+  } = {},
 ): Promise<number> {
   const excluded = new Set(opts.exclude ?? []);
   const ids = [...new Set(recipientIds)].filter((id) => !excluded.has(id));
@@ -221,7 +224,5 @@ export async function deliverPending(): Promise<{ sent: number; failed: number }
  * that may have written to it; a sender with nothing to send costs one query.
  */
 export function deliverSoon(): void {
-  after(() =>
-    deliverPending().catch((err) => console.error("[mail] utskicket misslyckades", err)),
-  );
+  after(() => deliverPending().catch((err) => console.error("[mail] utskicket misslyckades", err)));
 }

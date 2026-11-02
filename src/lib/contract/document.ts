@@ -34,12 +34,10 @@ export type DocumentFailure =
   | { reason: "storeFailed" };
 
 export type RenderResult =
-  | { ok: true; bytes: Uint8Array; filename: string }
-  | ({ ok: false } & DocumentFailure);
+  { ok: true; bytes: Uint8Array; filename: string } | ({ ok: false } & DocumentFailure);
 
 export type StoreResult =
-  | { ok: true; fileId: string; filename: string }
-  | ({ ok: false } & DocumentFailure);
+  { ok: true; fileId: string; filename: string } | ({ ok: false } & DocumentFailure);
 
 /** An ISO day, which is what a Swedish contract states a date as. Null in
  *  the live preview, where the period may not be chosen yet. */
@@ -239,7 +237,11 @@ export async function renderRentalPreview(draft: RentalDraft): Promise<RenderRes
 
   const data = buildRentalData(contract, SECTION);
   try {
-    return { ok: true, bytes: await renderRentalContract(data), filename: filenameFor(contract) };
+    return {
+      ok: true,
+      bytes: await renderRentalContract(data),
+      filename: filenameFor(contract),
+    };
   } catch (e) {
     return {
       ok: false,

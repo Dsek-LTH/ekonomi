@@ -68,8 +68,15 @@ export function InvoicesClient({
     () =>
       INVOICE_TABS.map((value) => {
         const holds = invoiceTabHolds(value, fiscal);
-        const waiting = value === "all" ? 0 : rows.filter((r) => r.waitsOnViewer && holds(r)).length;
-        return { value, label: t(`tab.${value}`), predicate: holds, badge: waiting || undefined, waiting: true };
+        const waiting =
+          value === "all" ? 0 : rows.filter((r) => r.waitsOnViewer && holds(r)).length;
+        return {
+          value,
+          label: t(`tab.${value}`),
+          predicate: holds,
+          badge: waiting || undefined,
+          waiting: true,
+        };
       }),
     [t, fiscal, rows],
   );
@@ -93,14 +100,22 @@ export function InvoicesClient({
       key: "description",
       header: t("col.description"),
       mobile: "title",
-      value: (r) => [r.description ?? "", r.supplierName ?? "", r.invoiceNumber ?? "", r.receivedByName ?? ""].join(" "),
+      value: (r) =>
+        [
+          r.description ?? "",
+          r.supplierName ?? "",
+          r.invoiceNumber ?? "",
+          r.receivedByName ?? "",
+        ].join(" "),
       sortable: true,
       searchable: true,
       cell: (r) =>
         r.description ? (
           <span className="block min-w-0">
             <span className="block truncate font-medium">{r.description}</span>
-            {r.supplierName && <span className="block truncate text-xs text-muted">{r.supplierName}</span>}
+            {r.supplierName && (
+              <span className="block truncate text-xs text-muted">{r.supplierName}</span>
+            )}
           </span>
         ) : (
           <span className="block truncate text-muted">

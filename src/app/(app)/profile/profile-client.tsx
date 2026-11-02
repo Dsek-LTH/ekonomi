@@ -77,7 +77,14 @@ export function ProfileClient({
 
   return (
     <PageShell title={tNav("profile")} width="content">
-      <ProfileHero userId={userId} name={name} email={email} roles={roles} score={score} hasAvatar={hasAvatar} />
+      <ProfileHero
+        userId={userId}
+        name={name}
+        email={email}
+        roles={roles}
+        score={score}
+        hasAvatar={hasAvatar}
+      />
 
       {/* The forms on the left, where the eye goes after the hero; the small
           things beside them. One column on a phone, in the same order, so the
@@ -154,13 +161,17 @@ export function ProfileClient({
                   title={
                     session
                       ? session.fortnoxUserName
-                        ? tProfile("signedInAs", { name: session.fortnoxUserName })
+                        ? tProfile("signedInAs", {
+                            name: session.fortnoxUserName,
+                          })
                         : tProfile("signedIn")
                       : tProfile("notSignedIn")
                   }
                   detail={
                     session
-                      ? tProfile("validUntil", { time: dateTime(session.expiresAt) })
+                      ? tProfile("validUntil", {
+                          time: dateTime(session.expiresAt),
+                        })
                       : tProfile("fortnoxRequired")
                   }
                 />
@@ -296,7 +307,11 @@ function ProfileHero({
             ))}
           </ul>
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm sm:justify-start">
-            <button type="button" onClick={pick} className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
+            <button
+              type="button"
+              onClick={pick}
+              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+            >
               {hasAvatar ? tProfile("avatar.change") : tProfile("avatar.upload")}
             </button>
             {hasAvatar && (
@@ -313,11 +328,18 @@ function ProfileHero({
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-3 sm:items-end">
-          <a href="#betyg" className="flex flex-col items-center gap-1 rounded-control px-2 py-1 transition-colors hover:bg-hover sm:items-end">
+          <a
+            href="#betyg"
+            className="flex flex-col items-center gap-1 rounded-control px-2 py-1 transition-colors hover:bg-hover sm:items-end"
+          >
             <span className="text-xs text-muted">{tScore("title")}</span>
             <StarRating value={score.stars} />
           </a>
-          <Button variant="dangerOutline" size="sm" onClick={() => signOut({ callbackUrl: "/login" })}>
+          <Button
+            variant="dangerOutline"
+            size="sm"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+          >
             {t("signOut")}
           </Button>
         </div>

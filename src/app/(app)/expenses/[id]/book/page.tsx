@@ -6,12 +6,11 @@ import { getActiveProjects } from "@/lib/data/projects";
 import { isRevenueAccount } from "@/lib/domain/voucher";
 import { getExpense } from "@/lib/data/expenses";
 import BookExpenseClient from "./book-client";
+import { titled } from "@/lib/server/page-title";
 
-export default async function BookExpensePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export const generateMetadata = titled("bookExpense");
+
+export default async function BookExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // Writing a verifikation is bookkeeping's alone. The same check
   // POST /api/expenses/[id]/book makes. The client renders an empty state for
@@ -23,10 +22,7 @@ export default async function BookExpensePage({
   // must still carry whatever this voucher already points at, otherwise
   // amending a voucher booked against a since-retired account would fail
   // validation with no way to fix it. So the expense has to load first.
-  const [expense, settings] = await Promise.all([
-    getExpense(id, user),
-    getBookkeepingSettings(),
-  ]);
+  const [expense, settings] = await Promise.all([getExpense(id, user), getBookkeepingSettings()]);
 
   const lines = expense?.verification?.lines ?? [];
   const [costCenters, accounts, projects] = await Promise.all([

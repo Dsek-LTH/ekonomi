@@ -68,10 +68,7 @@ export function contractScopeWhere(scope: ContractScope): Prisma.ContractWhereIn
 }
 
 /** Whether one already-fetched contract falls inside the scope. */
-export function scopeIncludes(
-  scope: ContractScope,
-  contract: { rental: unknown | null },
-): boolean {
+export function scopeIncludes(scope: ContractScope, contract: { rental: unknown | null }): boolean {
   if (scope.kind === "everything") return true;
   if (scope.kind === "rentalsOnly") return contract.rental != null;
   return false;

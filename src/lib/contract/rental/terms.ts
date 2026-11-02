@@ -66,10 +66,11 @@ export interface TermsSection {
 /** Shorthands, so the clauses below read as their text rather than as JSON. */
 const p = (text: string): TermsBlock => ({ kind: "text", text });
 const list = (...items: string[]): TermsBlock => ({ kind: "list", items });
-const table = (
-  head: [string, string],
-  ...rows: [string, string][]
-): TermsBlock => ({ kind: "table", head, rows });
+const table = (head: [string, string], ...rows: [string, string][]): TermsBlock => ({
+  kind: "table",
+  head,
+  rows,
+});
 
 /**
  * The clauses, in the order they are read.
@@ -87,12 +88,18 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
   {
     heading: "Vad avtalet gäller",
     body: [
-      p("Uthyraren hyr ut den utrustning som anges ovan till hyrestagaren, för den period, till den hyra och för det ändamål som anges ovan. Villkoren nedan gäller om parterna inte skriftligen har avtalat något annat."),
-      p("Utrustningen är uthyrarens egendom. Utan uthyrarens skriftliga medgivande får hyrestagaren inte låna ut, hyra ut, sälja eller pantsätta den, använda den för annat ändamål än det som anges ovan eller föra den utomlands."),
+      p(
+        "Uthyraren hyr ut den utrustning som anges ovan till hyrestagaren, för den period, till den hyra och för det ändamål som anges ovan. Villkoren nedan gäller om parterna inte skriftligen har avtalat något annat.",
+      ),
+      p(
+        "Utrustningen är uthyrarens egendom. Utan uthyrarens skriftliga medgivande får hyrestagaren inte låna ut, hyra ut, sälja eller pantsätta den, använda den för annat ändamål än det som anges ovan eller föra den utomlands.",
+      ),
       // The renter is often another section or förening, and whoever turns up to
       // sign is not always somebody who can bind it. This puts it in writing, so
       // if they could not, it is plain who said they could.
-      p("Den som undertecknar avtalet för en organisation intygar att denne har rätt att företräda organisationen."),
+      p(
+        "Den som undertecknar avtalet för en organisation intygar att denne har rätt att företräda organisationen.",
+      ),
     ],
   },
   {
@@ -105,7 +112,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // "Annan ersättning" so that interest reaches a damage or late invoice
       // too. A damage invoice with no interest is the invoice that is still
       // open at the next årsmöte.
-      p("Hyran är den som anges ovan, med eventuell rabatt avräknad. Hyran och annan ersättning enligt avtalet faktureras och ska betalas senast det förfallodatum som anges på fakturan. Vid försenad betalning har uthyraren rätt till dröjsmålsränta enligt räntelagen samt ersättning för påminnelse- och inkassokostnader enligt lag."),
+      p(
+        "Hyran är den som anges ovan, med eventuell rabatt avräknad. Hyran och annan ersättning enligt avtalet faktureras och ska betalas senast det förfallodatum som anges på fakturan. Vid försenad betalning har uthyraren rätt till dröjsmålsränta enligt räntelagen samt ersättning för påminnelse- och inkassokostnader enligt lag.",
+      ),
     ],
   },
   {
@@ -114,7 +123,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // The section's own premises unless something else was agreed, because
       // nothing on the document records a place, and "wherever was agreed" with
       // nothing written down is a place nobody can point to afterwards.
-      p("Utrustningen hämtas ut och återlämnas på de datum som anges ovan, i uthyrarens lokaler om inget annat har avtalats skriftligen. Den ska återlämnas rengjord och i samma skick och antal som vid uthämtningen, bortsett från normalt slitage."),
+      p(
+        "Utrustningen hämtas ut och återlämnas på de datum som anges ovan, i uthyrarens lokaler om inget annat har avtalats skriftligen. Den ska återlämnas rengjord och i samma skick och antal som vid uthämtningen, bortsett från normalt slitage.",
+      ),
       // The pickup note is only worth something if its silence means
       // something. Without the last sentence, "the scratch was already there" is
       // an argument; with it, the note settles the question.
@@ -125,7 +136,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       //
       // "Synliga", because a hidden fault cannot be noted by anybody, and a
       // fault that was already inside the gear at pickup is § 6's.
-      p("Utrustningens skick antecknas vid uthämtningen och vid återlämningen. Hyrestagaren ska vid uthämtningen påtala synliga brister så att de antecknas. Synliga brister som inte har antecknats vid uthämtningen anses inte ha funnits då."),
+      p(
+        "Utrustningens skick antecknas vid uthämtningen och vid återlämningen. Hyrestagaren ska vid uthämtningen påtala synliga brister så att de antecknas. Synliga brister som inte har antecknats vid uthämtningen anses inte ha funnits då.",
+      ),
       // Handing the gear back is not the same event as somebody plugging it in
       // and finding it works, so the section gets five working days to find
       // damage, and what it finds then is presumed to be the renter's.
@@ -134,7 +147,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // section claim hidden damage for two weeks and no longer, which only
       // took away a right general law already gives it. Past the five days the
       // section can still claim, it just has to prove it.
-      p("Uthyraren kontrollerar utrustningen, elektronik även i funktion, inom fem arbetsdagar från återlämningen. Skada som uthyraren meddelar hyrestagaren inom den tiden anses ha uppkommit under hyrestiden, om inte hyrestagaren visar något annat."),
+      p(
+        "Uthyraren kontrollerar utrustningen, elektronik även i funktion, inom fem arbetsdagar från återlämningen. Skada som uthyraren meddelar hyrestagaren inom den tiden anses ha uppkommit under hyrestiden, om inte hyrestagaren visar något annat.",
+      ),
     ],
   },
   {
@@ -151,10 +166,14 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       //
       // This assumes the à-pris on the page is for the whole period. If it is a
       // price per day, the fee here comes out divided by the days a second time.
-      p("Återlämnas utrustningen för sent betalar hyrestagaren en förseningsavgift för varje dag efter återlämningsdagen till och med den dag utrustningen återlämnas. Avgiften per dag är hyran ovan beräknad utan rabatt, delad med antalet hyresdagar. Både uthämtningsdagen och återlämningsdagen räknas som hyresdagar. Hyrestagaren ersätter dessutom skada som förseningen orsakar utöver avgiften, till exempel kostnaden för att hyra in motsvarande utrustning till någon som redan har bokat den."),
+      p(
+        "Återlämnas utrustningen för sent betalar hyrestagaren en förseningsavgift för varje dag efter återlämningsdagen till och med den dag utrustningen återlämnas. Avgiften per dag är hyran ovan beräknad utan rabatt, delad med antalet hyresdagar. Både uthämtningsdagen och återlämningsdagen räknas som hyresdagar. Hyrestagaren ersätter dessutom skada som förseningen orsakar utöver avgiften, till exempel kostnaden för att hyra in motsvarande utrustning till någon som redan har bokat den.",
+      ),
       // Seven days, so that late and lost do not stay the same argument for
       // ever. The fee already run up is not cancelled by the switch.
-      p("Har utrustningen inte återlämnats inom sju dagar efter återlämningsdagen får uthyraren behandla den som förlorad och kräva ersättning enligt § 5. Förseningsavgiften fram till dess ska ändå betalas."),
+      p(
+        "Har utrustningen inte återlämnats inom sju dagar efter återlämningsdagen får uthyraren behandla den som förlorad och kräva ersättning enligt § 5. Förseningsavgiften fram till dess ska ändå betalas.",
+      ),
     ],
   },
   {
@@ -167,7 +186,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // an unlocked room or out in the rain is exactly what "varsamt" asks
       // about, and a list only invites the reading that whatever is not on it
       // is allowed.
-      p("Hyrestagaren ansvarar för utrustningen, även under transport, från uthämtningen till dess att den har återlämnats. Hyrestagaren ska hantera och förvara den varsamt och följa de instruktioner som lämnas vid uthämtningen."),
+      p(
+        "Hyrestagaren ansvarar för utrustningen, även under transport, från uthämtningen till dess att den har återlämnats. Hyrestagaren ska hantera och förvara den varsamt och följa de instruktioner som lämnas vid uthämtningen.",
+      ),
       // Everything is the renter's, with named exceptions, rather than a rule
       // for each kind of damage. A speaker that simply stops is the renter's
       // unless it is a fault in the gear itself (§ 6), and the renter shows that,
@@ -182,13 +203,17 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // and a theft at an open party is exactly the case that should not be
       // excused, so it is "inbrott i låst lokal" now. "Kunnat förhindra" carries
       // the care requirement, and "dessa personer" keeps guests out of it.
-      p("Under den tiden ersätter hyrestagaren all skada på och förlust av utrustningen, även när den orsakas av gäster, publik, artister, leverantörer eller andra som hyrestagaren har bjudit in eller ansvarar för, och även när orsaken är okänd. Hyrestagaren ersätter dock inte:"),
+      p(
+        "Under den tiden ersätter hyrestagaren all skada på och förlust av utrustningen, även när den orsakas av gäster, publik, artister, leverantörer eller andra som hyrestagaren har bjudit in eller ansvarar för, och även när orsaken är okänd. Hyrestagaren ersätter dock inte:",
+      ),
       list(
         "normalt slitage,",
         "fel enligt § 6,",
         "skada eller förlust som hyrestagaren visar har orsakats av en händelse som varken hyrestagaren eller någon av dessa personer har orsakat eller hade kunnat förhindra, till exempel inbrott i låst lokal, brand eller åsknedslag.",
       ),
-      p("Skadas, förkommer eller stjäls utrustningen ska hyrestagaren genast meddela uthyraren. Stöld ska polisanmälas och en kopia av anmälan lämnas till uthyraren."),
+      p(
+        "Skadas, förkommer eller stjäls utrustningen ska hyrestagaren genast meddela uthyraren. Stöld ska polisanmälas och en kopia av anmälan lämnas till uthyraren.",
+      ),
       // As a table because it is three cases with three answers, which is the
       // shape a reader is looking for here. The accessories sentence is for
       // cables and cases, which are rarely lines of their own and are the
@@ -196,8 +221,14 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       p("Ersättningen beräknas så här:"),
       table(
         ["Vad som hänt", "Vad hyrestagaren ersätter"],
-        ["Skada som går att reparera", "Faktisk reparationskostnad, inklusive arbete, reservdelar och frakt, dock högst återanskaffningsvärdet"],
-        ["Förlust, stöld eller skada som inte går att reparera", "Återanskaffningsvärdet som anges ovan. Tillbehör som inte anges ovan, till exempel kablar och väskor, ersätts med vad motsvarande nya kostar."],
+        [
+          "Skada som går att reparera",
+          "Faktisk reparationskostnad, inklusive arbete, reservdelar och frakt, dock högst återanskaffningsvärdet",
+        ],
+        [
+          "Förlust, stöld eller skada som inte går att reparera",
+          "Återanskaffningsvärdet som anges ovan. Tillbehör som inte anges ovan, till exempel kablar och väskor, ersätts med vad motsvarande nya kostar.",
+        ],
         ["Utrustning som inte återlämnats rengjord", "Kostnaden för rengöringen"],
       ),
     ],
@@ -212,18 +243,24 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // Only faults in the gear itself, and "i motsvarande mån" rather than "for
       // that time", since most rentals are one evening and a mixer that loses a
       // channel is not a mixer that cannot be used at all.
-      p("Har utrustningen ett fel som beror på utrustningen själv och inte på hur den har hanterats, till exempel ett dolt tillverkningsfel, ska hyrestagaren meddela uthyraren utan dröjsmål. Det är hyrestagaren som ska visa att felet är av det slaget. Uthyraren får avhjälpa felet eller byta ut utrustningen mot likvärdig. Går inte det, och kan utrustningen inte användas för sitt ändamål, sätts hyran ned i motsvarande mån."),
+      p(
+        "Har utrustningen ett fel som beror på utrustningen själv och inte på hur den har hanterats, till exempel ett dolt tillverkningsfel, ska hyrestagaren meddela uthyraren utan dröjsmål. Det är hyrestagaren som ska visa att felet är av det slaget. Uthyraren får avhjälpa felet eller byta ut utrustningen mot likvärdig. Går inte det, och kan utrustningen inte användas för sitt ändamål, sätts hyran ned i motsvarande mån.",
+      ),
       // The event is the renter's, and so is anybody who comes after the
       // section over it: the guest who trips on a cable, the venue whose floor
       // was scratched. Claims that come from a fault in the gear itself are not
       // in "hur utrustningen har använts", and stay the section's.
-      p("Hyrestagaren ansvarar för det arrangemang där utrustningen används, inklusive tillstånd och säkerheten på platsen. Riktar någon annan krav mot uthyraren som beror på arrangemanget eller på hur utrustningen har använts, ersätter hyrestagaren uthyraren för det."),
+      p(
+        "Hyrestagaren ansvarar för det arrangemang där utrustningen används, inklusive tillstånd och säkerheten på platsen. Riktar någon annan krav mot uthyraren som beror på arrangemanget eller på hur utrustningen har använts, ersätter hyrestagaren uthyraren för det.",
+      ),
       // A cap, which the section had none of. Without one a faulty amplifier
       // at somebody's gasque could cost the section more than it has ever
       // earned from renting. Capped at the rent, which is zero on a free loan,
       // and that is why the exception is there: a cap that also covered gross
       // negligence would be set aside, and take the rest of the sentence with it.
-      p("Uthyraren ansvarar inte för indirekt skada, som utebliven vinst eller kostnader för arrangemanget. Uthyrarens ansvar i övrigt är begränsat till hyran. Begränsningarna gäller inte om uthyraren har orsakat skadan med uppsåt eller genom grov vårdslöshet."),
+      p(
+        "Uthyraren ansvarar inte för indirekt skada, som utebliven vinst eller kostnader för arrangemanget. Uthyrarens ansvar i övrigt är begränsat till hyran. Begränsningarna gäller inte om uthyraren har orsakat skadan med uppsåt eller genom grov vårdslöshet.",
+      ),
     ],
   },
   {
@@ -231,7 +268,9 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
     body: [
       // For risks that are nobody's breach, a storm coming in over an outdoor
       // event. Careless handling is a breach, and that is the paragraph after.
-      p("Uthyraren får avbryta användningen om förhållandena enligt uthyrarens bedömning utgör en risk för utrustningen eller för människor."),
+      p(
+        "Uthyraren får avbryta användningen om förhållandena enligt uthyrarens bedömning utgör en risk för utrustningen eller för människor.",
+      ),
       // The examples are the breaches that actually happen, and "väsentligt"
       // keeps a late invoice by a day from being one.
       //
@@ -239,10 +278,14 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // go and take it, which would read as leave to walk into somebody's
       // premises. The day after termination becomes the return date, so being
       // late, and being lost after seven days, run through § 4 unchanged.
-      p("Uthyraren får häva avtalet med omedelbar verkan om hyrestagaren väsentligt bryter mot det, till exempel genom att hantera utrustningen vårdslöst, använda den i strid med § 1 eller inte betala i tid. Hyrestagaren ska då genast återlämna utrustningen och ersätta uthyrarens kostnad för att hämta den. Som återlämningsdag enligt § 4 räknas dagen efter hävningen."),
+      p(
+        "Uthyraren får häva avtalet med omedelbar verkan om hyrestagaren väsentligt bryter mot det, till exempel genom att hantera utrustningen vårdslöst, använda den i strid med § 1 eller inte betala i tid. Hyrestagaren ska då genast återlämna utrustningen och ersätta uthyrarens kostnad för att hämta den. Som återlämningsdag enligt § 4 räknas dagen efter hävningen.",
+      ),
       // A renter who breaks the contract badly enough to have it ended should
       // not get part of the rent back for it.
-      p("Hävningen sätter inte ned hyran. Hyrestagaren ersätter dessutom annan skada som avtalsbrottet orsakar uthyraren."),
+      p(
+        "Hävningen sätter inte ned hyran. Hyrestagaren ersätter dessutom annan skada som avtalsbrottet orsakar uthyraren.",
+      ),
     ],
   },
   {
@@ -251,18 +294,24 @@ export const RENTAL_TERMS: readonly TermsSection[] = [
       // Weather is not among the examples: a renter whose speakers stood out in
       // a storm must not be able to call it force majeure. Nor is paying, which
       // an event being cancelled never actually stops anybody doing.
-      p("Part är inte skyldig att fullgöra ett åtagande som hindras av en omständighet utanför partens kontroll, till exempel myndighetsbeslut, krig, pandemi, strejk, omfattande elavbrott eller naturkatastrof. Parten ska genast meddela den andra parten. Befrielsen omfattar inte betalningsskyldighet eller hyrestagarens ansvar för utrustningen enligt § 5."),
+      p(
+        "Part är inte skyldig att fullgöra ett åtagande som hindras av en omständighet utanför partens kontroll, till exempel myndighetsbeslut, krig, pandemi, strejk, omfattande elavbrott eller naturkatastrof. Parten ska genast meddela den andra parten. Befrielsen omfattar inte betalningsskyldighet eller hyrestagarens ansvar för utrustningen enligt § 5.",
+      ),
       // Only before pickup. It used to be "after a week", which on a weekend
       // rental is after the rental is over, and it refunded rent for the time
       // gear "could not be used", which a cancelled event would have claimed
       // for the whole period. Once the gear is out, the rent stands.
-      p("Kan uthyrningen av ett sådant skäl inte genomföras får vardera parten säga upp avtalet utan kostnad, så länge utrustningen inte har hämtats ut."),
+      p(
+        "Kan uthyrningen av ett sådant skäl inte genomföras får vardera parten säga upp avtalet utan kostnad, så länge utrustningen inte har hämtats ut.",
+      ),
     ],
   },
   {
     heading: "Tillämplig lag och tvist",
     body: [
-      p("Svensk lag gäller för detta avtal. Tvist som inte kan lösas i samförstånd prövas av svensk allmän domstol, med Lunds tingsrätt som första instans."),
+      p(
+        "Svensk lag gäller för detta avtal. Tvist som inte kan lösas i samförstånd prövas av svensk allmän domstol, med Lunds tingsrätt som första instans.",
+      ),
     ],
   },
 ];

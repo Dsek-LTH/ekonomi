@@ -199,7 +199,10 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
     } else if (hasAmount) {
       const amount = amountExpression(amountRaw);
       if (amount === null) {
-        problems.push({ line: lineNo, message: `Belopp är inte ett tal ("${amountRaw}").` });
+        problems.push({
+          line: lineNo,
+          message: `Belopp är inte ett tal ("${amountRaw}").`,
+        });
         continue;
       }
       line = { description, quantity: null, unitPrice: null, expression: amount };
@@ -229,7 +232,11 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
     const accountKey = `${ccCode} ${accountCode}`;
     let account = accounts.get(accountKey);
     if (!account) {
-      account = { code: accountCode, name: at(cols, "account_name") || accountCode, lines: [] };
+      account = {
+        code: accountCode,
+        name: at(cols, "account_name") || accountCode,
+        lines: [],
+      };
       accounts.set(accountKey, account);
       sheet.accounts.push(account);
     }

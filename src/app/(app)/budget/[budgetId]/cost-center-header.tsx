@@ -18,7 +18,15 @@ import { sheetName } from "@/lib/budget";
 import type { CostCenter } from "@/lib/domain/types";
 import type { ApiFn, BudgetCC } from "./budget-types";
 
-export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyContents, onRemoved }: {
+export function CostCenterHeader({
+  cc,
+  available,
+  canEdit,
+  api,
+  onClone,
+  onCopyContents,
+  onRemoved,
+}: {
   cc: BudgetCC;
   /** Cost centres not already budgeted in this budget. */
   available: CostCenter[];
@@ -64,7 +72,9 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {linked ? (
           <>
-            <span className="rounded-control bg-surface px-2 py-1 font-mono text-xs font-semibold">{linked.code}</span>
+            <span className="rounded-control bg-surface px-2 py-1 font-mono text-xs font-semibold">
+              {linked.code}
+            </span>
             <h2 className="truncate text-sm font-semibold">{linked.name}</h2>
             <span className="text-xs text-muted">{linked.resultUnit ?? t("noResultUnit")}</span>
           </>
@@ -96,8 +106,20 @@ export function CostCenterHeader({ cc, available, canEdit, api, onClone, onCopyC
               { value: "", label: t("unlinked") },
               // The one it already points at stays in the list, so the current
               // value has a label to render; the rest are the free ones.
-              ...(linked ? [{ value: linked.id, label: `${linked.code} - ${linked.name}`, short: linked.code }] : []),
-              ...available.map((c) => ({ value: c.id, label: `${c.code} - ${c.name}`, short: c.code })),
+              ...(linked
+                ? [
+                    {
+                      value: linked.id,
+                      label: `${linked.code} - ${linked.name}`,
+                      short: linked.code,
+                    },
+                  ]
+                : []),
+              ...available.map((c) => ({
+                value: c.id,
+                label: `${c.code} - ${c.name}`,
+                short: c.code,
+              })),
             ]}
             value={linked?.id ?? ""}
             onChange={(v) => api(url, "PATCH", { costCenterId: v || null })}

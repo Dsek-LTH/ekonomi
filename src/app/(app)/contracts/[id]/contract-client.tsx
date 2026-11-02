@@ -216,7 +216,13 @@ export function ContractClient({
               title={t("detail.details")}
               action={
                 <ContractActions
-                  state={{ status: null, isRental: false, editable: false, canManage, hasSignedFiles }}
+                  state={{
+                    status: null,
+                    isRental: false,
+                    editable: false,
+                    canManage,
+                    hasSignedFiles,
+                  }}
                   busy={pending !== null}
                   onEdit={() => setEditing(true)}
                   onUpload={() => pick("ORIGINAL")}
@@ -262,7 +268,7 @@ export function ContractClient({
                       href={`/api/contracts/${contract.id}/files/${f.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="min-w-0 flex-1 truncate text-sm text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                      className="min-w-0 flex-1 truncate text-sm text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                     >
                       {f.filename}
                     </a>
@@ -293,9 +299,11 @@ export function ContractClient({
           <p>
             {[
               contract.createdBy &&
-                t("detail.filedBy", { name: contract.createdBy, date: date(contract.createdAt) }),
-              contract.termsVersion &&
-                t("detail.termsVersion", { version: contract.termsVersion }),
+                t("detail.filedBy", {
+                  name: contract.createdBy,
+                  date: date(contract.createdAt),
+                }),
+              contract.termsVersion && t("detail.termsVersion", { version: contract.termsVersion }),
             ]
               .filter(Boolean)
               .join(". ")}
@@ -323,13 +331,7 @@ export function ContractClient({
 
 /** The archive fields, as a dialog opened from "Ändra" in the actions menu,
  *  the way every record with several fields is edited. */
-function EditDialog({
-  contract,
-  onClose,
-}: {
-  contract: ContractDetail;
-  onClose: () => void;
-}) {
+function EditDialog({ contract, onClose }: { contract: ContractDetail; onClose: () => void }) {
   const t = useTranslations("contracts");
   const { mutate, pending } = useMutation();
 
@@ -385,7 +387,10 @@ function EditDialog({
                 validTo: dateField(validTo),
               }
           : { date: dateField(date) }),
-        tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
+        tags: tags
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         notes: notes.trim() || null,
       },
       success: t("detail.saved"),
@@ -403,10 +408,7 @@ function EditDialog({
           <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
         </Field>
         {showCounterparty && (
-          <Field
-            label={t("form.counterparty")}
-            requirement={isAgreement ? "required" : "optional"}
-          >
+          <Field label={t("form.counterparty")} requirement={isAgreement ? "required" : "optional"}>
             <Input
               value={counterparty}
               onChange={(e) => setCounterparty(e.target.value)}
@@ -463,7 +465,10 @@ function EditDialog({
           </>
         )}
         {!isAgreement && (
-          <Field label={t("form.date")} requirement={contract.kind === "PROTOCOL" ? "required" : "optional"}>
+          <Field
+            label={t("form.date")}
+            requirement={contract.kind === "PROTOCOL" ? "required" : "optional"}
+          >
             <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         )}

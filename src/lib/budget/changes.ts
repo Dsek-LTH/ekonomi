@@ -41,8 +41,9 @@ export const resultImpact = (kind: AccountKind, amount: number): number =>
   kind === "INCOME" ? amount : -amount;
 
 /** A whole change's effect on the result. Zero = rambudgeten står still. */
-export const netResultImpact = (entries: readonly { kind: AccountKind; amount: number }[]): number =>
-  entries.reduce((sum, e) => sum + resultImpact(e.kind, e.amount), 0);
+export const netResultImpact = (
+  entries: readonly { kind: AccountKind; amount: number }[],
+): number => entries.reduce((sum, e) => sum + resultImpact(e.kind, e.amount), 0);
 
 // Exactly zero, because the amounts are integer öre. This was `Math.abs(net) <
 // 0.005`, half an öre, because two kronor floats that ought to cancel could
@@ -70,10 +71,13 @@ export function scopeKey(sheet: {
 }
 
 /** What to call that unit when explaining why a transfer was refused. */
-export function scopeLabel(sheet: {
-  costCenter?: { resultUnit?: string | null } | null;
-  label?: string | null;
-}, fallback: string): string {
+export function scopeLabel(
+  sheet: {
+    costCenter?: { resultUnit?: string | null } | null;
+    label?: string | null;
+  },
+  fallback: string,
+): string {
   return sheet.costCenter?.resultUnit?.trim() || fallback;
 }
 
@@ -104,8 +108,7 @@ export function parseAmount(raw: string | number): number {
  * drift. `values` fills the code's placeholders.
  */
 export type Validation =
-  | { ok: true }
-  | { ok: false; error: string; values?: Record<string, string | number> };
+  { ok: true } | { ok: false; error: string; values?: Record<string, string | number> };
 
 /** Whether these entries may be recorded as a change of this kind. */
 export function validateChange(kind: ChangeKind, entries: readonly ResolvedEntry[]): Validation {

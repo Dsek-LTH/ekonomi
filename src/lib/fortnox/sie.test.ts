@@ -69,16 +69,18 @@ describe("parseSie", () => {
     });
 
     it("closes a voucher at its closing brace, so the next one stands alone", () => {
-      const got = parseSie([
-        '#VER A 1 20260101 "Ett"',
-        "{",
-        "#TRANS 1930 {} 100.00",
-        "}",
-        '#VER A 2 20260202 "Två"',
-        "{",
-        "#TRANS 1930 {} 200.00",
-        "}",
-      ].join("\n"));
+      const got = parseSie(
+        [
+          '#VER A 1 20260101 "Ett"',
+          "{",
+          "#TRANS 1930 {} 100.00",
+          "}",
+          '#VER A 2 20260202 "Två"',
+          "{",
+          "#TRANS 1930 {} 200.00",
+          "}",
+        ].join("\n"),
+      );
       expect(got.vouchers).toHaveLength(2);
       expect(got.vouchers[0].transactions).toHaveLength(1);
       expect(got.vouchers[1].transactions).toHaveLength(1);
@@ -86,38 +88,35 @@ describe("parseSie", () => {
     });
 
     it("picks dimension 1 out of a multi-dimension object list", () => {
-      const got = parseSie([
-        '#VER A 1 20260101 "Ett"',
-        "{",
-        '#TRANS 4010 {6 "P1" 1 "SEX02"} 100.00',
-        "}",
-      ].join("\n"));
+      const got = parseSie(
+        ['#VER A 1 20260101 "Ett"', "{", '#TRANS 4010 {6 "P1" 1 "SEX02"} 100.00', "}"].join("\n"),
+      );
       expect(got.vouchers[0].transactions[0].costCenterCode).toBe("SEX02");
     });
 
     // Fortnox emits the live posting as #TRANS; the correction registrations
     // beside it would double-count the voucher.
     it("ignores #RTRANS and #BTRANS", () => {
-      const got = parseSie([
-        '#VER A 1 20260101 "Ett"',
-        "{",
-        "#TRANS 4010 {} 100.00",
-        "#RTRANS 4010 {} 999.00",
-        "#BTRANS 4010 {} 888.00",
-        "}",
-      ].join("\n"));
+      const got = parseSie(
+        [
+          '#VER A 1 20260101 "Ett"',
+          "{",
+          "#TRANS 4010 {} 100.00",
+          "#RTRANS 4010 {} 999.00",
+          "#BTRANS 4010 {} 888.00",
+          "}",
+        ].join("\n"),
+      );
       expect(got.vouchers[0].transactions).toHaveLength(1);
       expect(got.vouchers[0].transactions[0].amount).toBe(100);
     });
 
     it("drops a posting with no account or an unreadable amount", () => {
-      const got = parseSie([
-        '#VER A 1 20260101 "Ett"',
-        "{",
-        "#TRANS 4010 {} abc",
-        "#TRANS 4010 {} 100.00",
-        "}",
-      ].join("\n"));
+      const got = parseSie(
+        ['#VER A 1 20260101 "Ett"', "{", "#TRANS 4010 {} abc", "#TRANS 4010 {} 100.00", "}"].join(
+          "\n",
+        ),
+      );
       expect(got.vouchers[0].transactions).toHaveLength(1);
     });
 
@@ -149,10 +148,7 @@ describe("parseSie", () => {
     // The breakdown is optional detail, never the source of the total, so the
     // two live side by side under different keys.
     it("keeps the account total and its breakdown apart", () => {
-      const got = parseSie([
-        "#UB 0 1930 7500.00",
-        '#OUB 0 1930 {1 "SEX02"} 2000.00',
-      ].join("\n"));
+      const got = parseSie(["#UB 0 1930 7500.00", '#OUB 0 1930 {1 "SEX02"} 2000.00'].join("\n"));
       expect(got.closingBalances.get("1930|")).toBe(7500);
       expect(got.closingBalances.get("1930|SEX02")).toBe(2000);
     });
@@ -164,13 +160,9 @@ describe("parseSie", () => {
   });
 
   it("ignores blank lines and anything it doesn't know", () => {
-    const got = parseSie([
-      "#FLAGGA 0",
-      "",
-      '#FNAMN "D-sektionen"',
-      "   ",
-      '#KONTO 1930 "Bank"',
-    ].join("\n"));
+    const got = parseSie(
+      ["#FLAGGA 0", "", '#FNAMN "D-sektionen"', "   ", '#KONTO 1930 "Bank"'].join("\n"),
+    );
     expect(got.accounts.size).toBe(1);
     expect(got.vouchers).toEqual([]);
   });

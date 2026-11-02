@@ -11,13 +11,7 @@ import { impossible, onHand, type OnHand } from "@/lib/stock/onhand";
 import { tagTotals, type TagMovement } from "@/lib/stock/event";
 import { cellQty, cellTotals, type CellKind, type CellRow } from "@/lib/stock/cells";
 import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/types";
-import {
-  checkOf,
-  lastEmptied,
-  soonestCheck,
-  type Check,
-  type ShelfStep,
-} from "@/lib/stock/expiry";
+import { checkOf, lastEmptied, soonestCheck, type Check, type ShelfStep } from "@/lib/stock/expiry";
 import { OPEN_SUM, openOf } from "@/lib/server/stock-state";
 import type { StockEntry } from "@/lib/generated/prisma/client";
 import { today, isoDay } from "@/lib/domain/date";
@@ -54,7 +48,7 @@ export interface StockLevelDto extends StockProductDto {
 
 /** Null becomes absent. A DTO field that is not there reads better than one
  *  that is there holding nothing. */
-const opt = <T,>(v: T | null): T | undefined => v ?? undefined;
+const opt = <T>(v: T | null): T | undefined => v ?? undefined;
 
 /** Every product the bar keeps. There is no second kind. */
 export async function getStockProducts(): Promise<StockProductDto[]> {
@@ -374,9 +368,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
   // person reads a night in, rather than the order rows were written.
   const order: Record<string, number> = { CHECKOUT: 0, RETURN: 1, WASTE: 2 };
   for (const line of nights.values()) {
-    line.parts!.sort(
-      (a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.level - b.level,
-    );
+    line.parts!.sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.level - b.level);
   }
   // A count reads whole things first, then down the ladder, the order somebody
   // walks a shelf in.
@@ -463,7 +455,6 @@ export async function getStockChanges(
     actorName: r.actor.name,
   }));
 }
-
 
 // ── Events ──────────────────────────────────────────────────────────
 
@@ -645,7 +636,9 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
     where: { eventId: id },
     select: {
       ...TAG_ENTRY,
-      product: { select: { id: true, name: true, kind: true, unitMl: true, nominalMl: true } },
+      product: {
+        select: { id: true, name: true, kind: true, unitMl: true, nominalMl: true },
+      },
     },
   });
 
@@ -659,16 +652,14 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
   // fold the sheet's confirm goes through, so the figure somebody types against
   // is the figure the server will check them against.
   const cells = cellTotals(
-    entries.map(
-      (e): CellRow => ({
-        productId: e.product.id,
-        kind: e.kind as CellKind,
-        level: e.level,
-        units: e.units,
-        open: { 80: e.open80, 60: e.open60, 40: e.open40, 20: e.open20 },
-        spilledQty: e.spilledQty,
-      }),
-    ),
+    entries.map((e): CellRow => ({
+      productId: e.product.id,
+      kind: e.kind as CellKind,
+      level: e.level,
+      units: e.units,
+      open: { 80: e.open80, 60: e.open60, 40: e.open40, 20: e.open20 },
+      spilledQty: e.spilledQty,
+    })),
   );
 
   const lines: TagLineDto[] = [...byProduct.entries()].map(([productId, rows]) => {
@@ -927,7 +918,6 @@ export async function getProductMovementCount(productId: string): Promise<number
   return prisma.stockEntry.count({ where: { productId } });
 }
 
-
 /**
  * How much notice the section wants before a delivery's estimated date. Null
  * until somebody chooses it, and no checks are raised until then.
@@ -1030,19 +1020,12 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
   }
 
   const emptied = new Map(
-    productIds.map(
-      (id) => [id, lastEmptied(steps.get(id) ?? [], held.get(id) ?? 0)] as const,
-    ),
+    productIds.map((id) => [id, lastEmptied(steps.get(id) ?? [], held.get(id) ?? 0)] as const),
   );
 
   const byProduct = new Map<string, Check[]>();
   for (const d of deliveries) {
-    const check = checkOf(
-      asDelivery(d),
-      expiryLeadDays,
-      emptied.get(d.productId) ?? null,
-      now,
-    );
+    const check = checkOf(asDelivery(d), expiryLeadDays, emptied.get(d.productId) ?? null, now);
     if (check) byProduct.set(d.productId, [...(byProduct.get(d.productId) ?? []), check]);
   }
 
@@ -1079,9 +1062,7 @@ const asStep = (m: {
 };
 
 /** The columns a delivery contributes to a check, as the rule wants them. */
-const asDelivery = (
-  e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "checkedAt">,
-) => ({
+const asDelivery = (e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "checkedAt">) => ({
   id: e.id,
   occurredAt: isoDay(e.occurredAt),
   bestBefore: e.bestBefore ? isoDay(e.bestBefore) : null,

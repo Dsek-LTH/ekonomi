@@ -50,10 +50,7 @@ export function StockValueChart({
   const { W, H, PAD, labels: wantedLabels } = geometry;
   const PLOT = plotOf(geometry);
 
-  const max = useMemo(
-    () => Math.max(1, ...points.map((p) => p.totalOre)),
-    [points],
-  );
+  const max = useMemo(() => Math.max(1, ...points.map((p) => p.totalOre)), [points]);
   // From zero: a shelf is never worth less than nothing, so the axis this chart
   // wants is the one-sided case of the shared ladder.
   const axis = useMemo(() => axisTicks(0, max), [max]);
@@ -152,16 +149,16 @@ export function StockValueChart({
               without them touching; a label per point would be a smear, and the
               day under the pointer is on the readout anyway. */}
           {labels.map((i) => (
-              <text
-                key={i}
-                x={x(i)}
-                y={H - 8}
-                textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
-                className="fill-muted text-[11px] tabular-nums"
-              >
-                {points[i]?.date}
-              </text>
-            ))}
+            <text
+              key={i}
+              x={x(i)}
+              y={H - 8}
+              textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
+              className="fill-muted text-[11px] tabular-nums"
+            >
+              {points[i]?.date}
+            </text>
+          ))}
 
           {hovered && (
             <line
@@ -196,7 +193,9 @@ export function StockValueChart({
                     style={{ background: DRINK_SERIES[c] }}
                   />
                   <dt className="min-w-0 flex-1 truncate text-muted">{t(`category.${c}`)}</dt>
-                  <dd className="tabular-nums">{formatNumber(oreToSEK(hovered.byCategory[c]), 0, 0)}</dd>
+                  <dd className="tabular-nums">
+                    {formatNumber(oreToSEK(hovered.byCategory[c]), 0, 0)}
+                  </dd>
                 </div>
               ))}
               <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 text-xs font-medium">

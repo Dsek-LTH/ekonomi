@@ -139,8 +139,11 @@ describe("matchCandidates", () => {
   });
 
   it("puts the ones that would settle it first, then the closest", () => {
-    expect(idsOf(matchCandidates([txn("a", -100), txn("b", -260), txn("c", -250)], 250)))
-      .toEqual(["c", "b", "a"]);
+    expect(idsOf(matchCandidates([txn("a", -100), txn("b", -260), txn("c", -250)], 250))).toEqual([
+      "c",
+      "b",
+      "a",
+    ]);
   });
 
   it("keeps a row another utlägg claims, and says so", () => {
@@ -211,7 +214,10 @@ describe("matchCandidates, by the day", () => {
 
   it("keeps the rows that can be picked first, whatever their day", () => {
     const rows = [txn("near-wrong", -253, "2026-10-12"), txn("far-right", -250, "2026-09-01")];
-    expect(ids(matchCandidates(rows, 250, null, "2026-10-12"))).toEqual(["far-right", "near-wrong"]);
+    expect(ids(matchCandidates(rows, 250, null, "2026-10-12"))).toEqual([
+      "far-right",
+      "near-wrong",
+    ]);
   });
 
   it("takes a free row a few days off with another amount for a typo", () => {

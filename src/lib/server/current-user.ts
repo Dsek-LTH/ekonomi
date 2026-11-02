@@ -114,9 +114,7 @@ export async function requireUser(): Promise<User> {
  * `loadUser`), so this and the `gate()` behind the page's writes are deciding on
  * the same facts.
  */
-export async function requirePage(
-  can: (caps: readonly Capability[]) => boolean,
-): Promise<User> {
+export async function requirePage(can: (caps: readonly Capability[]) => boolean): Promise<User> {
   const user = await requireUser();
   if (!can(user.capabilities)) redirect("/dashboard");
   return user;

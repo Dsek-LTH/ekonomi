@@ -21,12 +21,7 @@ import { useState } from "react";
 import { budgetLabel } from "@/lib/budget/compare";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/ui/utils";
-import type {
-  BudgetOption,
-  ComparisonMode,
-  QueryState,
-  ResultColumn,
-} from "./report-types";
+import type { BudgetOption, ComparisonMode, QueryState, ResultColumn } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
 
 // The picker value for the rows carrying no cost centre. The query spells that
@@ -75,9 +70,7 @@ function Field({
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="text-xs font-medium text-muted">
-        {label}
-      </span>
+      <span className="text-xs font-medium text-muted">{label}</span>
       {children}
     </div>
   );
@@ -158,7 +151,6 @@ function PeriodDate({
   );
 }
 
-
 /**
  * The period within the header's year, and the cost centres: what both panels ask
  * first, in the same order. One component, so the report and the charts cannot
@@ -203,30 +195,30 @@ function PeriodRows({
             other field takes a row of its own. Dates, not months: a report can
             be taken over any span of days, the way Fortnox takes one. */}
         <div className="flex min-w-0 items-end gap-2">
-        <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-          <PeriodDate
-            value={query.from}
-            onCommit={(v) => {
-              period?.onManual();
-              onQuery({ from: v });
-            }}
-            aria-label={t("from")}
-          />
-        </Field>
-        {/* The height of a control, so the dash sits level with the two. */}
-        <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
-          -
-        </span>
-        <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-          <PeriodDate
-            value={query.to}
-            onCommit={(v) => {
-              period?.onManual();
-              onQuery({ to: v });
-            }}
-            aria-label={t("to")}
-          />
-        </Field>
+          <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+            <PeriodDate
+              value={query.from}
+              onCommit={(v) => {
+                period?.onManual();
+                onQuery({ from: v });
+              }}
+              aria-label={t("from")}
+            />
+          </Field>
+          {/* The height of a control, so the dash sits level with the two. */}
+          <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
+            -
+          </span>
+          <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
+            <PeriodDate
+              value={query.to}
+              onCommit={(v) => {
+                period?.onManual();
+                onQuery({ to: v });
+              }}
+              aria-label={t("to")}
+            />
+          </Field>
         </div>
       </Row>
 
@@ -348,12 +340,7 @@ export function ReportParameters({
         </Field>
       </Row>
 
-      <PeriodRows
-        query={query}
-        onQuery={onQuery}
-        costCenters={costCenters}
-        period={period}
-      />
+      <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
       {/* Which figures stand beside each account. Result report only: the
           balance report's columns are fixed (opening, period, closing). */}
@@ -479,12 +466,7 @@ export function ChartParameters({
 
   return (
     <Card className="print:hidden">
-      <PeriodRows
-        query={query}
-        onQuery={onQuery}
-        costCenters={costCenters}
-        period={period}
-      />
+      <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
       <Row>
         {/* Two answers where the report offers three, because a budget is the

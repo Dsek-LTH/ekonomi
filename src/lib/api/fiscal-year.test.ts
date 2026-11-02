@@ -24,7 +24,10 @@ describe("denyOutsideFiscalYear", () => {
   it("refuses one outside it, naming the year", async () => {
     const res = await denyOutsideFiscalYear("2025-12-31");
     expect(res?.status).toBe(422);
-    expect(await res?.json()).toEqual({ error: "fiscalYear.outside", errorValues: { year: "2026" } });
+    expect(await res?.json()).toEqual({
+      error: "fiscalYear.outside",
+      errorValues: { year: "2026" },
+    });
   });
 
   it("has nothing to say about no date, or before any year is synced", async () => {

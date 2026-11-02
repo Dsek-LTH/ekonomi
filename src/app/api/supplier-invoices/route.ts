@@ -49,7 +49,13 @@ export async function POST(req: Request) {
   }
   const unit = doc.resultUnit;
 
-  const planning = await planAllocation({ rows, total: amount, documentCount: 1, viewer, actorId: actor.id });
+  const planning = await planAllocation({
+    rows,
+    total: amount,
+    documentCount: 1,
+    viewer,
+    actorId: actor.id,
+  });
   if (!planning.ok) return planning.res;
   const { planned, signed, status, attesters } = planning.plan;
 
@@ -99,13 +105,26 @@ export async function POST(req: Request) {
                   createdAt: doc.assignedAt ?? receivedAt,
                 },
                 ...(signed.length
-                  ? [{ type: "COST_CENTER_APPROVED" as const, actorId: actor.id, comment: comment ?? null, diff: { costCenters: signed } }]
+                  ? [
+                      {
+                        type: "COST_CENTER_APPROVED" as const,
+                        actorId: actor.id,
+                        comment: comment ?? null,
+                        diff: { costCenters: signed },
+                      },
+                    ]
                   : []),
-                ...(status === "APPROVED" ? [{ type: "APPROVED" as const, actorId: actor.id }] : []),
+                ...(status === "APPROVED"
+                  ? [{ type: "APPROVED" as const, actorId: actor.id }]
+                  : []),
               ],
             },
           },
-          include: { allocations: { include: { costCenter: { select: { code: true, name: true } } } } },
+          include: {
+            allocations: {
+              include: { costCenter: { select: { code: true, name: true } } },
+            },
+          },
         });
         // Still in that unit's Inkorg is part of the condition: fördelad in
         // another tab a moment ago, or given elsewhere, it is not this

@@ -31,7 +31,6 @@ import { isoDay } from "@/lib/domain/date";
 /** Already litres, not millilitres: these come out of the stats query summed. */
 const formatLitreCount = (litres: number) => formatNumber(litres, 0, 1);
 
-
 export default function StockStatsClient({
   stats,
   from,
@@ -127,7 +126,11 @@ export default function StockStatsClient({
   const tiles = [
     { key: "purchased", value: formatOreKr(flow.purchasedOre), tone: "" },
     { key: "consumed", value: formatOreKr(-flow.consumedOre), tone: "text-muted" },
-    { key: "wasted", value: formatOreKr(-flow.wastedOre), tone: flow.wastedOre > 0 ? "text-warning" : "" },
+    {
+      key: "wasted",
+      value: formatOreKr(-flow.wastedOre),
+      tone: flow.wastedOre > 0 ? "text-warning" : "",
+    },
     // Negative is worth looking at: the shelf held less than the log said, and
     // nothing else on this card accounts for the difference.
     {
@@ -164,7 +167,10 @@ export default function StockStatsClient({
             <FieldGroup label={t("stats.period")}>
               <SegmentedControl
                 size="sm"
-                options={ranges.map((r) => ({ value: r.key, label: t(`stats.range.${r.key}`) }))}
+                options={ranges.map((r) => ({
+                  value: r.key,
+                  label: t(`stats.range.${r.key}`),
+                }))}
                 value={current}
                 onChange={(key) => {
                   const range = ranges.find((r) => r.key === key);
@@ -197,7 +203,10 @@ export default function StockStatsClient({
               <FieldGroup label={t("filterCategory")}>
                 <MultiCombobox
                   size="sm"
-                  options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
+                  options={CATEGORIES.map((c) => ({
+                    value: c,
+                    label: t(`category.${c}`),
+                  }))}
                   values={categories}
                   onChange={(cats) => ask({ cats })}
                   placeholder={t("filterCategory")}
@@ -224,7 +233,10 @@ export default function StockStatsClient({
             title={t("stats.valueTitle")}
             subtitle={
               narrowed
-                ? t("stats.valueOfWhole", { shown: formatOreKr(shown), whole: formatOreKr(stats.wholeShelfOre) })
+                ? t("stats.valueOfWhole", {
+                    shown: formatOreKr(shown),
+                    whole: formatOreKr(stats.wholeShelfOre),
+                  })
                 : t("stats.valueNow", { value: formatOreKr(shown) })
             }
             action={
@@ -253,10 +265,10 @@ export default function StockStatsClient({
                 // no space to break at: without it the two columns push the
                 // card off the side of a phone rather than wrapping.
                 <div key={tile.key} className="min-w-0">
-                  <p className="text-xs text-muted">
-                    {t(`stats.flow.${tile.key}`)}
-                  </p>
-                  <p className={cn("mt-1 text-lg font-semibold tabular-nums sm:text-xl", tile.tone)}>
+                  <p className="text-xs text-muted">{t(`stats.flow.${tile.key}`)}</p>
+                  <p
+                    className={cn("mt-1 text-lg font-semibold tabular-nums sm:text-xl", tile.tone)}
+                  >
                     {tile.value}
                   </p>
                 </div>
@@ -291,7 +303,11 @@ export default function StockStatsClient({
                     </span>
                     <span className="ml-auto flex shrink-0 items-baseline gap-3">
                       <span className="w-20 text-right tabular-nums text-muted">
-                        {h.litres == null ? "-" : t("litres", { litres: formatLitreCount(h.litres) })}
+                        {h.litres == null
+                          ? "-"
+                          : t("litres", {
+                              litres: formatLitreCount(h.litres),
+                            })}
                       </span>
                       <span className="w-24 text-right font-medium tabular-nums">
                         {formatOreKr(h.valueOre)}
@@ -330,7 +346,9 @@ export default function StockStatsClient({
                     {m.name}
                   </Link>
                   <span className="ml-auto flex shrink-0 items-baseline gap-3">
-                    <span className="w-24 text-right tabular-nums text-muted">{formatOreKr(m.outOre)}</span>
+                    <span className="w-24 text-right tabular-nums text-muted">
+                      {formatOreKr(m.outOre)}
+                    </span>
                     <span className="w-24 text-right font-medium tabular-nums">
                       {formatOreKr(m.valueOre)}
                     </span>

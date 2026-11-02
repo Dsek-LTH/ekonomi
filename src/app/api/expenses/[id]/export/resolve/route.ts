@@ -66,7 +66,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       prisma.$transaction(async (tx) => {
         applied(await tx.expense.updateMany({ where: theLock, data: CLEARED }));
         await tx.expenseEvent.create({
-          data: { expenseId: id, type: "EXPORT_RELEASED", actorId, comment: body.comment },
+          data: {
+            expenseId: id,
+            type: "EXPORT_RELEASED",
+            actorId,
+            comment: body.comment,
+          },
         });
       }),
     );
@@ -86,7 +91,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const recorded = await commit(() =>
     recordExport(verification.id, created, async (tx) => {
       applied(
-        await tx.expense.updateMany({ where: theLock, data: { status: "EXPORTED", ...CLEARED } }),
+        await tx.expense.updateMany({
+          where: theLock,
+          data: { status: "EXPORTED", ...CLEARED },
+        }),
       );
       await tx.expenseEvent.create({
         data: {
@@ -96,9 +104,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           comment: body.comment ? `${label}: ${body.comment}` : label,
         },
       });
-      await notify(tx, "EXPENSE_EXPORTED", [expense.submitterId], expenseNotice("exported", expense), {
-        exclude: [actorId],
-      });
+      await notify(
+        tx,
+        "EXPENSE_EXPORTED",
+        [expense.submitterId],
+        expenseNotice("exported", expense),
+        {
+          exclude: [actorId],
+        },
+      );
     }),
   );
   if (recorded instanceof NextResponse) return recorded;

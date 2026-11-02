@@ -505,7 +505,9 @@ export const FlagSE = ({ className }: P) => (
 
 export const FlagGB = ({ className }: P) => (
   <svg viewBox="0 0 30 20" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
-    <clipPath id="flag-gb"><rect width="30" height="20" /></clipPath>
+    <clipPath id="flag-gb">
+      <rect width="30" height="20" />
+    </clipPath>
     <g clipPath="url(#flag-gb)">
       <rect width="30" height="20" fill="#012169" />
       <path d="M0,0 L30,20 M30,0 L0,20" stroke="#fff" strokeWidth="4" />

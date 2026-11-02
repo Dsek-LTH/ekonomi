@@ -30,9 +30,7 @@ export async function denyExpenseView(
   actor: Actor,
   expense: { id: string; submitterId: string },
 ): Promise<NextResponse | null> {
-  return (await canViewExpense(actor, expense))
-    ? null
-    : fail(404, "expense.notFound");
+  return (await canViewExpense(actor, expense)) ? null : fail(404, "expense.notFound");
 }
 
 /** Whether `actor` may change this expense's own fields: the submitter, or an

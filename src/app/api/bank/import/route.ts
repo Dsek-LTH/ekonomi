@@ -28,7 +28,12 @@ const MAX_LINES = 30;
  */
 async function notifyCardHolders(
   tx: TxClient,
-  created: { transactionDate: Date; description: string; amount: number; cardId: string | null }[],
+  created: {
+    transactionDate: Date;
+    description: string;
+    amount: number;
+    cardId: string | null;
+  }[],
 ) {
   const cardIds = [...new Set(created.map((t) => t.cardId).filter((c): c is string => !!c))];
   if (cardIds.length === 0) return;
@@ -114,7 +119,7 @@ export async function POST(req: Request) {
           amount: t.amount,
           importHash: t.importHash,
           cardLast4: t.cardLast4 ?? null,
-          cardId: t.cardLast4 ? cardIdByLast4.get(t.cardLast4) ?? null : null,
+          cardId: t.cardLast4 ? (cardIdByLast4.get(t.cardLast4) ?? null) : null,
         })),
         skipDuplicates: true,
         select: { transactionDate: true, description: true, amount: true, cardId: true },

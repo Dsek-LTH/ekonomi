@@ -30,6 +30,10 @@ const mustBeConfigured = isProduction && !isBuildPhase;
 // production there is no fallback and the variable must be set.
 const REQUIRED = {
   DATABASE_URL: "postgresql://ekonomi:ekonomi@localhost:5432/ekonomi",
+  // Where the app is served. Links in mails, canonical URLs and the link
+  // preview image are all built on it, so a deploy without it hands out
+  // localhost links.
+  APP_URL: "http://localhost:3000",
   // Signs the session JWTs. A known constant is fine on a laptop and is a
   // forgery key on the internet, and since the check below only asks whether
   // a value is set, nothing stops a deploy that kept this one. Generating it
@@ -72,10 +76,9 @@ const REQUIRED = {
 // up will look.
 //
 // SMTP_HOST switches email on (lib/server/mail.ts), through the section's
-// relay. Without it, mail is written to the log instead. With it, MAIL_FROM and
-// APP_URL become required, checked below: a mail from a made-up sender is
-// binned on arrival, and a mail whose links point at localhost is no use to
-// anyone. SMTP_PORT, SMTP_USER and SMTP_PASS are for a relay that wants them.
+// relay. Without it, mail is written to the log instead. With it, MAIL_FROM
+// becomes required, checked below: a mail from a made-up sender is binned on
+// arrival. SMTP_PORT, SMTP_USER and SMTP_PASS are for a relay that wants them.
 // CRON_SECRET switches on the scheduled jobs under app/api/cron.
 //
 // Authentik needs nothing beyond the three above: the endpoints it uses are
@@ -119,12 +122,8 @@ function envProblems(): string[] {
     (name) => !process.env[name],
   );
   // Optional as a group, required as a whole: mail half configured is mail
-  // that leaves and is binned, or arrives with links that go nowhere.
-  if (process.env.SMTP_HOST) {
-    for (const name of ["MAIL_FROM", "APP_URL"]) {
-      if (!process.env[name]) missing.push(name);
-    }
-  }
+  // that leaves and is binned.
+  if (process.env.SMTP_HOST && !process.env.MAIL_FROM) missing.push("MAIL_FROM");
   return missing.map((name) => `${name} saknas`);
 }
 

@@ -42,12 +42,18 @@ describe("buildInvoiceCoverData", () => {
   });
 
   it("dates a signature by the day in Stockholm", () => {
-    const late = { ...facts, rows: [{ ...facts.rows[0], attestedAt: new Date("2026-10-27T23:30:00Z") }] };
+    const late = {
+      ...facts,
+      rows: [{ ...facts.rows[0], attestedAt: new Date("2026-10-27T23:30:00Z") }],
+    };
     expect(buildInvoiceCoverData(late).allocations[0].approvedAt).toBe("2026-10-28");
   });
 
   it("leaves the kontering blank where the history has none", () => {
-    expect(buildInvoiceCoverData({ ...facts, booking: null }).booking).toEqual({ by: null, at: null });
+    expect(buildInvoiceCoverData({ ...facts, booking: null }).booking).toEqual({
+      by: null,
+      at: null,
+    });
   });
 });
 

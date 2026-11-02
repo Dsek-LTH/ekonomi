@@ -95,7 +95,11 @@ export function SectionBand({
           ("Utlägg" over "Utlägg"). A section's own page still needs an h1,
           so it is the lit tab's name, for a screen reader only. Under one (a
           budget, an utlägg) the page has a heading of its own below. */}
-      {own && <h1 className="sr-only">{section.tabs.find((tab) => tab.active)?.label ?? section.label}</h1>}
+      {own && (
+        <h1 className="sr-only">
+          {section.tabs.find((tab) => tab.active)?.label ?? section.label}
+        </h1>
+      )}
       {/* One row of a fixed height whatever stands at its end. The switch is
           32px (a 26px option in a padded, bordered track), the height of every
           control from sm up, and 44 leaves it 6px from the header above and 6
@@ -194,7 +198,9 @@ export function PageHeader({
           <PageTitle>{title}</PageTitle>
         </div>
         {subtitle && (
-          <p className="col-start-1 row-start-2 mt-1 text-lg font-medium tracking-tight">{subtitle}</p>
+          <p className="col-start-1 row-start-2 mt-1 text-lg font-medium tracking-tight">
+            {subtitle}
+          </p>
         )}
         {(aside || end) && (
           <div className="col-span-2 row-start-3 mt-3 flex min-w-0 items-center justify-end gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mt-0 md:flex-wrap">

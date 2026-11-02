@@ -2,6 +2,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings, canViewBookkeeping } from "@/lib/domain/permissions";
 import { getTemplate } from "@/lib/data/closing-checklist";
 import TemplateClient from "./template-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("closingTemplate");
 
 // The bokslut handbook: the steps every year's checklist starts from, and how
 // each is done. Kept here rather than under Inställningar, beside the work it

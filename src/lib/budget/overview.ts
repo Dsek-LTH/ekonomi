@@ -100,18 +100,20 @@ export function buildOverview(
     }
   }
 
-  return [...units.values()]
-    .map((u) => ({
-      ...u,
-      // The no-cost-centre bucket last within a unit, then by code.
-      costCenters: u.costCenters.sort((a, b) =>
-        a.code === "" ? 1 : b.code === "" ? -1 : a.code.localeCompare(b.code, "sv"),
-      ),
-    }))
-    // By name, with what no unit claims at the end.
-    .sort((a, b) =>
-      a.name === null ? 1 : b.name === null ? -1 : a.name.localeCompare(b.name, "sv"),
-    );
+  return (
+    [...units.values()]
+      .map((u) => ({
+        ...u,
+        // The no-cost-centre bucket last within a unit, then by code.
+        costCenters: u.costCenters.sort((a, b) =>
+          a.code === "" ? 1 : b.code === "" ? -1 : a.code.localeCompare(b.code, "sv"),
+        ),
+      }))
+      // By name, with what no unit claims at the end.
+      .sort((a, b) =>
+        a.name === null ? 1 : b.name === null ? -1 : a.name.localeCompare(b.name, "sv"),
+      )
+  );
 }
 
 /**

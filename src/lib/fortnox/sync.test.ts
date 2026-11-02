@@ -31,7 +31,8 @@ vi.mock("@/lib/server/db", () => {
         method === "findMany"
           ? async () => []
           : async (args: { data?: Record<string, unknown> }) => {
-              if (method === "update" && args?.data && "lastFinishedAt" in args.data) h.finished.push(args.data);
+              if (method === "update" && args?.data && "lastFinishedAt" in args.data)
+                h.finished.push(args.data);
               return { count: 0 };
             },
     },

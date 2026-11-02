@@ -62,7 +62,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   // rateOn hands back the row it was given, typed as the narrower shape it
   // reads, so it is looked up again to keep the row's own fields.
   const inForce = rateOn(rates, day);
-  const current = inForce ? rates.find((r) => r.validFrom === inForce.validFrom) ?? null : null;
+  const current = inForce ? (rates.find((r) => r.validFrom === inForce.validFrom) ?? null) : null;
   const upcoming = rates.filter((r) => r.validFrom > day);
   const earlier = rates.filter((r) => r.validFrom <= day && r.id !== current?.id);
 
@@ -108,19 +108,31 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
 
   /** Who entered it and why, on one quiet line. */
   function details(r: MileageRateRow) {
-    return [r.note, r.createdBy && `${t("col.createdBy")} ${r.createdBy}`].filter(Boolean).join(" - ");
+    return [r.note, r.createdBy && `${t("col.createdBy")} ${r.createdBy}`]
+      .filter(Boolean)
+      .join(" - ");
   }
 
   function row(r: MileageRateRow, label: string) {
     const meta = details(r);
     return (
-      <li key={r.id} className="flex items-center gap-3 border-b border-border px-inset py-2.5 last:border-0">
+      <li
+        key={r.id}
+        className="flex items-center gap-3 border-b border-border px-inset py-2.5 last:border-0"
+      >
         <span className="w-36 shrink-0 text-sm text-muted">{label}</span>
         <span className="min-w-0 flex-1">
-          <span className="text-sm font-medium tabular-nums">{t("perMil", { amount: perMil(r.orePerKm) })}</span>
+          <span className="text-sm font-medium tabular-nums">
+            {t("perMil", { amount: perMil(r.orePerKm) })}
+          </span>
           {meta && <span className="ml-2 text-xs text-muted">{meta}</span>}
         </span>
-        <IconButton tone="danger" label={t("remove")} loading={pending === r.id} onClick={() => remove(r)}>
+        <IconButton
+          tone="danger"
+          label={t("remove")}
+          loading={pending === r.id}
+          onClick={() => remove(r)}
+        >
           <IconTrash className="size-4" />
         </IconButton>
       </li>
@@ -144,7 +156,9 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
               <Tag tone="success">{t("current")}</Tag>
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              {[t("since", { date: date(current.validFrom) }), details(current)].filter(Boolean).join(" - ")}
+              {[t("since", { date: date(current.validFrom) }), details(current)]
+                .filter(Boolean)
+                .join(" - ")}
             </p>
           </div>
         ) : (
@@ -218,7 +232,11 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
       {earlier.length > 0 && (
         <div className="border-t border-border">
           <div className="px-inset py-2">
-            <ExpandToggle open={showHistory} onToggle={() => setShowHistory(!showHistory)} className="-ml-2">
+            <ExpandToggle
+              open={showHistory}
+              onToggle={() => setShowHistory(!showHistory)}
+              className="-ml-2"
+            >
               {showHistory ? t("hideEarlier") : t("showEarlier", { count: earlier.length })}
             </ExpandToggle>
           </div>

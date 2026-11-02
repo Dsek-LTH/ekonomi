@@ -104,11 +104,7 @@ describe("variables", () => {
 
 describe("account totals", () => {
   it("sums the rows on each account", () => {
-    const result = evaluate([], [
-      line("100", "a"),
-      line("250", "b"),
-      line("40", "c", "KM01:5010"),
-    ]);
+    const result = evaluate([], [line("100", "a"), line("250", "b"), line("40", "c", "KM01:5010")]);
     expect(result.accounts.get("SEX01:5010")).toBe(kr(350));
     expect(result.accounts.get("KM01:5010")).toBe(kr(40));
   });
@@ -116,11 +112,14 @@ describe("account totals", () => {
   it("lets a formula read another sheet's account total", () => {
     // account(CC, KONTO) is what makes a rambudget row follow the sheet it
     // summarises instead of being retyped.
-    const result = evaluate([], [
-      line("300", "a", "SEX01:5010"),
-      line("200", "b", "SEX01:5010"),
-      line("=account(SEX01, 5010)", "summary", "RAM:5010"),
-    ]);
+    const result = evaluate(
+      [],
+      [
+        line("300", "a", "SEX01:5010"),
+        line("200", "b", "SEX01:5010"),
+        line("=account(SEX01, 5010)", "summary", "RAM:5010"),
+      ],
+    );
     expect(result.lineItems.get("summary")).toBe(kr(500));
   });
 
@@ -145,22 +144,25 @@ describe("account totals", () => {
     // Codes come from Fortnox and from the settings screen, both of which allow
     // them (see POST /api/cost-centers). Lexed as an identifier, "NÄRU" became
     // the two names N and RU and the lookup silently missed.
-    const result = evaluate([], [
-      line("400", "a", "NÄRU:3010"),
-      line("=account(NÄRU, 3010)", "ref", "SEX01:5010"),
-      line("60", "b", "KM-01:3010"),
-      line("=account(KM-01, 3010)", "hyphen", "SEX01:5010"),
-    ]);
+    const result = evaluate(
+      [],
+      [
+        line("400", "a", "NÄRU:3010"),
+        line("=account(NÄRU, 3010)", "ref", "SEX01:5010"),
+        line("60", "b", "KM-01:3010"),
+        line("=account(KM-01, 3010)", "hyphen", "SEX01:5010"),
+      ],
+    );
     expect(result.lineItems.get("ref")).toBe(kr(400));
     expect(result.lineItems.get("hyphen")).toBe(kr(60));
     expect(result.badLineItems).toEqual([]);
   });
 
   it("resolves a cost-centre code that leads with a digit", () => {
-    const result = evaluate([], [
-      line("250", "a", "100:3010"),
-      line("=account(100, 3010)", "ref", "SEX01:5010"),
-    ]);
+    const result = evaluate(
+      [],
+      [line("250", "a", "100:3010"), line("=account(100, 3010)", "ref", "SEX01:5010")],
+    );
     expect(result.lineItems.get("ref")).toBe(kr(250));
     expect(result.badLineItems).toEqual([]);
   });
@@ -182,7 +184,12 @@ describe("account totals", () => {
 
 describe("editorial adjustments", () => {
   it("adds a decided change on top of the rows", () => {
-    const result = evaluate([], [line("1000")], [], [{ accountKey: "SEX01:5010", amount: kr(250) }]);
+    const result = evaluate(
+      [],
+      [line("1000")],
+      [],
+      [{ accountKey: "SEX01:5010", amount: kr(250) }],
+    );
     expect(result.accounts.get("SEX01:5010")).toBe(kr(1250));
   });
 
@@ -207,13 +214,21 @@ describe("editorial adjustments", () => {
 
 describe("references between cells", () => {
   it("reads another row's amount", () => {
-    const result = evaluate([], [line("400", "source"), { ...line("=@Lsource:expression*2", "double") }]);
+    const result = evaluate(
+      [],
+      [line("400", "source"), { ...line("=@Lsource:expression*2", "double") }],
+    );
     expect(result.lineItems.get("double")).toBe(kr(800));
   });
 
   it("reads a per-line value from a user-defined column", () => {
     const rows: LineItemInput[] = [
-      { id: "row", accountKey: "SEX01:5010", expression: "=@Lrow:x1*10", values: { x1: "25" } },
+      {
+        id: "row",
+        accountKey: "SEX01:5010",
+        expression: "=@Lrow:x1*10",
+        values: { x1: "25" },
+      },
     ];
     expect(evaluate([], rows, ["x1"]).lineItems.get("row")).toBe(kr(250));
   });
@@ -227,10 +242,7 @@ describe("circular references", () => {
   });
 
   it("leaves a settled budget free of warnings", () => {
-    const result = evaluate(
-      [{ name: "MEDLEMMAR", expression: "150" }],
-      [line("=MEDLEMMAR*20")],
-    );
+    const result = evaluate([{ name: "MEDLEMMAR", expression: "150" }], [line("=MEDLEMMAR*20")]);
     expect(result.errors).toEqual([]);
     expect(result.badLineItems).toEqual([]);
     expect(result.badVariables).toEqual([]);
@@ -275,27 +287,23 @@ describe("an unresolvable cell does not pass for zero", () => {
   it("makes the row that reads it unresolved too", () => {
     // Previously: the broken row was flagged, and the row doubling it quietly
     // returned 0, a clean number with nothing to suggest it was wrong.
-    const result = evaluate([], [
-      line("ungefär 300", "source"),
-      line("=@Lsource:expression*2", "double"),
-    ]);
+    const result = evaluate(
+      [],
+      [line("ungefär 300", "source"), line("=@Lsource:expression*2", "double")],
+    );
     expect(result.badLineItems).toEqual(["source", "double"]);
   });
 
   it("carries the failure down a chain of references", () => {
-    const result = evaluate([], [
-      line("=SAKNAS", "a"),
-      line("=@La:expression", "b"),
-      line("=@Lb:expression+1", "c"),
-    ]);
+    const result = evaluate(
+      [],
+      [line("=SAKNAS", "a"), line("=@La:expression", "b"), line("=@Lb:expression+1", "c")],
+    );
     expect(result.badLineItems).toEqual(["a", "b", "c"]);
   });
 
   it("leaves a row reading a cell that resolved alone", () => {
-    const result = evaluate([], [
-      line("400", "source"),
-      line("=@Lsource:expression*2", "double"),
-    ]);
+    const result = evaluate([], [line("400", "source"), line("=@Lsource:expression*2", "double")]);
     expect(result.badLineItems).toEqual([]);
     expect(result.lineItems.get("double")).toBe(kr(800));
   });
@@ -312,10 +320,7 @@ describe("an unresolvable cell does not pass for zero", () => {
 
 describe("an account total says when it is short a row", () => {
   it("names the account and still sums what resolved", () => {
-    const result = evaluate([], [
-      line("=fel kr", "broken"),
-      line("1200", "fine"),
-    ]);
+    const result = evaluate([], [line("=fel kr", "broken"), line("1200", "fine")]);
     // The figure is the rows that worked, a sheet you cannot read is no help
     // in finding the row to fix, and the account is marked as partial.
     expect(result.accounts.get("SEX01:5010")).toBe(kr(1200));
@@ -328,10 +333,10 @@ describe("an account total says when it is short a row", () => {
   });
 
   it("marks only the accounts that are actually short", () => {
-    const result = evaluate([], [
-      line("=trasig", "a", "SEX01:5010"),
-      line("500", "b", "KM01:5010"),
-    ]);
+    const result = evaluate(
+      [],
+      [line("=trasig", "a", "SEX01:5010"), line("500", "b", "KM01:5010")],
+    );
     expect(result.badAccounts).toEqual(["SEX01:5010"]);
   });
 });
@@ -341,10 +346,7 @@ describe("the cells are part of the fixed point", () => {
     // Two rows defined in terms of each other. The convergence test used to
     // look at variables and account totals only, so this settled "stable" with
     // whatever the last pass held and no warning at all.
-    const result = evaluate([], [
-      line("=@Lb:expression+1", "a"),
-      line("=@La:expression+1", "b"),
-    ]);
+    const result = evaluate([], [line("=@Lb:expression+1", "a"), line("=@La:expression+1", "b")]);
     expect(result.errors).toEqual(["circular"]);
   });
 
@@ -378,11 +380,7 @@ describe("money comes out as exact öre", () => {
     // A third decimal is not a smaller amount, it is one öre either way. It is
     // decided per row rather than carried into the total and rounded at the
     // end, so the total is always exactly the sum of the figures on screen.
-    const result = evaluate([], [
-      line("=10/3", "a"),
-      line("=10/3", "b"),
-      line("=10/3", "c"),
-    ]);
+    const result = evaluate([], [line("=10/3", "a"), line("=10/3", "b"), line("=10/3", "c")]);
     expect(result.lineItems.get("a")).toBe(333);
     expect(result.accounts.get("SEX01:5010")).toBe(999); // not 1000
   });
@@ -391,10 +389,7 @@ describe("money comes out as exact öre", () => {
     // The reason the arithmetic is not simply done in öre: scaling the whole
     // value space would make 67% into 67, and every formula built on a share a
     // hundred times too large.
-    const result = evaluate(
-      [{ name: "ANDEL", expression: "67%" }],
-      [line("=1000*ANDEL", "share")],
-    );
+    const result = evaluate([{ name: "ANDEL", expression: "67%" }], [line("=1000*ANDEL", "share")]);
     expect(result.vars.get("ANDEL")).toBe(0.67);
     expect(result.lineItems.get("share")).toBe(kr(670));
   });

@@ -46,9 +46,7 @@ function expense(over: Partial<Expense> & { status: ExpenseStatus }): Expense {
 
 describe("queueActionFor", () => {
   it("asks the submitter to fix an utlägg that came back", () => {
-    expect(
-      queueActionFor(expense({ status: "CHANGES_REQUESTED" }), viewer([])),
-    ).toBe("FIX");
+    expect(queueActionFor(expense({ status: "CHANGES_REQUESTED" }), viewer([]))).toBe("FIX");
   });
 
   it("asks the submitter to send a draft", () => {
@@ -122,9 +120,11 @@ describe("buildQueue", () => {
       expense({ id: "APPROVED_OLD", status: "APPROVED", purchaseDate: "2026-01-02" }),
       expense({ id: "RETURNED", status: "CHANGES_REQUESTED", purchaseDate: "2026-07-30" }),
     ];
-    expect(
-      buildQueue(rows, viewer(["SKATTMASTARE"])).map((i) => i.expense.id),
-    ).toEqual(["RETURNED", "APPROVED_OLD", "APPROVED_NEW"]);
+    expect(buildQueue(rows, viewer(["SKATTMASTARE"])).map((i) => i.expense.id)).toEqual([
+      "RETURNED",
+      "APPROVED_OLD",
+      "APPROVED_NEW",
+    ]);
   });
 
   it("never lists one utlägg twice, however many roles the viewer holds", () => {

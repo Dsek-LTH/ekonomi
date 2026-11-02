@@ -22,8 +22,7 @@ import type { ContractFileRole } from "@/lib/domain/types";
  */
 const IMMUTABLE_ROLES: readonly ContractFileRole[] = ["EVIDENCE"];
 
-export const isImmutable = (role: ContractFileRole): boolean =>
-  IMMUTABLE_ROLES.includes(role);
+export const isImmutable = (role: ContractFileRole): boolean => IMMUTABLE_ROLES.includes(role);
 
 /** Whether a file is the signed copy of the agreement. See contractStatus. */
 export const isSigned = (role: ContractFileRole): boolean => role === "SIGNED";

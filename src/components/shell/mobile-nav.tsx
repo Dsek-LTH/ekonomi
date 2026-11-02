@@ -44,7 +44,8 @@ import { cn } from "@/lib/ui/utils";
 
 // One card of an inset grouped list. `divide-y` rather than a border per row,
 // so the rules stop short of the rounded corners on their own.
-const CARD = "divide-y divide-border overflow-hidden rounded-panel border border-border bg-background";
+const CARD =
+  "divide-y divide-border overflow-hidden rounded-panel border border-border bg-background";
 
 // 48px, not the rail's 40. Everything on this screen is hit with a thumb, and
 // `min-h` rather than `h` so a long section name may take a second line rather
@@ -186,9 +187,7 @@ export function MobileNav({
             {/* The rail turns a group heading into a rule, because a word in a
                 64px column is noise. Here there is room for the word, which is
                 the whole point of the shape: a caption over the card it names. */}
-            <p className="mb-1.5 px-4 text-xs font-medium text-muted">
-              {t(group.label)}
-            </p>
+            <p className="mb-1.5 px-4 text-xs font-medium text-muted">{t(group.label)}</p>
             <div className={CARD}>{group.items.map(navRow)}</div>
           </div>
         ))}
@@ -204,7 +203,10 @@ export function MobileNav({
         <div>
           <p className="mb-1.5 px-4 text-xs font-medium text-muted">{tGuides("menuHeading")}</p>
           <div className={CARD}>
-            {[...(pageGuide && pageGuide.id !== "start" ? [pageGuide.id] : []), "start" as const].map((id) => (
+            {[
+              ...(pageGuide && pageGuide.id !== "start" ? [pageGuide.id] : []),
+              "start" as const,
+            ].map((id) => (
               <button
                 key={id}
                 type="button"
@@ -215,7 +217,9 @@ export function MobileNav({
                 className={cn(ROW, "text-left active:bg-surface")}
               >
                 <IconHelp className="size-5 shrink-0 text-muted" />
-                <span className="min-w-0 flex-1">{id === "start" ? tGuides("tour") : tGuides("thisPage")}</span>
+                <span className="min-w-0 flex-1">
+                  {id === "start" ? tGuides("tour") : tGuides("thisPage")}
+                </span>
               </button>
             ))}
           </div>
@@ -253,11 +257,17 @@ export function MobileNav({
               />
             </a>
           )}
-          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5" data-tour="theme">
+          <div
+            className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5"
+            data-tour="theme"
+          >
             <span className="text-sm font-medium">{tc("theme")}</span>
             <ThemeToggle />
           </div>
-          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5" data-tour="language">
+          <div
+            className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5"
+            data-tour="language"
+          >
             <span className="text-sm font-medium">{tc("language")}</span>
             <LanguageSwitcher />
           </div>

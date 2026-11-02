@@ -39,13 +39,7 @@ const shown = (row: CellarRowDto): number => {
   return Math.abs(row.open?.[level as 80] ?? 0);
 };
 
-export function EntryDialog({
-  row,
-  onClose,
-}: {
-  row: CellarRowDto;
-  onClose: () => void;
-}) {
+export function EntryDialog({ row, onClose }: { row: CellarRowDto; onClose: () => void }) {
   const t = useTranslations("stock");
   const { pending, mutate } = useMutation();
   const was = shown(row);

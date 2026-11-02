@@ -3,6 +3,9 @@ import { getPayoutAccount } from "@/lib/data/users";
 import { getMileageRates } from "@/lib/mileage/store";
 import { requireUser } from "@/lib/server/current-user";
 import MileageClient from "./mileage-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("newMileage");
 
 /**
  * A milersättning's own form.

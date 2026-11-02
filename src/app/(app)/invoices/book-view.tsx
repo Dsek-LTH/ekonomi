@@ -105,7 +105,15 @@ function linesOf(rows: VoucherEditorRow[]): InvoiceLine[] {
 }
 
 /** A boxed field with its label above it, as one cell of the head. */
-function BookField({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+function BookField({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className={cn("block min-w-0", className)}>
       <span className="mb-1 block text-xs text-muted">{label}</span>
@@ -178,7 +186,11 @@ function SavedInput({
       readOnly={readOnly}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => void commit()}
-      className={cn("w-full", align === "right" && "text-right tabular-nums", readOnly && "bg-surface text-muted")}
+      className={cn(
+        "w-full",
+        align === "right" && "text-right tabular-nums",
+        readOnly && "bg-surface text-muted",
+      )}
     />
   );
 }
@@ -243,7 +255,9 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     fortnoxSupplierNumber: number || null,
     // The register's name, once one is picked: it is the name Fortnox will
     // print, so it is the one the archive should show.
-    ...(list.find((s) => s.number === number) && { supplierName: list.find((s) => s.number === number)!.name }),
+    ...(list.find((s) => s.number === number) && {
+      supplierName: list.find((s) => s.number === number)!.name,
+    }),
   });
 
   const put = async (body: PatchSupplierInvoice) =>
@@ -276,7 +290,8 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     amount: toOre(invoice.amount),
     ocr: invoice.ocr ?? null,
     rounding: roundingOre,
-    shares: invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
+    shares:
+      invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
     lines,
   });
 
@@ -303,7 +318,8 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   // account, and the whole on the leverantörsskuld's credit side. Worked in
   // öre, so the sums meet exactly.
   const debitOre = lines.reduce((sum, l) => sum + l.debit, 0) + Math.max(roundingOre, 0);
-  const creditOre = lines.reduce((sum, l) => sum + l.credit, 0) + totalOre + Math.max(-roundingOre, 0);
+  const creditOre =
+    lines.reduce((sum, l) => sum + l.credit, 0) + totalOre + Math.max(-roundingOre, 0);
   const debit = debitOre / 100;
   const credit = creditOre / 100;
   const difference = (creditOre - debitOre) / 100;
@@ -359,17 +375,29 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
               )}
             </BookField>
             <BookField label={tFields("invoiceDate")}>
-              <SavedInput type="date" value={invoice.invoiceDate} onSave={(v) => commit("invoiceDate", v)} />
+              <SavedInput
+                type="date"
+                value={invoice.invoiceDate}
+                onSave={(v) => commit("invoiceDate", v)}
+              />
             </BookField>
             <BookField label={tFields("dueDate")}>
-              <SavedInput type="date" value={invoice.dueDate} onSave={(v) => commit("dueDate", v)} />
+              <SavedInput
+                type="date"
+                value={invoice.dueDate}
+                onSave={(v) => commit("dueDate", v)}
+              />
             </BookField>
             <BookField label={tFields("ocr")} className="col-span-2">
               {text("ocr")}
             </BookField>
             <BookField label={tFields("invoiceNumber")}>{text("invoiceNumber")}</BookField>
             <BookField label={tBook("total")}>
-              <SavedInput amount value={sekToInput(invoice.amount)} onSave={(v) => commit("amount", v)} />
+              <SavedInput
+                amount
+                value={sekToInput(invoice.amount)}
+                onSave={(v) => commit("amount", v)}
+              />
             </BookField>
           </div>
 
@@ -492,7 +520,13 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
  * clear answer came back. Only a look in Fortnox settles it, so the panel asks
  * for exactly that, and offers the two answers.
  */
-export function UncertainExport({ invoice, header }: { invoice: SupplierInvoiceView; header?: React.ReactNode }) {
+export function UncertainExport({
+  invoice,
+  header,
+}: {
+  invoice: SupplierInvoiceView;
+  header?: React.ReactNode;
+}) {
   const t = useTranslations("invoices.workspace");
   const m = useMutation();
   const [number, setNumber] = useState("");
@@ -509,18 +543,33 @@ export function UncertainExport({ invoice, header }: { invoice: SupplierInvoiceV
           <Button
             variant="secondary"
             loading={m.pending === "not_created"}
-            onClick={() => void m.mutate(url, { key: "not_created", body: { outcome: "not_created" } })}
+            onClick={() =>
+              void m.mutate(url, {
+                key: "not_created",
+                body: { outcome: "not_created" },
+              })
+            }
           >
             {t("uncertainNotCreated")}
           </Button>
           <div className="flex items-end gap-2">
             <Field label={t("uncertainGivenNumber")}>
-              <Input size="sm" inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} />
+              <Input
+                size="sm"
+                inputMode="numeric"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+              />
             </Field>
             <Button
               disabled={!/^\d+$/.test(number)}
               loading={m.pending === "created"}
-              onClick={() => void m.mutate(url, { key: "created", body: { outcome: "created", givenNumber: number } })}
+              onClick={() =>
+                void m.mutate(url, {
+                  key: "created",
+                  body: { outcome: "created", givenNumber: number },
+                })
+              }
             >
               {t("uncertainCreated")}
             </Button>
@@ -530,4 +579,3 @@ export function UncertainExport({ invoice, header }: { invoice: SupplierInvoiceV
     </Card>
   );
 }
-

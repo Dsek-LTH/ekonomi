@@ -6,9 +6,13 @@
    query both, which is why it is a block. See the palette below and
    lib/ui/theme.ts. */
 @custom-variant dark {
-  &:where(.dark, .dark *) { @slot; }
+  &:where(.dark, .dark *) {
+    @slot;
+  }
   @media (prefers-color-scheme: dark) {
-    &:where(:root:not(.light), :root:not(.light) *) { @slot; }
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
   }
 }
 
@@ -24,8 +28,8 @@
 @custom-variant typing (:root[data-typing] &);
 
 @theme {
-    /* Neutrals */
-    /* The page is a visible grey under white cards, 1.10:1, where it used to
+  /* Neutrals */
+  /* The page is a visible grey under white cards, 1.10:1, where it used to
        be #fafafa at 1.04:1. At that step the screen read as one white field:
        nothing for the eye to hold on to, and all of it glare. The border is
        one step firmer for the same reason. With the cards' shadow gone it is
@@ -38,26 +42,26 @@
        #18181b. It used to be Apple's greys with the ink from another ramp
        beside them, so the buttons and the text were two blacks and the
        surface (#f5f5f7) came out lighter than the page it sat on. */
-    --color-background: #ffffff;
-    --color-canvas: #f4f4f5;
-    /* A tinted header or a disabled field inside a card. Darker than the page,
+  --color-background: #ffffff;
+  --color-canvas: #f4f4f5;
+  /* A tinted header or a disabled field inside a card. Darker than the page,
        so it still reads where it sits straight on it (a switch's track). */
-    --color-surface: #efeff1;
-    --color-border: #dcdce0;
-    /* The edge of anything typed into or pressed: fields, comboboxes, the
+  --color-surface: #efeff1;
+  --color-border: #dcdce0;
+  /* The edge of anything typed into or pressed: fields, comboboxes, the
        secondary button. A step firmer than a divider (1.52:1 on a card,
        against the divider's 1.37) so a field can be found on a form without
        every rule in a card turning into a box. 3:1 was tried for this once and
        is the reason for the step: see the 3:1 tier below. */
-    --color-border-control: #d1d1d6;
+  --color-border-control: #d1d1d6;
 
-    --color-foreground: #18181b;
-    /* 6.33:1 on a card and 5.76 on a surface fill. It was #6e6e73, which is
+  --color-foreground: #18181b;
+  /* 6.33:1 on a card and 5.76 on a surface fill. It was #6e6e73, which is
        5.07 and 4.66, at the edge of what text owes, and this is the colour
        most of the app's small text is set in. */
-    --color-muted: #5f5f66;
+  --color-muted: #5f5f66;
 
-    /* ── The 3:1 tier ────────────────────────────────────────────
+  /* ── The 3:1 tier ────────────────────────────────────────────
        For ink that is not a word: a chevron, the search glyph, an elbow
        connector, the box on a selected budget cell. Non-text under WCAG 1.4.11,
        which asks 3:1 of anything that carries meaning, and this clears it on all
@@ -74,55 +78,57 @@
        words in it, placeholders included. This one is 3.44:1 on a card, under
        the 4.5 text owes, so no word is set in it. The `text-muted/40` … `/70` ladder this replaced
        ran from 1.72:1 to 2.81:1, and it was carrying real content. */
-    --color-faint: #808088;
+  --color-faint: #808088;
 
-    /* The fill a row or a control takes while the pointer is on it. Its own
+  /* The fill a row or a control takes while the pointer is on it. Its own
        token rather than a fraction of the surface: `bg-surface/40` is a 3%
        step (1.03:1), which is under what a screen at an angle can show, so in a
        table of fifty rows the hover said nothing. One step above --color-surface
        so a hovered row still reads over a tinted header. */
-    --color-hover: #e9e9ec;
+  --color-hover: #e9e9ec;
 
-    /* Budget sheets rule their cells in this rather than in --color-border, a
+  /* Budget sheets rule their cells in this rather than in --color-border, a
        hairline heavier, because a spreadsheet is read by its grid. Cool, like
        every other neutral here: it used to be #ddd7df, the one warm grey in the
        app. See the `.budget-grid` block near the bottom. */
-    --color-grid-line: #d4d4d8;
+  --color-grid-line: #d4d4d8;
 
-
-    /* ── Brand ───────────────────────────────────────────────────
+  /* ── Brand ───────────────────────────────────────────────────
        The primary action, and it is ink rather than the section's pink. A pink
        fill on every button, nav item and row action read as a consumer app,
        and with a white label it was 3.31:1, under what a label owes. Near-black
        carries white at 17:1. The pink is the logo's, and the first chart
        series keeps it as a value of its own (see --chart-1).
 
-       Accent is the same ink: links, the active tab and the required star. A
+       Accent is the same ink: the active tab and the required star. A
        blue was the obvious alternative and was ruled out because the two blues
        here already mean something (a card purchase, an attested utlägg). The
        soft step is the selected row's fill, one step past the hover so the two
        are never confused, and a selected row carries an ink bar at its start
        as well, so the state is not left to a fill alone. */
-    --color-brand: #18181b;
-    --color-brand-hover: #27272a;
-    --color-on-brand: #ffffff;
-    --color-brand-edge: #18181b;
+  --color-brand: #18181b;
+  --color-brand-hover: #27272a;
+  --color-on-brand: #ffffff;
+  --color-brand-edge: #18181b;
 
-    /* The primary button's fill, which is the section's pink again rather than
+  /* The primary button's fill, which is the section's pink again rather than
        the ink above. Ink stays on the segmented control, the stepper and the
        accent, so the pink is the one thing on a screen that asks to be pressed.
        A gentle diagonal blend ending on the chart pink. White reads 4.0:1 at
        the light end and 4.9:1 at the dark one. */
-    --color-action-from: #f280a1;
-    --color-action-to: #fa7b9f;
+  --color-action-from: #f280a1;
+  --color-action-to: #fa7b9f;
 
+  /* Accent */
+  --color-accent: #18181b;
+  --color-accent-soft: #e2e2e6;
 
-    /* Accent */
-    --color-accent: #18181b;
-    --color-accent-soft: #e2e2e6;
+  /* Links are the section's pink, so a thing that goes somewhere stands out
+       from the ink around it. The button pink is too pale for text on white
+       (2.6:1), so this is the chart's deeper pink, 5.2:1 on a card. */
+  --color-link: #d02253;
 
-
-    /* ── Tints ───────────────────────────────────────────────────
+  /* ── Tints ───────────────────────────────────────────────────
        Every soft tint below is one step deeper than it was, 1.13 to 1.27:1
        against a card where they were 1.06 to 1.20, so a pill reads as a chip
        and not as coloured text. Each ink was moved where its tint needed it,
@@ -135,35 +141,33 @@
        against blue for a dichromat (0.8, up from 0.2): the two collapse into
        one hue, so the word in the pill is what tells them apart. */
 
-    /* Purple, secondary meaning only. 4.87:1 on its tint. */
-    --color-purple: #7a4fb5;
-    --color-purple-soft: #efe8fa;
+  /* Purple, secondary meaning only. 4.87:1 on its tint. */
+  --color-purple: #7a4fb5;
+  --color-purple-soft: #efe8fa;
 
-    /* Blue, for an utlägg that is attesterat and waiting on the treasury. It
+  /* Blue, for an utlägg that is attesterat and waiting on the treasury. It
        used to share the green with bokförd, so the two ends of the last step
        looked the same. A sky blue rather than the card chip's royal one, and
        5.05:1 on its own tint. */
-    --color-blue: #0369a1;
-    --color-blue-soft: #e0eff8;
+  --color-blue: #0369a1;
+  --color-blue-soft: #e0eff8;
 
-    /* Semantic. On their tints: 4.74, 5.15 and 4.99:1. */
-    --color-success: #1f7a36;
-    --color-success-soft: #e6f4e9;
+  /* Semantic. On their tints: 4.74, 5.15 and 4.99:1. */
+  --color-success: #1f7a36;
+  --color-success-soft: #e6f4e9;
 
-    --color-warning: #8a5c00;
-    --color-warning-soft: #fdf0d5;
+  --color-warning: #8a5c00;
+  --color-warning-soft: #fdf0d5;
 
-    --color-danger: #c20013;
-    --color-danger-hover: #a50010;
-    /* Warm and a step deeper than the other tints, so an "obalanserad" chip
+  --color-danger: #c20013;
+  --color-danger-hover: #a50010;
+  /* Warm and a step deeper than the other tints, so an "obalanserad" chip
        is not taken for the warning amber: ΔE 16.0 apart, 5.5 for a
        dichromat, and 6.1 clear of the neutral selected row. */
-    --color-danger-soft: #ffdcd8;
-    --color-on-danger: #ffffff;
+  --color-danger-soft: #ffdcd8;
+  --color-on-danger: #ffffff;
 
-
-
-    /* ── How an utlägg was paid ──────────────────────────────────
+  /* ── How an utlägg was paid ──────────────────────────────────
        Three kinds, and telling them apart at a glance is the whole job: a
        purchase on the section's card is already paid for, an eget utlägg and a
        milersättning are money the section owes a person. They were all one
@@ -189,14 +193,14 @@
        an icon and a word, a status pill is a filled pill with a dot, they sit
        in different columns, and the word is the answer. Colour is the second
        way to tell these apart and never the only one. */
-    --color-pay-card: #1d4ed8;
-    --color-pay-card-soft: #e3eafc;
-    --color-pay-private: #0e7068;
-    --color-pay-private-soft: #dcf2ec;
-    --color-pay-mileage: #7c4a1e;
-    --color-pay-mileage-soft: #f3e5d6;
+  --color-pay-card: #1d4ed8;
+  --color-pay-card-soft: #e3eafc;
+  --color-pay-private: #0e7068;
+  --color-pay-private-soft: #dcf2ec;
+  --color-pay-mileage: #7c4a1e;
+  --color-pay-mileage-soft: #f3e5d6;
 
-    /* ── Chart series ────────────────────────────────────────────
+  /* ── Chart series ────────────────────────────────────────────
        One categorical palette for every chart in the app, and it is the status
        palette: the six tones an utlägg is already drawn in (see
        lib/domain/status.ts) plus two hues that only ever appear in a chart.
@@ -227,44 +231,44 @@
        the number that matters where two bands touch. And every chart in the app
        carries a legend or a labelled row, so colour is the second way to tell a
        series apart and never the only one. */
-    /* The section's pink, the same as the primary button's, so a theme has one
+  /* The section's pink, the same as the primary button's, so a theme has one
        pink rather than two. An alias, so the dark theme's follows its own. */
-    --chart-1: var(--color-action-from);
-    --chart-2: var(--color-purple);
-    --chart-3: var(--color-success);
-    --chart-4: var(--color-warning);
-    --chart-5: var(--color-danger);
-    /* The two the status palette has no opinion about, stepped for this ground
+  --chart-1: var(--color-action-from);
+  --chart-2: var(--color-purple);
+  --chart-3: var(--color-success);
+  --chart-4: var(--color-warning);
+  --chart-5: var(--color-danger);
+  /* The two the status palette has no opinion about, stepped for this ground
        rather than lightened from anything: lightness varies as well as hue,
        which is what carries a series list through red/green colour blindness.
        Chosen to sit as far as possible from the five above and from each other,
        which puts the closest pair either of them is in at ΔE 13.9. */
-    --chart-6: #3323b8;
-    --chart-7: #0b6270;
-    /* Last, and not one of the seven: the neutral tone, for the bucket that is
+  --chart-6: #3323b8;
+  --chart-7: #0b6270;
+  /* Last, and not one of the seven: the neutral tone, for the bucket that is
        an absence rather than a thing ("utan kostnadsställe", "övriga"). */
-    --chart-8: var(--color-muted);
+  --chart-8: var(--color-muted);
 
-    /* Misc */
-    /* The focus ring. Neutral rather than the section's pink: the ring is for
+  /* Misc */
+  /* The focus ring. Neutral rather than the section's pink: the ring is for
        finding the keyboard, and in pink it shouted on every field it landed
        on, and read as a second accent next to the buttons that actually wear
        one. It is the muted text grey, which keeps it at 6:1 on a card, well
        over the 3:1 a focus indicator owes. */
-    --color-ring: #5f5f66;
-    --color-scrollbar: #c7c7cc;
+  --color-ring: #5f5f66;
+  --color-scrollbar: #c7c7cc;
 
-    /* The light that sweeps a skeleton block. Brighter than the surface it
+  /* The light that sweeps a skeleton block. Brighter than the surface it
        runs across, which on a light ground means white and on a dark one a
        thin white wash. The same gesture, not the same colour. */
-    --skeleton-sheen: rgb(255 255 255 / 0.75);
+  --skeleton-sheen: rgb(255 255 255 / 0.75);
 
-    /* The padding inside every card, table and panel. One value at every
+  /* The padding inside every card, table and panel. One value at every
        width: it used to open up to 24px from sm, which on a data table spent
        48px of each row on margins and read as roomy rather than dense. */
-    --spacing-inset: 1rem;
+  --spacing-inset: 1rem;
 
-    /* ── Corners ─────────────────────────────────────────────────
+  /* ── Corners ─────────────────────────────────────────────────
        Three radii and no others. Tailwind's own scale is cleared, so a
        `rounded-lg` written anywhere produces no CSS at all, and radius.test.ts
        fails on it before anyone has to notice a square corner. Which one a
@@ -284,33 +288,34 @@
        status dots, spinners, step numbers, the scrollbar thumb. Never for a
        button or a pill. Fully round controls were most of what made the app
        read as playful. */
-    --radius-*: initial;
-    --radius-mark: 2px;
-    --radius-control: 4px;
-    --radius-panel: 6px;
+  --radius-*: initial;
+  --radius-mark: 2px;
+  --radius-control: 4px;
+  --radius-panel: 6px;
 
-    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text",
-        "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans:
+    var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-    --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
-    --shadow-pop: 0 4px 12px rgb(29 29 31 / 0.08), 0 12px 32px rgb(29 29 31 / 0.12);
+  --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
+  --shadow-pop: 0 4px 12px rgb(29 29 31 / 0.08), 0 12px 32px rgb(29 29 31 / 0.12);
 
-    /* For something raised inside a track rather than above the page: the
+  /* For something raised inside a track rather than above the page: the
         selected pill of a switcher, sitting in a 4px gutter. The other two lean
         downwards, which is right for a card on a page, since light comes from
         above, but in a gutter that thin the lean lands *in* the gap below the pill
         and darkens it, and the pill then reads as sitting low in a track it is
         in fact dead centre of. So this one has no vertical offset at all: it
         seats the pill without telling you which way is up. */
-    --shadow-pill: 0 0 2px rgb(29 29 31 / 0.06), 0 0 6px rgb(29 29 31 / 0.05);
+  --shadow-pill: 0 0 2px rgb(29 29 31 / 0.06), 0 0 6px rgb(29 29 31 / 0.05);
 
-    /* One easing for everything that moves, so the app has a single hand.
+  /* One easing for everything that moves, so the app has a single hand.
         Exponential-ish ease-out: leaves fast, settles soft. */
-    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-    /* How long the receipt panel takes to fold away or come back. Read by
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* How long the receipt panel takes to fold away or come back. Read by
        both halves of the motion and by the timer that unmounts the panel
        after it (RECEIPT_FOLD_MS), so the two cannot drift apart. */
-    --receipt-fold-ms: 240ms;
+  --receipt-fold-ms: 240ms;
 }
 
 /*
@@ -356,7 +361,6 @@
   --color-hover: #38383a;
   --color-grid-line: #39393b;
 
-
   /* Brand */
   --color-brand: #fafafa;
   --color-brand-hover: #e4e4e7;
@@ -366,18 +370,17 @@
   --color-action-from: #f280a1;
   --color-action-to: #ea6f95;
 
-
   /* Accent */
   --color-accent: #fafafa;
   --color-accent-soft: #323235;
-
+  /* The button pink itself. It holds on a dark ground. */
+  --color-link: #f280a1;
 
   /* Purple, secondary meaning only */
   --color-purple: #a98bd8;
   --color-purple-soft: #302b38;
   --color-blue: #5ab4ef;
   --color-blue-soft: #1c2d3b;
-
 
   /* Semantic */
   --color-success: #30d158;
@@ -398,7 +401,6 @@
      near-black; the light theme's red is dark enough that white reads 5.38
      there. Written down so the number is known rather than assumed. */
   --color-on-danger: #ffffff;
-
 
   /* How an utlägg was paid. Stepped for a near-black ground rather than
      lightened from the light theme's, so each still reads at 6:1 or better on
@@ -429,22 +431,15 @@
      to read as the surface catching light, not as a second colour. */
   --skeleton-sheen: rgb(255 255 255 / 0.06);
 
-
   /* Elevation */
-  --shadow-card:
-    0 1px 2px rgb(0 0 0 / 0.45),
-    0 4px 12px rgb(0 0 0 / 0.25);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 4px 12px rgb(0 0 0 / 0.25);
 
   /* The one that most needed fixing: on a dark ground the card shadow is 45%
      black 4px down, which filled the gutter under a selected pill almost
      solid. */
-  --shadow-pill:
-    0 0 3px rgb(0 0 0 / 0.4),
-    0 0 10px rgb(0 0 0 / 0.25);
+  --shadow-pill: 0 0 3px rgb(0 0 0 / 0.4), 0 0 10px rgb(0 0 0 / 0.25);
 
-  --shadow-pop:
-    0 8px 24px rgb(0 0 0 / 0.45),
-    0 20px 48px rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45), 0 20px 48px rgb(0 0 0 / 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -477,7 +472,6 @@
     --color-hover: #38383a;
     --color-grid-line: #39393b;
 
-
     /* Brand */
     --color-brand: #fafafa;
     --color-brand-hover: #e4e4e7;
@@ -487,18 +481,17 @@
     --color-action-from: #f280a1;
     --color-action-to: #ea6f95;
 
-
     /* Accent */
     --color-accent: #fafafa;
     --color-accent-soft: #323235;
-
+    /* The button pink itself. It holds on a dark ground. */
+    --color-link: #f280a1;
 
     /* Purple, secondary meaning only */
     --color-purple: #a98bd8;
     --color-purple-soft: #302b38;
     --color-blue: #5ab4ef;
     --color-blue-soft: #1c2d3b;
-
 
     /* Semantic */
     --color-success: #30d158;
@@ -519,7 +512,6 @@
        near-black; the light theme's red is dark enough that white reads 5.38
        there. Written down so the number is known rather than assumed. */
     --color-on-danger: #ffffff;
-
 
     /* How an utlägg was paid. Stepped for a near-black ground rather than
        lightened from the light theme's, so each still reads at 6:1 or better on
@@ -550,22 +542,15 @@
        to read as the surface catching light, not as a second colour. */
     --skeleton-sheen: rgb(255 255 255 / 0.06);
 
-
     /* Elevation */
-    --shadow-card:
-      0 1px 2px rgb(0 0 0 / 0.45),
-      0 4px 12px rgb(0 0 0 / 0.25);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 4px 12px rgb(0 0 0 / 0.25);
 
     /* The one that most needed fixing: on a dark ground the card shadow is 45%
        black 4px down, which filled the gutter under a selected pill almost
        solid. */
-    --shadow-pill:
-      0 0 3px rgb(0 0 0 / 0.4),
-      0 0 10px rgb(0 0 0 / 0.25);
+    --shadow-pill: 0 0 3px rgb(0 0 0 / 0.4), 0 0 10px rgb(0 0 0 / 0.25);
 
-    --shadow-pop:
-      0 8px 24px rgb(0 0 0 / 0.45),
-      0 20px 48px rgb(0 0 0 / 0.35);
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45), 0 20px 48px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -590,12 +575,12 @@
    snapped. The property is named too: this class is on the nav rail and the
    segmented control, where `transition: all` would also ease the width. */
 .brand-fill {
-    background: var(--color-brand);
-    transition: background 150ms var(--ease-out-quint);
+  background: var(--color-brand);
+  transition: background 150ms var(--ease-out-quint);
 }
 
 .brand-fill:hover {
-    background: var(--color-brand-hover);
+  background: var(--color-brand-hover);
 }
 
 /* The primary button. A gentle diagonal blend with no highlight and no shade,
@@ -604,15 +589,15 @@
    between and the button would snap. In the components layer so a utility on
    the element (the tab bar's card shadow) still wins. */
 @layer components {
-    .action-fill {
-        background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to));
-        border-color: transparent;
-        transition: box-shadow 150ms var(--ease-out-quint);
-    }
+  .action-fill {
+    background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to));
+    border-color: transparent;
+    transition: box-shadow 150ms var(--ease-out-quint);
+  }
 
-    .action-fill:hover {
-        box-shadow: inset 0 0 0 999px rgb(0 0 0 / 0.08);
-    }
+  .action-fill:hover {
+    box-shadow: inset 0 0 0 999px rgb(0 0 0 / 0.08);
+  }
 }
 
 /* A block standing in for content that hasn't arrived. The surface fill is what
@@ -653,16 +638,24 @@ html {
   color-scheme: light dark;
   text-rendering: optimizeLegibility;
 }
-html.light { color-scheme: light; }
-html.dark { color-scheme: dark; }
+html.light {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
 
 /* Greyscale smoothing in the dark theme only. On macOS it draws text thinner,
    which is what light type on a dark ground wants, and what dark type on a
    light one does not: there it took weight out of every stroke and read as
    lower contrast than the colours are. Both dark selectors, as everywhere. */
-html.dark { -webkit-font-smoothing: antialiased; }
+html.dark {
+  -webkit-font-smoothing: antialiased;
+}
 @media (prefers-color-scheme: dark) {
-  html:not(.light) { -webkit-font-smoothing: antialiased; }
+  html:not(.light) {
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 body {
@@ -1031,10 +1024,14 @@ summary {
   }
   /* Cells carrying a left divider, which has to travel with them too. */
   .rambudget thead th[data-rule="l"] {
-    box-shadow: inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border);
+    box-shadow:
+      inset 1px 0 0 var(--color-border),
+      inset 0 -1px 0 var(--color-border);
   }
   .rambudget thead td[data-rule="l"] {
-    box-shadow: inset 1px 0 0 var(--color-border), inset 0 -2px 0 var(--color-border);
+    box-shadow:
+      inset 1px 0 0 var(--color-border),
+      inset 0 -2px 0 var(--color-border);
   }
 }
 /* Roomier rows for breathing space (overrides the cells' tight py-1.5). */
@@ -1180,6 +1177,7 @@ summary {
     --color-action-to: #000000;
     --color-accent: #000000;
     --color-accent-soft: #e2e2e6;
+    --color-link: #d02253;
     --chart-1: #d02253;
     --color-purple: #8c4ccb;
     --color-purple-soft: #f6f2fc;

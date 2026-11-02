@@ -92,7 +92,8 @@ export function useExpenseMutations(expenseId: string) {
   async function recall(attested: number) {
     const ok = await confirm({
       title: t("recall.title"),
-      message: attested > 0 ? t("recall.messageAttested", { count: attested }) : t("recall.message"),
+      message:
+        attested > 0 ? t("recall.messageAttested", { count: attested }) : t("recall.message"),
       confirmLabel: t("recall.confirm"),
     });
     if (ok) await transition("recall");
@@ -134,10 +135,13 @@ export function useExpenseMutations(expenseId: string) {
    * attach is said in the same breath.
    */
   async function exportToFortnox(label: string): Promise<boolean> {
-    const data = await action.mutate<{ label: string; attachWarning: string | null }>(url("/export"), {
-      key: "export",
-      error: tBookkeeping("exportFailed", { id: label }),
-    });
+    const data = await action.mutate<{ label: string; attachWarning: string | null }>(
+      url("/export"),
+      {
+        key: "export",
+        error: tBookkeeping("exportFailed", { id: label }),
+      },
+    );
     if (!data) return false;
     const done = tBookkeeping("exportDone", { id: label, label: data.label });
     if (data.attachWarning) {

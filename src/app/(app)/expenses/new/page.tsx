@@ -4,6 +4,9 @@ import { getExpenseFingerprints } from "@/lib/data/expenses";
 import { getPayoutAccount, userHoldsCard } from "@/lib/data/users";
 import { requireUser } from "@/lib/server/current-user";
 import NewExpenseClient from "./new-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("newExpense");
 
 export default async function NewExpensePage() {
   // Says what it requires on its first line, like every other page. It used to

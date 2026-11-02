@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeAccountCode, parseBudgetCsv } from "@/lib/domain/budget-csv";
 
-const HEADER =
-  "cost_center,cc_name,account,account_name,description,quantity,unit_price,amount";
+const HEADER = "cost_center,cc_name,account,account_name,description,quantity,unit_price,amount";
 
 const file = (...rows: string[]) => [HEADER, ...rows].join("\n");
 
@@ -119,9 +118,7 @@ describe("parseBudgetCsv", () => {
   });
 
   it("refuses half an antal x á-pris pair rather than guessing", () => {
-    const { sheets, problems } = parseBudgetCsv(
-      file("SEX02,Sittningar,3011,Alkohol,Öl,1.44,,"),
-    );
+    const { sheets, problems } = parseBudgetCsv(file("SEX02,Sittningar,3011,Alkohol,Öl,1.44,,"));
     expect(sheets).toEqual([]);
     expect(problems[0].message).toContain("tillsammans");
   });

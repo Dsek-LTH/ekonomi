@@ -1,5 +1,8 @@
 import { permanentRedirect } from "next/navigation";
 import { HISTORY_PATH } from "../history/views";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockStats");
 
 // The statistics are the stats view of the stock's history now (see
 // ../history/views.ts). Kept as a redirect, with its period and filters, so a

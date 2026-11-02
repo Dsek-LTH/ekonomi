@@ -34,7 +34,16 @@ export function fiscalYearLabel(y: FiscalYear): string {
  * The Inkorg stays in: its list is not narrowed, but an invoice made from it
  * is made in the year, so the reader has to be able to pick it there.
  */
-const APPLIES = ["/dashboard", "/expenses", "/bank", "/invoices", "/income", "/budget", "/ledger", "/closing"];
+const APPLIES = [
+  "/dashboard",
+  "/expenses",
+  "/bank",
+  "/invoices",
+  "/income",
+  "/budget",
+  "/ledger",
+  "/closing",
+];
 const EXCEPT = ["/closing/template"];
 
 export function fiscalYearApplies(path: string): boolean {

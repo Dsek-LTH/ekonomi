@@ -127,7 +127,10 @@ export function SheetSaveBar({
         {changed.length === 0
           ? t("event.sheet.nothingToSave")
           : faults.size > 0
-            ? t("event.sheet.unsavedWithFaults", { count: changed.length, faults: faults.size })
+            ? t("event.sheet.unsavedWithFaults", {
+                count: changed.length,
+                faults: faults.size,
+              })
             : t("event.sheet.unsaved", { count: changed.length })}
       </span>
       <div className="flex items-center gap-2">

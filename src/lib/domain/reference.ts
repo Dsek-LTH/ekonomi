@@ -36,7 +36,11 @@ export function referencePrefix(year: number, series: ReferenceSeries = "DEK"): 
 }
 
 /** "DEK26-0043" from its two parts. */
-export function formatReference(year: number, counter: number, series: ReferenceSeries = "DEK"): string {
+export function formatReference(
+  year: number,
+  counter: number,
+  series: ReferenceSeries = "DEK",
+): string {
   return `${referencePrefix(year, series)}${String(counter).padStart(COUNTER_DIGITS, "0")}`;
 }
 
@@ -47,7 +51,11 @@ export function formatReference(year: number, counter: number, series: Reference
  * (the migration rewrote the ones that weren't), so the counter is simply the
  * prefix sliced off.
  */
-export function nextReference(year: number, last: string | null, series: ReferenceSeries = "DEK"): string {
+export function nextReference(
+  year: number,
+  last: string | null,
+  series: ReferenceSeries = "DEK",
+): string {
   const counter = Number.parseInt(last?.slice(referencePrefix(year, series).length) ?? "", 10);
   return formatReference(year, Number.isFinite(counter) ? counter + 1 : 1, series);
 }

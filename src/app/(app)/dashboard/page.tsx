@@ -4,7 +4,7 @@ import { getDashboardExpenses } from "@/lib/data/expenses";
 import { countUnaccountedPurchases } from "@/lib/data/bank";
 import { getBudgetOverview } from "@/lib/data/budget-overview";
 import { paceOf } from "@/lib/budget/overview";
-import { buildQueue } from "@/lib/domain/queue";
+import { buildQueue, type QueueAction } from "@/lib/domain/queue";
 import { canViewBookkeeping, canAccessBudget, canViewMemberScores } from "@/lib/domain/permissions";
 import { getMemberScore, getMemberScores } from "@/lib/data/member-score";
 import { getPayoutAccount } from "@/lib/data/users";
@@ -12,29 +12,37 @@ import { ownedResultUnits } from "@/lib/server/result-units";
 import {
   countStaleAttests,
   getOverdueInvoices,
-  getStuckOwn,
   getUnitInvoices,
   getUpcoming,
+  getWaitingOnOthers,
 } from "@/lib/data/dashboard";
-import { DashboardClient, type BudgetFlags, type ForgottenRow } from "./dashboard-client";
+import { DashboardClient, type BudgetFlags, type TurnRow } from "./dashboard-client";
+import { titled } from "@/lib/server/page-title";
 
-// How many of your own utlägg, and of your units' invoices, the dashboard
-// previews before handing you off to the list built for browsing.
+export const generateMetadata = titled("dashboard");
+
+// How many of your units' invoices the dashboard previews before handing you
+// off to the list built for browsing.
 //
 // It lives here, on the server, because this is what decides how many rows are
 // *fetched*. It cannot live in dashboard-client: that module is "use client",
 // and a Server Component importing a value from one gets a client reference
 // rather than the value.
-const MINE_PREVIEW = 5;
+const INVOICE_PREVIEW = 5;
 
 // A member whose oldest purchase has waited this long is behind enough for the
 // treasury to chase.
 const BEHIND_DAYS = 30;
 
-// Översikt is a strip across time and two cards under it. Glömt is what should
-// already have happened, Att göra is what waits on you now, Kommande is what
-// has a date soon. Under them, the result units off pace with their budget and
-// your own latest utlägg and invoices. Figures are on the pages these link to.
+/** How many single late or due things Din tur names before the rest fall back
+ *  into the counts under them. */
+const SINGLES_SHOWN = 5;
+
+// Översikt answers two questions side by side: what is your turn, and what of
+// yours waits on somebody else. Being late or due soon is shown on a row, not
+// given a card of its own, so nothing appears twice. Under them, the dates that
+// ask nothing of you, the result units off pace with their budget and the
+// invoices in your units. Figures are on the pages these link to.
 export default async function DashboardPage() {
   const user = await requireUser();
   const now = new Date();
@@ -58,11 +66,12 @@ export default async function DashboardPage() {
     score,
     everyone,
     upcoming,
-    stuck,
+    waiting,
     overdue,
     invoices,
   ] = await Promise.all([
-    getDashboardExpenses(user, MINE_PREVIEW, { during }),
+    // One of your own is enough to tell a first visit from any other.
+    getDashboardExpenses(user, 1, { during }),
     countUnaccountedPurchases(user.id, { during }),
     getPayoutAccount(user.id),
     watchesAll || watchesOwn ? getBudgetOverview(year) : null,
@@ -70,9 +79,9 @@ export default async function DashboardPage() {
     getMemberScore(user.id),
     canViewMemberScores(user.capabilities) ? getMemberScores() : null,
     getUpcoming(user),
-    getStuckOwn(user.id),
+    getWaitingOnOthers(user.id),
     getOverdueInvoices(user),
-    getUnitInvoices(user, MINE_PREVIEW),
+    getUnitInvoices(user, INVOICE_PREVIEW),
   ]);
 
   const queue = buildQueue(queueCandidates, user);
@@ -80,29 +89,59 @@ export default async function DashboardPage() {
     queue.filter((q) => q.action === "ATTEST").map((q) => q.expense.id),
   );
 
-  // Glömt: counts that stand for many first, then the single things, the
-  // longest forgotten first. A draft whose filing deadline is coming up is
-  // under Kommande with its date instead, which says more than its age does.
-  const deadlineIds = new Set(upcoming.filter((u) => u.kind === "deadline").map((u) => u.id));
+  // Din tur. First the single things that are late, the longest late first,
+  // then the drafts whose filing deadline is near, the soonest first. A draft
+  // with a deadline is named by its date, which says more than its age does.
+  const deadlines = upcoming.filter((u) => u.kind === "deadline");
+  const deadlineIds = new Set(deadlines.map((d) => d.id));
+  const late = [
+    // What the redovisningsbetyg already counts as late: drafts and card
+    // purchases past its grace days.
+    ...score.waiting
+      .filter((w) => w.kind !== "submitted" && !deadlineIds.has(w.id))
+      .map((w) => ({
+        kind: w.kind === "cardPurchase" ? ("cardPurchase" as const) : ("draft" as const),
+        id: w.id,
+        title: w.title,
+        days: w.days,
+      })),
+    ...overdue.map((o) => ({ kind: "invoiceOverdue" as const, ...o })),
+  ].sort((a, b) => b.days - a.days);
+  const singles = [
+    ...late,
+    ...deadlines.map((d) => ({
+      kind: "deadline" as const,
+      id: d.id,
+      title: d.title,
+      inDays: d.inDays,
+    })),
+  ].slice(0, SINGLES_SHOWN);
+
+  // Then the counts. Whatever is named above is taken out of them, so a thing
+  // is never on the page twice, and whatever did not fit falls back into them.
+  const named = new Set(singles.map((r) => r.id));
+  const count = (a: QueueAction) =>
+    queue.filter((q) => q.action === a && !named.has(q.expense.id)).length;
+  const namedPurchases = singles.filter((r) => r.kind === "cardPurchase").length;
+  const namedDrafts = singles.some((r) => r.kind === "draft" || r.kind === "deadline");
+  const hiddenOverdue = overdue.filter((o) => !named.has(o.id)).length;
   const behind = everyone?.filter((r) => (r.score.waiting[0]?.days ?? 0) > BEHIND_DAYS).length ?? 0;
-  const forgotten: ForgottenRow[] = [
-    ...(staleAttests > 0 ? [{ kind: "attestWaiting" as const, count: staleAttests }] : []),
-    ...(behind > 0 ? [{ kind: "membersBehind" as const, count: behind }] : []),
-    ...[
-      // What the redovisningsbetyg already counts as late: drafts and card
-      // purchases past its grace days.
-      ...score.waiting
-        .filter((w) => w.kind !== "submitted" && !deadlineIds.has(w.id))
-        .map((w) => ({
-          kind: w.kind === "cardPurchase" ? ("cardPurchase" as const) : ("draft" as const),
-          id: w.id,
-          title: w.title,
-          days: w.days,
-        })),
-      ...stuck.map((s) => ({ kind: "stuck" as const, ...s })),
-      ...overdue.map((o) => ({ kind: "invoiceOverdue" as const, ...o })),
-    ].sort((a, b) => b.days - a.days),
+  const counts: TurnRow[] = [
+    { kind: "count", action: "FIX", count: count("FIX") },
+    { kind: "count", action: "SUBMIT", count: count("SUBMIT"), more: namedDrafts },
+    {
+      kind: "count",
+      action: "PURCHASES",
+      count: Math.max(0, unaccountedPurchases - namedPurchases),
+      more: namedPurchases > 0,
+    },
+    { kind: "count", action: "ATTEST", count: count("ATTEST"), stale: staleAttests },
+    { kind: "count", action: "BOOK", count: count("BOOK") },
+    { kind: "count", action: "EXPORT", count: count("EXPORT") },
+    { kind: "count", action: "OVERDUE", count: hiddenOverdue },
+    { kind: "count", action: "MEMBERS_BEHIND", count: behind },
   ];
+  const turn: TurnRow[] = [...singles, ...counts.filter((r) => r.kind !== "count" || r.count > 0)];
 
   // Decided here rather than in the browser, so the figure does not move
   // between the server's render and the client's.
@@ -130,15 +169,12 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      queue={queue}
-      unaccountedPurchases={unaccountedPurchases}
       payoutMissing={!payout.clearing || !payout.account}
-      forgotten={forgotten}
-      upcoming={upcoming}
+      turn={turn}
+      waiting={waiting}
+      calendar={upcoming.filter((u) => u.kind !== "deadline")}
       budget={budget}
-      // Already newest first out of the query: your own list answers "where did
-      // mine get to", which reads backwards from the queue.
-      mine={mine}
+      fresh={mine.length === 0 && invoices.length === 0}
       invoices={invoices}
       stars={score.stars}
     />

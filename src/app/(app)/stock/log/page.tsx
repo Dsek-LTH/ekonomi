@@ -1,5 +1,8 @@
 import { permanentRedirect } from "next/navigation";
 import { HISTORY_PATH } from "../history/views";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockLog");
 
 // The log is the movements view of the stock's history now (see
 // ../history/views.ts). Kept as a redirect rather than deleted, with its

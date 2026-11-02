@@ -120,14 +120,23 @@ interface BudgetLike {
   costCenters: {
     id: string;
     label: string | null;
-    costCenter: { code: string; name: string; shortName?: string | null; resultUnit?: string | null } | null;
+    costCenter: {
+      code: string;
+      name: string;
+      shortName?: string | null;
+      resultUnit?: string | null;
+    } | null;
     accounts: {
       accountCode: string;
       accountName: string;
       lineItems: { id: string; description: string }[];
     }[];
   }[];
-  evaluated: { accounts: Record<string, number>; lineItems: Record<string, number>; vars: Record<string, number> };
+  evaluated: {
+    accounts: Record<string, number>;
+    lineItems: Record<string, number>;
+    vars: Record<string, number>;
+  };
 }
 
 /**
@@ -216,8 +225,12 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
       let js = sheets.get(sheet.key);
       if (!js) {
         js = {
-          key: sheet.key, name: sheet.name, shortName: sheet.shortName ?? null, resultUnit: sheet.resultUnit,
-          accounts: [], present: Array.from({ length: n }, () => false),
+          key: sheet.key,
+          name: sheet.name,
+          shortName: sheet.shortName ?? null,
+          resultUnit: sheet.resultUnit,
+          accounts: [],
+          present: Array.from({ length: n }, () => false),
         };
         sheets.set(sheet.key, js);
         accountsOf.set(sheet.key, new Map());
@@ -230,7 +243,13 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
       for (const acct of sheet.accounts) {
         let ja = accounts.get(acct.code);
         if (!ja) {
-          ja = { code: acct.code, name: acct.name, kind: acct.kind, totals: blank<number>(), lines: [] };
+          ja = {
+            code: acct.code,
+            name: acct.name,
+            kind: acct.kind,
+            totals: blank<number>(),
+            lines: [],
+          };
           accounts.set(acct.code, ja);
           js.accounts.push(ja);
           linesOf.set(`${sheet.key}:${acct.code}`, new Map());
@@ -241,7 +260,11 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
         for (const line of acct.lines) {
           let jl = lines.get(line.key);
           if (!jl) {
-            jl = { key: line.key, description: line.description, values: blank<number>() };
+            jl = {
+              key: line.key,
+              description: line.description,
+              values: blank<number>(),
+            };
             lines.set(line.key, jl);
             ja.lines.push(jl);
           }
@@ -256,7 +279,10 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
   snapshots.forEach((snap, i) => {
     for (const [name, value] of Object.entries(snap.vars)) {
       let row = vars.get(name);
-      if (!row) { row = { name, values: blank<number>() }; vars.set(name, row); }
+      if (!row) {
+        row = { name, values: blank<number>() };
+        vars.set(name, row);
+      }
       row.values[i] = value;
     }
   });
@@ -264,14 +290,20 @@ export function joinSnapshots(snapshots: Snapshot[]): Joined {
   return { sheets: [...sheets.values()], vars: [...vars.values()] };
 }
 
-export interface Totals { income: number; cost: number; result: number }
+export interface Totals {
+  income: number;
+  cost: number;
+  result: number;
+}
 
 /** One side's income/cost/result for a joined sheet. Missing accounts count 0. */
 export function sheetTotals(sheet: JoinedSheet, side: number): Totals {
-  let income = 0, cost = 0;
+  let income = 0,
+    cost = 0;
   for (const a of sheet.accounts) {
     const v = a.totals[side] ?? 0;
-    if (a.kind === "INCOME") income += v; else cost += v;
+    if (a.kind === "INCOME") income += v;
+    else cost += v;
   }
   return { income, cost, result: income - cost };
 }

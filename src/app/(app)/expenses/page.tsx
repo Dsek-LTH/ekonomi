@@ -3,10 +3,18 @@ import { getExpensePage, type ExpenseListScope } from "@/lib/data/expenses";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { getReviewQueue } from "@/lib/data/review-queue";
 import { getExpenseTabCounts } from "@/lib/data/nav-counts";
-import { canBookkeep, canViewBookkeeping, canSendReminders, hasAttestRole } from "@/lib/domain/permissions";
+import {
+  canBookkeep,
+  canViewBookkeeping,
+  canSendReminders,
+  hasAttestRole,
+} from "@/lib/domain/permissions";
 import { ExpensesClient } from "./expenses-client";
 import { expenseDefaultTab, type ExpenseScope } from "./scope";
 import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("expenses");
 
 // Utlägg: one list, three readings of it, and the stage as a tab. See
 // docs/navigation.md.
@@ -46,7 +54,11 @@ export default async function ExpensesPage({
 
   const query = parseListQuery(params, { defaultTab: expenseDefaultTab(scope) });
   const listScope: ExpenseListScope =
-    scope === "mine" ? { kind: "mine" } : scope === "unit" ? { kind: "attestable" } : { kind: "all" };
+    scope === "mine"
+      ? { kind: "mine" }
+      : scope === "unit"
+        ? { kind: "attestable" }
+        : { kind: "all" };
 
   // The treasury's things to do sit on the section's reading: the column of
   // Bokför and Granska buttons. A reader (a revisor) bokför nothing, so is

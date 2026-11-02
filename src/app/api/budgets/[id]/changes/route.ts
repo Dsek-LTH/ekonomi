@@ -59,7 +59,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // Keyed on the sheet and code it will have, so two entries naming the same
   // not-yet-existing account resolve to one id and the duplicate is caught by
   // the same rule as any other duplicate, rather than by a unique constraint.
-  const toCreate = new Map<string, { budgetCostCenterId: string; accountCode: string; accountName: string }>();
+  const toCreate = new Map<
+    string,
+    { budgetCostCenterId: string; accountCode: string; accountName: string }
+  >();
 
   for (const raw of rawEntries) {
     const sheet = sheets.get(raw.costCenterId);
@@ -82,7 +85,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // The result unit is derived from the cost-centre code on every read
     // (lib/server/result-units.ts), exactly as everywhere else, so a prefix reassigned
     // tomorrow regroups this budget too.
-    const resultUnit = sheet.costCenter ? resultUnitNameForCode(sheet.costCenter.code, prefixes) : null;
+    const resultUnit = sheet.costCenter
+      ? resultUnitNameForCode(sheet.costCenter.code, prefixes)
+      : null;
     const withResultUnit = { ...sheet, costCenter: sheet.costCenter ? { resultUnit } : null };
 
     let accountId: string;

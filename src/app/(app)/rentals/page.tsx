@@ -4,6 +4,9 @@ import { getRentalPage, getRentalStateCounts } from "@/lib/data/rentals";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { today } from "@/lib/domain/date";
 import { RentalsClient } from "./rentals-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("rentals");
 
 // Uthyrning: where the gear is, rather than which agreements exist.
 //
@@ -31,10 +34,6 @@ export default async function RentalsPage({
   ]);
 
   return (
-    <RentalsClient
-      page={page}
-      counts={counts}
-      canManage={canManageRentals(user.capabilities)}
-    />
+    <RentalsClient page={page} counts={counts} canManage={canManageRentals(user.capabilities)} />
   );
 }

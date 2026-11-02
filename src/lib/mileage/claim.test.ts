@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  claimBlocker,
-  journeyKm,
-  namedStops,
-  valueJourney,
-  type JourneyInput,
-} from "./claim";
+import { claimBlocker, journeyKm, namedStops, valueJourney, type JourneyInput } from "./claim";
 
 const rates = [
   { orePerKm: 185, validFrom: "2019-01-01" },
@@ -117,10 +111,7 @@ describe("claimBlocker", () => {
     // duplicate. Four stops is the errand that called at two places on the way.
     expect(claimBlocker(journey({ stops: ["E-huset", "E-huset"] }), rates)).toBeNull();
     expect(
-      claimBlocker(
-        journey({ stops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }),
-        rates,
-      ),
+      claimBlocker(journey({ stops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }), rates),
     ).toBeNull();
   });
 
@@ -140,10 +131,7 @@ describe("claimBlocker", () => {
 
 describe("namedStops", () => {
   it("keeps the order and drops what names nothing", () => {
-    expect(namedStops(["E-huset", "  ", "Snabbgross", ""])).toEqual([
-      "E-huset",
-      "Snabbgross",
-    ]);
+    expect(namedStops(["E-huset", "  ", "Snabbgross", ""])).toEqual(["E-huset", "Snabbgross"]);
   });
 
   it("trims what it keeps, so a stray space is not a different place", () => {

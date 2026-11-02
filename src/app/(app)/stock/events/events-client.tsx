@@ -69,7 +69,11 @@ export default function EventsClient({
       if (last?.key === key) last.events.push(e);
       else {
         const label = fmt.month.format(dayOf(e.date));
-        out.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1), events: [e] });
+        out.push({
+          key,
+          label: label.charAt(0).toUpperCase() + label.slice(1),
+          events: [e],
+        });
       }
     }
     return out;
@@ -118,8 +122,12 @@ export default function EventsClient({
                           {/* The day as a block, so the column of them reads
                               as a calendar down the left. */}
                           <span className="flex w-10 shrink-0 flex-col items-center leading-none">
-                            <span className="text-lg font-semibold tabular-nums">{day.getDate()}</span>
-                            <span className="mt-1 text-xs text-muted">{fmt.weekday.format(day)}</span>
+                            <span className="text-lg font-semibold tabular-nums">
+                              {day.getDate()}
+                            </span>
+                            <span className="mt-1 text-xs text-muted">
+                              {fmt.weekday.format(day)}
+                            </span>
                           </span>
                           <span className="min-w-0 flex-1">
                             {/* The whole row is the link: the name's own
@@ -130,7 +138,9 @@ export default function EventsClient({
                             >
                               {e.name}
                             </Link>
-                            <span className="block text-xs text-muted tabular-nums">{figures(e)}</span>
+                            <span className="block text-xs text-muted tabular-nums">
+                              {figures(e)}
+                            </span>
                           </span>
                           {e.soldValueOre > 0 && (
                             <span className="shrink-0 text-sm tabular-nums">
@@ -160,7 +170,9 @@ export default function EventsClient({
           </Card>
         ) : (
           <Card>
-            <EmptyNote size="page">{events.length === 0 ? t("event.empty") : t("event.noMatch")}</EmptyNote>
+            <EmptyNote size="page">
+              {events.length === 0 ? t("event.empty") : t("event.noMatch")}
+            </EmptyNote>
           </Card>
         )}
       </>

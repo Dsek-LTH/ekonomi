@@ -7,15 +7,14 @@ import { getRentalItemOptions } from "@/lib/data/rental-items";
 import { getCounterpartyOptions } from "@/lib/data/counterparties";
 import { canEditRental } from "@/lib/contract/status";
 import { NewRentalClient } from "../../rental/new/new-rental-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("editContract");
 
 // Editing a rental reuses the form it was drawn on, pre-filled from it, the
 // same way an utlägg is edited (expenses/[id]/edit). One form means the two
 // screens cannot disagree about what a rental is made of.
-export default async function EditRentalPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditRentalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePage(canManageRentals);
 

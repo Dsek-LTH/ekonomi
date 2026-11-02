@@ -119,7 +119,12 @@ describe("soonestCheck", () => {
     // And the earliest date does not win when it is one of those: the oldest
     // *owed* one does.
     const mixed = [
-      checkOf(delivery({ id: "seen", bestBefore: "2026-09-05", checkedAt: "2026-08-25" }), LEAD, null, NOW)!,
+      checkOf(
+        delivery({ id: "seen", bestBefore: "2026-09-05", checkedAt: "2026-08-25" }),
+        LEAD,
+        null,
+        NOW,
+      )!,
       checkOf(delivery({ id: "owed", bestBefore: "2026-09-25" }), LEAD, null, NOW)!,
     ];
     expect(soonestCheck(mixed)?.entryId).toBe("owed");

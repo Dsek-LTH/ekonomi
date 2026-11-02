@@ -47,7 +47,6 @@ import { ProductDialog } from "./product-dialog";
 import { CATEGORIES } from "@/lib/domain/categories";
 import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
 
-
 export default function StockClient({
   levels,
   checks,
@@ -98,10 +97,12 @@ export default function StockClient({
       confirmLabel: t("revalue.action"),
     });
     if (!ok) return;
-    const done = await mutate<{ products: number; rows: number; beforeOre: number; afterOre: number }>(
-      "/api/stock/revalue",
-      { key: "revalue", error: t("revalue.failed") },
-    );
+    const done = await mutate<{
+      products: number;
+      rows: number;
+      beforeOre: number;
+      afterOre: number;
+    }>("/api/stock/revalue", { key: "revalue", error: t("revalue.failed") });
     if (!done) return;
     notify.success(
       done.rows === 0
@@ -329,7 +330,11 @@ export default function StockClient({
       // somebody opened this for.
       mobile: "trailing",
       cell: (p) =>
-        p.onHand.valueOre > 0 ? formatOreKr(p.onHand.valueOre) : <span className="text-muted">-</span>,
+        p.onHand.valueOre > 0 ? (
+          formatOreKr(p.onHand.valueOre)
+        ) : (
+          <span className="text-muted">-</span>
+        ),
     },
     {
       key: "flags",
@@ -349,7 +354,9 @@ export default function StockClient({
         return (
           <div className="flex flex-wrap items-center justify-end gap-1">
             {p.impossible && (
-              <Tag tone="danger" size="sm">{t("flag.impossible")}</Tag>
+              <Tag tone="danger" size="sm">
+                {t("flag.impossible")}
+              </Tag>
             )}
             {badBarcode(p) && (
               <Tag tone="warning" size="sm" title={t("barcode.invalidHint")}>
@@ -402,7 +409,7 @@ export default function StockClient({
             <button
               type="button"
               onClick={() => setDate("")}
-              className="shrink-0 text-sm font-medium text-accent underline"
+              className="shrink-0 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("asOf.today")}
             </button>
@@ -509,9 +516,7 @@ export default function StockClient({
         />
       </Card>
 
-      {adding && (
-        <ProductDialog product={null} knownTags={tags} onClose={() => setAdding(false)} />
-      )}
+      {adding && <ProductDialog product={null} knownTags={tags} onClose={() => setAdding(false)} />}
     </PageShell>
   );
 }

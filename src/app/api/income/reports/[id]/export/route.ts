@@ -97,9 +97,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       console.error(`[fortnox] income ${id}: step ${step} failed`, e);
-      return fail(e instanceof FortnoxError ? (e.status ?? 502) : 502, "income.documentStepFailed", {
-        values: { step: { key: `errors.income.exportStep.${step}` }, detail },
-      });
+      return fail(
+        e instanceof FortnoxError ? (e.status ?? 502) : 502,
+        "income.documentStepFailed",
+        {
+          values: { step: { key: `errors.income.exportStep.${step}` }, detail },
+        },
+      );
     }
   }
 

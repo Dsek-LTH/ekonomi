@@ -65,8 +65,6 @@ export default getRequestConfig(async () => {
   const modules = await Promise.all(
     MESSAGE_NAMESPACES.map((ns) => import(`../../messages/${locale}/${ns}.json`)),
   );
-  const messages = Object.fromEntries(
-    MESSAGE_NAMESPACES.map((ns, i) => [ns, modules[i].default]),
-  );
+  const messages = Object.fromEntries(MESSAGE_NAMESPACES.map((ns, i) => [ns, modules[i].default]));
   return { locale, messages };
 });

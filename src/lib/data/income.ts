@@ -98,7 +98,6 @@ export interface IncomeReportRow {
   lines: IncomeLineRow[];
 }
 
-
 // What a report row is loaded with, wherever it is loaded: the review screen,
 // the booked list, a batch. One include, so the four lists cannot drift into
 // showing subtly different things about the same day.
@@ -281,7 +280,9 @@ export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
   ]);
 
   const reviewed = batch
-    ? await prisma.incomeReport.count({ where: { batchId: batch.id, status: { not: "DRAFT" } } })
+    ? await prisma.incomeReport.count({
+        where: { batchId: batch.id, status: { not: "DRAFT" } },
+      })
     : 0;
 
   return {

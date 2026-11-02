@@ -44,7 +44,9 @@ const pages = async (d: RentalContractData) =>
 
 describe("the letterhead", () => {
   it("renders with the section's full details, which is the ordinary case", async () => {
-    expect(await pages({ ...empty, counterparty: "F-sektionen inom TLTH" })).toBeGreaterThanOrEqual(1);
+    expect(await pages({ ...empty, counterparty: "F-sektionen inom TLTH" })).toBeGreaterThanOrEqual(
+      1,
+    );
   });
 
   it("renders with no address at all, so a missing SECTION entry cannot break it", async () => {
@@ -53,7 +55,12 @@ describe("the letterhead", () => {
     expect(
       await pages({
         ...empty,
-        lessor: { name: "D-sektionen inom TLTH", orgNo: null, address: null, postalLine: null },
+        lessor: {
+          name: "D-sektionen inom TLTH",
+          orgNo: null,
+          address: null,
+          postalLine: null,
+        },
       }),
     ).toBeGreaterThanOrEqual(1);
   });
@@ -65,7 +72,9 @@ describe("the contract as a preview draws it", () => {
   });
 
   it("renders with a period but nothing else, the usual second step", async () => {
-    expect(await pages({ ...empty, pickupAt: "2026-09-18", returnAt: "2026-09-21" })).toBeGreaterThanOrEqual(1);
+    expect(
+      await pages({ ...empty, pickupAt: "2026-09-18", returnAt: "2026-09-21" }),
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("renders half a period, since one date is typed before the other", async () => {
@@ -74,7 +83,11 @@ describe("the contract as a preview draws it", () => {
 
   it("renders a renter with no gear yet", async () => {
     expect(
-      await pages({ ...empty, counterparty: "F-sektionen inom TLTH", title: "Uthyrning till F-sektionen" }),
+      await pages({
+        ...empty,
+        counterparty: "F-sektionen inom TLTH",
+        title: "Uthyrning till F-sektionen",
+      }),
     ).toBeGreaterThanOrEqual(1);
   });
 
@@ -83,8 +96,14 @@ describe("the contract as a preview draws it", () => {
       await pages({
         ...empty,
         lines: [
-          { description: "Högtalare", quantity: "1 st", unitPrice: "0,00 kr",
-      discount: null, lineTotal: "0,00 kr", replacementValue: "0,00 kr" },
+          {
+            description: "Högtalare",
+            quantity: "1 st",
+            unitPrice: "0,00 kr",
+            discount: null,
+            lineTotal: "0,00 kr",
+            replacementValue: "0,00 kr",
+          },
         ],
       }),
     ).toBeGreaterThanOrEqual(1);

@@ -26,10 +26,7 @@ const OUT_OF_POCKET: readonly PaymentType[] = ["REIMBURSEMENT", "MILEAGE"];
 export const isOutOfPocket = (paymentType: PaymentType): boolean =>
   OUT_OF_POCKET.includes(paymentType);
 
-export function isLateReimbursement(
-  purchaseDate: string,
-  paymentType: PaymentType,
-): boolean {
+export function isLateReimbursement(purchaseDate: string, paymentType: PaymentType): boolean {
   return (
     isOutOfPocket(paymentType) &&
     isCompleteDate(purchaseDate) &&
@@ -85,13 +82,7 @@ type SubmitCandidate = {
 // boolean keeps the hint text in step with the gate. Mirrors the server-side
 // check in the transition route.
 export type SubmitBlocker =
-  | "match"
-  | "payout"
-  | "receipt"
-  | "mileage"
-  | "incomplete"
-  | "futureDate"
-  | "tooLate";
+  "match" | "payout" | "receipt" | "mileage" | "incomplete" | "futureDate" | "tooLate";
 
 export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
   // First, ahead of everything the submitter could still fix: past the filing
@@ -169,27 +160,23 @@ export function submitBlocker(e: SubmitCandidate): SubmitBlocker | null {
  * Used by the detail page, the edit page, the receipt upload and the PATCH
  * route. One rule, so closing it closes all four.
  */
-export const EDITABLE_STATUSES: ExpenseStatus[] = [
-  "DRAFT",
-  "CHANGES_REQUESTED",
-];
+export const EDITABLE_STATUSES: ExpenseStatus[] = ["DRAFT", "CHANGES_REQUESTED"];
 
 export const isEditable = (status: string): boolean =>
   EDITABLE_STATUSES.includes(status as ExpenseStatus);
 
 // Pre-attest statuses: the owner may still send (or re-send) these for attest.
 // Used by the detail page, the new/edit flow, and the transition route.
-export const SUBMITTABLE_STATUSES: ExpenseStatus[] = [
-  "DRAFT",
-  "CHANGES_REQUESTED",
-];
+export const SUBMITTABLE_STATUSES: ExpenseStatus[] = ["DRAFT", "CHANGES_REQUESTED"];
 
-export const isSubmittable = (status: string): boolean => SUBMITTABLE_STATUSES.includes(status as ExpenseStatus);
+export const isSubmittable = (status: string): boolean =>
+  SUBMITTABLE_STATUSES.includes(status as ExpenseStatus);
 
 // "Attested or further": once here, only an admin may delete the utlägg.
 export const SIGNED_STATUSES: ExpenseStatus[] = ["APPROVED", "BOOKED", "EXPORTED"];
 
-export const isSigned = (status: string): boolean => SIGNED_STATUSES.includes(status as ExpenseStatus);
+export const isSigned = (status: string): boolean =>
+  SIGNED_STATUSES.includes(status as ExpenseStatus);
 
 // An attester may pull their own attest back until the utlägg is bokfört.
 // After that the voucher exists and only bookkeeping can unwind it.

@@ -80,7 +80,8 @@ export function reviewColumns({
       sortable: true,
       searchable: true,
       className: "tabular-nums",
-      cell: (r) => costCentreFor(r, settings) || <Tag tone="warning">{t("review.noCostCenter")}</Tag>,
+      cell: (r) =>
+        costCentreFor(r, settings) || <Tag tone="warning">{t("review.noCostCenter")}</Tag>,
     },
     {
       key: "total",

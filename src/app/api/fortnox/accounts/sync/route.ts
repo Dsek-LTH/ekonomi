@@ -8,10 +8,7 @@ import { fortnoxFailure, gateFortnoxService } from "@/lib/api/fortnox-route";
 import { isoDay } from "@/lib/domain/date";
 
 export async function POST() {
-  const g = await gateFortnoxService(
-    canAccessSettings,
-    "auth.adminSyncChart",
-  );
+  const g = await gateFortnoxService(canAccessSettings, "auth.adminSyncChart");
   if (!g.ok) return g.res;
 
   try {

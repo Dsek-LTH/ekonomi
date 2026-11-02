@@ -179,7 +179,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
         orderBy: { accountCode: "asc" },
         include: {
           lineItems: { orderBy: { sortOrder: "asc" } },
-          comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true, id: true } } } },
+          comments: {
+            orderBy: { createdAt: "asc" },
+            include: { author: { select: { name: true, id: true } } },
+          },
         },
       },
     },

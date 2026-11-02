@@ -40,14 +40,15 @@ export type Collections = {
   /** Which option is current. */
   value: string;
   options: CollectionOption[];
-} & (
+} &
   // One or the other, never both and never a mixture. Declared at the group
   // rather than per option so a set cannot be half links and half buttons,
   // that would be two controls wearing one appearance, which is the thing this
   // component exists to stop.
-  | { href: (value: string) => string; onChange?: never }
-  | { onChange: (value: string) => void; href?: never }
-);
+  (
+    | { href: (value: string) => string; onChange?: never }
+    | { onChange: (value: string) => void; href?: never }
+  );
 
 // `relative`, because the pill is laid over the track rather than drawn on the
 // option. See the measurement below.

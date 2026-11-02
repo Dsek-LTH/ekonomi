@@ -51,10 +51,17 @@ export async function POST(req: Request) {
   try {
     const input = { source, from, to, createdById: g.actor.id };
     const result = routing
-      ? await createSalesBatch(input, routeZettleSales(routing.table, await fetchZettleSales(from, to)), existing)
+      ? await createSalesBatch(
+          input,
+          routeZettleSales(routing.table, await fetchZettleSales(from, to)),
+          existing,
+        )
       : await createFeeBatch(
           input,
-          groupZettleFees(await fetchZettleFees(from, to), (await loadBookkeepingSettings()).zettleFeeAccount ?? ""),
+          groupZettleFees(
+            await fetchZettleFees(from, to),
+            (await loadBookkeepingSettings()).zettleFeeAccount ?? "",
+          ),
           existing,
         );
 

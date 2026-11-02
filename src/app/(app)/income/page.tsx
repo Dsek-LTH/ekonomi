@@ -1,11 +1,19 @@
 import { getBookedIncome, getIncomeReviewQueue } from "@/lib/data/income";
-import { canAccessSettings, canBookkeep, canViewBookkeeping, canUnexport } from "@/lib/domain/permissions";
+import {
+  canAccessSettings,
+  canBookkeep,
+  canViewBookkeeping,
+  canUnexport,
+} from "@/lib/domain/permissions";
 import type { SearchParams } from "@/lib/data/list-query";
 import { incomeSetupSteps } from "@/lib/income/setup";
 import { requirePage } from "@/lib/server/current-user";
 import { getFiscalYear } from "@/lib/server/fiscal-year";
 import IncomeClient from "./income-client";
 import { INCOME_TABS, incomeDefaultTab, type IncomeTab } from "./tabs";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("income");
 
 // Intäkter: every day of takings, waiting or booked, with the stage as a tab.
 // See docs/navigation.md.

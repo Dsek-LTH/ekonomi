@@ -37,7 +37,7 @@ import { cn } from "@/lib/ui/utils";
 /**
  * The props any amount field needs, for an input that draws itself.
  *
- * For the ones inside a table (the voucher's debit and credit columns) which
+ * For the ones inside a table (a rental contract's lines) which
  * carry their own classes and cannot be a boxed control. Spread it over a bare
  * `<input>` and the guard, the keypad and the separator all come with it.
  */

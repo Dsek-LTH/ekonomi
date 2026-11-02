@@ -5,6 +5,9 @@ import { getClosingVoucherPage } from "@/lib/data/closing";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import ClosingVouchersClient from "./vouchers-client";
 import { NoClosingYear, getOpenClosingYear } from "../year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("closingVouchers");
 
 // Every voucher in one financial year, with the underlag the app holds for it
 // and where it stands in the review. Keyed on Fortnox's financial-year id,

@@ -45,9 +45,7 @@ export function ItemDialog({
   const [description, setDescription] = useState(item?.description ?? "");
   const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
   const [dailyPrice, setDailyPrice] = useState(fromOre(item?.dailyPriceOre ?? null));
-  const [replacement, setReplacement] = useState(
-    item ? fromOre(item.replacementValueOre) : "",
-  );
+  const [replacement, setReplacement] = useState(item ? fromOre(item.replacementValueOre) : "");
 
   const count = Number(quantity);
 
@@ -141,9 +139,7 @@ export function ItemDialog({
               rental line copies the description and the values at the moment it
               is drawn. Said here because it is the question somebody hesitates
               over before changing a price. */}
-          {item && item.usedBy > 0 && (
-            <p className="text-xs text-muted">{t("editSafe")}</p>
-          )}
+          {item && item.usedBy > 0 && <p className="text-xs text-muted">{t("editSafe")}</p>}
         </div>
       </ModalBody>
 

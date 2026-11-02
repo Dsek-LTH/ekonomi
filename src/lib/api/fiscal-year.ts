@@ -29,7 +29,9 @@ export async function denyOutsideFiscalYear(
  * The same for a budget, which is kept by calendar year rather than by date:
  * the year the picked räkenskapsår starts in, as the Budget list reads it.
  */
-export async function denyBudgetOutsideFiscalYear(budgetYear: number): Promise<NextResponse | null> {
+export async function denyBudgetOutsideFiscalYear(
+  budgetYear: number,
+): Promise<NextResponse | null> {
   const year = await getFiscalYear();
   if (!year || Number(year.fromDate.slice(0, 4)) === budgetYear) return null;
   return fail(422, "fiscalYear.outside", { values: { year: fiscalYearLabel(year) } });

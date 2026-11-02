@@ -203,12 +203,13 @@ export const CreateStockEntry = z.object({
    * spill it says which bottles were dropped. A dropped bottle loses
    * everything left in it, so the rung is the whole of what it cost.
    */
-  level: z.union([z.literal(0), z.literal(80), z.literal(60), z.literal(40), z.literal(20)]).optional(),
+  level: z
+    .union([z.literal(0), z.literal(80), z.literal(60), z.literal(40), z.literal(20)])
+    .optional(),
   expenseId: Id.nullish(),
   correctsId: Id.nullish(),
   note: NonEmpty.max(500).nullish(),
-})
-;
+});
 export type CreateStockEntry = z.infer<typeof CreateStockEntry>;
 
 /** POST /api/stock/events: an event to book a night's movements against. */

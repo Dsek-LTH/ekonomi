@@ -41,11 +41,21 @@ describe("resultImpact", () => {
 
 describe("netResultImpact", () => {
   it("nets income against cost", () => {
-    expect(netResultImpact([{ kind: "INCOME", amount: 500 }, { kind: "COST", amount: 500 }])).toBe(0);
+    expect(
+      netResultImpact([
+        { kind: "INCOME", amount: 500 },
+        { kind: "COST", amount: 500 },
+      ]),
+    ).toBe(0);
   });
 
   it("is zero for money moved between two cost accounts", () => {
-    expect(netResultImpact([{ kind: "COST", amount: 500 }, { kind: "COST", amount: -500 }])).toBe(0);
+    expect(
+      netResultImpact([
+        { kind: "COST", amount: 500 },
+        { kind: "COST", amount: -500 },
+      ]),
+    ).toBe(0);
   });
 });
 
@@ -107,7 +117,10 @@ describe("validateChange", () => {
     it("refuses one that crosses resultatenheter, and names them", () => {
       const v = validateChange("FORFLYTTNING", [
         cost("a", 500),
-        cost("b", -500, { scope: "resultatenhet:Källarmästeriet", scopeLabel: "Källarmästeriet" }),
+        cost("b", -500, {
+          scope: "resultatenhet:Källarmästeriet",
+          scopeLabel: "Källarmästeriet",
+        }),
       ]);
       expect(v.ok).toBe(false);
       if (v.ok) return;
@@ -203,7 +216,13 @@ describe("adjustmentsByAccount", () => {
   it("sums every active change per account", () => {
     const got = adjustmentsByAccount([
       { ...active, entries: [{ accountId: "a", amount: 500 }] },
-      { ...active, entries: [{ accountId: "a", amount: 200 }, { accountId: "b", amount: -100 }] },
+      {
+        ...active,
+        entries: [
+          { accountId: "a", amount: 200 },
+          { accountId: "b", amount: -100 },
+        ],
+      },
     ]);
     expect(got.get("a")).toBe(700);
     expect(got.get("b")).toBe(-100);
@@ -220,7 +239,11 @@ describe("adjustmentsByAccount", () => {
 
   it("accepts a revokedAt that arrived as a string over the wire", () => {
     const got = adjustmentsByAccount([
-      { kind: "AVSTEG", revokedAt: "2026-07-01T00:00:00.000Z", entries: [{ accountId: "a", amount: 900 }] },
+      {
+        kind: "AVSTEG",
+        revokedAt: "2026-07-01T00:00:00.000Z",
+        entries: [{ accountId: "a", amount: 900 }],
+      },
     ]);
     expect(got.size).toBe(0);
   });

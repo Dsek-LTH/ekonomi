@@ -4,6 +4,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { getRentalItemRows } from "@/lib/data/rental-items";
 import { RentalItemsClient } from "./rental-items-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("rentalItems");
 
 // Under Uthyrning rather than under Inställningar, which is where this started
 // and was the wrong side of a line this app already draws. Inställningar → Lager

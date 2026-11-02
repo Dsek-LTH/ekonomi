@@ -11,7 +11,13 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "kassor",
-  loadUser: async () => ({ name: "Kassör", email: "k@dsek.se", studentId: "x", roles: [], capabilities: ["INVOICE_TRIAGE"] }),
+  loadUser: async () => ({
+    name: "Kassör",
+    email: "k@dsek.se",
+    studentId: "x",
+    roles: [],
+    capabilities: ["INVOICE_TRIAGE"],
+  }),
 }));
 vi.mock("@/lib/server/db", () => {
   const db = {
@@ -23,14 +29,23 @@ vi.mock("@/lib/server/db", () => {
 });
 vi.mock("@/lib/server/notify", () => ({ notify: h.notify, deliverSoon: () => {} }));
 vi.mock("@/lib/api/supplier-invoice-access", () => ({
-  loadInboxDocumentFor: async () => ({ ok: true, doc: h.doc, viewer: {}, can: { canAssign: true } }),
+  loadInboxDocumentFor: async () => ({
+    ok: true,
+    doc: h.doc,
+    viewer: {},
+    can: { canAssign: true },
+  }),
   unitOwnersOf: async () => ["chief"],
 }));
 
 const { POST } = await import("./route");
 const call = (body: object) =>
   POST(
-    new Request("http://test/x", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    new Request("http://test/x", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
     { params: Promise.resolve({ id: "d1" }) },
   );
 

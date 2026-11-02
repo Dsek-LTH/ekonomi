@@ -19,7 +19,13 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "maja",
-  loadUser: async () => ({ name: "Maja", email: "m@dsek.se", studentId: "x", roles: [], capabilities: h.capabilities }),
+  loadUser: async () => ({
+    name: "Maja",
+    email: "m@dsek.se",
+    studentId: "x",
+    roles: [],
+    capabilities: h.capabilities,
+  }),
 }));
 
 vi.mock("@/lib/server/db", () => {
@@ -45,7 +51,8 @@ vi.mock("@/lib/api/supplier-invoice-access", () => ({
     invoice: { id: "inv1", status: "ASSIGNED", resultUnit: { name: "Sexmästeriet" } },
     can: { canEditDocuments: h.canEditDocuments, canReturnToInbox: h.canReturn },
   }),
-  refuseChange: () => new Response(JSON.stringify({ error: "supplierInvoice.denied" }), { status: 403 }),
+  refuseChange: () =>
+    new Response(JSON.stringify({ error: "supplierInvoice.denied" }), { status: 403 }),
 }));
 
 const { DELETE } = await import("./route");
@@ -121,9 +128,16 @@ describe("sending an invoice back to the Inkorg", () => {
     expect(res.status).toBe(204);
     expect(h.docUpdateMany).toHaveBeenCalledWith({
       where: { invoiceId: "inv1" },
-      data: { invoiceId: null, position: 0, returnedFrom: "Sexmästeriet", returnNote: "Det här är Caféets" },
+      data: {
+        invoiceId: null,
+        position: 0,
+        returnedFrom: "Sexmästeriet",
+        returnNote: "Det här är Caféets",
+      },
     });
-    expect(h.invoiceDeleteMany).toHaveBeenCalledWith({ where: { id: "inv1", status: "ASSIGNED" } });
+    expect(h.invoiceDeleteMany).toHaveBeenCalledWith({
+      where: { id: "inv1", status: "ASSIGNED" },
+    });
     expect(h.deleteObject).not.toHaveBeenCalled();
   });
 

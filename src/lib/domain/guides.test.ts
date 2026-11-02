@@ -43,17 +43,23 @@ describe("guides", () => {
 
   it("points only at anchors that exist", () => {
     const missing = GUIDES.flatMap((g) =>
-      g.steps.filter((s) => s.target && !exists(s.target)).map((s) => `${g.id}.${s.key} -> ${s.target}`),
+      g.steps
+        .filter((s) => s.target && !exists(s.target))
+        .map((s) => `${g.id}.${s.key} -> ${s.target}`),
     );
     expect(missing).toEqual([]);
   });
 
   it("has a title and a body for every step, in both languages", () => {
     for (const locale of ["sv", "en"]) {
-      const messages = JSON.parse(readFileSync(join(process.cwd(), "messages", locale, "guides.json"), "utf8"));
+      const messages = JSON.parse(
+        readFileSync(join(process.cwd(), "messages", locale, "guides.json"), "utf8"),
+      );
       const missing = GUIDES.flatMap((g) =>
         g.steps.flatMap((s) =>
-          ["title", "body"].filter((k) => !messages[g.id]?.[s.key]?.[k]).map((k) => `${locale}: ${g.id}.${s.key}.${k}`),
+          ["title", "body"]
+            .filter((k) => !messages[g.id]?.[s.key]?.[k])
+            .map((k) => `${locale}: ${g.id}.${s.key}.${k}`),
         ),
       );
       expect(missing).toEqual([]);

@@ -52,8 +52,7 @@ export type FortnoxAuthMode = "service" | "user";
 const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation supplier";
 const USER_SCOPES = "bookkeeping inbox connectfile companyinformation supplierinvoice supplier";
 
-const scopesFor = (mode: FortnoxAuthMode) =>
-  mode === "service" ? SERVICE_SCOPES : USER_SCOPES;
+const scopesFor = (mode: FortnoxAuthMode) => (mode === "service" ? SERVICE_SCOPES : USER_SCOPES);
 
 // Refresh this many ms before the token actually expires, to avoid racing the
 // clock on a slow request.
@@ -95,8 +94,8 @@ interface FortnoxConfig {
 export function fortnoxConfigured(): boolean {
   return Boolean(
     process.env.FORTNOX_CLIENT_ID &&
-      process.env.FORTNOX_CLIENT_SECRET &&
-      process.env.FORTNOX_REDIRECT_URI,
+    process.env.FORTNOX_CLIENT_SECRET &&
+    process.env.FORTNOX_REDIRECT_URI,
   );
 }
 
@@ -278,7 +277,12 @@ export async function getServiceToken(): Promise<string> {
         // transaction rather than thrown, so the record of it below is not
         // rolled back with everything else. Anything else (a timeout, a 5xx)
         // may well work next time and is not recorded.
-        if (e instanceof FortnoxError && e.status !== undefined && e.status >= 400 && e.status < 500) {
+        if (
+          e instanceof FortnoxError &&
+          e.status !== undefined &&
+          e.status >= 400 &&
+          e.status < 500
+        ) {
           return { refused: e };
         }
         throw e;
@@ -819,7 +823,14 @@ export async function listSuppliers(token: string): Promise<FortnoxSupplier[]> {
 /** One supplier, as the register has it now. */
 export async function getSupplier(token: string, number: string): Promise<FortnoxSupplier> {
   const data = await fortnoxGet<{
-    Supplier?: { SupplierNumber?: string; Name?: string; OrganisationNumber?: string; BG?: string; PG?: string; Active?: boolean };
+    Supplier?: {
+      SupplierNumber?: string;
+      Name?: string;
+      OrganisationNumber?: string;
+      BG?: string;
+      PG?: string;
+      Active?: boolean;
+    };
   }>(`/suppliers/${encodeURIComponent(number)}`, token);
   const s = data.Supplier;
   if (!s?.SupplierNumber) throw new FortnoxError("Leverantören finns inte i Fortnox.", 404);
@@ -844,7 +855,14 @@ export interface SupplierInvoiceInput {
   ourReference?: string | null;
   comments?: string | null;
   /** The kontering's rows, SEK, each a debit or a credit. */
-  rows: { account: number; debit: number; credit: number; costCenter?: string; project?: string; text?: string }[];
+  rows: {
+    account: number;
+    debit: number;
+    credit: number;
+    costCenter?: string;
+    project?: string;
+    text?: string;
+  }[];
   /** The leverantörsskuld account the total is credited to. */
   payableAccount: number;
   /** Öresutjämning, SEK, signed: debited to its account, credited when
@@ -860,7 +878,10 @@ export interface SupplierInvoiceInput {
  * the kontering that was attested. No VAT: the section is momsbefriad, so the
  * invoice's VAT is zero and every krona is cost.
  */
-export async function createSupplierInvoice(token: string, input: SupplierInvoiceInput): Promise<string> {
+export async function createSupplierInvoice(
+  token: string,
+  input: SupplierInvoiceInput,
+): Promise<string> {
   const rows: Record<string, unknown>[] = input.rows.map((r) => ({
     Account: r.account,
     ...(r.debit ? { Debit: r.debit } : { Credit: r.credit }),
@@ -870,7 +891,9 @@ export async function createSupplierInvoice(token: string, input: SupplierInvoic
   }));
   if (input.rounding) {
     const { account, amount } = input.rounding;
-    rows.push(amount > 0 ? { Account: account, Debit: amount } : { Account: account, Credit: -amount });
+    rows.push(
+      amount > 0 ? { Account: account, Debit: amount } : { Account: account, Credit: -amount },
+    );
   }
   rows.push({ Account: input.payableAccount, Code: "TOT", Credit: input.total });
 
@@ -895,7 +918,8 @@ export async function createSupplierInvoice(token: string, input: SupplierInvoic
     },
   );
   const given = data.SupplierInvoice?.GivenNumber;
-  if (given == null || given === "") throw new FortnoxError("Fortnox returnerade ingen leverantörsfaktura.");
+  if (given == null || given === "")
+    throw new FortnoxError("Fortnox returnerade ingen leverantörsfaktura.");
   return String(given);
 }
 

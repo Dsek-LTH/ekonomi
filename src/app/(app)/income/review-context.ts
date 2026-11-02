@@ -8,7 +8,11 @@ import "server-only";
 
 import { getActiveAccounts } from "@/lib/data/accounts";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
-import { getIncomeMoveTargets, type IncomeMoveTarget, type IncomeReportRow } from "@/lib/data/income";
+import {
+  getIncomeMoveTargets,
+  type IncomeMoveTarget,
+  type IncomeReportRow,
+} from "@/lib/data/income";
 import { getIncomeSettings, type IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { prisma } from "@/lib/server/db";
@@ -63,5 +67,11 @@ export async function loadReviewContext(
       })
     : null;
 
-  return { settings, costCenters, accounts, moveTargets, fallbackResultUnitId: fallback?.resultUnitId ?? null };
+  return {
+    settings,
+    costCenters,
+    accounts,
+    moveTargets,
+    fallbackResultUnitId: fallback?.resultUnitId ?? null,
+  };
 }

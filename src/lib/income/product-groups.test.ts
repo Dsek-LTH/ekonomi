@@ -41,9 +41,11 @@ describe("productRows", () => {
   it("steps a variant-less row of a grouped product in, under its own name", () => {
     // Unlike the document, which leaves it flush with the heading, where it read
     // as a separate product rather than one of the group's.
-    expect(
-      shown([line({ name: "Macka" }), line({ name: "Macka", variant: "Ost" })]),
-    ).toEqual(["Macka:", "  Macka", "  Ost"]);
+    expect(shown([line({ name: "Macka" }), line({ name: "Macka", variant: "Ost" })])).toEqual([
+      "Macka:",
+      "  Macka",
+      "  Ost",
+    ]);
   });
 
   it("orders groups by name and rows by variant, then account, then price", () => {

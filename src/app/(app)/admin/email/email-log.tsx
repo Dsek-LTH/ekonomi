@@ -61,10 +61,12 @@ export function EmailLog({
   });
 
   // A narrower question starts from the top again.
-  const narrow = <T,>(set: (v: T) => void) => (v: T) => {
-    set(v);
-    setTake(PAGE);
-  };
+  const narrow =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setTake(PAGE);
+    };
 
   return (
     <div className="space-y-3">
@@ -109,7 +111,12 @@ export function EmailLog({
       )}
 
       {data && data.rows.length > 0 && (
-        <ul className={cn("divide-y divide-border rounded-panel border border-border", loading && "opacity-70")}>
+        <ul
+          className={cn(
+            "divide-y divide-border rounded-panel border border-border",
+            loading && "opacity-70",
+          )}
+        >
           {data.rows.map((row) => (
             <li key={row.id}>
               <LogRow row={row} showRecipient={!recipient} onOpen={() => setOpen(row)} />
@@ -120,7 +127,12 @@ export function EmailLog({
 
       {data?.more && (
         <div className="flex justify-center">
-          <Button variant="secondary" size="sm" loading={loading} onClick={() => setTake(take + PAGE)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={loading}
+            onClick={() => setTake(take + PAGE)}
+          >
             {t("loadMore")}
           </Button>
         </div>

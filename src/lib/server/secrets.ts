@@ -55,16 +55,13 @@ export function encryptSecret(plaintext: string): string {
 export function decryptSecret(stored: string): string {
   const parts = stored.split(":");
   if (parts.length !== 4 || parts[0] !== PREFIX) {
-    throw new Error(
-      "fortnox.secretUnreadable",
-    );
+    throw new Error("fortnox.secretUnreadable");
   }
 
   const [, iv, tag, ct] = parts;
   const decipher = createDecipheriv(ALGORITHM, key(), Buffer.from(iv, "base64"));
   decipher.setAuthTag(Buffer.from(tag, "base64"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(ct, "base64")),
-    decipher.final(),
-  ]).toString("utf8");
+  return Buffer.concat([decipher.update(Buffer.from(ct, "base64")), decipher.final()]).toString(
+    "utf8",
+  );
 }

@@ -17,5 +17,4 @@ import "server-only";
 import { isoDay } from "@/lib/domain/date";
 
 /** A date column as the `YYYY-MM-DD` string the UI types expect. */
-export const isoDate = (d: Date | null | undefined) =>
-  d ? isoDay(d) : "";
+export const isoDate = (d: Date | null | undefined) => (d ? isoDay(d) : "");

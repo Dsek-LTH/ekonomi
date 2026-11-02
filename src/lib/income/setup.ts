@@ -14,11 +14,7 @@ import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
 /** Each a message key under `income.setup.steps`. */
 export type IncomeSetupKey =
-  | "service"
-  | IncomeConfigBlocker
-  | "swishClearing"
-  | "zettleClearing"
-  | "zettleFee";
+  "service" | IncomeConfigBlocker | "swishClearing" | "zettleClearing" | "zettleFee";
 
 /** The parts of Inställningar → Försäljning, each an anchor on that page. */
 export type IncomeSetupSection = "service" | "units" | "booking";
@@ -36,18 +32,27 @@ export interface IncomeSetupStep {
 
 /** Every step still to do, in the order they are best done. Empty when ready. */
 export async function incomeSetupSteps(): Promise<IncomeSetupStep[]> {
-  const [routing, settings] = await Promise.all([incomeRoutingProblems(), loadBookkeepingSettings()]);
+  const [routing, settings] = await Promise.all([
+    incomeRoutingProblems(),
+    loadBookkeepingSettings(),
+  ]);
   const steps: IncomeSetupStep[] = [];
 
   // The service that reaches Zettle and renders the intäktsräkning.
-  if (!intaktConfigured()) steps.push({ key: "service", section: "service", blocksFetch: true, inApp: false });
+  if (!intaktConfigured())
+    steps.push({ key: "service", section: "service", blocksFetch: true, inApp: false });
 
   for (const p of routing) {
     steps.push({ key: p.blocker, section: "units", blocksFetch: true, inApp: true });
   }
 
   // What booking needs and fetching does not (see api/income/reports/[id]/book).
-  const booking = (key: IncomeSetupKey): IncomeSetupStep => ({ key, section: "booking", blocksFetch: false, inApp: true });
+  const booking = (key: IncomeSetupKey): IncomeSetupStep => ({
+    key,
+    section: "booking",
+    blocksFetch: false,
+    inApp: true,
+  });
   if (!settings.swishClearingAccount) steps.push(booking("swishClearing"));
   if (!settings.zettleClearingAccount) steps.push(booking("zettleClearing"));
   if (!settings.zettleFeeAccount) steps.push(booking("zettleFee"));

@@ -149,11 +149,7 @@ export function labelPositions(count: number, wanted: number): number[] {
  * at least one step, but a caller passing its own bounds could; the guard puts
  * the line on the floor rather than returning NaN and drawing nothing.
  */
-export function linearScale(
-  lo: number,
-  hi: number,
-  g: ChartGeometry,
-): (value: number) => number {
+export function linearScale(lo: number, hi: number, g: ChartGeometry): (value: number) => number {
   const plot = plotOf(g);
   const span = hi - lo;
   return (value) => g.PAD.top + plot.h - (span === 0 ? 0 : ((value - lo) / span) * plot.h);
@@ -172,11 +168,7 @@ export function linearScale(
  *   "point"  a line or area chart. The value lives *at* a position, so the
  *            index is the nearest one and the readout snaps to it.
  */
-export function usePointerIndex(
-  count: number,
-  g: ChartGeometry,
-  mode: "band" | "point" = "band",
-) {
+export function usePointerIndex(count: number, g: ChartGeometry, mode: "band" | "point" = "band") {
   const ref = useRef<SVGSVGElement>(null);
   const [at, setAt] = useState<number | null>(null);
   const plot = plotOf(g);

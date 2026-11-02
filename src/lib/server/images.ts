@@ -10,13 +10,7 @@
 import decodeHeic from "heic-decode";
 import sharp, { type Sharp } from "sharp";
 
-const IMAGE_MIME = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-]);
+const IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 export function isNormalisableImage(mime: string): boolean {
   return IMAGE_MIME.has(mime);

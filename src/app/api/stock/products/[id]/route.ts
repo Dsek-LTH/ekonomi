@@ -116,7 +116,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const updated = await orNotFound(
     () =>
       prisma.$transaction(async (tx) => {
-        const row = await tx.stockProduct.update({ where: { id }, data, select: { id: true } });
+        const row = await tx.stockProduct.update({
+          where: { id },
+          data,
+          select: { id: true },
+        });
         if (edits.length > 0) {
           await tx.stockProductChange.createMany({
             data: edits.map((e) => ({ ...e, productId: id, actorId: g.actor.id })),

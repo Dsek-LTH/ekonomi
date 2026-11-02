@@ -20,6 +20,9 @@ import { requireUser } from "@/lib/server/current-user";
 import { getBudgetSummaries, getEvaluatedBudget } from "@/lib/data/budget";
 import { budgetLabel, snapshotOf, type Snapshot } from "@/lib/budget/compare";
 import { CompareClient } from "./compare-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("budgetCompare");
 
 export default async function BudgetComparePage({
   searchParams,
@@ -32,9 +35,7 @@ export default async function BudgetComparePage({
   // `?b=` is the list; `?a=`/`?b=` single ids are what older links carry.
   const ids = [
     ...new Set(
-      [params.a ?? "", ...(params.b ?? "").split(",")]
-        .map((s) => s.trim())
-        .filter(Boolean),
+      [params.a ?? "", ...(params.b ?? "").split(",")].map((s) => s.trim()).filter(Boolean),
     ),
   ];
 

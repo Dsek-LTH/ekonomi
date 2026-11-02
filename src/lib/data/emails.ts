@@ -53,7 +53,11 @@ export interface EmailLogPage {
 const EMAIL_LOG_PAGE = 50;
 const MAX_TAKE = 1000;
 
-function status(r: { sentAt: Date | null; lastError: string | null; attempts: number }): EmailStatus {
+function status(r: {
+  sentAt: Date | null;
+  lastError: string | null;
+  attempts: number;
+}): EmailStatus {
   if (r.sentAt) return "SENT";
   if (r.attempts >= MAX_ATTEMPTS) return "FAILED";
   return r.lastError ? "RETRYING" : "QUEUED";

@@ -156,7 +156,9 @@ export function VoucherCard({
           <BalanceChip balanced={voucher.balanced} difference={formatSEK(voucher.difference)} />
           {/* Approving puts a name on the day and on its document, so the
               name is said beside the button that does it. */}
-          <span className="text-xs text-muted">{t("review.approvedAs", { name: reviewerName })}</span>
+          <span className="text-xs text-muted">
+            {t("review.approvedAs", { name: reviewerName })}
+          </span>
         </div>
         <div className="flex items-center gap-2.5">
           {/* Why the button is dead: an empty row leaves a balanced voucher

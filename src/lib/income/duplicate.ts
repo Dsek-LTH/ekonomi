@@ -89,7 +89,8 @@ export async function fortnoxIncomeVouchers(
     // without one, which lets Fortnox answer from the current year rather than
     // returning nothing at all.
     const years = financialYearsFor(await listFinancialYears(token), from, to);
-    const queries = years.length > 0 ? years.map((y) => ({ from, to, financialYearId: y.id })) : [{ from, to }];
+    const queries =
+      years.length > 0 ? years.map((y) => ({ from, to, financialYearId: y.id })) : [{ from, to }];
 
     const byKey = new Map<string, string>();
     for (const query of queries) {

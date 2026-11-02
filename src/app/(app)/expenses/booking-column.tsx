@@ -33,7 +33,9 @@ function CornerDot({ tone }: { tone: "warning" | "danger" }) {
           )}
         />
       )}
-      <span className={cn("relative inline-flex size-2.5 rounded-full ring-2 ring-surface", fill)} />
+      <span
+        className={cn("relative inline-flex size-2.5 rounded-full ring-2 ring-surface", fill)}
+      />
     </span>
   );
 }
@@ -102,7 +104,8 @@ export function useBookingColumn(
             {bookings[e.id] && <CornerDot tone="warning" />}
           </Tooltip>
         )}
-        {mayBook && e.status === "BOOKED" &&
+        {mayBook &&
+          e.status === "BOOKED" &&
           (() => {
             // Bokföring is done on the utlägg's own page, where the voucher is
             // looked over first, and not from here: this opens it. A lock left
@@ -143,7 +146,9 @@ export function useBookingColumn(
             );
           })()}
         {e.status === "EXPORTED" && e.verification?.fortnoxLabel && (
-          <span className="text-xs text-muted">{t("voucherLabel", { label: e.verification.fortnoxLabel })}</span>
+          <span className="text-xs text-muted">
+            {t("voucherLabel", { label: e.verification.fortnoxLabel })}
+          </span>
         )}
       </div>
     ),

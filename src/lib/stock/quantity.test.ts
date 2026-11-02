@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { evaluate, isExpression, isQuantityInput, quantity } from "./quantity";
+import { evaluate } from "@/lib/domain/arithmetic";
+import { isExpression, isQuantityInput, quantity } from "./quantity";
 
 describe("evaluate", () => {
   it("reads a plain number", () => {

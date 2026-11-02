@@ -50,10 +50,7 @@ const URGENCY: Record<QueueAction, number> = {
 // The one thing this expense needs from this viewer, or null if it is waiting
 // on somebody else. An utlägg can only ever be waiting on one person at a time,
 // which is why this returns a single action rather than a list.
-export function queueActionFor(
-  expense: Expense,
-  user: Viewer,
-): QueueAction | null {
+export function queueActionFor(expense: Expense, user: Viewer): QueueAction | null {
   const mine = expense.submitterId === user.id;
 
   // The submitter's own court. Checked first: if it is yours and it is stuck,

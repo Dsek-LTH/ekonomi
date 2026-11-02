@@ -106,7 +106,12 @@ describe("expenseDocuments", () => {
     // Unmarked: with one document there is nothing to choose between, and the
     // viewer opens on the first when nobody says otherwise.
     expect(expenseDocuments({ ...submitted, status: "DRAFT" })).toEqual([
-      { src: "/api/receipts/rec1", mimeType: "image/jpeg", filename: undefined, label: undefined },
+      {
+        src: "/api/receipts/rec1",
+        mimeType: "image/jpeg",
+        filename: undefined,
+        label: undefined,
+      },
     ]);
   });
 
@@ -128,7 +133,12 @@ describe("expenseDocuments", () => {
     // pages saying the same reference, submitter and total is what this
     // replaced.
     expect(
-      expenseDocuments({ id: "exp1", status: "APPROVED", paymentType: "MILEAGE", receipts: [] }),
+      expenseDocuments({
+        id: "exp1",
+        status: "APPROVED",
+        paymentType: "MILEAGE",
+        receipts: [],
+      }),
     ).toEqual([{ src: "/api/expenses/exp1/document", mimeType: "application/pdf" }]);
   });
 

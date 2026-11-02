@@ -87,7 +87,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     await prisma.supplierInvoiceLine.findMany({
       where: { invoiceId: invoice.id },
       orderBy: [{ position: "asc" }, { id: "asc" }],
-      select: { account: true, costCenterCode: true, project: true, description: true, debit: true, credit: true },
+      select: {
+        account: true,
+        costCenterCode: true,
+        project: true,
+        description: true,
+        debit: true,
+        credit: true,
+      },
     })
   ).map((l) => JSON.stringify(l));
   const lines = body.lines?.map((l) => ({
@@ -115,7 +122,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       // Still in the state it was judged editable in. Exported in another tab
       // a moment ago, it is not this request's to change.
       applied(
-        await tx.supplierInvoice.updateMany({ where: { id: invoice.id, status: invoice.status }, data }),
+        await tx.supplierInvoice.updateMany({
+          where: { id: invoice.id, status: invoice.status },
+          data,
+        }),
         "supplierInvoice.changedMeanwhile",
       );
       if (linesChanged) {
@@ -143,7 +153,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         });
       } else {
         await tx.supplierInvoiceEvent.create({
-          data: { invoiceId: invoice.id, type: "EDITED", actorId: g.actor.id, diff: { fields: changed } },
+          data: {
+            invoiceId: invoice.id,
+            type: "EDITED",
+            actorId: g.actor.id,
+            diff: { fields: changed },
+          },
         });
       }
     }),

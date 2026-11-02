@@ -6,6 +6,9 @@ import { canAccessSettings } from "@/lib/domain/permissions";
 import { requirePage } from "@/lib/server/current-user";
 
 import { StockSettingsClient } from "./stock-settings-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockSettings");
 
 export default async function AdminStockPage() {
   await requirePage(canAccessSettings);

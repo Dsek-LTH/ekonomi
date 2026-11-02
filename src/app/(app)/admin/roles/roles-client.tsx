@@ -139,10 +139,7 @@ export function RolesClient({
 
 // ── Grupper ───────────────────────────────────────────────────────
 
-function GroupsView({
-  groups,
-  resultUnits,
-}: Pick<AuthorityData, "groups" | "resultUnits">) {
+function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "resultUnits">) {
   const t = useTranslations("admin.roles");
   const tRole = useTranslations("common.role");
   const tCommon = useTranslations("common");
@@ -388,7 +385,14 @@ function GroupsView({
                 // the picker to show it as chosen.
                 options={
                   draft.group && !candidates.some((c) => c.value === draft.group)
-                    ? [{ value: draft.group, label: draft.group, short: draft.group }, ...candidates]
+                    ? [
+                        {
+                          value: draft.group,
+                          label: draft.group,
+                          short: draft.group,
+                        },
+                        ...candidates,
+                      ]
                     : candidates
                 }
                 value={draft.group}
@@ -469,7 +473,11 @@ function CapabilitiesView({
     if (!on && holders >= MANY) {
       const ok = await confirm({
         title: t("confirmWideTitle"),
-        message: t("confirmWideBody", { capability: tCap(capability), role: tRole(role), count: holders }),
+        message: t("confirmWideBody", {
+          capability: tCap(capability),
+          role: tRole(role),
+          count: holders,
+        }),
         confirmLabel: t("confirmWideAction"),
       });
       if (!ok) return;

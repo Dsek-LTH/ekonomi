@@ -5,6 +5,9 @@ import { getContractPage } from "@/lib/data/contracts";
 import { parseListQuery, type SearchParams } from "@/lib/data/list-query";
 import { today } from "@/lib/domain/date";
 import { ContractsClient } from "./contracts-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("contracts");
 
 export default async function ContractsPage({
   searchParams,

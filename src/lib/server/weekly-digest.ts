@@ -104,7 +104,13 @@ async function collectWaiting(today: string): Promise<Map<string, Waiting>> {
       purchaseDate: { gte: earliest, lte: latest },
     },
     orderBy: { purchaseDate: "asc" },
-    select: { reference: true, title: true, status: true, purchaseDate: true, submitterId: true },
+    select: {
+      reference: true,
+      title: true,
+      status: true,
+      purchaseDate: true,
+      submitterId: true,
+    },
   });
   for (const e of nearDeadline) {
     const bought = isoDay(e.purchaseDate!);
@@ -157,7 +163,10 @@ async function collectWaiting(today: string): Promise<Map<string, Waiting>> {
     );
     const row: ListRow = {
       title: mailLabel(e),
-      sub: emailT("digest.attestSub", { submitter: e.submitter.name, days: daysAgo(sent, today) }),
+      sub: emailT("digest.attestSub", {
+        submitter: e.submitter.name,
+        days: daysAgo(sent, today),
+      }),
       amount: formatOre(e.grossAmount ?? 0),
     };
     for (const id of ids) (of(id).attest ??= []).push(row);

@@ -11,7 +11,12 @@ import type { InvoiceCapabilities } from "@/lib/domain/supplier-invoice";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import type { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
-import type { AccountRecord, CostCenter, ProjectRecord, SupplierInvoiceStatus } from "@/lib/domain/types";
+import type {
+  AccountRecord,
+  CostCenter,
+  ProjectRecord,
+  SupplierInvoiceStatus,
+} from "@/lib/domain/types";
 import type { AttestReach, SupplierInvoiceView } from "@/lib/data/supplier-invoices";
 import { PersonName } from "@/components/ui/avatar";
 import { LABEL } from "@/components/record-card";
@@ -49,7 +54,11 @@ export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
   if (invoice.documents.length === 0) return [];
   // A new URL whenever what the page says may have changed, so the panel
   // draws it again rather than keeping the copy from before a signature.
-  const version = [invoice.status, invoice.updatedAt, ...invoice.allocations.map((a) => a.approvedByName ?? "")].join();
+  const version = [
+    invoice.status,
+    invoice.updatedAt,
+    ...invoice.allocations.map((a) => a.approvedByName ?? ""),
+  ].join();
   return [
     {
       src: `/api/supplier-invoices/${invoice.id}/cover?v=${encodeURIComponent(version)}`,
@@ -160,7 +169,10 @@ export function Timeline({ invoice }: { invoice: SupplierInvoiceView }) {
       <h3 className={cn(LABEL, "mb-2")}>{t("history")}</h3>
       <ol className="space-y-1.5 text-xs">
         {invoice.events.map((e) => (
-          <li key={e.id} className="grid grid-cols-[minmax(0,1fr)] gap-x-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <li
+            key={e.id}
+            className="grid grid-cols-[minmax(0,1fr)] gap-x-4 sm:grid-cols-[10rem_minmax(0,1fr)]"
+          >
             <span className="tabular-nums text-muted">{dateTime(e.date)}</span>
             <span className="min-w-0">
               <span className={cn("font-medium", EVENT_TONE[e.type])}>

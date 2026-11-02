@@ -17,25 +17,45 @@ import { IconTrash } from "@/components/ui/icons";
 import { resultImpact } from "@/lib/budget/changes";
 
 import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
-import {
-  withLine, withLineOrder, withNewAccount, withSheet
-} from "./patch-budget";
+import { withLine, withLineOrder, withNewAccount, withSheet } from "./patch-budget";
 import { useCellEdit } from "./use-cell-edit";
 import { useSheetClipboard } from "./use-sheet-clipboard";
 import { SheetProvider, type SheetValue } from "./sheet-context";
 import { SectionCard } from "./sheet-section";
 import { useNotify } from "@/components/shell/notifications";
 import type { AccountRecord } from "@/lib/domain/types";
-import type { Account, BudgetCC, BudgetClip, Evaluated, LineItem, Draft, CellFn, FormulaFn, ApiFn } from "./budget-types";
+import type {
+  Account,
+  BudgetCC,
+  BudgetClip,
+  Evaluated,
+  LineItem,
+  Draft,
+  CellFn,
+  FormulaFn,
+  ApiFn,
+} from "./budget-types";
 
 /** This sheet, joined against the one side it is being compared with. */
-export interface SheetCompare { label: string; sheet: JoinedSheet }
+export interface SheetCompare {
+  label: string;
+  sheet: JoinedSheet;
+}
 
 export function CostCenterSheet(props: {
-  cc: BudgetCC; ccCode: string; ev: Evaluated; grid: BudgetGrid; columns: ColumnDef[];
+  cc: BudgetCC;
+  ccCode: string;
+  ev: Evaluated;
+  grid: BudgetGrid;
+  columns: ColumnDef[];
   compare: SheetCompare | null;
-  isAdmin: boolean; canComment: boolean; userId: string;
-  renderCell: CellFn; renderFormula: FormulaFn; api: ApiFn; budgetId: string;
+  isAdmin: boolean;
+  canComment: boolean;
+  userId: string;
+  renderCell: CellFn;
+  renderFormula: FormulaFn;
+  api: ApiFn;
+  budgetId: string;
   accounts: AccountRecord[];
   /** Editorial adjustments in force, by account id. See budget-helpers. */
   adjustments: Map<string, AdjustmentRow[]>;
@@ -43,7 +63,25 @@ export function CostCenterSheet(props: {
   clip: BudgetClip | null;
   onCopy: (clip: BudgetClip | null) => void;
 }) {
-  const { cc, ccCode, ev, grid, columns, compare, isAdmin, canComment, userId, renderCell, renderFormula, api, budgetId, accounts, adjustments, clip, onCopy } = props;
+  const {
+    cc,
+    ccCode,
+    ev,
+    grid,
+    columns,
+    compare,
+    isAdmin,
+    canComment,
+    userId,
+    renderCell,
+    renderFormula,
+    api,
+    budgetId,
+    accounts,
+    adjustments,
+    clip,
+    onCopy,
+  } = props;
   const t = useTranslations("budget.sheet");
   const tCol = useTranslations("budget.col");
   const tRam = useTranslations("budget.rambudget");
@@ -140,7 +178,12 @@ export function CostCenterSheet(props: {
     ? compare.sheet.accounts.filter((a) => !ownCodes.has(a.code))
     : [];
   // Two empty trailing cells to keep non-Summa rows aligned when they show.
-  const actualPad = showCompare ? <><td className="border-l border-border/40" /><td /></> : null;
+  const actualPad = showCompare ? (
+    <>
+      <td className="border-l border-border/40" />
+      <td />
+    </>
+  ) : null;
 
   // Column geometry. The table is: gutter + every column (+ compare + diff) + action.
   const totalCols = columns.length + 2 + (showCompare ? 2 : 0); // full-width spanners (comments)
@@ -168,13 +211,18 @@ export function CostCenterSheet(props: {
   //   action  78 → 40   one icon instead of two side by side.
   //
   // Which leaves ~185px for Beskrivning instead of nothing.
-  const GUT_W = narrow ? 0 : 58, ACT_W = narrow ? 40 : 78;
+  const GUT_W = narrow ? 0 : 58,
+    ACT_W = narrow ? 40 : 78;
   const staticWidth = (c: ColumnDef): number | undefined =>
     c.key === "beskrivning"
       ? undefined
       : c.key === "konto"
-        ? (narrow ? 26 : 110)
-        : (narrow ? 110 : 260);
+        ? narrow
+          ? 26
+          : 110
+        : narrow
+          ? 110
+          : 260;
 
   // One line-item cell, rendered per column.
 
@@ -194,7 +242,12 @@ export function CostCenterSheet(props: {
       { description: d.description.trim(), expression: d.expression.trim() || "0" },
       (b, data) => withLine(b, accountId, data as LineItem),
     );
-    if (ok) setNewRow((m) => { const n = { ...m }; delete n[accountId]; return n; });
+    if (ok)
+      setNewRow((m) => {
+        const n = { ...m };
+        delete n[accountId];
+        return n;
+      });
   }
 
   // Accounts come from the synced chart, so a budget can only refer to accounts
@@ -326,19 +379,22 @@ export function CostCenterSheet(props: {
   }, []);
 
   /** Put the dragged row in `accountId`, beside `overId`, or at its end. */
-  const place = useCallback((d: LineDrag, accountId: string, overId: string | null, after: boolean) => {
-    const ids: Record<string, string[]> = {};
-    for (const [key, list] of Object.entries(d.ids)) ids[key] = list.filter((x) => x !== d.id);
-    const list = ids[accountId];
-    if (!list) return;
-    const at = overId ? list.indexOf(overId) : -1;
-    list.splice(at === -1 ? list.length : at + (after ? 1 : 0), 0, d.id);
-    // The pointer crosses a row many times over without changing anything.
-    if (accountId === d.accountId && list.join() === d.ids[accountId].join()) return;
-    d.ids = ids;
-    d.accountId = accountId;
-    setPlacement(ids);
-  }, []);
+  const place = useCallback(
+    (d: LineDrag, accountId: string, overId: string | null, after: boolean) => {
+      const ids: Record<string, string[]> = {};
+      for (const [key, list] of Object.entries(d.ids)) ids[key] = list.filter((x) => x !== d.id);
+      const list = ids[accountId];
+      if (!list) return;
+      const at = overId ? list.indexOf(overId) : -1;
+      list.splice(at === -1 ? list.length : at + (after ? 1 : 0), 0, d.id);
+      // The pointer crosses a row many times over without changing anything.
+      if (accountId === d.accountId && list.join() === d.ids[accountId].join()) return;
+      d.ids = ids;
+      d.accountId = accountId;
+      setPlacement(ids);
+    },
+    [],
+  );
 
   // Ticking rows, and copying them onto another sheet. See ./use-sheet-clipboard.
   const { toggle, clearTicks, marked, isTicked, copySelection } = useSheetClipboard({
@@ -359,7 +415,11 @@ export function CostCenterSheet(props: {
         `/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`,
         "POST",
         c.kind === "accounts" ? { accountIds: c.ids } : { accountId, lineItemIds: c.ids },
-        (b, data) => withSheet(b, cc.id, (sheet) => ({ ...sheet, accounts: (data as BudgetCC).accounts })),
+        (b, data) =>
+          withSheet(b, cc.id, (sheet) => ({
+            ...sheet,
+            accounts: (data as BudgetCC).accounts,
+          })),
       ),
     notify,
     t,
@@ -484,8 +544,7 @@ export function CostCenterSheet(props: {
     const stop = () => {
       const d = lineDrag.current;
       const to = d?.accountId;
-      const moved =
-        d && to && (to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join());
+      const moved = d && to && (to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join());
       if (d && to && moved) {
         const ids = d.ids[to];
         api(`/api/budget-accounts/${to}/line-items/reorder`, "POST", { orderedIds: ids }, (b) =>
@@ -516,7 +575,6 @@ export function CostCenterSheet(props: {
     };
   }, [draggingLineId, api, lift, place]);
 
-
   // A whole account only the other side has: it is budgeted for (or was spent
   // on) over there and not at all here. Shown in full, read-only, so the gap is
   // legible down to the row. This is the case a left join would have hidden.
@@ -530,26 +588,93 @@ export function CostCenterSheet(props: {
   // Written once and drawn twice. The strip on a phone and the tiles above md
   // must never be able to disagree about what the sheet comes to.
   const summary = [
-    { label: t("totalIncome"), v: totals.income, a: compareTotals.income, incomeLike: true, signed: false, impact: undefined as number | undefined },
-    { label: t("totalCosts"), v: totals.cost, a: compareTotals.cost, incomeLike: false, signed: false, impact: undefined as number | undefined },
-    { label: tRam("result"), v: totals.result, a: compareTotals.result, signed: true, incomeLike: true, impact: changeImpact },
+    {
+      label: t("totalIncome"),
+      v: totals.income,
+      a: compareTotals.income,
+      incomeLike: true,
+      signed: false,
+      impact: undefined as number | undefined,
+    },
+    {
+      label: t("totalCosts"),
+      v: totals.cost,
+      a: compareTotals.cost,
+      incomeLike: false,
+      signed: false,
+      impact: undefined as number | undefined,
+    },
+    {
+      label: tRam("result"),
+      v: totals.result,
+      a: compareTotals.result,
+      signed: true,
+      incomeLike: true,
+      impact: changeImpact,
+    },
   ];
 
   // Everything the rows below need, gathered once. The sheet is four nested
   // levels of table and every one of them asks the same questions, so they ask
   // this rather than being handed forty-odd props each. See ./sheet-context.
   const sheet: SheetValue = {
-    cc, ccCode, budgetId, columns, grid, ev, accounts, adjustments, compare, showCompare,
-    isAdmin, canComment, userId,
-    renderCell, renderFormula, api, date,
-    narrow, gut, del, actualPad, totalCols, gutWidth: GUT_W, actionsWidth: ACT_W, staticWidth,
-    t, tCol, tRam, tChanges, tAlloc, tBook, tLedger,
-    income, cost, totals, compareTotals, compareAccounts, changeImpact,
-    badAccount, badLine, liUrl, accountOptionsFor,
-    isTicked, marked, tickBox,
-    draggingLineId, liftRef, linesOf, startLineDrag,
-    draft, setDraft, createLine, createAccount,
-    openComments, setOpenComments, commentDraft, setCommentDraft,
+    cc,
+    ccCode,
+    budgetId,
+    columns,
+    grid,
+    ev,
+    accounts,
+    adjustments,
+    compare,
+    showCompare,
+    isAdmin,
+    canComment,
+    userId,
+    renderCell,
+    renderFormula,
+    api,
+    date,
+    narrow,
+    gut,
+    del,
+    actualPad,
+    totalCols,
+    gutWidth: GUT_W,
+    actionsWidth: ACT_W,
+    staticWidth,
+    t,
+    tCol,
+    tRam,
+    tChanges,
+    tAlloc,
+    tBook,
+    tLedger,
+    income,
+    cost,
+    totals,
+    compareTotals,
+    compareAccounts,
+    changeImpact,
+    badAccount,
+    badLine,
+    liUrl,
+    accountOptionsFor,
+    isTicked,
+    marked,
+    tickBox,
+    draggingLineId,
+    liftRef,
+    linesOf,
+    startLineDrag,
+    draft,
+    setDraft,
+    createLine,
+    createAccount,
+    openComments,
+    setOpenComments,
+    commentDraft,
+    setCommentDraft,
   };
 
   return (
@@ -604,7 +729,10 @@ export function CostCenterSheet(props: {
               <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
                 {compare &&
                   summary.map((s) => (
-                    <p key={s.label} className="flex items-baseline justify-between gap-2 text-muted">
+                    <p
+                      key={s.label}
+                      className="flex items-baseline justify-between gap-2 text-muted"
+                    >
                       <span className="truncate">
                         {s.label} - {compare.label}
                       </span>
@@ -620,7 +748,9 @@ export function CostCenterSheet(props: {
                   <p className="flex items-baseline justify-between gap-2 text-muted">
                     <span className="truncate">{tRam("changes")}</span>
                     <span className="shrink-0 tabular-nums">
-                      <span className={diffClass(changeImpact, true)}>{fmtSigned(changeImpact)}</span>
+                      <span className={diffClass(changeImpact, true)}>
+                        {fmtSigned(changeImpact)}
+                      </span>
                       <span className="ml-2 text-muted">
                         {t("originallyLabel")}{" "}
                         <span className="tabular-nums text-foreground">
@@ -638,7 +768,7 @@ export function CostCenterSheet(props: {
                   <button
                     type="button"
                     onClick={() => setCompareOnPhone((v) => !v)}
-                    className="text-xs font-medium text-accent"
+                    className="text-xs font-medium text-link"
                   >
                     {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
                   </button>
@@ -718,7 +848,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={copySelection}
-              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("copyMarked")}
             </button>
@@ -726,7 +856,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={clearTicks}
-              className="ml-auto text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              className="ml-auto text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("clearMarked")}
             </button>
@@ -751,7 +881,7 @@ export function CostCenterSheet(props: {
             <button
               type="button"
               onClick={() => onCopy(null)}
-              className="ml-auto text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              className="ml-auto text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("clearClipboard")}
             </button>

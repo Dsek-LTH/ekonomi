@@ -23,16 +23,17 @@ describe("parseSystembolagetId", () => {
         "https://www.systembolaget.se/produkt/ol/norrlands-guld-141215/?utm_source=99",
       ),
     ).toBe("141215");
-    expect(parseSystembolagetId("https://www.systembolaget.se/produkt/ol/x-141215/#recension")).toBe(
-      "141215",
-    );
+    expect(
+      parseSystembolagetId("https://www.systembolaget.se/produkt/ol/x-141215/#recension"),
+    ).toBe("141215");
   });
 
   it("is not fooled by digits in the name", () => {
     // The article number is the last run, never the first.
     expect(parseSystembolagetId("brooklyn-1-2-3-141215")).toBe("141215");
-    expect(parseSystembolagetId("https://www.systembolaget.se/produkt/ol/carlsberg-33cl-108512/"))
-      .toBe("108512");
+    expect(
+      parseSystembolagetId("https://www.systembolaget.se/produkt/ol/carlsberg-33cl-108512/"),
+    ).toBe("108512");
   });
 
   it("says nothing rather than guessing", () => {

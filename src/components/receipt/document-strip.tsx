@@ -189,7 +189,10 @@ export function DocumentStrip({
                   }
                 }}
                 aria-current={i === current ? "true" : undefined}
-                aria-label={t("showDocument", { n: i + 1, name: item.filename ?? "" })}
+                aria-label={t("showDocument", {
+                  n: i + 1,
+                  name: item.filename ?? "",
+                })}
                 title={t("documentTileHint")}
                 className={cn(
                   "flex h-16 w-12 touch-none select-none items-center justify-center overflow-hidden rounded-control border bg-surface",

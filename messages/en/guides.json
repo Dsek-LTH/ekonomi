@@ -14,8 +14,8 @@
       "body": "This is where you submit expenses, attest and follow the section's money. We'll quickly go over what is here. Each page then has a short guide of its own the first time you open it."
     },
     "todo": {
-      "title": "To do",
-      "body": "Everything waiting on you is gathered here, whether it is an expense, an invoice or a card purchase. Click a row to go straight to it."
+      "title": "Your turn",
+      "body": "Everything waiting on you is gathered here, whether it is an expense, an invoice or a card purchase. Whatever is late comes first. Click a row to go straight to it."
     },
     "groupExpenses": {
       "title": "Expenses",

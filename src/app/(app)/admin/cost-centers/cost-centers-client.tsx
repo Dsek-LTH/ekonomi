@@ -76,7 +76,10 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
 
   async function saveName(cc: CostCenter, raw: string) {
     const name = raw.trim();
-    if (!name) { notify.error(t("nameRequired")); return false; }
+    if (!name) {
+      notify.error(t("nameRequired"));
+      return false;
+    }
     const data = await mutate(`/api/cost-centers/${cc.id}`, {
       key: `name-${cc.id}`,
       method: "PATCH",
@@ -266,7 +269,9 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
 
   return (
     <Card>
-      {suggesting && <ShortNamesDialog suggestions={suggestions} onClose={() => setSuggesting(false)} />}
+      {suggesting && (
+        <ShortNamesDialog suggestions={suggestions} onClose={() => setSuggesting(false)} />
+      )}
       <ClientDataTable
         columns={columns}
         rows={costCenters}
@@ -276,15 +281,26 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         // button that asked for it and above the rows it will join.
         actionPanel={
           adding && (
-            <FieldGroup label={t("codeAndName")} hint={t("newLocalSubtitle")} requirement="required">
+            <FieldGroup
+              label={t("codeAndName")}
+              hint={t("newLocalSubtitle")}
+              requirement="required"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <div className="w-40">
                   <Input
                     size="sm"
                     autoFocus
                     value={draft.code}
-                    onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-                    onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        code: e.target.value.toUpperCase(),
+                      })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") add();
+                    }}
                     placeholder="SEX-ALKO"
                     aria-label={t("colCode")}
                     className="font-mono uppercase"
@@ -295,7 +311,9 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
                     size="sm"
                     value={draft.name}
                     onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                    onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") add();
+                    }}
                     placeholder={t("colName")}
                     aria-label={t("colName")}
                   />
@@ -341,9 +359,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         searchPlaceholder={t("searchPlaceholder")}
         rowKey={(c) => c.id}
         rowClassName={(c) => cn(!c.active && "opacity-55")}
-        empty={
-          costCenters.length === 0 ? t("emptyNone") : t("emptyNoMatch")
-        }
+        empty={costCenters.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
       />
     </Card>
   );

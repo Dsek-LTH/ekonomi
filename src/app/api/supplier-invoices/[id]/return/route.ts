@@ -43,7 +43,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       // Still in the state it was judged returnable in: attested in another
       // tab a moment ago, it is not this request's to undo.
       applied(
-        await tx.supplierInvoice.deleteMany({ where: { id: invoice.id, status: invoice.status } }),
+        await tx.supplierInvoice.deleteMany({
+          where: { id: invoice.id, status: invoice.status },
+        }),
         "supplierInvoice.changedMeanwhile",
       );
     }),

@@ -12,7 +12,8 @@ const GIF = Buffer.from("GIF89a....");
 const h = vi.hoisted(() => ({
   message: {} as Record<string, unknown>,
   attachments: {} as Record<string, Buffer>,
-  history: { ids: [] as string[], historyId: "200" } as { ids: string[]; historyId: string } | "gone",
+  history: { ids: [] as string[], historyId: "200" } as
+    { ids: string[]; historyId: string } | "gone",
   recent: [] as string[],
   existing: new Set<string>(),
   claimFails: false,
@@ -153,12 +154,25 @@ beforeEach(() => {
   h.claimFails = false;
   h.sender = { id: "klara", name: "Klara Ström", roles: ["RESULTATANSVARIG"] };
   h.owned = ["Sexmästeriet"];
-  for (const fn of [h.assignedCreate, h.docCreate, h.mailCreate, h.mailDelete, h.mailUpdate, h.syncUpdate, h.put, h.del, h.notify, h.getMessage]) {
+  for (const fn of [
+    h.assignedCreate,
+    h.docCreate,
+    h.mailCreate,
+    h.mailDelete,
+    h.mailUpdate,
+    h.syncUpdate,
+    h.put,
+    h.del,
+    h.notify,
+    h.getMessage,
+  ]) {
     fn.mockReset();
   }
   h.mailDelete.mockResolvedValue({});
   h.assignedCreate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data);
-  h.getMessage.mockImplementation(async () => mail({ attachments: [{ name: "faktura.pdf", id: "a1", bytes: PDF }] }));
+  h.getMessage.mockImplementation(async () =>
+    mail({ attachments: [{ name: "faktura.pdf", id: "a1", bytes: PDF }] }),
+  );
 });
 
 /** The one document written straight into a unit's Inkorg, if any. */
@@ -166,15 +180,25 @@ const assigned = () => h.assignedCreate.mock.calls[0]?.[0].data;
 
 describe("one mail", () => {
   it("refuses mail from outside dsek.se and keeps no document", async () => {
-    h.getMessage.mockResolvedValue(mail({ from: "faktura@lundsslap.se", attachments: [{ name: "f.pdf", id: "a1", bytes: PDF }] }));
+    h.getMessage.mockResolvedValue(
+      mail({
+        from: "faktura@lundsslap.se",
+        attachments: [{ name: "f.pdf", id: "a1", bytes: PDF }],
+      }),
+    );
     expect(await syncInbox()).toEqual({ accepted: 0, rejected: 1, skipped: 0 });
-    expect(h.mailCreate.mock.calls[0][0].data).toMatchObject({ status: "REJECTED", rejectReason: "foreignDomain" });
+    expect(h.mailCreate.mock.calls[0][0].data).toMatchObject({
+      status: "REJECTED",
+      rejectReason: "foreignDomain",
+    });
     expect(h.assignedCreate).not.toHaveBeenCalled();
     expect(h.put).not.toHaveBeenCalled();
   });
 
   it("refuses a dsek.se From that did not authenticate", async () => {
-    h.getMessage.mockResolvedValue(mail({ auth: "mx.google.com; dkim=fail; dmarc=fail header.from=dsek.se" }));
+    h.getMessage.mockResolvedValue(
+      mail({ auth: "mx.google.com; dkim=fail; dmarc=fail header.from=dsek.se" }),
+    );
     await syncInbox();
     expect(h.mailCreate.mock.calls[0][0].data.rejectReason).toBe("notAuthenticated");
     expect(h.assignedCreate).not.toHaveBeenCalled();
@@ -197,7 +221,10 @@ describe("one mail", () => {
     // guessed, even with a unit to give it to.
     expect(h.assignedCreate).not.toHaveBeenCalled();
     const rows = h.docCreate.mock.calls[0][0].data;
-    expect(rows.map((r: { filename: string }) => r.filename)).toEqual(["faktura.pdf", "specifikation.pdf"]);
+    expect(rows.map((r: { filename: string }) => r.filename)).toEqual([
+      "faktura.pdf",
+      "specifikation.pdf",
+    ]);
     expect(rows[0]).toMatchObject({ inboundMailId: "mail1", uploadedById: "klara" });
     expect(rows[0].invoiceId).toBeUndefined();
   });

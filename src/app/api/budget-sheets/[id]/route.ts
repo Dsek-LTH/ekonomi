@@ -28,7 +28,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (body.costCenterId !== undefined) {
     const costCenterId = body.costCenterId;
     if (costCenterId) {
-      const cc = await prisma.budgetCostCenter.findUnique({ where: { id }, select: { budgetId: true } });
+      const cc = await prisma.budgetCostCenter.findUnique({
+        where: { id },
+        select: { budgetId: true },
+      });
       if (!cc) return fail(404, "notFound");
       const taken = await prisma.budgetCostCenter.findFirst({
         where: { budgetId: cc.budgetId, costCenterId, NOT: { id } },

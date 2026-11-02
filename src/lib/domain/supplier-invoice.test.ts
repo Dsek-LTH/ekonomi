@@ -34,7 +34,9 @@ const invoice = (over: Partial<InvoiceFacts> = {}): InvoiceFacts => ({
 
 describe("attestBlocker", () => {
   it("lets one row through without an amount: it is the whole invoice", () => {
-    expect(attestBlocker({ documentCount: 1, rows: [{ amount: null }], invoiceAmount: null })).toBeNull();
+    expect(
+      attestBlocker({ documentCount: 1, rows: [{ amount: null }], invoiceAmount: null }),
+    ).toBeNull();
   });
 
   it("wants the PDF first", () => {
@@ -45,7 +47,11 @@ describe("attestBlocker", () => {
 
   it("wants a share on every row of a split", () => {
     expect(
-      attestBlocker({ documentCount: 1, rows: [{ amount: 50000 }, { amount: null }], invoiceAmount: null }),
+      attestBlocker({
+        documentCount: 1,
+        rows: [{ amount: 50000 }, { amount: null }],
+        invoiceAmount: null,
+      }),
     ).toBe("supplierInvoice.splitNeedsAmounts");
   });
 
@@ -59,7 +65,11 @@ describe("attestBlocker", () => {
 
   it("lets a split through while the total is unknown, for the export to check", () => {
     expect(
-      attestBlocker({ documentCount: 1, rows: [{ amount: 50000 }, { amount: 40000 }], invoiceAmount: null }),
+      attestBlocker({
+        documentCount: 1,
+        rows: [{ amount: 50000 }, { amount: 40000 }],
+        invoiceAmount: null,
+      }),
     ).toBeNull();
   });
 });
@@ -126,7 +136,10 @@ describe("invoiceCapabilities", () => {
       canMove: false,
       canBook: false,
     });
-    expect(invoiceCapabilities(cafe, invoice())).toMatchObject({ canAllocate: false, canReturnToInbox: false });
+    expect(invoiceCapabilities(cafe, invoice())).toMatchObject({
+      canAllocate: false,
+      canReturnToInbox: false,
+    });
   });
 
   it("lets triage fördela on a unit's behalf, move it, or take it back", () => {
@@ -154,7 +167,11 @@ describe("invoiceCapabilities", () => {
         { approved: false, viewerMayAttest: true },
       ],
     });
-    expect(invoiceCapabilities(cafe, split)).toMatchObject({ canAttest: true, canRequestChanges: true, canAllocate: false });
+    expect(invoiceCapabilities(cafe, split)).toMatchObject({
+      canAttest: true,
+      canRequestChanges: true,
+      canAllocate: false,
+    });
     // From Sexmästeriet's side the unsigned row is not theirs to sign.
     const fromSex = invoice({
       status: "PENDING_APPROVAL",
@@ -169,10 +186,22 @@ describe("invoiceCapabilities", () => {
   it("lets a signer take their own signature back until it is in Fortnox", () => {
     const signed = { approved: true, approvedById: "klara", viewerMayAttest: true };
     const klara = viewer(["ATTEST_VIEW"], ["unit-sex"], ["RESULTATANSVARIG"], "klara");
-    expect(invoiceCapabilities(klara, invoice({ status: "APPROVED", allocations: [signed] })).canWithdrawAttest).toBe(true);
-    expect(invoiceCapabilities(klara, invoice({ status: "BOOKED", allocations: [signed] })).canWithdrawAttest).toBe(true);
-    expect(invoiceCapabilities(klara, invoice({ status: "EXPORTED", allocations: [signed] })).canWithdrawAttest).toBe(false);
-    expect(invoiceCapabilities(sexm, invoice({ status: "APPROVED", allocations: [signed] })).canWithdrawAttest).toBe(false);
+    expect(
+      invoiceCapabilities(klara, invoice({ status: "APPROVED", allocations: [signed] }))
+        .canWithdrawAttest,
+    ).toBe(true);
+    expect(
+      invoiceCapabilities(klara, invoice({ status: "BOOKED", allocations: [signed] }))
+        .canWithdrawAttest,
+    ).toBe(true);
+    expect(
+      invoiceCapabilities(klara, invoice({ status: "EXPORTED", allocations: [signed] }))
+        .canWithdrawAttest,
+    ).toBe(false);
+    expect(
+      invoiceCapabilities(sexm, invoice({ status: "APPROVED", allocations: [signed] }))
+        .canWithdrawAttest,
+    ).toBe(false);
   });
 
   it("lets the unit that proposed a split reopen it while others sign, and nobody else", () => {
@@ -205,7 +234,9 @@ describe("invoiceCapabilities", () => {
       canBook: false,
       canSend: false,
     });
-    expect(invoiceCapabilities(treasurer, invoice({ status: "PENDING_APPROVAL" })).canBook).toBe(false);
+    expect(invoiceCapabilities(treasurer, invoice({ status: "PENDING_APPROVAL" })).canBook).toBe(
+      false,
+    );
     expect(invoiceCapabilities(revisor, invoice({ status: "BOOKED" }))).toMatchObject({
       canBook: false,
       canSend: false,

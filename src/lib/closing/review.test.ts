@@ -44,9 +44,7 @@ describe("currentReview", () => {
   it("settles on a pass or an anmärkning, not on an open question", () => {
     expect(isSettled(currentReview([review({ status: "OK" })], "AUDITOR", "h1"))).toBe(true);
     expect(isSettled(currentReview([review({ status: "REMARK" })], "AUDITOR", "h1"))).toBe(true);
-    expect(isSettled(currentReview([review({ status: "QUESTION" })], "AUDITOR", "h1"))).toBe(
-      false,
-    );
+    expect(isSettled(currentReview([review({ status: "QUESTION" })], "AUDITOR", "h1"))).toBe(false);
   });
 });
 

@@ -97,7 +97,10 @@ export const MoveIncomeLines = z.object({
  * routing is what a mistyped prefix gets wrong.
  */
 export const UpdateIncomeLines = z.object({
-  lines: z.array(z.object({ id: Id, account: AccountNumber })).min(1).max(2000),
+  lines: z
+    .array(z.object({ id: Id, account: AccountNumber }))
+    .min(1)
+    .max(2000),
 });
 
 // ── The routing table (settings) ──────────────────────────────────
@@ -111,7 +114,9 @@ export const UpdateIncomeLines = z.object({
  * case-insensitive and storing both cases would make "C" and "c" two rows that
  * could route two ways.
  */
-const PrefixCode = Trimmed.min(1).max(16).transform((s) => s.toLowerCase());
+const PrefixCode = Trimmed.min(1)
+  .max(16)
+  .transform((s) => s.toLowerCase());
 
 /**
  * Give a resultatenhet an income profile: the settings that let it take money

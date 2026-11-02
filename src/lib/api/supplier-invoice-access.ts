@@ -101,8 +101,10 @@ export type DocumentAccess =
 export async function loadInboxDocumentFor(actor: Actor, id: string): Promise<DocumentAccess> {
   const [viewer, doc] = await Promise.all([invoiceViewerOf(actor), findDocument(id)]);
   const can = doc && documentCapabilities(viewer, doc);
-  if (!doc || !can?.canSee) return { ok: false, res: fail(404, "supplierInvoice.documentNotFound") };
-  if (doc.invoiceId !== null) return { ok: false, res: fail(409, "supplierInvoice.documentOnInvoice") };
+  if (!doc || !can?.canSee)
+    return { ok: false, res: fail(404, "supplierInvoice.documentNotFound") };
+  if (doc.invoiceId !== null)
+    return { ok: false, res: fail(409, "supplierInvoice.documentOnInvoice") };
   return { ok: true, doc, viewer, can };
 }
 

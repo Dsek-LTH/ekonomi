@@ -3,6 +3,9 @@ import { getCostCenters } from "@/lib/data/cost-centers";
 import { getFortnoxStatus } from "@/lib/data/fortnox";
 import { getFiscalYear } from "@/lib/server/fiscal-year";
 import LedgerClient from "./ledger-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("ledger");
 
 export default async function LedgerPage() {
   // Any signed-in member: the utfall is the section's own accounting and the

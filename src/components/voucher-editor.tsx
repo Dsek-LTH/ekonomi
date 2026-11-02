@@ -29,8 +29,7 @@ import { Notice } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { withBlankRows } from "@/lib/ui/blank-rows";
-import { isAmountInput } from "@/lib/domain/money";
-import { amountFieldProps } from "@/components/ui/amount-input";
+import { isAmountInput, isSum, isSumInput, settleAmount } from "@/lib/domain/money";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
 import { retagRowText } from "@/lib/domain/cost-center-tag";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
@@ -74,7 +73,8 @@ const isBlankVoucherRow = (r: VoucherEditorRow) =>
   !r.credit.trim();
 
 /** The rows that are actually a voucher: the typed ones, without the spare. */
-export const filledVoucherRows = (rows: VoucherEditorRow[]) => rows.filter((r) => !isBlankVoucherRow(r));
+export const filledVoucherRows = (rows: VoucherEditorRow[]) =>
+  rows.filter((r) => !isBlankVoucherRow(r));
 
 // How many spare rows the table holds. Three is enough that the common voucher,
 // a cost row with its VAT and a rounding, is written without ever asking for
@@ -190,7 +190,11 @@ export function VoucherEditor({
   };
 
   const accountOptions = withRowValues(
-    accounts.map((a) => ({ value: a.number, label: `${a.number} - ${a.name}`, short: a.number })),
+    accounts.map((a) => ({
+      value: a.number,
+      label: `${a.number} - ${a.name}`,
+      short: a.number,
+    })),
     rows.map((r) => r.account),
   );
   const ccOptions = withRowValues(
@@ -199,7 +203,11 @@ export function VoucherEditor({
   );
   const showProjects = projects !== undefined;
   const projectOptions = withRowValues(
-    (projects ?? []).map((p) => ({ value: p.number, label: `${p.number} - ${p.name}`, short: p.number })),
+    (projects ?? []).map((p) => ({
+      value: p.number,
+      label: `${p.number} - ${p.name}`,
+      short: p.number,
+    })),
     rows.map((r) => r.project ?? ""),
   );
 
@@ -210,7 +218,7 @@ export function VoucherEditor({
   const cellInput =
     "block h-8 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
   const amountInput =
-    "block h-8 w-full bg-transparent px-2 text-right text-sm tabular-nums placeholder:text-muted focus-inset";
+    "block h-8 w-full bg-transparent px-2 text-right text-sm tabular-nums placeholder:text-muted focus-inset not-focus:aria-invalid:text-danger";
   // Tight padding: these two columns are only as wide as a code needs, so the
   // chevron and padding would otherwise be most of the box.
   const cellCombo = "h-8 gap-1 bg-transparent px-1.5 focus-inset";
@@ -271,7 +279,10 @@ export function VoucherEditor({
     if (!r.account.trim() || r.debit.trim() || r.credit.trim()) return;
     // Under half an öre there is nothing to write; the voucher already meets.
     if (Math.abs(outstanding) < 0.005) return;
-    patch(r.id, outstanding > 0 ? { debit: outstanding.toFixed(2) } : { credit: (-outstanding).toFixed(2) });
+    patch(
+      r.id,
+      outstanding > 0 ? { debit: outstanding.toFixed(2) } : { credit: (-outstanding).toFixed(2) },
+    );
   }
 
   function startDrag(e: React.PointerEvent, row: VoucherEditorRow) {
@@ -315,7 +326,10 @@ export function VoucherEditor({
       const delta = e.clientY - d.startY;
       // Rounded, so a row is passed when the pointer is halfway across it,
       // and read off the pointer rather than the rows, which are moving.
-      const wanted = Math.min(Math.max(d.startIndex + Math.round(delta / d.height), 0), d.lastIndex);
+      const wanted = Math.min(
+        Math.max(d.startIndex + Math.round(delta / d.height), 0),
+        d.lastIndex,
+      );
       if (wanted !== d.index) {
         const next = d.rows.slice();
         next.splice(wanted, 0, ...next.splice(d.index, 1));
@@ -368,11 +382,41 @@ export function VoucherEditor({
     next.splice(to, 0, ...next.splice(from, 1));
     onChange(next);
   }
-  // Anything that isn't on its way to an amount is simply not taken. The field
-  // keeps what it had, so a stray letter leaves no trace to delete.
-  function patchAmount(id: string, field: "debit" | "credit", value: string) {
-    if (!isAmountInput(value)) return;
-    patch(id, { [field]: value });
+  /**
+   * A debit or credit cell. It takes an amount or a sum of them
+   * (`1250*0,25+40`), and a sum is worked out when the cell is left, so what
+   * stays in the voucher is the figure. Anything that is on its way to neither
+   * is simply not taken, so a stray letter leaves no trace to delete.
+   *
+   * A sum that does not add up stays as typed and is drawn in red, rather
+   * than being swapped for a figure nobody wrote. It counts as nothing in the
+   * totals until it is put right.
+   */
+  function amountProps(r: VoucherEditorRow, field: "debit" | "credit") {
+    const value = r[field];
+    return {
+      value,
+      inputMode: "decimal" as const,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        // A plain figure keeps to two decimals. A sum's pieces may have more,
+        // since its answer is what gets rounded to the öre.
+        const v = e.target.value;
+        if (isAmountInput(v) || (isSum(v) && isSumInput(v))) patch(r.id, { [field]: v });
+      },
+      onBlur: () => {
+        const settled = settleAmount(value);
+        const shown = settled === null ? value : settled.replace(/\./g, ",");
+        if (shown !== value) patch(r.id, { [field]: shown });
+      },
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Enter works the sum out where it stands, as a spreadsheet would.
+        if (e.key !== "Enter" || !isSum(value)) return;
+        e.preventDefault();
+        const settled = settleAmount(value);
+        if (settled !== null) patch(r.id, { [field]: settled });
+      },
+      "aria-invalid": isSum(value) && settleAmount(value) === null ? true : undefined,
+    };
   }
 
   // Off to the right edge on its own layer, so the ✕ and the lock stay centred
@@ -394,12 +438,18 @@ export function VoucherEditor({
   // (`accountsOnly`), drawn as a picked one would be, the same height and
   // colour, so the table reads as the one an utlägg is booked in.
   const given = (value: string) => (
-    <div className="flex h-8 items-center justify-center truncate px-2 text-sm" title={value || undefined}>
+    <div
+      className="flex h-8 items-center justify-center truncate px-2 text-sm"
+      title={value || undefined}
+    >
       {value}
     </div>
   );
   const givenAmount = (value: string) => (
-    <div className="flex h-8 items-center justify-end truncate px-2 text-sm" title={value || undefined}>
+    <div
+      className="flex h-8 items-center justify-end truncate px-2 text-sm"
+      title={value || undefined}
+    >
       {value}
     </div>
   );
@@ -437,7 +487,9 @@ export function VoucherEditor({
       {/* Above the table, not below it: this is the reason the button at the
           bottom is dead, and it should be read before the reader gets there
           wondering why. */}
-      {(unknownAccounts.length > 0 || unknownCostCenters.length > 0 || unknownProjects.length > 0) && (
+      {(unknownAccounts.length > 0 ||
+        unknownCostCenters.length > 0 ||
+        unknownProjects.length > 0) && (
         <div className="px-inset py-4">
           <Notice>
             {unknownAccounts.length > 0 && (
@@ -465,12 +517,16 @@ export function VoucherEditor({
               {/* The project column takes its width from the name, cost
                   centre and text columns, which have the most to spare. */}
               <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
-              <th className={cn(headerCell, showProjects ? "w-[15%]" : "w-[18%]")}>{t("colAccountName")}</th>
-              <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>{t("colCostCenter")}</th>
-              {showProjects && (
-                <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>
-              )}
-              <th className={cn(headerCell, showProjects ? "w-[10%]" : "w-[15%]")}>{t("colDescription")}</th>
+              <th className={cn(headerCell, showProjects ? "w-[15%]" : "w-[18%]")}>
+                {t("colAccountName")}
+              </th>
+              <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>
+                {t("colCostCenter")}
+              </th>
+              {showProjects && <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>}
+              <th className={cn(headerCell, showProjects ? "w-[10%]" : "w-[15%]")}>
+                {t("colDescription")}
+              </th>
               <th className={cn(amountHeader, "w-[15%]")}>{t("colDebit")}</th>
               <th className={cn(amountHeader, "w-[15%]")}>{t("colCredit")}</th>
               {/* Wide enough for the ✕ and the grip side by side. The name
@@ -486,7 +542,9 @@ export function VoucherEditor({
                 </td>
                 <td className="px-2 align-middle">{cell(locked.accountName, false)}</td>
                 <td className="px-2 text-center align-middle text-sm text-muted" />
-                {showProjects && <td className="px-2 text-center align-middle text-sm text-muted" />}
+                {showProjects && (
+                  <td className="px-2 text-center align-middle text-sm text-muted" />
+                )}
                 {/* Truncated like the name, with the whole text on hover. */}
                 <td className="px-2 align-middle">{cell(locked.description ?? "", false)}</td>
                 <td className="px-2 text-right align-middle text-sm tabular-nums">
@@ -516,202 +574,226 @@ export function VoucherEditor({
               const movable = !fixed;
               const removable = !fixed && !blank;
               return (
-              <tr
-                key={r.id}
-                className={cn(
-                  "group divide-x divide-border",
-                  // Lifted: over the rows it passes, on the card's own
-                  // background so they don't read through it, and outlined so
-                  // it is a row in hand rather than one that happens to overlap.
-                  //
-                  // Outline and not a shadow or a ring: box-shadow is not
-                  // painted on the rows of a border-collapse table, which this
-                  // is, so a shadow here would simply never appear.
-                  draggingId === r.id &&
-                    "relative z-10 bg-background outline outline-1 outline-border",
-                  // The rows being passed take no hovers or clicks while a row
-                  // is over them, because the pointer is holding something.
-                  draggingId && draggingId !== r.id && "pointer-events-none",
-                )}
-                style={
-                  draggingId === r.id ? { transform: `translateY(${draggedBy}px)` } : undefined
-                }
-                onBlur={(e) => {
-                  const to = e.relatedTarget as HTMLElement | null;
-                  // Nowhere in particular: a click on dead space, or the whole
-                  // window going away. Not a move to the next row, so not the
-                  // moment to write anything into this one.
-                  if (!to) return;
-                  if (e.currentTarget.contains(to)) return;
-                  // A picker's menu hangs off <body>, so opening one reads as
-                  // leaving the row, while the row is still being filled in.
-                  if (to.closest("[data-combobox-panel]")) return;
-                  balanceOnLeave(r);
-                }}
-                onKeyDown={(e) => {
-                  if (!e.altKey || fixed) return;
-                  if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-                  e.preventDefault();
-                  nudgeRow(r.id, e.key === "ArrowDown" ? 1 : -1);
-                }}
-              >
-                <td className={readOnly ? "px-2 py-1.5 text-center align-middle tabular-nums" : "p-0 align-middle"}>
-                  {readOnly ? (
-                    r.account || "-"
-                  ) : (
-                    <Combobox
-                      options={accountOptions}
-                      value={r.account}
-                      onChange={(v) => patch(r.id, { account: v })}
-                      // Empty, not absent: left off, the picker falls back to
-                      // its own "Välj…" and the column is full of them again.
-                      placeholder=""
-                      searchPlaceholder={t("accountSearch")}
-                      align="center"
-                      buttonClassName={cellCombo}
-                      aria-label={t("colAccount")}
-                    />
+                <tr
+                  key={r.id}
+                  className={cn(
+                    "group divide-x divide-border",
+                    // Lifted: over the rows it passes, on the card's own
+                    // background so they don't read through it, and outlined so
+                    // it is a row in hand rather than one that happens to overlap.
+                    //
+                    // Outline and not a shadow or a ring: box-shadow is not
+                    // painted on the rows of a border-collapse table, which this
+                    // is, so a shadow here would simply never appear.
+                    draggingId === r.id &&
+                      "relative z-10 bg-background outline outline-1 outline-border",
+                    // The rows being passed take no hovers or clicks while a row
+                    // is over them, because the pointer is holding something.
+                    draggingId && draggingId !== r.id && "pointer-events-none",
                   )}
-                </td>
-                {/* Derived from the picked account, so read-only either way.
-                    It's the name the trigger no longer shows. */}
-                <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
-                <td className={fixed && !accountsOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
-                  {accountsOnly ? (
-                    given(r.costCenterCode)
-                  ) : fixed ? (
-                    r.costCenterCode || "-"
-                  ) : (
-                    <Combobox
-                      options={ccOptions}
-                      value={r.costCenterCode}
-                      onChange={(v) =>
-                        patch(r.id, {
-                          costCenterCode: v,
-                          description: retagRowText(r.description, r.costCenterCode, v, isLocal),
-                        })
-                      }
-                      // Nothing rather than a dash: an unpicked cost centre is
-                      // ordinary (plenty of rows never take one) and the
-                      // chevron is already saying there is a choice here.
-                      placeholder=""
-                      searchPlaceholder={tAlloc("search")}
-                      allowClear
-                      align="center"
-                      buttonClassName={cellCombo}
-                      aria-label={t("colCostCenter")}
-                    />
-                  )}
-                </td>
-                {showProjects && (
-                  <td className={fixed && !accountsOnly ? "px-2 text-center align-middle text-muted" : "p-0 align-middle"}>
-                    {accountsOnly ? (
-                      given(r.project ?? "")
-                    ) : fixed ? (
-                      r.project || "-"
+                  style={
+                    draggingId === r.id ? { transform: `translateY(${draggedBy}px)` } : undefined
+                  }
+                  onBlur={(e) => {
+                    const to = e.relatedTarget as HTMLElement | null;
+                    // Nowhere in particular: a click on dead space, or the whole
+                    // window going away. Not a move to the next row, so not the
+                    // moment to write anything into this one.
+                    if (!to) return;
+                    if (e.currentTarget.contains(to)) return;
+                    // A picker's menu hangs off <body>, so opening one reads as
+                    // leaving the row, while the row is still being filled in.
+                    if (to.closest("[data-combobox-panel]")) return;
+                    balanceOnLeave(r);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!e.altKey || fixed) return;
+                    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                    e.preventDefault();
+                    nudgeRow(r.id, e.key === "ArrowDown" ? 1 : -1);
+                  }}
+                >
+                  <td
+                    className={
+                      readOnly
+                        ? "px-2 py-1.5 text-center align-middle tabular-nums"
+                        : "p-0 align-middle"
+                    }
+                  >
+                    {readOnly ? (
+                      r.account || "-"
                     ) : (
                       <Combobox
-                        options={projectOptions}
-                        value={r.project ?? ""}
-                        onChange={(v) => patch(r.id, { project: v })}
-                        // Blank when unpicked, like the cost centre: most rows
-                        // carry no project.
+                        options={accountOptions}
+                        value={r.account}
+                        onChange={(v) => patch(r.id, { account: v })}
+                        // Empty, not absent: left off, the picker falls back to
+                        // its own "Välj…" and the column is full of them again.
                         placeholder=""
-                        searchPlaceholder={t("projectSearch")}
-                        allowClear
+                        searchPlaceholder={t("accountSearch")}
                         align="center"
                         buttonClassName={cellCombo}
-                        aria-label={t("colProject")}
+                        aria-label={t("colAccount")}
                       />
                     )}
                   </td>
-                )}
-                <td className={fixed && !accountsOnly ? "px-2 align-middle" : "p-0 align-middle"}>
-                  {accountsOnly ? (
-                    given(r.description)
-                  ) : fixed ? (
-                    cell(r.description)
-                  ) : (
-                    // size=1 kills the ~180px default intrinsic width an <input>
-                    // would otherwise contribute to the column.
-                    //
-                    // Out of the tab order, with the row's ✕: a voucher is
-                    // written account → kostnadsställe → belopp, over and over,
-                    // and a text nobody fills in most of the time should not be
-                    // two of every four stops on that path. Tab from the credit
-                    // lands on the next row's account. Still reached by clicking
-                    // into it.
-                    <input
-                      size={1}
-                      tabIndex={-1}
-                      value={r.description}
-                      onChange={(e) => patch(r.id, { description: e.target.value })}
-                      className={cellInput}
-                    />
-                  )}
-                </td>
-                <td className={fixed && !accountsOnly ? "px-2 text-right align-middle tabular-nums" : "p-0 align-middle"}>
-                  {accountsOnly ? (
-                    <div className="tabular-nums">{givenAmount(r.debit)}</div>
-                  ) : fixed ? (
-                    r.debit || "-"
-                  ) : (
-                    <input
-                      size={1}
-                      {...amountFieldProps({
-                        value: r.debit,
-                        onChange: (v) => patchAmount(r.id, "debit", v),
-                      })}
-                      className={amountInput}
-                      // A field with no placeholder still needs a name: it disappears the moment you
-                      // type, and a screen reader reading this row would otherwise
-                      // announce the field as nothing at all. The account names
-                      // which row it is.
-                      aria-label={`${tVoucher("debit")} ${r.account || ""}`.trim()}
-                    />
-                  )}
-                </td>
-                <td className={fixed && !accountsOnly ? "px-2 text-right align-middle tabular-nums" : "p-0 align-middle"}>
-                  {accountsOnly ? (
-                    <div className="tabular-nums">{givenAmount(r.credit)}</div>
-                  ) : fixed ? (
-                    r.credit || "-"
-                  ) : (
-                    <input
-                      size={1}
-                      {...amountFieldProps({
-                        value: r.credit,
-                        onChange: (v) => patchAmount(r.id, "credit", v),
-                      })}
-                      aria-label={`${tVoucher("credit")} ${r.account || ""}`.trim()}
-                      className={amountInput}
-                    />
-                  )}
-                </td>
-                {/* The row's two handles, past its last field: remove it, and
-                    pick it up. */}
-                <td className="relative text-center align-middle">
-                  {removable && (
-                    <IconButton
-                      tone="danger"
-                      size="sm"
-                      // Out of the tab order with the description. See there.
-                      tabIndex={-1}
-                      label={tAlloc("removeRow")}
-                      onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                  {/* Derived from the picked account, so read-only either way.
+                    It's the name the trigger no longer shows. */}
+                  <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
+                  <td
+                    className={
+                      fixed && !accountsOnly
+                        ? "px-2 text-center align-middle text-muted"
+                        : "p-0 align-middle"
+                    }
+                  >
+                    {accountsOnly ? (
+                      given(r.costCenterCode)
+                    ) : fixed ? (
+                      r.costCenterCode || "-"
+                    ) : (
+                      <Combobox
+                        options={ccOptions}
+                        value={r.costCenterCode}
+                        onChange={(v) =>
+                          patch(r.id, {
+                            costCenterCode: v,
+                            description: retagRowText(r.description, r.costCenterCode, v, isLocal),
+                          })
+                        }
+                        // Nothing rather than a dash: an unpicked cost centre is
+                        // ordinary (plenty of rows never take one) and the
+                        // chevron is already saying there is a choice here.
+                        placeholder=""
+                        searchPlaceholder={tAlloc("search")}
+                        allowClear
+                        align="center"
+                        buttonClassName={cellCombo}
+                        aria-label={t("colCostCenter")}
+                      />
+                    )}
+                  </td>
+                  {showProjects && (
+                    <td
+                      className={
+                        fixed && !accountsOnly
+                          ? "px-2 text-center align-middle text-muted"
+                          : "p-0 align-middle"
+                      }
                     >
-                      <IconX className="size-4" />
-                    </IconButton>
+                      {accountsOnly ? (
+                        given(r.project ?? "")
+                      ) : fixed ? (
+                        r.project || "-"
+                      ) : (
+                        <Combobox
+                          options={projectOptions}
+                          value={r.project ?? ""}
+                          onChange={(v) => patch(r.id, { project: v })}
+                          // Blank when unpicked, like the cost centre: most rows
+                          // carry no project.
+                          placeholder=""
+                          searchPlaceholder={t("projectSearch")}
+                          allowClear
+                          align="center"
+                          buttonClassName={cellCombo}
+                          aria-label={t("colProject")}
+                        />
+                      )}
+                    </td>
                   )}
-                  {movable && (
-                    <DragHandle
-                      onPointerDown={(e) => startDrag(e, r)}
-                      title={t("dragRow")}
-                      className={cn(dragHandle, draggingId === r.id && "opacity-100")}
-                    />
-                  )}
-                </td>
-              </tr>
+                  <td className={fixed && !accountsOnly ? "px-2 align-middle" : "p-0 align-middle"}>
+                    {accountsOnly ? (
+                      given(r.description)
+                    ) : fixed ? (
+                      cell(r.description)
+                    ) : (
+                      // size=1 kills the ~180px default intrinsic width an <input>
+                      // would otherwise contribute to the column.
+                      //
+                      // Out of the tab order, with the row's ✕: a voucher is
+                      // written account → kostnadsställe → belopp, over and over,
+                      // and a text nobody fills in most of the time should not be
+                      // two of every four stops on that path. Tab from the credit
+                      // lands on the next row's account. Still reached by clicking
+                      // into it.
+                      <input
+                        size={1}
+                        tabIndex={-1}
+                        value={r.description}
+                        onChange={(e) => patch(r.id, { description: e.target.value })}
+                        className={cellInput}
+                      />
+                    )}
+                  </td>
+                  <td
+                    className={
+                      fixed && !accountsOnly
+                        ? "px-2 text-right align-middle tabular-nums"
+                        : "p-0 align-middle"
+                    }
+                  >
+                    {accountsOnly ? (
+                      <div className="tabular-nums">{givenAmount(r.debit)}</div>
+                    ) : fixed ? (
+                      r.debit || "-"
+                    ) : (
+                      <input
+                        size={1}
+                        {...amountProps(r, "debit")}
+                        className={amountInput}
+                        // A field with no placeholder still needs a name: it disappears the moment you
+                        // type, and a screen reader reading this row would otherwise
+                        // announce the field as nothing at all. The account names
+                        // which row it is.
+                        aria-label={`${tVoucher("debit")} ${r.account || ""}`.trim()}
+                      />
+                    )}
+                  </td>
+                  <td
+                    className={
+                      fixed && !accountsOnly
+                        ? "px-2 text-right align-middle tabular-nums"
+                        : "p-0 align-middle"
+                    }
+                  >
+                    {accountsOnly ? (
+                      <div className="tabular-nums">{givenAmount(r.credit)}</div>
+                    ) : fixed ? (
+                      r.credit || "-"
+                    ) : (
+                      <input
+                        size={1}
+                        {...amountProps(r, "credit")}
+                        aria-label={`${tVoucher("credit")} ${r.account || ""}`.trim()}
+                        className={amountInput}
+                      />
+                    )}
+                  </td>
+                  {/* The row's two handles, past its last field: remove it, and
+                    pick it up. */}
+                  <td className="relative text-center align-middle">
+                    {removable && (
+                      <IconButton
+                        tone="danger"
+                        size="sm"
+                        // Out of the tab order with the description. See there.
+                        tabIndex={-1}
+                        label={tAlloc("removeRow")}
+                        onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                      >
+                        <IconX className="size-4" />
+                      </IconButton>
+                    )}
+                    {movable && (
+                      <DragHandle
+                        onPointerDown={(e) => startDrag(e, r)}
+                        title={t("dragRow")}
+                        className={cn(dragHandle, draggingId === r.id && "opacity-100")}
+                      />
+                    )}
+                  </td>
+                </tr>
               );
             })}
           </tbody>
@@ -747,7 +829,7 @@ export function VoucherEditor({
               <td />
             </tr>
           </tfoot>
-          </table>
+        </table>
       </TableScroll>
     </>
   );

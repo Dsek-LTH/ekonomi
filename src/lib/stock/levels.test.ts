@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  bottlesAt,
-  openCount,
-  openMl,
-  pickFault,
-  shortfall,
-  type BottleStock,
-} from "./levels";
+import { bottlesAt, openCount, openMl, pickFault, shortfall, type BottleStock } from "./levels";
 
 // The shelf in the examples: one bottle three-quarters gone, two half gone, six
 // still sealed.
@@ -59,9 +52,7 @@ describe("pickFault", () => {
     expect(pickFault(shelf, { sealed: 0, open: { 40: 3 } })).toBe("notThatManyOpen");
     // A rung nobody has anything on.
     expect(pickFault(shelf, { sealed: 0, open: { 60: 1 } })).toBe("notThatManyOpen");
-    expect(pickFault({ sealed: 1, open: {} }, { sealed: 2, open: {} })).toBe(
-      "notThatManySealed",
-    );
+    expect(pickFault({ sealed: 1, open: {} }, { sealed: 2, open: {} })).toBe("notThatManySealed");
   });
 
   it("checks what is there before it checks the order", () => {
@@ -78,7 +69,6 @@ describe("bottlesAt", () => {
     expect(bottlesAt(shelf.open, 40)).toBe(2);
   });
 });
-
 
 describe("shortfall", () => {
   // Availability alone. What `pickFault` adds to it is a rule about choosing,

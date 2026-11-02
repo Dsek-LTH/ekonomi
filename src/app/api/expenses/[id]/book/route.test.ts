@@ -131,7 +131,9 @@ describe("POST /api/expenses/[id]/book", () => {
     h.settings = { bankAccount: "1930", memberDebtAccount: null };
     const res = await send(POST, body());
     expect(res.status).toBe(422);
-    await expect(res.json()).resolves.toMatchObject({ error: "settings.memberDebtAccountUnset" });
+    await expect(res.json()).resolves.toMatchObject({
+      error: "settings.memberDebtAccountUnset",
+    });
     expect(h.updateMany).not.toHaveBeenCalled();
   });
 

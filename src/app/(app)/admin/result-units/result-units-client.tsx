@@ -58,7 +58,7 @@ export function ResultUnitsClient({
   // The open unit by id, so the dialog follows the refreshed row after every
   // save rather than holding on to the copy it was opened with.
   const [openId, setOpenId] = useState<string | null>(null);
-  const open = openId ? resultUnits.find((u) => u.id === openId) ?? null : null;
+  const open = openId ? (resultUnits.find((u) => u.id === openId) ?? null) : null;
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
@@ -95,7 +95,7 @@ export function ResultUnitsClient({
         <button
           type="button"
           onClick={() => setOpenId(u.id)}
-          className="text-left font-medium hover:text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+          className="text-left font-medium hover:text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
         >
           {u.resultUnit}
         </button>
@@ -112,7 +112,9 @@ export function ResultUnitsClient({
         u.prefixes.length ? (
           <span className="flex flex-wrap gap-1">
             {u.prefixes.map((p) => (
-              <Tag key={p.id} className="font-mono font-semibold">{p.value}</Tag>
+              <Tag key={p.id} className="font-mono font-semibold">
+                {p.value}
+              </Tag>
             ))}
           </span>
         ) : (
@@ -153,11 +155,7 @@ export function ResultUnitsClient({
       sortable: true,
       mobile: "trailing",
       cell: (u) =>
-        u.income ? (
-          <Tag tone="accent">{t("salesOn")}</Tag>
-        ) : (
-          <span className="text-muted">-</span>
-        ),
+        u.income ? <Tag tone="accent">{t("salesOn")}</Tag> : <span className="text-muted">-</span>,
     },
   ];
 
@@ -170,7 +168,7 @@ export function ResultUnitsClient({
             <button
               type="button"
               onClick={() => setShowUnassigned(true)}
-              className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("showThem")}
             </button>
@@ -241,7 +239,11 @@ export function ResultUnitsClient({
       )}
 
       {showUnassigned && (
-        <Modal label={t("unassigned")} onClose={() => setShowUnassigned(false)} className="max-w-lg">
+        <Modal
+          label={t("unassigned")}
+          onClose={() => setShowUnassigned(false)}
+          className="max-w-lg"
+        >
           <ModalHeader title={t("unassigned")} subtitle={t("unassignedSubtitle")} />
           <ModalBody>
             <CostCenterList list={unassigned} />
@@ -297,7 +299,9 @@ function UnitDialog({
       title: t("deleteTitle", { name: unit.resultUnit }),
       message:
         unit.prefixes.length > 0
-          ? t("deleteMessagePrefixes", { prefixes: unit.prefixes.map((p) => p.value).join(", ") })
+          ? t("deleteMessagePrefixes", {
+              prefixes: unit.prefixes.map((p) => p.value).join(", "),
+            })
           : t("deleteMessage"),
       confirmLabel: t("delete"),
       tone: "danger",
@@ -341,7 +345,11 @@ function UnitDialog({
       <div className="flex shrink-0 items-start gap-2 border-b border-border px-inset py-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">
-            <EditableText value={unit.resultUnit} label={t("renameAria", { name: unit.resultUnit })} onSave={rename} />
+            <EditableText
+              value={unit.resultUnit}
+              label={t("renameAria", { name: unit.resultUnit })}
+              onSave={rename}
+            />
           </h2>
           <p className="px-1.5 text-sm text-muted">
             {t("activeCostCenters", { count: unit.costCenterCount })}
@@ -483,7 +491,10 @@ function UnitDialog({
                 .{" "}
               </>
             )}
-            <Link href="/admin/roles" className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current">
+            <Link
+              href="/admin/roles"
+              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+            >
               {t("editInRoles")}
             </Link>
           </p>
@@ -497,10 +508,12 @@ function UnitDialog({
         {incomeEnabled && (
           <Section title={t("sectionSales")} hint={t("sectionSalesHint")}>
             <p className="text-sm">
-              {unit.income ? t("salesOnSummary", { count: unit.income.prefixes.length }) : t("salesOffSummary")}{" "}
+              {unit.income
+                ? t("salesOnSummary", { count: unit.income.prefixes.length })
+                : t("salesOffSummary")}{" "}
               <Link
                 href="/admin/income#units"
-                className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
               >
                 {t("editInSales")}
               </Link>

@@ -14,14 +14,14 @@ import type { Block, Email, Tone } from "./types";
 import svEmail from "../../../messages/sv/email.json";
 import svCommon from "../../../messages/sv/common.json";
 import { isoDay } from "@/lib/domain/date";
+import { serverEnv } from "@/lib/server/env";
 
 /**
  * The address links in a mail point at. A mail is read outside the app, so
  * every link in it has to be absolute.
  */
 export function appUrl(path = "/"): string {
-  const base = process.env.APP_URL || "http://localhost:3000";
-  return new URL(path, base).toString();
+  return new URL(path, serverEnv("APP_URL")).toString();
 }
 
 // ── Words ─────────────────────────────────────────────────────────
@@ -37,7 +37,11 @@ export const emailT = createTranslator({
 });
 
 // Payment types and statuses are worded the way the app words them.
-const commonT = createTranslator({ locale: "sv", messages: { common: svCommon }, namespace: "common" });
+const commonT = createTranslator({
+  locale: "sv",
+  messages: { common: svCommon },
+  namespace: "common",
+});
 const paymentLabel = (p: PaymentType): string => commonT(`payment.${p}.label`);
 export const statusLabel = (s: ExpenseStatus): string => commonT(`status.${s}`);
 
@@ -227,7 +231,9 @@ export function invoiceNotice(
   // Every one of these asks the reader to act. A unit given an invoice, or
   // given it back, goes straight to the fördelning; an attester to the record,
   // where Attestera is the main button.
-  const url = appUrl(key === "submitted" ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}/allocate`);
+  const url = appUrl(
+    key === "submitted" ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}/allocate`,
+  );
 
   const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
   if (invoice.dueDate) {
@@ -288,7 +294,9 @@ export function documentNotice(
         reference: null,
         title: label,
         amount: "-",
-        facts: doc.dueDate ? [{ label: emailT("invoice.fact.dueDate"), value: isoDay(doc.dueDate) }] : [],
+        facts: doc.dueDate
+          ? [{ label: emailT("invoice.fact.dueDate"), value: isoDay(doc.dueDate) }]
+          : [],
       },
     ],
     action: { label: emailT("invoice.assigned.button"), url },
@@ -420,7 +428,9 @@ export function transactionsBlock(
   txns: readonly { transactionDate: Date; description: string; amount: number }[],
   max: number,
 ): Block {
-  const sorted = [...txns].sort((a, b) => a.transactionDate.getTime() - b.transactionDate.getTime());
+  const sorted = [...txns].sort(
+    (a, b) => a.transactionDate.getTime() - b.transactionDate.getTime(),
+  );
   return {
     kind: "transactions",
     head: {
@@ -467,7 +477,11 @@ export function digestEmail(name: string, week: string, w: Waiting): Email {
   const stats: Extract<Block, { kind: "stats" }>["items"] = [];
   const sections: Block[] = [];
   if (unmatched.length) {
-    stats.push({ value: unmatched.length, label: emailT("digest.stat.unmatched"), tone: "neutral" });
+    stats.push({
+      value: unmatched.length,
+      label: emailT("digest.stat.unmatched"),
+      tone: "neutral",
+    });
     sections.push({
       kind: "section",
       title: emailT("digest.unmatched"),
@@ -477,7 +491,11 @@ export function digestEmail(name: string, week: string, w: Waiting): Email {
     });
   }
   if (deadline.length) {
-    stats.push({ value: deadline.length, label: emailT("digest.stat.deadline"), tone: "warning" });
+    stats.push({
+      value: deadline.length,
+      label: emailT("digest.stat.deadline"),
+      tone: "warning",
+    });
     sections.push({
       kind: "section",
       title: emailT("digest.deadline"),

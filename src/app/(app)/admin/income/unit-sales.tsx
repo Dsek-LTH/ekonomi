@@ -135,7 +135,9 @@ export function UnitSales({
                 : income.prefixes.map((p) => p.code).join(", ")}
           </p>
         </div>
-        {income && income.prefixes.length === 0 && <Tag tone="warning">{tSales("needsProducts")}</Tag>}
+        {income && income.prefixes.length === 0 && (
+          <Tag tone="warning">{tSales("needsProducts")}</Tag>
+        )}
         {isFallback && (
           <span title={tIncome("fallbackHint")}>
             <Tag tone="accent">{tIncome("fallback")}</Tag>
@@ -169,11 +171,15 @@ export function UnitSales({
                 defaultValue={income.description}
                 aria-label={tIncome("description")}
                 onBlur={(e) =>
-                  e.target.value !== income.description && updateIncome({ description: e.target.value })
+                  e.target.value !== income.description &&
+                  updateIncome({ description: e.target.value })
                 }
               />
             </FieldGroup>
-            <FieldGroup label={tIncome("defaultCostCenter")} hint={tIncome("defaultCostCenterHint")}>
+            <FieldGroup
+              label={tIncome("defaultCostCenter")}
+              hint={tIncome("defaultCostCenterHint")}
+            >
               <Combobox
                 size="sm"
                 options={ccOptions}
@@ -192,7 +198,10 @@ export function UnitSales({
           <FieldGroup label={tIncome("productPrefixes")} hint={tIncome("productHint")}>
             <ul className="rounded-control border border-border">
               {income.prefixes.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0">
+                <li
+                  key={p.id}
+                  className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0"
+                >
                   <span className="w-20 shrink-0 font-mono text-sm font-semibold">{p.code}</span>
                   <span className="min-w-0 flex-1 truncate text-sm">
                     <span className="font-mono tabular-nums">{p.account}</span>
@@ -218,7 +227,12 @@ export function UnitSales({
                   <Input
                     size="sm"
                     value={productDraft?.code ?? ""}
-                    onChange={(e) => setProductDraft({ account: productDraft?.account ?? "", code: e.target.value })}
+                    onChange={(e) =>
+                      setProductDraft({
+                        account: productDraft?.account ?? "",
+                        code: e.target.value,
+                      })
+                    }
                     placeholder="c"
                     aria-label={tIncome("prefixCode")}
                     className="font-mono"
@@ -229,7 +243,12 @@ export function UnitSales({
                     size="sm"
                     inputMode="numeric"
                     value={productDraft?.account ?? ""}
-                    onChange={(e) => setProductDraft({ code: productDraft?.code ?? "", account: e.target.value })}
+                    onChange={(e) =>
+                      setProductDraft({
+                        code: productDraft?.code ?? "",
+                        account: e.target.value,
+                      })
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") addProductPrefix();
                     }}

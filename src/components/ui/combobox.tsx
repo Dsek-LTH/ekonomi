@@ -144,9 +144,7 @@ export function MultiCombobox({
       {...rest}
       multiple
       values={values}
-      onPick={(v) =>
-        onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])
-      }
+      onPick={(v) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])}
       onClear={() => onChange([])}
     />
   );
@@ -210,16 +208,16 @@ function ComboboxBase({
   /** Whether to offer what was typed as something to make. Only when there is
    *  text and nothing in the list already is it. */
   const offer =
-    Boolean(onCreate) &&
-    q.length > 0 &&
-    !options.some((o) => o.label.trim().toLowerCase() === q);
+    Boolean(onCreate) && q.length > 0 && !options.some((o) => o.label.trim().toLowerCase() === q);
 
   // One picked value reads as itself; several can't, so the trigger counts them
   // instead. Nothing picked falls through to the placeholder.
   const triggerLabel =
-    picked.length === 0 ? null
-    : picked.length === 1 ? picked[0].short ?? picked[0].label
-    : t("nSelected", { count: picked.length });
+    picked.length === 0
+      ? null
+      : picked.length === 1
+        ? (picked[0].short ?? picked[0].label)
+        : t("nSelected", { count: picked.length });
 
   // Where the field is on screen, kept current while the menu is open. See
   // lib/ui/anchored-panel.ts, shared with the menu, which explains why this
@@ -252,7 +250,14 @@ function ComboboxBase({
     if (disabled) return;
     setRect(triggerRef.current?.getBoundingClientRect() ?? null);
     setQuery(initial);
-    setActive(initial ? 0 : Math.max(0, options.findIndex((o) => isPicked(o.value))));
+    setActive(
+      initial
+        ? 0
+        : Math.max(
+            0,
+            options.findIndex((o) => isPicked(o.value)),
+          ),
+    );
     setOpen(true);
   }
   function close() {
@@ -264,7 +269,10 @@ function ComboboxBase({
   // stays open and keeps the search you typed; single has nothing left to offer.
   function commit(v: string) {
     onPick(v);
-    if (!multiple) { close(); triggerRef.current?.focus(); }
+    if (!multiple) {
+      close();
+      triggerRef.current?.focus();
+    }
   }
 
   // Escape shuts the menu and hands the caret back to the trigger, and shuts
@@ -275,7 +283,6 @@ function ComboboxBase({
     close();
     triggerRef.current?.focus();
   });
-
 
   /**
    * Where the menu goes: below by default, above only when below will not do.
@@ -354,15 +361,21 @@ function ComboboxBase({
   // press on it is not a press on the trigger either.
   useDismissOnOutside(open, [triggerRef, searchRef, panelRef], close);
 
-
   /** A row's height: a finger's worth on a phone, a pointer's elsewhere. */
   const row = phone ? "py-3 text-base" : "py-1.5 text-sm";
 
   function onSearchKey(e: React.KeyboardEvent) {
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); const o = filtered[active]; if (o) commit(o.value); }
-    else if (e.key === "Tab") {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((a) => Math.min(a + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(a - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const o = filtered[active];
+      if (o) commit(o.value);
+    } else if (e.key === "Tab") {
       // Tab walks the options like the arrows do, wrapping at both ends, rather
       // than leaving the field. With the menu open the list is what you're
       // moving through. Enter picks the highlighted one; Escape gets you out.
@@ -402,7 +415,11 @@ function ComboboxBase({
           if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             openMenu();
-          } else if ((e.key === "Delete" || e.key === "Backspace") && onClear && values.length > 0) {
+          } else if (
+            (e.key === "Delete" || e.key === "Backspace") &&
+            onClear &&
+            values.length > 0
+          ) {
             // Emptying a field with Delete/Backspace is what the keyboard
             // expects, so the closed trigger takes it as the "Clear" row does.
             // Gated on `onClear`: where clearing isn't offered, "" is not a
@@ -467,9 +484,16 @@ function ComboboxBase({
           data-combobox-search=""
           aria-label={ariaLabel ?? searchPlaceholder ?? t("searchPlaceholder")}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActive(0);
+          }}
           onKeyDown={onSearchKey}
-          placeholder={multiple ? (searchPlaceholder ?? t("searchPlaceholder")) : (triggerLabel ?? searchPlaceholder ?? t("searchPlaceholder"))}
+          placeholder={
+            multiple
+              ? (searchPlaceholder ?? t("searchPlaceholder"))
+              : (triggerLabel ?? searchPlaceholder ?? t("searchPlaceholder"))
+          }
           autoComplete="off"
           className={cn(
             "absolute inset-y-0 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted",
@@ -480,190 +504,204 @@ function ComboboxBase({
         />
       )}
 
-      {open && (phone || rect) && createPortal(
-        <div
-          ref={panelRef}
-          // Marks the menu as this field's, for anything outside that has to
-          // tell "focus left the field" from "focus went into its menu". The
-          // menu is portalled to <body>, so containment can't answer that. The
-          // voucher table's auto-balance reads it.
-          data-combobox-panel=""
-          // A layer of its own, over whatever it was opened from. A dialog
-          // underneath holds Tab inside itself and has to leave this alone.
-          // See lib/ui/focus-trap.ts.
-          data-popup-layer=""
-          style={phone ? undefined : menuStyle()}
-          // Above everything, dialogs included. The menu is portalled to
-          // <body>, so it shares a stacking context with the confirm dialog and
-          // the modals (both z-[200]). At z-50 a field inside one of them
-          // opened its options *behind* the dialog they belong to. It cannot
-          // wrongly cover something else, because a menu only stays open while
-          // its own trigger is on top: an outside mousedown closes it, which is
-          // how anything above it would have been opened in the first place.
-          className={cn(
-            "z-[210] flex flex-col overflow-hidden bg-background",
-            phone
-              ? "fixed inset-0 pt-[env(safe-area-inset-top)]"
-              : "rounded-panel border border-border shadow-[var(--shadow-pop)]",
-          )}
-        >
-          {/* What is being picked, and the way out, where the menu has covered
+      {open &&
+        (phone || rect) &&
+        createPortal(
+          <div
+            ref={panelRef}
+            // Marks the menu as this field's, for anything outside that has to
+            // tell "focus left the field" from "focus went into its menu". The
+            // menu is portalled to <body>, so containment can't answer that. The
+            // voucher table's auto-balance reads it.
+            data-combobox-panel=""
+            // A layer of its own, over whatever it was opened from. A dialog
+            // underneath holds Tab inside itself and has to leave this alone.
+            // See lib/ui/focus-trap.ts.
+            data-popup-layer=""
+            style={phone ? undefined : menuStyle()}
+            // Above everything, dialogs included. The menu is portalled to
+            // <body>, so it shares a stacking context with the confirm dialog and
+            // the modals (both z-[200]). At z-50 a field inside one of them
+            // opened its options *behind* the dialog they belong to. It cannot
+            // wrongly cover something else, because a menu only stays open while
+            // its own trigger is on top: an outside mousedown closes it, which is
+            // how anything above it would have been opened in the first place.
+            className={cn(
+              "z-[210] flex flex-col overflow-hidden bg-background",
+              phone
+                ? "fixed inset-0 pt-[env(safe-area-inset-top)]"
+                : "rounded-panel border border-border shadow-[var(--shadow-pop)]",
+            )}
+          >
+            {/* What is being picked, and the way out, where the menu has covered
               the field that said so. Several picks are kept as they are made,
               so that way out is "Klar" rather than "Avbryt". */}
-          {phone && (
-            <div className="flex h-14 shrink-0 items-center gap-3 px-4">
-              <p className="min-w-0 flex-1 truncate text-base font-semibold">
-                {ariaLabel ?? placeholder ?? t("placeholder")}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  triggerRef.current?.focus();
-                }}
-                className="-mr-2 rounded-control px-2 py-1.5 text-base font-medium text-accent"
-              >
-                {multiple ? t("done") : t("cancel")}
-              </button>
-            </div>
-          )}
-          {searchable && !inline && (
-          <div className={cn("shrink-0 border-b border-border", phone ? "px-4 pb-3" : "p-2")}>
-            <input
-              ref={searchRef}
-              // An id like every other field, so the browser does not report
-              // one it cannot autofill. Nothing points at it: the listbox is
-              // named by `aria-controls` below and the trigger carries the
-              // field's own label.
-              id={`${listId}-search`}
-              role="combobox"
-              aria-expanded
-              aria-controls={listId}
-              aria-activedescendant={filtered[active] ? optionId(active) : undefined}
-              aria-autocomplete="list"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setActive(0); }}
-              onKeyDown={onSearchKey}
-              placeholder={searchPlaceholder ?? t("searchPlaceholder")}
-              // 16px on a phone: iOS zooms the page in on any field set smaller.
-              className={cn(
-                "w-full rounded-control border border-border-control bg-background",
-                phone ? "h-11 px-3 text-base" : "h-8 px-2.5 text-sm",
-              )}
-            />
-          </div>
-          )}
-          {/* tabIndex -1: the list scrolls, and a scroll container with no
+            {phone && (
+              <div className="flex h-14 shrink-0 items-center gap-3 px-4">
+                <p className="min-w-0 flex-1 truncate text-base font-semibold">
+                  {ariaLabel ?? placeholder ?? t("placeholder")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    triggerRef.current?.focus();
+                  }}
+                  className="-mr-2 rounded-control px-2 py-1.5 text-base font-medium text-accent"
+                >
+                  {multiple ? t("done") : t("cancel")}
+                </button>
+              </div>
+            )}
+            {searchable && !inline && (
+              <div className={cn("shrink-0 border-b border-border", phone ? "px-4 pb-3" : "p-2")}>
+                <input
+                  ref={searchRef}
+                  // An id like every other field, so the browser does not report
+                  // one it cannot autofill. Nothing points at it: the listbox is
+                  // named by `aria-controls` below and the trigger carries the
+                  // field's own label.
+                  id={`${listId}-search`}
+                  role="combobox"
+                  aria-expanded
+                  aria-controls={listId}
+                  aria-activedescendant={filtered[active] ? optionId(active) : undefined}
+                  aria-autocomplete="list"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setActive(0);
+                  }}
+                  onKeyDown={onSearchKey}
+                  placeholder={searchPlaceholder ?? t("searchPlaceholder")}
+                  // 16px on a phone: iOS zooms the page in on any field set smaller.
+                  className={cn(
+                    "w-full rounded-control border border-border-control bg-background",
+                    phone ? "h-11 px-3 text-base" : "h-8 px-2.5 text-sm",
+                  )}
+                />
+              </div>
+            )}
+            {/* tabIndex -1: the list scrolls, and a scroll container with no
               focusable children of its own becomes a tab stop in Chrome.
 
               With no search box above it, this is also what holds the focus and
               therefore what the arrows, Enter and Escape arrive at. Same
               handler either way, so the two modes cannot drift into two
               different sets of keys. */}
-          <ul
-            ref={listRef}
-            id={listId}
-            role="listbox"
-            aria-multiselectable={multiple || undefined}
-            aria-activedescendant={
-              !searchable && filtered[active] ? optionId(active) : undefined
-            }
-            tabIndex={-1}
-            onKeyDown={searchable ? undefined : onSearchKey}
-            className={cn(
-              "min-h-0 flex-1 overflow-y-auto overscroll-contain",
-              phone ? "px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]" : "p-1",
-            )}
-          >
-            {onClear && picked.length > 0 && (
-              <li>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => {
-                    onClear();
-                    if (!multiple) { close(); triggerRef.current?.focus(); }
-                  }}
-                  className={cn("flex w-full items-center rounded-control px-3 text-left text-muted hover:bg-hover", row)}
-                >
-                  {clearLabel ?? t("clear")}
-                </button>
-              </li>
-            )}
-            {filtered.length === 0 && !offer && (
-              <li className="px-3 py-2 text-sm text-muted">{emptyText ?? t("empty")}</li>
-            )}
-            {/* Below the matches, not instead of them: somebody typing "norr"
+            <ul
+              ref={listRef}
+              id={listId}
+              role="listbox"
+              aria-multiselectable={multiple || undefined}
+              aria-activedescendant={!searchable && filtered[active] ? optionId(active) : undefined}
+              tabIndex={-1}
+              onKeyDown={searchable ? undefined : onSearchKey}
+              className={cn(
+                "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+                phone ? "px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]" : "p-1",
+              )}
+            >
+              {onClear && picked.length > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => {
+                      onClear();
+                      if (!multiple) {
+                        close();
+                        triggerRef.current?.focus();
+                      }
+                    }}
+                    className={cn(
+                      "flex w-full items-center rounded-control px-3 text-left text-muted hover:bg-hover",
+                      row,
+                    )}
+                  >
+                    {clearLabel ?? t("clear")}
+                  </button>
+                </li>
+              )}
+              {filtered.length === 0 && !offer && (
+                <li className="px-3 py-2 text-sm text-muted">{emptyText ?? t("empty")}</li>
+              )}
+              {/* Below the matches, not instead of them: somebody typing "norr"
                 wants to see the two beers that start with it before being
                 offered a third. */}
-            {offer && (
-              <li>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => {
-                    close();
-                    onCreate?.(query.trim());
-                  }}
-                  className={cn("flex w-full items-center gap-2 rounded-control px-3 text-left font-medium text-accent hover:bg-hover", row)}
-                >
-                  {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
-                </button>
-              </li>
-            )}
-            {filtered.map((o, i) => (
-              <Fragment key={o.value}>
-              {o.dividerBefore && !q && i > 0 && (
-                <li role="separator" aria-hidden className="mx-2 my-1 h-px bg-border" />
+              {offer && (
+                <li>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => {
+                      close();
+                      onCreate?.(query.trim());
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-control px-3 text-left font-medium text-accent hover:bg-hover",
+                      row,
+                    )}
+                  >
+                    {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
+                  </button>
+                </li>
               )}
-              <li>
-                <button
-                  type="button"
-                  id={optionId(i)}
-                  data-index={i}
-                  // Not a tab stop: focus stays in the search box and the arrow
-                  // keys move the highlight. Left tabbable, every option was its
-                  // own stop, and Tab put a focus ring on the first one, a
-                  // second highlight competing with the arrow-key one.
-                  tabIndex={-1}
-                  role="option"
-                  aria-selected={isPicked(o.value)}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => commit(o.value)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-control px-3 text-left transition-colors",
-                    row,
-                    // One indicator for "where the keyboard is". Arrows, Tab and
-                    // the mouse all move this same highlight; when a ring moved
-                    // on its own it left a second, stale one behind at the top
-                    // of the list. A neutral fill, the same one a Menu row
-                    // takes, rather than a pink ring: the mouse moves it on
-                    // every option it passes, and a ring there made the list
-                    // flash pink under the pointer.
-                    i === active && "bg-hover",
-                    // The checkmark says which one is picked. Pink text as well
-                    // said it twice, and on the active row it was pink inside
-                    // pink.
-                    isPicked(o.value) && "font-medium",
+              {filtered.map((o, i) => (
+                <Fragment key={o.value}>
+                  {o.dividerBefore && !q && i > 0 && (
+                    <li role="separator" aria-hidden className="mx-2 my-1 h-px bg-border" />
                   )}
-                >
-                  {/* Several options can be on at once, so each needs to show
+                  <li>
+                    <button
+                      type="button"
+                      id={optionId(i)}
+                      data-index={i}
+                      // Not a tab stop: focus stays in the search box and the arrow
+                      // keys move the highlight. Left tabbable, every option was its
+                      // own stop, and Tab put a focus ring on the first one, a
+                      // second highlight competing with the arrow-key one.
+                      tabIndex={-1}
+                      role="option"
+                      aria-selected={isPicked(o.value)}
+                      onMouseEnter={() => setActive(i)}
+                      onClick={() => commit(o.value)}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 rounded-control px-3 text-left transition-colors",
+                        row,
+                        // One indicator for "where the keyboard is". Arrows, Tab and
+                        // the mouse all move this same highlight; when a ring moved
+                        // on its own it left a second, stale one behind at the top
+                        // of the list. A neutral fill, the same one a Menu row
+                        // takes, rather than a pink ring: the mouse moves it on
+                        // every option it passes, and a ring there made the list
+                        // flash pink under the pointer.
+                        i === active && "bg-hover",
+                        // The checkmark says which one is picked. Pink text as well
+                        // said it twice, and on the active row it was pink inside
+                        // pink.
+                        isPicked(o.value) && "font-medium",
+                      )}
+                    >
+                      {/* Several options can be on at once, so each needs to show
                       its own on/off state whether or not it is the picked one,
                       a box that is either filled or empty. The single-select
                       below has only ever one, and marks it with a bare check.
                       The box is drawn by components/ui/checkbox, which is where
                       it went when the budget sheet wanted the same one. */}
-                  {multiple && <CheckMark on={isPicked(o.value)} />}
-                  <span className="mr-auto truncate">{o.label}</span>
-                  {!multiple && isPicked(o.value) && <IconCheck className="size-4 shrink-0 text-accent" />}
-                </button>
-              </li>
-              </Fragment>
-            ))}
-          </ul>
-        </div>,
-        document.body,
-      )}
+                      {multiple && <CheckMark on={isPicked(o.value)} />}
+                      <span className="mr-auto truncate">{o.label}</span>
+                      {!multiple && isPicked(o.value) && (
+                        <IconCheck className="size-4 shrink-0 text-accent" />
+                      )}
+                    </button>
+                  </li>
+                </Fragment>
+              ))}
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

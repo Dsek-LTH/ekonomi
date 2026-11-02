@@ -70,7 +70,6 @@ export interface InvoiceCoverData {
   exportedBy: string | null;
 }
 
-
 /** The day in Stockholm, as an ISO date. A signature at 00:30 is that day's. */
 const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
 
@@ -88,7 +87,10 @@ export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
     created: day(f.created),
     // What the rows add up to, as on the utläggsräkning: this page is about
     // what was attested, and the export has already checked it is the amount.
-    total: formatOreKr(f.rows.reduce((s, r) => s + r.amount, 0), { decimals: 2 }),
+    total: formatOreKr(
+      f.rows.reduce((s, r) => s + r.amount, 0),
+      { decimals: 2 },
+    ),
     allocations: f.rows.map((r) => ({
       costCenter: r.costCenter,
       amount: formatOreKr(r.amount, { decimals: 2 }),
@@ -115,7 +117,11 @@ export async function invoiceCoverFacts(
 ): Promise<CoverFacts> {
   const [users, booked, exporter] = await Promise.all([
     prisma.user.findMany({
-      where: { id: { in: invoice.allocations.flatMap((a) => (a.approvedById ? [a.approvedById] : [])) } },
+      where: {
+        id: {
+          in: invoice.allocations.flatMap((a) => (a.approvedById ? [a.approvedById] : [])),
+        },
+      },
       select: { id: true, name: true },
     }),
     // Who konterade it: the last time it was, if it was done more than once.
@@ -125,7 +131,10 @@ export async function invoiceCoverFacts(
       select: { createdAt: true, actor: { select: { name: true } } },
     }),
     !sending && invoice.exportedById
-      ? prisma.user.findUnique({ where: { id: invoice.exportedById }, select: { name: true } })
+      ? prisma.user.findUnique({
+          where: { id: invoice.exportedById },
+          select: { name: true },
+        })
       : null,
   ]);
   const nameOf = new Map(users.map((u) => [u.id, u.name]));

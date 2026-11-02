@@ -22,7 +22,11 @@ const account = (n: string, amount: number, extra: Partial<ReportAccount> = {}):
   ...extra,
 });
 
-const section = (key: string, accounts: ReportAccount[], extra: Partial<ReportSection> = {}): ReportSection => ({
+const section = (
+  key: string,
+  accounts: ReportAccount[],
+  extra: Partial<ReportSection> = {},
+): ReportSection => ({
   key,
   accounts,
   total: accounts.reduce((s, a) => s + a.amount, 0),
@@ -45,7 +49,14 @@ const result: LedgerReport = {
       sections: [
         section(
           "income",
-          [account("3011", 1200.5, { comparison: 1000, accumulated: 2400, prior: 900, priorAccumulated: 1800 })],
+          [
+            account("3011", 1200.5, {
+              comparison: 1000,
+              accumulated: 2400,
+              prior: 900,
+              priorAccumulated: 1800,
+            }),
+          ],
           { comparison: 1000, accumulated: 2400, prior: 900, priorAccumulated: 1800 },
         ),
         section("costs", [
@@ -91,12 +102,16 @@ const balance: LedgerReport = {
       costCenterCode: null,
       costCenterName: null,
       sections: [
-        section("assets", [account("1930", 500, { opening: 1000, closing: 1500, comparison: 1200 })], {
-          total: 500,
-          opening: 1000,
-          closing: 1500,
-          comparison: 1200,
-        }),
+        section(
+          "assets",
+          [account("1930", 500, { opening: 1000, closing: 1500, comparison: 1200 })],
+          {
+            total: 500,
+            opening: 1000,
+            closing: 1500,
+            comparison: 1200,
+          },
+        ),
       ],
       total: 500,
       opening: 1000,
@@ -121,13 +136,27 @@ const ALL: ResultColumn[] = ["period", "prior", "accumulated", "priorAccumulated
 describe("reportToCsv", () => {
   it("writes a specified result report with every column and a comparison", () => {
     expect(
-      reportToCsv(result, { specified: true, showComparison: true, comparisonLabel: "Budget", diff: true, columns: ALL, t }),
+      reportToCsv(result, {
+        specified: true,
+        showComparison: true,
+        comparisonLabel: "Budget",
+        diff: true,
+        columns: ALL,
+        t,
+      }),
     ).toMatchSnapshot();
   });
 
   it("writes a summed result report with nothing picked (the period alone)", () => {
     expect(
-      reportToCsv(result, { specified: false, showComparison: false, comparisonLabel: "", diff: false, columns: [], t }),
+      reportToCsv(result, {
+        specified: false,
+        showComparison: false,
+        comparisonLabel: "",
+        diff: false,
+        columns: [],
+        t,
+      }),
     ).toMatchSnapshot();
   });
 
@@ -146,7 +175,14 @@ describe("reportToCsv", () => {
 
   it("writes a balance report with its fixed columns, whatever columns are picked", () => {
     expect(
-      reportToCsv(balance, { specified: false, showComparison: true, comparisonLabel: "Föregående år", diff: true, columns: ALL, t }),
+      reportToCsv(balance, {
+        specified: false,
+        showComparison: true,
+        comparisonLabel: "Föregående år",
+        diff: true,
+        columns: ALL,
+        t,
+      }),
     ).toMatchSnapshot();
   });
 });

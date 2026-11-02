@@ -41,19 +41,21 @@ interface ContractLike {
 const ORDER: readonly string[] = ["SIGNED", "GENERATED", "ORIGINAL", "ATTACHMENT"];
 
 export function contractDocuments(contract: ContractLike): PanelDocument[] {
-  return contract.files
-    .filter((f) => ORDER.includes(f.role))
-    .slice()
-    // Stable within a role, so two attachments keep the order the archive
-    // returned them in (newest first) rather than an order nobody chose.
-    .sort((a, b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role))
-    .map((f) => ({
-      src: `/api/contracts/${contract.id}/files/${f.id}`,
-      mimeType: f.mimeType,
-      filename: f.filename,
-      // Its own name. A contract's files are already named for what they are
-      // ("uthyrningsavtal-2026-09-18-F-sektionen.pdf"), unlike an utlägg's two,
-      // which are generated and need telling apart by hand.
-      label: f.filename,
-    }));
+  return (
+    contract.files
+      .filter((f) => ORDER.includes(f.role))
+      .slice()
+      // Stable within a role, so two attachments keep the order the archive
+      // returned them in (newest first) rather than an order nobody chose.
+      .sort((a, b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role))
+      .map((f) => ({
+        src: `/api/contracts/${contract.id}/files/${f.id}`,
+        mimeType: f.mimeType,
+        filename: f.filename,
+        // Its own name. A contract's files are already named for what they are
+        // ("uthyrningsavtal-2026-09-18-F-sektionen.pdf"), unlike an utlägg's two,
+        // which are generated and need telling apart by hand.
+        label: f.filename,
+      }))
+  );
 }

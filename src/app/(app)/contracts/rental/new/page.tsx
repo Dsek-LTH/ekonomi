@@ -3,6 +3,9 @@ import { canManageRentals } from "@/lib/domain/permissions";
 import { getRentalItemOptions } from "@/lib/data/rental-items";
 import { getCounterpartyOptions } from "@/lib/data/counterparties";
 import { NewRentalClient } from "./new-rental-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("newRentalContract");
 
 export default async function NewRentalPage() {
   await requirePage(canManageRentals);

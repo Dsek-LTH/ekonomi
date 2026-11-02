@@ -45,9 +45,9 @@ import { sekToOre } from "@/lib/domain/money";
 // in adding a hundred of them together and comparing the answer to something.
 type AccountTotals = Map<string, number>; // "CC_CODE:ACCT_CODE" → öre
 /** Variable values, in whatever the variable means: kronor, a count, a ratio. */
-type VarValues    = Map<string, number>;
+type VarValues = Map<string, number>;
 /** Working values for cell references, in kronor (rounded to öre precision). */
-type CellValues   = Map<string, number>;
+type CellValues = Map<string, number>;
 /** Every "CC_CODE:ACCT_CODE" the budget actually holds, rows or no rows. */
 type KnownAccounts = ReadonlySet<string>;
 
@@ -57,7 +57,10 @@ type KnownAccounts = ReadonlySet<string>;
 // because nobody goes looking for it. It is a token now, and `parseAtom`
 // answers NaN for it like any other thing it cannot read.
 type TokKind = "num" | "id" | "ref" | "acct" | "op" | "lparen" | "rparen" | "comma" | "bad" | "eof";
-interface Tok { kind: TokKind; val: string }
+interface Tok {
+  kind: TokKind;
+  val: string;
+}
 
 // What may start / continue a name. Any letter, not just A-Z: variable names are
 // typed by hand and never validated (see POST /api/budgets/[id]/variables), so a
@@ -85,7 +88,10 @@ function tokenise(src: string): Tok[] {
   let i = 0;
   while (i < src.length) {
     const ch = src[i];
-    if (/\s/.test(ch)) { i++; continue; }
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
     if (/[0-9]/.test(ch) || (ch === "." && /[0-9]/.test(src[i + 1] ?? ""))) {
       let num = "";
       while (i < src.length && /[0-9._]/.test(src[i])) num += src[i++];
@@ -116,15 +122,20 @@ function tokenise(src: string): Tok[] {
     } else if ("+-*/×÷".includes(ch)) {
       // Accept the typographic ×/÷ as aliases for * and /.
       const op = ch === "×" ? "*" : ch === "÷" ? "/" : ch;
-      toks.push({ kind: "op", val: op }); i++;
+      toks.push({ kind: "op", val: op });
+      i++;
     } else if (ch === "(") {
-      toks.push({ kind: "lparen", val: "(" }); i++;
+      toks.push({ kind: "lparen", val: "(" });
+      i++;
     } else if (ch === ")") {
-      toks.push({ kind: "rparen", val: ")" }); i++;
+      toks.push({ kind: "rparen", val: ")" });
+      i++;
     } else if (ch === ",") {
-      toks.push({ kind: "comma", val: "," }); i++;
+      toks.push({ kind: "comma", val: "," });
+      i++;
     } else {
-      toks.push({ kind: "bad", val: ch }); i++;
+      toks.push({ kind: "bad", val: ch });
+      i++;
     }
   }
   toks.push({ kind: "eof", val: "" });
@@ -157,7 +168,9 @@ function evalExpr(src: string, ctx: EvalCtx): number {
   const peek = () => toks[pos];
   const consume = () => toks[pos++];
 
-  function parseExpr(): number { return parseAddSub(); }
+  function parseExpr(): number {
+    return parseAddSub();
+  }
 
   function parseAddSub(): number {
     let left = parseMulDiv();
@@ -286,18 +299,18 @@ export interface VariableInput {
 // figure that is actually in force rather than the one that was adopted.
 export interface AdjustmentInput {
   accountKey: string; // "CC_CODE:ACCT_CODE"
-  amount: number;     // öre, signed in the account's own orientation
+  amount: number; // öre, signed in the account's own orientation
 }
 
 export interface EvalResult {
   /** Variable name → its value, in whatever it means (kronor, a count, a ratio). */
   vars: VarValues;
-  accounts: AccountTotals;   // "CC:ACCT" → sum of its rows, in öre
+  accounts: AccountTotals; // "CC:ACCT" → sum of its rows, in öre
   lineItems: Map<string, number>; // lineItem.id → the row's amount, in öre
   /** Reference values in kronor, the working unit, not an output. See Units. */
   cells: CellValues;
-  badLineItems: string[];    // ids whose cell didn't resolve (formula error)
-  badVariables: string[];    // variable names that didn't resolve
+  badLineItems: string[]; // ids whose cell didn't resolve (formula error)
+  badVariables: string[]; // variable names that didn't resolve
   /**
    * Account keys ("CC:ACCT") whose total is missing at least one row.
    *
@@ -307,7 +320,7 @@ export interface EvalResult {
    * row showed a total that looked entirely ordinary.
    */
   badAccounts: string[];
-  errors: string[];          // human-readable warnings (circular etc.)
+  errors: string[]; // human-readable warnings (circular etc.)
 }
 
 export function evaluate(
@@ -327,10 +340,10 @@ export function evaluate(
   maxPasses = 8,
 ): EvalResult {
   const known: KnownAccounts = new Set(knownAccounts);
-  const vars: VarValues     = new Map();
+  const vars: VarValues = new Map();
   const accounts: AccountTotals = new Map();
-  const cells: CellValues   = new Map();
-  const badCells            = new Set<string>();
+  const cells: CellValues = new Map();
+  const badCells = new Set<string>();
   const liValues: Map<string, number> = new Map();
   const errors: string[] = [];
   const ctx: EvalCtx = { vars, accounts, cells, badCells, known };
@@ -340,14 +353,14 @@ export function evaluate(
 
   while (!stable && pass < maxPasses) {
     pass++;
-    const prevVars    = new Map(vars);
-    const prevAccts   = new Map(accounts);
+    const prevVars = new Map(vars);
+    const prevAccts = new Map(accounts);
     // The cells are part of the fixed point too. Leaving them out of the
     // convergence test meant a chain of cell references that had not settled
     // could still be declared stable. The loop stopped, the numbers were
     // whatever the last pass happened to hold, and nothing reported "circular".
-    const prevCells   = new Map(cells);
-    const prevBad     = new Set(badCells);
+    const prevCells = new Map(cells);
+    const prevBad = new Set(badCells);
 
     // Step 1: evaluate line items + their cells using current var/account/cell values
     badCells.clear();
@@ -405,7 +418,7 @@ export function evaluate(
 
     // Check convergence. A map that lost a key between passes is not stable
     // either, so the sizes are compared alongside the entries.
-    const same = <V,>(now: Map<string, V>, before: Map<string, V>) =>
+    const same = <V>(now: Map<string, V>, before: Map<string, V>) =>
       now.size === before.size && [...now.entries()].every(([k, v]) => before.get(k) === v);
     stable =
       same(vars, prevVars) &&
@@ -432,9 +445,7 @@ export function evaluate(
   // than all of them, so the sheet can mark the figure rather than present a
   // partial sum as the budgeted amount.
   const badAccounts = [
-    ...new Set(
-      lineItems.filter((li) => badLineItems.includes(li.id)).map((li) => li.accountKey),
-    ),
+    ...new Set(lineItems.filter((li) => badLineItems.includes(li.id)).map((li) => li.accountKey)),
   ];
 
   if (!stable) {
@@ -442,5 +453,14 @@ export function evaluate(
     errors.push("circular");
   }
 
-  return { vars, accounts, lineItems: liValues, cells, badLineItems, badVariables, badAccounts, errors };
+  return {
+    vars,
+    accounts,
+    lineItems: liValues,
+    cells,
+    badLineItems,
+    badVariables,
+    badAccounts,
+    errors,
+  };
 }

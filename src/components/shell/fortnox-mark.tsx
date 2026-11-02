@@ -22,10 +22,7 @@ export function IconFortnox({ className }: { className?: string }) {
 export function FortnoxMark({ className }: { className?: string }) {
   return (
     <span
-      className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-control",
-        className,
-      )}
+      className={cn("flex size-8 shrink-0 items-center justify-center rounded-control", className)}
     >
       <IconFortnox className="size-6" />
     </span>

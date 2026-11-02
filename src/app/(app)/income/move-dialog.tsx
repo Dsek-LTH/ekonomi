@@ -128,7 +128,10 @@ export function MoveLinesDialog({
       byLine: { ...(o.unitId === toResultUnitId ? o.byLine : {}), [lineId]: account },
     }));
 
-  const unitOptions: ComboOption[] = choices.map((u) => ({ value: u.resultUnitId, label: u.name }));
+  const unitOptions: ComboOption[] = choices.map((u) => ({
+    value: u.resultUnitId,
+    label: u.name,
+  }));
 
   const options = accountOptions(target, accounts, t("unknownAccountName"));
 
@@ -209,7 +212,9 @@ export function MoveLinesDialog({
                       value={accountFor(line)}
                       onChange={(v) => setOneAccount(line.id, v)}
                       disabled={!target}
-                      aria-label={t("accountFor", { product: productDisplayName(line) })}
+                      aria-label={t("accountFor", {
+                        product: productDisplayName(line),
+                      })}
                     />
                   </td>
                   <td className="px-3 py-2 text-right">

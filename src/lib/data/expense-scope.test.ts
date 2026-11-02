@@ -42,7 +42,9 @@ describe("expenseScopeWhere", () => {
         {
           allocations: {
             some: {
-              costCenter: { OR: [{ code: { startsWith: "SEX" } }, { code: { startsWith: "KM" } }] },
+              costCenter: {
+                OR: [{ code: { startsWith: "SEX" } }, { code: { startsWith: "KM" } }],
+              },
             },
           },
         },

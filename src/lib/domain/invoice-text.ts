@@ -121,13 +121,19 @@ export function parseInvoiceText(
 
   // "Forfallodatum" too: a text layer drawn with a font that lacks the
   // Swedish letters drops them, and the label is still unmistakable.
-  out.dueDate = first(after(lines, /f[öo]rfallo(?:datum|dag)|f[öo]rfaller|betala senast|sista betal\w*|due date/i), parseDate);
+  out.dueDate = first(
+    after(lines, /f[öo]rfallo(?:datum|dag)|f[öo]rfaller|betala senast|sista betal\w*|due date/i),
+    parseDate,
+  );
   out.invoiceDate = first(after(lines, /fakturadatum|invoice date/i), parseDate);
 
-  out.invoiceNumber = first(after(lines, /faktura(?:nummer|nr\.?)|faktura nr\.?|invoice (?:no\.?|number)/i), (s) => {
-    const m = s.match(/^\s*([A-Za-z0-9][A-Za-z0-9-/]{1,30})/);
-    return m ? m[1] : null;
-  });
+  out.invoiceNumber = first(
+    after(lines, /faktura(?:nummer|nr\.?)|faktura nr\.?|invoice (?:no\.?|number)/i),
+    (s) => {
+      const m = s.match(/^\s*([A-Za-z0-9][A-Za-z0-9-/]{1,30})/);
+      return m ? m[1] : null;
+    },
+  );
 
   out.ocr = first(after(lines, /\bocr(?:-?nummer|-?nr)?\b|referensnummer/i), (s) => {
     // One whose check digit does not add up is misread, or is some other
@@ -136,8 +142,14 @@ export function parseInvoiceText(
     return m && isValidOcr(m[1]) ? m[1] : null;
   });
 
-  out.bankgiro = first(after(lines, /\b(?:bankgiro|bg)\b(?:\s*nr\.?)?/i), (s) => s.match(BG)?.[1] ?? null);
-  out.plusgiro = first(after(lines, /\b(?:plusgiro|postgiro|pg)\b(?:\s*nr\.?)?/i), (s) => s.match(PG)?.[1] ?? null);
+  out.bankgiro = first(
+    after(lines, /\b(?:bankgiro|bg)\b(?:\s*nr\.?)?/i),
+    (s) => s.match(BG)?.[1] ?? null,
+  );
+  out.plusgiro = first(
+    after(lines, /\b(?:plusgiro|postgiro|pg)\b(?:\s*nr\.?)?/i),
+    (s) => s.match(PG)?.[1] ?? null,
+  );
 
   // The supplier's, not ours: the section's own org number is printed on the
   // invoice too, as the customer's.

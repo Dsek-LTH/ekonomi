@@ -56,10 +56,7 @@ export interface ProposedEntry {
 const ADDS: readonly StockEntryKind[] = ["PURCHASE", "RETURN"];
 const REMOVES: readonly StockEntryKind[] = ["CHECKOUT", "SPOILAGE"];
 
-export function entryFault(
-  entry: ProposedEntry,
-  product: { kind: StockKind },
-): EntryFault | null {
+export function entryFault(entry: ProposedEntry, product: { kind: StockKind }): EntryFault | null {
   const { kind, units, open } = entry;
   const movedLevels = LEVELS.some((level) => (open?.[level] ?? 0) !== 0);
 

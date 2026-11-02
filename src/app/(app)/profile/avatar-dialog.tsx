@@ -41,7 +41,11 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
       setImg(el);
       // Centred, at the smallest size that still fills the frame.
       const s = VIEW / Math.min(el.naturalWidth, el.naturalHeight);
-      setAt({ zoom: 1, x: (VIEW - el.naturalWidth * s) / 2, y: (VIEW - el.naturalHeight * s) / 2 });
+      setAt({
+        zoom: 1,
+        x: (VIEW - el.naturalWidth * s) / 2,
+        y: (VIEW - el.naturalHeight * s) / 2,
+      });
     };
     el.onerror = () => setBroken(true);
     el.src = url;
@@ -74,7 +78,10 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
   const zoomTo = useCallback(
     (zoom: number | ((from: number) => number)) =>
       setAt((p) => {
-        const next = Math.min(MAX_ZOOM, Math.max(1, typeof zoom === "function" ? zoom(p.zoom) : zoom));
+        const next = Math.min(
+          MAX_ZOOM,
+          Math.max(1, typeof zoom === "function" ? zoom(p.zoom) : zoom),
+        );
         const k = next / p.zoom;
         const c = VIEW / 2;
         return clamp({ zoom: next, x: c - (c - p.x) * k, y: c - (c - p.y) * k });

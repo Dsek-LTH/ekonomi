@@ -108,13 +108,21 @@ async function postJSON<T>(path: string, body: unknown, timeoutMs: number): Prom
 
 /** Every product line Zettle sold in an inclusive range of Swedish days. */
 export async function fetchZettleSales(from: string, to: string): Promise<ZettleSaleLine[]> {
-  const body = await postJSON<{ lines?: ZettleSaleLine[] }>("/v1/zettle/sales", { from, to }, FETCH_TIMEOUT_MS);
+  const body = await postJSON<{ lines?: ZettleSaleLine[] }>(
+    "/v1/zettle/sales",
+    { from, to },
+    FETCH_TIMEOUT_MS,
+  );
   return body.lines ?? [];
 }
 
 /** Zettle's own payment fees in the same kind of range, as positive costs. */
 export async function fetchZettleFees(from: string, to: string): Promise<ZettleFee[]> {
-  const body = await postJSON<{ fees?: ZettleFee[] }>("/v1/zettle/fees", { from, to }, FETCH_TIMEOUT_MS);
+  const body = await postJSON<{ fees?: ZettleFee[] }>(
+    "/v1/zettle/fees",
+    { from, to },
+    FETCH_TIMEOUT_MS,
+  );
   return body.fees ?? [];
 }
 

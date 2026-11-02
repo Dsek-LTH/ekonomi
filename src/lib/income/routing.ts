@@ -52,7 +52,9 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** The pattern that splits a name into its prefix and the rest. */
 function prefixPattern(table: RoutingTable): RegExp | null {
   if (table.prefixes.size === 0) return null;
-  const codes = [...table.prefixes.keys()].sort((a, b) => b.length - a.length || a.localeCompare(b));
+  const codes = [...table.prefixes.keys()].sort(
+    (a, b) => b.length - a.length || a.localeCompare(b),
+  );
   return new RegExp(`^(${codes.map(escape).join("|")})${SEPARATOR}(.+?)$`, "i");
 }
 
@@ -91,7 +93,14 @@ class Reports {
     const key = `${route.key}-${date}`;
     let report = this.byKey.get(key);
     if (!report) {
-      report = { key, committee: route.key, date, products: [], total: 0, accountDistributions: [] };
+      report = {
+        key,
+        committee: route.key,
+        date,
+        products: [],
+        total: 0,
+        accountDistributions: [],
+      };
       this.byKey.set(key, report);
     }
 
@@ -134,7 +143,10 @@ function addDistribution(
 }
 
 /** Zettle's lines as one report per verksamhet and day. */
-export function routeZettleSales(table: RoutingTable, lines: readonly ZettleSaleLine[]): IncomeReportDto[] {
+export function routeZettleSales(
+  table: RoutingTable,
+  lines: readonly ZettleSaleLine[],
+): IncomeReportDto[] {
   const pattern = prefixPattern(table);
   const reports = new Reports(table.accountNames);
   for (const line of lines) {
@@ -153,7 +165,10 @@ export function routeZettleSales(table: RoutingTable, lines: readonly ZettleSale
 }
 
 /** A Swish export's payments as one report per verksamhet and day. */
-export function routeSwishPayments(table: RoutingTable, payments: readonly SwishPayment[]): IncomeReportDto[] {
+export function routeSwishPayments(
+  table: RoutingTable,
+  payments: readonly SwishPayment[],
+): IncomeReportDto[] {
   const pattern = prefixPattern(table);
   const reports = new Reports(table.accountNames);
   for (const p of payments) {
@@ -190,7 +205,13 @@ export function groupZettleFees(fees: readonly ZettleFee[], account: string): In
       same.quantity += 1;
       same.total += fee.amount;
     } else {
-      report.fees.push({ name: "Zettle fee", account, quantity: 1, unitPrice: fee.amount, total: fee.amount });
+      report.fees.push({
+        name: "Zettle fee",
+        account,
+        quantity: 1,
+        unitPrice: fee.amount,
+        total: fee.amount,
+      });
     }
     report.total += fee.amount;
   }

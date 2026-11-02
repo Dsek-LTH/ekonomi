@@ -47,7 +47,11 @@ export function costCenterWhere(codes: string[] | undefined): { OR?: (CodeIs | C
       code === NO_CC
         ? [{ costCenterCode: null }, { costCenterCode: NO_CC }]
         : code === ANY_CC
-          ? [{ AND: [{ costCenterCode: { not: null } }, { costCenterCode: { not: NO_CC } }] }]
+          ? [
+              {
+                AND: [{ costCenterCode: { not: null } }, { costCenterCode: { not: NO_CC } }],
+              },
+            ]
           : [{ costCenterCode: code }],
     ),
   };

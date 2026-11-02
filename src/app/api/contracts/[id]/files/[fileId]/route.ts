@@ -14,10 +14,7 @@ import { getObjectStream } from "@/lib/server/storage";
 import { deleteContractFile } from "@/lib/contract/files";
 
 // GET /api/contracts/:id/files/:fileId: streams the PDF or image back inline.
-export async function GET(
-  _req: Request,
-  ctx: { params: Promise<{ id: string; fileId: string }> },
-) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string; fileId: string }> }) {
   const { id, fileId } = await ctx.params;
   const g = await gate(canViewRentals, "contract.noViewAccess");
   if (!g.ok) return g.res;

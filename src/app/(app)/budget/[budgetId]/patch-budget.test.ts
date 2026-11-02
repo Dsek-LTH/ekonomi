@@ -51,11 +51,10 @@ describe("withLineOrder", () => {
   });
 
   it("moves a row named by another account onto it", () => {
-    const b = withLineOrder(
-      budgetOf(account("A", ["1", "2"]), account("B", ["3"])),
-      "B",
-      ["3", "1"],
-    );
+    const b = withLineOrder(budgetOf(account("A", ["1", "2"]), account("B", ["3"])), "B", [
+      "3",
+      "1",
+    ]);
     expect(idsOf(b, "B")).toEqual(["3", "1"]);
     // And the account it left keeps the order it had, minus the row.
     expect(idsOf(b, "A")).toEqual(["2"]);
@@ -67,11 +66,7 @@ describe("withLineOrder", () => {
   });
 
   it("leaves accounts the order does not name alone", () => {
-    const b = withLineOrder(
-      budgetOf(account("A", ["1"]), account("B", ["2", "3"])),
-      "A",
-      ["1"],
-    );
+    const b = withLineOrder(budgetOf(account("A", ["1"]), account("B", ["2", "3"])), "A", ["1"]);
     expect(idsOf(b, "B")).toEqual(["2", "3"]);
   });
 });

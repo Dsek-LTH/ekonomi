@@ -15,7 +15,9 @@ async function resolve(ctx: Ctx) {
   const financialYear = Number(year);
   if (!Number.isInteger(financialYear) || !/^\d{4}$/.test(account)) return null;
   const balance = await prisma.ledgerAccountBalance.findUnique({
-    where: { financialYear_account_costCenterCode: { financialYear, account, costCenterCode: "" } },
+    where: {
+      financialYear_account_costCenterCode: { financialYear, account, costCenterCode: "" },
+    },
     select: { account: true },
   });
   return balance ? { financialYear, account } : null;

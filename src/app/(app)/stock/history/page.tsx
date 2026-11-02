@@ -7,6 +7,9 @@ import { CATEGORIES } from "@/lib/domain/categories";
 import type { DrinkCategory, StockEntryKind } from "@/lib/domain/types";
 import StockLogClient from "../log/log-client";
 import StockStatsClient from "../stats/stats-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stockHistory");
 
 // The stock's history, in one of two views (see ./views.ts): the movements, or
 // the statistics. Everything about either lives in the address, so a view of
@@ -20,7 +23,11 @@ const list = (v: string | string[] | undefined): string[] =>
   first(v)?.split(",").filter(Boolean) ?? [];
 const isDate = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-export default async function StockHistoryPage({ searchParams }: { searchParams: Promise<Params> }) {
+export default async function StockHistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Params>;
+}) {
   await requirePage(canViewStock);
   const sp = await searchParams;
   const from = isDate(first(sp.from)) ? (first(sp.from) as string) : undefined;

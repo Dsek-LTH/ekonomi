@@ -2,11 +2,18 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { cleanSubject } from "@/lib/domain/inbound-mail";
 import { canSeeInvoiceInbox, getInboxDocument } from "@/lib/data/invoice-inbox";
-import { attestReachOf, costCenterSuggestionFor, invoiceViewerOf } from "@/lib/data/supplier-invoices";
+import {
+  attestReachOf,
+  costCenterSuggestionFor,
+  invoiceViewerOf,
+} from "@/lib/data/supplier-invoices";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { readDocumentScan } from "@/lib/server/invoice-documents";
 import { InvoiceMissing } from "../../[id]/record-client";
 import { DocumentAllocateClient } from "./allocate-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("invoiceDocument");
 
 // Fördela a document in the unit's Inkorg: the unit's step, and the one that
 // makes it an invoice. The same form an invoice is fördelad again on
@@ -15,7 +22,11 @@ import { DocumentAllocateClient } from "./allocate-client";
 //
 // The PDF is read here, the first time anybody needs what it says. What it
 // says is only offered: the unit has the document beside the form.
-export default async function DocumentAllocatePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DocumentAllocatePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const user = await requireUser();
   if (!canSeeInvoiceInbox(user)) redirect("/dashboard");
@@ -50,7 +61,10 @@ export default async function DocumentAllocatePage({ params }: { params: Promise
         dueDate: doc.dueDate || scanned.dueDate || "",
         description: cleanSubject(doc.subject) ?? "",
       }}
-      fromScan={{ amount: scanned.amount != null, dueDate: !doc.dueDate && Boolean(scanned.dueDate) }}
+      fromScan={{
+        amount: scanned.amount != null,
+        dueDate: !doc.dueDate && Boolean(scanned.dueDate),
+      }}
     />
   );
 }

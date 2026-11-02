@@ -22,12 +22,12 @@ export const EXTRA_COLUMN_KEYS = ["x1", "x2", "x3", "x4", "x5", "x6"] as const;
 
 // One column in the final, ordered layout.
 export interface ColumnDef {
-  key: string;      // field key: konto | beskrivning | expression | <columnId>
-  name: string;     // header label
-  kind: ColKind;    // konto = account-only; text = free string; number = formula cell (referenceable)
-  custom: boolean;  // true for user-defined columns (key === columnId)
+  key: string; // field key: konto | beskrivning | expression | <columnId>
+  name: string; // header label
+  kind: ColKind; // konto = account-only; text = free string; number = formula cell (referenceable)
+  custom: boolean; // true for user-defined columns (key === columnId)
   sortOrder: number;
-  letter: string;   // assigned by position
+  letter: string; // assigned by position
 }
 
 // The fixed layout: Konto, Beskrivning, Belopp. Belopp holds the equation
@@ -53,17 +53,32 @@ function legacyField(s: string): string {
   return s === "C" ? "quantity" : s === "D" ? "unitPrice" : s === "E" ? "expression" : s;
 }
 
-interface GridLineItem { id: string }
-interface GridAccount { id: string; accountCode: string; lineItems: GridLineItem[] }
-export interface GridSheet { code: string; accounts: GridAccount[] }
+interface GridLineItem {
+  id: string;
+}
+interface GridAccount {
+  id: string;
+  accountCode: string;
+  lineItems: GridLineItem[];
+}
+export interface GridSheet {
+  code: string;
+  accounts: GridAccount[];
+}
 
 type RowKind = "section" | "account" | "line";
-interface RowEntity { row: number; kind: RowKind; accountId?: string; accountCode?: string; lineId?: string }
+interface RowEntity {
+  row: number;
+  kind: RowKind;
+  accountId?: string;
+  accountCode?: string;
+  lineId?: string;
+}
 
 export interface BudgetGrid {
   accountRow: Map<string, number>; // `${sheet}|${accountId}` → row (gutter)
-  lineRow: Map<string, number>;    // `${sheet}|${lineId}` → row (gutter)
-  rowAt: Map<string, RowEntity>;   // `${sheet}|${row}` → entity (A1 → token)
+  lineRow: Map<string, number>; // `${sheet}|${lineId}` → row (gutter)
+  rowAt: Map<string, RowEntity>; // `${sheet}|${row}` → entity (A1 → token)
   lineLoc: Map<string, { sheet: string; row: number }>; // lineId → location (token → A1)
   acctCodeRow: Map<string, number>; // `${sheet}|${accountCode}` → row (token → A1)
   columns: ColumnDef[];
@@ -85,17 +100,29 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
     const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "INCOME");
     const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "COST");
     const emit = (accts: GridAccount[]) => {
-      r++; rowAt.set(`${code}|${r}`, { row: r, kind: "section" });
+      r++;
+      rowAt.set(`${code}|${r}`, { row: r, kind: "section" });
       for (const a of accts) {
         r++;
         accountRow.set(`${code}|${a.id}`, r);
         acctCodeRow.set(`${code}|${a.accountCode}`, r);
-        rowAt.set(`${code}|${r}`, { row: r, kind: "account", accountId: a.id, accountCode: a.accountCode });
+        rowAt.set(`${code}|${r}`, {
+          row: r,
+          kind: "account",
+          accountId: a.id,
+          accountCode: a.accountCode,
+        });
         for (const li of a.lineItems) {
           r++;
           lineRow.set(`${code}|${li.id}`, r);
           lineLoc.set(li.id, { sheet: code, row: r });
-          rowAt.set(`${code}|${r}`, { row: r, kind: "line", lineId: li.id, accountId: a.id, accountCode: a.accountCode });
+          rowAt.set(`${code}|${r}`, {
+            row: r,
+            kind: "line",
+            lineId: li.id,
+            accountId: a.id,
+            accountCode: a.accountCode,
+          });
         }
       }
     };
@@ -105,11 +132,20 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
 
   const letterToCol = new Map<string, ColumnDef>();
   const fieldToLetter = new Map<string, string>();
-  for (const c of columns) { letterToCol.set(c.letter, c); fieldToLetter.set(c.key, c.letter); }
+  for (const c of columns) {
+    letterToCol.set(c.letter, c);
+    fieldToLetter.set(c.key, c.letter);
+  }
 
   return {
-    accountRow, lineRow, rowAt, lineLoc, acctCodeRow,
-    columns, letterToCol, fieldToLetter,
+    accountRow,
+    lineRow,
+    rowAt,
+    lineLoc,
+    acctCodeRow,
+    columns,
+    letterToCol,
+    fieldToLetter,
     beloppLetter: fieldToLetter.get("expression") ?? "E",
   };
 }
@@ -140,7 +176,8 @@ function a1ToToken(a1: string, currentSheet: string, grid: BudgetGrid): string |
   const e = grid.rowAt.get(`${sheet}|${row}`);
   if (!col || !e) return null;
   if (col.kind === "number" && e.kind === "line") return `@L${e.lineId}:${col.key}`;
-  if (col.key === "expression" && e.kind === "account") return `account(${sheet}, ${e.accountCode})`;
+  if (col.key === "expression" && e.kind === "account")
+    return `account(${sheet}, ${e.accountCode})`;
   return null;
 }
 
@@ -182,7 +219,9 @@ const TOKEN_WORD = new RegExp(
 export function toStored(raw: string, currentSheet: string, grid: BudgetGrid): string {
   const s = raw.trim();
   if (!s.startsWith("=")) return s;
-  return "=" + s.slice(1).replace(A1_WORD, (whole) => a1ToToken(whole, currentSheet, grid) ?? whole);
+  return (
+    "=" + s.slice(1).replace(A1_WORD, (whole) => a1ToToken(whole, currentSheet, grid) ?? whole)
+  );
 }
 
 // What we store (tokens) → what we show when editing (A1 coordinates).

@@ -4,6 +4,9 @@ import { getFortnoxStatus } from "@/lib/data/fortnox";
 import { isTreasury, loadWorkspace } from "../load";
 import { invoicesHref } from "../scope";
 import { InvoiceMissing, InvoiceRecordClient } from "./record-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("invoice");
 
 // One levfaktura's record: what it is, where it stands, and the next step as
 // its main button. Opened from Fakturor, Att attestera and the mails.

@@ -30,7 +30,10 @@ export function useCellEdit(className?: string): CellEditProps {
   // character overwrites the cell.
   function beginEdit(input: HTMLInputElement, caret: "end" | "here" | "replace") {
     setEditing(true);
-    if (caret === "replace") { input.select(); return; }
+    if (caret === "replace") {
+      input.select();
+      return;
+    }
     const at = caret === "here" ? (input.selectionEnd ?? input.value.length) : input.value.length;
     input.setSelectionRange(at, at);
   }
@@ -42,17 +45,28 @@ export function useCellEdit(className?: string): CellEditProps {
 
     if (editing) {
       // Leaving the cell drops back to selected; the input's own blur commits.
-      if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); input.blur(); setEditing(false); }
-      else if (e.key === "Tab" || e.key === "Escape") setEditing(false); // Tab moves natively; Escape reverts
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        input.blur();
+        setEditing(false);
+      } else if (e.key === "Tab" || e.key === "Escape") setEditing(false); // Tab moves natively; Escape reverts
       // Everything else (arrows, Home/End, text) belongs to the input.
       return;
     }
 
     if (e.metaKey || e.ctrlKey || e.altKey) return; // leave shortcuts alone
     if (e.key === "Tab") return; // native focus order owns movement
-    if (e.key === "Enter" || e.key === "F2") { e.preventDefault(); e.stopPropagation(); beginEdit(input, "end"); }
-    else if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") beginEdit(input, "replace"); // type-to-edit: the key falls through and overwrites
-    else { e.preventDefault(); e.stopPropagation(); } // ignore other keys while just selected
+    if (e.key === "Enter" || e.key === "F2") {
+      e.preventDefault();
+      e.stopPropagation();
+      beginEdit(input, "end");
+    } else if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
+      beginEdit(input, "replace"); // type-to-edit: the key falls through and overwrites
+    else {
+      e.preventDefault();
+      e.stopPropagation();
+    } // ignore other keys while just selected
   }
 
   return {

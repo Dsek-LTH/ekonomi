@@ -6,13 +6,10 @@ import { RESULT_COLUMNS } from "./report-types";
 // closing balance on a balance one. What a comparison is taken against, and
 // split in two because an account calls it `amount` and a total `total`.
 export const rowValue = (a: ReportAccount, isBalance: boolean) =>
-  isBalance ? a.closing ?? 0 : a.amount;
+  isBalance ? (a.closing ?? 0) : a.amount;
 
-export const totalValue = (
-  x: { total: number; closing: number | null },
-  isBalance: boolean,
-) => (isBalance ? x.closing ?? 0 : x.total);
-
+export const totalValue = (x: { total: number; closing: number | null }, isBalance: boolean) =>
+  isBalance ? (x.closing ?? 0) : x.total;
 
 // Surplus or deficit. Only for figures that are a *result*: the bottom line
 // and a cost centre's own total, which are the only places in this report where
@@ -123,7 +120,13 @@ export function reportToCsv(
       push([...cc, name, "", t(`sectionTotal.${s.key}`), ...figures(s, s.total)]);
     }
   }
-  push([...(opts.specified ? ["", ""] : []), "", "", t("csv.total"), ...figures(report, report.total)]);
+  push([
+    ...(opts.specified ? ["", ""] : []),
+    "",
+    "",
+    t("csv.total"),
+    ...figures(report, report.total),
+  ]);
 
   return `﻿${lines.join("\r\n")}\r\n`;
 }

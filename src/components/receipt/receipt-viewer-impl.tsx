@@ -435,8 +435,7 @@ export default function ReceiptViewerImpl({
   // Esc exits fullscreen.
   useEffect(() => {
     if (!fullscreen) return;
-    const onKey = (e: KeyboardEvent) =>
-      e.key === "Escape" && setFullscreen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFullscreen(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreen]);
@@ -505,10 +504,7 @@ export default function ReceiptViewerImpl({
     // MAX/√n come to the same total pixels as one page capped at MAX,
     // whatever n is. Floored at the display's own resolution, so sharing only
     // ever costs magnification, never the sharpness of a page sitting still.
-    const share = Math.max(
-      base,
-      MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, totalPages)),
-    );
+    const share = Math.max(base, MAX_CANVAS_WIDTH / pdfWidth / Math.sqrt(Math.max(1, totalPages)));
     return Math.max(1, Math.min(base * zoom, share));
   }, [anyPdf, pdfWidth, zoom, totalPages, coarse]);
 
@@ -560,9 +556,7 @@ export default function ReceiptViewerImpl({
       // vector content magnified by the transform, and there is none here: pages
       // are canvases, and the zoom re-rasterises them at the new scale anyway
       // (see `pixelRatio`), which is a sharper answer than the 2D transform's.
-      customTransform={(x, y, scale) =>
-        `translate3d(${x}px, ${y}px, 0) scale(${scale})`
-      }
+      customTransform={(x, y, scale) => `translate3d(${x}px, ${y}px, 0) scale(${scale})`}
       // Fires on every frame of a pan as well as a zoom, so it is settled
       // before it reaches state: re-rasterising an A4 page sixty times a second
       // would cost far more than the sharpness it buys.
@@ -586,129 +580,129 @@ export default function ReceiptViewerImpl({
         }, ZOOM_SETTLE_MS);
       }}
     >
-        {(ctl) => (
-          <>
-            <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
-              <ToolBtn label={t("zoomOut")} onClick={() => ctl.zoomOut()}>
-                −
-              </ToolBtn>
-              <ToolBtn label={t("zoomIn")} onClick={() => ctl.zoomIn()}>
-                +
-              </ToolBtn>
-              <ToolBtn label={t("reset")} onClick={() => ctl.resetTransform()}>
-                <ResetIcon />
-              </ToolBtn>
-              <ToolBtn label={t("rotate")} onClick={rotate}>
-                <RotateIcon />
-              </ToolBtn>
-              <span className="mx-0.5 h-5 w-px bg-border" />
-              {/* The one control worth naming out loud. Fullscreen is how a
+      {(ctl) => (
+        <>
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-control border border-border bg-background/90 p-1 shadow-sm backdrop-blur">
+            <ToolBtn label={t("zoomOut")} onClick={() => ctl.zoomOut()}>
+              −
+            </ToolBtn>
+            <ToolBtn label={t("zoomIn")} onClick={() => ctl.zoomIn()}>
+              +
+            </ToolBtn>
+            <ToolBtn label={t("reset")} onClick={() => ctl.resetTransform()}>
+              <ResetIcon />
+            </ToolBtn>
+            <ToolBtn label={t("rotate")} onClick={rotate}>
+              <RotateIcon />
+            </ToolBtn>
+            <span className="mx-0.5 h-5 w-px bg-border" />
+            {/* The one control worth naming out loud. Fullscreen is how a
                   receipt is actually read, and as an unlabelled 28px icon in a
                   corner nobody found it, so inline it carries its word, and
                   both states name the key in the tooltip. */}
-              <ToolBtn
-                label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
-                title={fullscreen ? t("exitFullscreenKey") : t("fullscreenKey")}
-                onClick={() => setFullscreen((v) => !v)}
-                wide={!fullscreen}
-              >
-                {fullscreen ? (
-                  <CloseIcon />
-                ) : (
-                  <>
-                    <ExpandIcon />
-                    <span className="hidden text-xs font-medium sm:inline">
-                      {t("fullscreen")}
-                    </span>
-                  </>
-                )}
-              </ToolBtn>
-            </div>
-
-            {navigation && (
-              <JumpOnRequest request={navigation.jumpTo} onJump={(i) => jump(ctl, i)} />
-            )}
-            {documents.length > 1 && !navigation && (
-              <JumpBar
-                items={documents.map((d, i) => ({ key: d.src, name: docName(d, i) }))}
-                onJump={(i) => jump(ctl, i)}
-                register={registerBar}
-              />
-            )}
-
-            <TransformComponent
-              wrapperStyle={{ width: "100%", height: "100%" }}
-              // Centring lives on the transformed element itself, and as a
-              // *minimum* height rather than a fixed one.
-              //
-              // The library derives how far you may pan from this element's
-              // offsetHeight. Fixed at 100% it was exactly the panel, so a
-              // receipt taller than the panel hung out of it, half above the
-              // top, and panning stopped at a box that didn't contain what you
-              // were looking at, leaving the top of a zoomed page unreachable.
-              // Growing past 100% instead, the element is always as tall as the
-              // receipt in it, and centring only does anything when there's
-              // slack to centre in. (The element is already display:flex, from
-              // the library's own stylesheet.)
-              contentStyle={{
-                width: "100%",
-                minHeight: "100%",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0.5rem",
-                // Says in advance what `customTransform` above then does, so the
-                // layer is standing before the first frame of a gesture rather
-                // than being built during it.
-                willChange: "transform",
-              }}
+            <ToolBtn
+              label={fullscreen ? t("exitFullscreen") : t("fullscreen")}
+              title={fullscreen ? t("exitFullscreenKey") : t("fullscreenKey")}
+              onClick={() => setFullscreen((v) => !v)}
+              wide={!fullscreen}
             >
-              {/* One measured box around whatever is being shown: a stack of
+              {fullscreen ? (
+                <CloseIcon />
+              ) : (
+                <>
+                  <ExpandIcon />
+                  <span className="hidden text-xs font-medium sm:inline">{t("fullscreen")}</span>
+                </>
+              )}
+            </ToolBtn>
+          </div>
+
+          {navigation && <JumpOnRequest request={navigation.jumpTo} onJump={(i) => jump(ctl, i)} />}
+          {documents.length > 1 && !navigation && (
+            <JumpBar
+              items={documents.map((d, i) => ({ key: d.src, name: docName(d, i) }))}
+              onJump={(i) => jump(ctl, i)}
+              register={registerBar}
+            />
+          )}
+
+          <TransformComponent
+            wrapperStyle={{ width: "100%", height: "100%" }}
+            // Centring lives on the transformed element itself, and as a
+            // *minimum* height rather than a fixed one.
+            //
+            // The library derives how far you may pan from this element's
+            // offsetHeight. Fixed at 100% it was exactly the panel, so a
+            // receipt taller than the panel hung out of it, half above the
+            // top, and panning stopped at a box that didn't contain what you
+            // were looking at, leaving the top of a zoomed page unreachable.
+            // Growing past 100% instead, the element is always as tall as the
+            // receipt in it, and centring only does anything when there's
+            // slack to centre in. (The element is already display:flex, from
+            // the library's own stylesheet.)
+            contentStyle={{
+              width: "100%",
+              minHeight: "100%",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0.5rem",
+              // Says in advance what `customTransform` above then does, so the
+              // layer is standing before the first frame of a gesture rather
+              // than being built during it.
+              willChange: "transform",
+            }}
+          >
+            {/* One measured box around whatever is being shown: a stack of
                   pages, an image, a failure. It is what the observer above
                   watches, and the library's own content element is its parent,
                   so the two grow together. */}
-              {/* `gap-10`, up from 6, so the space between two documents is
+            {/* `gap-10`, up from 6, so the space between two documents is
                   plainly wider than the space between two pages of one.
 
                   Padded at both ends where there are several: the first
                   divider would otherwise start under the toolbars in the top
                   corners, and the end of the last document under the jump
                   bar, with no way to pan either one clear. */}
-              <div
-                ref={stackRef}
-                className={cn(
-                  "flex w-full flex-col items-center gap-10",
-                  documents.length > 1 && "pb-14 pt-10",
-                )}
-              >
-                {documents.map((d, i) => (
-                  <div
-                    key={d.src}
-                    ref={(el) => {
-                      sheetRefs.current[i] = el;
-                    }}
-                    data-sheet={i}
-                    className="w-full"
-                  >
-                    <DocumentSheet
-                      doc={d}
-                      // Captioned only where there is something to tell apart.
-                      position={
-                        documents.length > 1
-                          ? { index: i, total: documents.length, name: docName(d, i) }
-                          : undefined
-                      }
-                      width={pdfWidth}
-                      pixelRatio={pixelRatio}
-                      turn={turns[d.src] ?? 0}
-                      selectable={!coarse}
-                      onPages={reportPages}
-                    />
-                  </div>
-                ))}
-              </div>
-            </TransformComponent>
-          </>
-        )}
+            <div
+              ref={stackRef}
+              className={cn(
+                "flex w-full flex-col items-center gap-10",
+                documents.length > 1 && "pb-14 pt-10",
+              )}
+            >
+              {documents.map((d, i) => (
+                <div
+                  key={d.src}
+                  ref={(el) => {
+                    sheetRefs.current[i] = el;
+                  }}
+                  data-sheet={i}
+                  className="w-full"
+                >
+                  <DocumentSheet
+                    doc={d}
+                    // Captioned only where there is something to tell apart.
+                    position={
+                      documents.length > 1
+                        ? {
+                            index: i,
+                            total: documents.length,
+                            name: docName(d, i),
+                          }
+                        : undefined
+                    }
+                    width={pdfWidth}
+                    pixelRatio={pixelRatio}
+                    turn={turns[d.src] ?? 0}
+                    selectable={!coarse}
+                    onPages={reportPages}
+                  />
+                </div>
+              ))}
+            </div>
+          </TransformComponent>
+        </>
+      )}
     </TransformWrapper>
   );
 
@@ -719,10 +713,7 @@ export default function ReceiptViewerImpl({
       <div
         ref={containerRef}
         onPointerDown={startDrag}
-        className={cn(
-          "fixed inset-0 z-100 touch-none overflow-hidden bg-black/90",
-          cursor,
-        )}
+        className={cn("fixed inset-0 z-100 touch-none overflow-hidden bg-black/90", cursor)}
       >
         {content}
       </div>,
@@ -741,11 +732,7 @@ export default function ReceiptViewerImpl({
       // to see whether they were meant for a scroll it might have to run itself,
       // which is the drag starting late, every time. There is nothing to
       // scroll (this element is overflow-hidden), so it was only ever a wait.
-      className={cn(
-        "relative touch-none overflow-hidden bg-surface",
-        cursor,
-        className,
-      )}
+      className={cn("relative touch-none overflow-hidden bg-surface", cursor, className)}
     >
       {content}
     </div>
@@ -919,7 +906,10 @@ function DocumentSheet({
           alt={doc.filename ?? t("alt")}
           draggable={false}
           onLoad={(e) =>
-            setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+            setNatural({
+              w: e.currentTarget.naturalWidth,
+              h: e.currentTarget.naturalHeight,
+            })
           }
           onError={() => setFailed(true)}
           className="max-w-full select-none rounded-mark shadow-[var(--shadow-card)]"
@@ -1071,10 +1061,7 @@ function ToolBtn({
 function PdfLoading() {
   const t = useTranslations("receipt");
   return (
-    <div
-      role="status"
-      className="flex items-center gap-2.5 p-6 text-sm text-muted"
-    >
+    <div role="status" className="flex items-center gap-2.5 p-6 text-sm text-muted">
       <Spinner size="md" />
       {t("loadingPdf")}
     </div>
@@ -1084,13 +1071,7 @@ function PdfLoading() {
 // Storage is the one dependency that can be down while everything else works,
 // so this says which part is broken (the archive, not the utlägg) rather than
 // leaving a broken-image glyph to imply the receipt was never there.
-function LoadFailed({
-  onRetry,
-  pdfHref,
-}: {
-  onRetry: () => void;
-  pdfHref?: string;
-}) {
+function LoadFailed({ onRetry, pdfHref }: { onRetry: () => void; pdfHref?: string }) {
   const t = useTranslations("receipt");
   return (
     <div className="flex max-w-xs flex-col items-center gap-2 p-6 text-center">
@@ -1101,12 +1082,7 @@ function LoadFailed({
           {t("retry")}
         </Button>
         {pdfHref && (
-          <a
-            href={pdfHref}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-accent"
-          >
+          <a href={pdfHref} target="_blank" rel="noreferrer" className="text-xs text-accent">
             {t("pdfFailed")}
           </a>
         )}

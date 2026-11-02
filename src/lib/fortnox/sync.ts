@@ -116,7 +116,10 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
   // centre that has since been created for real is adopted rather than
   // duplicated (the code is unique, so there is only ever the one row).
   const now = new Date();
-  for (const chunk of chunks(lastByKey(fortnoxCcs, (c) => c.code), UPSERT_CHUNK)) {
+  for (const chunk of chunks(
+    lastByKey(fortnoxCcs, (c) => c.code),
+    UPSERT_CHUNK,
+  )) {
     const { sql, params } = valuesClause(
       chunk.map((c) => [randomUUID(), c.code, c.description, c.active, "FORTNOX", now]),
       { 4: '"CostCenterSource"' },
@@ -138,11 +141,18 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     where: { code: { notIn: [...seenCodes] }, source: "FORTNOX" },
     select: {
       id: true,
-      _count: { select: { allocations: true, verificationLines: true, budgetCostCenters: true } },
+      _count: {
+        select: { allocations: true, verificationLines: true, budgetCostCenters: true },
+      },
     },
   });
   const unreferencedIds = gone
-    .filter((c) => c._count.allocations === 0 && c._count.verificationLines === 0 && c._count.budgetCostCenters === 0)
+    .filter(
+      (c) =>
+        c._count.allocations === 0 &&
+        c._count.verificationLines === 0 &&
+        c._count.budgetCostCenters === 0,
+    )
     .map((c) => c.id);
 
   const { count: deleted } = await prisma.costCenter.deleteMany({
@@ -151,7 +161,11 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
 
   // Not in Fortnox and still referenced, so kept above: local from here on.
   const { count: madeLocal } = await prisma.costCenter.updateMany({
-    where: { source: "FORTNOX", code: { notIn: [...seenCodes] }, id: { notIn: unreferencedIds } },
+    where: {
+      source: "FORTNOX",
+      code: { notIn: [...seenCodes] },
+      id: { notIn: unreferencedIds },
+    },
     data: { source: "LOCAL" },
   });
 
@@ -188,7 +202,10 @@ export async function syncAccounts(
   // A BAS chart is a thousand accounts and change. One statement per chunk, not
   // one round trip per account. The loop this replaced was the slowest part of
   // a sync by a wide margin, and all it was doing was waiting.
-  for (const chunk of chunks(lastByKey(accounts, (a) => a.number), UPSERT_CHUNK)) {
+  for (const chunk of chunks(
+    lastByKey(accounts, (a) => a.number),
+    UPSERT_CHUNK,
+  )) {
     const { sql, params } = valuesClause(
       chunk.map((a) => [a.number, a.name, a.active, a.sru, now, now]),
     );
@@ -225,7 +242,10 @@ export async function syncProjects(token: string): Promise<ProjectSyncResult> {
   const projects = await listProjects(token);
   const now = new Date();
 
-  for (const chunk of chunks(lastByKey(projects, (p) => p.number), UPSERT_CHUNK)) {
+  for (const chunk of chunks(
+    lastByKey(projects, (p) => p.number),
+    UPSERT_CHUNK,
+  )) {
     const { sql, params } = valuesClause(
       chunk.map((p) => [p.number, p.description, p.active, now]),
     );
@@ -296,7 +316,7 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
         accountName: parsed.accounts.get(tr.account) ?? "",
         costCenterCode: tr.costCenterCode ?? null,
         costCenterName: tr.costCenterCode
-          ? parsed.costCenters.get(tr.costCenterCode) ?? null
+          ? (parsed.costCenters.get(tr.costCenterCode) ?? null)
           : null,
         text: tr.text ?? null,
         debit: tr.amount > 0 ? sekToOre(tr.amount) : 0,

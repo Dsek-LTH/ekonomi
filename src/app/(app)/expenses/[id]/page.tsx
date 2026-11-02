@@ -11,6 +11,9 @@ import { reviewWarnings, voucherTextPrefix, type ReviewWarning } from "@/lib/dom
 import { exportReviewBlocker } from "@/lib/server/review";
 import type { Expense } from "@/lib/domain/types";
 import ExpenseDetailClient from "./detail-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("expense");
 
 /**
  * What the bokföring of a konterat utlägg has to know, for whoever may do it:
@@ -44,11 +47,7 @@ async function bookkeepingReview(
   return { warnings, ownBooking: blocker === "ownBooking" };
 }
 
-export default async function ExpenseDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ExpenseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser();
 

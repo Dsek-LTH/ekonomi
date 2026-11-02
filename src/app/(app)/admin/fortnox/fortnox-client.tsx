@@ -34,18 +34,13 @@ import type {
   SyncAllResult,
 } from "@/lib/fortnox/sync";
 import type { FortnoxSyncStatus } from "@/lib/data/fortnox";
-import type {
-  AccountRecord,
-  BookkeepingSettings,
-  FortnoxStatus,
-} from "@/lib/domain/types";
+import type { AccountRecord, BookkeepingSettings, FortnoxStatus } from "@/lib/domain/types";
 
 interface LedgerYear {
   id: number;
   year: number;
   lastSyncAt: string | null;
 }
-
 
 export function FortnoxClient({
   fortnox,
@@ -92,9 +87,7 @@ export function FortnoxClient({
 
   const q = accountQuery.trim().toLowerCase();
   const visibleAccounts = q
-    ? accounts.filter(
-        (a) => a.number.includes(q) || a.name.toLowerCase().includes(q),
-      )
+    ? accounts.filter((a) => a.number.includes(q) || a.name.toLowerCase().includes(q))
     : accounts;
 
   const lastAccountSync = accounts.reduce<string | null>(
@@ -166,8 +159,9 @@ export function FortnoxClient({
     });
     if (!data) return;
     const failed =
-      [data.financialYears, data.costCenters, data.projects, data.accounts, data.suppliers].some((s) => !s.ok) ||
-      data.ledger.some((s) => !s.ok);
+      [data.financialYears, data.costCenters, data.projects, data.accounts, data.suppliers].some(
+        (s) => !s.ok,
+      ) || data.ledger.some((s) => !s.ok);
     if (failed) notify.error(t("syncAllPartial"));
     else notify.success(t("syncAllDone"));
   }
@@ -292,11 +286,7 @@ export function FortnoxClient({
                   : t("notConnected")
             }
             detail={
-              !fortnox.configured
-                ? t("unconfigured")
-                : connected
-                  ? undefined
-                  : t("connectHint")
+              !fortnox.configured ? t("unconfigured") : connected ? undefined : t("connectHint")
             }
           />
           {connected && fortnox.refreshFailed && (
@@ -395,7 +385,10 @@ export function FortnoxClient({
             </p>
             {lastSync.lastError && lastSync.lastFinishedAt && !lastSync.runningSince && (
               <p className="text-danger">
-                {t("nightlyFailed", { time: dateTime(lastSync.lastFinishedAt), error: lastSync.lastError })}
+                {t("nightlyFailed", {
+                  time: dateTime(lastSync.lastFinishedAt),
+                  error: lastSync.lastError,
+                })}
               </p>
             )}
           </div>
@@ -412,7 +405,10 @@ export function FortnoxClient({
             label={t("chart")}
             meta={
               lastAccountSync
-                ? t("chartSubtitle", { count: accounts.length, time: dateTime(lastAccountSync) })
+                ? t("chartSubtitle", {
+                    count: accounts.length,
+                    time: dateTime(lastAccountSync),
+                  })
                 : t("chartSubtitleNever", { count: accounts.length })
             }
           >
@@ -454,7 +450,9 @@ export function FortnoxClient({
                       <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
                       {a.number === settings.bankAccount && <Tag>{t("bankAccount")}</Tag>}
                       {a.number === settings.memberDebtAccount && <Tag>{t("debtAccount")}</Tag>}
-                      {!a.active && <span className="text-xs text-muted">{tCostCenters("inactive")}</span>}
+                      {!a.active && (
+                        <span className="text-xs text-muted">{tCostCenters("inactive")}</span>
+                      )}
                     </li>
                   ))}
                 </ul>

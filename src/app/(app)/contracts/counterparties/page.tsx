@@ -4,6 +4,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { getCounterpartyRows } from "@/lib/data/counterparties";
 import { CounterpartiesClient } from "./counterparties-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("counterparties");
 
 // Dokument → Motparter. The organisations and people the section has agreed
 // with before, so a new contract can pick one rather than have its

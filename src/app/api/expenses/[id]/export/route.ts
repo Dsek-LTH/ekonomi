@@ -26,12 +26,7 @@ import {
 import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
 import { mergeCoverAndReceipts, PdfMergeError } from "@/lib/server/pdf-merge";
-import {
-  createVoucher,
-  getConnection,
-  uploadInboxFile,
-  FortnoxError,
-} from "@/lib/fortnox";
+import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
 import {
   attachBestEffort,
   recordExport,
@@ -196,18 +191,17 @@ async function exportHolding(
       }
 
       step = "uploadReceipt";
-      fileId = await uploadInboxFile(
-        token,
-        Buffer.from(bytes),
-        stored.filename,
-        "application/pdf",
-      );
+      fileId = await uploadInboxFile(token, Buffer.from(bytes), stored.filename, "application/pdf");
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       console.error(`[fortnox] ${id}: step ${step} failed`, e);
-      return fail(e instanceof FortnoxError ? (e.status ?? 502) : 502, "expense.receiptStepFailed", {
-        values: { step: { key: `errors.expense.exportStep.${step}` }, detail },
-      });
+      return fail(
+        e instanceof FortnoxError ? (e.status ?? 502) : 502,
+        "expense.receiptStepFailed",
+        {
+          values: { step: { key: `errors.expense.exportStep.${step}` }, detail },
+        },
+      );
     }
   }
 
@@ -263,9 +257,15 @@ async function exportHolding(
           comment: label,
         },
       });
-      await notify(tx, "EXPENSE_EXPORTED", [expense.submitterId], expenseNotice("exported", expense), {
-        exclude: [user.id],
-      });
+      await notify(
+        tx,
+        "EXPENSE_EXPORTED",
+        [expense.submitterId],
+        expenseNotice("exported", expense),
+        {
+          exclude: [user.id],
+        },
+      );
     });
   } catch (e) {
     // The voucher is in Fortnox and is not recorded here. The lock stays, as

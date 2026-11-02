@@ -6,7 +6,17 @@ const y2025 = { id: 1, fromDate: "2025-01-01", toDate: "2025-12-31" };
 
 describe("fiscalYearApplies", () => {
   it("applies to every list with a date, and to the Inkorg, which makes dated invoices", () => {
-    for (const path of ["/dashboard", "/expenses", "/bank", "/invoices", "/invoices/inbox", "/income", "/budget", "/ledger", "/closing"]) {
+    for (const path of [
+      "/dashboard",
+      "/expenses",
+      "/bank",
+      "/invoices",
+      "/invoices/inbox",
+      "/income",
+      "/budget",
+      "/ledger",
+      "/closing",
+    ]) {
       expect(fiscalYearApplies(path), path).toBe(true);
     }
   });
@@ -14,7 +24,6 @@ describe("fiscalYearApplies", () => {
   it("does not apply to the bokslut template, which is the same every year", () => {
     expect(fiscalYearApplies("/closing/template")).toBe(false);
   });
-
 
   it("does not apply to pages outside the books", () => {
     expect(fiscalYearApplies("/stock")).toBe(false);
@@ -50,6 +59,8 @@ describe("outsideFiscalYear", () => {
 describe("fiscalYearLabel", () => {
   it("is the year, or both halves of a broken one", () => {
     expect(fiscalYearLabel(y2025)).toBe("2025");
-    expect(fiscalYearLabel({ id: 2, fromDate: "2025-07-01", toDate: "2026-06-30" })).toBe("2025/26");
+    expect(fiscalYearLabel({ id: 2, fromDate: "2025-07-01", toDate: "2026-06-30" })).toBe(
+      "2025/26",
+    );
   });
 });

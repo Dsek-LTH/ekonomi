@@ -28,9 +28,7 @@ const sheets: GridSheet[] = [
   },
   {
     code: "KM01",
-    accounts: [
-      { id: "b1", accountCode: "4010", lineItems: [{ id: "li9" }] },
-    ],
+    accounts: [{ id: "b1", accountCode: "4010", lineItems: [{ id: "li9" }] }],
   },
 ];
 

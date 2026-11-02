@@ -150,11 +150,7 @@ export interface IncomeVoucherInput {
  * is one whose voucher would be rejected by Fortnox, but only at export, long
  * after the app had said it was booked. Better to refuse it here.
  */
-type IncomeVoucherBlocker =
-  | "noDistributions"
-  | "unbalanced"
-  | "noClearingAccount"
-  | "noCostCenter";
+type IncomeVoucherBlocker = "noDistributions" | "unbalanced" | "noClearingAccount" | "noCostCenter";
 
 export function incomeVoucherBlocker(input: IncomeVoucherInput): IncomeVoucherBlocker | null {
   const usable = input.distributions.filter((d) => d.total !== 0);

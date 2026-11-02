@@ -31,7 +31,10 @@ describe("voucherFingerprint", () => {
     expect(voucherFingerprint({ ...voucher, date: "2026-03-02" })).not.toBe(base);
     expect(voucherFingerprint({ ...voucher, description: "Kolsyra 2" })).not.toBe(base);
     expect(
-      voucherFingerprint({ ...voucher, rows: [row("4011", 45000, 0), row("2440", 0, 45000)] }),
+      voucherFingerprint({
+        ...voucher,
+        rows: [row("4011", 45000, 0), row("2440", 0, 45000)],
+      }),
     ).not.toBe(base);
     expect(
       voucherFingerprint({
@@ -43,7 +46,10 @@ describe("voucherFingerprint", () => {
 
   it("treats a missing cost centre and a missing text alike however they arrive", () => {
     const a = { ...voucher, rows: [{ ...row("4010", 1, 0), costCenterCode: null }] };
-    const b = { ...voucher, rows: [{ ...row("4010", 1, 0), costCenterCode: null, text: null }] };
+    const b = {
+      ...voucher,
+      rows: [{ ...row("4010", 1, 0), costCenterCode: null, text: null }],
+    };
     expect(voucherFingerprint(a)).toBe(voucherFingerprint(b));
   });
 });

@@ -289,9 +289,21 @@ function MonthlyResult({
             side={at! > months.length / 2 ? "left" : "right"}
             title={monthLabel(hovered.month, true)}
             rows={[
-              { label: t("monthly.income"), value: formatSEK(hovered.income), color: INCOME },
-              { label: t("monthly.costs"), value: formatSEK(hovered.costs), color: COST },
-              { label: t("monthly.result"), value: formatSEK(hovered.result), strong: true },
+              {
+                label: t("monthly.income"),
+                value: formatSEK(hovered.income),
+                color: INCOME,
+              },
+              {
+                label: t("monthly.costs"),
+                value: formatSEK(hovered.costs),
+                color: COST,
+              },
+              {
+                label: t("monthly.result"),
+                value: formatSEK(hovered.result),
+                strong: true,
+              },
             ]}
           />
         )}
@@ -343,9 +355,7 @@ function Cumulative({
 
   /** The budget spent evenly, at the end of the period's i-th month. */
   const pace = (i: number): number | null =>
-    budgetTotal == null || yearLength <= 0
-      ? null
-      : (budgetTotal * (offset + i + 1)) / yearLength;
+    budgetTotal == null || yearLength <= 0 ? null : (budgetTotal * (offset + i + 1)) / yearLength;
 
   const axis = useMemo(() => {
     const values = months.map((m) => m.cumulative);
@@ -525,8 +535,7 @@ function CostCenterRanking({
             <span className="min-w-[9rem] flex-[3] truncate">
               {c.code ? (
                 <>
-                  <span className="tabular-nums text-muted">{c.code}</span>{" "}
-                  {c.name ?? ""}
+                  <span className="tabular-nums text-muted">{c.code}</span> {c.name ?? ""}
                 </>
               ) : (
                 <span className="text-muted">{noCostCenterLabel}</span>
@@ -576,7 +585,7 @@ function CostCenterRanking({
         <button
           type="button"
           onClick={() => setAll((v) => !v)}
-          className="pt-1 text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+          className="pt-1 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
         >
           {all ? t("ranking.showFewer") : t("ranking.showAll", { count: costCenters.length })}
         </button>
@@ -620,9 +629,7 @@ function CostCenterStack({
 
   /** The bands, in the order they stack: the biggest spenders, then the rest. */
   const bands = useMemo(() => {
-    const spenders = trend.costCenters
-      .filter((c) => c.costs < 0)
-      .sort((a, b) => a.costs - b.costs); // most negative first
+    const spenders = trend.costCenters.filter((c) => c.costs < 0).sort((a, b) => a.costs - b.costs); // most negative first
     const head = spenders.slice(0, STACK_BANDS);
     const tail = spenders.slice(STACK_BANDS);
     return [
@@ -737,7 +744,11 @@ function CostCenterStack({
               ...bands
                 .map((b, i) => ({ b, v: hovered.values[i] }))
                 .filter(({ v }) => v > 0)
-                .map(({ b, v }) => ({ label: b.label, value: money(v), color: b.color })),
+                .map(({ b, v }) => ({
+                  label: b.label,
+                  value: money(v),
+                  color: b.color,
+                })),
               {
                 label: t("stack.total"),
                 value: money(hovered.values.reduce((a, b) => a + b, 0)),

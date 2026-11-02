@@ -41,8 +41,7 @@ type DetectorCtor = new (opts?: { formats?: string[] }) => Detector;
  * wrong one of these is what made flipping take three presses; see `flip`.
  */
 type Choice =
-  | { kind: "side"; side: "user" | "environment"; exact: boolean }
-  | { kind: "device"; id: string };
+  { kind: "side"; side: "user" | "environment"; exact: boolean } | { kind: "device"; id: string };
 
 /** The symbologies a drink actually carries: EAN-13 on a bottle, EAN-8 on
  *  something small, UPC on an import. */
@@ -274,7 +273,11 @@ export function BarcodeScanner({
   const nextCamera = (): Choice | null => {
     const { side, deviceId, label } = active.current;
     if (side) {
-      return { kind: "side", side: side === "environment" ? "user" : "environment", exact: true };
+      return {
+        kind: "side",
+        side: side === "environment" ? "user" : "environment",
+        exact: true,
+      };
     }
     if (cameras.length < 2) return null;
     const at = cameras.findIndex(
@@ -315,45 +318,45 @@ export function BarcodeScanner({
             error && "hidden",
           )}
         >
-            {/* muted + playsInline, or iOS refuses to play it inline at all. */}
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className="aspect-[4/3] w-full object-cover"
-              style={mirrored ? { transform: "scaleX(-1)" } : undefined}
-            />
-            {!ready && !error && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Spinner size="lg" className="text-white/80" />
-              </div>
-            )}
-            {/* Over the picture rather than under it: the frame is already as
+          {/* muted + playsInline, or iOS refuses to play it inline at all. */}
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            className="aspect-[4/3] w-full object-cover"
+            style={mirrored ? { transform: "scaleX(-1)" } : undefined}
+          />
+          {!ready && !error && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner size="lg" className="text-white/80" />
+            </div>
+          )}
+          {/* Over the picture rather than under it: the frame is already as
                 tall as a phone can spare, and a row of controls beneath it
                 pushes the typed-code field off the screen, which is the way in
                 that always works and the last one to sacrifice. Disabled rather
                 than hidden while the next camera comes up, so the frame does
                 not jump and a second tap cannot race the first. */}
-            {cameras.length > 1 && (
-              <button
-                type="button"
-                onClick={flip}
-                disabled={!ready}
-                aria-label={t("scan.flip")}
-                title={t("scan.flip")}
-                className="absolute right-2 top-2 rounded-control bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70 disabled:opacity-40"
-              >
-                <IconCameraFlip className="size-5" />
-              </button>
-            )}
-            {/* A window to aim through. The detector reads the whole frame; this
+          {cameras.length > 1 && (
+            <button
+              type="button"
+              onClick={flip}
+              disabled={!ready}
+              aria-label={t("scan.flip")}
+              title={t("scan.flip")}
+              className="absolute right-2 top-2 rounded-control bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70 disabled:opacity-40"
+            >
+              <IconCameraFlip className="size-5" />
+            </button>
+          )}
+          {/* A window to aim through. The detector reads the whole frame; this
                 is for the person holding the phone, not for the algorithm. */}
-            {ready && (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-control border-2 border-white/70"
-              />
-            )}
+          {ready && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-control border-2 border-white/70"
+            />
+          )}
         </div>
 
         {error ? (

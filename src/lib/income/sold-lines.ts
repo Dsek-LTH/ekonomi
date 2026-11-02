@@ -67,7 +67,10 @@ function stripPrefix(text: string, key: string): string {
  * the review of that day is about. On any other day a dash in a product's name
  * is just part of its name.
  */
-export function soldSections<T extends SectionLine>(lines: readonly T[], reserv: boolean): SoldSection<T>[] {
+export function soldSections<T extends SectionLine>(
+  lines: readonly T[],
+  reserv: boolean,
+): SoldSection<T>[] {
   const byAccount = new Map<string, T[]>();
   for (const line of lines) {
     const group = byAccount.get(line.account);
@@ -96,7 +99,12 @@ export function soldSections<T extends SectionLine>(lines: readonly T[], reserv:
       }
       for (const key of [...byPrefix.keys()].sort(byCodePoint)) {
         const under = byPrefix.get(key)!;
-        rows.push({ kind: "prefix", key: `prefix:${account}:${key}`, prefix: unplacedPrefix(under[0].name)!.prefix, lines: under });
+        rows.push({
+          kind: "prefix",
+          key: `prefix:${account}:${key}`,
+          prefix: unplacedPrefix(under[0].name)!.prefix,
+          lines: under,
+        });
         // Grouped by product as everywhere else, with the prefix taken off the
         // name and, where the till repeated it there, off the variant too:
         // "s5 - Mat" with "s5 - Billys" reads as "Mat", then "Billys" under it.

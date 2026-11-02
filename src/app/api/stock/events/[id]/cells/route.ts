@@ -248,7 +248,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if ("fault" in result) return fail(422, `stock.${result.fault}`);
   if ("conflicts" in result) {
-    return NextResponse.json({ error: "stock.cellMoved", conflicts: result.conflicts }, { status: 409 });
+    return NextResponse.json(
+      { error: "stock.cellMoved", conflicts: result.conflicts },
+      { status: 409 },
+    );
   }
   return NextResponse.json({ written: result.written });
 }

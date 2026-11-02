@@ -11,7 +11,6 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-
 // Whatever `useRouter()` hands back, rather than reaching into next/dist for
 // the name of it. The wrapper below has to stay a drop-in for exactly that.
 type Router = ReturnType<typeof useRouter>;
@@ -115,10 +114,7 @@ function RouteProgress() {
   const value = active ? creep : 100;
 
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 print:hidden"
-    >
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 print:hidden">
       <div
         className="h-full bg-linear-to-r from-action-from to-action-to shadow-[0_0_10px_var(--color-action-to)] transition-[width,opacity] duration-200 ease-[var(--ease-out-quint)]"
         style={{ width: `${value}%`, opacity: active ? 1 : 0 }}
@@ -149,8 +145,7 @@ export function useProgressRouter(): Router {
     () => ({
       ...router,
       push: (href, options) => startTransition(() => router.push(href, options)),
-      replace: (href, options) =>
-        startTransition(() => router.replace(href, options)),
+      replace: (href, options) => startTransition(() => router.replace(href, options)),
       refresh: () => startTransition(() => router.refresh()),
       back: () => startTransition(() => router.back()),
       forward: () => startTransition(() => router.forward()),
@@ -216,7 +211,14 @@ function useLinkNavigations() {
     const onClick = (e: MouseEvent) => {
       // Anything that isn't a plain left click opens elsewhere (a new tab, a
       // new window, a download) and this page is not going anywhere.
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      if (
+        e.defaultPrevented ||
+        e.button !== 0 ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.shiftKey ||
+        e.altKey
+      ) {
         return;
       }
       const anchor = (e.target as Element | null)?.closest?.("a");

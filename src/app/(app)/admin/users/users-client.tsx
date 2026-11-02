@@ -60,7 +60,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
   // search, which reaches the ~980 members the table leaves out.
   const [inspecting, setInspecting] = useState<User | null>(null);
   // The looked-up member may have been re-synced since; prefer the live row.
-  const live = inspecting ? holders.find((u) => u.id === inspecting.id) ?? inspecting : null;
+  const live = inspecting ? (holders.find((u) => u.id === inspecting.id) ?? inspecting) : null;
 
   const held = (u: User) => ASSIGNABLE_ROLES.filter((r) => u.roles.includes(r));
 
@@ -90,7 +90,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
         >
           <UserAvatar userId={u.id} name={u.name} />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium group-hover:text-accent group-hover:underline">
+            <span className="block truncate text-sm font-medium group-hover:text-link group-hover:underline">
               {u.name}
             </span>
             <span className="block truncate text-xs text-muted">{u.email}</span>
@@ -101,14 +101,22 @@ export function UsersClient({ holders }: { holders: User[] }) {
     {
       key: "roles",
       mobile: "meta",
-      mobileCell: (u) => held(u).map((r) => tRole(r)).join(", "),
+      mobileCell: (u) =>
+        held(u)
+          .map((r) => tRole(r))
+          .join(", "),
       header: t("colRoles"),
-      value: (u) => held(u).map((r) => tRole(r)).join(", "),
+      value: (u) =>
+        held(u)
+          .map((r) => tRole(r))
+          .join(", "),
       sortable: true,
       cell: (u) => (
         <span className="flex flex-wrap gap-1">
           {held(u).map((r) => (
-            <Tag key={r} tone="accent">{tRole(r)}</Tag>
+            <Tag key={r} tone="accent">
+              {tRole(r)}
+            </Tag>
           ))}
         </span>
       ),
@@ -129,9 +137,7 @@ export function UsersClient({ holders }: { holders: User[] }) {
           // these rows: finding somebody who is not here is the one thing the
           // table cannot do, and a second box that only narrowed two dozen
           // names would be a search for the wrong thing.
-          action={
-            <PersonSearch onSelect={setInspecting} className="w-full sm:w-72" />
-          }
+          action={<PersonSearch onSelect={setInspecting} className="w-full sm:w-72" />}
         />
         <p className="border-t border-border px-inset py-3 text-xs text-muted">
           {t("rolesSubtitle", { role: tRole("ORDINARIE") })}
@@ -276,9 +282,7 @@ function WhyPanel({ userId }: { userId: string }) {
           is not wrong data to be corrected here, it is a row waiting for its
           holder to sign in, and knowing that is what stops somebody editing the
           mapping to chase it. */}
-      {granted.some((r) => r.leftover) && (
-        <Notice tone="warning">{t("leftoverExplained")}</Notice>
-      )}
+      {granted.some((r) => r.leftover) && <Notice tone="warning">{t("leftoverExplained")}</Notice>}
 
       {data.resultUnits.length > 0 && (
         <div className="space-y-1.5">

@@ -16,8 +16,16 @@ import { cn } from "@/lib/ui/utils";
  * this sheet's own columns.
  */
 // something is budgeting nothing for it.
-export function CompareCells({ other, own, incomeLike, strong }: {
-  other: number | undefined; own: number | undefined; incomeLike: boolean; strong?: boolean;
+export function CompareCells({
+  other,
+  own,
+  incomeLike,
+  strong,
+}: {
+  other: number | undefined;
+  own: number | undefined;
+  incomeLike: boolean;
+  strong?: boolean;
 }) {
   const diff = other === undefined ? undefined : other - (own ?? 0);
   // Each in its group's own tint, under its own heading (COMPARE_GROUP), so
@@ -25,10 +33,23 @@ export function CompareCells({ other, own, incomeLike, strong }: {
   // between them is read off where it stands rather than worked out.
   return (
     <>
-      <td className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right tabular-nums", strong && "font-semibold")}>
+      <td
+        className={cn(
+          COMPARE_GROUP.other,
+          "whitespace-nowrap px-2 py-1.5 text-right tabular-nums",
+          strong && "font-semibold",
+        )}
+      >
         {fmt(other)}
       </td>
-      <td className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right tabular-nums", strong && "font-semibold", diff !== undefined && diffClass(diff, incomeLike))}>
+      <td
+        className={cn(
+          COMPARE_GROUP.diff,
+          "whitespace-nowrap px-2 py-1.5 text-right tabular-nums",
+          strong && "font-semibold",
+          diff !== undefined && diffClass(diff, incomeLike),
+        )}
+      >
         {fmtSigned(diff)}
       </td>
     </>
@@ -48,12 +69,27 @@ export const COMPARE_GROUP = {
 
 // Column header with its A1 letter shown before the name (the six general
 // columns are unnamed, so they show just their letter).
-export function Hc({ letter, align, title, children }: {
-  letter: string; align?: "right"; title?: string; children: React.ReactNode;
+export function Hc({
+  letter,
+  align,
+  title,
+  children,
+}: {
+  letter: string;
+  align?: "right";
+  title?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <th title={title} className={cn("border-r border-border/60 px-2 py-2", align === "right" ? "text-right" : "text-left")}>
-      <span className="mr-1 font-mono text-[10px] font-normal text-muted">{letter}</span>{children}
+    <th
+      title={title}
+      className={cn(
+        "border-r border-border/60 px-2 py-2",
+        align === "right" ? "text-right" : "text-left",
+      )}
+    >
+      <span className="mr-1 font-mono text-[10px] font-normal text-muted">{letter}</span>
+      {children}
     </th>
   );
 }

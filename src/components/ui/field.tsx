@@ -119,7 +119,8 @@ export const CONTROL_SIZES: Record<ControlSize, string> = {
  * only inside the container query, so the two never compete for one property
  * at the same width. The cost-split editor's rows are built from it.
  */
-export const CONTROL_CELL = "@2xl:h-10 @2xl:rounded-none @2xl:border-0 @2xl:bg-transparent focus-inset";
+export const CONTROL_CELL =
+  "@2xl:h-10 @2xl:rounded-none @2xl:border-0 @2xl:bg-transparent focus-inset";
 
 // The textarea grows with what is typed, so it is sized by padding rather
 // than a height, set to land a single line at the same 32px.
@@ -212,9 +213,15 @@ function FieldContent({
           Carries the id the control points `aria-describedby` at, so whichever
           of the two is showing is the one read out after the label. */}
       {error ? (
-        <span id={describedBy} className="mt-1 block text-xs text-warning">{error}</span>
+        <span id={describedBy} className="mt-1 block text-xs text-warning">
+          {error}
+        </span>
       ) : (
-        hint && <span id={describedBy} className="mt-1 block text-xs text-muted">{hint}</span>
+        hint && (
+          <span id={describedBy} className="mt-1 block text-xs text-muted">
+            {hint}
+          </span>
+        )
       )}
     </>
   );
@@ -438,7 +445,11 @@ export function DateInput({
     <div
       className={suffixBox(
         size,
-        cn("relative min-w-fit pr-1", disabled && "cursor-not-allowed bg-surface text-muted", className),
+        cn(
+          "relative min-w-fit pr-1",
+          disabled && "cursor-not-allowed bg-surface text-muted",
+          className,
+        ),
       )}
     >
       <DateInputBase
@@ -493,4 +504,3 @@ export function DateInput({
     </div>
   );
 }
-

@@ -64,7 +64,6 @@ interface GrantSources {
 // lib/domain/group-name.ts. The settings screen that edits this mapping needs
 // the same rule, and it runs in the browser.
 
-
 /**
  * What each group confers, as one lookup.
  *
@@ -74,10 +73,7 @@ interface GrantSources {
  * re-derive everybody from the transaction's own view of the tables rather than
  * from a request cache that is one write out of date.
  */
-type GroupMapping = ReadonlyMap<
-  string,
-  { roles: readonly Role[]; resultUnits: readonly string[] }
->;
+type GroupMapping = ReadonlyMap<string, { roles: readonly Role[]; resultUnits: readonly string[] }>;
 
 /** Build the lookup from the two tables' rows, in either caller's shape. */
 export function buildMapping(
@@ -171,10 +167,7 @@ export function explainGrants(
 }
 
 /** What a group list confers, given a mapping. Pure. */
-export function deriveGrants(
-  mapping: GroupMapping,
-  groups: readonly string[] | undefined,
-): Grants {
+export function deriveGrants(mapping: GroupMapping, groups: readonly string[] | undefined): Grants {
   const sources = explainGrants(mapping, groups);
   return {
     roles: sources.roles.map((r) => r.role),

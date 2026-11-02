@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ANY_CC, NO_CC, costCenterMatcher, costCenterWhere, parseCostCenters } from "./cost-center-filter";
+import {
+  ANY_CC,
+  NO_CC,
+  costCenterMatcher,
+  costCenterWhere,
+  parseCostCenters,
+} from "./cost-center-filter";
 
 const params = (q: string) => new URLSearchParams(q);
 

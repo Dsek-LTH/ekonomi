@@ -3,13 +3,7 @@ import { STATUS_TONE, TONE_CLASSES } from "@/lib/domain/status";
 import type { ExpenseStatus } from "@/lib/domain/types";
 import { cn } from "@/lib/ui/utils";
 
-export function StatusPill({
-  status,
-  className,
-}: {
-  status: ExpenseStatus;
-  className?: string;
-}) {
+export function StatusPill({ status, className }: { status: ExpenseStatus; className?: string }) {
   const t = useTranslations("common.status");
   return (
     <span

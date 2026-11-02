@@ -465,11 +465,7 @@ function SectionRows({
   return (
     <Fragment>
       <div role="row" className="col-span-full border-t border-border bg-surface">
-        <div
-          role="cell"
-          aria-colspan={cols.length}
-          className="px-inset py-2 text-xs font-medium"
-        >
+        <div role="cell" aria-colspan={cols.length} className="px-inset py-2 text-xs font-medium">
           {t(`section.${section.key}`)}
         </div>
       </div>
@@ -582,9 +578,7 @@ function VoucherRows({
         {rows.map((r) => (
           <tr key={r.id} className="text-muted">
             <td className="py-1 pr-3 whitespace-nowrap">{date(r.date)}</td>
-            <td className="py-1 pr-3 whitespace-nowrap font-medium text-foreground">
-              {r.voucher}
-            </td>
+            <td className="py-1 pr-3 whitespace-nowrap font-medium text-foreground">{r.voucher}</td>
             <td className="py-1 pr-3">{r.text || r.description}</td>
             {showCostCenter && (
               <td className="py-1 pr-3 whitespace-nowrap">{r.costCenter ?? "-"}</td>

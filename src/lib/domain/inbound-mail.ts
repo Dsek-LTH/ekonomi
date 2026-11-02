@@ -56,7 +56,13 @@ function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
         const i = p.indexOf("=");
         if (i > 0) props[p.slice(0, i).toLowerCase()] = p.slice(i + 1).toLowerCase();
       }
-      return [{ method: head.slice(0, eq).toLowerCase(), result: head.slice(eq + 1).toLowerCase(), props }];
+      return [
+        {
+          method: head.slice(0, eq).toLowerCase(),
+          result: head.slice(eq + 1).toLowerCase(),
+          props,
+        },
+      ];
     });
 }
 
@@ -173,13 +179,14 @@ export function autoAssign(args: {
   const text = args.text;
 
   const codes = new Map(args.costCenters.map((c) => [c.code.toUpperCase(), c.resultUnitId]));
-  const named = [...new Set((text.toUpperCase().match(/\b[A-ZÅÄÖ]{2,8}\d{1,4}\b/g) ?? []))].filter(
+  const named = [...new Set(text.toUpperCase().match(/\b[A-ZÅÄÖ]{2,8}\d{1,4}\b/g) ?? [])].filter(
     (code) => codes.has(code),
   );
   if (named.length) {
     const units = new Set(named.map((c) => codes.get(c)));
     const [only] = [...units];
-    if (units.size === 1 && only) return { resultUnitId: only, rule: "costCenter", match: named[0] };
+    if (units.size === 1 && only)
+      return { resultUnitId: only, rule: "costCenter", match: named[0] };
     return null;
   }
 

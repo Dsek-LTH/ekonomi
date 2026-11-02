@@ -39,11 +39,7 @@ type OrderedListParent = keyof typeof PARENT_TABLE;
  * For code that already has a transaction of its own. Everything else wants
  * `appendInOrder`, which opens one.
  */
-export async function lockForAppend(
-  tx: Tx,
-  parent: OrderedListParent,
-  id: string,
-): Promise<void> {
+export async function lockForAppend(tx: Tx, parent: OrderedListParent, id: string): Promise<void> {
   await tx.$executeRaw`SELECT 1 FROM ${Prisma.raw(PARENT_TABLE[parent])} WHERE id = ${id} FOR UPDATE`;
 }
 

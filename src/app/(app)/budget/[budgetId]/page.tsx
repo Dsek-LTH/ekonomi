@@ -4,12 +4,11 @@ import { getAccounts } from "@/lib/data/accounts";
 import { getCostCenters } from "@/lib/data/cost-centers";
 import { getEvaluatedBudget } from "@/lib/data/budget";
 import BudgetClient from "./budget-client";
+import { titled } from "@/lib/server/page-title";
 
-export default async function BudgetPage({
-  params,
-}: {
-  params: Promise<{ budgetId: string }>;
-}) {
+export const generateMetadata = titled("budgetSheet");
+
+export default async function BudgetPage({ params }: { params: Promise<{ budgetId: string }> }) {
   const { budgetId } = await params;
   await requireUser();
 

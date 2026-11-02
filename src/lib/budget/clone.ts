@@ -39,7 +39,12 @@ type SourceAccount = {
   // schema.prisma). They are copied as ordinary rows. See planAccounts.
   adjustments: {
     amount: number;
-    change: { seq: number; kind: "AVSTEG" | "FORFLYTTNING"; reason: string; revokedAt: Date | null };
+    change: {
+      seq: number;
+      kind: "AVSTEG" | "FORFLYTTNING";
+      reason: string;
+      revokedAt: Date | null;
+    };
   }[];
 };
 
@@ -181,13 +186,17 @@ async function repointCopies(
         quantity: li.quantity === null ? null : repointRefs(li.quantity, idMap),
         unitPrice: li.unitPrice === null ? null : repointRefs(li.unitPrice, idMap),
         values: Object.fromEntries(
-          Object.entries(values).map(([k, v]) => [k, typeof v === "string" ? repointRefs(v, idMap) : v]),
+          Object.entries(values).map(([k, v]) => [
+            k,
+            typeof v === "string" ? repointRefs(v, idMap) : v,
+          ]),
         ),
       };
-      const changed = next.expression !== li.expression
-        || next.quantity !== li.quantity
-        || next.unitPrice !== li.unitPrice
-        || JSON.stringify(next.values) !== JSON.stringify(values);
+      const changed =
+        next.expression !== li.expression ||
+        next.quantity !== li.quantity ||
+        next.unitPrice !== li.unitPrice ||
+        JSON.stringify(next.values) !== JSON.stringify(values);
       if (!changed) continue; // most rows are plain numbers
       await tx.budgetLineItem.update({
         where: { id: idMap.get(li.id)! },

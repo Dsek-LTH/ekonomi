@@ -7,6 +7,9 @@ import { readInvoiceScan } from "@/lib/server/invoice-documents";
 import { loadWorkspace } from "../../load";
 import { InvoiceMissing } from "../record-client";
 import { InvoiceAllocateClient } from "./allocate-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("allocateInvoice");
 
 // Fördela a levfaktura: the unit's step, as editing an utlägg is the
 // submitter's. Which cost centres take how much, and the amount, due date and

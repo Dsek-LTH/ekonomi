@@ -39,7 +39,10 @@ describe("giroMismatch", () => {
 });
 
 describe("matchSupplier", () => {
-  const s = (number: string, rest: Partial<{ orgNo: string; bankgiro: string; plusgiro: string; active: boolean }>) => ({
+  const s = (
+    number: string,
+    rest: Partial<{ orgNo: string; bankgiro: string; plusgiro: string; active: boolean }>,
+  ) => ({
     number,
     orgNo: rest.orgNo ?? null,
     bankgiro: rest.bankgiro ?? null,
@@ -62,7 +65,9 @@ describe("matchSupplier", () => {
   });
 
   it("falls back to the bankgiro, then the plusgiro", () => {
-    expect(matchSupplier({ supplierOrgNo: "111111-1111", bankgiro: "50501055" }, register)?.number).toBe("1");
+    expect(
+      matchSupplier({ supplierOrgNo: "111111-1111", bankgiro: "50501055" }, register)?.number,
+    ).toBe("1");
     expect(matchSupplier({ plusgiro: "1234567" }, register)?.number).toBe("2");
   });
 

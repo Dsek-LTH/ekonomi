@@ -62,7 +62,10 @@ export async function getAuthority(): Promise<AuthorityData> {
       prisma.groupResultUnit.findMany({
         select: { group: true, resultUnit: { select: { id: true, name: true } } },
       }),
-      prisma.resultUnit.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+      prisma.resultUnit.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
       prisma.roleCapability.findMany({ select: { role: true, capability: true } }),
       // Every group anyone is actually in, and every role anyone holds. The
       // section has ~1000 members and this is two small array columns off each

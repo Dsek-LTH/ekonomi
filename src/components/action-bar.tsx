@@ -64,62 +64,62 @@ export function ActionBar({
     // form short enough to end above the fold the bar is simply the last thing
     // on the page, and a fade there only dimmed the card above it.
     <>
-    <div
-      className={cn(
-        "pointer-events-none z-20 -mx-2 mt-4 px-2 md:sticky md:bottom-0 md:-mb-17 md:pb-3",
-        stuck && "bg-gradient-to-t from-canvas from-60% to-transparent",
-      )}
-    >
-      {stuck && (
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-canvas to-transparent"
-        />
-      )}
       <div
         className={cn(
-          // A column on a phone: what it comes to and what is missing across
-          // the whole width, then the two buttons sharing a row under it.
-          // Side by side, the text was the one thing allowed to shrink, and
-          // two buttons left it a sliver to wrap "Saknas: …" into.
-          "pointer-events-auto flex flex-col gap-3 rounded-panel border border-border px-inset py-3 transition-shadow md:flex-row md:flex-wrap md:items-center md:gap-x-4",
-          stuck
-            ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
-            : "bg-background shadow-[var(--shadow-card)]",
+          "pointer-events-none z-20 -mx-2 mt-4 px-2 md:sticky md:bottom-0 md:-mb-17 md:pb-3",
+          stuck && "bg-gradient-to-t from-canvas from-60% to-transparent",
         )}
       >
-        <div className="min-w-0 text-sm md:flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{summary}</div>
-          {missing.length > 0 ? (
-            <p className="mt-0.5 text-xs text-warning">{`${missingLabel}: ${missing.join(", ")}`}</p>
-          ) : (
-            note && <div className="mt-0.5">{note}</div>
+        {stuck && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-canvas to-transparent"
+          />
+        )}
+        <div
+          className={cn(
+            // A column on a phone: what it comes to and what is missing across
+            // the whole width, then the two buttons sharing a row under it.
+            // Side by side, the text was the one thing allowed to shrink, and
+            // two buttons left it a sliver to wrap "Saknas: …" into.
+            "pointer-events-auto flex flex-col gap-3 rounded-panel border border-border px-inset py-3 transition-shadow md:flex-row md:flex-wrap md:items-center md:gap-x-4",
+            stuck
+              ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
+              : "bg-background shadow-[var(--shadow-card)]",
           )}
-        </div>
-        <div className="flex gap-2.5 md:shrink-0">
-          <Button
-            variant="secondary"
-            onClick={onSave}
-            loading={saving}
-            disabled={saveDisabled}
-            className="flex-1 md:flex-none"
-          >
-            {saveLabel}
-          </Button>
-          {submit && (
+        >
+          <div className="min-w-0 text-sm md:flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{summary}</div>
+            {missing.length > 0 ? (
+              <p className="mt-0.5 text-xs text-warning">{`${missingLabel}: ${missing.join(", ")}`}</p>
+            ) : (
+              note && <div className="mt-0.5">{note}</div>
+            )}
+          </div>
+          <div className="flex gap-2.5 md:shrink-0">
             <Button
-              onClick={submit.onClick}
-              loading={submit.loading}
-              disabled={submit.disabled}
+              variant="secondary"
+              onClick={onSave}
+              loading={saving}
+              disabled={saveDisabled}
               className="flex-1 md:flex-none"
             >
-              {submit.label}
+              {saveLabel}
             </Button>
-          )}
+            {submit && (
+              <Button
+                onClick={submit.onClick}
+                loading={submit.loading}
+                disabled={submit.disabled}
+                className="flex-1 md:flex-none"
+              >
+                {submit.label}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-    <div ref={sentinel} aria-hidden className="h-px" />
+      <div ref={sentinel} aria-hidden className="h-px" />
     </>
   );
 }

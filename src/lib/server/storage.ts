@@ -84,11 +84,7 @@ export function expenseDocumentKey(expenseId: string, filename: string): string 
 // name never collides with the one already there. That matters more here than
 // it does for receipts: a contract holds many files at once, and two of them
 // really are often called scan.pdf.
-export function contractFileKey(
-  contractId: string,
-  fileId: string,
-  filename: string,
-): string {
+export function contractFileKey(contractId: string, fileId: string, filename: string): string {
   return `contracts/${contractId}/${fileId}-${safeName(filename)}`;
 }
 
@@ -118,11 +114,7 @@ export function avatarObjectKey(userId: string, version: number): string {
   return `avatars/${userId}/${version}.webp`;
 }
 
-export async function putObject(
-  key: string,
-  body: Buffer,
-  contentType: string,
-): Promise<void> {
+export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
   await ensureBucket();
   await s3.send(
     new PutObjectCommand({
@@ -141,9 +133,7 @@ interface ObjectStream {
 }
 
 export async function getObjectStream(key: string): Promise<ObjectStream> {
-  const res = await s3.send(
-    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-  );
+  const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
   if (!res.Body) throw new Error(`Empty object body for key ${key}`);
   return {
     // Web stream so it pipes straight into a Next Response with no buffering.
@@ -160,7 +150,9 @@ export async function getObjectBuffer(
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
   if (!res.Body) throw new Error(`Empty object body for key ${key}`);
-  const arr = await (res.Body as { transformToByteArray(): Promise<Uint8Array> }).transformToByteArray();
+  const arr = await (
+    res.Body as { transformToByteArray(): Promise<Uint8Array> }
+  ).transformToByteArray();
   return {
     bytes: Buffer.from(arr),
     contentType: res.ContentType ?? "application/octet-stream",

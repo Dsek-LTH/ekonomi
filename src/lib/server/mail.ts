@@ -75,7 +75,10 @@ export async function sendMail(mail: Mail): Promise<void> {
     subject: mail.subject,
     text: mail.text,
     ...(mail.html
-      ? { html: mail.html, attachments: [{ filename: "dsek.png", path: LOGO, cid: LOGO_CID }] }
+      ? {
+          html: mail.html,
+          attachments: [{ filename: "dsek.png", path: LOGO, cid: LOGO_CID }],
+        }
       : {}),
   });
 }

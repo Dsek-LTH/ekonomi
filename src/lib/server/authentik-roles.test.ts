@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_GROUP_RESULT_UNITS,
-  DEFAULT_GROUP_ROLES,
-} from "./authority-defaults";
+import { DEFAULT_GROUP_RESULT_UNITS, DEFAULT_GROUP_ROLES } from "./authority-defaults";
 import {
   buildMapping,
   deriveGrants,
@@ -101,7 +98,6 @@ describe("deriveGrants", () => {
   });
 });
 
-
 // The half of the derivation that exists to be read by a person: which group
 // made somebody what they are. Its answers have to agree with `deriveGrants`
 // exactly. An explanation that disagrees with the grant it explains is worse
@@ -156,9 +152,7 @@ describe("explainGrants", () => {
     // a role for it. It is as silent as one nobody mapped at all, and the
     // screen that flags typos should see it the same way.
     const blank = buildMapping([], []);
-    expect(explainGrants(blank, ["dsek.sex.mastare"]).silentGroups).toEqual([
-      "dsek.sex.mastare",
-    ]);
+    expect(explainGrants(blank, ["dsek.sex.mastare"]).silentGroups).toEqual(["dsek.sex.mastare"]);
   });
 
   it("normalises and dedupes the list it read", () => {
@@ -267,7 +261,10 @@ function fakeTx(
     groupRole: { findMany: async () => mapping.roleRows ?? [] },
     groupResultUnit: {
       findMany: async () =>
-        (mapping.unitRows ?? []).map((r) => ({ group: r.group, resultUnit: { name: r.unit } })),
+        (mapping.unitRows ?? []).map((r) => ({
+          group: r.group,
+          resultUnit: { name: r.unit },
+        })),
     },
     user: {
       findMany: async () => users,
@@ -297,7 +294,10 @@ const member = (id: string, groups: string[], roles: string[], resultUnits: stri
 describe("reapplyGrants", () => {
   it("writes nobody when the mapping already agrees with every row", async () => {
     const { tx, calls } = fakeTx(
-      [member("a", ["dsek.ordf"], ["ORDINARIE", "ORDFORANDE"]), member("b", ["dsek.x"], ["ORDINARIE"])],
+      [
+        member("a", ["dsek.ordf"], ["ORDINARIE", "ORDFORANDE"]),
+        member("b", ["dsek.x"], ["ORDINARIE"]),
+      ],
       { roleRows: [{ group: "dsek.ordf", role: "ORDFORANDE" }] },
     );
     expect(await reapplyGrants(tx)).toBe(0);
@@ -308,10 +308,9 @@ describe("reapplyGrants", () => {
     // `roles` comes back from Postgres in whatever order it was written, and
     // deriveGrants builds it from a Set. Comparing them as sequences would
     // rewrite the whole section every time somebody saved the grid.
-    const { tx, calls } = fakeTx(
-      [member("a", ["dsek.ordf"], ["ORDFORANDE", "ORDINARIE"])],
-      { roleRows: [{ group: "dsek.ordf", role: "ORDFORANDE" }] },
-    );
+    const { tx, calls } = fakeTx([member("a", ["dsek.ordf"], ["ORDFORANDE", "ORDINARIE"])], {
+      roleRows: [{ group: "dsek.ordf", role: "ORDFORANDE" }],
+    });
     expect(await reapplyGrants(tx)).toBe(0);
     expect(calls).toEqual([]);
   });
@@ -377,6 +376,9 @@ describe("reapplyGrants", () => {
 
     expect(await reapplyGrants(tx)).toBe(2);
     expect(calls).toHaveLength(2);
-    expect(calls.map((c) => c.resultUnits).sort()).toEqual([["Caféutskottet"], ["Källarmästeriet"]]);
+    expect(calls.map((c) => c.resultUnits).sort()).toEqual([
+      ["Caféutskottet"],
+      ["Källarmästeriet"],
+    ]);
   });
 });

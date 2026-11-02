@@ -13,14 +13,20 @@ const row = (r: Partial<ReplayRow> & { id: string }): ReplayRow => ({
 
 describe("replay", () => {
   it("leaves ordinary movements as they were typed", () => {
-    const out = replay([row({ id: "a", units: 100 }), row({ id: "b", kind: "CHECKOUT", units: -20 })]);
+    const out = replay([
+      row({ id: "a", units: 100 }),
+      row({ id: "b", kind: "CHECKOUT", units: -20 }),
+    ]);
     expect(out.get("a")?.units).toBe(100);
     expect(out.get("b")?.units).toBe(-20);
   });
 
   it("turns a count into the difference that reaches it", () => {
     // Books say 100, shelf holds 90.
-    const out = replay([row({ id: "a", units: 100 }), row({ id: "c", kind: "COUNT", countedQty: 90 })]);
+    const out = replay([
+      row({ id: "a", units: 100 }),
+      row({ id: "c", kind: "COUNT", countedQty: 90 }),
+    ]);
     expect(out.get("c")?.units).toBe(-10);
   });
 
@@ -28,8 +34,14 @@ describe("replay", () => {
     // The whole reason this exists. The delivery was 200 and is corrected to
     // 20; the count still said 90, so the difference has to become +70 or the
     // shelf reads 20 for a product somebody physically counted at 90.
-    const before = replay([row({ id: "a", units: 200 }), row({ id: "c", kind: "COUNT", countedQty: 90 })]);
-    const after = replay([row({ id: "a", units: 20 }), row({ id: "c", kind: "COUNT", countedQty: 90 })]);
+    const before = replay([
+      row({ id: "a", units: 200 }),
+      row({ id: "c", kind: "COUNT", countedQty: 90 }),
+    ]);
+    const after = replay([
+      row({ id: "a", units: 20 }),
+      row({ id: "c", kind: "COUNT", countedQty: 90 }),
+    ]);
     expect(before.get("c")?.units).toBe(-110);
     expect(after.get("c")?.units).toBe(70);
     // Either way the shelf comes to what was counted.
@@ -54,12 +66,10 @@ describe("replay", () => {
   });
 
   it("counts each rung against its own running total", () => {
-    const out = replay(
-      [
-        row({ id: "a", kind: "RETURN", level: 40, open: { 40: 3 } }),
-        row({ id: "c", kind: "COUNT", level: 40, countedQty: 2 }),
-      ]
-    );
+    const out = replay([
+      row({ id: "a", kind: "RETURN", level: 40, open: { 40: 3 } }),
+      row({ id: "c", kind: "COUNT", level: 40, countedQty: 2 }),
+    ]);
     expect(out.get("c")?.open).toEqual({ 40: -1 });
     expect(out.get("c")?.units).toBe(0);
   });
@@ -72,9 +82,10 @@ describe("replay", () => {
   });
 
   it("re-prices what leaves after a delivery that changed", () => {
-    const out = replay(
-      [row({ id: "a", units: 10 }), row({ id: "b", kind: "CHECKOUT", units: -2 })]
-    );
+    const out = replay([
+      row({ id: "a", units: 10 }),
+      row({ id: "b", kind: "CHECKOUT", units: -2 }),
+    ]);
     expect(out.get("a")?.valueDeltaOre).toBe(10_000);
     expect(out.get("b")?.valueDeltaOre).toBe(-2000);
   });

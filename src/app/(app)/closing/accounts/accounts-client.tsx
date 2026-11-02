@@ -75,7 +75,13 @@ export default function AccountsClient({
       mobile: "status",
       cell: (a) =>
         a.reconciled ? (
-          <Tag tone="success" title={tAcc("by", { name: a.reconciled.by ?? tAcc("someone"), when: dateTime(a.reconciled.at) })}>
+          <Tag
+            tone="success"
+            title={tAcc("by", {
+              name: a.reconciled.by ?? tAcc("someone"),
+              when: dateTime(a.reconciled.at),
+            })}
+          >
             {tAcc("reconciled")}
           </Tag>
         ) : (
@@ -150,10 +156,15 @@ function AccountPanel({
       <div className="flex flex-col gap-3 px-inset py-3 text-sm">
         {account.reconciled && (
           <p className="text-muted">
-            {t("by", { name: account.reconciled.by ?? t("someone"), when: dateTime(account.reconciled.at) })}
+            {t("by", {
+              name: account.reconciled.by ?? t("someone"),
+              when: dateTime(account.reconciled.at),
+            })}
           </p>
         )}
-        {account.reconciled?.note && <p className="whitespace-pre-wrap">{account.reconciled.note}</p>}
+        {account.reconciled?.note && (
+          <p className="whitespace-pre-wrap">{account.reconciled.note}</p>
+        )}
         {account.accountNote && (
           <div>
             <p className="text-xs font-medium text-muted">{t("accountNote")}</p>
@@ -187,7 +198,10 @@ function AccountPanel({
               {t("unmark")}
             </Button>
             <span className="text-xs text-muted">
-              {t("by", { name: account.reconciled.by ?? t("someone"), when: dateTime(account.reconciled.at) })}
+              {t("by", {
+                name: account.reconciled.by ?? t("someone"),
+                when: dateTime(account.reconciled.at),
+              })}
             </span>
           </>
         )}

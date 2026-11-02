@@ -24,7 +24,9 @@ describe("canRemindAboutTransaction", () => {
   });
 
   it("not one already accounted for", () => {
-    expect(canRemindAboutTransaction({ cardHolderId: "maja", matchedExpenseId: "e1" }, "me")).toBe(false);
+    expect(canRemindAboutTransaction({ cardHolderId: "maja", matchedExpenseId: "e1" }, "me")).toBe(
+      false,
+    );
   });
 
   it("not one on no card, or on the viewer's own", () => {

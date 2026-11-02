@@ -63,7 +63,11 @@ export default function ClosingVoucherClient({
 
   async function comment() {
     const body: VoucherCommentBody = { body: draft, contentHash: voucher.contentHash };
-    const res = await mutate(`${api}/comments`, { key: "comment", body, error: t("commentFailed") });
+    const res = await mutate(`${api}/comments`, {
+      key: "comment",
+      body,
+      error: t("commentFailed"),
+    });
     if (res) setDraft("");
   }
 

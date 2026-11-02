@@ -97,7 +97,8 @@ export function useSheetClipboard({
   function focusedRow(): { accountId: string; lineId?: string } | null {
     const el = document.activeElement as HTMLElement | null;
     const line = el?.closest<HTMLElement>("tr[data-line]");
-    if (line?.dataset.account) return { accountId: line.dataset.account, lineId: line.dataset.line };
+    if (line?.dataset.account)
+      return { accountId: line.dataset.account, lineId: line.dataset.line };
     const account = el?.closest<HTMLElement>("tr[data-account-row]");
     if (account?.dataset.accountRow) return { accountId: account.dataset.accountRow };
     return null;

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/server/storage", () => ({ getObjectBuffer: vi.fn(async () => ({ bytes: new Uint8Array() })) }));
-vi.mock("@/lib/server/supplier-register", () => ({ supplierMatcher: vi.fn(async () => () => null) }));
+vi.mock("@/lib/server/storage", () => ({
+  getObjectBuffer: vi.fn(async () => ({ bytes: new Uint8Array() })),
+}));
+vi.mock("@/lib/server/supplier-register", () => ({
+  supplierMatcher: vi.fn(async () => () => null),
+}));
 vi.mock("@/lib/server/invoice-prefill", () => ({ readInvoicePdf: vi.fn() }));
 vi.mock("@/lib/server/db", () => ({
   prisma: { supplierInvoiceDocument: { findMany: vi.fn(), update: vi.fn() } },
@@ -10,7 +14,8 @@ vi.mock("@/lib/server/db", () => ({
 const storage = await import("@/lib/server/storage");
 const prefill = await import("@/lib/server/invoice-prefill");
 const { prisma } = await import("@/lib/server/db");
-const { attachDocument, DocumentTaken, readInvoiceScan, scanOf } = await import("./invoice-documents");
+const { attachDocument, DocumentTaken, readInvoiceScan, scanOf } =
+  await import("./invoice-documents");
 
 // A document moving from the Inkorg onto an invoice: claimed only while it is
 // still in the Inkorg, and put last. Nothing is read off it on the way.
@@ -24,7 +29,13 @@ function fakeTx(claimed: number, lastPosition: number | null) {
   };
 }
 
-const doc = { id: "d1", objectKey: "k", mimeType: "application/pdf", scan: {}, scannedAt: new Date() };
+const doc = {
+  id: "d1",
+  objectKey: "k",
+  mimeType: "application/pdf",
+  scan: {},
+  scannedAt: new Date(),
+};
 
 describe("attachDocument", () => {
   it("claims it out of the Inkorg, last among the invoice's documents", async () => {
@@ -46,7 +57,9 @@ describe("attachDocument", () => {
   });
 
   it("refuses a document somebody else took first", async () => {
-    await expect(attachDocument(fakeTx(0, null) as never, doc, { id: "inv1" })).rejects.toBeInstanceOf(DocumentTaken);
+    await expect(
+      attachDocument(fakeTx(0, null) as never, doc, { id: "inv1" }),
+    ).rejects.toBeInstanceOf(DocumentTaken);
   });
 });
 
@@ -63,7 +76,10 @@ describe("readInvoiceScan", () => {
       { ...doc, id: "d1", scan: null, scannedAt: null },
       { ...doc, id: "d2", scan: { amount: 999, ocr: "123" }, scannedAt: new Date() },
     ] as never);
-    vi.mocked(prefill.readInvoicePdf).mockResolvedValue({ amount: 125000, invoiceNumber: "20417" });
+    vi.mocked(prefill.readInvoicePdf).mockResolvedValue({
+      amount: 125000,
+      invoiceNumber: "20417",
+    });
 
     const reading = await readInvoiceScan("inv1");
 

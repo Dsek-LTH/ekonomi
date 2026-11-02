@@ -1,16 +1,14 @@
 import { prisma } from "@/lib/server/db";
 import { requireUser } from "@/lib/server/current-user";
-import {
-  canBookkeep,
-  canLogInToFortnox,
-  hasAttestRole,
-  isAdmin,
-} from "@/lib/domain/permissions";
+import { canBookkeep, canLogInToFortnox, hasAttestRole, isAdmin } from "@/lib/domain/permissions";
 import { AUDIENCE, SWITCHABLE_KINDS, wants } from "@/lib/domain/notifications";
 import { userHoldsCard } from "@/lib/data/users";
 import { getFortnoxSession } from "@/lib/data/fortnox";
 import { getMemberScore } from "@/lib/data/member-score";
 import { ProfileClient } from "./profile-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("profile");
 
 export default async function ProfilePage() {
   const user = await requireUser();
@@ -41,9 +39,10 @@ export default async function ProfilePage() {
     cardHolders: holdsCard,
   };
   const choices = new Map(saved.map((p) => [p.kind, p.enabled]));
-  const notifications = SWITCHABLE_KINDS.filter((kind) => reaches[AUDIENCE[kind]]).map(
-    (kind) => ({ kind, enabled: wants(kind, choices) }),
-  );
+  const notifications = SWITCHABLE_KINDS.filter((kind) => reaches[AUDIENCE[kind]]).map((kind) => ({
+    kind,
+    enabled: wants(kind, choices),
+  }));
 
   return (
     <ProfileClient

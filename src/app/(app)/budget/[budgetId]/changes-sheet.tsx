@@ -53,7 +53,13 @@ const emptyRow = (costCenterId = ""): DraftRow => ({
   amount: "",
 });
 
-export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
+export function ChangesSheet({
+  budget,
+  budgetId,
+  canChange,
+  chart,
+  api,
+}: {
   budget: Budget;
   budgetId: string;
   /** The treasurer, on a locked budget. See canChangeLockedBudget. */
@@ -84,7 +90,9 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
   // the section has, and the code is what the treasurer knows one by.
   const sheetOptions = sheets.map((cc) => ({
     value: cc.id,
-    label: cc.costCenter ? `${cc.costCenter.code} - ${cc.costCenter.name}` : sheetName(cc, tSheet("unnamed")),
+    label: cc.costCenter
+      ? `${cc.costCenter.code} - ${cc.costCenter.name}`
+      : sheetName(cc, tSheet("unnamed")),
     short: cc.costCenter?.code ?? sheetName(cc, tSheet("unnamed")),
   }));
 
@@ -102,16 +110,18 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
     const sheet = sheetById.get(r.costCenterId);
     if (!sheet) return [];
     const existing = sheet.accounts.find((a) => a.accountCode === r.accountCode);
-    return [{
-      // The id only has to be stable and unique within the draft. The API
-      // resolves the real one, and for an account that doesn't exist yet there
-      // isn't one to use.
-      accountId: existing?.id ?? `${sheet.id}:${r.accountCode}`,
-      amount: parseAmount(r.amount),
-      kind: effectiveKind(r.accountCode),
-      scope: scopeKey(sheet),
-      scopeLabel: scopeLabel(sheet, sheetName(sheet, tSheet("unnamed"))),
-    }];
+    return [
+      {
+        // The id only has to be stable and unique within the draft. The API
+        // resolves the real one, and for an account that doesn't exist yet there
+        // isn't one to use.
+        accountId: existing?.id ?? `${sheet.id}:${r.accountCode}`,
+        amount: parseAmount(r.amount),
+        kind: effectiveKind(r.accountCode),
+        scope: scopeKey(sheet),
+        scopeLabel: scopeLabel(sheet, sheetName(sheet, tSheet("unnamed"))),
+      },
+    ];
   });
 
   const net = netResultImpact(resolved.filter((e) => Number.isFinite(e.amount)));
@@ -243,7 +253,12 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                             // The account code belongs to the sheet it was
                             // picked in, so changing the sheet clears it rather
                             // than carrying a code the new one may not hold.
-                            onChange={(v) => setRow(row.key, { costCenterId: v, accountCode: "" })}
+                            onChange={(v) =>
+                              setRow(row.key, {
+                                costCenterId: v,
+                                accountCode: "",
+                              })
+                            }
                             placeholder={t("costCenterPlaceholder")}
                             searchPlaceholder={tAlloc("search")}
                             emptyText={t("noSheets")}
@@ -264,7 +279,11 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                           {/* Funding a post the sheet doesn't hold is allowed,
                               but it is a thing to know you are doing. */}
                           {row.accountCode && sheet && !known && (
-                            <p className="mt-1 text-xs text-warning">{t("willBeAdded", { sheet: sheetName(sheet, tSheet("unnamed")) })}</p>
+                            <p className="mt-1 text-xs text-warning">
+                              {t("willBeAdded", {
+                                sheet: sheetName(sheet, tSheet("unnamed")),
+                              })}
+                            </p>
                           )}
                         </div>
 
@@ -281,7 +300,11 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                         <IconButton
                           tone="danger"
                           label={tAlloc("removeRow")}
-                          onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== row.key) : rs))}
+                          onClick={() =>
+                            setRows((rs) =>
+                              rs.length > 1 ? rs.filter((r) => r.key !== row.key) : rs,
+                            )
+                          }
                         >
                           <IconX className="size-4" />
                         </IconButton>
@@ -293,7 +316,9 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                   size="sm"
                   variant="secondary"
                   className="mt-2"
-                  onClick={() => setRows((rs) => [...rs, emptyRow(rs[rs.length - 1]?.costCenterId ?? "")])}
+                  onClick={() =>
+                    setRows((rs) => [...rs, emptyRow(rs[rs.length - 1]?.costCenterId ?? "")])
+                  }
                 >
                   <IconPlus className="size-4" /> {t("addEntry")}
                 </Button>
@@ -305,7 +330,12 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
               <InsetPanel className="px-4 py-3 text-sm">
                 <p>
                   {t("effectOnFrame")}{" "}
-                  <span className={cn("font-semibold tabular-nums", net !== 0 && (net > 0 ? "text-success" : "text-danger"))}>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      net !== 0 && (net > 0 ? "text-success" : "text-danger"),
+                    )}
+                  >
                     {resolved.length === 0 ? "-" : `${fmtSigned(net)} kr`}
                   </span>
                 </p>
@@ -321,7 +351,9 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
                 <Button onClick={save} loading={saving} disabled={!canSave}>
                   {t("save")}
                 </Button>
-                <Button variant="secondary" onClick={reset}>{tCommon("cancel")}</Button>
+                <Button variant="secondary" onClick={reset}>
+                  {tCommon("cancel")}
+                </Button>
               </div>
             </div>
           </div>
@@ -352,7 +384,12 @@ export function ChangesSheet({ budget, budgetId, canChange, chart, api }: {
 // One change, as it stands in the history. A revoked one is shown in full and
 // struck through: it is part of what happened, and hiding it would leave a gap
 // in the numbering with nothing to explain it.
-function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
+function ChangeCard({
+  change,
+  sheets,
+  canRevoke,
+  onRevoke,
+}: {
   change: BudgetChange;
   sheets: BudgetCC[];
   canRevoke: boolean;
@@ -374,20 +411,23 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
             <span className={cn("font-semibold", revoked && "line-through")}>
               {t("label", { kind: change.kind, seq: change.seq })}
             </span>
-            {revoked && (
-              <Tag>{t("revoked")}</Tag>
-            )}
+            {revoked && <Tag>{t("revoked")}</Tag>}
             <span className="text-xs text-muted">
               {date(change.createdAt)} - {change.createdBy.name}
             </span>
           </p>
-          <p className={cn("mt-1 text-sm", revoked ? "text-muted line-through" : "text-foreground")}>
+          <p
+            className={cn("mt-1 text-sm", revoked ? "text-muted line-through" : "text-foreground")}
+          >
             {change.reason}
           </p>
           {revoked && (
             <p className="mt-1 text-xs text-muted">
               {change.revokedBy
-                ? t("revokedByOn", { name: change.revokedBy.name, date: date(change.revokedAt!) })
+                ? t("revokedByOn", {
+                    name: change.revokedBy.name,
+                    date: date(change.revokedAt!),
+                  })
                 : t("revokedOn", { date: date(change.revokedAt!) })}
             </p>
           )}
@@ -395,12 +435,19 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
         <div className="flex items-center gap-3">
           <span className="text-right text-sm text-muted">
             {t("frameBudget")}{" "}
-            <span className={cn("font-semibold tabular-nums", !revoked && impact !== 0 && (impact > 0 ? "text-success" : "text-danger"))}>
+            <span
+              className={cn(
+                "font-semibold tabular-nums",
+                !revoked && impact !== 0 && (impact > 0 ? "text-success" : "text-danger"),
+              )}
+            >
               {impact === 0 ? t("unchangedShort") : `${fmtSigned(impact)} kr`}
             </span>
           </span>
           {canRevoke && (
-            <Button size="sm" variant="dangerOutline" onClick={onRevoke}>{t("revoke")}</Button>
+            <Button size="sm" variant="dangerOutline" onClick={onRevoke}>
+              {t("revoke")}
+            </Button>
           )}
         </div>
       </div>
@@ -410,12 +457,18 @@ function ChangeCard({ change, sheets, canRevoke, onRevoke }: {
           {entries.map((e) => (
             <tr key={e.id} className="border-b border-border/50 last:border-0">
               <td className="px-inset py-1.5">
-                {e.found ? e.found.sheetLabel : <span className="text-muted">{t("removedEntry")}</span>}
+                {e.found ? (
+                  e.found.sheetLabel
+                ) : (
+                  <span className="text-muted">{t("removedEntry")}</span>
+                )}
               </td>
               <td className="px-4 py-1.5 text-muted">
                 {e.found ? `${e.found.accountCode} - ${e.found.accountName}` : ""}
               </td>
-              <td className={cn("px-inset py-1.5 text-right tabular-nums", revoked && "line-through")}>
+              <td
+                className={cn("px-inset py-1.5 text-right tabular-nums", revoked && "line-through")}
+              >
                 {fmtSigned(e.amount)}
               </td>
             </tr>
@@ -455,6 +508,10 @@ function accountOptions(sheet: BudgetCC | undefined, chart: AccountRecord[], not
   const taken = new Set(own.map((o) => o.value));
   const rest = chart
     .filter((a) => a.active && !taken.has(a.number))
-    .map((a) => ({ value: a.number, label: `${a.number} - ${a.name} (${notOnSheet})`, short: a.number }));
+    .map((a) => ({
+      value: a.number,
+      label: `${a.number} - ${a.name} (${notOnSheet})`,
+      short: a.number,
+    }));
   return [...own, ...rest];
 }

@@ -35,7 +35,10 @@ export async function getBudgetOverview(year: number): Promise<BudgetOverview> {
 
   const [budget, planned, booked, fy] = await Promise.all([
     budgetId
-      ? prisma.budget.findUnique({ where: { id: budgetId }, select: { id: true, name: true } })
+      ? prisma.budget.findUnique({
+          where: { id: budgetId },
+          select: { id: true, name: true },
+        })
       : null,
     budgetId ? budgetComparison(budgetId) : null,
     fyId == null

@@ -88,7 +88,11 @@ describe("POST /api/expenses/[id]/export/resolve", () => {
     await expect(res.json()).resolves.toMatchObject({ status: "EXPORTED", label: "A-42" });
     expect(h.verificationUpdate).toHaveBeenCalledWith({
       where: { id: "v1" },
-      data: expect.objectContaining({ fortnoxSeries: "A", fortnoxNumber: 42, fortnoxYear: null }),
+      data: expect.objectContaining({
+        fortnoxSeries: "A",
+        fortnoxNumber: 42,
+        fortnoxYear: null,
+      }),
     });
     expect(h.updateMany).toHaveBeenCalledWith({
       where: theLock,

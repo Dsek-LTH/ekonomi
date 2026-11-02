@@ -5,10 +5,7 @@ import { syncCostCenters } from "@/lib/fortnox/sync";
 import { fortnoxFailure, gateFortnoxService } from "@/lib/api/fortnox-route";
 
 export async function POST() {
-  const g = await gateFortnoxService(
-    canAccessSettings,
-    "auth.adminSyncCostCenters",
-  );
+  const g = await gateFortnoxService(canAccessSettings, "auth.adminSyncCostCenters");
   if (!g.ok) return g.res;
 
   try {

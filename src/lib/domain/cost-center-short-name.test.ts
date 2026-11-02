@@ -4,7 +4,9 @@ import { nameUnderUnit, suggestShortName } from "./cost-center-short-name";
 
 describe("suggestShortName", () => {
   it("takes the unit's name and the separator off the front", () => {
-    expect(suggestShortName("Aktivitetsutskottet - Funktionärer", "Aktivitetsutskottet")).toBe("Funktionärer");
+    expect(suggestShortName("Aktivitetsutskottet - Funktionärer", "Aktivitetsutskottet")).toBe(
+      "Funktionärer",
+    );
   });
 
   it("takes a colon, a slash or a dash from Fortnox as the separator", () => {
@@ -37,13 +39,20 @@ describe("suggestShortName", () => {
   });
 
   it("keeps a dash further on in the name", () => {
-    expect(suggestShortName("Sexmästeriet - Sittning - vår", "Sexmästeriet")).toBe("Sittning - vår");
+    expect(suggestShortName("Sexmästeriet - Sittning - vår", "Sexmästeriet")).toBe(
+      "Sittning - vår",
+    );
   });
 });
 
 describe("nameUnderUnit", () => {
   it("is the short name when there is one", () => {
-    expect(nameUnderUnit({ name: "Aktivitetsutskottet - Funktionärer", shortName: "Funktionärer" })).toBe("Funktionärer");
+    expect(
+      nameUnderUnit({
+        name: "Aktivitetsutskottet - Funktionärer",
+        shortName: "Funktionärer",
+      }),
+    ).toBe("Funktionärer");
   });
 
   it("is the full name when there is none, or only spaces", () => {

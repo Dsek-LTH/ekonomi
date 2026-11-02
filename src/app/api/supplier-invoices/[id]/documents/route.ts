@@ -9,7 +9,11 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/server/db";
-import { deleteObjectBestEffort, putObject, supplierInvoiceDocumentKey } from "@/lib/server/storage";
+import {
+  deleteObjectBestEffort,
+  putObject,
+  supplierInvoiceDocumentKey,
+} from "@/lib/server/storage";
 import { readDocumentUpload } from "@/lib/server/document-upload";
 import { DocumentTaken, attachDocument } from "@/lib/server/invoice-documents";
 import { awaitsAllocation } from "@/lib/domain/supplier-invoice";
@@ -77,11 +81,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /** A document from the Inkorg onto this invoice. Triage's, since the Inkorg is. */
-async function attachFromInbox(
-  req: Request,
-  invoice: { id: string },
-  actorId: string,
-) {
+async function attachFromInbox(req: Request, invoice: { id: string }, actorId: string) {
   const parsed = await parseBody(req, FromInbox);
   if (!parsed.ok) return parsed.res;
   const doc = await prisma.supplierInvoiceDocument.findUnique({

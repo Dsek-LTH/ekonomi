@@ -103,7 +103,9 @@ export function PurchaseDialog({
         ) : (
           count > 0 && (
             <Notice tone="info">
-              {t("notice.worth", { value: formatOreKr(product.costPriceOre * count, { decimals: 2 }) })}
+              {t("notice.worth", {
+                value: formatOreKr(product.costPriceOre * count, { decimals: 2 }),
+              })}
             </Notice>
           )
         )}
@@ -211,15 +213,15 @@ export function StocktakeDialog({
             <Field
               key={level}
               label={t("field.levelOf", { level })}
-              hint={t("stocktake.expected", { count: bottlesAt(product.onHand.open, level) })}
+              hint={t("stocktake.expected", {
+                count: bottlesAt(product.onHand.open, level),
+              })}
               requirement="required"
             >
               <Input
                 inputMode="numeric"
                 value={open[level]?.toString() ?? ""}
-                onChange={(e) =>
-                  setOpen((prev) => ({ ...prev, [level]: int(e.target.value) }))
-                }
+                onChange={(e) => setOpen((prev) => ({ ...prev, [level]: int(e.target.value) }))}
                 placeholder="0"
               />
             </Field>
@@ -277,7 +279,6 @@ export function StocktakeDialog({
   );
 }
 
-
 /**
  * A write-off: what broke or went out of date in the cellar.
  *
@@ -329,8 +330,7 @@ export function SpoilageDialog({
   // down: its cost left the books the moment it was opened. Approximate,
   // because the route prices the row at the average it finds when it writes it,
   // and this is the same average read a moment earlier.
-  const unitOre =
-    product.onHand.units > 0 ? product.onHand.valueOre / product.onHand.units : 0;
+  const unitOre = product.onHand.units > 0 ? product.onHand.valueOre / product.onHand.units : 0;
   const writeDownOre = level === 0 ? Math.round(unitOre * count) : 0;
 
   async function save() {
@@ -366,7 +366,10 @@ export function SpoilageDialog({
               onChange={(v) => setLevel(Number(v))}
               options={[
                 { value: "0", label: t("spoilage.sealed") },
-                ...LEVELS.map((l) => ({ value: String(l), label: t("field.levelOf", { level: l }) })),
+                ...LEVELS.map((l) => ({
+                  value: String(l),
+                  label: t("field.levelOf", { level: l }),
+                })),
               ]}
             />
           </Field>
@@ -392,7 +395,11 @@ export function SpoilageDialog({
 
         {count > 0 &&
           (writeDownOre > 0 ? (
-            <Notice tone="info">{t("spoilage.worth", { value: formatOreKr(writeDownOre, { decimals: 2 }) })}</Notice>
+            <Notice tone="info">
+              {t("spoilage.worth", {
+                value: formatOreKr(writeDownOre, { decimals: 2 }),
+              })}
+            </Notice>
           ) : (
             <Notice tone="info">{t("spoilage.noValue")}</Notice>
           ))}

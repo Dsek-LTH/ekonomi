@@ -9,7 +9,15 @@ import { toStored, toDisplay, type BudgetGrid } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
 import { recomputeBudget } from "./recompute";
 import { fmt, fmtScalar, formulaIdleText, prettyFormula, normalizeFormula } from "./budget-helpers";
-import type { Budget, ApiFn, MutateFn, CellArgs, FormulaArgs, CellFn, FormulaFn } from "./budget-types";
+import type {
+  Budget,
+  ApiFn,
+  MutateFn,
+  CellArgs,
+  FormulaArgs,
+  CellFn,
+  FormulaFn,
+} from "./budget-types";
 
 interface Opts {
   grid: BudgetGrid;
@@ -40,8 +48,14 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   const [focusKey, setFocusKey] = useState<string | null>(null);
 
   const pVal = (id: string, field: string, actual: string) => pending[`${id}:${field}`] ?? actual;
-  const setP = (id: string, field: string, v: string) => setPending((p) => ({ ...p, [`${id}:${field}`]: v }));
-  const clearP = (id: string, field: string) => setPending((p) => { const n = { ...p }; delete n[`${id}:${field}`]; return n; });
+  const setP = (id: string, field: string, v: string) =>
+    setPending((p) => ({ ...p, [`${id}:${field}`]: v }));
+  const clearP = (id: string, field: string) =>
+    setPending((p) => {
+      const n = { ...p };
+      delete n[`${id}:${field}`];
+      return n;
+    });
 
   // A cell edit shouldn’t refetch (and re-evaluate) the whole budget, that’s
   // a PATCH plus two GETs per keystroke-commit. Instead we apply the change to
@@ -50,38 +64,81 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // only reloading if it fails.
 
   // Merge a columnValues patch the same way the server does (empty clears).
-  function mergeValues(cur: Record<string, string>, patch: Record<string, string>): Record<string, string> {
+  function mergeValues(
+    cur: Record<string, string>,
+    patch: Record<string, string>,
+  ): Record<string, string> {
     const merged = { ...cur };
     for (const [k, v] of Object.entries(patch)) {
       if (typeof v !== "string") continue;
-      if (v.trim() === "") delete merged[k]; else merged[k] = v.trim();
+      if (v.trim() === "") delete merged[k];
+      else merged[k] = v.trim();
     }
     return merged;
   }
 
   // Apply a PATCH payload to local state by URL shape; null = not a known field edit.
   function applyLocal(rev: Budget, url: string, payload: Record<string, unknown>): Budget | null {
-    const str = (k: string, fallback: string) => (typeof payload[k] === "string" ? payload[k] : fallback);
+    const str = (k: string, fallback: string) =>
+      typeof payload[k] === "string" ? payload[k] : fallback;
     let m: RegExpMatchArray | null;
     if ((m = url.match(/\/line-items\/([^/]+)$/))) {
       const id = m[1];
-      return { ...rev, costCenters: rev.costCenters.map((cc) => ({ ...cc, accounts: cc.accounts.map((a) => ({ ...a,
-        lineItems: a.lineItems.map((li) => li.id !== id ? li : {
-          ...li,
-          description: str("description", li.description),
-          expression: str("expression", li.expression),
-          values: payload.columnValues && typeof payload.columnValues === "object" ? mergeValues(li.values, payload.columnValues as Record<string, string>) : li.values,
-        }) })) })) };
+      return {
+        ...rev,
+        costCenters: rev.costCenters.map((cc) => ({
+          ...cc,
+          accounts: cc.accounts.map((a) => ({
+            ...a,
+            lineItems: a.lineItems.map((li) =>
+              li.id !== id
+                ? li
+                : {
+                    ...li,
+                    description: str("description", li.description),
+                    expression: str("expression", li.expression),
+                    values:
+                      payload.columnValues && typeof payload.columnValues === "object"
+                        ? mergeValues(li.values, payload.columnValues as Record<string, string>)
+                        : li.values,
+                  },
+            ),
+          })),
+        })),
+      };
     }
     if ((m = url.match(/\/accounts\/([^/]+)$/))) {
       const id = m[1];
-      return { ...rev, costCenters: rev.costCenters.map((cc) => ({ ...cc, accounts: cc.accounts.map((a) => a.id !== id ? a : {
-        ...a, accountCode: str("accountCode", a.accountCode), accountName: str("accountName", a.accountName),
-      }) })) };
+      return {
+        ...rev,
+        costCenters: rev.costCenters.map((cc) => ({
+          ...cc,
+          accounts: cc.accounts.map((a) =>
+            a.id !== id
+              ? a
+              : {
+                  ...a,
+                  accountCode: str("accountCode", a.accountCode),
+                  accountName: str("accountName", a.accountName),
+                },
+          ),
+        })),
+      };
     }
     if ((m = url.match(/\/variables\/([^/]+)$/))) {
       const id = m[1];
-      return { ...rev, variables: rev.variables.map((v) => v.id !== id ? v : { ...v, name: str("name", v.name), expression: str("expression", v.expression) }) };
+      return {
+        ...rev,
+        variables: rev.variables.map((v) =>
+          v.id !== id
+            ? v
+            : {
+                ...v,
+                name: str("name", v.name),
+                expression: str("expression", v.expression),
+              },
+        ),
+      };
     }
     return null;
   }
@@ -100,17 +157,33 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     if (!ok) await load(); // rejected: the screen is ahead of the server, resync
   }
 
-  async function commit(id: string, field: string, actual: string, url: string, payload: (v: string) => Record<string, unknown>) {
+  async function commit(
+    id: string,
+    field: string,
+    actual: string,
+    url: string,
+    payload: (v: string) => Record<string, unknown>,
+  ) {
     const key = `${id}:${field}`;
     const v = pending[key];
-    if (v === undefined || v.trim() === actual.trim()) { clearP(id, field); return; }
+    if (v === undefined || v.trim() === actual.trim()) {
+      clearP(id, field);
+      return;
+    }
     clearP(id, field);
     await commitField(url, payload(v.trim()));
   }
 
   // Commit a formula cell: turn the typed A1 form back into stored row-bound
   // tokens, then PATCH if it actually changed.
-  async function commitFormula(id: string, field: string, raw: string, sheet: string, url: string, payload: (v: string) => Record<string, unknown>) {
+  async function commitFormula(
+    id: string,
+    field: string,
+    raw: string,
+    sheet: string,
+    url: string,
+    payload: (v: string) => Record<string, unknown>,
+  ) {
     const key = `${id}:${field}`;
     setFocusKey((k) => (k === key ? null : k));
     const typed = pending[key];
@@ -136,9 +209,23 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // An editable text cell (admin only); otherwise a static value. Invoked as a
   // plain function (not <Cell/>) so the <input> reconciles by position and keeps
   // focus across re-renders instead of remounting on every keystroke.
-  const renderCell: CellFn = ({ id, field, actual, className, placeholder, mono, url, payload, gated }: CellArgs) => {
+  const renderCell: CellFn = ({
+    id,
+    field,
+    actual,
+    className,
+    placeholder,
+    mono,
+    url,
+    payload,
+    gated,
+  }: CellArgs) => {
     if (!isAdmin) {
-      return <div className={cn("px-2 py-1.5 min-h-8", mono && "font-mono text-xs", className)}>{actual || <span className="text-muted">{placeholder}</span>}</div>;
+      return (
+        <div className={cn("px-2 py-1.5 min-h-8", mono && "font-mono text-xs", className)}>
+          {actual || <span className="text-muted">{placeholder}</span>}
+        </div>
+      );
     }
     return (
       <input
@@ -148,7 +235,11 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         onBlur={() => commit(id, field, actual, url, payload)}
         onKeyDown={editKeys(id, field)}
         placeholder={placeholder}
-        className={cn("w-full bg-transparent px-2 py-1.5 outline-none", mono && "font-mono text-xs", className)}
+        className={cn(
+          "w-full bg-transparent px-2 py-1.5 outline-none",
+          mono && "font-mono text-xs",
+          className,
+        )}
       />
     );
   };
@@ -156,7 +247,21 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   // A spreadsheet-style cell: shows the evaluated value when idle, the formula
   // (in A1 form, with a leading "=") while focused. `raw` is the stored string,
   // `computed` the evaluated number, `sheet` the cost-centre code for ref scope.
-  const renderFormula: FormulaFn = ({ id, field, raw, computed, sheet, bad, placeholder, url, payload, className, display = "value", gated, unit = "ore" }: FormulaArgs) => {
+  const renderFormula: FormulaFn = ({
+    id,
+    field,
+    raw,
+    computed,
+    sheet,
+    bad,
+    placeholder,
+    url,
+    payload,
+    className,
+    display = "value",
+    gated,
+    unit = "ore",
+  }: FormulaArgs) => {
     const key = `${id}:${field}`;
     // A Belopp is money in öre; a variable is whatever it means. The renderer
     // is shared, so which one this cell holds has to come in with it.

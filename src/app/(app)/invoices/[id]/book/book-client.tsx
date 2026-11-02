@@ -23,7 +23,11 @@ export function InvoiceBookClient({ data }: { data: WorkspaceData }) {
     <PageShell
       width="content"
       title={title(invoice)}
-      subtitle={[invoice.description && invoice.reference, invoice.resultUnitName].filter(Boolean).join(" - ") || undefined}
+      subtitle={
+        [invoice.description && invoice.reference, invoice.resultUnitName]
+          .filter(Boolean)
+          .join(" - ") || undefined
+      }
       back={record}
     >
       <ReceiptPanelSource documents={documents} />

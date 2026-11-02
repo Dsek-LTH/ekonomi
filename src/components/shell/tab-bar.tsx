@@ -122,8 +122,18 @@ export function TabBar({
             <p className="px-1 pb-2 text-sm font-semibold">{tNew("label")}</p>
             <div className="space-y-2">
               {[
-                { href: "/expenses/new", icon: IconReceipt, label: tNew("ordinary"), hint: tNew("ordinaryHint") },
-                { href: "/expenses/new/mileage", icon: IconCar, label: tNew("mileage"), hint: tNew("mileageHint") },
+                {
+                  href: "/expenses/new",
+                  icon: IconReceipt,
+                  label: tNew("ordinary"),
+                  hint: tNew("ordinaryHint"),
+                },
+                {
+                  href: "/expenses/new/mileage",
+                  icon: IconCar,
+                  label: tNew("mileage"),
+                  hint: tNew("mileageHint"),
+                },
               ].map((c) => (
                 <button
                   key={c.href}
@@ -169,7 +179,10 @@ export function TabBar({
           <span className="relative">
             <IconMenu className="size-[22px]" />
             {moreWaiting && (
-              <span aria-hidden className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-action-to ring-2 ring-background" />
+              <span
+                aria-hidden
+                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-action-to ring-2 ring-background"
+              />
             )}
           </span>
           <span>{t("more")}</span>

@@ -132,7 +132,12 @@ function TemplateRow({
               initial={draftOf(item)}
               submitLabel={t("save")}
               onSubmit={(d) =>
-                mutate(url, { method: "PATCH", key: "save", body: bodyOf(d), error: t("saveFailed") })
+                mutate(url, {
+                  method: "PATCH",
+                  key: "save",
+                  body: bodyOf(d),
+                  error: t("saveFailed"),
+                })
               }
               busy={pending === "save"}
               extra={

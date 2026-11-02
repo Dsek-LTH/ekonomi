@@ -45,7 +45,17 @@ export default async function AppLayout({
   // find out after an export has already failed. One indexed lookup, and only
   // for the handful of roles it can be true of.
   const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
-  const [holdsCard, fortnoxSession, fortnoxCompany, cookieStore, counts, fiscalYears, fiscalYear, avatars, guides] = await Promise.all([
+  const [
+    holdsCard,
+    fortnoxSession,
+    fortnoxCompany,
+    cookieStore,
+    counts,
+    fiscalYears,
+    fiscalYear,
+    avatars,
+    guides,
+  ] = await Promise.all([
     userHoldsCard(currentUser.id),
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     booksInFortnox ? getFortnoxCompany() : null,
@@ -72,61 +82,63 @@ export default async function AppLayout({
   // receipt flashing open at the wrong width.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
   const storedWidth = Number(cookieStore.get(RECEIPT_WIDTH_COOKIE)?.value);
-  const receiptWidth = Number.isFinite(storedWidth) && storedWidth > 0 ? storedWidth : DEFAULT_WIDTH;
+  const receiptWidth =
+    Number.isFinite(storedWidth) && storedWidth > 0 ? storedWidth : DEFAULT_WIDTH;
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>
       <AvatarProvider versions={avatars}>
-      <NotificationsProvider>
-        <ConfirmProvider>
-          <FortnoxAuthResult />
-          {/* Outside AppShell for the same reason as the banners: it is fixed
+        <NotificationsProvider>
+          <ConfirmProvider>
+            <FortnoxAuthResult />
+            {/* Outside AppShell for the same reason as the banners: it is fixed
               to the top of the viewport, not to the page column. It reads the
               query string to know when a navigation has landed, hence the
               boundary, nothing renders in the fallback, it is a 2px bar. */}
-          <Suspense fallback={null}>
-            <RouteProgressBar />
-            {/* Beside the bar because it watches the same thing, the URL
+            <Suspense fallback={null}>
+              <RouteProgressBar />
+              {/* Beside the bar because it watches the same thing, the URL
                 changing, and reads the query string to do it. See
                 components/shell/route-history. */}
-            <RouteHistoryRecorder />
-            <SettingsReopener />
-          </Suspense>
-          {/* A fixed overlay, deliberately outside AppShell. Notifications
+              <RouteHistoryRecorder />
+              <SettingsReopener />
+            </Suspense>
+            {/* A fixed overlay, deliberately outside AppShell. Notifications
               float over the page rather than pushing the content down. */}
-          <NotificationBanners />
-          <ReceiptPanelProvider
-            defaultCollapsed={receiptCollapsed}
-            defaultWidth={receiptWidth}
-          >
-          {/* Around the shell, whose account menu starts a guide, and the
+            <NotificationBanners />
+            <ReceiptPanelProvider defaultCollapsed={receiptCollapsed} defaultWidth={receiptWidth}>
+              {/* Around the shell, whose account menu starts a guide, and the
               settings overlay, which a guide dims along with everything else. */}
-          <GuideProvider seen={guides}>
-            {/* `fortnox` absent is "this reader has no Fortnox login of their
+              <GuideProvider seen={guides}>
+                {/* `fortnox` absent is "this reader has no Fortnox login of their
                 own", which is most of them, and the nav shows nothing at all.
                 Present with a null session is the treasury signed out. The
                 one state the sidebar exists to catch. */}
-            <AppShell
-              fortnox={booksInFortnox ? { session: fortnoxSession, company: fortnoxCompany } : undefined}
-              fiscal={fiscalYear && { years: fiscalYears, selected: fiscalYear }}
-              counts={{
-                "/expenses": counts.expenses,
-                "/bank": counts.bank,
-                "/invoices/inbox": counts.invoiceInbox,
-                "/invoices": counts.invoices,
-              }}
-            >
-              {children}
-            </AppShell>
-            {/* Settings, floating over whichever of the above is underneath
+                <AppShell
+                  fortnox={
+                    booksInFortnox
+                      ? { session: fortnoxSession, company: fortnoxCompany }
+                      : undefined
+                  }
+                  fiscal={fiscalYear && { years: fiscalYears, selected: fiscalYear }}
+                  counts={{
+                    "/expenses": counts.expenses,
+                    "/bank": counts.bank,
+                    "/invoices/inbox": counts.invoiceInbox,
+                    "/invoices": counts.invoices,
+                  }}
+                >
+                  {children}
+                </AppShell>
+                {/* Settings, floating over whichever of the above is underneath
                 it. A sibling of AppShell rather than something rendered
                 inside it: the app's own sidebar is exactly what this must
                 not touch. */}
-            {modal}
-          </GuideProvider>
-          </ReceiptPanelProvider>
-        </ConfirmProvider>
-      </NotificationsProvider>
+                {modal}
+              </GuideProvider>
+            </ReceiptPanelProvider>
+          </ConfirmProvider>
+        </NotificationsProvider>
       </AvatarProvider>
     </RoleProvider>
   );

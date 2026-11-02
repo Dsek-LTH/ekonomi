@@ -12,7 +12,9 @@ const mine = [fp("a", 320, "2026-10-12"), fp("b", 89.5, "2026-10-01"), fp("c", -
 
 describe("likelyDuplicates", () => {
   it("finds the same amount within three days", () => {
-    expect(likelyDuplicates(mine, { grossAmount: 320, purchaseDate: "2026-10-15" }).map((e) => e.id)).toEqual(["a"]);
+    expect(
+      likelyDuplicates(mine, { grossAmount: 320, purchaseDate: "2026-10-15" }).map((e) => e.id),
+    ).toEqual(["a"]);
   });
 
   it("lets a fourth day go", () => {
@@ -20,16 +22,26 @@ describe("likelyDuplicates", () => {
   });
 
   it("does not take a return for the purchase it returns", () => {
-    expect(likelyDuplicates(mine, { grossAmount: -320, purchaseDate: "2026-10-12" }).map((e) => e.id)).toEqual(["c"]);
+    expect(
+      likelyDuplicates(mine, { grossAmount: -320, purchaseDate: "2026-10-12" }).map((e) => e.id),
+    ).toEqual(["c"]);
   });
 
   it("matches öre exactly, not through a float", () => {
-    expect(likelyDuplicates(mine, { grossAmount: 89.5, purchaseDate: "2026-10-01" }).map((e) => e.id)).toEqual(["b"]);
+    expect(
+      likelyDuplicates(mine, { grossAmount: 89.5, purchaseDate: "2026-10-01" }).map((e) => e.id),
+    ).toEqual(["b"]);
     expect(likelyDuplicates(mine, { grossAmount: 89.51, purchaseDate: "2026-10-01" })).toEqual([]);
   });
 
   it("leaves out the utlägg being edited", () => {
-    expect(likelyDuplicates(mine, { grossAmount: 320, purchaseDate: "2026-10-12", excludeId: "a" })).toEqual([]);
+    expect(
+      likelyDuplicates(mine, {
+        grossAmount: 320,
+        purchaseDate: "2026-10-12",
+        excludeId: "a",
+      }),
+    ).toEqual([]);
   });
 
   it("says nothing until there is an amount and a date", () => {

@@ -3,6 +3,9 @@ import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getExpiryChecks, getStockLevels } from "@/lib/data/stock";
 import { today } from "@/lib/domain/date";
 import StockClient from "./stock-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("stock");
 
 export default async function StockPage({
   searchParams,

@@ -65,10 +65,10 @@ export function ViewToggle<T extends string>({
               "flex items-center justify-center rounded-mark transition-colors",
               labels ? "h-7 gap-1.5 px-2.5 text-sm font-medium" : "size-7",
               active
-                // The selected pill in a track, same reasoning, and the same
-                // token, as CollectionSwitch. The gutter here is 2px, so a
-                // shadow that leans down has even less room to do it in.
-                ? "bg-background text-foreground shadow-[var(--shadow-pill)]"
+                ? // The selected pill in a track, same reasoning, and the same
+                  // token, as CollectionSwitch. The gutter here is 2px, so a
+                  // shadow that leans down has even less room to do it in.
+                  "bg-background text-foreground shadow-[var(--shadow-pill)]"
                 : "text-muted hover:text-foreground",
             )}
           >

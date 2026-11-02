@@ -134,20 +134,14 @@ export function impossible(product: StockSubject, state: OnHand): boolean {
  * Returns null for a product with no unit volume, so a caller reports the gap
  * rather than filing a total that quietly omitted it.
  */
-export function purchasedMl(
-  product: StockSubject,
-  log: readonly StockMovement[],
-): number | null {
+export function purchasedMl(product: StockSubject, log: readonly StockMovement[]): number | null {
   const per = unitVolume(product);
   if (per == null) return null;
   // Sealed units only, and everything bought is sealed. A delivery of opened
   // bottles is not a thing. So the litres bought are the count times the size,
   // for a spirit exactly as for a can.
-  return log
-    .filter((m) => m.kind === "PURCHASE")
-    .reduce((sum, m) => sum + m.units * per, 0);
+  return log.filter((m) => m.kind === "PURCHASE").reduce((sum, m) => sum + m.units * per, 0);
 }
-
 
 /** Litres of pure alcohol: volume × strength. Null when the ABV is unknown. */
 export function pureAlcoholMl(product: StockSubject, ml: number): number | null {

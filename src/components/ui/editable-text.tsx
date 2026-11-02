@@ -33,7 +33,8 @@ import { isCompleteDate } from "@/lib/domain/date";
 // Shared by the input and its sizer. Every property that affects text metrics
 // has to be identical on both or the box will not match what is typed in it,
 // so they are written once here rather than kept in step by hand.
-const METRICS = "px-1.5 py-0.5 text-[length:inherit] font-[inherit] leading-[inherit] tracking-[inherit]";
+const METRICS =
+  "px-1.5 py-0.5 text-[length:inherit] font-[inherit] leading-[inherit] tracking-[inherit]";
 
 export function EditableText({
   value,
@@ -76,7 +77,8 @@ export function EditableText({
   const abandoned = useRef(false);
   // The date field's input belongs to DateInput, which keeps its own ref, so it
   // is found by the id handed to it instead.
-  const field = () => inputRef.current ?? (document.getElementById(autoId) as HTMLInputElement | null);
+  const field = () =>
+    inputRef.current ?? (document.getElementById(autoId) as HTMLInputElement | null);
 
   // Adopt a value that changed underneath us (a save landing, a router
   // refresh, another tab) but never while the field has focus, where it would
@@ -128,11 +130,16 @@ export function EditableText({
             void commit(next);
           }
         }}
-        onFocus={() => { abandoned.current = false; }}
+        onFocus={() => {
+          abandoned.current = false;
+        }}
         // Emptied, it clears. Left half typed, it goes back to what was saved.
         onBlur={() => (draft === "" ? void commit() : !isCompleteDate(draft) && setDraft(value))}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); field()?.blur(); }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            field()?.blur();
+          }
           if (e.key === "Escape") {
             abandoned.current = true;
             setDraft(value);
@@ -169,10 +176,15 @@ export function EditableText({
       // the column, so the box is as wide as the text and no wider.
       size={1}
       onChange={(e) => setDraft(e.target.value)}
-      onFocus={() => { abandoned.current = false; }}
+      onFocus={() => {
+        abandoned.current = false;
+      }}
       onBlur={() => void commit()}
       onKeyDown={(e) => {
-        if (e.key === "Enter") { e.preventDefault(); inputRef.current?.blur(); }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          inputRef.current?.blur();
+        }
         if (e.key === "Escape") {
           abandoned.current = true;
           setDraft(value);

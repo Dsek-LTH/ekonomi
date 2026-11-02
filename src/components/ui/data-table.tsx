@@ -12,7 +12,12 @@ import { IconChevronLeft, IconChevronRight, IconFilter } from "./icons";
 import { FilterTabs } from "./filter-tabs";
 import { Button } from "./button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
-import { PAGE_SIZES, type PageSize, type ServerControls, type TableControlState } from "@/lib/data/use-list-query";
+import {
+  PAGE_SIZES,
+  type PageSize,
+  type ServerControls,
+  type TableControlState,
+} from "@/lib/data/use-list-query";
 
 // The table every data list is drawn with: the filter bar (search / date range
 // / tabs, all derived from the column declarations), the header, the rows, and
@@ -121,7 +126,9 @@ function FilterPicker({
       className={className}
       options={filter.options}
       values={controls.picks.filter((v) => own.has(v))}
-      onChange={(next) => controls.setPicks([...controls.picks.filter((v) => !own.has(v)), ...next])}
+      onChange={(next) =>
+        controls.setPicks([...controls.picks.filter((v) => !own.has(v)), ...next])
+      }
       placeholder={filter.label}
       aria-label={filter.label}
     />
@@ -189,7 +196,8 @@ export interface Column<T> {
 // column claims `title` the first one is used, so a row always has a headline.
 type MobileSlot = "title" | "trailing" | "meta" | "status" | "actions" | "hide";
 
-const alignCls = (a?: Column<unknown>["align"]) => a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
+const alignCls = (a?: Column<unknown>["align"]) =>
+  a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
 // Horizontal padding for every header and body cell.
 //
@@ -217,8 +225,7 @@ type MobileGroups<T> = {
 // back to the first column so an un-annotated list still has a headline.
 function mobileSlots<T>(cols: Column<T>[]): MobileGroups<T> {
   const visible = cols.filter((c) => c.mobile && c.mobile !== "hide");
-  const title =
-    visible.find((c) => c.mobile === "title") ?? cols.find((c) => c.mobile !== "hide");
+  const title = visible.find((c) => c.mobile === "title") ?? cols.find((c) => c.mobile !== "hide");
   // Sort is stable, so a slot where nobody has an opinion keeps the order the
   // columns were declared in, which is what every slot but one relies on.
   const inSlot = (slot: MobileSlot) =>
@@ -236,8 +243,7 @@ function mobileSlots<T>(cols: Column<T>[]): MobileGroups<T> {
 
 // A cell that renders to nothing (an action a row doesn't offer, an empty
 // column) would otherwise leave a labelled but blank line in the card.
-const isBlank = (node: React.ReactNode) =>
-  node == null || node === false || node === "";
+const isBlank = (node: React.ReactNode) => node == null || node === false || node === "";
 
 export function DataTable<T>({
   columns,
@@ -414,7 +420,10 @@ export function DataTable<T>({
               {c.header}
             </SortableHeader>
           ) : (
-            <th key={c.key} className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}>
+            <th
+              key={c.key}
+              className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}
+            >
               {c.header}
             </th>
           ),
@@ -438,7 +447,12 @@ export function DataTable<T>({
         <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-inset">
           <div className="min-w-0" data-tour="stage-tabs">
             <FilterTabs
-              options={tabs.map((o) => ({ value: o.value, label: o.label, badge: o.badge, waiting: o.waiting }))}
+              options={tabs.map((o) => ({
+                value: o.value,
+                label: o.label,
+                badge: o.badge,
+                waiting: o.waiting,
+              }))}
               value={activeTab?.value ?? ""}
               onChange={controls.setTab}
               aria-label={t("tabsLabel")}
@@ -490,9 +504,7 @@ export function DataTable<T>({
                 )}
               >
                 <IconFilter className="size-4" />
-                {activeFilters > 0 && (
-                  <span className="tabular-nums">{activeFilters}</span>
-                )}
+                {activeFilters > 0 && <span className="tabular-nums">{activeFilters}</span>}
               </button>
             )}
 
@@ -620,7 +632,9 @@ export function DataTable<T>({
         // what the list would hold, and the note is its one row. On a phone
         // there are no heads to keep, so the note stands alone.
         <>
-          <EmptyNote size="page" className="md:hidden">{empty ?? t("empty")}</EmptyNote>
+          <EmptyNote size="page" className="md:hidden">
+            {empty ?? t("empty")}
+          </EmptyNote>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               {head}
@@ -686,8 +700,8 @@ export function DataTable<T>({
                   const under = expansion?.(row);
                   const open = Boolean(under) && (expandAll || opened.has(key));
                   return (
-                  <Fragment key={key}>
-                  {/* `[transform:translate(0)]` next to `relative`, and it is
+                    <Fragment key={key}>
+                      {/* `[transform:translate(0)]` next to `relative`, and it is
                       the whole reason a click anywhere on the page used to open
                       the last row of the table in Safari.
 
@@ -707,15 +721,18 @@ export function DataTable<T>({
                       (menus, comboboxes, dialogs, the receipt viewer) is
                       portalled to <body>, so no `position: fixed` descendant
                       is left measuring against a transformed row. */}
-                  <tr
-                    className={cn(
-                      href && "relative cursor-pointer hover:bg-hover [transform:translate(0)]",
-                      rowClassName?.(row),
-                    )}
-                  >
-                    {cols.map((c) => (
-                      <td key={c.key} className={cn(CELL_X, "py-2", alignCls(c.align), c.className)}>
-                        {/* The link goes in the title cell and nowhere else:
+                      <tr
+                        className={cn(
+                          href && "relative cursor-pointer hover:bg-hover [transform:translate(0)]",
+                          rowClassName?.(row),
+                        )}
+                      >
+                        {cols.map((c) => (
+                          <td
+                            key={c.key}
+                            className={cn(CELL_X, "py-2", alignCls(c.align), c.className)}
+                          >
+                            {/* The link goes in the title cell and nowhere else:
                             one control per row, on the thing that names it.
                             `before:` stretches its hit area over the whole row,
                             so clicking anywhere still opens it, which is the mouse
@@ -731,46 +748,49 @@ export function DataTable<T>({
                             clickable while action buttons in the last never
                             did. See the compare column in
                             app/(app)/budget/budget-list-client.tsx. */}
-                        {href && c === slots.title ? (
-                          <Link
-                            href={href}
-                            scroll={rowScroll}
-                            className="before:absolute before:inset-0 hover:underline focus-visible:underline"
-                          >
-                            {c.cell(row)}
-                          </Link>
-                        ) : c === slots.title && under ? (
-                          // The chevron goes on the thing the row is named
-                          // after, which is what somebody clicks to ask "what
-                          // is this made of".
-                          <span className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => toggle(key)}
-                              aria-expanded={open}
-                              className="relative z-10 -ml-1 shrink-0 rounded-control p-0.5 text-muted hover:bg-hover hover:text-foreground"
-                            >
-                              <IconChevronRight
-                                className={cn("size-3.5 transition-transform", open && "rotate-90")}
-                              />
-                              <span className="sr-only">{t("expand")}</span>
-                            </button>
-                            {c.cell(row)}
-                          </span>
-                        ) : (
-                          c.cell(row)
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                  {open && (
-                    <tr className="bg-surface">
-                      <td colSpan={cols.length} className={cn(CELL_X, "py-0")}>
-                        {under}
-                      </td>
-                    </tr>
-                  )}
-                  </Fragment>
+                            {href && c === slots.title ? (
+                              <Link
+                                href={href}
+                                scroll={rowScroll}
+                                className="before:absolute before:inset-0 hover:underline focus-visible:underline"
+                              >
+                                {c.cell(row)}
+                              </Link>
+                            ) : c === slots.title && under ? (
+                              // The chevron goes on the thing the row is named
+                              // after, which is what somebody clicks to ask "what
+                              // is this made of".
+                              <span className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(key)}
+                                  aria-expanded={open}
+                                  className="relative z-10 -ml-1 shrink-0 rounded-control p-0.5 text-muted hover:bg-hover hover:text-foreground"
+                                >
+                                  <IconChevronRight
+                                    className={cn(
+                                      "size-3.5 transition-transform",
+                                      open && "rotate-90",
+                                    )}
+                                  />
+                                  <span className="sr-only">{t("expand")}</span>
+                                </button>
+                                {c.cell(row)}
+                              </span>
+                            ) : (
+                              c.cell(row)
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                      {open && (
+                        <tr className="bg-surface">
+                          <td colSpan={cols.length} className={cn(CELL_X, "py-0")}>
+                            {under}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -976,7 +996,8 @@ function Pagination({
   const from = totalItems === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
-  const btn = "flex size-8 items-center justify-center rounded-control border border-border-control bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
+  const btn =
+    "flex size-8 items-center justify-center rounded-control border border-border-control bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">

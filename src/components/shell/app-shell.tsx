@@ -150,9 +150,7 @@ const NAV_GROUPS: NavGroup[] = [
         // role is the closest thing the frame knows to "answers for a unit";
         // the page itself checks the unit (bank/page.tsx).
         visible: (u) =>
-          u.holdsCard ||
-          u.roles.includes("RESULTATANSVARIG") ||
-          canViewBookkeeping(u.capabilities),
+          u.holdsCard || u.roles.includes("RESULTATANSVARIG") || canViewBookkeeping(u.capabilities),
       },
       // No Att attestera here any more. It is a stage, and stage is a tab:
       // the utlägg to attest are Utlägg on Min resultatenhet, the levfakturor
@@ -173,7 +171,9 @@ const NAV_GROUPS: NavGroup[] = [
         label: "invoiceInbox",
         icon: IconMail,
         visible: (u) =>
-          canTriageInvoices(u.capabilities) || isAdmin(u.capabilities) || u.roles.includes("RESULTATANSVARIG"),
+          canTriageInvoices(u.capabilities) ||
+          isAdmin(u.capabilities) ||
+          u.roles.includes("RESULTATANSVARIG"),
       },
       // Every levfaktura from the moment it is given to a unit until it is in
       // Fortnox, the stage as a tab, the way Utlägg is. It used to be split
@@ -237,7 +237,12 @@ const NAV_GROUPS: NavGroup[] = [
       // Its own group rather than a line under Bokföring: keeping the
       // lagerbokföring is a different job, done by different people, and the
       // roles that see this see nothing else in the app.
-      { href: "/stock", label: "stock", icon: IconBox, visible: (u) => canViewStock(u.capabilities) },
+      {
+        href: "/stock",
+        label: "stock",
+        icon: IconBox,
+        visible: (u) => canViewStock(u.capabilities),
+      },
       // Above the log, because it is where the work happens: taking stock out
       // and bringing it back is registered on the event it belongs to. The
       // log is what you open when a figure looks wrong.
@@ -350,9 +355,7 @@ const SECTION_LABELS: Record<string, string> = Object.fromEntries(
     ...NAV_GROUPS.flatMap((g) => g.items),
     ...PROFILE_GROUP.items,
     ...SETTINGS_SECTIONS,
-  ].map(
-    (item) => [item.href, item.label],
-  ),
+  ].map((item) => [item.href, item.label]),
 );
 
 /**
@@ -364,8 +367,7 @@ const SECTION_LABELS: Record<string, string> = Object.fromEntries(
  * this same lookup, one screen away, was already answering "Tillfällen" for the
  * phone's top bar. They cannot disagree now.
  */
-const sectionHref = (path: string): string | null =>
-  owningRoute(path, Object.keys(SECTION_LABELS));
+const sectionHref = (path: string): string | null => owningRoute(path, Object.keys(SECTION_LABELS));
 
 export function AppShell({
   children,
@@ -507,7 +509,9 @@ export function AppShell({
           "flex h-8 items-center gap-2.5 rounded-control px-2 text-sm transition-colors",
           // A pink wash on the current page, the same pink as the primary
           // button, so where you are reads in the accent.
-          active ? "bg-action-from/15 font-medium text-foreground" : "text-foreground hover:bg-hover",
+          active
+            ? "bg-action-from/15 font-medium text-foreground"
+            : "text-foreground hover:bg-hover",
         )}
       >
         <Icon className={cn("size-[18px] shrink-0", active && "text-action-from")} />
@@ -527,7 +531,10 @@ export function AppShell({
   // the page's own header (components/shell/section-nav.tsx), on the
   // section's pages and on everything under them, an utlägg or a budget, so
   // the way across to the section's other pages is always at the top.
-  const profileGroup = { ...PROFILE_GROUP, items: PROFILE_GROUP.items.filter((i) => i.visible(user)) };
+  const profileGroup = {
+    ...PROFILE_GROUP,
+    items: PROFILE_GROUP.items.filter((i) => i.visible(user)),
+  };
   const tabSection =
     [...groups, profileGroup].find(
       (g) => g.items.length > 1 && g.items.some((i) => isActive(i.href)),
@@ -729,7 +736,9 @@ export function AppShell({
                 answers the second question, and it is the same answer on every
                 screen; this is the line a phone's own nav bar spends on the
                 screen you are actually looking at. */}
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{section ?? "D-sektionen"}</p>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+              {section ?? "D-sektionen"}
+            </p>
             {/* The year here too: it narrows the page as much on a phone. The
                 rest of the desktop header is in the menu. */}
             {fiscal && <FiscalYearPicker fiscal={fiscal} />}
@@ -772,9 +781,7 @@ export function AppShell({
               // exactly this much back and reach the edge (section-nav.tsx).
               // Written into the band as a fixed 24px, it stopped short of the
               // edge by the difference whenever the receipt was folded.
-              receiptTab
-                ? "[--main-pr:1.5rem] md:[--main-pr:3rem]"
-                : "[--main-pr:1.5rem]",
+              receiptTab ? "[--main-pr:1.5rem] md:[--main-pr:3rem]" : "[--main-pr:1.5rem]",
               "pr-(--main-pr)",
             )}
           >
@@ -804,7 +811,6 @@ export function AppShell({
             height of the frame and stay put while the page scrolls. */}
         <ReceiptPanelColumn />
       </div>
-
     </div>
   );
 }

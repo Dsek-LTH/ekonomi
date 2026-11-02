@@ -63,7 +63,9 @@ const Ctx = createContext<NotifyApi | null>(null);
 
 // Separate context for the live list so the banner region re-renders on every
 // notification while pages (which only consume the stable useNotify API) don't.
-const ListCtx = createContext<{ items: Notification[]; dismiss: (id: string) => void } | null>(null);
+const ListCtx = createContext<{ items: Notification[]; dismiss: (id: string) => void } | null>(
+  null,
+);
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<Notification[]>([]);
@@ -129,18 +131,15 @@ export function useNotify(): NotifyApi {
 // hex, so the banners would keep their light background in dark mode.
 const TONE_STYLE: Record<NotifyTone, { wrap: string; icon: React.ReactNode }> = {
   error: {
-    wrap:
-      "border-danger/30 bg-[color-mix(in_srgb,var(--color-danger-soft)_85%,transparent)] text-danger",
+    wrap: "border-danger/30 bg-[color-mix(in_srgb,var(--color-danger-soft)_85%,transparent)] text-danger",
     icon: <IconAlert className="size-5 shrink-0" />,
   },
   success: {
-    wrap:
-      "border-success/30 bg-[color-mix(in_srgb,var(--color-success-soft)_85%,transparent)] text-success",
+    wrap: "border-success/30 bg-[color-mix(in_srgb,var(--color-success-soft)_85%,transparent)] text-success",
     icon: <IconCheck className="size-5 shrink-0" />,
   },
   info: {
-    wrap:
-      "border-accent/30 bg-[color-mix(in_srgb,var(--color-accent-soft)_85%,transparent)] text-accent",
+    wrap: "border-accent/30 bg-[color-mix(in_srgb,var(--color-accent-soft)_85%,transparent)] text-accent",
     icon: <IconInfo className="size-5 shrink-0" />,
   },
 };

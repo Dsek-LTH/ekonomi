@@ -45,8 +45,7 @@ export const SWITCHABLE_KINDS: readonly NotificationKind[] = [...DEFAULT_ON, ...
 /** Every kind there is, the digest last. What a test mail can be sent as. */
 export const ALL_KINDS: readonly NotificationKind[] = [...SWITCHABLE_KINDS, "WEEKLY_DIGEST"];
 
-const isSwitchable = (kind: NotificationKind): boolean =>
-  SWITCHABLE_KINDS.includes(kind);
+const isSwitchable = (kind: NotificationKind): boolean => SWITCHABLE_KINDS.includes(kind);
 
 export const isOnByDefault = (kind: NotificationKind): boolean =>
   kind === "WEEKLY_DIGEST" || DEFAULT_ON.includes(kind);

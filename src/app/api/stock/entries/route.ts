@@ -360,9 +360,7 @@ export async function POST(req: Request) {
   // nought on one. A feed that logged those as nothing would be a feed that
   // lost the movement it exists to explain.
   const movedQty =
-    body.kind === "WASTE"
-      ? spilledQty
-      : Math.abs(isLevel(level) ? (open[level] ?? 0) : units);
+    body.kind === "WASTE" ? spilledQty : Math.abs(isLevel(level) ? (open[level] ?? 0) : units);
 
   await prisma.stockChange.create({
     data: {

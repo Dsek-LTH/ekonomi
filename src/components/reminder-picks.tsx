@@ -51,8 +51,11 @@ export function useReminderPicks<T>({
 
   // The callers' functions are written inline, so they are new on every
   // render. The rows are what actually changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const choosable = useMemo(() => (enabled ? rows.filter(remindable).map(rowId) : []), [enabled, rows]);
+  const choosable = useMemo(
+    () => (enabled ? rows.filter(remindable).map(rowId) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enabled, rows],
+  );
   const ticked = useMemo(() => picked.filter((id) => choosable.includes(id)), [picked, choosable]);
 
   const column = useMemo<Column<T>>(

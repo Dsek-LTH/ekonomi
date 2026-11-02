@@ -103,9 +103,7 @@ export function CardsClient({
     const ok = await confirm({
       title: t("deleteTitle", { last4: card.last4 }),
       message:
-        card.txCount > 0
-          ? t("deleteMessageLinked", { count: card.txCount })
-          : t("deleteMessage"),
+        card.txCount > 0 ? t("deleteMessageLinked", { count: card.txCount }) : t("deleteMessage"),
       confirmLabel: t("delete"),
       tone: "danger",
     });
@@ -186,7 +184,7 @@ export function CardsClient({
         c.txCount > 0 ? (
           <Link
             href={`/bank?scope=all&q=${c.last4}`}
-            className="tabular-nums text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+            className="tabular-nums text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
           >
             {c.txCount}
           </Link>

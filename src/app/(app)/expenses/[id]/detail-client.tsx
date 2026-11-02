@@ -297,7 +297,9 @@ function BankSection({
       </Button>
     ) : null;
     const when = (
-      <span className="text-xs leading-5 tabular-nums text-muted">{date(matched.transactionDate)}</span>
+      <span className="text-xs leading-5 tabular-nums text-muted">
+        {date(matched.transactionDate)}
+      </span>
     );
     return (
       <section className="border-t border-border px-inset pb-4 pt-4">
@@ -321,7 +323,9 @@ function BankSection({
                   <PaymentIcon type="CARD" className="size-4 shrink-0" />
                   <span className="truncate font-medium">{matched.description}</span>
                   {matched.cardLast4 && (
-                    <span className="shrink-0 text-xs tabular-nums text-muted">{cardMask(matched.cardLast4)}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted">
+                      {cardMask(matched.cardLast4)}
+                    </span>
                   )}
                 </div>
                 {/* On a phone the third column is gone, so what it holds

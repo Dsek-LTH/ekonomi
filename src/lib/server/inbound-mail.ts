@@ -21,11 +21,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/server/db";
-import {
-  deleteObjectBestEffort,
-  putObject,
-  supplierInvoiceInboxKey,
-} from "@/lib/server/storage";
+import { deleteObjectBestEffort, putObject, supplierInvoiceInboxKey } from "@/lib/server/storage";
 import { getPrefixes, ownedResultUnits, resultUnitForCode } from "@/lib/server/result-units";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { documentNotice } from "@/lib/email/content";
@@ -58,14 +54,17 @@ const MAX_BYTES = 25 * 1024 * 1024;
 // ── Reading a message ─────────────────────────────────────────────
 
 const headerValues = (part: GmailPart, name: string): string[] =>
-  (part.headers ?? []).filter((h) => h.name.toLowerCase() === name.toLowerCase()).map((h) => h.value);
+  (part.headers ?? [])
+    .filter((h) => h.name.toLowerCase() === name.toLowerCase())
+    .map((h) => h.value);
 
 function* walk(part: GmailPart): Generator<GmailPart> {
   yield part;
   for (const p of part.parts ?? []) yield* walk(p);
 }
 
-const decode = (data: string | undefined) => (data ? Buffer.from(data, "base64url").toString("utf8") : "");
+const decode = (data: string | undefined) =>
+  data ? Buffer.from(data, "base64url").toString("utf8") : "";
 
 /** The mail's text: its first text/plain part, or its HTML with the tags
  *  taken out when it has no plain one. Attachments are not text. */
@@ -120,7 +119,8 @@ async function assignCtx(): Promise<AssignCtx> {
 }
 
 async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promise<MessageOutcome> {
-  if (await prisma.inboundMail.findUnique({ where: { gmailId }, select: { id: true } })) return "skipped";
+  if (await prisma.inboundMail.findUnique({ where: { gmailId }, select: { id: true } }))
+    return "skipped";
 
   const msg = await getMessage(c, gmailId);
   const top = msg.payload;
@@ -173,7 +173,11 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
       const bytes = part.body?.attachmentId
         ? await getAttachment(c, gmailId, part.body.attachmentId)
         : Buffer.from(part.body?.data ?? "", "base64url");
-      if (bytes.length === 0 || sniffReceiptType(bytes.subarray(0, SNIFF_BYTES)) !== "application/pdf") continue;
+      if (
+        bytes.length === 0 ||
+        sniffReceiptType(bytes.subarray(0, SNIFF_BYTES)) !== "application/pdf"
+      )
+        continue;
       const documentId = randomUUID();
       const key = supplierInvoiceInboxKey(documentId, part.filename!);
       await putObject(key, bytes, "application/pdf");
@@ -235,7 +239,11 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
     const [only] = docs;
     const owners = (
       await prisma.user.findMany({
-        where: { active: true, roles: { has: "RESULTATANSVARIG" }, resultUnits: { has: unit.name } },
+        where: {
+          active: true,
+          roles: { has: "RESULTATANSVARIG" },
+          resultUnits: { has: unit.name },
+        },
         select: { id: true },
       })
     ).map((u) => u.id);
@@ -336,7 +344,9 @@ export async function syncInbox(): Promise<SyncResult | null> {
  * Renew Gmail's watch when it is two days from running out, or was never set.
  * Daily from the cron job, so a missed day or two costs nothing.
  */
-export async function renewWatch(now = new Date()): Promise<{ renewed: boolean; expiresAt: Date | null } | null> {
+export async function renewWatch(
+  now = new Date(),
+): Promise<{ renewed: boolean; expiresAt: Date | null } | null> {
   const c = gmailConfig();
   if (!c) return null;
   const state = await prisma.gmailSync.upsert({ where: { id: STATE }, create: {}, update: {} });
@@ -349,7 +359,10 @@ export async function renewWatch(now = new Date()): Promise<{ renewed: boolean; 
     where: { id: STATE },
     // The first watch also says where reading starts, so mail that was in the
     // mailbox before the integration was switched on is not swept in.
-    data: { watchExpiresAt: w.expiration, ...(state.historyId ? {} : { historyId: w.historyId }) },
+    data: {
+      watchExpiresAt: w.expiration,
+      ...(state.historyId ? {} : { historyId: w.historyId }),
+    },
   });
   return { renewed: true, expiresAt: w.expiration };
 }

@@ -34,9 +34,7 @@ export async function getBankTransactions(
   const scoped = opts.cardHolderId ? { card: { holderId: opts.cardHolderId } } : {};
   const txns = await prisma.bankTransaction.findMany({
     where:
-      opts.cardHolderId && alsoIds.length
-        ? { OR: [scoped, { id: { in: [...alsoIds] } }] }
-        : scoped,
+      opts.cardHolderId && alsoIds.length ? { OR: [scoped, { id: { in: [...alsoIds] } }] } : scoped,
     // transactionDate is a date, so same-day purchases tie. Without a unique
     // tiebreaker Postgres may return tied rows in a different order per query,
     // which shows up as a hydration mismatch when the HTML and the RSC payload
@@ -59,9 +57,7 @@ export async function getBankTransactions(
  * filter there is the holder, and `alsoIds` only widens it. An empty list in,
  * an empty list out; there is no way to ask this one for everything.
  */
-export async function getBankTransactionsByIds(
-  ids: readonly string[],
-): Promise<BankTransaction[]> {
+export async function getBankTransactionsByIds(ids: readonly string[]): Promise<BankTransaction[]> {
   const wanted = ids.filter(Boolean);
   if (wanted.length === 0) return [];
   const txns = await prisma.bankTransaction.findMany({
@@ -106,7 +102,10 @@ function toBankTransaction(t: BankRow): BankTransaction {
 // Sortable columns, as orders the database can take. Every one ends in `id`,
 // for the reason given in expenses.ts: a page is a window onto an ordering, and
 // an ordering with ties is a window that can repeat a row and drop another.
-const BANK_ORDER: Record<string, (dir: SortDir) => Prisma.BankTransactionOrderByWithRelationInput[]> = {
+const BANK_ORDER: Record<
+  string,
+  (dir: SortDir) => Prisma.BankTransactionOrderByWithRelationInput[]
+> = {
   date: (d) => [{ transactionDate: d }, { id: d }],
   description: (d) => [{ description: d }, { id: d }],
   amount: (d) => [{ amount: d }, { id: d }],
@@ -189,7 +188,9 @@ export async function getBankTransactionPage(
  * down to nothing, so the list is short whenever anyone is keeping up with it.
  */
 /** How many purchases the export named no card on, for bookkeeping to place. */
-export async function countCardlessTransactions({ during }: { during?: During } = {}): Promise<number> {
+export async function countCardlessTransactions({
+  during,
+}: { during?: During } = {}): Promise<number> {
   return prisma.bankTransaction.count({
     where: { cardId: null, ...(during ? { transactionDate: during } : {}) },
   });

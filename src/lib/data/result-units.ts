@@ -8,7 +8,10 @@ import type { ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 
 // Just the units, for a picker that only needs to name one.
 export async function getResultUnitOptions(): Promise<{ id: string; name: string }[]> {
-  return prisma.resultUnit.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+  return prisma.resultUnit.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 }
 
 // Result units with their prefixes, their resultatansvariga, and the cost centres

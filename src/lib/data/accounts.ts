@@ -43,9 +43,7 @@ export function getAccounts(): Promise<AccountRecord[]> {
 // a bookkeeping setting still pointing at one) stays valid and re-savable.
 // Fortnox retires accounts routinely, so this is the normal case, not an edge.
 // A setting nobody has chosen yet is null, and simply keeps nothing in.
-export function getActiveAccounts(
-  keep: readonly (string | null)[] = [],
-): Promise<AccountRecord[]> {
+export function getActiveAccounts(keep: readonly (string | null)[] = []): Promise<AccountRecord[]> {
   const numbers = [...new Set(keep.filter((n): n is string => Boolean(n)))];
   return loadAccounts(
     numbers.length ? { OR: [{ active: true }, { number: { in: numbers } }] } : { active: true },

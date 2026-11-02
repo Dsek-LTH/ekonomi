@@ -29,8 +29,7 @@ export type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
  * result unit membership is derived from the code rather than stored.
  */
 export type ExpenseScope =
-  | { everything: true }
-  | { everything: false; userId: string; resultUnitPrefixes: string[] };
+  { everything: true } | { everything: false; userId: string; resultUnitPrefixes: string[] };
 
 /** Resolve `viewer` to their scope. This is the only place the policy lives. */
 export async function expenseScopeOf(viewer: Viewer): Promise<ExpenseScope> {

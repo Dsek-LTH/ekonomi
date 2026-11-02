@@ -20,16 +20,9 @@ import { PatchExpense } from "@/lib/api/schemas/expense";
 import { valueForStorage } from "@/lib/mileage/store";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
-import {
-  canEditExpense,
-  denyExpenseDelete,
-  denyExpenseView,
-} from "@/lib/api/expense-access";
+import { canEditExpense, denyExpenseDelete, denyExpenseView } from "@/lib/api/expense-access";
 
-export async function PATCH(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
@@ -202,7 +195,9 @@ export async function PATCH(
     const centerMap = new Map(centers.map((c) => [c.code, c.id]));
     for (const a of inputs) {
       if (!centerMap.has(a.costCenterCode)) {
-        return fail(422, "expense.unknownCostCenter", { values: { code: a.costCenterCode } });
+        return fail(422, "expense.unknownCostCenter", {
+          values: { code: a.costCenterCode },
+        });
       }
     }
     newAllocs = inputs.map((a) => ({
@@ -248,7 +243,10 @@ export async function PATCH(
   // Sorting by code alone left two rows on the same cost centre tied, and a
   // tie could come back in either order and read as a change.
   const allocRows = (rows: { cc: string; amt: number; comment: string | null }[]) =>
-    rows.map((r) => JSON.stringify(r)).sort().join("\n");
+    rows
+      .map((r) => JSON.stringify(r))
+      .sort()
+      .join("\n");
   const allocsChanged =
     newAllocs !== null &&
     allocRows(
@@ -420,10 +418,7 @@ export async function PATCH(
 }
 
 // DELETE: admin deletes any; owner deletes own while not yet attested.
-export async function DELETE(
-  _req: Request,
-  ctx: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
@@ -445,9 +440,13 @@ export async function DELETE(
   // it back. Asked before the receipt files go, so a refusal deletes nothing.
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "free") {
-    return fail(409, lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain", {
-      values: { name: expense.exportClaimedBy?.name ?? "-" },
-    });
+    return fail(
+      409,
+      lock === "exporting" ? "expense.exportInProgress" : "expense.exportUncertain",
+      {
+        values: { name: expense.exportClaimedBy?.name ?? "-" },
+      },
+    );
   }
 
   // Receipt files first, and the utlägg only if every one of them is gone.

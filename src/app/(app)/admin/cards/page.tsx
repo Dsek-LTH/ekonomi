@@ -6,6 +6,9 @@ import { getCards } from "@/lib/data/bank";
 import { getResultUnitOptions } from "@/lib/data/result-units";
 import { getUsers } from "@/lib/data/users";
 import { CardsClient } from "./cards-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("cards");
 
 export default async function AdminCardsPage() {
   await requirePage(canAccessSettings);

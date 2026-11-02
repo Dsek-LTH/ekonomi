@@ -35,7 +35,10 @@ export async function POST(req: Request) {
     if (!isMatchable(paymentType)) return fail(422, "expense.matchCardOnly");
     const txn = await prisma.bankTransaction.findUnique({
       where: { id: matchedTransactionId },
-      include: { matchedExpense: { select: { id: true } }, card: { select: { holderId: true } } },
+      include: {
+        matchedExpense: { select: { id: true } },
+        card: { select: { holderId: true } },
+      },
     });
     if (!txn) return fail(422, "bank.txnNotFound");
     if (txn.matchedExpense) {

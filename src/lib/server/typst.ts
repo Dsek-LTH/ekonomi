@@ -105,11 +105,7 @@ const compilerFor = () =>
  * @param template Absolute path to the `.typ` file.
  * @param what     Names this document in the log line when Typst refuses it.
  */
-export async function typeset(
-  template: string,
-  data: unknown,
-  what: string,
-): Promise<Uint8Array> {
+export async function typeset(template: string, data: unknown, what: string): Promise<Uint8Array> {
   try {
     const pdf = compilerFor().pdf({
       mainFilePath: template,

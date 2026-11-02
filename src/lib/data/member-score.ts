@@ -73,7 +73,10 @@ async function load(submitterIds: string[] | null, now: string) {
     }),
   ]);
 
-  const byMember = new Map<string, { expenses: ScoreExpense[]; cardPurchases: ScoreCardPurchase[] }>();
+  const byMember = new Map<
+    string,
+    { expenses: ScoreExpense[]; cardPurchases: ScoreCardPurchase[] }
+  >();
   const of = (id: string) => {
     let m = byMember.get(id);
     if (!m) byMember.set(id, (m = { expenses: [], cardPurchases: [] }));
@@ -119,13 +122,20 @@ async function load(submitterIds: string[] | null, now: string) {
 export async function getMemberScore(userId: string): Promise<MemberScore> {
   const now = today();
   const inputs = (await load([userId], now)).get(userId);
-  return memberScore({ today: now, expenses: inputs?.expenses ?? [], cardPurchases: inputs?.cardPurchases ?? [] });
+  return memberScore({
+    today: now,
+    expenses: inputs?.expenses ?? [],
+    cardPurchases: inputs?.cardPurchases ?? [],
+  });
 }
 
 /** One member's score with who they are, or null for nobody by that id. */
 export async function getMemberScoreRow(userId: string): Promise<MemberScoreRow | null> {
   const [user, score] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    }),
     getMemberScore(userId),
   ]);
   return user && { userId: user.id, name: user.name, email: user.email, score };
@@ -148,6 +158,11 @@ export async function getMemberScores(): Promise<MemberScoreRow[]> {
   });
   return users.map((u) => {
     const inputs = byMember.get(u.id)!;
-    return { userId: u.id, name: u.name, email: u.email, score: memberScore({ today: now, ...inputs }) };
+    return {
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      score: memberScore({ today: now, ...inputs }),
+    };
   });
 }

@@ -120,15 +120,11 @@ export async function denyDeletingAdjusted(
   const found = await prisma.budgetAdjustment.findFirst({ where, select: { id: true } });
   if (!found) return null;
 
-  return fail(
-    409,
-    "account" in target ? "budget.accountInHistory" : "budget.sheetInHistory",
-  );
+  return fail(409, "account" in target ? "budget.accountInHistory" : "budget.sheetInHistory");
 }
 
 type EditorialGate =
-  | { ok: false; res: NextResponse }
-  | { ok: true; actorId: string; budgetId: string };
+  { ok: false; res: NextResponse } | { ok: true; actorId: string; budgetId: string };
 
 /**
  * Whether this request may record, or revoke, a change on the budget
@@ -151,11 +147,16 @@ export async function gateEditorialChange(
 
   const budget =
     "budget" in target
-      ? await prisma.budget.findUnique({ where: { id: target.budget }, select: { id: true, lockedAt: true } })
-      : (await prisma.budgetChange.findUnique({
-          where: { id: target.change },
-          select: { budget: { select: { id: true, lockedAt: true } } },
-        }))?.budget ?? null;
+      ? await prisma.budget.findUnique({
+          where: { id: target.budget },
+          select: { id: true, lockedAt: true },
+        })
+      : ((
+          await prisma.budgetChange.findUnique({
+            where: { id: target.change },
+            select: { budget: { select: { id: true, lockedAt: true } } },
+          })
+        )?.budget ?? null);
 
   if (!budget) return deny("budget.notFound", 404);
   // The lock is what a change departs from. Without one there is nothing to

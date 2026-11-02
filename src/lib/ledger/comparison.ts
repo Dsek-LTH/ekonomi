@@ -69,10 +69,7 @@ export async function priorYearComparison(
 
   const out = new Map<string, number>();
   for (const g of grouped) {
-    out.set(
-      `${g.account}|${g.costCenterCode ?? ""}`,
-      (g._sum.debit ?? 0) - (g._sum.credit ?? 0),
-    );
+    out.set(`${g.account}|${g.costCenterCode ?? ""}`, (g._sum.debit ?? 0) - (g._sum.credit ?? 0));
   }
   return out;
 }
@@ -137,9 +134,7 @@ export async function resolveBudget(
 // Budget amounts are expression strings, so this evaluates the whole budget.
 // Values are stored as positive magnitudes oriented by account kind, so they're
 // converted back to a debit-minus-credit net here.
-export async function budgetComparison(
-  budgetId: string,
-): Promise<Map<string, number> | null> {
+export async function budgetComparison(budgetId: string): Promise<Map<string, number> | null> {
   const budget = await prisma.budget.findUnique({
     where: { id: budgetId },
     include: {

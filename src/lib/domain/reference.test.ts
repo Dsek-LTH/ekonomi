@@ -21,12 +21,7 @@ describe("reference format", () => {
       formatReference(2026, 9),
       formatReference(2026, 1000),
     ];
-    expect([...refs].sort()).toEqual([
-      "DEK25-9999",
-      "DEK26-0009",
-      "DEK26-0100",
-      "DEK26-1000",
-    ]);
+    expect([...refs].sort()).toEqual(["DEK25-9999", "DEK26-0009", "DEK26-0100", "DEK26-1000"]);
   });
 });
 

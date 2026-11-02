@@ -29,7 +29,9 @@ vi.mock("@/lib/server/db", () => ({
     rentalItem: {
       // Looked up by name in the POST, which wants no clash, and by id in the
       // DELETE, which wants the row.
-      findUnique: vi.fn(async ({ where }: { where: { id?: string } }) => (where.id ? h.found : null)),
+      findUnique: vi.fn(async ({ where }: { where: { id?: string } }) =>
+        where.id ? h.found : null,
+      ),
       findFirst: vi.fn(async () => null),
       create: h.create,
       update: h.update,

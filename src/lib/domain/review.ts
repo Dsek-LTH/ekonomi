@@ -100,7 +100,9 @@ export function reviewWarnings(input: {
   const day = input.date.slice(0, 10);
   if (
     input.financialYears.length > 0 &&
-    !input.financialYears.some((y) => y.fromDate.slice(0, 10) <= day && day <= y.toDate.slice(0, 10))
+    !input.financialYears.some(
+      (y) => y.fromDate.slice(0, 10) <= day && day <= y.toDate.slice(0, 10),
+    )
   ) {
     out.push("outsideFinancialYear");
   }

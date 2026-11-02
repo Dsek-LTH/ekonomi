@@ -39,7 +39,8 @@ import { IncomeSetupNotice } from "../../income/setup-notice";
 import { UnitSales } from "./unit-sales";
 import { sekToOre } from "@/lib/domain/money";
 
-type AccountKey = "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
+type AccountKey =
+  "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
 
 export function IncomeSettingsClient({
   config,
@@ -220,7 +221,9 @@ export function IncomeSettingsClient({
                     key={u.id}
                     unit={u}
                     costCenters={costCenters}
-                    isFallback={Boolean(u.income) && u.income?.id === settings.incomeFallbackIncomeId}
+                    isFallback={
+                      Boolean(u.income) && u.income?.id === settings.incomeFallbackIncomeId
+                    }
                     pending={pending}
                     mutate={mutate}
                   />
@@ -271,7 +274,9 @@ export function IncomeSettingsClient({
               label={t("export.series")}
               hint={
                 settings.connectionVoucherSeries
-                  ? t("export.seriesHint", { series: settings.connectionVoucherSeries })
+                  ? t("export.seriesHint", {
+                      series: settings.connectionVoucherSeries,
+                    })
                   : t("export.seriesHintUnconnected")
               }
             >
@@ -358,7 +363,9 @@ export function IncomeSettingsClient({
               <Input
                 value={newFallback.message}
                 onChange={(e) => setNewFallback({ ...newFallback, message: e.target.value })}
-                onKeyDown={(e) => { if (e.key === "Enter") addFallback(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addFallback();
+                }}
                 placeholder={t("fallbacks.messagePlaceholder")}
                 size="sm"
                 aria-label={t("fallbacks.message")}
@@ -395,7 +402,12 @@ function Section({ id, children }: { id: IncomeSetupSection; children: React.Rea
 function SectionStatus({ left }: { left: number }) {
   const t = useTranslations("admin.income");
   return (
-    <span className={cn("flex items-center gap-1 text-xs font-medium", left ? "text-warning" : "text-success")}>
+    <span
+      className={cn(
+        "flex items-center gap-1 text-xs font-medium",
+        left ? "text-warning" : "text-success",
+      )}
+    >
       {left === 0 && <IconCheck className="size-3.5" />}
       {left ? t("stepsLeft", { count: left }) : t("done")}
     </span>

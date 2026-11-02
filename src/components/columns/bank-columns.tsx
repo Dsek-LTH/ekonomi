@@ -190,7 +190,7 @@ export const bankMatchedColumn = (
     tx.matchedExpenseId ? (
       <Link
         href={`/expenses/${tx.matchedExpenseId}`}
-        className="font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+        className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
       >
         {tx.matchedExpenseRef ?? linked}
       </Link>

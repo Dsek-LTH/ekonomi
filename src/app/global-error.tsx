@@ -31,19 +31,15 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "2rem",
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
           background: "#fff",
           color: "#171319",
         }}
       >
         <main style={{ maxWidth: "32rem", textAlign: "center" }}>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0 }}>
-            Något gick fel
-          </h1>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0 }}>Något gick fel</h1>
           <p style={{ margin: "0.5rem 0 0", color: "#6b6470", fontSize: "0.9375rem" }}>
-            Appen kunde inte starta. Försök igen, står det kvar, hör av dig till
-            skattmästeriet.
+            Appen kunde inte starta. Försök igen, står det kvar, hör av dig till skattmästeriet.
           </p>
           <p style={{ margin: "1.25rem 0 0", color: "#6b6470", fontSize: "0.875rem" }}>
             Something went wrong and the app could not start.

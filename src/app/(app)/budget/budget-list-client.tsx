@@ -92,7 +92,11 @@ export function BudgetListClient({
   // at next year's. If the copy is meant for another year, that is one edit on
   // the page it just opened.
   const copyBudget = (b: BudgetSummary, key?: string) =>
-    create({ year: b.year, name: t("copyOf", { name: b.name }), copyFromId: b.id }, t("copied"), key);
+    create(
+      { year: b.year, name: t("copyOf", { name: b.name }), copyFromId: b.id },
+      t("copied"),
+      key,
+    );
 
   // Importing a past budget from the interchange CSV (lib/domain/budget-csv.ts).
   //
@@ -119,23 +123,29 @@ export function BudgetListClient({
     if (fileRef.current) fileRef.current.value = "";
     if (!data) return;
 
-    notify.success(t("imported", { sheets: data.sheets, accounts: data.accounts, lines: data.lines }));
+    notify.success(
+      t("imported", { sheets: data.sheets, accounts: data.accounts, lines: data.lines }),
+    );
     // Two things the import cannot decide for the reader, and both change what
     // the budget is worth: a sheet with no cost centre is left out of the Utfall
     // comparison entirely (lib/ledger/comparison.ts), and a dropped row is a
     // figure that is simply not in the budget. Neither is an error, so neither
     // stops the import, but neither may pass silently either.
     if (data.unmatchedCostCenters.length > 0) {
-      notify.info(t("importUnmatched", {
-        count: data.unmatchedCostCenters.length,
-        codes: data.unmatchedCostCenters.join(", "),
-      }));
+      notify.info(
+        t("importUnmatched", {
+          count: data.unmatchedCostCenters.length,
+          codes: data.unmatchedCostCenters.join(", "),
+        }),
+      );
     }
     if (data.problems.length > 0) {
-      notify.info(t("importProblems", {
-        count: data.problems.length,
-        first: `${data.problems[0].line}: ${data.problems[0].message}`,
-      }));
+      notify.info(
+        t("importProblems", {
+          count: data.problems.length,
+          first: `${data.problems[0].line}: ${data.problems[0].message}`,
+        }),
+      );
     }
     router.push(`/budget/${data.budgetId}`);
   }
@@ -157,8 +167,8 @@ export function BudgetListClient({
     setPicked((p) => p.filter((id) => id !== b.id));
   }
 
-  const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
-
+  const toggle = (id: string) =>
+    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const columns: Column<BudgetSummary>[] = [
     {
@@ -207,9 +217,11 @@ export function BudgetListClient({
       searchable: true,
       className: "w-32 whitespace-nowrap",
       cell: (b) =>
-        b.adoptedAt
-          ? <span className="text-sm tabular-nums text-muted">{b.adoptedAt}</span>
-          : <span className="text-sm text-muted">{t("notAdopted")}</span>,
+        b.adoptedAt ? (
+          <span className="text-sm tabular-nums text-muted">{b.adoptedAt}</span>
+        ) : (
+          <span className="text-sm text-muted">{t("notAdopted")}</span>
+        ),
     },
     {
       key: "name",
@@ -222,7 +234,9 @@ export function BudgetListClient({
         <p className="flex items-center gap-2 truncate text-sm font-medium">
           {b.name}
           {b.lockedAt && (
-            <Tag tone="purple" size="sm">{t("locked")}</Tag>
+            <Tag tone="purple" size="sm">
+              {t("locked")}
+            </Tag>
           )}
         </p>
       ),
@@ -308,37 +322,37 @@ export function BudgetListClient({
                 )}
               </span>
               {admin && (
-              // Not a form in a dropdown: two ways to start, each one click.
-              <span className="flex" data-tour="budget-new">
-                <Menu
-                  label={t("new")}
-                  icon={<IconPlus className="size-4" />}
-                  loading={pending === "create"}
-                >
-                  <MenuItem onClick={createEmpty}>
-                    {t("newEmpty", { year: String(thisYear) })}
-                  </MenuItem>
-                  {budgets.length > 0 && (
-                    <>
-                      <MenuSeparator />
-                      <MenuLabel>{t("copyExisting")}</MenuLabel>
-                      {budgets.map((b) => (
-                        <MenuItem key={b.id} onClick={() => copyBudget(b)}>
-                          <span className="tabular-nums text-muted">{b.year}</span>
-                          <span className="truncate">{b.name}</span>
-                        </MenuItem>
-                      ))}
-                      <MenuNote>{t("basedOnHint")}</MenuNote>
-                    </>
-                  )}
-                  <MenuSeparator />
-                  <MenuItem onClick={() => fileRef.current?.click()}>
-                    <IconUpload className="size-4" />
-                    {t("importCsv")}
-                  </MenuItem>
-                  <MenuNote>{t("importHint")}</MenuNote>
-                </Menu>
-              </span>
+                // Not a form in a dropdown: two ways to start, each one click.
+                <span className="flex" data-tour="budget-new">
+                  <Menu
+                    label={t("new")}
+                    icon={<IconPlus className="size-4" />}
+                    loading={pending === "create"}
+                  >
+                    <MenuItem onClick={createEmpty}>
+                      {t("newEmpty", { year: String(thisYear) })}
+                    </MenuItem>
+                    {budgets.length > 0 && (
+                      <>
+                        <MenuSeparator />
+                        <MenuLabel>{t("copyExisting")}</MenuLabel>
+                        {budgets.map((b) => (
+                          <MenuItem key={b.id} onClick={() => copyBudget(b)}>
+                            <span className="tabular-nums text-muted">{b.year}</span>
+                            <span className="truncate">{b.name}</span>
+                          </MenuItem>
+                        ))}
+                        <MenuNote>{t("basedOnHint")}</MenuNote>
+                      </>
+                    )}
+                    <MenuSeparator />
+                    <MenuItem onClick={() => fileRef.current?.click()}>
+                      <IconUpload className="size-4" />
+                      {t("importCsv")}
+                    </MenuItem>
+                    <MenuNote>{t("importHint")}</MenuNote>
+                  </Menu>
+                </span>
               )}
             </div>
           }

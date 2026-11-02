@@ -3,6 +3,9 @@ import { canAccessSettings, canBookkeep, canViewBookkeeping } from "@/lib/domain
 import { getChecklist } from "@/lib/data/closing-checklist";
 import ChecklistClient from "./checklist-client";
 import { NoClosingYear, getOpenClosingYear } from "./year";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("closing");
 
 // Bokslut, for the header's räkenskapsår, opened on its checklist: what is
 // left to do, how to do it, and what last year's skattmästare wanted this one

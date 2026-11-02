@@ -237,7 +237,10 @@ export type PutNotificationPreference = z.infer<typeof PutNotificationPreference
 
 /** PUT /api/profile/guides: guide steps the reader has been shown. */
 export const PutSeenGuideSteps = z.object({
-  steps: z.array(z.enum(GUIDE_STEP_IDS as [string, ...string[]])).min(1).max(GUIDE_STEP_IDS.length),
+  steps: z
+    .array(z.enum(GUIDE_STEP_IDS as [string, ...string[]]))
+    .min(1)
+    .max(GUIDE_STEP_IDS.length),
 });
 export type PutSeenGuideSteps = z.infer<typeof PutSeenGuideSteps>;
 

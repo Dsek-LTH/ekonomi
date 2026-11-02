@@ -50,11 +50,7 @@ describe("buildOverview", () => {
   it("puts unclaimed and cost-centreless rows in a unit of their own, last", () => {
     const units = buildOverview(
       [],
-      [
-        booked("4010", "XYZ", 100_00),
-        booked("4010", null, 50_00),
-        booked("4010", "SEX01", 10_00),
-      ],
+      [booked("4010", "XYZ", 100_00), booked("4010", null, 50_00), booked("4010", "SEX01", 10_00)],
       unitOf,
       names,
     );

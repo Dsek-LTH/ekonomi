@@ -75,9 +75,7 @@ describe("buildCoverData", () => {
     // driven would name a document that does not exist, on a page that is
     // filed as evidence.
     expect(buildCoverData(base, TODAY).dateLabel).toBe("Kvittodatum");
-    expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe(
-      "Resdag",
-    );
+    expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe("Resdag");
   });
 
   it("formats amounts as Swedish kronor, thousands separated", () => {
@@ -170,23 +168,22 @@ describe("buildCoverData, the dispens", () => {
     // later. A document filed beside a voucher must not say something different
     // the next time somebody opens it.
     expect(buildCoverData(waived, TODAY).waiver!.lateness).toBe("76 dagar efter köpet");
-    expect(
-      buildCoverData(waived, new Date("2027-01-01T00:00:00Z")).waiver!.lateness,
-    ).toBe("76 dagar efter köpet");
+    expect(buildCoverData(waived, new Date("2027-01-01T00:00:00Z")).waiver!.lateness).toBe(
+      "76 dagar efter köpet",
+    );
   });
 
   it("says resan rather than köpet on a milersättning", () => {
     // The same distinction `dateLabel` makes: nothing was bought.
-    expect(
-      buildCoverData({ ...waived, paymentType: "MILEAGE" }, TODAY).waiver!.lateness,
-    ).toBe("76 dagar efter resan");
+    expect(buildCoverData({ ...waived, paymentType: "MILEAGE" }, TODAY).waiver!.lateness).toBe(
+      "76 dagar efter resan",
+    );
   });
 
   it("needs both the day and the reason before it states one at all", () => {
     // The route writes and clears the three columns together, so a half-set
     // dispens is a row nobody wrote. Reading it as absent is the safe way round.
-    expect(buildCoverData({ ...waived, deadlineWaiverReason: null }, TODAY).waiver)
-      .toBeNull();
+    expect(buildCoverData({ ...waived, deadlineWaiverReason: null }, TODAY).waiver).toBeNull();
     expect(buildCoverData({ ...waived, deadlineWaivedAt: null }, TODAY).waiver).toBeNull();
   });
 });

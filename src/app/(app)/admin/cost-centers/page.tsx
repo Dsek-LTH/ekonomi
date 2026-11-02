@@ -4,6 +4,9 @@ import { requirePage } from "@/lib/server/current-user";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getCostCenters } from "@/lib/data/cost-centers";
 import { CostCentersClient } from "./cost-centers-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("costCenters");
 
 export default async function AdminCostCentersPage() {
   await requirePage(canAccessSettings);
@@ -11,10 +14,7 @@ export default async function AdminCostCentersPage() {
   const costCenters = await getCostCenters();
 
   return (
-    <PageShell
-      title={t("title")}
-      width="content"
-    >
+    <PageShell title={t("title")} width="content">
       <CostCentersClient costCenters={costCenters} />
     </PageShell>
   );

@@ -78,16 +78,12 @@ describe("the light palette", () => {
   const LIGHT_ONLY = /^--(font|spacing|radius|ease|receipt|chart-[1-5]|chart-8)/;
 
   it("has a dark counterpart for every colour it names", () => {
-    const missing = Object.keys(theme).filter(
-      (k) => !LIGHT_ONLY.test(k) && !(k in stated),
-    );
+    const missing = Object.keys(theme).filter((k) => !LIGHT_ONLY.test(k) && !(k in stated));
     expect(missing).toEqual([]);
   });
 
   it("names every token the dark block redefines", () => {
-    const extra = Object.keys(stated).filter(
-      (k) => k !== "color-scheme" && !(k in theme),
-    );
+    const extra = Object.keys(stated).filter((k) => k !== "color-scheme" && !(k in theme));
     expect(extra).toEqual([]);
   });
 });

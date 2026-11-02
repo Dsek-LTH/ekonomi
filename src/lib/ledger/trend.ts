@@ -215,9 +215,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
   // on the ranking: "budgeted 40 000, spent nothing" is one of the things the
   // chart exists to show.
   const codes = new Set([...byCc.keys(), ...budgetByCc.keys()]);
-  const names = await costCenterNames(
-    [...codes].filter((c) => c !== NO_CC && !byCc.get(c)?.name),
-  );
+  const names = await costCenterNames([...codes].filter((c) => c !== NO_CC && !byCc.get(c)?.name));
 
   const costCenters: TrendCostCenter[] = [...codes]
     .map((cc) => {

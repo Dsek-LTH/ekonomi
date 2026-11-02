@@ -152,13 +152,25 @@ beforeEach(() => {
   h.remaining = 0;
   h.attesters = [];
   h.reading = { fields: {}, supplier: null };
-  for (const fn of [h.invoiceUpdate, h.allocationUpdate, h.allocationDelete, h.allocationCreate, h.lineDelete, h.event, h.notify]) {
+  for (const fn of [
+    h.invoiceUpdate,
+    h.allocationUpdate,
+    h.allocationDelete,
+    h.allocationCreate,
+    h.lineDelete,
+    h.event,
+    h.notify,
+  ]) {
     fn.mockReset();
     fn.mockResolvedValue({ count: 1 });
   }
 });
 
-const assigned = { status: "ASSIGNED", resultUnitId: "unit-sex", resultUnit: { name: "Sexmästeriet" } };
+const assigned = {
+  status: "ASSIGNED",
+  resultUnitId: "unit-sex",
+  resultUnit: { name: "Sexmästeriet" },
+};
 
 describe("assign, to another unit", () => {
   it("moves it and mails the new unit's resultatansvarig, keeping where it was", async () => {
@@ -167,9 +179,16 @@ describe("assign, to another unit", () => {
     expect(res.status).toBe(200);
     expect(h.invoiceUpdate).toHaveBeenCalledWith({
       where: { id: "inv1", status: "ASSIGNED" },
-      data: expect.objectContaining({ status: "ASSIGNED", resultUnitId: "unit-sex", assignedById: "actor" }),
+      data: expect.objectContaining({
+        status: "ASSIGNED",
+        resultUnitId: "unit-sex",
+        assignedById: "actor",
+      }),
     });
-    expect(h.event.mock.calls[0][0].data.diff).toEqual({ from: "Caféutskottet", to: "Sexmästeriet" });
+    expect(h.event.mock.calls[0][0].data.diff).toEqual({
+      from: "Caféutskottet",
+      to: "Sexmästeriet",
+    });
     expect(h.notify.mock.calls[0][1]).toBe("SUPPLIER_INVOICE_ASSIGNED");
   });
 
@@ -201,12 +220,21 @@ describe("attest, as the fördelning", () => {
   const read = { amount: 125000, dueDate: "2026-11-30" };
 
   it("fördelar and attests in one step, the whole invoice on one cost centre", async () => {
-    const res = await call({ action: "attest", rows: [{ costCenterCode: "sex01" }], ...read, description: "Släp" });
+    const res = await call({
+      action: "attest",
+      rows: [{ costCenterCode: "sex01" }],
+      ...read,
+      description: "Släp",
+    });
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("APPROVED");
     const created = h.allocationCreate.mock.calls[0][0].data;
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({ costCenterId: "cc-0-SEX01", amount: null, approvedById: "actor" });
+    expect(created[0]).toMatchObject({
+      costCenterId: "cc-0-SEX01",
+      amount: null,
+      approvedById: "actor",
+    });
     expect(h.invoiceUpdate).toHaveBeenCalledWith({
       where: { id: "inv1", status: "ASSIGNED" },
       data: {
@@ -217,7 +245,10 @@ describe("attest, as the fördelning", () => {
         prefilled: [],
       },
     });
-    expect(h.event.mock.calls.map((c) => c[0].data.type)).toEqual(["COST_CENTER_APPROVED", "APPROVED"]);
+    expect(h.event.mock.calls.map((c) => c[0].data.type)).toEqual([
+      "COST_CENTER_APPROVED",
+      "APPROVED",
+    ]);
     // A kontering made from an earlier split goes with it.
     expect(h.lineDelete).toHaveBeenCalledWith({ where: { invoiceId: "inv1" } });
     expect(h.notify).not.toHaveBeenCalled();
@@ -225,9 +256,9 @@ describe("attest, as the fördelning", () => {
 
   it("needs the amount and the due date", async () => {
     const rows = [{ costCenterCode: "SEX01" }];
-    expect((await (await call({ action: "attest", rows, dueDate: read.dueDate })).json()).error).toBe(
-      "supplierInvoice.noAmount",
-    );
+    expect(
+      (await (await call({ action: "attest", rows, dueDate: read.dueDate })).json()).error,
+    ).toBe("supplierInvoice.noAmount");
     expect((await (await call({ action: "attest", rows, amount: read.amount })).json()).error).toBe(
       "supplierInvoice.noDueDate",
     );
@@ -246,7 +277,10 @@ describe("attest, as the fördelning", () => {
     });
     expect((await res.json()).status).toBe("PENDING_APPROVAL");
     const created = h.allocationCreate.mock.calls[0][0].data;
-    expect(created.map((r: { approvedById: string | null }) => r.approvedById)).toEqual(["actor", null]);
+    expect(created.map((r: { approvedById: string | null }) => r.approvedById)).toEqual([
+      "actor",
+      null,
+    ]);
     expect(h.notify).toHaveBeenCalledWith(
       expect.anything(),
       "SUPPLIER_INVOICE_SUBMITTED",
@@ -299,7 +333,9 @@ describe("attest, as the fördelning", () => {
 
   it("is not another unit's to attest", async () => {
     h.ownedUnits = [];
-    expect((await call({ action: "attest", rows: [{ costCenterCode: "SEX01" }] })).status).toBe(403);
+    expect((await call({ action: "attest", rows: [{ costCenterCode: "SEX01" }] })).status).toBe(
+      403,
+    );
   });
 });
 
@@ -367,7 +403,9 @@ describe("book, the treasury's kontering", () => {
     h.invoice = complete;
     h.allocations = [row({ approvedById: "klara" })];
     h.lines = [{ account: "5615", debit: 120000, credit: 0 }];
-    expect((await (await call({ action: "book" })).json()).error).toBe("supplierInvoice.unbalanced");
+    expect((await (await call({ action: "book" })).json()).error).toBe(
+      "supplierInvoice.unbalanced",
+    );
     expect(h.invoiceUpdate).not.toHaveBeenCalled();
   });
 

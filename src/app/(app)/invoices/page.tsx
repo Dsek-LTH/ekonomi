@@ -6,6 +6,9 @@ import { ownedResultUnits } from "@/lib/server/result-units";
 import { getFiscalYear } from "@/lib/server/fiscal-year";
 import { InvoicesClient } from "./invoices-client";
 import { INVOICE_TABS, invoiceDefaultTab, type InvoiceScope, type InvoiceTab } from "./scope";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("invoices");
 
 // Fakturor: every levfaktura the reader may see, from the moment it is given
 // to a unit until it is in Fortnox, with the stage as a tab. See
@@ -36,8 +39,7 @@ export default async function InvoicesPage({
   // and reads it as the section's: that is what they attest on.
   if (scopes.length === 0) scopes.push("all");
   const scope = scopes.find((s) => s === params.scope) ?? scopes[scopes.length - 1];
-  const tab: InvoiceTab =
-    INVOICE_TABS.find((t) => t === params.tab) ?? invoiceDefaultTab(scope);
+  const tab: InvoiceTab = INVOICE_TABS.find((t) => t === params.tab) ?? invoiceDefaultTab(scope);
 
   const [rows, fiscal] = await Promise.all([
     getInvoiceRows(user, { ownUnits: scope === "unit" }),

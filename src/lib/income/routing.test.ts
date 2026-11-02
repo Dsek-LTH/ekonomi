@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { groupZettleFees, routeSwishPayments, routeZettleSales, type RoutingTable } from "./routing";
+import {
+  groupZettleFees,
+  routeSwishPayments,
+  routeZettleSales,
+  type RoutingTable,
+} from "./routing";
 import type { ZettleSaleLine } from "./types";
 
 const table = (over: Partial<RoutingTable> = {}): RoutingTable => ({
@@ -31,12 +36,22 @@ const sale = (over: Partial<ZettleSaleLine> = {}): ZettleSaleLine => ({
 
 describe("routeZettleSales", () => {
   it("routes by prefix, strips it, and merges a day's identical lines", () => {
-    const got = routeZettleSales(table(), [sale(), sale({ purchaseId: "p2", quantity: 2, total: 2600 })]);
+    const got = routeZettleSales(table(), [
+      sale(),
+      sale({ purchaseId: "p2", quantity: 2, total: 2600 }),
+    ]);
 
     expect(got).toHaveLength(1);
     expect(got[0]).toMatchObject({ key: "cafe-2026-01-02", committee: "cafe", total: 3900 });
     expect(got[0].products).toEqual([
-      { name: "Cola", account: "3000", quantity: 3, unitPrice: 1300, effectiveDiscount: 0, total: 3900 },
+      {
+        name: "Cola",
+        account: "3000",
+        quantity: 3,
+        unitPrice: 1300,
+        effectiveDiscount: 0,
+        total: 3900,
+      },
     ]);
     expect(got[0].accountDistributions).toEqual([
       { account: "3000", description: "Försäljning inom Sverige", total: 3900 },
@@ -67,14 +82,19 @@ describe("routeZettleSales", () => {
 
   // intakt matched only all-lower or all-upper.
   it("matches a prefix in any case", () => {
-    const [report] = routeZettleSales(table(), [sale({ name: "C - Cola" }), sale({ name: "S1 - Öl" })]);
+    const [report] = routeZettleSales(table(), [
+      sale({ name: "C - Cola" }),
+      sale({ name: "S1 - Öl" }),
+    ]);
     expect(report.committee).toBe("cafe");
   });
 
   // "s1 - Öl" must not be read as "s" followed by "1 - Öl", whichever order
   // the prefixes happen to come in.
   it("prefers the longer of two overlapping prefixes", () => {
-    const [report] = routeZettleSales(table(), [sale({ name: "s1 - Öl", unitPrice: 4000, total: 4000 })]);
+    const [report] = routeZettleSales(table(), [
+      sale({ name: "s1 - Öl", unitPrice: 4000, total: 4000 }),
+    ]);
     expect(report.products[0]).toMatchObject({ name: "Öl", account: "3011" });
   });
 
@@ -82,7 +102,11 @@ describe("routeZettleSales", () => {
     const [report] = routeZettleSales(table(), [
       sale({ name: "c-Kaffe", variant: "Stor", unitPrice: 2000, discount: 500, total: 1500 }),
     ]);
-    expect(report.products[0]).toMatchObject({ variant: "Stor", effectiveDiscount: 500, total: 1500 });
+    expect(report.products[0]).toMatchObject({
+      variant: "Stor",
+      effectiveDiscount: 500,
+      total: 1500,
+    });
   });
 
   it("is one report per verksamhet and day, sorted by key", () => {
@@ -91,7 +115,11 @@ describe("routeZettleSales", () => {
       sale({ name: "s1 - Öl" }),
       sale(),
     ]);
-    expect(got.map((r) => r.key)).toEqual(["cafe-2026-01-02", "cafe-2026-01-03", "sexet-2026-01-02"]);
+    expect(got.map((r) => r.key)).toEqual([
+      "cafe-2026-01-02",
+      "cafe-2026-01-03",
+      "sexet-2026-01-02",
+    ]);
   });
 });
 
@@ -106,7 +134,11 @@ describe("routeSwishPayments", () => {
     const cafe = got.find((r) => r.committee === "cafe")!;
     expect(cafe.products.map((p) => p.name)).toEqual(["Bulle", "Cola"]);
     const reserv = got.find((r) => r.committee === "skatt")!;
-    expect(reserv.products[0]).toMatchObject({ name: "Tack för igår", account: "3990", total: 5000 });
+    expect(reserv.products[0]).toMatchObject({
+      name: "Tack för igår",
+      account: "3990",
+      total: 5000,
+    });
   });
 });
 
@@ -124,6 +156,8 @@ describe("groupZettleFees", () => {
 
     expect(got).toHaveLength(2);
     expect(got[0]).toMatchObject({ date: "2026-01-02", total: 300 });
-    expect(got[0].fees).toEqual([{ name: "Zettle fee", account: "6570", quantity: 2, unitPrice: 150, total: 300 }]);
+    expect(got[0].fees).toEqual([
+      { name: "Zettle fee", account: "6570", quantity: 2, unitPrice: 150, total: 300 },
+    ]);
   });
 });

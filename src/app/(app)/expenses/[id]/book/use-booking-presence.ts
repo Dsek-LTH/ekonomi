@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  HEARTBEAT_MS,
-  isIdle,
-  type PresenceAnswer,
-  type PresentUser,
-} from "@/lib/domain/presence";
+import { HEARTBEAT_MS, isIdle, type PresenceAnswer, type PresentUser } from "@/lib/domain/presence";
 
 // Activity that means somebody is at this screen. Listened to in the capture
 // phase, so a control that stops propagation still counts.

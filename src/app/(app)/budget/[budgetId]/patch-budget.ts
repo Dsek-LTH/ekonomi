@@ -64,9 +64,7 @@ export function withoutLine(b: Budget, lineId: string): Budget {
 export function withNewAccount(b: Budget, sheetId: string, account: Account): Budget {
   return withSheet(b, sheetId, (cc) => ({
     ...cc,
-    accounts: [...cc.accounts, account].sort((x, y) =>
-      x.accountCode.localeCompare(y.accountCode),
-    ),
+    accounts: [...cc.accounts, account].sort((x, y) => x.accountCode.localeCompare(y.accountCode)),
   }));
 }
 

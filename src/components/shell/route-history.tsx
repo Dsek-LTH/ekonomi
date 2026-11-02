@@ -123,7 +123,14 @@ export function useGoBack(fallback: string): {
     onClick: (e) => {
       // Anything but a plain left click is opening this elsewhere, and the
       // href is what should be opened.
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      if (
+        e.defaultPrevented ||
+        e.button !== 0 ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.shiftKey ||
+        e.altKey
+      ) {
         return;
       }
       e.preventDefault();

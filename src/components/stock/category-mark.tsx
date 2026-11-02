@@ -26,9 +26,13 @@ const TONE: Record<Category, string> = {
 // Drawn in a 16-unit box, stroked in the mark's colour.
 const GLYPH: Record<Category, React.ReactNode> = {
   // A glass of beer with its handle.
-  OL: <path d="M4 4h6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM10 6h1.5a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H10M4 7h6" />,
+  OL: (
+    <path d="M4 4h6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM10 6h1.5a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H10M4 7h6" />
+  ),
   // A can.
-  OVRIG_JASTDRYCK: <path d="M5 3h6M5 13h6M5 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1M11 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1M4 6h8" />,
+  OVRIG_JASTDRYCK: (
+    <path d="M5 3h6M5 13h6M5 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1M11 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1M4 6h8" />
+  ),
   // A wine glass.
   VIN: <path d="M5 2h6l-.5 4a2.5 2.5 0 0 1-5 0zM8 8.5V13M5.5 13.5h5" />,
   // A bottle.

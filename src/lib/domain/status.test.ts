@@ -212,9 +212,9 @@ describe("submitBlocker", () => {
     };
     expect(submitBlocker(late)).toBe("tooLate");
     expect(submitBlocker({ ...late, deadlineWaived: true })).toBeNull();
-    expect(
-      submitBlocker({ ...late, deadlineWaived: true, submitterHasPayout: false }),
-    ).toBe("payout");
+    expect(submitBlocker({ ...late, deadlineWaived: true, submitterHasPayout: false })).toBe(
+      "payout",
+    );
   });
 
   it("holds no deadline over a sektionskort purchase", () => {
@@ -226,9 +226,9 @@ describe("submitBlocker", () => {
   it("blocks an allocation row with no cost centre picked", () => {
     // The picker starts empty on purpose, so this is the ordinary case rather
     // than a strange one.
-    expect(
-      submitBlocker({ ...ready, allocations: [{ amount: 250, costCenterCode: "" }] }),
-    ).toBe("incomplete");
+    expect(submitBlocker({ ...ready, allocations: [{ amount: 250, costCenterCode: "" }] })).toBe(
+      "incomplete",
+    );
   });
 
   it("blocks when the split does not add up to the amount", () => {

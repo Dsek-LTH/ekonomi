@@ -6,7 +6,12 @@ import { PageShell } from "@/components/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/status-pill";
-import { DataTable, type Column, type SelectFilter, type TabFilter } from "@/components/ui/data-table";
+import {
+  DataTable,
+  type Column,
+  type SelectFilter,
+  type TabFilter,
+} from "@/components/ui/data-table";
 import { useUrlTableControls } from "@/lib/data/use-list-query";
 import { useFormat } from "@/lib/ui/use-format";
 import { CONTRACT_STATUS_TONE, CONTRACT_TABS, displayStatus } from "@/lib/contract/status";

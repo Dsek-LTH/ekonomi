@@ -40,7 +40,7 @@ export function CounterpartiesClient({ counterparties }: { counterparties: Count
                 type="button"
                 onClick={() => setEditing(c)}
                 className={cn(
-                  "text-left font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current",
+                  "text-left font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current",
                 )}
               >
                 {c.name}

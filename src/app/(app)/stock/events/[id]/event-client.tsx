@@ -47,7 +47,15 @@ import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconDots, IconList, IconLock, IconSwap, IconTrash, IconViewTable, IconX } from "@/components/ui/icons";
+import {
+  IconDots,
+  IconList,
+  IconLock,
+  IconSwap,
+  IconTrash,
+  IconViewTable,
+  IconX,
+} from "@/components/ui/icons";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -200,9 +208,7 @@ export default function EventClient({
    * scroll past when you are holding one of them.
    */
   const hunt = search.trim().toLowerCase();
-  const found = hunt
-    ? rows.filter((id) => byId.get(id)?.name.toLowerCase().includes(hunt))
-    : rows;
+  const found = hunt ? rows.filter((id) => byId.get(id)?.name.toLowerCase().includes(hunt)) : rows;
 
   /**
    * The drawn rows by drink type, in the order every stock screen keeps them,
@@ -497,7 +503,10 @@ export default function EventClient({
   // the ordinary mistake, and moving it moves everything booked on it.
   async function rename(raw: string) {
     const name = raw.trim();
-    if (!name) { notify.error(t("event.field.nameRequired")); return false; }
+    if (!name) {
+      notify.error(t("event.field.nameRequired"));
+      return false;
+    }
     return patchEvent({ name, date: event.date });
   }
   async function patchEvent(body: PatchStockEvent) {
@@ -530,9 +539,7 @@ export default function EventClient({
     // Counted by the transaction rather than by the page: somebody else may
     // have booked on the night between this screen loading and the button.
     notify.success(
-      gone.entries > 0
-        ? t("event.removedWithLog", { count: gone.entries })
-        : t("event.removed"),
+      gone.entries > 0 ? t("event.removedWithLog", { count: gone.entries }) : t("event.removed"),
     );
     // Not a push. The event is gone, and Back must not lead to its page.
     returnTo("/stock/events");
@@ -564,8 +571,6 @@ export default function EventClient({
     });
     setAdded((prev) => prev.filter((id) => id !== productId));
   }
-
-
 
   /**
    * The same row, a different product.
@@ -808,7 +813,9 @@ export default function EventClient({
         // 100 is an edit rather than a retype.
         onFocus={(e) => {
           setFocusKey(key);
-          setTyped((prev) => (prev[key] === undefined ? { ...prev, [key]: bookedText(key) } : prev));
+          setTyped((prev) =>
+            prev[key] === undefined ? { ...prev, [key]: bookedText(key) } : prev,
+          );
           const el = e.currentTarget;
           requestAnimationFrame(() => el.select());
         }}
@@ -906,256 +913,280 @@ export default function EventClient({
           <div className="border-t border-border px-inset py-3">
             <Link
               href={`/stock/history?event=${event.id}`}
-              className="text-sm font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
             >
               {t("event.movements", { count: event.entries })}
             </Link>
           </div>
         </Card>
       ) : (
-      <>
-      <Card>
-        <SheetHeader
-          t={t}
-          search={search}
-          onSearch={setSearch}
-          onScan={canManage ? scan : undefined}
-          kinds={CELL_KINDS}
-          column={column}
-          onColumn={setColumn}
-        />
+        <>
+          <Card>
+            <SheetHeader
+              t={t}
+              search={search}
+              onSearch={setSearch}
+              onScan={canManage ? scan : undefined}
+              kinds={CELL_KINDS}
+              column={column}
+              onColumn={setColumn}
+            />
 
-        {/* No CardBody: the sheet is ruled to the card's own edge, the way the
+            {/* No CardBody: the sheet is ruled to the card's own edge, the way the
             voucher editor is. A body would inset it by `px-inset` and the
             outermost column rule would float in a gutter. */}
-        {/* The spare rows *are* how a product gets onto the sheet, so an
+            {/* The spare rows *are* how a product gets onto the sheet, so an
             event with nothing on it still needs the table. Showing a note
             in its place left a new night with no way in at all. */}
-        {rows.length === 0 && !canManage ? (
-          <div className="px-inset py-6">
-            <EmptyNote>{t("event.nothing")}</EmptyNote>
-          </div>
-        ) : (
-          /* Only ever sideways where there is something to scroll to. On a
+            {rows.length === 0 && !canManage ? (
+              <div className="px-inset py-6">
+                <EmptyNote>{t("event.nothing")}</EmptyNote>
+              </div>
+            ) : (
+              /* Only ever sideways where there is something to scroll to. On a
              phone the sheet is three columns (product, the one being typed,
              and the total) and that fits: a grid you have to drag about in a
              cellar is a grid nobody finishes. */
-          <TableScroll minWidth="min-w-0 md:min-w-[36rem]">
-            {/* table-fixed: the header percentages decide the columns, so a
+              <TableScroll minWidth="min-w-0 md:min-w-[36rem]">
+                {/* table-fixed: the header percentages decide the columns, so a
                 long product name can never push the number columns about. */}
-            <table className="w-full table-fixed border-collapse text-sm">
-              <thead>
-                <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
-                  <th className={cn(headerCell, "w-[34%] text-left")}>{t("event.col.product")}</th>
-                  {CELL_KINDS.map((kind) => (
-                    <th
-                      key={kind}
-                      className={cn(headerCell, "w-[15%]", kind !== column && "hidden md:table-cell")}
-                    >
-                      {t(`kind.${kind}`)}
-                    </th>
-                  ))}
-                  <th className={cn(headerCell, "w-[21%]")}>{t("event.col.sold")}</th>
-                </tr>
-              </thead>
-
-              {groups.map(([category, ids]) => (
-                <Fragment key={category}>
-                  {/* The drink type, as a ruled line across the sheet rather
-                      than a heading over a card of its own. */}
-                  <tbody>
-                    <tr className="border-b border-border bg-surface/60">
-                      <td colSpan={span} className="px-3 py-1.5">
-                        <span className="flex items-center gap-2 text-xs font-medium text-muted">
-                          <CategoryMark category={category as StockLevelDto["category"]} />
-                          {t(`category.${category}`)}
-                        </span>
-                      </td>
+                <table className="w-full table-fixed border-collapse text-sm">
+                  <thead>
+                    <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+                      <th className={cn(headerCell, "w-[34%] text-left")}>
+                        {t("event.col.product")}
+                      </th>
+                      {CELL_KINDS.map((kind) => (
+                        <th
+                          key={kind}
+                          className={cn(
+                            headerCell,
+                            "w-[15%]",
+                            kind !== column && "hidden md:table-cell",
+                          )}
+                        >
+                          {t(`kind.${kind}`)}
+                        </th>
+                      ))}
+                      <th className={cn(headerCell, "w-[21%]")}>{t("event.col.sold")}</th>
                     </tr>
-                  </tbody>
-              {ids.map((productId) => {
-                const product = byId.get(productId);
-                if (!product) return null;
-                const totals = nightOf(product);
-                const fault = faultOn(productId);
-                const lines = sheetLines(product);
-                const isVolume = product.kind === "VOLUME";
-                const shelf = shelfOf(product);
+                  </thead>
 
-                return (
-                  <tbody
-                    key={productId}
-                    className="divide-y divide-border/40 border-b border-border last:border-0"
-                  >
-                    {/* A spirit's own row carries its name and its total; the
+                  {groups.map(([category, ids]) => (
+                    <Fragment key={category}>
+                      {/* The drink type, as a ruled line across the sheet rather
+                      than a heading over a card of its own. */}
+                      <tbody>
+                        <tr className="border-b border-border bg-surface/60">
+                          <td colSpan={span} className="px-3 py-1.5">
+                            <span className="flex items-center gap-2 text-xs font-medium text-muted">
+                              <CategoryMark category={category as StockLevelDto["category"]} />
+                              {t(`category.${category}`)}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                      {ids.map((productId) => {
+                        const product = byId.get(productId);
+                        if (!product) return null;
+                        const totals = nightOf(product);
+                        const fault = faultOn(productId);
+                        const lines = sheetLines(product);
+                        const isVolume = product.kind === "VOLUME";
+                        const shelf = shelfOf(product);
+
+                        return (
+                          <tbody
+                            key={productId}
+                            className="divide-y divide-border/40 border-b border-border last:border-0"
+                          >
+                            {/* A spirit's own row carries its name and its total; the
                         typing happens on the ladder below it. A can has no
                         ladder, so its one row is both. */}
-                    <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>
-                      <td className="group px-2 py-1.5 align-middle">
-                        <div className="flex items-center justify-between gap-2">
-                          {swapping === productId ? (
-                            // The row's name, while it is being changed. In
-                            // place rather than in a dialog: what is being
-                            // answered is "which product is this row", and the
-                            // row is where that question is.
-                            <div className="flex min-w-0 flex-1 items-center gap-1">
-                              <div className="min-w-0 flex-1">
-                                <Combobox
-                                  autoFocus
-                                  size="sm"
-                                  value=""
-                                  onChange={(toId) => swap(productId, toId)}
-                                  // Never one already on the sheet, since two
-                                  // rows for one product is what the unique index
-                                  // on a cell forbids, and never one counted
-                                  // differently: a spirit's rungs have nowhere
-                                  // to land on a can.
-                                  options={products
-                                    .filter(
-                                      (p) => !rows.includes(p.id) && p.kind === product.kind,
-                                    )
-                                    .map((p) => ({ value: p.id, label: p.name }))}
-                                  placeholder={t("event.sheet.swapTo")}
-                                  searchPlaceholder={t("event.sheet.addSearch")}
-                                  aria-label={t("event.sheet.swap")}
-                                  align="left"
-                                />
-                              </div>
-                              <IconButton
-                                label={t("event.sheet.swapCancel")}
-                                onClick={() => setSwapping(null)}
-                              >
-                                <IconX className="size-4" />
-                              </IconButton>
-                            </div>
-                          ) : (
-                            // The name, and under it what the cellar holds.
-                            // On one line they ran together, and a long name
-                            // pushed the stock count onto a line of its own
-                            // anyway, at a different place on every row.
-                            <span className="min-w-0">
-                              <Link
-                                href={`/stock/${productId}`}
-                                className="block truncate font-medium hover:underline"
-                              >
-                                {product.name}
-                              </Link>
-                              <span className="block truncate text-xs text-muted">
-                                {isVolume
-                                  ? t("holding.volume", {
-                                      sealed: shelf.sealed,
-                                      open: LEVELS.reduce((n, l) => n + (shelf.open[l] ?? 0), 0),
-                                    })
-                                  : t("holding.unit", { units: shelf.sealed })}
-                              </span>
-                              {fault && (
-                                <span className="block text-xs text-danger">
-                                  {t(`fault.${fault}`)}
-                                </span>
-                              )}
-                            </span>
-                          )}
-                          {/* What can be done to the row itself, as opposed to
+                            <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>
+                              <td className="group px-2 py-1.5 align-middle">
+                                <div className="flex items-center justify-between gap-2">
+                                  {swapping === productId ? (
+                                    // The row's name, while it is being changed. In
+                                    // place rather than in a dialog: what is being
+                                    // answered is "which product is this row", and the
+                                    // row is where that question is.
+                                    <div className="flex min-w-0 flex-1 items-center gap-1">
+                                      <div className="min-w-0 flex-1">
+                                        <Combobox
+                                          autoFocus
+                                          size="sm"
+                                          value=""
+                                          onChange={(toId) => swap(productId, toId)}
+                                          // Never one already on the sheet, since two
+                                          // rows for one product is what the unique index
+                                          // on a cell forbids, and never one counted
+                                          // differently: a spirit's rungs have nowhere
+                                          // to land on a can.
+                                          options={products
+                                            .filter(
+                                              (p) =>
+                                                !rows.includes(p.id) && p.kind === product.kind,
+                                            )
+                                            .map((p) => ({
+                                              value: p.id,
+                                              label: p.name,
+                                            }))}
+                                          placeholder={t("event.sheet.swapTo")}
+                                          searchPlaceholder={t("event.sheet.addSearch")}
+                                          aria-label={t("event.sheet.swap")}
+                                          align="left"
+                                        />
+                                      </div>
+                                      <IconButton
+                                        label={t("event.sheet.swapCancel")}
+                                        onClick={() => setSwapping(null)}
+                                      >
+                                        <IconX className="size-4" />
+                                      </IconButton>
+                                    </div>
+                                  ) : (
+                                    // The name, and under it what the cellar holds.
+                                    // On one line they ran together, and a long name
+                                    // pushed the stock count onto a line of its own
+                                    // anyway, at a different place on every row.
+                                    <span className="min-w-0">
+                                      <Link
+                                        href={`/stock/${productId}`}
+                                        className="block truncate font-medium hover:underline"
+                                      >
+                                        {product.name}
+                                      </Link>
+                                      <span className="block truncate text-xs text-muted">
+                                        {isVolume
+                                          ? t("holding.volume", {
+                                              sealed: shelf.sealed,
+                                              open: LEVELS.reduce(
+                                                (n, l) => n + (shelf.open[l] ?? 0),
+                                                0,
+                                              ),
+                                            })
+                                          : t("holding.unit", {
+                                              units: shelf.sealed,
+                                            })}
+                                      </span>
+                                      {fault && (
+                                        <span className="block text-xs text-danger">
+                                          {t(`fault.${fault}`)}
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                  {/* What can be done to the row itself, as opposed to
                               its figures. Two things, so a menu rather than two
                               icons competing for the same corner, and icon
                               only, because forty rows carrying a word each is a
                               column of repeated text where the products should
                               be. */}
-                          {canManage && swapping !== productId && (
-                            <Menu
-                              label={t("event.sheet.rowActions")}
-                              iconOnly
-                              variant="ghost"
-                              size="sm"
-                              icon={<IconDots className="size-4" />}
-                              className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 md:opacity-100"
-                            >
-                              <MenuItem onClick={() => setSwapping(productId)}>
-                                <IconSwap className="size-4 shrink-0 text-muted" />
-                                {t("event.sheet.swap")}
-                              </MenuItem>
-                              {/* Taking a product off the event entirely. It
+                                  {canManage && swapping !== productId && (
+                                    <Menu
+                                      label={t("event.sheet.rowActions")}
+                                      iconOnly
+                                      variant="ghost"
+                                      size="sm"
+                                      icon={<IconDots className="size-4" />}
+                                      className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 md:opacity-100"
+                                    >
+                                      <MenuItem onClick={() => setSwapping(productId)}>
+                                        <IconSwap className="size-4 shrink-0 text-muted" />
+                                        {t("event.sheet.swap")}
+                                      </MenuItem>
+                                      {/* Taking a product off the event entirely. It
                                   removes its rows rather than zeroing them:
                                   picking the wrong beer is not a movement of
                                   nothing, it is no movement, and the log should
                                   say so. */}
-                              <MenuItem
-                                onClick={() => drop(productId)}
-                                className="text-danger hover:bg-danger-soft"
-                              >
-                                <IconTrash className="size-4 shrink-0" />
-                                {t("event.sheet.remove")}
-                              </MenuItem>
-                            </Menu>
-                          )}
-                        </div>
-                      </td>
+                                      <MenuItem
+                                        onClick={() => drop(productId)}
+                                        className="text-danger hover:bg-danger-soft"
+                                      >
+                                        <IconTrash className="size-4 shrink-0" />
+                                        {t("event.sheet.remove")}
+                                      </MenuItem>
+                                    </Menu>
+                                  )}
+                                </div>
+                              </td>
 
-                      {CELL_KINDS.map((kind) => (
-                        <td
-                          key={kind}
-                          className={cn("p-0 align-middle", kind !== column && "hidden md:table-cell")}
-                        >
-                          {!isVolume && cellFor(product, kind, lines[0])}
-                        </td>
-                      ))}
+                              {CELL_KINDS.map((kind) => (
+                                <td
+                                  key={kind}
+                                  className={cn(
+                                    "p-0 align-middle",
+                                    kind !== column && "hidden md:table-cell",
+                                  )}
+                                >
+                                  {!isVolume && cellFor(product, kind, lines[0])}
+                                </td>
+                              ))}
 
-                      <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
-                        {amount(product.kind, totals.sold)}
-                      </td>
-                    </tr>
+                              <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
+                                {amount(product.kind, totals.sold)}
+                              </td>
+                            </tr>
 
-                    {isVolume &&
-                      lines.map((level) => (
-                        <tr key={level} className="divide-x divide-border">
-                          {/* The rung as the bottle it stands for, and how
+                            {isVolume &&
+                              lines.map((level) => (
+                                <tr key={level} className="divide-x divide-border">
+                                  {/* The rung as the bottle it stands for, and how
                               many of those the night found on the shelf. It
                               was "↳ 80 % - 3", which left the 3 to be
                               guessed at. */}
-                          <td className="py-1 pl-4 pr-2 align-middle">
-                            <span className="flex items-center gap-1.5 text-xs text-muted">
-                              <Bottle level={level === WHOLE ? 100 : level} />
-                              <span className="text-foreground">{rungName(level)}</span>
-                              <span className="ml-auto truncate tabular-nums">
-                                {t("event.sheet.onShelf", { count: available(product, level) })}
-                              </span>
-                            </span>
-                          </td>
-                          {CELL_KINDS.map((kind) => (
-                            <td
-                              key={kind}
-                              className={cn(
-                                "p-0 align-middle",
-                                kind !== column && "hidden md:table-cell",
-                              )}
-                            >
-                              {cellFor(product, kind, level)}
-                            </td>
-                          ))}
-                          <td />
-                        </tr>
-                      ))}
-                  </tbody>
-                );
-              })}
-                </Fragment>
-              ))}
+                                  <td className="py-1 pl-4 pr-2 align-middle">
+                                    <span className="flex items-center gap-1.5 text-xs text-muted">
+                                      <Bottle level={level === WHOLE ? 100 : level} />
+                                      <span className="text-foreground">{rungName(level)}</span>
+                                      <span className="ml-auto truncate tabular-nums">
+                                        {t("event.sheet.onShelf", {
+                                          count: available(product, level),
+                                        })}
+                                      </span>
+                                    </span>
+                                  </td>
+                                  {CELL_KINDS.map((kind) => (
+                                    <td
+                                      key={kind}
+                                      className={cn(
+                                        "p-0 align-middle",
+                                        kind !== column && "hidden md:table-cell",
+                                      )}
+                                    >
+                                      {cellFor(product, kind, level)}
+                                    </td>
+                                  ))}
+                                  <td />
+                                </tr>
+                              ))}
+                          </tbody>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
 
-              {/* Said inside the table rather than in place of it: the spare
+                  {/* Said inside the table rather than in place of it: the spare
                   rows below are where you would go next, and hiding them to
                   say "nothing matches" would hide the answer with the
                   question. */}
-              {shown.length === 0 && rows.length > 0 && (
-                <tbody>
-                  <tr>
-                    <td colSpan={span} className="px-inset py-4">
-                      <EmptyNote>{t("event.sheet.noMatch", { text: search.trim() })}</EmptyNote>
-                    </td>
-                  </tr>
-                </tbody>
-              )}
+                  {shown.length === 0 && rows.length > 0 && (
+                    <tbody>
+                      <tr>
+                        <td colSpan={span} className="px-inset py-4">
+                          <EmptyNote>
+                            {t("event.sheet.noMatch", {
+                              text: search.trim(),
+                            })}
+                          </EmptyNote>
+                        </td>
+                      </tr>
+                    </tbody>
+                  )}
 
-              {/* The next line, the way a sheet always has one. Typing a name
+                  {/* The next line, the way a sheet always has one. Typing a name
                   into it puts that product on the event, and a name nothing
                   answers to offers to make it.
 
@@ -1164,57 +1195,66 @@ export default function EventClient({
                   saves you making room each time. Here the quick way in is the
                   scanner, so the queue bought nothing and cost three pickers'
                   worth of empty space at the foot of every sheet. */}
-              {canManage && (
-                <tbody>
-                  <tr className="divide-x divide-border">
-                    <td className="p-0 align-middle">
-                      {/* Picking by name. The scanner, the quicker way in,
+                  {canManage && (
+                    <tbody>
+                      <tr className="divide-x divide-border">
+                        <td className="p-0 align-middle">
+                          {/* Picking by name. The scanner, the quicker way in,
                           is on the toolbar beside the search: a code the
                           event already has jumps to that product's row, so
                           it finds as much as it adds. */}
-                      <div className="flex items-center">
-                        <div className="min-w-0 flex-1">
-                          <Combobox
-                            value=""
-                            onChange={add}
-                            options={products
-                              .filter((p) => !rows.includes(p.id))
-                              .map((p) => ({ value: p.id, label: p.name }))}
-                            onCreate={invent}
-                            createLabel={(text) => t("event.sheet.newProduct", { name: text })}
-                            placeholder={t("event.sheet.addProduct")}
-                            searchPlaceholder={t("event.sheet.addSearch")}
-                            aria-label={t("event.sheet.addProduct")}
-                            align="left"
-                            buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
+                          <div className="flex items-center">
+                            <div className="min-w-0 flex-1">
+                              <Combobox
+                                value=""
+                                onChange={add}
+                                options={products
+                                  .filter((p) => !rows.includes(p.id))
+                                  .map((p) => ({
+                                    value: p.id,
+                                    label: p.name,
+                                  }))}
+                                onCreate={invent}
+                                createLabel={(text) =>
+                                  t("event.sheet.newProduct", {
+                                    name: text,
+                                  })
+                                }
+                                placeholder={t("event.sheet.addProduct")}
+                                searchPlaceholder={t("event.sheet.addSearch")}
+                                aria-label={t("event.sheet.addProduct")}
+                                align="left"
+                                buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        {CELL_KINDS.map((kind) => (
+                          <td
+                            key={kind}
+                            className={cn(kind !== column && "hidden md:table-cell")}
                           />
-                        </div>
-                      </div>
-                    </td>
-                    {CELL_KINDS.map((kind) => (
-                      <td key={kind} className={cn(kind !== column && "hidden md:table-cell")} />
-                    ))}
-                    <td />
-                  </tr>
-                </tbody>
-              )}
-            </table>
-          </TableScroll>
-        )}
+                        ))}
+                        <td />
+                      </tr>
+                    </tbody>
+                  )}
+                </table>
+              </TableScroll>
+            )}
 
-        {canManage && (
-          <SheetSaveBar
-            t={t}
-            changed={changed}
-            faults={faults}
-            pending={pending}
-            onSave={save}
-            onDiscard={discard}
-          />
-        )}
-      </Card>
-
-      </>
+            {canManage && (
+              <SheetSaveBar
+                t={t}
+                changed={changed}
+                faults={faults}
+                pending={pending}
+                onSave={save}
+                onDiscard={discard}
+              />
+            )}
+          </Card>
+        </>
       )}
 
       {overlay}

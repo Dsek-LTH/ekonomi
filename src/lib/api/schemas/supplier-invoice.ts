@@ -83,7 +83,14 @@ export type PatchSupplierInvoice = z.infer<typeof PatchSupplierInvoice>;
  * sending it to Fortnox is ../export.
  */
 export const TransitionSupplierInvoice = z.object({
-  action: z.enum(["assign", "attest", "withdraw_attest", "redistribute", "book", "request_changes"]),
+  action: z.enum([
+    "assign",
+    "attest",
+    "withdraw_attest",
+    "redistribute",
+    "book",
+    "request_changes",
+  ]),
   resultUnitId: Id.optional(),
   rows: z.array(KonteringRow).min(1).max(20).optional(),
   /** With the fördelning: the amount it is split against, öre, as the unit

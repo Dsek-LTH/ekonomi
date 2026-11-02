@@ -25,11 +25,7 @@ export interface VoucherLine {
  * and the screen shows the same sentence.
  */
 export type VoucherBlocker =
-  | "twoLines"
-  | "accountRequired"
-  | "amountRequired"
-  | "negativeAmounts"
-  | "unbalanced";
+  "twoLines" | "accountRequired" | "amountRequired" | "negativeAmounts" | "unbalanced";
 
 /**
  * The two sides, and what stands between them. Öre.

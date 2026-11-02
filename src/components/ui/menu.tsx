@@ -117,7 +117,9 @@ export function Menu({
   // twice for one change.
   useEffect(() => {
     if (!holdOpen) return;
-    const frame = requestAnimationFrame(() => setRect(triggerRef.current?.getBoundingClientRect() ?? null));
+    const frame = requestAnimationFrame(() =>
+      setRect(triggerRef.current?.getBoundingClientRect() ?? null),
+    );
     return () => cancelAnimationFrame(frame);
   }, [holdOpen, setRect]);
 
@@ -215,26 +217,28 @@ export function Menu({
           z-[210] is the combobox's layer, and for the same reason: both are
           popovers over a field, both have to clear a modal at z-[200], and both
           belong under the notifications at z-[220]. */}
-      {shown && rect && createPortal(
-        <div
-          ref={panelRef}
-          role="menu"
-          aria-label={label}
-          // A layer of its own, over whatever it was opened from. A dialog
-          // underneath holds Tab inside itself and has to leave this alone.
-          // See lib/ui/focus-trap.ts.
-          data-popup-layer=""
+      {shown &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            aria-label={label}
+            // A layer of its own, over whatever it was opened from. A dialog
+            // underneath holds Tab inside itself and has to leave this alone.
+            // See lib/ui/focus-trap.ts.
+            data-popup-layer=""
 
-          style={panelStyle()}
-          className={cn(
-            "z-[210] max-h-[min(70vh,26rem)] w-max max-w-[min(22rem,80vw)] overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)]",
-            narrow ? "min-w-28" : "min-w-56",
-          )}
-        >
-          <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>
-        </div>,
-        document.body,
-      )}
+            style={panelStyle()}
+            className={cn(
+              "z-[210] max-h-[min(70vh,26rem)] w-max max-w-[min(22rem,80vw)] overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)]",
+              narrow ? "min-w-28" : "min-w-56",
+            )}
+          >
+            <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

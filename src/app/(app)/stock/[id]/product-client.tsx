@@ -256,7 +256,12 @@ export default function StockProductClient({
                 large: the sealed with their count and every opened bottle at
                 its level. The figures below are the same shelf spelled out. */}
             <div className="border-b border-border px-inset py-4">
-              <BottleLevels kind={product.kind} sealed={onHand.units} open={onHand.open} size="lg" />
+              <BottleLevels
+                kind={product.kind}
+                sealed={onHand.units}
+                open={onHand.open}
+                size="lg"
+              />
             </div>
             <CardBody className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-x-6 gap-y-4">
               <Detail
@@ -278,7 +283,9 @@ export default function StockProductClient({
               <Detail
                 label={t("product.totalVolume")}
                 value={
-                  onHand.totalMl == null ? "-" : t("litres", { litres: formatLitres(onHand.totalMl) })
+                  onHand.totalMl == null
+                    ? "-"
+                    : t("litres", { litres: formatLitres(onHand.totalMl) })
                 }
                 dim={onHand.totalMl == null}
               />
@@ -289,9 +296,7 @@ export default function StockProductClient({
             </CardBody>
           </Card>
 
-          {product.impossible && (
-            <p className="text-sm text-danger">{t("product.impossible")}</p>
-          )}
+          {product.impossible && <p className="text-sm text-danger">{t("product.impossible")}</p>}
           {/* A made-up barcode, from before the field checked: the product
               cannot be scanned by it, and the next edit will refuse it. Said
               here with what to do, so it is fixed on purpose rather than
@@ -367,10 +372,7 @@ export default function StockProductClient({
                 label={t("products.field.category")}
                 value={t(`category.${product.category}`)}
               />
-              <Detail
-                label={t("products.field.kind")}
-                value={t(`kindName.${product.kind}`)}
-              />
+              <Detail label={t("products.field.kind")} value={t(`kindName.${product.kind}`)} />
               <Detail
                 label={t("products.field.tags")}
                 value={
@@ -387,11 +389,11 @@ export default function StockProductClient({
                   product.ean ? (
                     <span className="flex flex-wrap items-center gap-1.5">
                       <span className="tabular-nums">{product.ean}</span>
-                      {isInternalCode(product.ean) && (
-                        <Tag size="sm">{t("barcode.ownTag")}</Tag>
-                      )}
+                      {isInternalCode(product.ean) && <Tag size="sm">{t("barcode.ownTag")}</Tag>}
                       {!validGtin(product.ean) && (
-                        <Tag size="sm" tone="warning">{t("barcode.invalidTag")}</Tag>
+                        <Tag size="sm" tone="warning">
+                          {t("barcode.invalidTag")}
+                        </Tag>
                       )}
                     </span>
                   ) : (
@@ -412,7 +414,7 @@ export default function StockProductClient({
                       href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="tabular-nums text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+                      className="tabular-nums text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
                     >
                       {product.systembolagetId}
                     </a>
@@ -428,13 +430,7 @@ export default function StockProductClient({
               />
               <Detail
                 label={t("product.size")}
-                value={
-                  size == null ? (
-                    <span className="text-muted">-</span>
-                  ) : (
-                    t("ml", { ml: size })
-                  )
-                }
+                value={size == null ? <span className="text-muted">-</span> : t("ml", { ml: size })}
               />
               <Detail
                 label={t("product.abv")}
@@ -462,7 +458,9 @@ export default function StockProductClient({
                   alcoholPerKrona(product) == null ? (
                     <span className="text-muted">-</span>
                   ) : (
-                    t("clPerKrona", { cl: formatClPerKrona(alcoholPerKrona(product)!) })
+                    t("clPerKrona", {
+                      cl: formatClPerKrona(alcoholPerKrona(product)!),
+                    })
                   )
                 }
               />
@@ -476,10 +474,7 @@ export default function StockProductClient({
               what came back, and what that came to. Anything somebody later
               changed about a night hangs off that night's own row. */}
           <Card>
-            <CardHeader
-              title={t("product.events")}
-              subtitle={t("product.eventsHint")}
-            />
+            <CardHeader title={t("product.events")} subtitle={t("product.eventsHint")} />
             <EventTable rows={events} kind={product.kind} />
           </Card>
         </div>
@@ -496,7 +491,7 @@ export default function StockProductClient({
               action={
                 <Link
                   href={`/stock/history?product=${product.id}`}
-                  className="text-sm font-medium text-accent"
+                  className="text-sm font-medium text-link"
                 >
                   {t("product.wholeLog")}
                 </Link>
@@ -513,11 +508,7 @@ export default function StockProductClient({
       </div>
 
       {editing && (
-        <ProductDialog
-          product={product}
-          knownTags={knownTags}
-          onClose={() => setEditing(false)}
-        />
+        <ProductDialog product={product} knownTags={knownTags} onClose={() => setEditing(false)} />
       )}
       {buying && (
         <PurchaseDialog
@@ -572,10 +563,7 @@ function Detail({
     <div className="min-w-0">
       <p className="text-[13px] text-muted">{label}</p>
       <div
-        className={cn(
-          "mt-0.5 text-sm font-medium tabular-nums",
-          dim && "font-normal text-muted",
-        )}
+        className={cn("mt-0.5 text-sm font-medium tabular-nums", dim && "font-normal text-muted")}
       >
         {value}
       </div>
@@ -595,10 +583,7 @@ function Detail({
 function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
   const t = useTranslations("stock");
   const controls = useTableControls();
-  const amount = (n: number) =>
-    kind === "VOLUME"
-      ? formatMovementLitres(n)
-      : String(n);
+  const amount = (n: number) => (kind === "VOLUME" ? formatMovementLitres(n) : String(n));
 
   const figure = (key: string, pick: (r: ProductEventDto) => number, strong = false) => ({
     key,
@@ -654,7 +639,9 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
       controls={controls}
       rowKey={(r) => r.eventId}
       searchPlaceholder={t("product.searchEvents")}
-      expansion={(r) => (r.changes.length ? <ChangeFeed changes={r.changes} scope="event" /> : null)}
+      expansion={(r) =>
+        r.changes.length ? <ChangeFeed changes={r.changes} scope="event" /> : null
+      }
       empty={t("product.noEvents")}
     />
   );
@@ -702,7 +689,9 @@ function CellarTable({
       mobile: "title",
       cell: (r) => (
         <span className="font-medium">
-          {isChange(r) ? t("product.correctionOf", { kind: t(`kind.${r.kind}`) }) : t(`kind.${r.kind}`)}
+          {isChange(r)
+            ? t("product.correctionOf", { kind: t(`kind.${r.kind}`) })
+            : t(`kind.${r.kind}`)}
         </span>
       ),
     },
@@ -769,7 +758,7 @@ function CellarTable({
           <button
             type="button"
             onClick={() => onFix(r)}
-            className="relative z-10 text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+            className="relative z-10 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
           >
             {t("entry.fix")}
           </button>
@@ -779,7 +768,7 @@ function CellarTable({
           <button
             type="button"
             onClick={() => onToPurchase(r)}
-            className="relative z-10 whitespace-nowrap text-xs font-medium text-accent underline decoration-faint underline-offset-2 hover:decoration-current"
+            className="relative z-10 whitespace-nowrap text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
           >
             {t("toPurchase.action")}
           </button>
@@ -798,7 +787,6 @@ function CellarTable({
     />
   );
 }
-
 
 /**
  * The best-before schedule for one product: a row per delivery still on the
@@ -864,7 +852,9 @@ function CheckTable({
                 {check.quiet ? (
                   <Tag size="sm">{t("expiry.stateChecked", { date: check.checkedAt ?? "" })}</Tag>
                 ) : check.state === "over" ? (
-                  <Tag size="sm" tone="warning">{t("expiry.stateOver", { days: -check.daysLeft })}</Tag>
+                  <Tag size="sm" tone="warning">
+                    {t("expiry.stateOver", { days: -check.daysLeft })}
+                  </Tag>
                 ) : check.state === "soon" ? (
                   <Tag size="sm" className="text-foreground">
                     {t("expiry.stateSoon", { days: check.daysLeft })}

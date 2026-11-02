@@ -46,7 +46,9 @@ describe("evidenceFor", () => {
 
   it("has nothing for a voucher made in Fortnox", () => {
     const index = indexAppVouchers([expense(12, 45000)]);
-    expect(evidenceFor({ series: "A", number: 13, debit: 100 }, index)).toEqual({ kind: "none" });
+    expect(evidenceFor({ series: "A", number: 13, debit: 100 }, index)).toEqual({
+      kind: "none",
+    });
   });
 
   it("does not vouch for a number Fortnox has given to a different voucher", () => {

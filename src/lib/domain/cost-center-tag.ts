@@ -34,7 +34,10 @@ export function withCostCenterTag(text: string, code: string, max = ROW_TEXT_MAX
 /** `text` with the cost centre's tag taken off, wherever it is. */
 export function withoutCostCenterTag(text: string, code: string): string {
   if (!code || !hasTag(text, code)) return text;
-  return text.replace(costCenterTag(code), "").replace(/\s{2,}/g, " ").trim();
+  return text
+    .replace(costCenterTag(code), "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 /**

@@ -33,15 +33,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
   const { invoice } = access;
-  if (invoice.exportClaimState !== "UNCERTAIN") return fail(409, "supplierInvoice.nothingToRelease");
+  if (invoice.exportClaimState !== "UNCERTAIN")
+    return fail(409, "supplierInvoice.nothingToRelease");
 
-  const where = { id: invoice.id, exportClaimState: "UNCERTAIN" as const, exportClaimedAt: invoice.exportClaimedAt };
+  const where = {
+    id: invoice.id,
+    exportClaimState: "UNCERTAIN" as const,
+    exportClaimedAt: invoice.exportClaimedAt,
+  };
   const cleared = { exportClaimedAt: null, exportClaimedById: null, exportClaimState: null };
 
   const result = await commit(() =>
     prisma.$transaction(async (tx) => {
       if (body.outcome === "not_created") {
-        applied(await tx.supplierInvoice.updateMany({ where, data: cleared }), "supplierInvoice.changedMeanwhile");
+        applied(
+          await tx.supplierInvoice.updateMany({ where, data: cleared }),
+          "supplierInvoice.changedMeanwhile",
+        );
         await tx.supplierInvoiceEvent.create({
           data: { invoiceId: invoice.id, type: "EXPORT_RELEASED", actorId: g.actor.id },
         });
@@ -61,7 +69,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         "supplierInvoice.changedMeanwhile",
       );
       await tx.supplierInvoiceEvent.create({
-        data: { invoiceId: invoice.id, type: "EXPORTED", actorId: g.actor.id, comment: body.givenNumber },
+        data: {
+          invoiceId: invoice.id,
+          type: "EXPORTED",
+          actorId: g.actor.id,
+          comment: body.givenNumber,
+        },
       });
       return "EXPORTED" as const;
     }),

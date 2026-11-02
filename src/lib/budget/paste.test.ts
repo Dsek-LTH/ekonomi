@@ -67,7 +67,9 @@ describe("rebindCopiedRefs", () => {
   });
 
   it("survives a row whose values column is not an object", () => {
-    expect(rebindCopiedRefs(row({ expression: "@Lold1:expression", values: null }), copied)).toEqual({
+    expect(
+      rebindCopiedRefs(row({ expression: "@Lold1:expression", values: null }), copied),
+    ).toEqual({
       expression: "@Lnew1:expression",
       quantity: null,
       unitPrice: null,

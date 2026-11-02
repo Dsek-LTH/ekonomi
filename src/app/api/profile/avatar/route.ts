@@ -56,7 +56,10 @@ export async function PUT(req: Request) {
     return fail(503, "avatar.storageUnavailable");
   }
 
-  const before = await prisma.user.findUnique({ where: { id: g.actor.id }, select: { avatarKey: true } });
+  const before = await prisma.user.findUnique({
+    where: { id: g.actor.id },
+    select: { avatarKey: true },
+  });
   await prisma.user.update({
     where: { id: g.actor.id },
     data: { avatarKey: key, avatarUpdatedAt: now },
@@ -73,7 +76,10 @@ export async function DELETE() {
   const g = await gate();
   if (!g.ok) return g.res;
 
-  const before = await prisma.user.findUnique({ where: { id: g.actor.id }, select: { avatarKey: true } });
+  const before = await prisma.user.findUnique({
+    where: { id: g.actor.id },
+    select: { avatarKey: true },
+  });
   if (!before?.avatarKey) return new NextResponse(null, { status: 204 });
   await prisma.user.update({
     where: { id: g.actor.id },

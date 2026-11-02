@@ -23,7 +23,9 @@ export async function POST(req: Request) {
   // Two rates starting on the same day is not a period anybody could resolve,
   // and the column says so too, caught here so the answer is a sentence
   // rather than a unique-constraint 500.
-  const clash = await prisma.mileageRate.findUnique({ where: { validFrom: new Date(validFrom) } });
+  const clash = await prisma.mileageRate.findUnique({
+    where: { validFrom: new Date(validFrom) },
+  });
   if (clash) return fail(409, "mileage.rateExists", { values: { date: validFrom } });
 
   const rate = await prisma.mileageRate.create({

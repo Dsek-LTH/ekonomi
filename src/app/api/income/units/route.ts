@@ -46,7 +46,9 @@ export async function POST(req: Request) {
     if (!cc) return fail(422, "income.unknownCostCenter");
     // Only one of the unit's own cost centres. See the PATCH beside this.
     if (resultUnitForCode(cc.code, await getPrefixes())?.resultUnitId !== unit.id) {
-      return fail(422, "income.costCenterOutsideUnit", { values: { code: cc.code, name: unit.name } });
+      return fail(422, "income.costCenterOutsideUnit", {
+        values: { code: cc.code, name: unit.name },
+      });
     }
   }
 

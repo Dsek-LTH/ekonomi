@@ -4,6 +4,9 @@ import { getContractTags } from "@/lib/data/contracts";
 import { contractScopeOf } from "@/lib/data/contract-scope";
 import { getCounterpartyOptions } from "@/lib/data/counterparties";
 import { UploadContractClient } from "./upload-client";
+import { titled } from "@/lib/server/page-title";
+
+export const generateMetadata = titled("uploadContract");
 
 export default async function UploadContractPage() {
   // Filing an arbitrary agreement is the wide grant. An uthyrningsansvarig

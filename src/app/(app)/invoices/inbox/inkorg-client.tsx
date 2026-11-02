@@ -99,7 +99,11 @@ export function InkorgClient({
   const tabs: ClientTabFilter<InboxDocument> | undefined = useMemo(
     () =>
       tabValues.length > 1
-        ? tabValues.map((value) => ({ value, label: t(`tab.${value}`), predicate: TAB_HOLDS[value] }))
+        ? tabValues.map((value) => ({
+            value,
+            label: t(`tab.${value}`),
+            predicate: TAB_HOLDS[value],
+          }))
         : undefined,
     // The values follow from the two flags.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -176,7 +180,9 @@ export function InkorgClient({
       searchable: true,
       cell: (d) => (
         <span className="block truncate">
-          {d.fromName ?? d.fromAddress ?? <span className="text-muted">{t("uploadedByUnknown")}</span>}
+          {d.fromName ?? d.fromAddress ?? (
+            <span className="text-muted">{t("uploadedByUnknown")}</span>
+          )}
         </span>
       ),
     },
@@ -219,18 +225,18 @@ export function InkorgClient({
       mobile: "hide",
       cell: (d) =>
         d.can.canDelete && (
-        // Above the row's link, which covers the row so a click anywhere
-        // opens it. See the note on rowHref in components/ui/data-table.tsx.
-        <span className="relative z-10 flex justify-end">
-          <IconButton
-            tone="danger"
-            label={t("delete")}
-            loading={remover.pending === d.id}
-            onClick={() => void remove(d)}
-          >
-            <IconTrash className="size-4" />
-          </IconButton>
-        </span>
+          // Above the row's link, which covers the row so a click anywhere
+          // opens it. See the note on rowHref in components/ui/data-table.tsx.
+          <span className="relative z-10 flex justify-end">
+            <IconButton
+              tone="danger"
+              label={t("delete")}
+              loading={remover.pending === d.id}
+              onClick={() => void remove(d)}
+            >
+              <IconTrash className="size-4" />
+            </IconButton>
+          </span>
         ),
     },
   ];
@@ -269,7 +275,9 @@ export function InkorgClient({
           rows={rows}
           controls={controls}
           tabs={tabs}
-          action={triage ? <UploadButton upload={upload} address={health?.address ?? null} /> : undefined}
+          action={
+            triage ? <UploadButton upload={upload} address={health?.address ?? null} /> : undefined
+          }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
           // The open row's link closes it again; any other opens that one.
@@ -283,7 +291,9 @@ export function InkorgClient({
               ? "bg-accent-soft hover:bg-accent-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--color-accent)]"
               : undefined
           }
-          empty={documents.length === 0 ? (triage ? t("emptyTitle") : t("unitEmptyTitle")) : t("noMatch")}
+          empty={
+            documents.length === 0 ? (triage ? t("emptyTitle") : t("unitEmptyTitle")) : t("noMatch")
+          }
         />
       </Card>
 
@@ -303,14 +313,23 @@ function useUpload() {
     setCount((c) => c + 1);
     const form = new FormData();
     form.append("file", file);
-    const ok = await m.mutate("/api/supplier-invoice-documents", { body: form, key: file.name });
+    const ok = await m.mutate("/api/supplier-invoice-documents", {
+      body: form,
+      key: file.name,
+    });
     setCount((c) => c - 1);
     if (ok) notify.success(t("uploaded", { name: file.name }));
   }
   return { send, busy: count > 0 };
 }
 
-function UploadButton({ upload, address }: { upload: ReturnType<typeof useUpload>; address: string | null }) {
+function UploadButton({
+  upload,
+  address,
+}: {
+  upload: ReturnType<typeof useUpload>;
+  address: string | null;
+}) {
   const t = useTranslations("invoices.inkorg");
   const picker = useRef<HTMLInputElement>(null);
   return (
@@ -328,7 +347,12 @@ function UploadButton({ upload, address }: { upload: ReturnType<typeof useUpload
           for (const f of files) void upload.send(f);
         }}
       />
-      <Button size="sm" variant="primary" loading={upload.busy} onClick={() => picker.current?.click()}>
+      <Button
+        size="sm"
+        variant="primary"
+        loading={upload.busy}
+        onClick={() => picker.current?.click()}
+      >
         <IconUpload className="size-4" />
         {t("upload")}
       </Button>
@@ -395,13 +419,17 @@ function DocumentBar({
   return (
     <div className="space-y-2 px-4 py-3">
       {d.returned && (
-        <p className="line-clamp-2 whitespace-pre-line text-xs text-danger" title={d.returned.reason}>
+        <p
+          className="line-clamp-2 whitespace-pre-line text-xs text-danger"
+          title={d.returned.reason}
+        >
           {t("returned", { unit: d.returned.from ?? "-", reason: d.returned.reason })}
         </p>
       )}
       {d.note && (
         <p className="line-clamp-2 whitespace-pre-line text-xs text-muted" title={d.note}>
-          <span className="font-medium text-foreground">{d.fromName ?? d.fromAddress}:</span> {d.note}
+          <span className="font-medium text-foreground">{d.fromName ?? d.fromAddress}:</span>{" "}
+          {d.note}
         </p>
       )}
       {/* One row, whatever the panel's width: the buttons keep their size and
@@ -419,7 +447,10 @@ function DocumentBar({
                 <span className={`${LABEL} mb-1 block truncate`}>{t("createUnit")}</span>
                 <Combobox
                   size="sm"
-                  options={resultUnits.map((u) => ({ value: u.id, label: u.name }))}
+                  options={resultUnits.map((u) => ({
+                    value: u.id,
+                    label: u.name,
+                  }))}
                   value={unit}
                   onChange={setUnit}
                   placeholder={t("createUnitPlaceholder")}
@@ -454,7 +485,11 @@ function DocumentBar({
                 </Button>
               )}
               {d.can.canAllocate && (
-                <ButtonLink size="sm" href={`/invoices/inbox/${d.id}`} className="whitespace-nowrap">
+                <ButtonLink
+                  size="sm"
+                  href={`/invoices/inbox/${d.id}`}
+                  className="whitespace-nowrap"
+                >
                   {t("allocate")}
                 </ButtonLink>
               )}
@@ -480,10 +515,14 @@ function MailboxCard({ health }: { health: InboxHealth }) {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className={LABEL}>{t("title")}</h2>
           <span className="text-xs text-muted">
-            {health.lastSyncAt ? t("lastSync", { when: dateTime(health.lastSyncAt) }) : t("neverSynced")}
+            {health.lastSyncAt
+              ? t("lastSync", { when: dateTime(health.lastSyncAt) })
+              : t("neverSynced")}
           </span>
         </div>
-        {health.lastError && <p className="text-danger">{t("error", { error: health.lastError })}</p>}
+        {health.lastError && (
+          <p className="text-danger">{t("error", { error: health.lastError })}</p>
+        )}
         {health.rejected.length === 0 ? (
           <p className="text-xs text-muted">{t("noneRejected")}</p>
         ) : (

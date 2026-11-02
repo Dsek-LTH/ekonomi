@@ -8,19 +8,9 @@ import { cn } from "@/lib/ui/utils";
 // The rest of the div's props pass through, so a surface that is also something
 // (a dialog with `role="alertdialog"`, a list panel) doesn't need a wrapper
 // element just to carry its attributes.
-export function Card({
-  className,
-  children,
-  ...rest
-}: React.ComponentProps<"div">) {
+export function Card({ className, children, ...rest }: React.ComponentProps<"div">) {
   return (
-    <div
-      {...rest}
-      className={cn(
-        "rounded-panel border border-border bg-background",
-        className,
-      )}
-    >
+    <div {...rest} className={cn("rounded-panel border border-border bg-background", className)}>
       {children}
     </div>
   );
@@ -59,7 +49,10 @@ export function CardHeader({
       <div className="min-w-0">
         {title && <h2 className="break-words text-base font-semibold">{title}</h2>}
         {subtitle && (
-          <p title={subtitle} className={cn("line-clamp-2 break-words text-sm text-muted", title && "mt-0.5")}>
+          <p
+            title={subtitle}
+            className={cn("line-clamp-2 break-words text-sm text-muted", title && "mt-0.5")}
+          >
             {subtitle}
           </p>
         )}
@@ -112,7 +105,11 @@ export function InsetPanel({
   return (
     <div
       {...rest}
-      className={cn("rounded-control", dashed ? "border border-dashed border-border" : "bg-surface", className)}
+      className={cn(
+        "rounded-control",
+        dashed ? "border border-dashed border-border" : "bg-surface",
+        className,
+      )}
     >
       {children}
     </div>

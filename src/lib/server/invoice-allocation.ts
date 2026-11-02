@@ -69,7 +69,10 @@ export async function planAllocation(f: {
   for (const code of codes) {
     const c = byCode.get(code);
     if (!c || (!c.active && !had.has(code))) {
-      return { ok: false, res: fail(422, "supplierInvoice.unknownCostCenter", { values: { code } }) };
+      return {
+        ok: false,
+        res: fail(422, "supplierInvoice.unknownCostCenter", { values: { code } }),
+      };
     }
   }
 
@@ -93,7 +96,10 @@ export async function planAllocation(f: {
   // Asked without naming a submitter: the sender has signed what they could,
   // and is left out of the mail instead.
   const attesters = waiting.length
-    ? await attestersOf(waiting.map((w) => ({ costCenterCode: w.code })), "")
+    ? await attestersOf(
+        waiting.map((w) => ({ costCenterCode: w.code })),
+        "",
+      )
     : [];
   return {
     ok: true,

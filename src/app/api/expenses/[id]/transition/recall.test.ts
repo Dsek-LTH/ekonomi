@@ -52,9 +52,18 @@ vi.mock("@/lib/server/db", () => ({
         matchedTransaction: null,
         receipts: [{ id: "r1" }],
         allocations: [
-          { id: "a1", approvedById: "chief", costCenter: { code: "SEX01" }, amount: 45000 },
+          {
+            id: "a1",
+            approvedById: "chief",
+            costCenter: { code: "SEX01" },
+            amount: 45000,
+          },
         ],
-        submitter: { roles: ["ORDINARIE"], bankClearingNumber: "8327", bankAccountNumber: "123" },
+        submitter: {
+          roles: ["ORDINARIE"],
+          bankClearingNumber: "8327",
+          bankAccountNumber: "123",
+        },
       }),
     },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>

@@ -91,7 +91,10 @@ export function AppHeader({
         {/* Off the corner rather than inside it, where it would crowd the
             label. */}
         {waiting && !navOpen && (
-          <span aria-hidden className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background" />
+          <span
+            aria-hidden
+            className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background"
+          />
         )}
       </button>
 

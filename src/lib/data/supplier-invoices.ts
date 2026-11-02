@@ -118,7 +118,9 @@ export function invoiceScopeWhere(
   const OR: Prisma.SupplierInvoiceWhereInput[] = [];
   if (v.ownedResultUnitIds.length) OR.push({ resultUnitId: { in: [...v.ownedResultUnitIds] } });
   if (v.ownedPrefixes.length) {
-    OR.push({ allocations: { some: { costCenter: costCentreWhereForPrefixes(v.ownedPrefixes) } } });
+    OR.push({
+      allocations: { some: { costCenter: costCentreWhereForPrefixes(v.ownedPrefixes) } },
+    });
   }
   if (OR.length === 0) return { id: { in: [] } };
   return { OR };
@@ -377,7 +379,11 @@ export async function costCenterSuggestionFor(inv: {
   resultUnitId: string | null;
   supplierName: string | null;
   yourReference: string | null;
-  inboundMail: { note: string | null; subject: string | null; originalFrom: string | null } | null;
+  inboundMail: {
+    note: string | null;
+    subject: string | null;
+    originalFrom: string | null;
+  } | null;
 }): Promise<string | null> {
   if (!inv.resultUnitId) return null;
   const prefixes = (await getPrefixes()).filter((p) => p.resultUnitId === inv.resultUnitId);
@@ -439,7 +445,10 @@ async function accountSuggestionsFor(inv: {
   });
   if (prior.length === 0) return {};
   return Object.fromEntries(
-    inv.allocations.map((a) => [a.id, (prior.find((p) => p.costCenterCode === a.costCenter.code) ?? prior[0]).account]),
+    inv.allocations.map((a) => [
+      a.id,
+      (prior.find((p) => p.costCenterCode === a.costCenter.code) ?? prior[0]).account,
+    ]),
   );
 }
 
@@ -638,7 +647,13 @@ export async function getInboxHealth(): Promise<InboxHealth> {
       where: { status: "REJECTED", createdAt: { gte: since } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 10,
-      select: { id: true, fromAddress: true, subject: true, rejectReason: true, receivedAt: true },
+      select: {
+        id: true,
+        fromAddress: true,
+        subject: true,
+        rejectReason: true,
+        receivedAt: true,
+      },
     }),
   ]);
   const config = gmailConfig();

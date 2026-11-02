@@ -25,9 +25,7 @@ describe("entryFault", () => {
 
   it("passes a bottle coming back a rung lower", () => {
     // One leaving 80 and arriving at 40, which is what a return is.
-    expect(
-      entryFault(entry({ kind: "RETURN", open: { 80: -1, 40: 1 } }), VOLUME),
-    ).toBeNull();
+    expect(entryFault(entry({ kind: "RETURN", open: { 80: -1, 40: 1 } }), VOLUME)).toBeNull();
   });
 
   it("refuses a row that moves nothing", () => {
@@ -39,9 +37,7 @@ describe("entryFault", () => {
   it("refuses a purchase that takes stock away", () => {
     // The sign is what everyone reading the log later goes by; a serving
     // entered as a purchase reads as a delivery.
-    expect(entryFault(entry({ kind: "PURCHASE", units: -12 }), UNIT)).toBe(
-      "purchaseNotPositive",
-    );
+    expect(entryFault(entry({ kind: "PURCHASE", units: -12 }), UNIT)).toBe("purchaseNotPositive");
   });
 
   it("refuses a checkout that adds stock", () => {
@@ -50,9 +46,7 @@ describe("entryFault", () => {
 
   it("refuses a homecoming that takes stock away", () => {
     // A return only ever puts bottles back. The checkout took them off.
-    expect(entryFault(entry({ kind: "RETURN", units: -1 }), UNIT)).toBe(
-      "purchaseNotPositive",
-    );
+    expect(entryFault(entry({ kind: "RETURN", units: -1 }), UNIT)).toBe("purchaseNotPositive");
   });
 
   it("lets a count go either way", () => {
@@ -150,9 +144,9 @@ describe("entryFault, on a spill", () => {
 
   it("refuses one that also moves the shelf", () => {
     // Both columns filled in would take the stock away twice.
-    expect(
-      entryFault({ kind: "WASTE", units: -2, spilledQty: 2 }, { kind: "UNIT" }),
-    ).toBe("spillMovesNoStock");
+    expect(entryFault({ kind: "WASTE", units: -2, spilledQty: 2 }, { kind: "UNIT" })).toBe(
+      "spillMovesNoStock",
+    );
     expect(
       entryFault({ kind: "WASTE", units: 0, open: { 40: -1 }, spilledQty: 1 }, { kind: "VOLUME" }),
     ).toBe("spillMovesNoStock");
@@ -165,7 +159,6 @@ describe("entryFault, on a spill", () => {
     expect(entryFault({ kind: "WASTE", units: 0, spilledQty: -2 }, { kind: "UNIT" })).toBeNull();
   });
 });
-
 
 describe("entryFault, on a cellar write-off", () => {
   // The other half of a spill, and a separate kind because the two happened in
@@ -183,12 +176,10 @@ describe("entryFault, on a cellar write-off", () => {
   it("insists on the sign its meaning fixes", () => {
     // Stock destroyed that turned up as an addition would read as a delivery to
     // everybody who came after it.
-    expect(entryFault({ kind: "SPOILAGE", units: 2 }, { kind: "UNIT" })).toBe(
-      "removalNotNegative",
+    expect(entryFault({ kind: "SPOILAGE", units: 2 }, { kind: "UNIT" })).toBe("removalNotNegative");
+    expect(entryFault({ kind: "SPOILAGE", units: 0, open: { 40: 1 } }, { kind: "VOLUME" })).toBe(
+      "levelsOnReturnOnly",
     );
-    expect(
-      entryFault({ kind: "SPOILAGE", units: 0, open: { 40: 1 } }, { kind: "VOLUME" }),
-    ).toBe("levelsOnReturnOnly");
   });
 
   it("is not a row that moves nothing", () => {

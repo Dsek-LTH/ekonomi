@@ -13,7 +13,17 @@
 // for what is new, the next time they open the page.
 import type { CurrentUser } from "./types";
 
-export const GUIDE_IDS = ["start", "expenses", "bank", "inbox", "invoices", "income", "budget", "ledger", "stock"] as const;
+export const GUIDE_IDS = [
+  "start",
+  "expenses",
+  "bank",
+  "inbox",
+  "invoices",
+  "income",
+  "budget",
+  "ledger",
+  "stock",
+] as const;
 export type GuideId = (typeof GUIDE_IDS)[number];
 
 export interface GuideStep {

@@ -141,9 +141,15 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
                 {l.comment && <p className="mt-1 text-xs italic text-muted">{l.comment}</p>}
               </td>
               <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                {l.amount == null ? <span className="text-muted">-</span> : <Amount value={l.amount} signed />}
+                {l.amount == null ? (
+                  <span className="text-muted">-</span>
+                ) : (
+                  <Amount value={l.amount} signed />
+                )}
               </td>
-              <td className="hidden truncate py-2 pl-6 text-xs leading-5 sm:table-cell">{l.attest}</td>
+              <td className="hidden truncate py-2 pl-6 text-xs leading-5 sm:table-cell">
+                {l.attest}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -203,12 +209,20 @@ export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
         <tr className="text-left">
           <th className={cn(LABEL, "w-16 pb-2 pl-inset")}>{t("account")}</th>
           <th className={cn(LABEL, "pb-2 pl-3")}>{t("accountName")}</th>
-          <th className={cn(LABEL, "hidden w-20 pb-2 pl-3 sm:table-cell")}>{t("costCenterShort")}</th>
+          <th className={cn(LABEL, "hidden w-20 pb-2 pl-3 sm:table-cell")}>
+            {t("costCenterShort")}
+          </th>
           {hasProject && (
-            <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>{t("projectShort")}</th>
+            <th className={cn(LABEL, "hidden w-16 pb-2 pl-3 sm:table-cell")}>
+              {t("projectShort")}
+            </th>
           )}
-          <th className={cn(LABEL, "w-28 pb-2 pl-3 pr-inset text-right sm:hidden")}>{t("amount")}</th>
-          <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 text-right sm:table-cell")}>{t("debit")}</th>
+          <th className={cn(LABEL, "w-28 pb-2 pl-3 pr-inset text-right sm:hidden")}>
+            {t("amount")}
+          </th>
+          <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 text-right sm:table-cell")}>
+            {t("debit")}
+          </th>
           <th className={cn(LABEL, "hidden w-28 pb-2 pl-3 pr-inset text-right sm:table-cell")}>
             {t("credit")}
           </th>
@@ -220,7 +234,9 @@ export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
             <td className="py-2 pl-inset font-medium tabular-nums">{l.account}</td>
             <td className="py-2 pl-3">
               <span className="block truncate">{l.accountName}</span>
-              {l.costCenter && <span className="block text-xs text-muted sm:hidden">{l.costCenter}</span>}
+              {l.costCenter && (
+                <span className="block text-xs text-muted sm:hidden">{l.costCenter}</span>
+              )}
               {l.project && (
                 <span className="block text-xs text-muted sm:hidden">
                   {t("projectShort")} {l.project}
@@ -228,13 +244,19 @@ export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
               )}
               {l.note && <span className="block truncate text-xs text-muted">{l.note}</span>}
             </td>
-            <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">{l.costCenter}</td>
+            <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">
+              {l.costCenter}
+            </td>
             {hasProject && (
-              <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">{l.project}</td>
+              <td className="hidden py-2 pl-3 tabular-nums text-muted sm:table-cell">
+                {l.project}
+              </td>
             )}
             <td className="whitespace-nowrap py-2 pl-3 pr-inset text-right tabular-nums sm:hidden">
               <Amount value={l.debit || l.credit} />
-              <span className="ml-1.5 text-xs text-muted">{l.debit ? t("debitShort") : t("creditShort")}</span>
+              <span className="ml-1.5 text-xs text-muted">
+                {l.debit ? t("debitShort") : t("creditShort")}
+              </span>
             </td>
             <td className="hidden whitespace-nowrap py-2 pl-3 text-right tabular-nums sm:table-cell">
               {l.debit ? <Amount value={l.debit} /> : null}

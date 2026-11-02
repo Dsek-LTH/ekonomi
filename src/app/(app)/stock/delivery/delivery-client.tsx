@@ -379,11 +379,7 @@ export default function DeliveryClient({
   );
 
   return (
-    <PageShell
-      title={t("delivery.title")}
-      back="/stock"
-      width="wide"
-    >
+    <PageShell title={t("delivery.title")} back="/stock" width="wide">
       {/* The sheet, and beside it a summary of the delivery as a whole, the
           way an order is laid out beside its lines: what it was bought for,
           when it arrived, what it comes to, and the button that books it.
@@ -392,88 +388,84 @@ export default function DeliveryClient({
           fields only, and the total and Spara ride the sheet's sticky footer
           instead, at the bottom of a phone's screen where the thumb is. */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <Card className="w-full shrink-0 lg:sticky lg:top-14 lg:order-2 lg:w-72">
-        {/* Once for the delivery rather than on every row, because an invoice
+        <Card className="w-full shrink-0 lg:sticky lg:top-14 lg:order-2 lg:w-72">
+          {/* Once for the delivery rather than on every row, because an invoice
             is one date however many products it lists. */}
-        <div className="grid gap-3 px-inset py-4 sm:grid-cols-2 lg:grid-cols-1">
-          <Field label={t("delivery.forLabel")} requirement="optional">
-            <Input
-              size="sm"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t("delivery.forPlaceholder")}
-            />
-          </Field>
-          <Field label={t("field.date")} requirement="required">
-            <DateInput
-              size="sm"
-              value={occurredAt}
-              onChange={(e) => setOccurredAt(e.target.value)}
-            />
-          </Field>
-        </div>
-        <div className="hidden space-y-3 border-t border-border px-inset py-4 lg:block">
-          <div>
-            <div className="text-xs text-muted">{t("delivery.total")}</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">{formatOreKr(totalOre, { decimals: 2 })}</div>
-            <div className="mt-1 text-sm text-muted">{saveStatus}</div>
+          <div className="grid gap-3 px-inset py-4 sm:grid-cols-2 lg:grid-cols-1">
+            <Field label={t("delivery.forLabel")} requirement="optional">
+              <Input
+                size="sm"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t("delivery.forPlaceholder")}
+              />
+            </Field>
+            <Field label={t("field.date")} requirement="required">
+              <DateInput
+                size="sm"
+                value={occurredAt}
+                onChange={(e) => setOccurredAt(e.target.value)}
+              />
+            </Field>
           </div>
-          {saveButtons}
-        </div>
-      </Card>
+          <div className="hidden space-y-3 border-t border-border px-inset py-4 lg:block">
+            <div>
+              <div className="text-xs text-muted">{t("delivery.total")}</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">
+                {formatOreKr(totalOre, { decimals: 2 })}
+              </div>
+              <div className="mt-1 text-sm text-muted">{saveStatus}</div>
+            </div>
+            {saveButtons}
+          </div>
+        </Card>
 
-      <Card className="min-w-0 flex-1 lg:order-1">
-        {/* No CardBody: the sheet is ruled to the card's own edge, the way the
+        <Card className="min-w-0 flex-1 lg:order-1">
+          {/* No CardBody: the sheet is ruled to the card's own edge, the way the
             event sheet and the voucher editor are. */}
-        <table className="w-full table-fixed border-collapse text-sm">
-          <thead>
-            <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
-              <th className={cn(headerCell, "w-[40%] text-left")}>
-                {t("delivery.col.product")}
-              </th>
-              {/* Columns of their own, because they are the figures this sheet
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead>
+              <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+                <th className={cn(headerCell, "w-[40%] text-left")}>{t("delivery.col.product")}</th>
+                {/* Columns of their own, because they are the figures this sheet
                   is read against an invoice by, line by line, and a figure
                   hiding in a sentence beside a name cannot be scanned down. */}
-              <th className={cn(headerCell, "w-[19%] text-right")}>
-                {t("delivery.col.price")}
-              </th>
-              <th className={cn(headerCell, "w-[17%]")}>{t("delivery.col.in")}</th>
-              <th className={cn(headerCell, "w-[24%] text-right")}>
-                {t("delivery.col.sum")}
-              </th>
-            </tr>
-          </thead>
+                <th className={cn(headerCell, "w-[19%] text-right")}>{t("delivery.col.price")}</th>
+                <th className={cn(headerCell, "w-[17%]")}>{t("delivery.col.in")}</th>
+                <th className={cn(headerCell, "w-[24%] text-right")}>{t("delivery.col.sum")}</th>
+              </tr>
+            </thead>
 
-          <tbody className="divide-y divide-border/40">
-            {rows.map((id) => {
-              const product = byId.get(id);
-              if (!product) return null;
-              const qty = number(id);
-              return (
-                <tr key={id} className="divide-x divide-border">
-                  <td className="group px-2 py-1.5 align-middle">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate">
-                        <Link href={`/stock/${id}`} className="font-medium hover:underline">
-                          {product.name}
-                        </Link>
-                      </span>
-                      {/* Always there on a phone, which has no hover to reveal
+            <tbody className="divide-y divide-border/40">
+              {rows.map((id) => {
+                const product = byId.get(id);
+                if (!product) return null;
+                const qty = number(id);
+                return (
+                  <tr key={id} className="divide-x divide-border">
+                    <td className="group px-2 py-1.5 align-middle">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">
+                          <Link href={`/stock/${id}`} className="font-medium hover:underline">
+                            {product.name}
+                          </Link>
+                        </span>
+                        {/* Always there on a phone, which has no hover to reveal
                           it with. A control you can only get at with a pointer
                           is a control that does not exist on the screen this
                           sheet is actually filled in on. From md it goes back
                           to appearing with the row. */}
-                      <button
-                        type="button"
-                        onClick={() => drop(id)}
-                        className="shrink-0 rounded-control p-0.5 text-muted transition-opacity hover:text-foreground md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
-                        aria-label={t("delivery.remove")}
-                      >
-                        <IconX className="size-4" />
-                      </button>
-                    </div>
-                  </td>
-                  {/* Text, not a disabled box. What a price is on this sheet
+                        <button
+                          type="button"
+                          onClick={() => drop(id)}
+                          className="shrink-0 rounded-control p-0.5 text-muted transition-opacity hover:text-foreground md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+                          aria-label={t("delivery.remove")}
+                        >
+                          <IconX className="size-4" />
+                        </button>
+                      </div>
+                    </td>
+                    {/* Text, not a disabled box. What a price is on this sheet
                       is the product's own figure, and the way to change it is
                       to change the product: a box that refuses to be typed in
                       is an invitation followed by a no. Nothing here is
@@ -483,87 +475,93 @@ export default function DeliveryClient({
                       A product nobody has priced says so, in the warning
                       colour: it is about to be delivered onto the shelf at a
                       value of nothing. */}
-                  <td
-                    className={cn(
-                      "px-2 py-1.5 text-right text-xs tabular-nums",
-                      product.costPriceOre == null ? "text-warning" : "text-muted",
-                    )}
-                  >
-                    {product.costPriceOre == null
-                      ? t("delivery.unpriced")
-                      : formatOreKr(product.costPriceOre, { decimals: 2 })}
-                  </td>
-                  <td className="p-0 align-middle">{cellFor(product)}</td>
-                  {/* The line as the invoice prints it: price times count. Blank
+                    <td
+                      className={cn(
+                        "px-2 py-1.5 text-right text-xs tabular-nums",
+                        product.costPriceOre == null ? "text-warning" : "text-muted",
+                      )}
+                    >
+                      {product.costPriceOre == null
+                        ? t("delivery.unpriced")
+                        : formatOreKr(product.costPriceOre, {
+                            decimals: 2,
+                          })}
+                    </td>
+                    <td className="p-0 align-middle">{cellFor(product)}</td>
+                    {/* The line as the invoice prints it: price times count. Blank
                       until there is a count, so an unfilled row does not read as
                       a line worth nothing. */}
-                  <td className="px-2 py-1.5 text-right text-sm tabular-nums">
-                    {qty > 0 && product.costPriceOre != null
-                      ? formatOreKr(product.costPriceOre * qty, { decimals: 2 })
-                      : ""}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+                    <td className="px-2 py-1.5 text-right text-sm tabular-nums">
+                      {qty > 0 && product.costPriceOre != null
+                        ? formatOreKr(product.costPriceOre * qty, {
+                            decimals: 2,
+                          })
+                        : ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
 
-          {/* The next line, the way a sheet always has one. It is also the only
+            {/* The next line, the way a sheet always has one. It is also the only
               way onto an empty sheet, so it is never hidden. An empty state in
               its place would be a screen with no way in. */}
-          <tbody className="border-t border-border">
-            <tr className="divide-x divide-border">
-              <td colSpan={4} className="p-0 align-middle">
-                {/* The two ways of putting a product on the sheet, side by
+            <tbody className="border-t border-border">
+              <tr className="divide-x divide-border">
+                <td colSpan={4} className="p-0 align-middle">
+                  {/* The two ways of putting a product on the sheet, side by
                     side, because they are one errand. The scanner is the
                     quicker of them and does double duty: a code already on the
                     sheet jumps to that row instead of adding a second one. */}
-                <div className="flex items-center gap-1 pr-1">
-                  <div className="min-w-0 flex-1">
-                    <Combobox
-                      value=""
-                      onChange={add}
-                      options={products
-                        .filter((p) => !rows.includes(p.id))
-                        .map((p) => ({ value: p.id, label: p.name }))}
-                      onCreate={invent}
-                      createLabel={(text) => t("delivery.newProduct", { name: text })}
-                      placeholder={t("delivery.addProduct")}
-                      searchPlaceholder={t("delivery.addSearch")}
-                      aria-label={t("delivery.addProduct")}
-                      align="left"
-                      buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
-                    />
+                  <div className="flex items-center gap-1 pr-1">
+                    <div className="min-w-0 flex-1">
+                      <Combobox
+                        value=""
+                        onChange={add}
+                        options={products
+                          .filter((p) => !rows.includes(p.id))
+                          .map((p) => ({ value: p.id, label: p.name }))}
+                        onCreate={invent}
+                        createLabel={(text) => t("delivery.newProduct", { name: text })}
+                        placeholder={t("delivery.addProduct")}
+                        searchPlaceholder={t("delivery.addSearch")}
+                        aria-label={t("delivery.addProduct")}
+                        align="left"
+                        buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
+                      />
+                    </div>
+                    <IconButton
+                      label={t("delivery.scan")}
+                      title={t("delivery.scan")}
+                      onClick={scan}
+                    >
+                      <IconScan className="size-4" />
+                    </IconButton>
                   </div>
-                  <IconButton
-                    label={t("delivery.scan")}
-                    title={t("delivery.scan")}
-                    onClick={scan}
-                  >
-                    <IconScan className="size-4" />
-                  </IconButton>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        {/* Below lg, where the summary card is up above the sheet: the total
+          {/* Below lg, where the summary card is up above the sheet: the total
             and Spara stay with the rows instead, sticky, because a pallet runs
             past the bottom of a phone's screen and a save button you have to
             scroll to find is one people forget. The total is beside the button
             because it is the figure the pallet is checked against before the
             button is pressed. */}
-        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3 lg:hidden">
-          <span className="text-sm text-muted">{saveStatus}</span>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="flex items-baseline gap-2">
-              <span className="text-xs text-muted">{t("delivery.total")}</span>
-              <span className="text-lg font-semibold tabular-nums">{formatOreKr(totalOre, { decimals: 2 })}</span>
-            </span>
-            {saveButtons}
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3 lg:hidden">
+            <span className="text-sm text-muted">{saveStatus}</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="flex items-baseline gap-2">
+                <span className="text-xs text-muted">{t("delivery.total")}</span>
+                <span className="text-lg font-semibold tabular-nums">
+                  {formatOreKr(totalOre, { decimals: 2 })}
+                </span>
+              </span>
+              {saveButtons}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
       </div>
 
       {/* Said once, under the sheet: an unpriced product is not an error and

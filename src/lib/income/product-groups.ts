@@ -80,10 +80,7 @@ export function productRows<T extends GroupableLine>(lines: readonly T[]): Produ
   for (const name of [...byName.keys()].sort(byCodePoint)) {
     const group = byName.get(name)!;
     const sorted = group.toSorted((a, b) => {
-      const variant = byCodePoint(
-        (a.variant ?? "").toLowerCase(),
-        (b.variant ?? "").toLowerCase(),
-      );
+      const variant = byCodePoint((a.variant ?? "").toLowerCase(), (b.variant ?? "").toLowerCase());
       if (variant !== 0) return variant;
       const account = byCodePoint(a.account, b.account);
       if (account !== 0) return account;

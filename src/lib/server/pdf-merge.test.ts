@@ -2,12 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
-import {
-  fitCentred,
-  isMergeableReceipt,
-  mergeCoverAndReceipts,
-  PdfMergeError,
-} from "./pdf-merge";
+import { fitCentred, isMergeableReceipt, mergeCoverAndReceipts, PdfMergeError } from "./pdf-merge";
 
 /** A stand-in for whatever typeset the cover, the merge does not care. */
 async function pdfOf(pages: number): Promise<Uint8Array> {
@@ -16,8 +11,7 @@ async function pdfOf(pages: number): Promise<Uint8Array> {
   return doc.save();
 }
 
-const pageCount = async (bytes: Uint8Array) =>
-  (await PDFDocument.load(bytes)).getPageCount();
+const pageCount = async (bytes: Uint8Array) => (await PDFDocument.load(bytes)).getPageCount();
 
 /** A real encoded image, since embedJpg/embedPng parse the actual bytes. */
 const imageOf = (w: number, h: number, format: "jpeg" | "png") =>
@@ -114,16 +108,17 @@ describe("mergeCoverAndReceipts", () => {
     // This is the case the export's fallback exists for: a supplier's PDF that
     // will not open must not take an otherwise valid export down with it.
     const { failed } = await mergeCoverAndReceipts(await pdfOf(1), [
-      { bytes: new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x39, 0x39]), mimeType: "application/pdf" },
+      {
+        bytes: new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x39, 0x39]),
+        mimeType: "application/pdf",
+      },
     ]);
     expect(failed).toBe(1);
   });
 
   it("refuses when every receipt failed and there is no cover to fall back to", async () => {
     await expect(
-      mergeCoverAndReceipts(null, [
-        { bytes: new Uint8Array([1, 2, 3]), mimeType: "image/webp" },
-      ]),
+      mergeCoverAndReceipts(null, [{ bytes: new Uint8Array([1, 2, 3]), mimeType: "image/webp" }]),
     ).rejects.toBeInstanceOf(PdfMergeError);
   });
 });

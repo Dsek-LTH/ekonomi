@@ -63,13 +63,24 @@ export function DocumentAllocateClient({
       back={`/invoices/inbox?doc=${d.id}`}
       panel={
         <ReceiptPanelSource
-          documents={[{ src: `/api/supplier-invoice-documents/${d.id}`, mimeType: d.mimeType, filename: d.filename }]}
+          documents={[
+            {
+              src: `/api/supplier-invoice-documents/${d.id}`,
+              mimeType: d.mimeType,
+              filename: d.filename,
+            },
+          ]}
         />
       }
       notice={
         d.returned && (
           <Notice tone="warning">
-            <p>{t("returned", { unit: d.returned.from ?? "-", reason: d.returned.reason })}</p>
+            <p>
+              {t("returned", {
+                unit: d.returned.from ?? "-",
+                reason: d.returned.reason,
+              })}
+            </p>
           </Notice>
         )
       }
@@ -77,11 +88,17 @@ export function DocumentAllocateClient({
       initialRows={[makeRow(suggestedCostCenter ?? "", sekToInput(defaults.amount))]}
       defaults={defaults}
       fromScan={fromScan}
-      mail={d.note ? { fromName: d.fromName, fromAddress: d.fromAddress ?? "", note: d.note } : null}
+      mail={
+        d.note ? { fromName: d.fromName, fromAddress: d.fromAddress ?? "", note: d.note } : null
+      }
       costCenters={costCenters}
       reach={reach}
       documentCount={1}
-      decline={d.can.canDecline ? { label: t("decline"), busy: decliner.busy, run: () => void decline() } : null}
+      decline={
+        d.can.canDecline
+          ? { label: t("decline"), busy: decliner.busy, run: () => void decline() }
+          : null
+      }
       busy={create.busy || decliner.busy}
       pending={create.busy}
       onSubmit={async (f) => {
