@@ -1,4 +1,8 @@
+"use client";
+
+import { useRef } from "react";
 import Link from "next/link";
+import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
 
 // "Which part of this record?" Underlined links under a nested page's title,
@@ -17,8 +21,19 @@ export interface PageTabsProps {
 }
 
 export function PageTabs({ label, value, options }: PageTabsProps) {
+  const row = useRef<HTMLElement>(null);
+  useScrollStrip(
+    row,
+    options.findIndex((o) => o.value === value),
+  );
   return (
-    <nav aria-label={label} className="flex min-w-0 gap-5 overflow-x-auto">
+    // Scrolls on a phone with a fade and no scrollbar, like the filter tabs
+    // (filter-tabs.tsx).
+    <nav
+      ref={row}
+      aria-label={label}
+      className="scroll-strip relative flex min-w-0 gap-5 overflow-x-auto max-md:gap-4"
+    >
       {options.map((o) => {
         const active = o.value === value;
         return (

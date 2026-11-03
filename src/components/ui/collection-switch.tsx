@@ -52,7 +52,14 @@ export type Collections = {
 
 // `relative`, because the pill is laid over the track rather than drawn on the
 // option. See the measurement below.
-const TRACK = "relative inline-flex rounded-control border border-border-control bg-surface p-0.5";
+//
+// On a phone the switch has a row of its own (PageHeader), and the track runs
+// the width of it, so it reads as one control across the page rather than
+// three words in the corner of a row. The options share out only the room
+// left over (`flex-auto`, not equal thirds): a third of 343px is too narrow
+// for "Min resultatenhet", which then broke onto two lines.
+const TRACK =
+  "relative inline-flex rounded-control border border-border-control bg-surface p-0.5 max-md:flex max-md:w-full";
 
 // What the pill looks like, in the one place both the moving copy and the
 // static fallback read it from. The primary button's pink, flat and without a
@@ -134,7 +141,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     cn(
       // Above the pill, which is a positioned sibling and would otherwise paint
       // over the label.
-      "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors",
+      "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors max-md:flex-auto max-md:justify-center max-md:whitespace-nowrap",
       active
         ? cn(
             "text-white",

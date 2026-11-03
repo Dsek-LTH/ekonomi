@@ -154,21 +154,30 @@ export default async function DashboardPage() {
     const units = watchesAll
       ? overview.units
       : overview.units.filter((u) => u.name !== null && owned.names.includes(u.name));
+    // Every unit with a cost budget, the ones off pace first and the furthest
+    // gone first among them, so the card can show the worst few as bars.
+    const rank = { OVER: 0, AHEAD: 1, ON_TRACK: 2 } as const;
     budget = {
       budgetId: overview.budget?.id ?? null,
       scope: watchesAll ? "all" : "own",
       ownCount: owned.names.length,
       elapsed: Math.round(elapsed * 100),
-      flagged: units.flatMap((u) => {
-        const pace = paceOf(u.cost, elapsed);
-        if (pace !== "OVER" && pace !== "AHEAD") return [];
-        return [{ name: u.name, pace, used: Math.round((u.cost.actual / u.cost.budget) * 100) }];
-      }),
+      units: units
+        .flatMap((u) => {
+          const pace = paceOf(u.cost, elapsed);
+          if (!pace) return [];
+          return [{ name: u.name, pace, used: Math.round((u.cost.actual / u.cost.budget) * 100) }];
+        })
+        .sort((a, b) => rank[a.pace] - rank[b.pace] || b.used - a.used),
     };
   }
 
   return (
     <DashboardClient
+      firstName={user.name.split(" ")[0]}
+      // Everything late, not only the few named in Din tur: the tile over it
+      // counts what is behind, and a stale attest is behind too.
+      lateCount={late.length + staleAttests}
       payoutMissing={!payout.clearing || !payout.account}
       turn={turn}
       waiting={waiting}

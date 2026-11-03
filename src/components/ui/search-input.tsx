@@ -37,6 +37,9 @@ export function SearchInput({
         className={cn(
           CONTROL_SIZES.sm,
           "w-full border border-border-control bg-background pl-8 pr-2.5 text-sm text-foreground placeholder:text-muted",
+          // A long hint ends in an ellipsis on a phone rather than being cut
+          // through a word at the box's edge.
+          "max-md:text-ellipsis",
           inputClassName,
         )}
         {...props}

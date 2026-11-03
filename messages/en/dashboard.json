@@ -1,5 +1,23 @@
 {
   "title": "Overview",
+  "greeting": "Hi, {name}",
+  "tiles": {
+    "turn": "Your turn",
+    "late": "{count, plural, one {# late} other {# late}}",
+    "nothingLate": "Nothing is late",
+    "waiting": "Waiting on others",
+    "stuck": "{count, plural, one {# is stuck} other {# are stuck}}",
+    "noneStuck": "Nothing is stuck",
+    "score": "Reporting score",
+    "scoreNote": "How it is counted",
+    "budget": "Ahead of budget pace",
+    "budgetValue": "{off} of {total}",
+    "over": "{count, plural, one {# over the whole year's budget} other {# over the whole year's budget}}",
+    "elapsed": "{elapsed}% of the year has passed",
+    "calendar": "Upcoming dates",
+    "next": "Next {date}",
+    "nothingComing": "Nothing scheduled"
+  },
   "firstRun": {
     "title": "How an expense works",
     "lead": "Spent your own money for the guild, or paid with a guild card? This is where you get it back.",
@@ -22,11 +40,12 @@
     "ownFine": "{count, plural, one {Your committee is keeping to its budget.} other {Your committees are keeping to their budgets.}}",
     "over": "{unit} has gone over its cost budget for the whole year.",
     "ahead": "{unit} has used {used}% of its cost budget, and {elapsed}% of the year has gone.",
-    "noUnit": "No result unit"
+    "noUnit": "No result unit",
+    "elapsed": "{elapsed}% of the year has passed",
+    "used": "{used}%",
+    "onTrack": "{unit} has used {used}% of its cost budget, and {elapsed}% of the year has passed.",
+    "showAll": "Show all {count}"
   },
-  "invoicesTitle": "Invoices in your committee",
-  "allInvoices": "All invoices",
-  "invoiceUntitled": "Unknown supplier",
   "turn": {
     "title": "Your turn",
     "empty": "Nothing is waiting on you.",
@@ -70,6 +89,12 @@
     "contractEnds": "The contract <b>{title}</b> ends",
     "stockEvent": "Stock occasion: <b>{title}</b>",
     "deadline": "Last day to send in <b>{title}</b>",
-    "untitled": "an unknown supplier"
+    "untitled": "an unknown supplier",
+    "more": "Show {count} more"
+  },
+  "invoices": {
+    "title": "Invoices in your committee",
+    "all": "All invoices",
+    "untitled": "Unknown supplier"
   }
 }

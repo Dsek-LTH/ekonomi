@@ -154,7 +154,10 @@ export function TabBar({
         </div>
       )}
 
+      {/* `data-guide-edge`: a guide keeps the control it lights above this
+          bar (shell/guide.tsx). */}
       <nav
+        data-guide-edge="bottom"
         aria-label={t("tabBar")}
         className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border bg-background/90 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden print:hidden"
       >

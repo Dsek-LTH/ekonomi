@@ -1,20 +1,31 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 
-// The page's shape: Din tur and Väntar på andra side by side, then two
-// cards under it.
+// The page's shape: the row of figures, then Din tur and Väntar på andra in the
+// wide column, and the calendar and the budget beside them.
 export default function Loading() {
   return (
     <SkeletonPage width="content" action titleWidth="w-40">
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        {[5, 3].map((rows, i) => (
-          <ListCard key={i} rows={rows} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Card key={i} className="space-y-2 px-4 py-3">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-7 w-10" />
+            <Skeleton className="h-3 w-24" />
+          </Card>
         ))}
       </div>
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        {[3, 2].map((rows, i) => (
-          <ListCard key={i} rows={rows} />
-        ))}
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="grid items-start gap-6 lg:col-span-2">
+          {[5, 3].map((rows, i) => (
+            <ListCard key={i} rows={rows} />
+          ))}
+        </div>
+        <div className="grid items-start gap-6">
+          {[3, 4].map((rows, i) => (
+            <ListCard key={i} rows={rows} />
+          ))}
+        </div>
       </div>
     </SkeletonPage>
   );

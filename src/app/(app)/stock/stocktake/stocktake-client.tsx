@@ -274,7 +274,9 @@ export default function StocktakeClient({
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-inset py-3">
-          <div className="min-w-0 flex-1">
+          {/* A row of its own on a phone. Beside the scan button and the
+              checkbox it was left about 60px, two letters of what you typed. */}
+          <div className="min-w-0 flex-1 max-md:basis-full">
             <SearchInput
               placeholder={t("stocktakeSheet.search")}
               value={query}

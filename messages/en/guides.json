@@ -9,6 +9,10 @@
   "skip": "Skip",
   "done": "Done",
   "start": {
+    "install": {
+      "title": "Put Ekonomi on your home screen",
+      "body": "It then opens as an app, full screen and without the browser's address bar. It takes ten seconds."
+    },
     "welcome": {
       "title": "Welcome to Finance",
       "body": "This is where you submit expenses, attest and follow the section's money. We'll quickly go over what is here. Each page then has a short guide of its own the first time you open it."

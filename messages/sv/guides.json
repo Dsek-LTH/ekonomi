@@ -9,6 +9,10 @@
   "skip": "Hoppa över",
   "done": "Klar",
   "start": {
+    "install": {
+      "title": "Lägg Ekonomi på hemskärmen",
+      "body": "Då öppnas Ekonomi som en app, i helskärm och utan webbläsarens adressfält. Det tar tio sekunder."
+    },
     "welcome": {
       "title": "Välkommen till Ekonomi",
       "body": "Här lämnar du utlägg, attesterar och följer sektionens pengar. Vi går snabbt igenom vad som finns. Varje sida har sedan en egen kort guide första gången du öppnar den."

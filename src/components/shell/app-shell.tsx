@@ -707,8 +707,13 @@ export function AppShell({
               since the tab bar's "Mer" is the same door. Installed to a home
               screen, the page starts under the status bar, so the bar pads by
               that strip (as mobile-nav.tsx does) and grows by it, keeping the
-              row itself as it was. See h-app-bar in globals.css. */}
-          <header className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden">
+              row itself as it was. See h-app-bar in globals.css.
+              `data-guide-edge`: a guide keeps the control it lights below
+              this bar (shell/guide.tsx). */}
+          <header
+            data-guide-edge="top"
+            className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden"
+          >
             {!tabBar && (
               <button
                 type="button"

@@ -44,6 +44,15 @@ export interface GuideStep {
    * menu for theme and language. On a phone both are the one menu screen.
    */
   opens?: "nav" | "account";
+  /**
+   * Only on a device that can still put the app on its home screen: a phone,
+   * in its browser rather than already installed. Decided by the engine, which
+   * can see the device (components/pwa/platform.ts). A step left out this way
+   * is not marked as seen, so it waits for the reader's phone.
+   */
+  device?: "installable";
+  /** Drawn under the body: the home-screen steps for this device. */
+  content?: "install";
 }
 
 export interface Guide {
@@ -63,6 +72,8 @@ export const GUIDES: Guide[] = [
     id: "start",
     page: "/dashboard",
     steps: [
+      // First on a phone: put it on the home screen, where it opens as an app.
+      { key: "install", device: "installable", content: "install" },
       { key: "welcome" },
       { key: "todo", target: "todo" },
       { key: "groupExpenses", target: "nav-group:groupExpenses", opens: "nav" },

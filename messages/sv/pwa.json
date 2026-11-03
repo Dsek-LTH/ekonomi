@@ -4,5 +4,12 @@
   "android": "Då öppnas den som en app, i helskärm, direkt från hemskärmen.",
   "androidMenu": "Då öppnas den som en app, i helskärm. Öppna webbläsarens meny och välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>.",
   "install": "Installera",
-  "dismiss": "Stäng"
+  "dismiss": "Stäng",
+  "steps": {
+    "ios1": "Tryck på <share></share> <b>Dela</b> i Safari.",
+    "ios2": "Välj <b>Lägg till på hemskärmen</b>. Den kan ligga en bit ner i listan.",
+    "ios3": "Tryck på <b>Lägg till</b>.",
+    "android1": "Öppna webbläsarens meny <dots></dots>.",
+    "android2": "Välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>."
+  }
 }

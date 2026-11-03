@@ -1,5 +1,23 @@
 {
   "title": "Översikt",
+  "greeting": "Hej, {name}",
+  "tiles": {
+    "turn": "Din tur",
+    "late": "{count, plural, one {# försenad} other {# försenade}}",
+    "nothingLate": "Inget är försenat",
+    "waiting": "Väntar på andra",
+    "stuck": "{count, plural, one {# har fastnat} other {# har fastnat}}",
+    "noneStuck": "Inget har fastnat",
+    "score": "Redovisningsbetyg",
+    "scoreNote": "Så räknas det",
+    "budget": "Över budgettakten",
+    "budgetValue": "{off} av {total}",
+    "over": "{count, plural, one {# över hela årsbudgeten} other {# över hela årsbudgeten}}",
+    "elapsed": "{elapsed} % av året har gått",
+    "calendar": "Kommande datum",
+    "next": "Närmast {date}",
+    "nothingComing": "Inget inbokat"
+  },
   "firstRun": {
     "title": "Så funkar ett utlägg",
     "lead": "Har du lagt ut egna pengar för sektionen, eller handlat med ett sektionskort? Det är här du får tillbaka dem.",
@@ -22,11 +40,12 @@
     "ownFine": "{count, plural, one {Ditt utskott följer budgeten.} other {Dina utskott följer budgeten.}}",
     "over": "{unit} har gått över kostnadsbudgeten för hela året.",
     "ahead": "{unit} har använt {used} % av kostnadsbudgeten, och {elapsed} % av året har gått.",
-    "noUnit": "Utan resultatenhet"
+    "noUnit": "Utan resultatenhet",
+    "elapsed": "{elapsed} % av året har gått",
+    "used": "{used} %",
+    "onTrack": "{unit} har använt {used} % av kostnadsbudgeten, och {elapsed} % av året har gått.",
+    "showAll": "Visa alla {count}"
   },
-  "invoicesTitle": "Fakturor i ditt utskott",
-  "allInvoices": "Alla fakturor",
-  "invoiceUntitled": "Okänd leverantör",
   "turn": {
     "title": "Din tur",
     "empty": "Inget väntar på dig just nu.",
@@ -70,6 +89,12 @@
     "contractEnds": "Avtalet <b>{title}</b> löper ut",
     "stockEvent": "Lagertillfälle: <b>{title}</b>",
     "deadline": "Sista dag att skicka in <b>{title}</b>",
-    "untitled": "okänd leverantör"
+    "untitled": "okänd leverantör",
+    "more": "Visa {count} till"
+  },
+  "invoices": {
+    "title": "Fakturor i ditt utskott",
+    "all": "Alla fakturor",
+    "untitled": "Okänd leverantör"
   }
 }

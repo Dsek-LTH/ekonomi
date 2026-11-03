@@ -855,6 +855,39 @@ summary {
   display: none;
 }
 
+/* Phone only. A tab row that runs past its edge fades out on that side, so
+ * the tab cut in half reads as "there is more this way" rather than as a
+ * broken label, and it draws no scrollbar, the fade being the cue instead.
+ * Used by the tab rows (filter-tabs.tsx, page-tabs.tsx, the section tabs).
+ * The ends are set by useScrollStrip (lib/ui/scroll-strip.ts), which marks
+ * the sides that have more to show. The mask is on the scrolling box, not on
+ * what scrolls in it, so the fade stays at the edge while the tabs move under
+ * it. From md the rows fit, and anything that does not keeps the thin
+ * scrollbar every other box has. */
+@media (width < 48rem) {
+  .scroll-strip {
+    --fade-start: 0px;
+    --fade-end: 0px;
+    scrollbar-width: none;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent
+    );
+  }
+  .scroll-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .scroll-strip[data-more-start] {
+    --fade-start: 1.5rem;
+  }
+  .scroll-strip[data-more-end] {
+    --fade-end: 1.5rem;
+  }
+}
+
 /* Nothing in an app this dense should move for someone who asked it not to.
    State changes still happen, they just arrive rather than travel. */
 @media (prefers-reduced-motion: reduce) {

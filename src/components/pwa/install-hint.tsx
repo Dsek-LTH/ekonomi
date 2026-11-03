@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconDownload, IconShare, IconX } from "@/components/ui/icons";
+import { usePlatform } from "./platform";
 import { promptInstall, useCanPromptInstall } from "./service-worker";
 
 // A card on a phone that says the app can be put on the home screen, and how.
@@ -17,25 +18,7 @@ import { promptInstall, useCanPromptInstall } from "./service-worker";
 // holds Chrome's own banner back for it). When Chrome has not offered (it
 // decides for itself when), the card says where the same thing is in its menu.
 
-type Platform = "installed" | "ios" | "android" | "other";
-
 const DISMISSED_KEY = "pwa:install-hint:dismissed";
-
-function readPlatform(): Platform {
-  // `navigator.standalone` is Safari's own, older answer to the same question.
-  const nav = navigator as Navigator & { standalone?: boolean };
-  if (window.matchMedia("(display-mode: standalone)").matches || nav.standalone) {
-    return "installed";
-  }
-  const ua = navigator.userAgent;
-  // An iPad asks for the desktop site, so it says Macintosh. It has a touch
-  // screen, which a Mac does not.
-  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
-    return "ios";
-  }
-  if (/Android/.test(ua)) return "android";
-  return "other";
-}
 
 function readDismissed(): boolean {
   // Storage can be missing or throw (private mode, blocked site data). Then
@@ -47,14 +30,14 @@ function readDismissed(): boolean {
   }
 }
 
-// Neither answer changes while the page is open, so there is nothing to
-// subscribe to. The store is for reading them after hydration only: on the
+// Closing it is remembered in storage, which does not change while the page is
+// open, so there is nothing to subscribe to. Read after hydration only: on the
 // server the card is not drawn at all, and the client does not disagree.
 const never = () => () => {};
 
 export function InstallHint() {
   const t = useTranslations("pwa");
-  const platform = useSyncExternalStore(never, readPlatform, () => "other" as const);
+  const platform = usePlatform();
   const stored = useSyncExternalStore(never, readDismissed, () => true);
   const [closed, setClosed] = useState(false);
   const canPrompt = useCanPromptInstall();

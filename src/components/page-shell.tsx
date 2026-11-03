@@ -158,7 +158,10 @@ export function PageShell({
         aside={aside}
         right={
           collections ? (
-            <div className={cn(collectionsHidden && "invisible")} inert={collectionsHidden}>
+            <div
+              className={cn("max-md:w-full", collectionsHidden && "invisible")}
+              inert={collectionsHidden}
+            >
               <CollectionSwitch {...collections} />
             </div>
           ) : (

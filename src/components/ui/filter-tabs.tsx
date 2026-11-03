@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
 
 // "Which slice of this list?" The underline register.
@@ -101,9 +102,15 @@ export function FilterTabs<T extends string>({
     return () => ro.disconnect();
   }, [index]);
 
+  useScrollStrip(bar, index);
+
   return (
     // Scrolls rather than wraps: a wrapped second row of tabs reads as a second
     // question, which is the confusion this whole register exists to remove.
+    // On a phone there is no scrollbar under it: the side with more fades out
+    // instead, and the active tab is kept in view (useScrollStrip). The tabs
+    // also stand closer together there, which alone is enough for a four-tab
+    // row to fit 343px.
     // -mb-px puts the active tab's underline *on* the container's own bottom
     // border rather than a hair above it.
     //
@@ -113,7 +120,11 @@ export function FilterTabs<T extends string>({
       ref={bar}
       role="tablist"
       aria-label={ariaLabel}
-      className={cn("relative -mb-px flex overflow-x-auto", fill ? "gap-2" : "gap-5", className)}
+      className={cn(
+        "scroll-strip relative -mb-px flex overflow-x-auto",
+        fill ? "gap-2" : "gap-5 max-md:gap-3",
+        className,
+      )}
     >
       {options.map((opt) => {
         const active = opt.value === value;

@@ -11,7 +11,8 @@
 //
 // The one thing a page still puts in the band is its own switch (Mina / Alla),
 // which belongs on the tabs' line. It is portaled there (PageHeader), so the
-// page keeps owning it: its state and callbacks stay the page's.
+// page keeps owning it: its state and callbacks stay the page's. On a phone
+// there is no room for both on one line, and it stays in the page instead.
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -19,6 +20,8 @@ import { useTranslations } from "next-intl";
 import { useGoBack } from "@/components/shell/route-history";
 import { IconChevronLeft } from "@/components/ui/icons";
 import { PageTitle } from "@/components/shell/settings-title";
+import { usePhone } from "@/lib/ui/media";
+import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
 import { NavCount } from "./nav-count";
 
@@ -69,6 +72,9 @@ export function SectionBand({
   const scrolled = usePageScrolled();
   return (
     <div
+      // A guide on a phone keeps the control it lights below the band
+      // (shell/guide.tsx).
+      data-guide-edge="top"
       className={cn(
         // Out to the main column's edges, so what scrolls under it does not
         // show beside it, and below the phone's own top bar. From md the
@@ -133,7 +139,8 @@ export function SectionBand({
  * (a budget, an utlägg) it draws its back link and title as it always has.
  * Either way, in a section the switch goes up to the band's slot, so it stands
  * on the tabs' line on every page. In no section at all it is the header it
- * always was, the switch beside the title.
+ * always was, the switch beside the title. On a phone it never goes up to the
+ * band, and has a row of its own in the page.
  */
 export function PageHeader({
   title,
@@ -151,6 +158,12 @@ export function PageHeader({
   aside?: React.ReactNode;
 }) {
   const { nav, slot, reportOwn } = useContext(Ctx);
+  // On a phone the switch stays in the page instead of going up to the band.
+  // The band's line is 343px there, and "Mina | Min resultatenhet | Alla"
+  // beside the tabs left them about 100px, so a section's second tab was
+  // pushed out of sight. Asked in JavaScript because which element it is
+  // portaled into is not something a class can change.
+  const phone = usePhone();
   // A page in a section with no way back is one of the section's own, the
   // ones the tabs and their switches go between, whatever its path. A path is
   // only the shell's first guess (`root`): /income/booked is not a tab's own
@@ -165,7 +178,7 @@ export function PageHeader({
   if (own) {
     return (
       <>
-        {right && slot && createPortal(right, slot)}
+        {right && (phone ? <div className="mb-4">{right}</div> : slot && createPortal(right, slot))}
         {subtitle && <p className="-mt-3 mb-6 text-lg font-medium tracking-tight">{subtitle}</p>}
       </>
     );
@@ -175,14 +188,15 @@ export function PageHeader({
   // and back link, but its switch still goes up onto the tabs' line: what
   // steers the page stands at the same height whichever page it is, rather
   // than beside the title on some pages and above it on others.
-  const inBand = Boolean(nav) && slot;
+  const inBand = Boolean(nav) && !phone && slot;
   // Everything on one line: the arrow back, the title, and the page's own
   // controls at the far end, with the subtitle under the title rather than
   // under the arrow. The back link on a line of its own above the title, and
   // a page's controls on a row below it, were three lines of header where one
   // will do. In a section the switch goes up to the band (above); in none it
-  // stands at the far end with the controls.
-  const end = !nav && right;
+  // stands at the far end with the controls, and so it does on a phone, in
+  // the row of controls under the title.
+  const end = (!nav || phone) && right;
   return (
     <div className="mb-6 flex items-start gap-1.5">
       {inBand && right && createPortal(right, slot)}
@@ -263,6 +277,7 @@ export function PageHeaderSkeleton({
  * the line is still standing under the old tab when the new one is current.
  */
 function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] }) {
+  const strip = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const line = useRef<HTMLSpanElement>(null);
   const current = tabs.findIndex((i) => i.active);
@@ -319,13 +334,20 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
     return () => ro.disconnect();
   }, [section, active]);
 
+  useScrollStrip(strip, active, list);
+
   return (
     // `-mb-px` so the line lies over the row's divider rather than a pixel
     // above it.
     <nav aria-label={label} className="-mb-px flex min-w-0 flex-1" data-tour="section-tabs">
       {/* Scrolls sideways on a phone rather than wrapping: four tabs of Lager
-          do not fit 343px, and a second row of tabs reads as a second level. */}
-      <div className="relative flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          do not fit 343px, and a second row of tabs reads as a second level.
+          The side with more fades out, and the current tab is kept in view
+          (useScrollStrip). */}
+      <div
+        ref={strip}
+        className="scroll-strip relative flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]"
+      >
         <ul ref={list} className="flex items-stretch gap-1">
           {tabs.map((i, n) => {
             const Icon = i.icon;

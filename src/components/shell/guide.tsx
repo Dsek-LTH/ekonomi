@@ -20,6 +20,8 @@ import {
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { installable, usePlatform, type Platform } from "@/components/pwa/platform";
+import { InstallSteps } from "@/components/pwa/install-steps";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { Button } from "@/components/ui/button";
 import { GUIDES, guideStepId, type Guide, type GuideId, type GuideStep } from "@/lib/domain/guides";
@@ -68,10 +70,12 @@ const settled = () => document.querySelector("[data-tour-page]") !== null;
  * the app does not draw for them is not theirs. One inside a menu is drawn
  * while the menu is shut, only out of sight, so being in the document is
  * enough. The account menu draws nothing until it opens, and its theme and
- * language are everybody's.
+ * language are everybody's. A step that falls back to the middle of the
+ * screen is everybody's too: that is what the fallback is for (Frågor & svar,
+ * which a phone has no header link to).
  */
 function present(step: GuideStep): boolean {
-  if (!step.target || step.opens === "account") return true;
+  if (!step.target || step.opens === "account" || step.orCentre) return true;
   if (step.opens) return document.querySelector(`[data-tour="${step.target}"]`) !== null;
   return findTarget(step.target) !== null;
 }
@@ -80,6 +84,50 @@ function present(step: GuideStep): boolean {
 const PAD = 6;
 const GAP = 12;
 const EDGE = 16;
+/** A phone's card from the screen's edge, and its lit control from the bars. */
+const SHEET_EDGE = 12;
+const BAR_ROOM = 16;
+
+/**
+ * How much of a phone's screen the app's own bars cover: the top bar and the
+ * section's band, and the tab bar at the foot. Each marks itself with
+ * `data-guide-edge`. A control scrolled under one of them would be lit through
+ * a hole with the bar drawn over it.
+ */
+function coveredEdges(): { top: number; bottom: number } {
+  let top = 0;
+  let bottom = 0;
+  for (const el of document.querySelectorAll<HTMLElement>("[data-guide-edge]")) {
+    if (!el.checkVisibility()) continue;
+    const r = el.getBoundingClientRect();
+    if (el.dataset.guideEdge === "top") top = Math.max(top, r.bottom);
+    else bottom = Math.max(bottom, window.innerHeight - r.top);
+  }
+  return { top, bottom };
+}
+
+/**
+ * On a phone, the lit control is brought up under the bars, at once, so the
+ * card docked at the foot (see `dockCard`) has the lower part of the screen to
+ * itself. Left where it is when it is already well up the screen and clear of
+ * the bars. At once rather than smoothly, so where the card docks is decided
+ * on where the control ends up rather than somewhere on its way. The lit box
+ * still slides there, which is its own transition.
+ */
+function bringUp(el: HTMLElement) {
+  // A control on one of the bars (the year, the section's tabs) is always on
+  // screen, and scrolling would only move the page under it.
+  if (el.closest("[data-guide-edge]")) return;
+  const { top, bottom } = coveredEdges();
+  const r = el.getBoundingClientRect();
+  const clear = r.top >= top + BAR_ROOM && r.bottom <= window.innerHeight - bottom - BAR_ROOM;
+  if (clear && r.bottom <= window.innerHeight * 0.55) return;
+  el.style.scrollMarginTop = `${top + BAR_ROOM}px`;
+  el.style.scrollMarginBottom = `${bottom + BAR_ROOM}px`;
+  el.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
+  el.style.scrollMarginTop = "";
+  el.style.scrollMarginBottom = "";
+}
 
 type Box = { top: number; left: number; width: number; height: number };
 
@@ -110,6 +158,48 @@ export function placeCard(
 }
 
 /**
+ * Where the card goes on a phone: across the screen, at its foot, or at its
+ * head when the foot would cover the lit control and the head would not. A
+ * card beside a control, as on a wide screen, had no room on a phone: it sat
+ * over the control it was about, or the control was left at the screen's
+ * edge with half of it below. Held clear of the home indicator and the clock.
+ */
+export function dockCard(
+  spot: Box | null,
+  card: { height: number },
+  view: { height: number },
+  safe: { top: number; bottom: number },
+): { top: number } {
+  const foot = view.height - safe.bottom - SHEET_EDGE - card.height;
+  const head = safe.top + SHEET_EDGE;
+  if (!spot) return { top: foot };
+  const coversFoot = spot.top + spot.height > foot - GAP;
+  const coversHead = spot.top < head + card.height + GAP;
+  return { top: coversFoot && !coversHead ? head : foot };
+}
+
+/** The lit box, cut to the window, so its ring is never drawn off the screen. */
+function clip(b: Box, view: { width: number; height: number }): Box {
+  const top = Math.max(b.top, 0);
+  const left = Math.max(b.left, 0);
+  const bottom = Math.min(b.top + b.height, view.height);
+  const right = Math.min(b.left + b.width, view.width);
+  return { top, left, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+}
+
+/** The status bar's strip and the home indicator's, read off the CSS that knows them. */
+function readSafeArea(): { top: number; bottom: number } {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)";
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const safe = { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+  probe.remove();
+  return safe;
+}
+
+/**
  * A guide under way: the steps this reader is being shown, which are the
  * guide's own less what is not theirs and, unless they asked for it, less
  * what they have seen. `fresh` is that last case with some seen already, so
@@ -129,6 +219,7 @@ export function GuideProvider({
   const pathname = usePathname();
   const router = useProgressRouter();
   const phone = usePhone();
+  const platform = usePlatform();
   const pageGuide = GUIDES.find((g) => g.page === pathname) ?? null;
 
   const [seen, setSeen] = useState(() => new Set(initial));
@@ -201,7 +292,12 @@ export function GuideProvider({
     if (wanted && wanted !== guide.id) return;
     const asked = wanted === guide.id;
     setWant(null);
-    const theirs = guide.steps.filter((s) => (s.visible?.(user) ?? true) && present(s));
+    const theirs = guide.steps.filter(
+      (s) =>
+        (s.visible?.(user) ?? true) &&
+        (s.device !== "installable" || installable(platform)) &&
+        present(s),
+    );
     const steps = asked ? theirs : theirs.filter((s) => !seen.has(guideStepId(guide, s)));
     if (steps.length === 0) return;
     returnFocus.current =
@@ -233,6 +329,15 @@ export function GuideProvider({
   // reads the latest `move` without depending on it.
   const skip = useEffectEvent((dir: 1 | -1) => move(dir));
 
+  // Into view. On a phone, up under the bars, clear of the card at the foot;
+  // elsewhere only as far as it takes. Read when a step starts, so turning the
+  // phone on its side mid-step does not send the search round again.
+  const reveal = useEffectEvent((el: HTMLElement) => {
+    if (phone) return bringUp(el);
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+  });
+
   // Find the step's control.
   useEffect(() => {
     if (!run) return;
@@ -245,8 +350,7 @@ export function GuideProvider({
     const look = () => {
       const el = findTarget(target);
       if (el) {
-        const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        el.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+        reveal(el);
         setReady({ index: run.index, target: el });
         return;
       }
@@ -283,6 +387,8 @@ export function GuideProvider({
         createPortal(
           <GuideLayer
             run={run}
+            phone={phone}
+            platform={platform}
             target={shown ? shown.target : undefined}
             onNext={() => move(1)}
             onBack={() => move(-1)}
@@ -296,12 +402,17 @@ export function GuideProvider({
 
 function GuideLayer({
   run,
+  phone,
+  platform,
   target,
   onNext,
   onBack,
   onSkip,
 }: {
   run: Run;
+  /** Below md: the card docks across the screen rather than beside the control. */
+  phone: boolean;
+  platform: Platform;
   /** The lit control, null for a card in the middle, undefined while looking. */
   target: HTMLElement | null | undefined;
   onNext: () => void;
@@ -318,6 +429,7 @@ function GuideLayer({
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+  const [safe] = useState(readSafeArea);
   // The lit box, and which control it was measured for. One box for the whole
   // guide, never taken down between steps, so it can slide from one control
   // to the next. A card in the middle shrinks it to a point there. It starts
@@ -340,12 +452,15 @@ function GuideLayer({
       if (target !== undefined) {
         const r = target?.getBoundingClientRect();
         const box = r
-          ? {
-              top: r.top - PAD,
-              left: r.left - PAD,
-              width: r.width + PAD * 2,
-              height: r.height + PAD * 2,
-            }
+          ? clip(
+              {
+                top: r.top - PAD,
+                left: r.left - PAD,
+                width: r.width + PAD * 2,
+                height: r.height + PAD * 2,
+              },
+              { width: window.innerWidth, height: window.innerHeight },
+            )
           : centre(window.innerWidth, window.innerHeight);
         setSpot((s) => (s.for === target && same(s.box, box) ? s : { box, for: target }));
       }
@@ -392,13 +507,15 @@ function GuideLayer({
   const total = run.steps.length;
   const last = run.index === total - 1;
   const lit = spot.for ? spot.box : null;
-  const place = placeCard(lit, size, view);
+  const place = phone ? dockCard(lit, size, view, safe) : placeCard(lit, size, view);
 
   return (
     // Over everything, dialogs and the portalled menus included (those stop at
     // z-210), and catching every press, so the page under it cannot be used
     // while it is dimmed.
-    <div className="fixed inset-0 z-[220] print:hidden">
+    // On a phone it also takes the touch, so a drag on the dimmed page cannot
+    // scroll it out from under the lit control.
+    <div className="fixed inset-0 z-[220] max-md:touch-none print:hidden">
       {/* The dim is the lit box's own shadow, spread over the whole window,
           so the control shows through a hole rather than being redrawn. The
           pink edge is a second shadow in the same declaration: a `ring-`
@@ -431,6 +548,8 @@ function GuideLayer({
         style={place}
         className={cn(
           "absolute w-80 max-w-[calc(100vw-2rem)] rounded-panel border border-border bg-background p-4 shadow-[var(--shadow-pop)]",
+          // Across the screen on a phone, docked by `dockCard`.
+          "max-md:inset-x-3 max-md:w-auto max-md:max-w-none",
           ready
             ? "pointer-events-auto transition-[top,left,opacity] duration-300 ease-[var(--ease-out-quint)]"
             : "opacity-0",
@@ -445,19 +564,22 @@ function GuideLayer({
         <p id="guide-body" className="mt-1.5 text-sm">
           {t(`${run.guide.id}.${step.key}.body`)}
         </p>
+        {step.content === "install" && <InstallSteps platform={platform} />}
+        {/* On a phone the two that move through the guide share the row's
+            width, thumb-sized, and the way out stays a word at the start. */}
         <div className="mt-4 flex items-center gap-2">
           {!last && (
             <Button variant="quiet" onClick={onSkip}>
               {t("skip")}
             </Button>
           )}
-          <span className="flex-1" />
+          <span className="flex-1 max-md:hidden" />
           {run.index > 0 && (
-            <Button variant="secondary" onClick={onBack}>
+            <Button variant="secondary" onClick={onBack} className="max-md:flex-1">
               {t("back")}
             </Button>
           )}
-          <Button ref={next} onClick={last ? onSkip : onNext}>
+          <Button ref={next} onClick={last ? onSkip : onNext} className="max-md:flex-1">
             {last ? t("done") : t("next")}
           </Button>
         </div>
