@@ -73,7 +73,7 @@ export function SidebarPanel({
   if (bar && collapsed) {
     return (
       <>
-        {/* `top-14` under the phone's app bar; from md the frame is fixed and
+        {/* `top-app-bar` under the phone's app bar; from md the frame is fixed and
             the main column is the scrollport, so the bar sticks to the top of
             that instead. z-10 to stay under the app bar's own 20.
 
@@ -84,7 +84,7 @@ export function SidebarPanel({
             rather than as the geometry it is. Canvas is the page's own colour
             (body, globals.css), so the arcs go on showing exactly what they
             show when nothing is scrolling. */}
-        <div className="sticky top-14 z-10 bg-canvas">
+        <div className="sticky top-app-bar z-10 bg-canvas">
           <Card className="overflow-hidden">
             <button
               type="button"

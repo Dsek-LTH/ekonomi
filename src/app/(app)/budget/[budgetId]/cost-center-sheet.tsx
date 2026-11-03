@@ -702,7 +702,7 @@ export function CostCenterSheet(props: {
             four corner arcs transparent, and the rows scrolling under the strip
             showed through them. `bg-canvas` is the page's own colour, so the
             arcs read exactly as they do at rest. */}
-        <div className="sticky top-14 z-10 bg-canvas md:hidden">
+        <div className="sticky top-app-bar z-10 bg-canvas md:hidden">
           <div className="rounded-panel border border-border bg-background">
             <button
               type="button"

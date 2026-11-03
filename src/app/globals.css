@@ -27,6 +27,18 @@
  * never matched on an iPhone. */
 @custom-variant typing (:root[data-typing] &);
 
+/* The phone's app bar (app-shell.tsx): 56px for its row, and the status bar's
+ * strip above that when the app is installed to a home screen and the page
+ * starts under the clock. In a browser tab the inset is nought. One value for
+ * the bar and for everything that sticks under it, so the two cannot drift
+ * apart the way a `top-14` beside a taller bar would. */
+@utility h-app-bar {
+  height: calc(3.5rem + env(safe-area-inset-top));
+}
+@utility top-app-bar {
+  top: calc(3.5rem + env(safe-area-inset-top));
+}
+
 @theme {
   /* Neutrals */
   /* The page is a visible grey under white cards, 1.10:1, where it used to

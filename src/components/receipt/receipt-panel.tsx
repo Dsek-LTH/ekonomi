@@ -723,7 +723,9 @@ export function ReceiptPanelColumn() {
   // float in the corner the viewer's own toolbar doesn't use, styled to match
   // it so the two read as one set of tools.
   const controls = (
-    <div className="absolute left-2 top-2 z-20 flex items-center gap-1.5">
+    // Absolute, so the panel's own safe-area padding does not move it: it adds
+    // the inset itself below md, where the panel covers the screen.
+    <div className="absolute left-2 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 flex items-center gap-1.5 md:top-2">
       {/* On a phone this is drawn even while a receipt is still wanted. From md
           it is not: there the panel is a column beside the form, so an open one
           costs nothing and folding it away would only hide the dropzone the
@@ -1014,8 +1016,10 @@ export function ReceiptPanelColumn() {
             // Below md it covers the screen; from md it's a column in the frame.
             // Covering the screen, it keeps clear of the home indicator, so the
             // document strip along its foot and the viewer's toolbar stay
-            // above it rather than under it.
-            "flex flex-col bg-background pb-[env(safe-area-inset-bottom)] md:pb-0 print:hidden",
+            // above it rather than under it. And clear of the status bar, for
+            // when it is installed to a home screen and the page starts under
+            // the clock.
+            "flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 print:hidden",
             // The motion lives in globals.css beside its own keyframes: the
             // transition that folds it away, the animation that brings it back,
             // and the one duration both are timed to.

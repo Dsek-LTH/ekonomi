@@ -83,7 +83,7 @@ export function SectionBand({
         // Its bottom border is the divider under the tabs. The band reaches
         // both edges of the main column, so its own border does too, at
         // every width and whatever the receipt panel is doing.
-        "sticky top-14 z-20 md:top-0 -ml-4 -mr-(--main-pr) mb-6 border-b border-border bg-background/90 pl-4 pr-(--main-pr) backdrop-blur-xl backdrop-saturate-150 md:-ml-6 md:pl-6",
+        "sticky top-app-bar z-20 md:top-0 -ml-4 -mr-(--main-pr) mb-6 border-b border-border bg-background/90 pl-4 pr-(--main-pr) backdrop-blur-xl backdrop-saturate-150 md:-ml-6 md:pl-6",
         // The main column's top padding, taken back, so the band starts right
         // under the header. The tabs are the first thing there, with no title
         // above them, and the row's own height is all the room it needs.

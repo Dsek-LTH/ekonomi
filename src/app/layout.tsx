@@ -6,6 +6,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { serverEnv } from "@/lib/server/env";
 import { THEME_COOKIE, parseTheme } from "@/lib/ui/theme";
 import { cn } from "@/lib/ui/utils";
+import { ServiceWorker } from "@/components/pwa/service-worker";
 import "./globals.css";
 
 // The tab title follows the reader's language like everything else, so it has
@@ -26,6 +27,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: title, template: `%s | ${title}` },
     description,
     applicationName: title,
+    // Installed from Safari's "Lägg till på hemskärmen", this is the name under
+    // the icon and what makes it open full screen. The status bar style is left
+    // to iOS, which colours it from themeColor (generateViewport below).
+    appleWebApp: { capable: true, title: "Ekonomi" },
     robots: { index: false, follow: false },
     openGraph: {
       type: "website",
@@ -106,6 +111,7 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

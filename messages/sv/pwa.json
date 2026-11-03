@@ -1,0 +1,8 @@
+{
+  "title": "Lägg Ekonomi på hemskärmen",
+  "ios": "Då öppnas den som en app, i helskärm. Tryck på <share></share> <b>Dela</b> i Safari och välj <b>Lägg till på hemskärmen</b>.",
+  "android": "Då öppnas den som en app, i helskärm, direkt från hemskärmen.",
+  "androidMenu": "Då öppnas den som en app, i helskärm. Öppna webbläsarens meny och välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>.",
+  "install": "Installera",
+  "dismiss": "Stäng"
+}
