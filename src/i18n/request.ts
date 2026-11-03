@@ -43,6 +43,7 @@ export const MESSAGE_NAMESPACES = [
   "closing",
   "score",
   "guides",
+  "pwa",
 ] as const;
 
 const isLocale = (v: string | undefined): v is Locale =>

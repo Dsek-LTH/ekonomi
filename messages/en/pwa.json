@@ -1,0 +1,8 @@
+{
+  "title": "Add Ekonomi to your home screen",
+  "ios": "It then opens as an app, full screen. Tap <share></share> <b>Share</b> in Safari and choose <b>Add to Home Screen</b>.",
+  "android": "It then opens as an app, full screen, straight from your home screen.",
+  "androidMenu": "It then opens as an app, full screen. Open the browser menu and choose <b>Install app</b> or <b>Add to Home screen</b>.",
+  "install": "Install",
+  "dismiss": "Close"
+}

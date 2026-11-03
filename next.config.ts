@@ -112,7 +112,16 @@ const nextConfig: NextConfig = {
   // The framework's version is not the visitor's business.
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // The service worker (public/sw.js). Never cached, so a new version, or
+      // the one that removes it, reaches every installed phone on its next
+      // page load.
+      {
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
+    ];
   },
   // /stock/tags was renamed to /stock/events, along with the model behind it.
   // The word had drifted three ways: "tag" in the schema and the URL, "event"

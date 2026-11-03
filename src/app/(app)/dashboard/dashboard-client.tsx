@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { NewExpenseMenu } from "@/components/new-expense-menu";
+import { InstallHint } from "@/components/pwa/install-hint";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
@@ -141,6 +142,10 @@ export function DashboardClient({
   return (
     <PageShell title={t("title")} width="content" aside={<NewExpenseMenu size="sm" />}>
       <div className="flex flex-col gap-6">
+        {/* Phones only, until the app is on the home screen or the card is
+            closed. The dashboard is where an installed app opens (start_url
+            in app/manifest.ts), so it is where the offer belongs. */}
+        <InstallHint />
         {payoutMissing && (
           <Link href="/profile" className="hover:underline">
             <Notice>{t("payoutMissing")}</Notice>

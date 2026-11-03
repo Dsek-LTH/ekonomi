@@ -269,6 +269,15 @@ export const IconDownload = (p: P) => (
   </Svg>
 );
 
+// Safari's own share button, drawn the way it is on the phone, so the install
+// hint can point at the button the reader is meant to look for.
+export const IconShare = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3v12m0-12-4 4m4-4 4 4" />
+    <path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2" />
+  </Svg>
+);
+
 export const IconLink = (p: P) => (
   <Svg {...p}>
     <path d="M10 13a5 5 0 0 0 7.07 0l2-2a5 5 0 0 0-7.07-7.07L10.5 5.5" />
