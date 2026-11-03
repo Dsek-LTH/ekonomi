@@ -23,3 +23,4 @@ Fylla debit automatiskt med belopp
 Fixa rotera knappen vid liggande kvitton
 Mer stats kring hur ofta man attesterar rätt, hur mycket skickas tillbaka osv
 Medlemmar utan utlägg
+Remove all redirects for backwards compatibility

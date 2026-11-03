@@ -47,7 +47,7 @@ import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import type { IncomeMoveTarget, IncomeReportRow, IncomeReviewQueue } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 
 import {
   costCentreFor,
@@ -71,6 +71,7 @@ export default function IncomeReviewClient({
   settings,
   costCenters,
   accounts,
+  projects,
   moveTargets,
   setup,
   canSetUp,
@@ -82,6 +83,8 @@ export default function IncomeReviewClient({
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
+  /** Fortnox projects, for the voucher's project column. */
+  projects: ProjectRecord[];
   /** Where a mis-routed sale can be moved to. See move-dialog.tsx. */
   moveTargets: IncomeMoveTarget[];
   /** What is left to set up before fetching and booking. See lib/income/setup.ts. */
@@ -193,9 +196,14 @@ export default function IncomeReviewClient({
   const rowSignature = (rows: VoucherEditorRow[]) =>
     filledVoucherRows(rows)
       .map((r) =>
-        [r.account.trim(), r.costCenterCode.trim(), r.description.trim(), r.debit, r.credit].join(
-          "|",
-        ),
+        [
+          r.account.trim(),
+          r.costCenterCode.trim(),
+          (r.project ?? "").trim(),
+          r.description.trim(),
+          r.debit,
+          r.credit,
+        ].join("|"),
       )
       .join(";");
   const isEdited = (report: IncomeReportRow) => {
@@ -215,6 +223,7 @@ export default function IncomeReviewClient({
       settings,
       accounts,
       costCenters,
+      projects,
       label: {
         source: t(`source.${report.source}`),
         clearingHint: t("book.clearingHint"),
@@ -695,7 +704,7 @@ export default function IncomeReviewClient({
               </span>
             </div>
             {/* The scrollbar floats over the rows rather than taking a column
-                from them. See components/ui/overlay-scroll.tsx. In a 16rem
+                from them. See components/ui/overlay-scroll.tsx. In a 14rem
                 panel whose rows are a name against an amount, the gutter was
                 worth removing. */}
             {/* Below xl the queue opens as a dialog, and is capped there. From
@@ -957,6 +966,7 @@ export default function IncomeReviewClient({
                       voucher={voucher}
                       accounts={accounts}
                       costCenters={costCenters}
+                      projects={projects}
                       onRows={(rows) => setRows(selected, rows)}
                       onBook={() => book(selected)}
                       booking={pending === `book-${selected.id}`}

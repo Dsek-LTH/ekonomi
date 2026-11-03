@@ -17,7 +17,7 @@ import {
 } from "@/components/voucher-editor";
 import { formatSEK } from "@/lib/ui/format";
 import type { IncomeReportRow } from "@/lib/data/income";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import type { VoucherDraft } from "./voucher-draft";
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
@@ -115,6 +115,7 @@ export function VoucherCard({
   voucher,
   accounts,
   costCenters,
+  projects,
   onRows,
   onBook,
   booking,
@@ -124,6 +125,7 @@ export function VoucherCard({
   voucher: VoucherDraft;
   accounts: AccountRecord[];
   costCenters: CostCenter[];
+  projects: ProjectRecord[];
   onRows: (rows: VoucherEditorRow[]) => void;
   onBook: () => void;
   booking: boolean;
@@ -138,6 +140,7 @@ export function VoucherCard({
         onChange={onRows}
         accounts={accounts}
         costCenters={costCenters}
+        projects={projects}
         locked={voucher.locked}
         totalDebit={voucher.totalDebit}
         totalCredit={voucher.totalCredit}

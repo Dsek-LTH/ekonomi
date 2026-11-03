@@ -17,7 +17,7 @@ import { Modal, ModalHeader } from "./modal";
  */
 const BANDS = {
   lg: { column: "lg:w-64", below: "(max-width: 1023px)" },
-  xl: { column: "xl:w-64", below: "(max-width: 1279px)" },
+  xl: { column: "xl:w-56", below: "(max-width: 1279px)" },
 } as const;
 
 /** Told to close by a row that has just been picked. See `SidebarItem`. */

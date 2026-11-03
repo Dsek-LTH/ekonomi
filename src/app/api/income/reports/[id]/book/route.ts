@@ -109,12 +109,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const unknown = codes.find((c) => !idByCode.has(c));
     if (unknown) return fail(422, "voucher.unknownCostCenter", { values: { code: unknown } });
 
+    // A project Fortnox does not have would get the whole voucher rejected at
+    // export, so it is refused here, where it can still be fixed. Closed
+    // projects still count, the same rule as the utlägg voucher.
+    const numbers = [...new Set(edited.map((l) => l.project).filter(Boolean))] as string[];
+    if (numbers.length > 0) {
+      const known = await prisma.project.findMany({
+        where: { number: { in: numbers } },
+        select: { number: true },
+      });
+      const have = new Set(known.map((p) => p.number));
+      const missing = numbers.find((n) => !have.has(n));
+      if (missing) return fail(422, "voucher.unknownProject", { values: { project: missing } });
+    }
+
     lines = edited
       .filter((l) => l.account || l.debit || l.credit)
       .map((l, i) => ({
         account: l.account,
         accountName: l.accountName || nameFor(l.account),
         costCenterId: l.costCenterCode ? (idByCode.get(l.costCenterCode) ?? null) : null,
+        project: l.project || null,
         debit: l.debit,
         credit: l.credit,
         sortOrder: i,
@@ -232,6 +247,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             account: l.account,
             accountName: l.accountName,
             costCenterId: l.costCenterId,
+            project: l.project ?? null,
             debit: l.debit,
             credit: l.credit,
             sortOrder: l.sortOrder,

@@ -8,19 +8,22 @@ import "server-only";
 
 import { getActiveAccounts } from "@/lib/data/accounts";
 import { getActiveCostCenters } from "@/lib/data/cost-centers";
+import { getActiveProjects } from "@/lib/data/projects";
 import {
   getIncomeMoveTargets,
   type IncomeMoveTarget,
   type IncomeReportRow,
 } from "@/lib/data/income";
 import { getIncomeSettings, type IncomeSettingsRow } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import { prisma } from "@/lib/server/db";
 
 interface IncomeReviewContext {
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
+  /** Fortnox projects a voucher row may name. Draft days carry none yet. */
+  projects: ProjectRecord[];
   moveTargets: IncomeMoveTarget[];
   /**
    * The verksamhet sales matching no prefix are routed to, as a result unit.
@@ -43,7 +46,7 @@ export async function loadReviewContext(
   // put back (lib/income/lines.ts).
   const [settings, moveTargets] = await Promise.all([getIncomeSettings(), getIncomeMoveTargets()]);
 
-  const [costCenters, accounts] = await Promise.all([
+  const [costCenters, accounts, projects] = await Promise.all([
     getActiveCostCenters([
       ...reports.flatMap((d) => (d.costCenterCode ? [d.costCenterCode] : [])),
       // The defaults the booking screen pre-fills from count too: a committee
@@ -58,6 +61,7 @@ export async function loadReviewContext(
       settings.zettleFeeAccount,
       ...reports.flatMap((d) => d.lines.map((l) => l.account)),
     ]),
+    getActiveProjects(),
   ]);
 
   const fallback = settings.incomeFallbackIncomeId
@@ -71,6 +75,7 @@ export async function loadReviewContext(
     settings,
     costCenters,
     accounts,
+    projects,
     moveTargets,
     fallbackResultUnitId: fallback?.resultUnitId ?? null,
   };

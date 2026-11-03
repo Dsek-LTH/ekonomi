@@ -22,7 +22,7 @@ import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { voucherBalance, voucherBlocker, type VoucherBlocker } from "@/lib/domain/voucher";
 import type { IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 
 /** One line of the voucher as it goes to the booking route, in öre. */
 export interface VoucherLine {
@@ -30,6 +30,8 @@ export interface VoucherLine {
   accountName: string;
   description?: string;
   costCenterCode: string | null;
+  /** Fortnox project number, or null. */
+  project: string | null;
   debit: number;
   credit: number;
 }
@@ -162,6 +164,7 @@ export function voucherFor({
   settings,
   accounts,
   costCenters,
+  projects,
   label,
 }: {
   report: IncomeReportRow;
@@ -170,6 +173,7 @@ export function voucherFor({
   settings: IncomeSettingsRow;
   accounts: AccountRecord[];
   costCenters: CostCenter[];
+  projects: ProjectRecord[];
   /** Already in the reader's language: this module does not translate. */
   label: { source: string; clearingHint: string; clearingLocked: string };
 }): VoucherDraft {
@@ -198,6 +202,7 @@ export function voucherFor({
       // dimension of anybody's budget. A cost centre here would make every
       // committee's outcome count the money twice.
       costCenterCode: null as string | null,
+      project: null as string | null,
       debit: sekToOre(locked.debit),
       credit: sekToOre(locked.credit),
     },
@@ -209,6 +214,7 @@ export function voucherFor({
       accountName: nameOf(accounts, r.account),
       description: r.description || undefined,
       costCenterCode: r.costCenterCode || null,
+      project: r.project?.trim() || null,
       debit: parseOre(r.debit),
       credit: parseOre(r.credit),
     })),
@@ -232,6 +238,10 @@ export function voucherFor({
   const knownCostCenters = filledVoucherRows(rows).every(
     (r) => !r.costCenterCode.trim() || costCenters.some((c) => c.code === r.costCenterCode.trim()),
   );
+  // Fortnox rejects the whole voucher at export for a project it does not have.
+  const knownProjects = filledVoucherRows(rows).every(
+    (r) => !r.project?.trim() || projects.some((p) => p.number === r.project!.trim()),
+  );
   // The locked row is nobody's choice here, but it is still an account that
   // has to exist: a clearing account missing from the chart is a settings
   // mistake that would otherwise be found by Fortnox, at export, on a voucher
@@ -253,6 +263,7 @@ export function voucherFor({
       !blocker &&
       knownAccounts &&
       knownCostCenters &&
+      knownProjects &&
       clearingKnown &&
       rows.length > 0 &&
       // Already booked here: the verifikation exists, and a second is refused

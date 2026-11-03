@@ -127,6 +127,8 @@ export interface IncomeVoucherLine extends VoucherLine {
   accountName: string;
   /** Null on the clearing row. See below. */
   costCenterId: string | null;
+  /** Fortnox project number. Only set when the bookkeeper picked one. */
+  project?: string | null;
   sortOrder: number;
 }
 

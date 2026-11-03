@@ -524,11 +524,16 @@ export function VoucherEditor({
                 {t("colCostCenter")}
               </th>
               {showProjects && <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>}
-              <th className={cn(headerCell, showProjects ? "w-[10%]" : "w-[15%]")}>
+              {/* With projects, the amounts give up room so "Beskrivning" fits. */}
+              <th className={cn(headerCell, showProjects ? "w-[16%]" : "w-[15%]")}>
                 {t("colDescription")}
               </th>
-              <th className={cn(amountHeader, "w-[15%]")}>{t("colDebit")}</th>
-              <th className={cn(amountHeader, "w-[15%]")}>{t("colCredit")}</th>
+              <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
+                {t("colDebit")}
+              </th>
+              <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
+                {t("colCredit")}
+              </th>
               {/* Wide enough for the ✕ and the grip side by side. The name
                   column gave up the difference, being the one with slack. */}
               <th className="w-[9%]" />

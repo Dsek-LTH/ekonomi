@@ -4,7 +4,7 @@ import { makeVoucherRow } from "@/components/voucher-editor";
 import { costCentreFor, defaultRows, voucherFor } from "./voucher-draft";
 import type { IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 
 // What decides whether a day of takings is written to the ledger. It lived at
 // line 305 of a sixteen-hundred-line component and had no tests at all, which
@@ -27,6 +27,8 @@ const accounts = [
 
 const costCenters = [{ code: "SEX01" }, { code: "KM01" }] as CostCenter[];
 
+const projects = [{ number: "12", name: "Nollning", active: true }] as ProjectRecord[];
+
 const label = { source: "Swish", clearingHint: "hint", clearingLocked: "locked" };
 
 const report = (over: Partial<IncomeReportRow> = {}) =>
@@ -44,7 +46,7 @@ const report = (over: Partial<IncomeReportRow> = {}) =>
   }) as IncomeReportRow;
 
 const draft = (r: IncomeReportRow, rows = defaultRows(r, settings)) =>
-  voucherFor({ report: r, rows, settings, accounts, costCenters, label });
+  voucherFor({ report: r, rows, settings, accounts, costCenters, projects, label });
 
 describe("costCentreFor", () => {
   it("prefers the day's own cost centre", () => {
@@ -168,6 +170,21 @@ describe("voucherFor", () => {
     expect(draft(report(), rows).canBook).toBe(false);
   });
 
+  it("carries a known project onto its line", () => {
+    const rows = defaultRows(report(), settings);
+    rows[0].project = "12";
+    const v = draft(report(), rows);
+    expect(v.lines[1].project).toBe("12");
+    expect(v.lines[0].project).toBeNull(); // the clearing row never has one
+    expect(v.canBook).toBe(true);
+  });
+
+  it("refuses a project Fortnox does not have", () => {
+    const rows = defaultRows(report(), settings);
+    rows[0].project = "99";
+    expect(draft(report(), rows).canBook).toBe(false);
+  });
+
   it("says so when the clearing account itself is missing from the chart", () => {
     const v = voucherFor({
       report: report(),
@@ -175,6 +192,7 @@ describe("voucherFor", () => {
       settings: { ...settings, swishClearingAccount: "1599" } as IncomeSettingsRow,
       accounts,
       costCenters,
+      projects,
       label,
     });
     expect(v.clearingKnown).toBe(false);
