@@ -224,25 +224,29 @@ interface FeeVoucherInput {
 /**
  * The two rows a day of Zettle fees becomes.
  *
- * Fees arrive from Zettle as negative amounts and the service already stores
- * them as a positive cost, so nothing here flips a sign.
+ * Fees arrive from Zettle as negative amounts and the service stores them as a
+ * positive cost. A day can still come to a negative total: when a purchase is
+ * refunded, Zettle pays its fee back. Those rows are booked the other way
+ * round, crediting the fee account, rather than as a negative debit.
  */
 export function buildFeeVoucherLines(input: FeeVoucherInput): IncomeVoucherLine[] {
   const total = input.report.total;
+  const cost = total > 0 ? total : 0;
+  const refund = total < 0 ? -total : 0;
   return [
     {
       account: input.feeAccount,
       accountName: input.feeAccountName,
-      debit: total,
-      credit: 0,
+      debit: cost,
+      credit: refund,
       costCenterId: input.costCenterId,
       sortOrder: 0,
     },
     {
       account: input.clearingAccount,
       accountName: input.clearingAccountName,
-      debit: 0,
-      credit: total,
+      debit: refund,
+      credit: cost,
       costCenterId: null,
       sortOrder: 1,
     },

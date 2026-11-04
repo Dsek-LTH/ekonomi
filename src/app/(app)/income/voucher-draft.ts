@@ -120,12 +120,17 @@ export function defaultRows(
 
   if (report.source === "ZETTLE_FEE") {
     // A fee is a cost: the fee account is debited and the clearing account,
-    // the locked row, is credited.
+    // the locked row, is credited. A day that came to a net negative fee is
+    // Zettle paying fees back (a refunded purchase takes its fee with it), so
+    // it runs the other way round and the fee account is credited.
+    const refund = report.total < 0;
+    const amount = Math.abs(report.total).toFixed(2);
     return [
       makeVoucherRow({
         account: settings.zettleFeeAccount ?? "",
         costCenterCode,
-        debit: report.total.toFixed(2),
+        debit: refund ? "" : amount,
+        credit: refund ? amount : "",
       }),
     ];
   }
@@ -180,8 +185,8 @@ export function voucherFor({
   const clearing = clearingAccountFor(report, settings);
   // Where the money went, from the day's point of view. Takings land in the
   // clearing account (a debit); fees leave it, as does a day that came to a
-  // net refund.
-  const incoming = report.source !== "ZETTLE_FEE" && report.total >= 0;
+  // net refund. Fees paid back are the one kind of fee day that lands in it.
+  const incoming = report.source === "ZETTLE_FEE" ? report.total < 0 : report.total >= 0;
   const magnitude = Math.abs(report.total);
 
   const locked: VoucherLockedRow = {

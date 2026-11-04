@@ -163,6 +163,22 @@ describe("buildFeeVoucherLines", () => {
     });
     expect(voucherBlocker(lines)).toBeNull();
   });
+
+  it("books fees paid back as a credit to the fee account", () => {
+    // A refunded purchase takes its fee with it. No negative debit.
+    const lines = buildFeeVoucherLines({
+      report: { key: "avgift-2026-10-23", date: "2026-10-23", total: -345, fees: [] },
+      feeAccount: "6570",
+      feeAccountName: "Bankkostnader",
+      clearingAccount: "1580",
+      clearingAccountName: "Zettle",
+      costCenterId: "cc-skatt",
+    });
+
+    expect(lines[0]).toMatchObject({ account: "6570", debit: 0, credit: 345 });
+    expect(lines[1]).toMatchObject({ account: "1580", debit: 345, credit: 0 });
+    expect(voucherBlocker(lines)).toBeNull();
+  });
 });
 
 describe("incomeVoucherDescription", () => {

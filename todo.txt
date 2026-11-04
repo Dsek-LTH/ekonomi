@@ -24,3 +24,6 @@ Fixa rotera knappen vid liggande kvitton
 Mer stats kring hur ofta man attesterar rätt, hur mycket skickas tillbaka osv
 Medlemmar utan utlägg
 Remove all redirects for backwards compatibility
+If you choose cost center top level it should show it in the konterings component, same with project
+Förbättre intäkter vyn
+Select all in intäkter

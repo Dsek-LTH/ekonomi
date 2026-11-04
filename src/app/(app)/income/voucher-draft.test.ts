@@ -130,6 +130,22 @@ describe("voucherFor", () => {
     expect(v.balanced).toBe(true);
   });
 
+  it("debits it for fees Zettle paid back, and credits the fee account", () => {
+    // A refunded purchase takes its fee with it, so a fee day can be negative.
+    const r = report({
+      source: "ZETTLE_FEE",
+      total: -3.45,
+      lines: [],
+    } as Partial<IncomeReportRow>);
+    const [row] = defaultRows(r, settings);
+    expect(row).toMatchObject({ account: "6570", debit: "", credit: "3.45" });
+    const v = draft(r);
+    expect(v.locked.debit).toBe(3.45);
+    expect(v.locked.credit).toBe(0);
+    expect(v.balanced).toBe(true);
+    expect(v.canBook).toBe(true);
+  });
+
   it("credits it for a day that came to a net refund", () => {
     const r = report({
       total: -80,
