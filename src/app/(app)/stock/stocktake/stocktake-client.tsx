@@ -452,13 +452,9 @@ export default function StocktakeClient({
           increases.length > 0 ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-warning">
               <span>{t("stocktakeSheet.increases", { count: increases.length })}</span>
-              <button
-                type="button"
-                onClick={increasesToDelivery}
-                className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-              >
+              <Button variant="link" type="button" onClick={increasesToDelivery}>
                 {t("stocktakeSheet.toDelivery")}
-              </button>
+              </Button>
             </div>
           ) : differing.length > 0 ? (
             <p className="text-xs text-warning">

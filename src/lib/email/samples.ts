@@ -17,7 +17,7 @@ import {
 import type { Email } from "./types";
 import type { NotificationKind } from "@/lib/domain/types";
 
-export const SAMPLE_EXPENSE = {
+const SAMPLE_EXPENSE = {
   id: "preview",
   reference: "DEK26-0043",
   title: "Kolsyra till pubben",
@@ -27,7 +27,7 @@ export const SAMPLE_EXPENSE = {
   allocations: [{ costCenter: { code: "SEX01", name: "Sexmästeriet" } }],
 };
 
-export const SAMPLE_INVOICE = {
+const SAMPLE_INVOICE = {
   id: "preview",
   reference: "LEV26-0012",
   supplierName: "Lunds Släpvagnsuthyrning AB",
@@ -38,7 +38,7 @@ export const SAMPLE_INVOICE = {
   allocations: [{ costCenter: { code: "SEX01", name: "Sexmästeriet" } }],
 };
 
-export const SAMPLE_TRANSACTIONS = [
+const SAMPLE_TRANSACTIONS = [
   {
     transactionDate: new Date("2026-10-02"),
     description: "ICA KVANTUM MALMBORGS",

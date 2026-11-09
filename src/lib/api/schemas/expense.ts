@@ -19,12 +19,12 @@ export const CreateExpense = z.object({
 export type CreateExpense = z.infer<typeof CreateExpense>;
 
 /** One cost-centre slice of an utlägg. Amounts in öre, like the gross. */
-export const AllocationInput = z.object({
+const AllocationInput = z.object({
   costCenterCode: Trimmed,
   amount: Ore,
   comment: Trimmed.optional(),
 });
-export type AllocationInput = z.infer<typeof AllocationInput>;
+type AllocationInput = z.infer<typeof AllocationInput>;
 
 /**
  * A total odometer reading, in kilometres. The car's lifetime figure, not the

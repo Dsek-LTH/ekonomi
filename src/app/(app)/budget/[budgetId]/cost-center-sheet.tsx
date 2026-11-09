@@ -2,6 +2,7 @@
 // account → line-items → Summa table. Owns the drag-reclassify + row-reorder
 // drag handlers and the per-sheet drafts; the select/edit behaviour comes from
 // useCellEdit, and the cell renderers and `api` from the budget client.
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
@@ -845,21 +846,13 @@ export function CostCenterSheet(props: {
                 ? t("markedAccounts", { count: marked.accounts.length })
                 : t("markedRows", { count: marked.rows.length })}
             </span>
-            <button
-              type="button"
-              onClick={copySelection}
-              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <Button variant="link" type="button" onClick={copySelection} className="text-sm">
               {t("copyMarked")}
-            </button>
+            </Button>
             <span className="text-xs text-muted">⌘/Ctrl+C</span>
-            <button
-              type="button"
-              onClick={clearTicks}
-              className="ml-auto text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <Button variant="link" type="button" onClick={clearTicks} className="ml-auto text-xs">
               {t("clearMarked")}
-            </button>
+            </Button>
           </div>
         )}
 
@@ -878,13 +871,14 @@ export function CostCenterSheet(props: {
             <span className="text-xs text-muted">
               {clip.kind === "rows" ? t("pasteRowsHint") : t("pasteAccountsHint")}
             </span>
-            <button
+            <Button
+              variant="link"
               type="button"
               onClick={() => onCopy(null)}
-              className="ml-auto text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+              className="ml-auto text-xs"
             >
               {t("clearClipboard")}
-            </button>
+            </Button>
           </div>
         )}
 

@@ -161,13 +161,9 @@ export function ResultUnitsClient({
         <Notice>
           <p>
             {t("unassignedNotice", { count: unassignedActive })}{" "}
-            <button
-              type="button"
-              onClick={() => setShowUnassigned(true)}
-              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <Button variant="link" type="button" onClick={() => setShowUnassigned(true)}>
               {t("showThem")}
-            </button>
+            </Button>
           </p>
         </Notice>
       )}

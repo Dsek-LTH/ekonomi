@@ -100,7 +100,7 @@ export interface ClosingProgress {
 }
 
 /** The tabs of the voucher list. "all" first, the rest by evidence. */
-export const CLOSING_TABS = ["all", "expense", "income", "none", "disagrees"] as const;
+const CLOSING_TABS = ["all", "expense", "income", "none", "disagrees"] as const;
 export type ClosingTab = (typeof CLOSING_TABS)[number];
 
 function toYear(

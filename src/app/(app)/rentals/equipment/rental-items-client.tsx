@@ -55,13 +55,14 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
                   navigate, so the affordance sits on the words somebody would
                   aim at anyway. That is one target per row instead of a pencil
                   column repeating "editable" fifteen times. */}
-              <button
+              <Button
+                variant="link"
                 type="button"
                 onClick={() => setEditing(i)}
-                className="text-left font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+                className="text-left"
               >
                 {i.name}
-              </button>
+              </Button>
             </span>
             {i.description && (
               <span className="block truncate text-xs text-muted">{i.description}</span>

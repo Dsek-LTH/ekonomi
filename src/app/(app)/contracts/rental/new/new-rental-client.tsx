@@ -507,14 +507,15 @@ export function NewRentalClient({
                     label={t("rental.renterOrg")}
                     requirement="required"
                     action={
-                      <button
+                      <Button
+                        variant="link"
                         type="button"
                         onClick={() => setNewCounterpartyName("")}
-                        className="flex items-center gap-1 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+                        className="flex items-center gap-1 text-xs"
                       >
                         <IconPlus className="size-3.5" />
                         {tc("add")}
-                      </button>
+                      </Button>
                     }
                   >
                     <Combobox
@@ -742,13 +743,9 @@ export function NewRentalClient({
                     with one row missed. */}
                 {pricing.subtotalOre > 0 && pricing.totalOre > 0 && (
                   <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-                      onClick={lendFree}
-                    >
+                    <Button variant="link" type="button" className="text-xs" onClick={lendFree}>
                       {t("rental.lendFree")}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

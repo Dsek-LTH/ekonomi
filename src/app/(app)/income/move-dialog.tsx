@@ -40,7 +40,7 @@ export interface AssignRequest {
  * reads as "choose" rather than as an answer. Guessing between beer and food
  * here would produce a voucher that looks decided and is not.
  */
-export function suggestedAccount(target: IncomeMoveTarget | undefined, current: string): string {
+function suggestedAccount(target: IncomeMoveTarget | undefined, current: string): string {
   if (target?.accounts.length === 1) return target.accounts[0].account;
   return current;
 }

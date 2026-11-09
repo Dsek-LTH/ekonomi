@@ -47,10 +47,14 @@ import { Combobox } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconButton } from "@/components/ui/icon-button";
+import { Button } from "@/components/ui/button";
+import { FilterTabs } from "@/components/ui/filter-tabs";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   IconDots,
   IconList,
   IconLock,
+  IconScan,
   IconSwap,
   IconTrash,
   IconViewTable,
@@ -65,7 +69,6 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
 import { tagsInUse } from "@/lib/stock/tags";
-import { SheetHeader, SheetSaveBar } from "./sheet-chrome";
 import {
   CELL_KINDS,
   WHOLE,
@@ -922,15 +925,32 @@ export default function EventClient({
       ) : (
         <>
           <Card>
-            <SheetHeader
-              t={t}
-              search={search}
-              onSearch={setSearch}
-              onScan={canManage ? scan : undefined}
-              kinds={CELL_KINDS}
-              column={column}
-              onColumn={setColumn}
-            />
+            <div className="flex items-center gap-2 border-b border-border px-inset py-2">
+              <div className="min-w-0 flex-1 sm:max-w-72">
+                <SearchInput
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("event.sheet.search")}
+                  aria-label={t("event.sheet.search")}
+                />
+              </div>
+              {canManage && (
+                <Button variant="secondary" onClick={scan} title={t("event.sheet.scan")}>
+                  <IconScan className="size-4" />
+                  <span className="hidden sm:inline">{t("event.sheet.scanShort")}</span>
+                </Button>
+              )}
+            </div>
+            {/* On a phone, one column at a time. */}
+            <div className="border-b border-border px-inset md:hidden">
+              <FilterTabs
+                options={CELL_KINDS.map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
+                value={column}
+                onChange={setColumn}
+                fill
+                aria-label={t("event.sheet.column")}
+              />
+            </div>
 
             {/* No CardBody: the sheet is ruled to the card's own edge, the way the
             voucher editor is. A body would inset it by `px-inset` and the
@@ -1244,14 +1264,33 @@ export default function EventClient({
             )}
 
             {canManage && (
-              <SheetSaveBar
-                t={t}
-                changed={changed}
-                faults={faults}
-                pending={pending}
-                onSave={save}
-                onDiscard={discard}
-              />
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3">
+                <span className="text-sm text-muted">
+                  {changed.length === 0
+                    ? t("event.sheet.nothingToSave")
+                    : faults.size > 0
+                      ? t("event.sheet.unsavedWithFaults", {
+                          count: changed.length,
+                          faults: faults.size,
+                        })
+                      : t("event.sheet.unsaved", { count: changed.length })}
+                </span>
+                <div className="flex items-center gap-2">
+                  {changed.length > 0 && (
+                    <Button variant="secondary" onClick={discard} disabled={pending !== null}>
+                      {t("event.sheet.discard")}
+                    </Button>
+                  )}
+                  {/* Faulty cells are skipped, so one bad figure cannot block the rest. */}
+                  <Button
+                    onClick={save}
+                    disabled={changed.every((k) => faults.has(k))}
+                    loading={pending === "save"}
+                  >
+                    {t("event.sheet.save")}
+                  </Button>
+                </div>
+              </div>
             )}
           </Card>
         </>

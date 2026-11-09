@@ -30,13 +30,6 @@ export const IconGrid = (p: P) => (
 // The two shapes a list can be drawn in, for the view toggle
 // (components/ui/view-toggle.tsx). Pictures of the layouts themselves: a
 // master-detail split and a table, because the toggle carries no words.
-export const IconViewSplit = (p: P) => (
-  <Svg {...p}>
-    <rect x="3" y="4" width="18" height="16" rx="2" />
-    <path d="M9.5 4v16" />
-  </Svg>
-);
-
 export const IconViewTable = (p: P) => (
   <Svg {...p}>
     <rect x="3" y="4" width="18" height="16" rx="2" />

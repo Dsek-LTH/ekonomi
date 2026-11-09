@@ -19,6 +19,7 @@
 // The three that are a series over time are SVG. The two that are a ranked list
 // of labelled things are HTML bars: their rows carry a name, a figure and
 // sometimes a link, and laying text out is what HTML is for.
+import { Button } from "@/components/ui/button";
 import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -582,13 +583,14 @@ function CostCenterRanking({
       })}
 
       {costCenters.length > RANKING_HEAD && (
-        <button
+        <Button
+          variant="link"
           type="button"
           onClick={() => setAll((v) => !v)}
-          className="pt-1 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+          className="pt-1 text-sm"
         >
           {all ? t("ranking.showFewer") : t("ranking.showAll", { count: costCenters.length })}
-        </button>
+        </Button>
       )}
     </div>
   );

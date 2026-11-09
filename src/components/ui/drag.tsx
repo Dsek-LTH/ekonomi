@@ -18,18 +18,6 @@
 import { cn } from "@/lib/ui/utils";
 
 /**
- * True while the drag pointer is still inside the element's box.
- *
- * Used to keep a drop highlight from flashing: `dragleave` fires every time the
- * pointer crosses onto a child element, so the highlight is only cleared when
- * the pointer has truly left.
- */
-export function insideRect(e: React.DragEvent): boolean {
-  const r = e.currentTarget.getBoundingClientRect();
-  return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom;
-}
-
-/**
  * The grip you pick a row up by: ⠿, faint until the row is hovered.
  *
  * A handle rather than a draggable row, in both screens and for the same

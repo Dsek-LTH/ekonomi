@@ -307,13 +307,9 @@ function ProfileHero({
             ))}
           </ul>
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm sm:justify-start">
-            <button
-              type="button"
-              onClick={pick}
-              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <Button variant="link" type="button" onClick={pick}>
               {hasAvatar ? tProfile("avatar.change") : tProfile("avatar.upload")}
-            </button>
+            </Button>
             {hasAvatar && (
               <button
                 type="button"

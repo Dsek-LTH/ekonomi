@@ -7,10 +7,10 @@ import { Id, IsoDate, NonEmpty, Ore, Trimmed } from "./common";
 import { MAX_TAG, MAX_TAGS, cleanTags } from "@/lib/stock/tags";
 import { validGtin } from "@/lib/stock/barcode";
 
-export const StockKind = z.enum(["UNIT", "VOLUME"]);
+const StockKind = z.enum(["UNIT", "VOLUME"]);
 
 /** The five the bar keeps its stock in. See lib/domain/types.ts. */
-export const DrinkCategory = z.enum([
+const DrinkCategory = z.enum([
   "SPRITDRYCK",
   "VIN",
   "OVRIG_JASTDRYCK",
@@ -18,7 +18,7 @@ export const DrinkCategory = z.enum([
   "ALKOHOLDRYCKSLIKNANDE",
 ]);
 
-export const StockEntryKind = z.enum([
+const StockEntryKind = z.enum([
   "PURCHASE",
   "CHECKOUT",
   "RETURN",

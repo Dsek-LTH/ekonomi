@@ -10,7 +10,6 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { AmountInput } from "@/components/ui/amount-input";
 import { PageShell } from "@/components/page-shell";
-import { wizardChrome } from "./wizard-chrome";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
 import { SubmitBlockerNote } from "@/components/submit-blocker-note";
 import {
@@ -764,7 +763,12 @@ export default function NewExpenseClient({
     done(id);
   }
 
-  const chrome = wizardChrome({ existing, t });
+  const title = !existing
+    ? t("newTitle")
+    : existing.reference
+      ? t("editTitle", { id: existing.reference })
+      : t("editTitleDraft");
+  const back = existing ? `/expenses/${existing.id}` : "/expenses";
 
   // Every document the panel has to show, in the reader's order (see `docs`).
   // Captioned the same way a saved utlägg's
@@ -818,7 +822,7 @@ export default function NewExpenseClient({
   }
 
   return (
-    <PageShell title={chrome.title} back={chrome.back} width="content">
+    <PageShell title={title} back={back} width="content">
       {/* The panel takes documents as well as showing them: with none
           uploaded yet it stands open beside the form as the dropzone, which
           is why this wizard has no upload step of its own. Once one is

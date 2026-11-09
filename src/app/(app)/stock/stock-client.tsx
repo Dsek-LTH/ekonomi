@@ -406,13 +406,14 @@ export default function StockClient({
             />
           </div>
           {asOf && (
-            <button
+            <Button
+              variant="link"
               type="button"
               onClick={() => setDate("")}
-              className="shrink-0 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+              className="shrink-0 text-sm"
             >
               {t("asOf.today")}
-            </button>
+            </Button>
           )}
         </div>
       }

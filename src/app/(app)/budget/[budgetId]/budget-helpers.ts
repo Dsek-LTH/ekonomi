@@ -10,7 +10,7 @@ export const CHANGES = "__changes__";
 // The two groups that are not a result unit. Sentinels rather than words: they
 // share a namespace with real result unit names, and they are wording the screen
 // resolves through `budget.group.<key>`.
-export const OTHER = "__other__";
+const OTHER = "__other__";
 // Sheets with no cost centre behind them yet. Their own group rather than
 // OTHER: that one means "belongs to no result unit", this one means "not decided
 // yet", and the second is a to-do.

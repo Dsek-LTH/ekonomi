@@ -62,16 +62,6 @@ const nameOf = (accounts: AccountRecord[], number: string) =>
   accounts.find((a) => a.number === number)?.name ?? number;
 
 /**
- * Is this day one the section may already have booked?
- *
- * Either because this database has a verifikation holding some of its money,
- * or because Fortnox holds one for the same source and day. Both are shown
- * rather than hidden, since a day missing from the queue cannot be told apart
- * from a day the fetch never covered.
- */
-export const isDuplicate = (r: IncomeReportRow) => Boolean(r.duplicateOf || r.existingVoucher);
-
-/**
  * Where to read a day's intäktsräkning, stamped with when the report last
  * changed so a corrected day is a different address and the browser does not
  * show the copy it was allowed to keep for five minutes.

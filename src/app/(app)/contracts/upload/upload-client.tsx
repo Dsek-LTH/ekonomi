@@ -241,14 +241,15 @@ export function UploadContractClient({
                   hint={t("form.counterpartyHint")}
                   requirement={isAgreement ? "required" : "optional"}
                   action={
-                    <button
+                    <Button
+                      variant="link"
                       type="button"
                       onClick={() => setNewCounterpartyName("")}
-                      className="flex items-center gap-1 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+                      className="flex items-center gap-1 text-xs"
                     >
                       <IconPlus className="size-3.5" />
                       {tc("add")}
-                    </button>
+                    </Button>
                   }
                 >
                   <Combobox
@@ -380,13 +381,9 @@ export function UploadContractClient({
             walking through it would lose. */}
         <p className="text-xs text-muted">
           {t("form.otherKind")}{" "}
-          <button
-            type="button"
-            onClick={() => router.push("/contracts/rental/new")}
-            className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-          >
+          <Button variant="link" type="button" onClick={() => router.push("/contracts/rental/new")}>
             {t("form.otherKindLink")}
-          </button>
+          </Button>
         </p>
       </div>
 

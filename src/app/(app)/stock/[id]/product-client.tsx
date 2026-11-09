@@ -755,23 +755,25 @@ function CellarTable({
       hidden: !canManage,
       cell: (r) =>
         r.fixable ? (
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={() => onFix(r)}
-            className="relative z-10 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+            className="relative z-10 text-xs"
           >
             {t("entry.fix")}
-          </button>
+          </Button>
         ) : r.kind === "COUNT" && (r.units ?? 0) > 0 ? (
           // A count that found more sealed than the log expected: very often
           // a delivery booked as a stocktake. Offered, not assumed.
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={() => onToPurchase(r)}
-            className="relative z-10 whitespace-nowrap text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+            className="relative z-10 whitespace-nowrap text-xs"
           >
             {t("toPurchase.action")}
-          </button>
+          </Button>
         ) : null,
     },
   ];

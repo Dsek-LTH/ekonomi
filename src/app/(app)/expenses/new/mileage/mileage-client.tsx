@@ -25,6 +25,7 @@
 // action bar along the foot saying what it comes to, what is still missing,
 // and the two ways out. There is no match section, since there is no card
 // purchase to match.
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useReturnTo } from "@/components/shell/route-history";
@@ -34,7 +35,6 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import Link from "next/link";
 import { PaymentTag } from "@/components/ui/payment-tag";
-import { wizardChrome } from "../wizard-chrome";
 import { Card, CardBody } from "@/components/ui/card";
 import { ActionBar } from "@/components/action-bar";
 import { Field, FieldGroup, Input, DateInput } from "@/components/ui/field";
@@ -339,7 +339,12 @@ export default function MileageClient({
     </Field>
   );
 
-  const chrome = wizardChrome({ existing, t });
+  const pageTitle = !existing
+    ? t("newTitle")
+    : existing.reference
+      ? t("editTitle", { id: existing.reference })
+      : t("editTitleDraft");
+  const back = existing ? `/expenses/${existing.id}` : "/expenses";
 
   // What still has to be filled in before this can be sent, by name, for the
   // action bar. In the order the page asks for them, as on the utlägg form.
@@ -362,7 +367,7 @@ export default function MileageClient({
   ].join(", ");
 
   return (
-    <PageShell title={chrome.title} back={chrome.back} width="content">
+    <PageShell title={pageTitle} back={back} width="content">
       {/* The panel shows the utläggsräkning itself, once there is a draft to
           draw one from, the same one document that goes to Fortnox, with the
           journey printed on it. Before the first save there is nothing at an
@@ -457,27 +462,29 @@ export default function MileageClient({
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <button
+              <Button
+                variant="link"
                 type="button"
                 onClick={() => setStops([...stops, ""])}
                 disabled={stops.length >= MAX_STOPS}
-                className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
+                className="text-sm"
               >
                 {t("route.addStop")}
-              </button>
+              </Button>
               {/* The common shape, in one press. Nearly every errand ends where
                   it began, and typing "Kårhuset, Lund" a second time is the kind
                   of retyping people skip. */}
               {stops.length < MAX_STOPS &&
                 stops[0].trim() !== "" &&
                 stops[stops.length - 1].trim() !== stops[0].trim() && (
-                  <button
+                  <Button
+                    variant="link"
                     type="button"
                     onClick={() => setStops([...stops, stops[0]])}
-                    className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+                    className="text-sm"
                   >
                     {t("route.addReturn")}
-                  </button>
+                  </Button>
                 )}
             </div>
           </FieldGroup>

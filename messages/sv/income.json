@@ -38,9 +38,6 @@
     "superseded": "{count} tidigare rapporter rensades bort",
     "fortnoxCheckSeriesUnset": "Kunde inte kontrolleras mot Fortnox eftersom ingen verifikationsserie är vald"
   },
-  "counts": {
-    "reports": "{count} rapporter"
-  },
   "empty": {
     "description": "Hämta en period från Zettle, eller ladda upp en Swish-rapport.",
     "noMatch": "Inga hämtningar matchar filtret.",
@@ -53,7 +50,6 @@
   "table": {
     "source": "Källa",
     "period": "Period",
-    "reports": "Rapporter",
     "imported": "Hämtad",
     "date": "Datum",
     "costCenter": "Kostnadsställe",

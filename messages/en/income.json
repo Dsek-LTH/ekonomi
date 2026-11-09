@@ -38,9 +38,6 @@
     "superseded": "{count} earlier reports were cleared out",
     "fortnoxCheckSeriesUnset": "Could not be checked against Fortnox because no voucher series is chosen"
   },
-  "counts": {
-    "reports": "{count} reports"
-  },
   "empty": {
     "description": "Fetch a period from Zettle, or upload a Swish report.",
     "noMatch": "No fetches match the filter.",
@@ -53,7 +50,6 @@
   "table": {
     "source": "Source",
     "period": "Period",
-    "reports": "Reports",
     "imported": "Fetched",
     "date": "Date",
     "costCenter": "Cost centre",

@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react";
 
 export type Platform = "installed" | "ios" | "android" | "other";
 
-export function readPlatform(): Platform {
+function readPlatform(): Platform {
   // `navigator.standalone` is Safari's own, older answer to the same question.
   const nav = navigator as Navigator & { standalone?: boolean };
   if (window.matchMedia("(display-mode: standalone)").matches || nav.standalone) {

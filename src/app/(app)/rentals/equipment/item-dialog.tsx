@@ -23,9 +23,6 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { oreToSEK, parseOre, sekToInput } from "@/lib/domain/money";
 import type { RentalItemRow } from "@/lib/data/rental-items";
 
-/** Kronor as typed, to öre. Blank is not zero: see `dailyPriceOre` below. */
-const toOre = (input: string) => parseOre(input);
-
 /** Öre to the string the amount field holds. */
 const fromOre = (ore: number | null) => (ore === null ? "" : sekToInput(oreToSEK(ore)));
 
@@ -66,8 +63,8 @@ export function ItemDialog({
     quantity: count,
     // Blank means "priced case by case", which is a real answer and not a zero.
     // A zero would print "0,00 kr per dag" on a contract.
-    dailyPriceOre: dailyPrice.trim() === "" ? null : toOre(dailyPrice),
-    replacementValueOre: toOre(replacement),
+    dailyPriceOre: dailyPrice.trim() === "" ? null : parseOre(dailyPrice),
+    replacementValueOre: parseOre(replacement),
   };
 
   async function save() {

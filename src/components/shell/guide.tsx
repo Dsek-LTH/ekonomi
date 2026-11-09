@@ -135,7 +135,7 @@ type Box = { top: number; left: number; width: number; height: number };
  * Where the card goes: under the control if it fits there, over it if not, and
  * in the middle with no control at all. Held inside the window either way.
  */
-export function placeCard(
+function placeCard(
   spot: Box | null,
   card: { width: number; height: number },
   view: { width: number; height: number },
@@ -164,7 +164,7 @@ export function placeCard(
  * over the control it was about, or the control was left at the screen's
  * edge with half of it below. Held clear of the home indicator and the clock.
  */
-export function dockCard(
+function dockCard(
   spot: Box | null,
   card: { height: number },
   view: { height: number },

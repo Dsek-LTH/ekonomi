@@ -12,6 +12,7 @@
 // Almost every utlägg goes to one cost centre. It is the same table then, one
 // row, but its amount is the utlägg's own and is not asked: there is nothing to
 // add up, so the foot holds only the way to split it.
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
@@ -206,17 +207,18 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
           )}
         >
           <div className="@2xl:col-span-2 @2xl:flex @2xl:items-center @2xl:justify-between @2xl:gap-2 @2xl:px-2.5 @2xl:py-2">
-            <button
+            <Button
+              variant="link"
               type="button"
               // Into two: the first row keeps the whole amount until somebody
               // changes it, and the new one is where the next cost centre goes,
               // empty until somebody says how much.
               onClick={add}
               disabled={single ? costCenters.length < 2 : value.length >= costCenters.length}
-              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
+              className="text-sm"
             >
               {single ? t("split") : t("add")}
-            </button>
+            </Button>
             {!single && (
               <span className="hidden @2xl:inline">
                 <BalanceChip balanced={balanced} left={left} gross={grossAmount} />

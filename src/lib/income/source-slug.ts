@@ -6,7 +6,7 @@
 // fees booked on its own before the per-day voucher (ZETTLE_FEE) is Zettle's.
 import type { IncomeSource } from "@/lib/domain/types";
 
-export const INCOME_SOURCE_SLUGS = ["zettle", "swish"] as const;
+const INCOME_SOURCE_SLUGS = ["zettle", "swish"] as const;
 export type IncomeSourceSlug = (typeof INCOME_SOURCE_SLUGS)[number];
 
 export const isIncomeSourceSlug = (s: string): s is IncomeSourceSlug =>

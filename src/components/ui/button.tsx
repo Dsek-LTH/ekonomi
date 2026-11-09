@@ -3,7 +3,14 @@ import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 
 type Variant =
-  "primary" | "secondary" | "ghost" | "quiet" | "accentOutline" | "danger" | "dangerOutline";
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "quiet"
+  | "accentOutline"
+  | "danger"
+  | "dangerOutline"
+  | "link";
 type Size = "sm" | "md" | "lg";
 
 // A flat pink blend with a white label (see .action-fill in globals.css).
@@ -27,6 +34,8 @@ const VARIANTS: Record<Variant, string> = {
   // Destructive but not the primary path: sign out, delete an utlägg.
   dangerOutline:
     "bg-background text-danger border border-border-control hover:bg-danger-soft hover:border-danger",
+  // Inline text action: no box, no size, sits in a sentence or beside a field.
+  link: "font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40",
 };
 
 // "md" is the button a page's actions are drawn at, and like the control
@@ -85,7 +94,11 @@ export function Button({
   }) {
   return (
     <button
-      className={cn(BASE, !loading && DIMMED, VARIANTS[variant], SIZES[size], className)}
+      className={cn(
+        variant !== "link" && cn(BASE, !loading && DIMMED, SIZES[size]),
+        VARIANTS[variant],
+        className,
+      )}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       // Firefox restores a button's disabled state when a page is reloaded or
@@ -129,7 +142,11 @@ export function ButtonLink({
     <Link
       href={href}
       replace={replace}
-      className={cn(BASE, DIMMED, VARIANTS[variant], SIZES[size], className)}
+      className={cn(
+        variant !== "link" && cn(BASE, DIMMED, SIZES[size]),
+        VARIANTS[variant],
+        className,
+      )}
     >
       {children}
     </Link>

@@ -67,7 +67,7 @@ interface UnitRouting {
  * the right prefix (lib/income/config.ts), which is the point: correcting a
  * line should land it exactly where it would have gone.
  */
-export function routedCostCenter(unit: UnitRouting, account: string): string | null {
+function routedCostCenter(unit: UnitRouting, account: string): string | null {
   const named = new Set(
     unit.prefixes.filter((p) => p.account === account && p.costCenterId).map((p) => p.costCenterId),
   );

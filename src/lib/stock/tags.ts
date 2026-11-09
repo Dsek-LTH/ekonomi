@@ -20,7 +20,7 @@ export const MAX_TAGS = 10;
 
 /** The comparison form. Never stored, never shown: a tag keeps the spelling it
  *  was given, and this is only what decides whether two of them are one. */
-export const fold = (tag: string): string => tag.trim().toLowerCase();
+const fold = (tag: string): string => tag.trim().toLowerCase();
 
 /**
  * A list of tags as it should be stored: trimmed, emptied of blanks, and with

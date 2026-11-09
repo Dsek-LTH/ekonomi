@@ -107,14 +107,15 @@ export function TransactionPicker({
         </span>
         <span className={END}>
           <Amount value={picked.txn.amount} />
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={() => setChanging(true)}
             disabled={busy}
-            className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40"
+            className="text-sm"
           >
             {t("change")}
-          </button>
+          </Button>
         </span>
       </div>
     );
