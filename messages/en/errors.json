@@ -446,5 +446,8 @@
   },
   "fiscalYear": {
     "outside": "The date is outside the financial year {year}. Switch year in the header to enter it there."
+  },
+  "gmail": {
+    "unconfigured": "Gmail is not configured on the server (GMAIL_* missing)."
   }
 }

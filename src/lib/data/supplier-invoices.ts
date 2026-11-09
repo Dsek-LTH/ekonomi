@@ -559,6 +559,10 @@ export async function getInvoice(
 export interface InboxHealth {
   enabled: boolean;
   address: string | null;
+  /** Whether a login to the mailbox is stored. Nothing is read until there is one. */
+  connected: boolean;
+  connectedBy: string | null;
+  connectedAt: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
   watchExpiresAt: string | null;
@@ -574,7 +578,10 @@ export interface InboxHealth {
 export async function getInboxHealth(): Promise<InboxHealth> {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
   const [state, rejected] = await Promise.all([
-    prisma.gmailSync.findUnique({ where: { id: "singleton" } }),
+    prisma.gmailSync.findUnique({
+      where: { id: "singleton" },
+      include: { connectedBy: { select: { name: true } } },
+    }),
     prisma.inboundMail.findMany({
       where: { status: "REJECTED", createdAt: { gte: since } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -592,6 +599,9 @@ export async function getInboxHealth(): Promise<InboxHealth> {
   return {
     enabled: config !== null,
     address: config?.mailbox ?? null,
+    connected: Boolean(state?.refreshToken),
+    connectedBy: state?.connectedBy?.name ?? null,
+    connectedAt: state?.connectedAt?.toISOString() ?? null,
     lastSyncAt: state?.lastSyncAt?.toISOString() ?? null,
     lastError: state?.lastError ?? null,
     watchExpiresAt: state?.watchExpiresAt?.toISOString() ?? null,

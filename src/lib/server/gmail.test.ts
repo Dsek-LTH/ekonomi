@@ -1,8 +1,15 @@
-import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import { serviceAccountAssertion, verifyPushToken, gmailConfig } from "./gmail";
+import { createSign, generateKeyPairSync } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  GmailError,
+  authorizeUrl,
+  exchangeCode,
+  gmailConfig,
+  profile,
+  verifyPushToken,
+} from "./gmail";
 
-// The two signed tokens: the one the app signs to read the mailbox, and the one Google signs for a push. Checked with a key pair made here.
+// The push token Google signs (checked with a key pair made here), and the mailbox login (Google mocked).
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
@@ -10,8 +17,8 @@ const jwk = publicKey.export({ format: "jwk" });
 
 const config = {
   mailbox: "fakturor@dsek.se",
-  serviceAccount: "inkorg@ekonomi.iam.gserviceaccount.com",
-  privateKey: pem,
+  clientId: "client.apps.googleusercontent.com",
+  clientSecret: "secret",
   topic: "projects/ekonomi/topics/inkorg",
   pushAudience: "https://ekonomi.dsek.se/api/inbound/gmail",
   pushServiceAccount: "pubsub-push@ekonomi.iam.gserviceaccount.com",
@@ -78,41 +85,115 @@ describe("verifyPushToken", () => {
   });
 });
 
-describe("serviceAccountAssertion", () => {
-  it("is signed by the service account, for the mailbox, read-only", () => {
-    const jwt = serviceAccountAssertion(config, now);
-    const [h, p, s] = jwt.split(".");
-    const verifier = createVerify("RSA-SHA256");
-    verifier.update(`${h}.${p}`);
-    expect(verifier.verify(publicKey, Buffer.from(s, "base64url"))).toBe(true);
-    expect(JSON.parse(Buffer.from(p, "base64url").toString())).toEqual({
-      iss: config.serviceAccount,
-      sub: "fakturor@dsek.se",
+describe("the login", () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const reply = (status: number, body: object) =>
+    new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  const form = (call: number) =>
+    Object.fromEntries(new URLSearchParams(String(fetchMock.mock.calls[call][1].body)));
+
+  it("asks Google for offline, read-only access to the mailbox", () => {
+    const url = new URL(
+      authorizeUrl(config, "nonce1", "https://ekonomi.dsek.se/api/gmail/callback"),
+    );
+    expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      client_id: config.clientId,
+      redirect_uri: "https://ekonomi.dsek.se/api/gmail/callback",
       scope: "https://www.googleapis.com/auth/gmail.readonly",
-      aud: "https://oauth2.googleapis.com/token",
-      iat: now,
-      exp: now + 3600,
+      access_type: "offline",
+      prompt: "consent",
+      login_hint: "fakturor@dsek.se",
+      state: "nonce1",
     });
+  });
+
+  it("trades the code for a refresh token, then reads the mailbox without asking again", async () => {
+    fetchMock.mockResolvedValueOnce(
+      reply(200, {
+        access_token: "at1",
+        refresh_token: "rt1",
+        expires_in: 3600,
+        scope: "https://www.googleapis.com/auth/gmail.readonly",
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { emailAddress: "fakturor@dsek.se", historyId: "5" }),
+    );
+    const refreshToken = await exchangeCode(config, "code1", "https://x/cb");
+    expect(refreshToken).toBe("rt1");
+    expect(form(0)).toMatchObject({ grant_type: "authorization_code", code: "code1" });
+    expect(await profile({ ...config, refreshToken })).toEqual({
+      emailAddress: "fakturor@dsek.se",
+      historyId: "5",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe("Bearer at1");
+  });
+
+  it("refuses a login that did not grant Gmail read access", async () => {
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { access_token: "at", refresh_token: "rt", scope: "openid email" }),
+    );
+    await expect(exchangeCode(config, "c", "https://x/cb")).rejects.toThrow("not granted");
+  });
+
+  it("gets a new access token from the refresh token", async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { access_token: "at2", expires_in: 3600 }));
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { emailAddress: "fakturor@dsek.se", historyId: "6" }),
+    );
+    await profile({ ...config, refreshToken: "rt2" });
+    expect(form(0)).toEqual({
+      grant_type: "refresh_token",
+      refresh_token: "rt2",
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+    });
+  });
+
+  it("says when Google no longer accepts the refresh token", async () => {
+    fetchMock.mockResolvedValueOnce(
+      reply(400, {
+        error: "invalid_grant",
+        error_description: "Token has been expired or revoked.",
+      }),
+    );
+    const err = await profile({ ...config, refreshToken: "rt3" }).catch((e) => e);
+    expect(err).toBeInstanceOf(GmailError);
+    expect(err.revoked).toBe(true);
+  });
+
+  it("does not take another failure for a revoked login", async () => {
+    fetchMock.mockResolvedValueOnce(reply(500, { error: "internal" }));
+    const err = await profile({ ...config, refreshToken: "rt4" }).catch((e) => e);
+    expect(err.revoked).toBe(false);
   });
 });
 
 describe("gmailConfig", () => {
-  it("is off until every variable is set, and reads a key with escaped newlines", () => {
+  it("is off until every variable is set", () => {
     const keep = { ...process.env };
     try {
       for (const k of Object.keys(process.env)) if (k.startsWith("GMAIL_")) delete process.env[k];
       expect(gmailConfig()).toBeNull();
       Object.assign(process.env, {
-        GMAIL_MAILBOX: config.mailbox,
-        GMAIL_SERVICE_ACCOUNT_EMAIL: config.serviceAccount,
-        GMAIL_SERVICE_ACCOUNT_KEY: "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----",
+        GMAIL_MAILBOX: "Fakturor@dsek.se",
+        GMAIL_OAUTH_CLIENT_ID: config.clientId,
+        GMAIL_OAUTH_CLIENT_SECRET: config.clientSecret,
         GMAIL_PUBSUB_TOPIC: config.topic,
         GMAIL_PUSH_AUDIENCE: config.pushAudience,
       });
       expect(gmailConfig()).toBeNull();
       process.env.GMAIL_PUSH_SERVICE_ACCOUNT = config.pushServiceAccount;
       const c = gmailConfig();
-      expect(c?.privateKey).toBe("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----");
+      expect(c?.mailbox).toBe("fakturor@dsek.se");
       expect(c?.allowedDomain).toBe("dsek.se");
     } finally {
       process.env = keep;

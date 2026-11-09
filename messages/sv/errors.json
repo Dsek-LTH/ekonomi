@@ -446,5 +446,8 @@
   },
   "fiscalYear": {
     "outside": "Datumet ligger utanför räkenskapsåret {year}. Byt år i sidhuvudet för att lägga in det där."
+  },
+  "gmail": {
+    "unconfigured": "Gmail är inte konfigurerat på servern (GMAIL_* saknas)."
   }
 }

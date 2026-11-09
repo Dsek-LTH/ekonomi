@@ -1,51 +1,50 @@
 // The Gmail API as far as the levfaktura inkorg needs it (fetch and node:crypto, no googleapis; setup in
-// docs/gmail-inbound.md). A service account with domain-wide delegation reads the mailbox via a signed JWT,
-// `watch` publishes changes to Pub/Sub (lasts seven days, renewed by cron), and Pub/Sub pushes to
-// /api/inbound/gmail with a Google-signed OIDC token that verifyPushToken checks. Off unless every GMAIL_*
-// variable is set.
+// docs/gmail-inbound.md). The mailbox is read with a refresh token from logging in as it once (OAuth,
+// gmail.readonly, see api/gmail/connect). `watch` publishes changes to Pub/Sub (lasts seven days, renewed by
+// cron), and Pub/Sub pushes to /api/inbound/gmail with a Google-signed OIDC token that verifyPushToken
+// checks. Off unless every GMAIL_* variable is set.
 import "server-only";
 
-import { createPublicKey, createSign, createVerify, type JsonWebKey } from "node:crypto";
+import { createPublicKey, createVerify, type JsonWebKey } from "node:crypto";
 
+const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const API = "https://gmail.googleapis.com/gmail/v1/users/me";
 const CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
-interface GmailConfig {
+export interface GmailConfig {
   mailbox: string;
-  serviceAccount: string;
-  privateKey: string;
+  clientId: string;
+  clientSecret: string;
   topic: string;
   pushAudience: string;
   pushServiceAccount: string;
   allowedDomain: string;
 }
 
+/** The configuration plus the stored login: what every Gmail call needs. */
+export interface GmailMailbox extends GmailConfig {
+  refreshToken: string;
+}
+
 /** The configuration, or null when the integration is off. */
 export function gmailConfig(): GmailConfig | null {
   const e = process.env;
   const mailbox = e.GMAIL_MAILBOX;
-  const serviceAccount = e.GMAIL_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = e.GMAIL_SERVICE_ACCOUNT_KEY;
+  const clientId = e.GMAIL_OAUTH_CLIENT_ID;
+  const clientSecret = e.GMAIL_OAUTH_CLIENT_SECRET;
   const topic = e.GMAIL_PUBSUB_TOPIC;
   const pushAudience = e.GMAIL_PUSH_AUDIENCE;
   const pushServiceAccount = e.GMAIL_PUSH_SERVICE_ACCOUNT;
-  if (
-    !mailbox ||
-    !serviceAccount ||
-    !privateKey ||
-    !topic ||
-    !pushAudience ||
-    !pushServiceAccount
-  ) {
+  if (!mailbox || !clientId || !clientSecret || !topic || !pushAudience || !pushServiceAccount) {
     return null;
   }
   return {
-    mailbox,
-    serviceAccount,
-    // A PEM in an environment variable arrives with its newlines written as \n.
-    privateKey: privateKey.replace(/\\n/g, "\n"),
+    mailbox: mailbox.toLowerCase(),
+    clientId,
+    clientSecret,
     topic,
     pushAudience,
     pushServiceAccount: pushServiceAccount.toLowerCase(),
@@ -57,72 +56,118 @@ export class GmailError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Google no longer accepts the refresh token: the mailbox has to be connected again. */
+    readonly revoked = false,
   ) {
     super(message);
   }
 }
 
-const b64url = (data: Buffer | string) => Buffer.from(data).toString("base64url");
-
-/** A JWT signed with the service account's key, for the token exchange. */
-export function serviceAccountAssertion(
-  c: GmailConfig,
-  now = Math.floor(Date.now() / 1000),
-): string {
-  const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claims = b64url(
-    JSON.stringify({
-      iss: c.serviceAccount,
-      sub: c.mailbox,
-      scope: SCOPE,
-      aud: TOKEN_URL,
-      iat: now,
-      exp: now + 3600,
-    }),
-  );
-  const signer = createSign("RSA-SHA256");
-  signer.update(`${header}.${claims}`);
-  return `${header}.${claims}.${b64url(signer.sign(c.privateKey))}`;
+/** Where to send the person connecting the mailbox. `prompt=consent` makes Google return a refresh token every time. */
+export function authorizeUrl(c: GmailConfig, state: string, redirectUri: string): string {
+  const q = new URLSearchParams({
+    client_id: c.clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: SCOPE,
+    access_type: "offline",
+    prompt: "consent",
+    login_hint: c.mailbox,
+    state,
+  });
+  return `${AUTH_URL}?${q}`;
 }
 
-// One token per process, renewed a minute before it runs out.
-let cached: { token: string; expiresAt: number } | null = null;
+interface TokenResponse {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  scope?: string;
+  error?: string;
+  error_description?: string;
+}
 
-async function accessToken(c: GmailConfig): Promise<string> {
-  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
+async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: serviceAccountAssertion(c),
-    }),
+    body: new URLSearchParams(body),
   });
-  const json = (await res.json().catch(() => ({}))) as {
-    access_token?: string;
-    expires_in?: number;
-    error_description?: string;
-    error?: string;
-  };
+  const json = (await res.json().catch(() => ({}))) as TokenResponse;
   if (!res.ok || !json.access_token) {
     throw new GmailError(
       `Google token exchange failed: ${json.error_description ?? json.error ?? res.status}`,
       res.status,
+      json.error === "invalid_grant",
     );
   }
-  cached = { token: json.access_token, expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000 };
-  return cached.token;
+  return json;
 }
 
-async function call<T>(c: GmailConfig, path: string, init: RequestInit = {}): Promise<T> {
+// Access tokens by refresh token, renewed a minute before they run out. Keyed on the refresh token so a
+// reconnect never reuses the old login's token.
+const cache = new Map<string, { token: string; expiresAt: number }>();
+
+const remember = (refreshToken: string, json: TokenResponse) => {
+  cache.clear();
+  cache.set(refreshToken, {
+    token: json.access_token!,
+    expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000,
+  });
+};
+
+/** Trade the code from Google's redirect for a login. Throws unless Gmail read access was granted. */
+export async function exchangeCode(
+  c: GmailConfig,
+  code: string,
+  redirectUri: string,
+): Promise<string> {
+  const json = await tokenRequest({
+    grant_type: "authorization_code",
+    code,
+    client_id: c.clientId,
+    client_secret: c.clientSecret,
+    redirect_uri: redirectUri,
+  });
+  if (!json.refresh_token) throw new GmailError("Google returned no refresh token");
+  if (!json.scope?.split(" ").includes(SCOPE)) throw new GmailError("gmail.readonly not granted");
+  remember(json.refresh_token, json);
+  return json.refresh_token;
+}
+
+async function accessToken(m: GmailMailbox): Promise<string> {
+  const hit = cache.get(m.refreshToken);
+  if (hit && hit.expiresAt > Date.now() + 60_000) return hit.token;
+  const json = await tokenRequest({
+    grant_type: "refresh_token",
+    refresh_token: m.refreshToken,
+    client_id: m.clientId,
+    client_secret: m.clientSecret,
+  });
+  remember(m.refreshToken, json);
+  return json.access_token!;
+}
+
+/** Withdraw the login at Google. Best effort: the token is forgotten here either way. */
+export async function revoke(refreshToken: string): Promise<void> {
+  cache.delete(refreshToken);
+  await fetch(REVOKE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: refreshToken }),
+  }).catch(() => {});
+}
+
+async function call<T>(m: GmailMailbox, path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${await accessToken(c)}`,
+      Authorization: `Bearer ${await accessToken(m)}`,
       Accept: "application/json",
       ...(init.body ? { "Content-Type": "application/json" } : {}),
     },
   });
+  // A 204 (users.stop) has no body.
   const json = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } };
   if (!res.ok) {
     throw new GmailError(
@@ -133,12 +178,21 @@ async function call<T>(c: GmailConfig, path: string, init: RequestInit = {}): Pr
   return json;
 }
 
+/** Which mailbox the login is for, and where its history stands. */
+export const profile = (m: GmailMailbox) =>
+  call<{ emailAddress: string; historyId: string }>(m, "/profile");
+
+/** Stop publishing changes to Pub/Sub. */
+export async function stopWatch(m: GmailMailbox): Promise<void> {
+  await call(m, "/stop", { method: "POST" });
+}
+
 /** Ask Gmail to publish changes to the inbox. Returns where it starts from. */
-export async function watch(c: GmailConfig): Promise<{ historyId: string; expiration: Date }> {
-  const r = await call<{ historyId: string; expiration: string }>(c, "/watch", {
+export async function watch(m: GmailMailbox): Promise<{ historyId: string; expiration: Date }> {
+  const r = await call<{ historyId: string; expiration: string }>(m, "/watch", {
     method: "POST",
     body: JSON.stringify({
-      topicName: c.topic,
+      topicName: m.topic,
       labelIds: ["INBOX"],
       labelFilterBehavior: "INCLUDE",
     }),
@@ -146,17 +200,12 @@ export async function watch(c: GmailConfig): Promise<{ historyId: string; expira
   return { historyId: r.historyId, expiration: new Date(Number(r.expiration)) };
 }
 
-/** The mailbox's current history id, for starting from now. */
-export async function currentHistoryId(c: GmailConfig): Promise<string> {
-  return (await call<{ historyId: string }>(c, "/profile")).historyId;
-}
-
 /**
  * Every message added to the inbox since `startHistoryId`, oldest first, and the next history id. Throws a
  * GmailError with status 404 when the start is older than Gmail keeps history (about a week).
  */
 export async function messagesAddedSince(
-  c: GmailConfig,
+  m: GmailMailbox,
   startHistoryId: string,
 ): Promise<{ ids: string[]; historyId: string }> {
   const ids: string[] = [];
@@ -173,7 +222,7 @@ export async function messagesAddedSince(
       history?: { messagesAdded?: { message: { id: string } }[] }[];
       historyId: string;
       nextPageToken?: string;
-    }>(c, `/history?${q}`);
+    }>(m, `/history?${q}`);
     for (const h of r.history ?? []) for (const m of h.messagesAdded ?? []) ids.push(m.message.id);
     historyId = r.historyId;
     page = r.nextPageToken;
@@ -182,7 +231,7 @@ export async function messagesAddedSince(
 }
 
 /** Inbox messages from the last `days` days, for when history has run out. */
-export async function recentMessages(c: GmailConfig, days: number): Promise<string[]> {
+export async function recentMessages(m: GmailMailbox, days: number): Promise<string[]> {
   const ids: string[] = [];
   let page: string | undefined;
   do {
@@ -193,7 +242,7 @@ export async function recentMessages(c: GmailConfig, days: number): Promise<stri
       ...(page ? { pageToken: page } : {}),
     });
     const r = await call<{ messages?: { id: string }[]; nextPageToken?: string }>(
-      c,
+      m,
       `/messages?${q}`,
     );
     for (const m of r.messages ?? []) ids.push(m.id);
@@ -218,16 +267,16 @@ export interface GmailMessage {
   payload: GmailPart;
 }
 
-export const getMessage = (c: GmailConfig, id: string) =>
-  call<GmailMessage>(c, `/messages/${encodeURIComponent(id)}?format=full`);
+export const getMessage = (m: GmailMailbox, id: string) =>
+  call<GmailMessage>(m, `/messages/${encodeURIComponent(id)}?format=full`);
 
 export async function getAttachment(
-  c: GmailConfig,
+  m: GmailMailbox,
   messageId: string,
   attachmentId: string,
 ): Promise<Buffer> {
   const r = await call<{ data: string }>(
-    c,
+    m,
     `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
   );
   return Buffer.from(r.data, "base64url");

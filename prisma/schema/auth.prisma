@@ -252,6 +252,7 @@ model User {
   assignedSupplierInvoiceDocuments SupplierInvoiceDocument[]   @relation("SupplierInvoiceDocumentAssigner")
   supplierInvoiceEvents            SupplierInvoiceEvent[]      @relation("SupplierInvoiceEventActor")
   inboundMails                     InboundMail[]               @relation("InboundMailSender")
+  gmailConnections                 GmailSync[]                 @relation("GmailConnectedBy")
   exportedSupplierInvoices         SupplierInvoice[]           @relation("SupplierInvoiceExporter")
   supplierInvoiceExports           SupplierInvoice[]           @relation("SupplierInvoiceExportClaim")
 

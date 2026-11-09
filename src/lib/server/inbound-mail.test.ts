@@ -26,6 +26,8 @@ const h = vi.hoisted(() => ({
   getMessage: vi.fn(),
   sender: { id: "klara", name: "Klara Ström", roles: ["RESULTATANSVARIG"] } as object | null,
   owned: ["Sexmästeriet"] as string[],
+  refreshToken: "enc:refresh" as string | null,
+  revoked: false,
 }));
 
 vi.mock("./gmail", () => {
@@ -33,22 +35,34 @@ vi.mock("./gmail", () => {
     constructor(
       message: string,
       readonly status?: number,
+      readonly revoked = false,
     ) {
       super(message);
     }
   }
+  const authed = async <T>(value: T) => {
+    if (h.revoked)
+      throw new GmailError(
+        "Google token exchange failed: Token has been expired or revoked.",
+        400,
+        true,
+      );
+    return value;
+  };
   return {
     GmailError,
-    gmailConfig: () => ({ allowedDomain: "dsek.se" }),
+    gmailConfig: () => ({ allowedDomain: "dsek.se", mailbox: "fakturor@dsek.se" }),
     getMessage: h.getMessage,
     getAttachment: async (_c: unknown, _m: string, id: string) => h.attachments[id],
     messagesAddedSince: async () => {
       if (h.history === "gone") throw new GmailError("too old", 404);
-      return h.history;
+      return authed(h.history);
     },
     recentMessages: async () => h.recent,
-    currentHistoryId: async () => "999",
-    watch: async () => ({ historyId: "1", expiration: new Date() }),
+    profile: async () => ({ emailAddress: "fakturor@dsek.se", historyId: "999" }),
+    watch: async () => authed({ historyId: "1", expiration: new Date() }),
+    stopWatch: async () => {},
+    revoke: async () => {},
   };
 });
 
@@ -78,6 +92,7 @@ vi.mock("@/lib/server/db", () => ({
     costCenter: { findMany: async () => [{ code: "SEX01" }, { code: "CAFE01" }] },
     gmailSync: {
       upsert: async () => ({ historyId: "100" }),
+      findUnique: async () => ({ refreshToken: h.refreshToken }),
       update: h.syncUpdate,
     },
     supplierInvoiceDocument: { createMany: h.docCreate },
@@ -107,9 +122,14 @@ vi.mock("@/lib/server/result-units", () => ({
   ownedResultUnits: async () => ({ names: h.owned, prefixes: [] }),
 }));
 
+vi.mock("@/lib/server/secrets", () => ({
+  decryptSecret: (s: string) => s.replace(/^enc:/, ""),
+  encryptSecret: (s: string) => `enc:${s}`,
+}));
+
 vi.mock("@/lib/server/notify", () => ({ notify: h.notify, deliverSoon: () => {} }));
 
-const { syncInbox } = await import("./inbound-mail");
+const { connectMailbox, renewWatch, syncInbox } = await import("./inbound-mail");
 
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
 const PASS = "mx.google.com; dkim=pass header.i=@dsek.se; dmarc=pass header.from=dsek.se";
@@ -151,6 +171,8 @@ beforeEach(() => {
   h.claimFails = false;
   h.sender = { id: "klara", name: "Klara Ström", roles: ["RESULTATANSVARIG"] };
   h.owned = ["Sexmästeriet"];
+  h.refreshToken = "enc:refresh";
+  h.revoked = false;
   for (const fn of [
     h.assignedCreate,
     h.docCreate,
@@ -318,5 +340,36 @@ describe("the sync", () => {
     h.recent = ["g1"];
     expect(await syncInbox()).toMatchObject({ accepted: 1 });
     expect(h.syncUpdate.mock.calls.at(-1)![0].data.historyId).toBe("999");
+  });
+
+  it("does nothing while the mailbox is not connected", async () => {
+    h.refreshToken = null;
+    expect(await syncInbox()).toBeNull();
+    expect(await renewWatch()).toBeNull();
+    expect(h.getMessage).not.toHaveBeenCalled();
+    expect(h.syncUpdate).not.toHaveBeenCalled();
+  });
+
+  it("forgets the login when Google no longer accepts it", async () => {
+    h.revoked = true;
+    await expect(syncInbox()).rejects.toThrow();
+    expect(h.syncUpdate.mock.calls[0][0].data).toMatchObject({
+      refreshToken: null,
+      watchExpiresAt: null,
+    });
+  });
+});
+
+describe("connecting the mailbox", () => {
+  it("stores the login encrypted, says who connected it, and starts the watch", async () => {
+    await connectMailbox("fresh", "ludwig");
+    expect(h.syncUpdate.mock.calls[0][0].data).toMatchObject({
+      refreshToken: "enc:fresh",
+      connectedAddress: "fakturor@dsek.se",
+      connectedById: "ludwig",
+      watchExpiresAt: null,
+      lastError: null,
+    });
+    expect(h.syncUpdate.mock.calls[1][0].data).toHaveProperty("watchExpiresAt");
   });
 });

@@ -9,10 +9,10 @@
 // it was.
 
 enum InboundMailStatus {
-  /// From a dsek.se sender whose mail passed DKIM/DMARC. Turned into one
-  /// invoice per PDF, or a single invoice without a document when it had none.
+  /// From a dsek.se sender whose mail passed DKIM/DMARC and carried a PDF.
+  /// Its PDFs became Inkorg documents.
   ACCEPTED
-  /// Refused. `rejectReason` says why. No invoice was made.
+  /// Refused. `rejectReason` says why. No document was made.
   REJECTED
 }
 
@@ -71,10 +71,22 @@ model GmailSync {
   /// Gmail history ids are 64-bit and arrive as strings. Kept as one.
   historyId      String?
   /// A watch lasts seven days and has to be renewed. The cron job does it
-  /// daily (api/cron/gmail-sync).
+  /// hourly when it is two days from running out (api/cron/gmail-sync).
   watchExpiresAt DateTime?
   lastSyncAt     DateTime?
   lastError      String?
+
+  /// The OAuth refresh token from logging in as the mailbox once
+  /// (api/gmail/connect), encrypted with lib/server/secrets.ts. Null when
+  /// not connected, or when Google stopped accepting it (password changed or
+  /// access revoked). Then the mailbox is connected again from the Inkorg.
+  refreshToken     String?
+  /// The address that logged in. Always GMAIL_MAILBOX: the callback refuses
+  /// any other.
+  connectedAddress String?
+  connectedBy      User?     @relation("GmailConnectedBy", fields: [connectedById], references: [id], onDelete: SetNull)
+  connectedById    String?
+  connectedAt      DateTime?
 
   updatedAt DateTime @updatedAt
 }

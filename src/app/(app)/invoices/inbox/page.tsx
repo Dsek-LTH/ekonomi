@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/server/current-user";
 import { canSeeInvoiceInbox, getInboxDocuments } from "@/lib/data/invoice-inbox";
 import { getAssignableResultUnits, getInboxHealth } from "@/lib/data/supplier-invoices";
-import { canTriageInvoices } from "@/lib/domain/permissions";
+import { canAccessSettings, canTriageInvoices } from "@/lib/domain/permissions";
 import { ownedResultUnits } from "@/lib/server/result-units";
 import { InkorgClient } from "./inkorg-client";
 import { titled } from "@/lib/server/page-title";
@@ -32,6 +32,7 @@ export default async function InvoiceInboxPage({
       resultUnits={resultUnits}
       health={health}
       triage={triage}
+      canConnectMailbox={canAccessSettings(user.capabilities)}
       ownsUnits={owned.names.length > 0}
     />
   );
